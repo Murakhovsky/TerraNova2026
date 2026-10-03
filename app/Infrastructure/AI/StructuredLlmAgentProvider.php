@@ -38,7 +38,7 @@ final readonly class StructuredLlmAgentProvider implements LlmProviderInterface
             responseSchema: $this->schemas->create($definition),
             model: $definition->model,
             organizationId: $context->organizationId->value(),
-            useCase: 'agent.run',
+            useCase: $this->useCase($definition),
             correlationId: $context->correlationId,
         ));
 
@@ -67,4 +67,14 @@ final readonly class StructuredLlmAgentProvider implements LlmProviderInterface
             ],
         );
     }
+
+    private function useCase(AgentDefinition $definition): string
+    {
+        $name = strtolower((string) preg_replace('/[^A-Za-z0-9_.:-]+/', '_', trim($definition->name)));
+        if ($name === '' || !ctype_alpha($name[0])) {
+            $name = 'runtime_' . ltrim($name, '_.:-0123456789');
+        }
+        return 'agent.' . ($name !== '' ? $name : 'runtime');
+    }
 }
+

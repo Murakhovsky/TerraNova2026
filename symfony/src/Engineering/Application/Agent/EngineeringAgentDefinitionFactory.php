@@ -8,6 +8,14 @@ use Kernel\Agent\AgentDefinition;
 
 final class EngineeringAgentDefinitionFactory
 {
+    public function __construct(
+        private readonly string $managerModel = '',
+        private readonly string $architectModel = '',
+        private readonly string $developerModel = '',
+        private readonly string $reviewerModel = '',
+        private readonly string $qaModel = '',
+    ) {}
+
     public function create(AgentRole $role): AgentDefinition
     {
         return new AgentDefinition(
@@ -22,12 +30,26 @@ final class EngineeringAgentDefinitionFactory
             domainName: 'engineering',
             enabled: true,
             profile: 'engineering',
+            model: $this->model($role),
             contextSources: null,
             confidenceThreshold: 0.0,
             maxActionsPerRun: 0,
             configurationManaged: false,
             outputSchema: EngineeringAgentSchemas::forRole($role),
         );
+    }
+
+    private function model(AgentRole $role): ?string
+    {
+        $model = match ($role) {
+            AgentRole::ENGINEERING_MANAGER => $this->managerModel,
+            AgentRole::PRINCIPAL_ARCHITECT => $this->architectModel,
+            AgentRole::DEVELOPER => $this->developerModel,
+            AgentRole::REVIEWER => $this->reviewerModel,
+            AgentRole::QA => $this->qaModel,
+        };
+        $model = trim($model);
+        return $model !== '' ? $model : null;
     }
 
     private function prompt(AgentRole $role): string

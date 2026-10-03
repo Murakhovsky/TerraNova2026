@@ -40,6 +40,11 @@ parameters:
   env(COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD): '3'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
+  env(COS_ENGINEERING_MANAGER_MODEL): ''
+  env(COS_ENGINEERING_ARCHITECT_MODEL): ''
+  env(COS_ENGINEERING_DEVELOPER_MODEL): ''
+  env(COS_ENGINEERING_REVIEWER_MODEL): ''
+  env(COS_ENGINEERING_QA_MODEL): ''
 
 services:
   _defaults:
@@ -1255,6 +1260,14 @@ services:
 
   App\Engineering\Application\Agent\EngineeringAgentRunnerInterface:
     alias: App\Engineering\Application\Agent\EngineeringAgentRunner
+
+  App\Engineering\Application\Agent\EngineeringAgentDefinitionFactory:
+    arguments:
+      $managerModel: '%env(COS_ENGINEERING_MANAGER_MODEL)%'
+      $architectModel: '%env(COS_ENGINEERING_ARCHITECT_MODEL)%'
+      $developerModel: '%env(COS_ENGINEERING_DEVELOPER_MODEL)%'
+      $reviewerModel: '%env(COS_ENGINEERING_REVIEWER_MODEL)%'
+      $qaModel: '%env(COS_ENGINEERING_QA_MODEL)%'
 
   App\Engineering\Application\Context\RepositoryDiscoveryInterface:
     alias: App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery
