@@ -1,0 +1,18 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Engineering\Domain\Artifact;
+
+enum ArtifactType: string
+{
+    case FEATURE_SPEC = 'FEATURE_SPEC';
+    case CONTEXT_MAP = 'CONTEXT_MAP';
+    case ARCHITECTURE_DECISION = 'ARCHITECTURE_DECISION';
+    case IMPLEMENTATION_PLAN = 'IMPLEMENTATION_PLAN';
+    case DEVELOPMENT_RESULT = 'DEVELOPMENT_RESULT';
+    case REVIEW_REPORT = 'REVIEW_REPORT';
+    case TEST_PLAN = 'TEST_PLAN';
+    case QA_REPORT = 'QA_REPORT';
+    case ESCALATION = 'ESCALATION';
+    case FINAL_REPORT = 'FINAL_REPORT';
+}

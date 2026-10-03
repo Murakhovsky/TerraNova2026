@@ -27,5 +27,7 @@ final readonly class AgentDefinition
         public float $confidenceThreshold = 0.0,
         public int $maxActionsPerRun = 10,
         public bool $configurationManaged = true,
+        /** @var array<string, mixed>|null */
+        public ?array $outputSchema = null,
     ) {}
 }

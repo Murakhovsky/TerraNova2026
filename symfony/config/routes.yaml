@@ -1,3 +1,63 @@
+
+# Engineering Manager V0.1 API
+cos_engineering_feature_create:
+  path: /api/engineering/features
+  controller: App\Http\Api\V1\Controller\EngineeringController::create
+  methods: [POST]
+
+cos_engineering_metrics:
+  path: /api/engineering/metrics
+  controller: App\Http\Api\V1\Controller\EngineeringController::metrics
+  methods: [GET]
+
+cos_engineering_feature_audit:
+  path: /api/engineering/features/{id}/audit
+  controller: App\Http\Api\V1\Controller\EngineeringController::audit
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_get:
+  path: /api/engineering/features/{id}
+  controller: App\Http\Api\V1\Controller\EngineeringController::get
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_run:
+  path: /api/engineering/features/{id}/run
+  controller: App\Http\Api\V1\Controller\EngineeringController::run
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_resume:
+  path: /api/engineering/features/{id}/resume
+  controller: App\Http\Api\V1\Controller\EngineeringController::resume
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_cancel:
+  path: /api/engineering/features/{id}/cancel
+  controller: App\Http\Api\V1\Controller\EngineeringController::cancel
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_runs:
+  path: /api/engineering/features/{id}/runs
+  controller: App\Http\Api\V1\Controller\EngineeringController::runs
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_artifacts:
+  path: /api/engineering/features/{id}/artifacts
+  controller: App\Http\Api\V1\Controller\EngineeringController::artifacts
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_engineering_feature_human_decision:
+  path: /api/engineering/features/{id}/human-decision
+  controller: App\Http\Api\V1\Controller\EngineeringController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_global_search:
   path: /workspace/search
   controller: App\Web\Experience\Search\GlobalSearchController
@@ -264,6 +324,13 @@ cos_api_v1_status:
   path: /api/v1/status
   controller: App\Http\Api\V1\Controller\ApiStatusController
   methods: [GET]
+
+cos_api_v1_engineering_feature:
+  path: /api/v1/engineering/features/{id}
+  controller: App\Http\Api\V1\Controller\EngineeringReadController::status
+  methods: [GET]
+  requirements:
+    id: '[0-9a-fA-F-]{36}'
 
 cos_dependency_health:
   path: /health/dependencies
@@ -2052,6 +2119,17 @@ cos_web_workspace_analytics:
   path: /admin/analytics
   controller: App\Web\Administration\AdministrationAnalyticsController::index
   methods: [GET, HEAD]
+
+cos_web_engineering:
+  path: /admin/engineering
+  controller: App\Web\Engineering\EngineeringFeatureController::index
+  methods: [GET, HEAD]
+
+cos_web_engineering_feature:
+  path: /admin/engineering/{id}
+  controller: App\Web\Engineering\EngineeringFeatureController::show
+  methods: [GET, HEAD]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
 
 cos_web_client_cases:
   path: /client-case

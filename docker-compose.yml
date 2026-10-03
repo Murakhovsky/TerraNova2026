@@ -11,6 +11,7 @@ x-app-environment: &app-environment
   REDIS_URL: redis://redis:6379
   MESSENGER_TRANSPORT_DSN: redis://redis:6379/cos_async
   MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/cos_failed
+  MESSENGER_ENGINEERING_TRANSPORT_DSN: redis://redis:6379/cos_engineering
   LLM_ENDPOINT: ${LLM_ENDPOINT:-}
   LLM_TOKEN: ${LLM_TOKEN:-}
   LLM_MODEL: ${LLM_MODEL:-}
@@ -52,6 +53,8 @@ x-app-environment: &app-environment
   COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID: ${COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID:-0}
   COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT: ${COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT:-200}
   COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT: ${COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT:-100}
+  COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED: ${COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED:-0}
+  COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES: ${COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES:-2}
   APP_URL: ${APP_URL:-http://127.0.0.1:8081}
   MERCURE_URL: http://mercure/.well-known/mercure
   MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-${APP_URL:-http://127.0.0.1:8081}/.well-known/mercure}
@@ -91,6 +94,9 @@ services:
     environment:
       <<: *app-environment
       MESSENGER_CONSUMER_NAME: http
+      COS_ENGINEERING_GITHUB_REPOSITORY: ${COS_ENGINEERING_GITHUB_REPOSITORY:-}
+      COS_ENGINEERING_GITHUB_TOKEN: ${COS_ENGINEERING_GITHUB_TOKEN:-}
+      COS_ENGINEERING_GITHUB_BASE_BRANCH: ${COS_ENGINEERING_GITHUB_BASE_BRANCH:-main}
     command: ["sh", "-c", "rm -rf public/assets/* && php bin/console asset-map:compile && exec php-fpm"]
     volumes:
       - symfony_sessions:/var/www/html/symfony/var/sessions
@@ -120,6 +126,24 @@ services:
       redis: { condition: service_healthy }
     healthcheck: { disable: true }
     networks: [backend]
+
+  engineering-worker:
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["php","bin/console","messenger:consume","engineering","--keepalive=5","--time-limit=3600","--memory-limit=512M","--failure-limit=1"]
+    environment:
+      <<: *app-environment
+      MESSENGER_CONSUMER_NAME: engineering-worker-1
+      COS_ENGINEERING_GITHUB_REPOSITORY: ${COS_ENGINEERING_GITHUB_REPOSITORY:-}
+      COS_ENGINEERING_GITHUB_TOKEN: ${COS_ENGINEERING_GITHUB_TOKEN:-}
+      COS_ENGINEERING_GITHUB_BASE_BRANCH: ${COS_ENGINEERING_GITHUB_BASE_BRANCH:-main}
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [frontend, backend]
 
   kernel-worker:
     image: cos-symfony-php:local

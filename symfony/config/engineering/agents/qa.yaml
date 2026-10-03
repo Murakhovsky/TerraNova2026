@@ -1,0 +1,26 @@
+id: qa
+version: 0.1.0
+role: QA
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model:
+  tier: balanced
+  reasoning: medium
+permissions:
+  repository:
+    read: true
+    write: false
+  github:
+    pr_read: true
+    checks_read: true
+  workflow:
+    read: true
+    propose_transition: true
+  merge: false
+  deploy: false
+tools:
+  - artifact.read
+  - github.pr.read
+  - github.checks.read
+  - workflow.read

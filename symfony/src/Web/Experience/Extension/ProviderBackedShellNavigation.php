@@ -39,6 +39,16 @@ final readonly class ProviderBackedShellNavigation
             new NavigationContribution('content', 'Content', '/admin/content', priority: 20, parentKey: 'administration'),
         ];
 
+        if (in_array($context->role, ['manager', 'admin'], true)) {
+            $contributions[] = new NavigationContribution(
+                'engineering',
+                'Engineering',
+                '/admin/engineering',
+                priority: 30,
+                parentKey: 'administration',
+            );
+        }
+
         if ($context->role === 'admin') {
             $contributions[] = new NavigationContribution(
                 'users',

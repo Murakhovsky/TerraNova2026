@@ -1,0 +1,201 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Engineering · {{ engineering.feature.title }} | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="COS · Engineering"
+        title="{{ engineering.feature.title }}"
+        subtitle="{{ engineering.feature.business_goal ?: 'Autonomous engineering workflow status and evidence.' }}"
+        metaValue="{{ summary.state }}"
+        metaLabel="current stage"
+    >
+        {% if summary.pull_request.url %}
+            <twig:CosButton label="Open pull request" href="{{ summary.pull_request.url }}" variant="primary" />
+        {% endif %}
+        {% if engineering.feature.external_issue_id %}
+            <span class="cos-badge">GitHub Issue #{{ engineering.feature.external_issue_id }}</span>
+        {% endif %}
+    </twig:CosPageHeader>
+
+    <section class="cos-kpi-strip" aria-label="Engineering workflow metrics">
+        <article class="cos-card">
+            <twig:CosMetric
+                label="Tasks"
+                value="{{ summary.tasks_completed }}/{{ summary.tasks_total }}"
+                hint="completed"
+            />
+        </article>
+        <article class="cos-card">
+            <twig:CosMetric
+                label="Agent runs"
+                value="{{ summary.agent_runs }}"
+                hint="all roles"
+            />
+        </article>
+        <article class="cos-card">
+            <twig:CosMetric
+                label="Tokens"
+                value="{{ summary.tokens|number_format(0, '.', ' ') }}"
+                hint="input + output"
+            />
+        </article>
+        <article class="cos-card">
+            <twig:CosMetric
+                label="Estimated cost"
+                value="${{ summary.cost|number_format(4, '.', '') }}"
+                hint="provider metadata"
+            />
+        </article>
+    </section>
+
+    {% if engineering.open_human_decisions is not empty %}
+        <section class="cos-page__section" aria-labelledby="engineering-human-decisions">
+            <div class="cos-card">
+                <p class="cos-card__eyebrow">Human gate</p>
+                <h2 id="engineering-human-decisions" class="cos-card__title">Потрібне рішення людини</h2>
+                <div class="cos-entity-list" role="list">
+                    {% for decision in engineering.open_human_decisions %}
+                        <twig:CosEntityListItem
+                            title="{{ decision.question|default('Human decision required') }}"
+                            subtitle="{{ decision.reason|default('Workflow is waiting for human input.') }}"
+                            meta="{{ decision.type|default('DECISION') }}"
+                        />
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    <section class="cos-page__section cos-section-grid" aria-label="Engineering status">
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Feature</p>
+            <h2 class="cos-card__title">{{ summary.state }}</h2>
+            <div class="cos-entity-list" role="list">
+                <twig:CosEntityListItem
+                    title="Priority"
+                    subtitle="{{ engineering.feature.priority }}"
+                    meta="{{ engineering.feature.complexity|default('n/a') }}"
+                />
+                <twig:CosEntityListItem
+                    title="Repository revision"
+                    subtitle="{{ engineering.feature.repository_revision|default('not captured yet') }}"
+                    meta="{{ engineering.workflow.id|default('no workflow') }}"
+                />
+                <twig:CosEntityListItem
+                    title="Last activity"
+                    subtitle="{{ engineering.workflow.last_activity_at|default('not started') }}"
+                    meta="{{ engineering.workflow.trace_id|default('') }}"
+                />
+            </div>
+        </article>
+
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Quality gate</p>
+            <h2 class="cos-card__title">Open findings</h2>
+            {% if summary.open_findings is empty %}
+                <twig:CosEmptyState
+                    title="Немає відкритих findings"
+                    copy="Reviewer та QA не залишили невирішених зауважень."
+                />
+            {% else %}
+                <div class="cos-entity-list" role="list">
+                    {% for finding in summary.open_findings %}
+                        <twig:CosEntityListItem
+                            title="{{ finding.severity }} · {{ finding.title }}"
+                            subtitle="{{ finding.description }}"
+                            meta="{{ finding.source_role }}"
+                        />
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="engineering-tasks">
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Execution plan</p>
+            <h2 id="engineering-tasks" class="cos-card__title">Tasks</h2>
+        </div>
+        {% if engineering.tasks is empty %}
+            <twig:CosEmptyState title="Tasks ще не створені" copy="Engineering Manager ще не завершив декомпозицію." />
+        {% else %}
+            <div class="cos-entity-list" role="list">
+                {% for task in engineering.tasks %}
+                    <twig:CosEntityListItem
+                        title="{{ task.external_key }} · {{ task.assigned_role }}"
+                        subtitle="{{ task.status }}"
+                        meta="{{ task.id }}"
+                    />
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="engineering-runs">
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Agent runtime</p>
+            <h2 id="engineering-runs" class="cos-card__title">AgentRuns</h2>
+        </div>
+        {% if engineering.agent_runs is empty %}
+            <twig:CosEmptyState title="Agent runs ще немає" copy="Workflow ще не виконав жодного agent stage." />
+        {% else %}
+            <div class="cos-entity-list" role="list">
+                {% for run in engineering.agent_runs %}
+                    <twig:CosEntityListItem
+                        title="{{ run.role }} · {{ run.status }}"
+                        subtitle="{{ run.model|default('model pending') }} · logical {{ run.logical_attempt|default(1) }} · technical retries {{ run.technical_retry|default(0) }}"
+                        meta="{{ run.cost is not null ? ('$' ~ run.cost|number_format(4, '.', '')) : 'cost n/a' }}"
+                    />
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+
+    {% if summary.final_report %}
+        <section class="cos-page__section cos-section-grid" aria-label="Final report">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Final Report</p>
+                <h2 class="cos-card__title">{{ summary.final_report.recommendation|default(summary.state) }}</h2>
+                <div class="cos-entity-list" role="list">
+                    <twig:CosEntityListItem
+                        title="Review"
+                        subtitle="{{ summary.final_report.review.status|default('n/a') }}"
+                        meta="{{ summary.final_report.review.cycles|default(0) }} cycles"
+                    />
+                    <twig:CosEntityListItem
+                        title="QA"
+                        subtitle="{{ summary.final_report.qa.status|default('n/a') }}"
+                        meta="{{ summary.final_report.qa.cycles|default(0) }} cycles"
+                    />
+                    <twig:CosEntityListItem
+                        title="CI"
+                        subtitle="{{ summary.final_report.ci.status|default('n/a') }}"
+                        meta="{{ summary.final_report.ci.passed|default(0) }}/{{ summary.final_report.ci.total|default(0) }} passed"
+                    />
+                </div>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Evidence</p>
+                <h2 class="cos-card__title">Artifacts</h2>
+                <div class="cos-entity-list" role="list">
+                    {% for type, artifact in engineering.artifacts %}
+                        <twig:CosEntityListItem
+                            title="{{ type }}"
+                            subtitle="version {{ artifact.version|default('?') }}"
+                            meta="{{ artifact.created_by_agent|default('system') }}"
+                        />
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+    {% endif %}
+</section>
+{% endblock %}

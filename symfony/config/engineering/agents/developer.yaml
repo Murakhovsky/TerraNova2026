@@ -1,0 +1,29 @@
+id: developer
+version: 0.1.0
+role: DEVELOPER
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model:
+  tier: coding
+  reasoning: high
+permissions:
+  repository:
+    read: true
+    write: true
+  workflow:
+    read: true
+    propose_transition: true
+  github:
+    branch_write: true
+    pull_request_create: true
+  production:
+    access: false
+  merge: false
+  deploy: false
+tools:
+  - artifact.read
+  - repository.read
+  - repository.propose_changes
+  - repository.commit_changes
+  - github.pr.create

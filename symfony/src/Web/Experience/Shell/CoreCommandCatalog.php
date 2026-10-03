@@ -18,6 +18,16 @@ final readonly class CoreCommandCatalog
             new ShellCommandItem('core.administration', 'Open Administration', '/admin/content', 'command', 'Core'),
         ];
 
+        if (in_array($context->role, ['manager', 'admin'], true)) {
+            $commands[] = new ShellCommandItem(
+                'core.engineering',
+                'Open Engineering Workflows',
+                '/admin/engineering',
+                'command',
+                'Admin',
+            );
+        }
+
         if ($context->role === 'admin') {
             $commands[] = new ShellCommandItem(
                 'core.users',

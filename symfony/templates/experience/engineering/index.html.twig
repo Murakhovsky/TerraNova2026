@@ -1,0 +1,45 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Engineering | COS{% endblock %}
+
+{% block workspace_content %}
+<section
+    class="cos-page__stack"
+    data-cos-archetype="{{ page.archetypeId() }}"
+    data-cos-page-state="{{ page.state }}"
+    data-cos-page-density="{{ page.density }}"
+>
+    <twig:CosPageHeader
+        eyebrow="COS · Engineering"
+        title="Engineering workflows"
+        subtitle="Останні автономні розробки, їхній стан та контрольні точки."
+        metaValue="{{ features|length }}"
+        metaLabel="recent features"
+    />
+
+    <section class="cos-page__section" aria-labelledby="engineering-feature-list">
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Workspace</p>
+            <h2 id="engineering-feature-list" class="cos-card__title">Recent features</h2>
+        </div>
+
+        {% if features is empty %}
+            <twig:CosEmptyState
+                title="Engineering feature-ів ще немає"
+                copy="Створіть feature через API, CLI або імпортуйте GitHub Issue."
+            />
+        {% else %}
+            <div class="cos-entity-list" role="list">
+                {% for feature in features %}
+                    <twig:CosEntityListItem
+                        title="{{ feature.title }}"
+                        subtitle="{{ feature.status }} · {{ feature.priority }} · {{ feature.complexity|default('n/a') }}"
+                        meta="{{ feature.updated_at }}"
+                        href="/admin/engineering/{{ feature.id }}"
+                    />
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

@@ -38,6 +38,13 @@ parameters:
   env(COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT): '100'
   env(COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES): '360'
   env(COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD): '3'
+  env(COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED): '0'
+  env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
+  env(COS_ENGINEERING_MANAGER_MODEL): ''
+  env(COS_ENGINEERING_ARCHITECT_MODEL): ''
+  env(COS_ENGINEERING_DEVELOPER_MODEL): ''
+  env(COS_ENGINEERING_REVIEWER_MODEL): ''
+  env(COS_ENGINEERING_QA_MODEL): ''
 
 services:
   _defaults:
@@ -283,6 +290,8 @@ services:
       $growthMarketDiscoveryEnabled: '%env(bool:COS_GROWTH_MARKET_SCHEDULER_ENABLED)%'
       $growthMarketDiscoveryIntervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
       $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
+      $engineeringAutonomyEnabled: '%env(bool:COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED)%'
+      $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -1234,6 +1243,118 @@ services:
   Kernel\Agent\Service\StructuredAgentLlmClient:
     arguments:
       $client: '@Kernel\Llm\GovernedStructuredLlmClient'
+
+  Infrastructure\AI\StructuredLlmAgentProvider:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Kernel\Agent\Contract\LlmProviderInterface:
+    alias: Infrastructure\AI\StructuredLlmAgentProvider
+
+  Kernel\Agent\Service\AgentRuntimeEngine:
+    arguments:
+      $llm: '@Kernel\Agent\Contract\LlmProviderInterface'
+
+  Kernel\Agent\Contract\AgentRuntimeInterface:
+    alias: Kernel\Agent\Service\AgentRuntimeEngine
+
+  App\Engineering\Application\Agent\EngineeringAgentRunnerInterface:
+    alias: App\Engineering\Application\Agent\EngineeringAgentRunner
+
+  App\Engineering\Application\Agent\EngineeringAgentDefinitionFactory:
+    arguments:
+      $managerModel: '%env(COS_ENGINEERING_MANAGER_MODEL)%'
+      $architectModel: '%env(COS_ENGINEERING_ARCHITECT_MODEL)%'
+      $developerModel: '%env(COS_ENGINEERING_DEVELOPER_MODEL)%'
+      $reviewerModel: '%env(COS_ENGINEERING_REVIEWER_MODEL)%'
+      $qaModel: '%env(COS_ENGINEERING_QA_MODEL)%'
+
+  App\Engineering\Application\Context\RepositoryDiscoveryInterface:
+    alias: App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery
+
+  App\Engineering\Application\Context\RepositoryFileReaderInterface:
+    alias: App\Engineering\Infrastructure\Repository\LocalRepositoryFileReader
+
+  App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFeatureStore
+
+  App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringWorkflowStore
+
+  App\Engineering\Application\Workflow\EngineeringTransitionObserverInterface:
+    alias: App\Engineering\Infrastructure\GitHub\GitHubEngineeringTransitionObserver
+
+  App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringArtifactStore
+
+  App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringAgentRunStore
+
+  App\Engineering\Application\Persistence\EngineeringTaskStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringTaskStore
+
+  App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringHumanDecisionStore
+
+  App\Engineering\Application\Persistence\EngineeringFindingStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFindingStore
+
+  App\Engineering\Application\Metrics\EngineeringMetricsProviderInterface:
+    alias: App\Engineering\Infrastructure\Metrics\DoctrineEngineeringMetricsProvider
+
+  App\Engineering\Application\Audit\EngineeringAuditQueryInterface:
+    alias: App\Engineering\Infrastructure\Audit\DoctrineEngineeringAuditQuery
+
+  App\Engineering\Application\Lock\EngineeringWorkflowLockInterface:
+    alias: App\Engineering\Infrastructure\Lock\MySqlEngineeringWorkflowLock
+
+  App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery:
+    arguments:
+      $repositoryRoot: '%kernel.project_dir%/..'
+      $maxFiles: 20
+      $maxFileBytes: 131072
+
+  App\Engineering\Infrastructure\Repository\LocalRepositoryFileReader:
+    arguments:
+      $repositoryRoot: '%kernel.project_dir%/..'
+      $maxFiles: 20
+      $maxFileBytes: 65536
+      $maxTotalBytes: 524288
+
+  App\Engineering\Infrastructure\Repository\GitHubEngineeringRepositoryGateway:
+    arguments:
+      $repositoryFullName: '%env(COS_ENGINEERING_GITHUB_REPOSITORY)%'
+      $token: '%env(COS_ENGINEERING_GITHUB_TOKEN)%'
+      $baseBranch: '%env(COS_ENGINEERING_GITHUB_BASE_BRANCH)%'
+
+  App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface:
+    alias: App\Engineering\Infrastructure\Repository\GitHubEngineeringRepositoryGateway
+
+  App\Command\EngineeringCreateCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Command\EngineeringStartCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Command\EngineeringDecisionCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Command\EngineeringContinueCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Command\EngineeringFinalizeCommand: ~
+
+  App\Command\EngineeringIssueCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommandHandler:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
   App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
     arguments:
@@ -2438,6 +2559,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Administration\AdministrationAnalyticsController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Engineering\EngineeringFeatureController:
     public: true
     tags: ['controller.service_arguments']
 
