@@ -16,6 +16,6 @@ final readonly class CreateAdministrationUserCommandHandler implements CommandHa
     /** @return array<string,mixed> */
     public function __invoke(CreateAdministrationUserCommand $command): array
     {
-        return $this->administration->createUser($command->input);
+        return $this->administration->createUser($command->input, $command->organizationId);
     }
 }
