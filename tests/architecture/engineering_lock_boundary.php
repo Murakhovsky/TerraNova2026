@@ -7,20 +7,27 @@ $managerStage = (string) file_get_contents($root.'/symfony/src/Engineering/Appli
 $architectStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArchitectStageExecutor.php');
 $developerStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringDeveloperStageExecutor.php');
 $reviewerStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringReviewerStageExecutor.php');
+$qaStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringQaStageExecutor.php');
 $lock = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Lock/MySqlEngineeringWorkflowLock.php');
 
 if (!str_contains($orchestrator, 'activeIdForFeature')) throw new RuntimeException('Duplicate active workflow guard missing.');
 
-foreach ([$managerStage, $architectStage, $developerStage, $reviewerStage] as $stage) {
-    if (!str_contains($stage, 'agents->run')) continue;
-    $run = strpos($stage, 'agents->run');
-    $lockEnd = strrpos(substr($stage, 0, $run), 'lock->synchronized');
-    if ($lockEnd === false) throw new RuntimeException('Agent stage is missing its durable pre-run lock.');
+$managerStart = strpos($managerStage, 'agentRuns->start');
+$managerExecute = strpos($managerStage, 'manager->execute');
+$managerComplete = strpos($managerStage, 'agentRuns->complete');
+if ($managerStart === false || $managerExecute === false || $managerComplete === false || !($managerStart < $managerExecute && $managerExecute < $managerComplete)) {
+    throw new RuntimeException('Manager durable AgentRun boundary ordering is invalid.');
 }
 
-if (!str_contains($managerStage, '// External LLM work deliberately runs outside the feature lock.')) {
-    throw new RuntimeException('Manager external Agent call boundary marker is missing.');
+foreach ([$architectStage, $developerStage, $reviewerStage, $qaStage] as $stage) {
+    $start = strpos($stage, 'agentRuns->start');
+    $run = strpos($stage, 'agents->run');
+    $complete = strpos($stage, 'agentRuns->complete');
+    if ($start === false || $run === false || $complete === false || !($start < $run && $run < $complete)) {
+        throw new RuntimeException('Specialist durable AgentRun boundary ordering is invalid.');
+    }
 }
+
 if (!str_contains($lock, "'engineering:feature:'.\$featureId.':workflow'")) {
     throw new RuntimeException('Feature lock key contract missing.');
 }
