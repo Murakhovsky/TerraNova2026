@@ -8,7 +8,9 @@ $template = (string) file_get_contents($root.'/symfony/templates/experience/engi
 $status = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringStatusService.php');
 
 foreach ([
+    '/admin/engineering',
     '/admin/engineering/{id}',
+    'EngineeringFeatureController::index',
     'EngineeringFeatureController::show',
 ] as $needle) {
     if (!str_contains($routes, $needle)) throw new RuntimeException('Engineering feature UI route missing '.$needle);
@@ -18,6 +20,7 @@ foreach ([
     'TenantPermissions::MANAGE',
     'organization_id',
     'EngineeringStatusService',
+    'recentForOrganization',
     'SystemControlSurface',
 ] as $needle) {
     if (!str_contains($controller, $needle)) throw new RuntimeException('Engineering feature UI controller missing '.$needle);
