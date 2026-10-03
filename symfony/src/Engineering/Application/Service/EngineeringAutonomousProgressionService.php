@@ -12,6 +12,7 @@ final readonly class EngineeringAutonomousProgressionService
     public function __construct(
         private EngineeringArchitectStageExecutor $architect,
         private EngineeringDeveloperStageExecutor $developer,
+        private EngineeringReviewerStageExecutor $reviewer,
         private EngineeringAgentRunStoreInterface $agentRuns,
     ) {}
 
@@ -39,6 +40,16 @@ final readonly class EngineeringAutonomousProgressionService
                 organizationId: $organizationId,
                 correlationId: $correlationId,
                 logicalAttempt: $this->nextAttempt($featureId, AgentRole::DEVELOPER),
+            );
+        }
+
+        if ($directive->agent === AgentRole::REVIEWER) {
+            $directive = $this->reviewer->execute(
+                featureId: $featureId,
+                workflowId: $workflowId,
+                organizationId: $organizationId,
+                correlationId: $correlationId,
+                logicalAttempt: $this->nextAttempt($featureId, AgentRole::REVIEWER),
             );
         }
 

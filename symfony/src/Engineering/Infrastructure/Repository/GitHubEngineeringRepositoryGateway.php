@@ -127,6 +127,28 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         ];
     }
 
+    public function pullRequestFiles(int $pullRequestNumber): array
+    {
+        $this->assertAvailable();
+        if ($pullRequestNumber <= 0) throw new RuntimeException('Pull request number must be positive.');
+        $files = $this->request('GET', '/pulls/'.$pullRequestNumber.'/files?per_page=100', null, [200]);
+
+        $result = [];
+        foreach ($files as $file) {
+            if (!is_array($file)) continue;
+            $result[] = [
+                'path' => (string) ($file['filename'] ?? ''),
+                'status' => (string) ($file['status'] ?? ''),
+                'additions' => (int) ($file['additions'] ?? 0),
+                'deletions' => (int) ($file['deletions'] ?? 0),
+                'patch' => isset($file['patch']) ? mb_substr((string) $file['patch'], 0, 20000) : null,
+            ];
+        }
+
+        if (count($result) > 100) $result = array_slice($result, 0, 100);
+        return $result;
+    }
+
     private function ensureBranch(string $branch, string $baseRevision): string
     {
         $existing = $this->requestNullable('GET', '/git/ref/heads/'.rawurlencode($branch), [200, 404]);

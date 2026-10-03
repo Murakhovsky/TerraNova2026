@@ -56,6 +56,8 @@ final readonly class EngineeringDeveloperStageExecutor
         $architecture = $this->requiredArtifact($featureId, ArtifactType::ARCHITECTURE_DECISION);
         $implementation = $this->requiredArtifact($featureId, ArtifactType::IMPLEMENTATION_PLAN);
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
+        $previousReview = $this->artifacts->latest($featureId, ArtifactType::REVIEW_REPORT);
+        $previousQa = $this->artifacts->latest($featureId, ArtifactType::QA_REPORT);
 
         $baseRevision = trim((string) ($contextMap['content']['repository_revision'] ?? ''));
         if ($baseRevision === '' || $baseRevision === 'unknown') {
@@ -73,6 +75,8 @@ final readonly class EngineeringDeveloperStageExecutor
                 'implementation_plan' => $implementation['content'],
                 'context_map' => $contextMap['content'],
                 'tasks' => $this->tasks->forFeature($featureId),
+                'previous_review' => $previousReview['content'] ?? null,
+                'previous_qa' => $previousQa['content'] ?? null,
             ],
             contextRefs: [
                 'artifact:'.$featureSpec['id'],

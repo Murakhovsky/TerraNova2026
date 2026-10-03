@@ -20,4 +20,7 @@ interface EngineeringRepositoryGatewayInterface
 
     /** @return array{number:int,url:string,title:string} */
     public function openPullRequest(string $branch, string $title, string $body): array;
+
+    /** @return list<array{path:string,status:string,additions:int,deletions:int,patch:?string}> */
+    public function pullRequestFiles(int $pullRequestNumber): array;
 }
