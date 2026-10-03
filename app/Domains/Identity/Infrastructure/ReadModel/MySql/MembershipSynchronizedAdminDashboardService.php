@@ -21,18 +21,18 @@ final class MembershipSynchronizedAdminDashboardService extends AdminDashboardSe
         parent::__construct($identityDatabase);
     }
 
-    public function createUser(array $input): array
+    public function createUser(array $input, string $organizationId): array
     {
-        return $this->transactional(function () use ($input): array {
-            $result = parent::createUser($input);
+        return $this->transactional(function () use ($input, $organizationId): array {
+            $result = parent::createUser($input, $organizationId);
             if (($result['ok'] ?? false) !== true) {
                 return $result;
             }
 
             $email = mb_strtolower(trim((string) ($input['email'] ?? '')));
             $user = $this->identityDatabase->fetchOne(
-                'SELECT id FROM tn_users WHERE email = :email LIMIT 1',
-                ['email' => $email],
+                'SELECT id FROM tn_users WHERE email = :email AND organization_id = :organization_id LIMIT 1',
+                ['email' => $email, 'organization_id' => $organizationId],
             );
             if ($user === null) {
                 throw new RuntimeException('Created user could not be reloaded for membership synchronization.');
@@ -43,10 +43,10 @@ final class MembershipSynchronizedAdminDashboardService extends AdminDashboardSe
         }, 'admin-user-create-membership');
     }
 
-    public function updateUser(int $id, array $input, ?array $actor = null): array
+    public function updateUser(int $id, array $input, string $organizationId, ?array $actor = null): array
     {
-        return $this->transactional(function () use ($id, $input, $actor): array {
-            $result = parent::updateUser($id, $input, $actor);
+        return $this->transactional(function () use ($id, $input, $organizationId, $actor): array {
+            $result = parent::updateUser($id, $input, $organizationId, $actor);
             if (($result['ok'] ?? false) !== true) {
                 return $result;
             }
