@@ -419,8 +419,14 @@ final readonly class MysqlPublicPropertyReadRepository implements PublicProperty
             $params['deal_type'] = $filters['deal_type'];
         }
         if (($filters['q'] ?? '') !== '') {
-            $where[] = '(p.title LIKE :q OR p.public_id LIKE :q OR p.short_description LIKE :q OR p.description LIKE :q OR p.address LIKE :q OR l.city LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $search = '%' . $filters['q'] . '%';
+            $where[] = '(p.title LIKE :q_title OR p.public_id LIKE :q_public_id OR p.short_description LIKE :q_short_description OR p.description LIKE :q_description OR p.address LIKE :q_address OR l.city LIKE :q_city)';
+            $params['q_title'] = $search;
+            $params['q_public_id'] = $search;
+            $params['q_short_description'] = $search;
+            $params['q_description'] = $search;
+            $params['q_address'] = $search;
+            $params['q_city'] = $search;
         }
         if (($filters['type'] ?? '') !== '') {
             $where[] = 't.code = :type';

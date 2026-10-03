@@ -100,8 +100,11 @@ final readonly class MysqlGrowthExperimentRepository implements GrowthExperiment
         }
         $query=$this->filter($filters,'q',191);
         if($query!==null){
-            $where[]='(experiment_id LIKE :q OR name LIKE :q OR hypothesis LIKE :q)';
-            $params['q']='%'.$this->like($query).'%';
+            $search='%'.$this->like($query).'%';
+            $where[]='(experiment_id LIKE :q_experiment_id OR name LIKE :q_name OR hypothesis LIKE :q_hypothesis)';
+            $params['q_experiment_id']=$search;
+            $params['q_name']=$search;
+            $params['q_hypothesis']=$search;
         }
 
         $statement=$this->connection->prepare(

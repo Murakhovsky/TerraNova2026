@@ -55,6 +55,12 @@ try {
   await expect200('/workspace/ai', '[data-cos-ai-center]');
   await expect200('/admin/engineering', '[data-cos-engineering="index"]');
 
+  // Search/filter paths must exercise native PDO prepares, not just empty-state rendering.
+  await expect200('/admin/content?q=cutover');
+  await expect200('/property?q=cutover');
+  await expect200('/property/catalog?q=cutover');
+  await expect200('/property/manage?q=cutover');
+
   for (const path of [
     '/growth',
     '/growth/candidates',
@@ -65,6 +71,11 @@ try {
     '/growth/experiments',
     '/growth/market',
     '/growth/settings',
+    '/growth/candidates?q=cutover',
+    '/growth/accounts?q=cutover',
+    '/growth/signals?q=cutover',
+    '/growth/learning?q=cutover',
+    '/growth/experiments?q=cutover',
   ]) {
     await expect200(path, '.cos-growth-workspace');
   }

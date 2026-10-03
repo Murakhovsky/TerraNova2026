@@ -341,8 +341,8 @@ class CatalogService implements PropertyCatalogInterface
               AND p.id <> :id
               AND (p.type_id = :type_id OR p.location_id = :location_id OR p.deal_type = :deal_type)
             ORDER BY
-                (p.type_id = :type_id) DESC,
-                (p.location_id = :location_id) DESC,
+                (p.type_id = :order_type_id) DESC,
+                (p.location_id = :order_location_id) DESC,
                 p.is_featured DESC,
                 p.published_at DESC,
                 p.id DESC
@@ -352,6 +352,8 @@ class CatalogService implements PropertyCatalogInterface
                 'type_id' => (int) $property['type_id'],
                 'location_id' => (int) $property['location_id'],
                 'deal_type' => (string) $property['deal_type'],
+                'order_type_id' => (int) $property['type_id'],
+                'order_location_id' => (int) $property['location_id'],
             ]
         );
 
@@ -461,8 +463,14 @@ class CatalogService implements PropertyCatalogInterface
         }
 
         if (($filters['q'] ?? '') !== '') {
-            $where[] = '(p.title LIKE :q OR p.public_id LIKE :q OR p.short_description LIKE :q OR p.description LIKE :q OR p.address LIKE :q OR l.city LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $search = '%' . $filters['q'] . '%';
+            $where[] = '(p.title LIKE :q_title OR p.public_id LIKE :q_public_id OR p.short_description LIKE :q_short_description OR p.description LIKE :q_description OR p.address LIKE :q_address OR l.city LIKE :q_city)';
+            $params['q_title'] = $search;
+            $params['q_public_id'] = $search;
+            $params['q_short_description'] = $search;
+            $params['q_description'] = $search;
+            $params['q_address'] = $search;
+            $params['q_city'] = $search;
         }
 
         if (($filters['type'] ?? '') !== '') {
