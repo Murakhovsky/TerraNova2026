@@ -6,6 +6,8 @@ $routes = (string) file_get_contents($root.'/symfony/config/routes.yaml');
 $controller = (string) file_get_contents($root.'/symfony/src/Web/Engineering/EngineeringFeatureController.php');
 $template = (string) file_get_contents($root.'/symfony/templates/experience/engineering/feature.html.twig');
 $status = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringStatusService.php');
+$navigation = (string) file_get_contents($root.'/symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php');
+$commands = (string) file_get_contents($root.'/symfony/src/Web/Experience/Shell/CoreCommandCatalog.php');
 
 foreach ([
     '/admin/engineering',
@@ -39,6 +41,12 @@ foreach ([
 
 if (!str_contains($status, 'latestIdForFeature')) {
     throw new RuntimeException('Engineering feature UI cannot retain terminal workflow state.');
+}
+if (!str_contains($navigation, "'engineering'") || !str_contains($navigation, "'/admin/engineering'")) {
+    throw new RuntimeException('Engineering workspace navigation entry missing.');
+}
+if (!str_contains($commands, "'core.engineering'")) {
+    throw new RuntimeException('Engineering command palette entry missing.');
 }
 
 echo "Engineering feature UI contract passed.\n";
