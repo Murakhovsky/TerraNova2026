@@ -1273,6 +1273,10 @@ services:
       $maxFiles: 20
       $maxFileBytes: 131072
 
+  App\Command\EngineeringStartCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
     arguments:
       $mode: '%env(COS_AGENT_LLM_MODE)%'
