@@ -1235,6 +1235,32 @@ services:
     arguments:
       $client: '@Kernel\Llm\GovernedStructuredLlmClient'
 
+  Infrastructure\AI\StructuredLlmAgentProvider:
+    arguments:
+      $client: '@Kernel\Llm\StructuredLlmClientInterface'
+
+  Kernel\Agent\Contract\LlmProviderInterface:
+    alias: Infrastructure\AI\StructuredLlmAgentProvider
+
+  Kernel\Agent\Service\AgentRuntimeEngine:
+    arguments:
+      $llm: '@Kernel\Agent\Contract\LlmProviderInterface'
+
+  Kernel\Agent\Contract\AgentRuntimeInterface:
+    alias: Kernel\Agent\Service\AgentRuntimeEngine
+
+  App\Engineering\Application\Agent\EngineeringAgentRunnerInterface:
+    alias: App\Engineering\Application\Agent\EngineeringAgentRunner
+
+  App\Engineering\Application\Context\RepositoryDiscoveryInterface:
+    alias: App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery
+
+  App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery:
+    arguments:
+      $repositoryRoot: '%kernel.project_dir%/..'
+      $maxFiles: 20
+      $maxFileBytes: 131072
+
   App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
     arguments:
       $mode: '%env(COS_AGENT_LLM_MODE)%'
