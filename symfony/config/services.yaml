@@ -1293,6 +1293,12 @@ services:
   App\Engineering\Application\Persistence\EngineeringFindingStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFindingStore
 
+  App\Engineering\Application\Metrics\EngineeringMetricsProviderInterface:
+    alias: App\Engineering\Infrastructure\Metrics\DoctrineEngineeringMetricsProvider
+
+  App\Engineering\Application\Audit\EngineeringAuditQueryInterface:
+    alias: App\Engineering\Infrastructure\Audit\DoctrineEngineeringAuditQuery
+
   App\Engineering\Application\Lock\EngineeringWorkflowLockInterface:
     alias: App\Engineering\Infrastructure\Lock\MySqlEngineeringWorkflowLock
 

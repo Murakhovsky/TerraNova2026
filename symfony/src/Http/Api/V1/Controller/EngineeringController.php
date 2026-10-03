@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Http\Api\V1\Controller;
 
 use App\Engineering\Application\DTO\EngineeringRequest;
+use App\Engineering\Application\Audit\EngineeringAuditQueryInterface;
+use App\Engineering\Application\Metrics\EngineeringMetricsProviderInterface;
 use App\Engineering\Application\Service\EngineeringCancelService;
 use App\Engineering\Application\Service\EngineeringContinueService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
@@ -26,6 +28,8 @@ final readonly class EngineeringController
         private EngineeringCancelService $cancel,
         private EngineeringHumanDecisionService $decisions,
         private EngineeringStatusService $status,
+        private EngineeringMetricsProviderInterface $metrics,
+        private EngineeringAuditQueryInterface $audit,
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
     ) {}
@@ -161,6 +165,28 @@ final readonly class EngineeringController
         try {
             $status = $this->status->status(EngineeringId::assert($id));
             return new JsonResponse(['ok' => true, 'data' => $status['artifacts'] ?? []]);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
+    public function metrics(Request $request): JsonResponse
+    {
+        if (($denied = $this->authorize($request, false)) !== null) return $denied;
+        try {
+            return new JsonResponse(['ok' => true, 'data' => $this->metrics->summary()]);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
+    public function audit(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, false)) !== null) return $denied;
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->status->status($featureId);
+            return new JsonResponse(['ok' => true, 'data' => $this->audit->forFeature($featureId)]);
         } catch (Throwable $e) {
             return $this->exception($e);
         }

@@ -5,6 +5,17 @@ cos_engineering_feature_create:
   controller: App\Http\Api\V1\Controller\EngineeringController::create
   methods: [POST]
 
+cos_engineering_metrics:
+  path: /api/engineering/metrics
+  controller: App\Http\Api\V1\Controller\EngineeringController::metrics
+  methods: [GET]
+
+cos_engineering_feature_audit:
+  path: /api/engineering/features/{id}/audit
+  controller: App\Http\Api\V1\Controller\EngineeringController::audit
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_engineering_feature_get:
   path: /api/engineering/features/{id}
   controller: App\Http\Api\V1\Controller\EngineeringController::get
