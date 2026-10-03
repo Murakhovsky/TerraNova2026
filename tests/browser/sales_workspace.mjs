@@ -54,6 +54,19 @@ const assertCount = async (locator, expected, label) => {
   const actual = await locator.count();
   if (actual !== expected) throw new Error(`${label}: expected ${expected}, got ${actual}`);
 };
+const eventually = async (check, label, timeoutMs = 20000, intervalMs = 500) => {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    try {
+      if (await check()) return;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(label + (lastError ? ': ' + lastError.message : ''));
+};
 
 const salesPerformanceBudget = {
   navigationMs: 4500,
@@ -193,8 +206,10 @@ try {
   await messageForm.locator('select[name="channel"]').selectOption('WEB');
   await messageForm.locator('textarea[name="body"]').fill(messageBody);
   await waitMutation(page, `/api/v1/sales/opportunities/${dealId}/communications`, () => messageForm.locator('button').filter({ hasText: 'Send Message' }).click(), 'Send Message');
-  assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Message postcondition');
-  await assertCount(page.locator('.cos-sales-message').filter({ hasText: messageBody }), 1, 'Sent canonical WEB message must persist after reload');
+  await eventually(async () => {
+    assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Message postcondition');
+    return await page.locator('.cos-sales-message').filter({ hasText: messageBody }).count() === 1;
+  }, 'Sent canonical WEB message must persist after async projection');
 
   await page.locator('#intelligence').waitFor({ state: 'visible' });
   const execute = page.locator('[data-sales-action] [data-decision="execute"]').first();
