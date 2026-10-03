@@ -1272,6 +1272,9 @@ services:
   App\Engineering\Application\Context\RepositoryDiscoveryInterface:
     alias: App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery
 
+  App\Engineering\Application\Context\RepositoryFileReaderInterface:
+    alias: App\Engineering\Infrastructure\Repository\LocalRepositoryFileReader
+
   App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFeatureStore
 
@@ -1307,6 +1310,13 @@ services:
       $repositoryRoot: '%kernel.project_dir%/..'
       $maxFiles: 20
       $maxFileBytes: 131072
+
+  App\Engineering\Infrastructure\Repository\LocalRepositoryFileReader:
+    arguments:
+      $repositoryRoot: '%kernel.project_dir%/..'
+      $maxFiles: 20
+      $maxFileBytes: 65536
+      $maxTotalBytes: 524288
 
   App\Engineering\Infrastructure\Repository\GitHubEngineeringRepositoryGateway:
     arguments:
