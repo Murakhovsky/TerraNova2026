@@ -109,6 +109,7 @@ jobs:
           ADMIN_E2E_EMAIL: production-cutover-web@example.test
           ADMIN_E2E_PASSWORD: Production-Cutover-Web-CI-Ab9!
         run: |
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "INSERT INTO cos_organizations (id,name,status) VALUES ('foreign-tenant','Foreign Tenant','ACTIVE') ON DUPLICATE KEY UPDATE name='Foreign Tenant',status='ACTIVE';"
           FOREIGN_HASH="$(php -r 'echo password_hash("Foreign-Tenant-Ab9!", PASSWORD_DEFAULT);')"
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
             INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
