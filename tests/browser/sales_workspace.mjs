@@ -219,11 +219,13 @@ try {
   const actionId = await actionPanel.getAttribute('data-action-id');
   if (!actionId) throw new Error('Executable COS action must expose data-action-id.');
   await waitMutation(page, `/api/v1/sales/actions/${actionId}/execute`, () => execute.click(), 'Execute COS action');
-  const intelligenceResponse = page.waitForResponse((response) => response.url().includes(`/api/v1/sales/opportunities/${dealId}/intelligence`) && response.request().method() === 'GET');
-  assertOk(await page.goto(absolute(dealHref), { waitUntil: 'domcontentloaded' }), 'COS action postcondition');
-  assertOk(await intelligenceResponse, 'Reloaded Deal intelligence');
-  await page.locator('[data-sales-intelligence]').waitFor({ state: 'visible' });
-  await assertCount(page.locator(`[data-sales-action][data-action-id="${actionId}"] [data-decision="execute"]`), 0, 'Executed COS action must not remain executable after reload');
+  await eventually(async () => {
+    const intelligenceResponse = page.waitForResponse((response) => response.url().includes(`/api/v1/sales/opportunities/${dealId}/intelligence`) && response.request().method() === 'GET');
+    assertOk(await page.goto(absolute(dealHref), { waitUntil: 'domcontentloaded' }), 'COS action postcondition');
+    assertOk(await intelligenceResponse, 'Reloaded Deal intelligence');
+    await page.locator('[data-sales-intelligence]').waitFor({ state: 'visible' });
+    return await page.locator(`[data-sales-action][data-action-id="${actionId}"] [data-decision="execute"]`).count() === 0;
+  }, 'Executed COS action must not remain executable after async execution', 30000, 750);
 
   await context.close();
   console.log(JSON.stringify({ ok: true, suite: 'Sales V0.6.8 Epic 2 Closure mutation E2E' }, null, 2));
