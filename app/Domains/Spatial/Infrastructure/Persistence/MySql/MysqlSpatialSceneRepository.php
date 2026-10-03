@@ -151,7 +151,7 @@ final class MysqlSpatialSceneRepository implements SpatialSceneRepositoryInterfa
                 $pdo->rollBack();
             }
             $this->logError('scene-save', $e);
-            return ['ok' => false, 'message' => 'Не вдалося зберегти Spatial сцену.', 'id' => $id];
+            return ['ok' => false, 'message' => 'Не вдалося зберегти Spatial сцену: ' . $e->getMessage(), 'id' => $id];
         }
     }
 
