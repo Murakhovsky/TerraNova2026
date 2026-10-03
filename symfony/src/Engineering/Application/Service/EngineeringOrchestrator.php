@@ -6,8 +6,8 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Manager\EngineeringManagerAnalysisService;
-use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
@@ -62,61 +62,60 @@ final readonly class EngineeringOrchestrator
             return $workflow;
         });
 
+        $plan = $this->manager->prepare($featureId, $this->features->request($featureId));
+        $engineeringRunId = $this->lock->synchronized(
+            $featureId,
+            fn (): string => $this->agentRuns->start($workflow->id(), $plan->task, $correlationId),
+        );
+
         // External LLM work deliberately runs outside the feature lock.
-        $analysis = $this->manager->analyze(
-            featureId: $featureId,
-            request: $this->features->request($featureId),
-            organizationId: $organizationId,
-            correlationId: $correlationId,
-        );
+        $analysis = $this->manager->execute($plan, $organizationId, $correlationId);
 
-        $next = $this->lock->synchronized($featureId, function () use ($featureId, $workflow, $analysis, $correlationId) {
-            $current = $this->workflows->get($workflow->id());
-            if ($current->currentState() !== EngineeringWorkflowState::ANALYSIS) {
-                throw new WorkflowAlreadyRunningException('Engineering workflow changed while Manager analysis was running.');
-            }
+        $next = $this->lock->synchronized(
+            $featureId,
+            function () use ($featureId, $workflow, $analysis, $engineeringRunId) {
+                $current = $this->workflows->get($workflow->id());
+                if ($current->currentState() !== EngineeringWorkflowState::ANALYSIS) {
+                    throw new WorkflowAlreadyRunningException('Engineering workflow changed while Manager analysis was running.');
+                }
 
-            $this->agentRuns->recordCompleted(
-            workflowId: $current->id(),
-            task: $analysis->task,
-            result: $analysis->run,
-            traceId: $correlationId,
-        );
+                $this->agentRuns->complete($engineeringRunId, $analysis->run);
 
-        $this->artifacts->createVersion(
-            $featureId,
-            ArtifactType::FEATURE_SPEC,
-            $analysis->featureSpecification['feature'],
-            agentRunId: $analysis->run->runId,
-            createdByAgent: AgentRole::ENGINEERING_MANAGER->value,
-        );
-        $this->artifacts->createVersion(
-            $featureId,
-            ArtifactType::CONTEXT_MAP,
-            $analysis->contextMap->toArray(),
-            agentRunId: $analysis->run->runId,
-            createdByAgent: AgentRole::ENGINEERING_MANAGER->value,
-        );
-        $this->tasks->createFromManager(
-            $featureId,
-            is_array($analysis->featureSpecification['tasks'] ?? null) ? $analysis->featureSpecification['tasks'] : [],
-        );
-        $this->features->applyManagerAnalysis(
-            $featureId,
-            $analysis->featureSpecification,
-            $analysis->contextMap->toArray(),
-            $analysis->contextMap->repositoryRevision,
-        );
+                $this->artifacts->createVersion(
+                    $featureId,
+                    ArtifactType::FEATURE_SPEC,
+                    $analysis->featureSpecification['feature'],
+                    agentRunId: $engineeringRunId,
+                    createdByAgent: AgentRole::ENGINEERING_MANAGER->value,
+                );
+                $this->artifacts->createVersion(
+                    $featureId,
+                    ArtifactType::CONTEXT_MAP,
+                    $analysis->contextMap->toArray(),
+                    agentRunId: $engineeringRunId,
+                    createdByAgent: AgentRole::ENGINEERING_MANAGER->value,
+                );
+                $this->tasks->createFromManager(
+                    $featureId,
+                    is_array($analysis->featureSpecification['tasks'] ?? null) ? $analysis->featureSpecification['tasks'] : [],
+                );
+                $this->features->applyManagerAnalysis(
+                    $featureId,
+                    $analysis->featureSpecification,
+                    $analysis->contextMap->toArray(),
+                    $analysis->contextMap->repositoryRevision,
+                );
 
-            $next = $this->coordinator->acceptAgentResult(
-                $current,
-                AgentRole::ENGINEERING_MANAGER,
-                $analysis->run->structuredOutput,
-            );
-            $this->persistTransitions($current, $next->transitions);
-            $this->features->updateStatus($featureId, $current->currentState()->value);
-            return $next;
-        });
+                $next = $this->coordinator->acceptAgentResult(
+                    $current,
+                    AgentRole::ENGINEERING_MANAGER,
+                    $analysis->run->structuredOutput,
+                );
+                $this->persistTransitions($current, $next->transitions);
+                $this->features->updateStatus($featureId, $current->currentState()->value);
+                return $next;
+            },
+        );
 
         $finalWorkflow = $this->workflows->get($workflow->id());
         return new EngineeringStartResult(
