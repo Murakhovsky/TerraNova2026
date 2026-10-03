@@ -32,10 +32,11 @@ try {
   await create.locator('input[name="email"]').fill(createdEmail);
   await create.locator('input[name="password"]').fill('Ui-Created-Ab9!');
   await create.locator('select[name="role"]').selectOption('manager');
-  await Promise.all([
-    page.waitForURL((url) => url.pathname === '/admin/users', { timeout: 25000 }),
-    create.locator('button[type="submit"]').click(),
-  ]);
+  const createResponsePromise = page.waitForResponse((response) => response.url().includes('/admin/createUser') && response.request().method() === 'POST');
+  await create.locator('button[type="submit"]').click();
+  const createResponse = await createResponsePromise;
+  if (createResponse.status() >= 400) throw new Error('Create user returned HTTP ' + createResponse.status() + ': ' + (await createResponse.text()).slice(0, 2000));
+  await page.waitForLoadState('networkidle');
   if (!await page.getByText(createdEmail, { exact: true }).count()) {
     const body = (await page.locator('body').innerText()).slice(0, 5000);
     const statusMessage = new URL(page.url()).searchParams.get('status_message') || '';
