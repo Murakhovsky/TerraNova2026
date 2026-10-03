@@ -66,7 +66,7 @@ WHERE organization_id='default' AND client_case_id=@e2e_deal_id AND title='UI Ac
 INSERT INTO tn_client_case_activities
     (organization_id,client_case_id,person_id,user_id,activity_type,title,body,due_at,completed_at)
 VALUES
-    ('default',@e2e_deal_id,@e2e_person_id,@e2e_user_id,'task','UI Acceptance Task','Complete me from Sales Today.',NOW()-INTERVAL 15 MINUTE,NULL);
+    ('default',@e2e_deal_id,@e2e_person_id,@e2e_user_id,'followup','UI Acceptance Task','Complete me from Sales Today.',NOW()-INTERVAL 15 MINUTE,NULL);
 
 DELETE FROM cos_approvals
 WHERE organization_id='default' AND id='22222222222222222222222222222222';
