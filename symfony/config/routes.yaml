@@ -2120,6 +2120,11 @@ cos_web_workspace_analytics:
   controller: App\Web\Administration\AdministrationAnalyticsController::index
   methods: [GET, HEAD]
 
+cos_web_engineering:
+  path: /admin/engineering
+  controller: App\Web\Engineering\EngineeringFeatureController::index
+  methods: [GET, HEAD]
+
 cos_web_engineering_feature:
   path: /admin/engineering/{id}
   controller: App\Web\Engineering\EngineeringFeatureController::show
