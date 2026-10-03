@@ -206,8 +206,8 @@ final readonly class SpatialPageController
         return new Response(
             $this->twig->render('experience/public/spatial_scene.html.twig', [
                 'page' => $this->pages->create(
-                    PageArchetype::MapSpatial,
-                    ['PageHeader', 'Toolbar'],
+                    PageArchetype::PublicDetailMarketing,
+                    ['PageHeader', 'ActionBar', 'StatGrid'],
                     'normal',
                 ),
                 'scene' => $scene,
