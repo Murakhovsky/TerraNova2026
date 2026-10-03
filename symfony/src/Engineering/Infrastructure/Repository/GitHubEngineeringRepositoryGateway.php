@@ -20,6 +20,15 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return trim($this->repositoryFullName) !== '' && trim($this->token) !== '';
     }
 
+    public function currentBaseRevision(): string
+    {
+        $this->assertAvailable();
+        $ref = $this->request('GET', '/git/ref/heads/'.rawurlencode($this->baseBranch), null, [200]);
+        $sha = (string) ($ref['object']['sha'] ?? '');
+        if ($sha === '') throw new RuntimeException('GitHub base branch does not expose a revision.');
+        return $sha;
+    }
+
     public function commitChanges(string $baseRevision, string $branch, array $changes, string $message): array
     {
         $this->assertAvailable();
@@ -58,6 +67,13 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         ], [201]);
         $treeSha = (string) ($tree['sha'] ?? '');
         if ($treeSha === '') throw new RuntimeException('GitHub tree creation did not return sha.');
+        if ($treeSha === $baseTree) {
+            return [
+                'branch' => $branch,
+                'revision' => $head,
+                'changed_files' => array_values(array_unique($changedFiles)),
+            ];
+        }
 
         $newCommit = $this->request('POST', '/git/commits', [
             'message' => trim($message) !== '' ? $message : 'feat(engineering): autonomous implementation',

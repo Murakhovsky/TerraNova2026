@@ -6,6 +6,7 @@ namespace App\Engineering\Application\Repository;
 interface EngineeringRepositoryGatewayInterface
 {
     public function available(): bool;
+    public function currentBaseRevision(): string;
 
     /** @param list<array{path:string,operation:string,content?:string|null}> $changes
      *  @return array{branch:string,revision:string,changed_files:list<string>}
