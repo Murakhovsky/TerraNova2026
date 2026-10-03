@@ -9,7 +9,8 @@ $routes = (string) file_get_contents($root.'/symfony/config/routes.yaml');
 foreach ([
     'features_started','features_completed','features_escalated','manager_analysis_success_rate',
     'average_agent_runs_per_feature','average_review_cycles','average_qa_cycles',
-    'human_interventions','cost_per_feature','time_to_ready_seconds','failed_workflows',
+    'human_interventions','architect_runs','architecture_revalidations','architecture_human_decisions',
+    'cost_per_feature','time_to_ready_seconds','failed_workflows',
 ] as $needle) {
     if (!str_contains($metrics, $needle)) throw new RuntimeException('Engineering metrics missing '.$needle);
 }

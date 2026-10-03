@@ -27,8 +27,25 @@ if ($d->agent !== AgentRole::ENGINEERING_MANAGER) throw new RuntimeException('Ma
 $d = $coordinator->acceptAgentResult($workflow, AgentRole::ENGINEERING_MANAGER, ['status' => 'SPECIFICATION_READY']);
 if ($d->agent !== AgentRole::PRINCIPAL_ARCHITECT || $workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) throw new RuntimeException('Architect routing failed.');
 
+$humanWorkflow = new WorkflowExecution(EngineeringId::generate(), EngineeringId::generate(), EngineeringWorkflowState::NEW, 'architect-human-trace');
+$coordinator->startAnalysis($humanWorkflow);
+$coordinator->acceptAgentResult($humanWorkflow, AgentRole::ENGINEERING_MANAGER, ['status' => 'SPECIFICATION_READY']);
+$humanDirective = $coordinator->acceptAgentResult($humanWorkflow, AgentRole::PRINCIPAL_ARCHITECT, ['status' => 'NEEDS_HUMAN_DECISION']);
+if ($humanDirective->type !== WorkflowDirectiveType::REQUEST_HUMAN_DECISION || $humanWorkflow->currentState() !== EngineeringWorkflowState::HUMAN_DECISION_REQUIRED) {
+    throw new RuntimeException('Architect human decision gate failed.');
+}
+
 $d = $coordinator->acceptAgentResult($workflow, AgentRole::PRINCIPAL_ARCHITECT, ['status' => 'APPROVED']);
 if ($d->agent !== AgentRole::DEVELOPER || $workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) throw new RuntimeException('Developer routing failed.');
+
+$revalidation = $coordinator->revalidateArchitecture($workflow, 'main advanced');
+if ($revalidation->agent !== AgentRole::PRINCIPAL_ARCHITECT || $workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
+    throw new RuntimeException('Architecture revalidation routing failed.');
+}
+$d = $coordinator->acceptAgentResult($workflow, AgentRole::PRINCIPAL_ARCHITECT, ['status' => 'APPROVED']);
+if ($d->agent !== AgentRole::DEVELOPER || $workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) {
+    throw new RuntimeException('Developer routing after architecture revalidation failed.');
+}
 
 $coordinator->acceptAgentResult($workflow, AgentRole::DEVELOPER, ['status' => 'COMPLETED']);
 $d = $coordinator->acceptAgentResult($workflow, AgentRole::REVIEWER, ['status' => 'CHANGES_REQUESTED'], new WorkflowCounters(0, 1, 0));

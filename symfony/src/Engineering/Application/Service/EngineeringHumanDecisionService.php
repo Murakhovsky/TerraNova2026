@@ -44,9 +44,11 @@ final readonly class EngineeringHumanDecisionService
             throw new \LogicException('Engineering human decision request is not open.');
         }
 
-        $isCancel = strtoupper(trim($selectedOption)) === 'CANCEL';
-        if ($isCancel && !$this->offersOption(is_array($request['options'] ?? null) ? $request['options'] : [], 'CANCEL')) {
-            throw new \LogicException('CANCEL is not an offered option for this human decision.');
+        $normalizedOption = strtoupper(trim($selectedOption));
+        $options = is_array($request['options'] ?? null) ? $request['options'] : [];
+        $isCancel = $normalizedOption === 'CANCEL';
+        if (!$this->offersOption($options, $normalizedOption)) {
+            throw new \LogicException('Selected option is not offered for this human decision.');
         }
 
         $answer = $this->humanDecisions->answer($requestId, $selectedOption, $comment, $decidedBy);

@@ -29,6 +29,96 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return $sha;
     }
 
+    public function filesAtRevision(array $paths, string $revision): array
+    {
+        $this->assertAvailable();
+        $revision = trim($revision);
+        if ($revision === '') throw new RuntimeException('Repository revision is required.');
+
+        $result = [];
+        $totalBytes = 0;
+        foreach (array_slice(array_values(array_unique($paths)), 0, 20) as $rawPath) {
+            if (!is_string($rawPath)) continue;
+            $path = $this->assertPath($rawPath);
+            $encodedPath = implode('/', array_map('rawurlencode', explode('/', $path)));
+            $response = $this->requestNullable(
+                'GET',
+                '/contents/'.$encodedPath.'?ref='.rawurlencode($revision),
+                [200, 404],
+            );
+            if ($response === null || ($response['type'] ?? null) !== 'file') continue;
+            if (($response['encoding'] ?? null) !== 'base64' || !is_string($response['content'] ?? null)) continue;
+
+            $decoded = base64_decode(str_replace(["\r","\n"], '', $response['content']), true);
+            if (!is_string($decoded)) continue;
+
+            $size = strlen($decoded);
+            $remaining = min(65536, 524288 - $totalBytes);
+            if ($remaining <= 0) break;
+            $content = substr($decoded, 0, $remaining);
+            $totalBytes += strlen($content);
+
+            $result[] = [
+                'path' => $path,
+                'content' => $content,
+                'complete' => strlen($content) >= $size,
+                'size' => $size,
+                'sha256' => hash('sha256', $content),
+            ];
+        }
+
+        return $result;
+    }
+
+    public function compareRevisions(string $baseRevision, string $headRevision): array
+    {
+        $this->assertAvailable();
+        $baseRevision = trim($baseRevision);
+        $headRevision = trim($headRevision);
+        if ($baseRevision === '' || $headRevision === '') {
+            throw new RuntimeException('Both repository revisions are required for comparison.');
+        }
+
+        if ($baseRevision === $headRevision) {
+            return [
+                'base_revision' => $baseRevision,
+                'head_revision' => $headRevision,
+                'status' => 'identical',
+                'ahead_by' => 0,
+                'behind_by' => 0,
+                'files' => [],
+            ];
+        }
+
+        $comparison = $this->request(
+            'GET',
+            '/compare/'.rawurlencode($baseRevision).'...'.rawurlencode($headRevision),
+            null,
+            [200],
+        );
+
+        $files = [];
+        foreach (array_slice(is_array($comparison['files'] ?? null) ? $comparison['files'] : [], 0, 100) as $file) {
+            if (!is_array($file)) continue;
+            $files[] = [
+                'path' => (string) ($file['filename'] ?? ''),
+                'status' => (string) ($file['status'] ?? ''),
+                'additions' => (int) ($file['additions'] ?? 0),
+                'deletions' => (int) ($file['deletions'] ?? 0),
+                'patch' => isset($file['patch']) ? mb_substr((string) $file['patch'], 0, 20000) : null,
+            ];
+        }
+
+        return [
+            'base_revision' => $baseRevision,
+            'head_revision' => $headRevision,
+            'status' => (string) ($comparison['status'] ?? 'unknown'),
+            'ahead_by' => (int) ($comparison['ahead_by'] ?? 0),
+            'behind_by' => (int) ($comparison['behind_by'] ?? 0),
+            'files' => $files,
+        ];
+    }
+
     public function commitChanges(string $baseRevision, string $branch, array $changes, string $message): array
     {
         $this->assertAvailable();
@@ -277,7 +367,16 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
     {
         $existing = $this->requestNullable('GET', '/git/ref/heads/'.rawurlencode($branch), [200, 404]);
         if (is_array($existing) && isset($existing['object']['sha'])) {
-            return (string) $existing['object']['sha'];
+            $head = (string) $existing['object']['sha'];
+            if ($head !== $baseRevision) {
+                throw new RuntimeException(sprintf(
+                    'Engineering branch %s advanced from expected revision %s to %s; rerun Developer with fresh repository context.',
+                    $branch,
+                    $baseRevision,
+                    $head,
+                ));
+            }
+            return $head;
         }
 
         $created = $this->request('POST', '/git/refs', [

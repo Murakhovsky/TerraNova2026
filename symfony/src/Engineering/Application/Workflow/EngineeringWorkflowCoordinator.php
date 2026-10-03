@@ -196,8 +196,8 @@ final readonly class EngineeringWorkflowCoordinator
     private function afterArchitect(WorkflowExecution $workflow, array $output): WorkflowDirective
     {
         $status = (string) ($output['status'] ?? '');
-        if ($status === 'NEEDS_PRODUCT_DECISION') return $this->human($workflow, 'Architect requires a product decision.');
-        if (in_array($status, ['BLOCKED','REJECTED'], true)) return $this->block($workflow, 'Architecture stage blocked the feature.');
+        if ($status === 'NEEDS_HUMAN_DECISION') return $this->human($workflow, 'Architect requires a human architecture/product decision.');
+        if ($status === 'REJECTED') return $this->block($workflow, 'Architecture gate rejected the feature for development.');
         if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS'], true)) throw new LogicException('Unexpected Architect status: '.$status);
 
         $transitions = [
@@ -206,6 +206,26 @@ final readonly class EngineeringWorkflowCoordinator
             $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, 'DEVELOPER_STARTED'),
         ];
         return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Approved architecture is ready for implementation.', $transitions);
+    }
+
+    public function revalidateArchitecture(WorkflowExecution $workflow, string $reason): WorkflowDirective
+    {
+        if ($workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) {
+            throw new LogicException('Architecture revalidation can be requested only before Developer execution.');
+        }
+
+        $transition = $this->transition(
+            $workflow,
+            EngineeringWorkflowState::ARCHITECTURE_PENDING,
+            'ARCHITECTURE_REVALIDATION_REQUIRED',
+        );
+
+        return new WorkflowDirective(
+            WorkflowDirectiveType::RUN_AGENT,
+            AgentRole::PRINCIPAL_ARCHITECT,
+            $reason,
+            [$transition],
+        );
     }
 
     private function afterDeveloper(WorkflowExecution $workflow, array $output): WorkflowDirective

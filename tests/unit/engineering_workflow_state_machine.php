@@ -31,6 +31,11 @@ if ($workflow->resumeState() !== EngineeringWorkflowState::SPECIFICATION_READY) 
 $engine->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, $context);
 $engine->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, $context);
 
+$engine->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_APPROVED, $context);
+$engine->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_PENDING, $context);
+$engine->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, $context);
+$engine->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, $context);
+
 try {
     $engine->transition($workflow, EngineeringWorkflowState::QA_PENDING, $context);
     throw new RuntimeException('Invalid workflow transition was accepted.');

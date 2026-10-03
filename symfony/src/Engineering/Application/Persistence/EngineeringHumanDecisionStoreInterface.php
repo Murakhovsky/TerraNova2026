@@ -25,4 +25,7 @@ interface EngineeringHumanDecisionStoreInterface
 
     /** @return list<array<string,mixed>> */
     public function openForFeature(string $featureId): array;
+
+    /** @return list<array<string,mixed>> */
+    public function historyForFeature(string $featureId): array;
 }

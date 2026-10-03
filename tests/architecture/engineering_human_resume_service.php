@@ -11,6 +11,8 @@ foreach ([
     'previousContext',
     'managerStage->execute',
     'logicalAttempt',
+    'Selected option is not offered for this human decision.',
+    'offersOption',
 ] as $needle) {
     if (!str_contains($service, $needle)) throw new RuntimeException('Human resume service missing '.$needle);
 }

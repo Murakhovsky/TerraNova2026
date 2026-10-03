@@ -28,6 +28,10 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
         $managerTotal = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status <> 'RUNNING'", $params);
         $managerCompleted = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status='COMPLETED'", $params);
 
+        $architectRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='PRINCIPAL_ARCHITECT'", $params);
+        $architectureRevalidations = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_transitions t JOIN cos_engineering_features f ON f.id=t.feature_id WHERE f.organization_id=:organization_id AND t.transition_trigger='ARCHITECTURE_REVALIDATION_REQUIRED'", $params);
+        $architectureHumanDecisions = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_human_decision_requests r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND JSON_UNQUOTE(JSON_EXTRACT(r.evidence, '$.requested_by_agent'))='PRINCIPAL_ARCHITECT'", $params);
+
         $totalCost = (float) ($db->fetchOne('SELECT COALESCE(SUM(r.estimated_cost),0) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params) ?: 0);
         $avgTimeToReady = $db->fetchOne("
             SELECT AVG(TIMESTAMPDIFF(SECOND, w.started_at, t.created_at))
@@ -42,6 +46,9 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
             'features_completed' => $featuresCompleted,
             'features_escalated' => $featuresEscalated,
             'manager_analysis_success_rate' => $managerTotal > 0 ? round($managerCompleted / $managerTotal, 4) : null,
+            'architect_runs' => $architectRuns,
+            'architecture_revalidations' => $architectureRevalidations,
+            'architecture_human_decisions' => $architectureHumanDecisions,
             'average_agent_runs_per_feature' => $featuresStarted > 0 ? round($agentRuns / $featuresStarted, 2) : 0.0,
             'average_review_cycles' => $featuresStarted > 0 ? round($reviewRuns / $featuresStarted, 2) : 0.0,
             'average_qa_cycles' => $featuresStarted > 0 ? round($qaRuns / $featuresStarted, 2) : 0.0,
