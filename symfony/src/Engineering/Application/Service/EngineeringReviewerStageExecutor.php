@@ -126,7 +126,7 @@ final readonly class EngineeringReviewerStageExecutor
             $this->lock->synchronized(
                 $featureId,
                 function () use ($featureId, $engineeringRunId, $error): void {
-                    $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage());
+                    $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage(), $error instanceof \App\Engineering\Application\Agent\EngineeringAgentTechnicalFailureException ? $error->technicalRetries : 0);
                     $this->tasks->markRole($featureId, AgentRole::REVIEWER, 'FAILED', ['error' => $error->getMessage()]);
                 },
             );

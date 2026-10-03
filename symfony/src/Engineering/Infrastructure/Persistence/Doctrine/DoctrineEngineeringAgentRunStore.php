@@ -34,7 +34,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             inputSnapshot: $task->inputSnapshot,
             status: 'RUNNING',
             technicalRetry: 0,
-            logicalAttempt: 1,
+            logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
             traceId: $traceId,
             startedAt: new DateTimeImmutable(),
         ));
@@ -58,15 +58,16 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             estimatedCost: isset($usage['cost_amount']) ? (string) $usage['cost_amount'] : null,
             errorType: $result->error !== null ? 'TASK_ERROR' : null,
             errorMessage: $result->error,
+            technicalRetry: $result->technicalRetries,
         );
         $this->entityManager->flush();
     }
 
-    public function fail(string $engineeringRunId, string $errorType, string $errorMessage): void
+    public function fail(string $engineeringRunId, string $errorType, string $errorMessage, int $technicalRetry = 0): void
     {
         $record = $this->entityManager->find(AgentRunRecord::class, $engineeringRunId);
         if (!$record instanceof AgentRunRecord) throw new RuntimeException('Engineering AgentRun not found: '.$engineeringRunId);
-        $record->fail($errorType, $errorMessage);
+        $record->fail($errorType, $errorMessage, $technicalRetry);
         $this->entityManager->flush();
     }
 
@@ -115,6 +116,8 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             'finished_at' => $record->finishedAt()?->format(DATE_ATOM),
             'error_type' => $record->errorType(),
             'error_message' => $record->errorMessage(),
+            'technical_retry' => $record->technicalRetry(),
+            'logical_attempt' => $record->logicalAttempt(),
         ];
     }
 }

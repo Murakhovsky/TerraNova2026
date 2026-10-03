@@ -58,7 +58,7 @@ final readonly class EngineeringManagerStageExecutor
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
-                fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage()),
+                fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage(), $error instanceof \App\Engineering\Application\Agent\EngineeringAgentTechnicalFailureException ? $error->technicalRetries : 0),
             );
             throw $error;
         }

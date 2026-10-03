@@ -76,6 +76,8 @@ class AgentRunRecord
     public function finishedAt(): ?DateTimeImmutable { return $this->finishedAt; }
     public function errorType(): ?string { return $this->errorType; }
     public function errorMessage(): ?string { return $this->errorMessage; }
+    public function technicalRetry(): int { return $this->technicalRetry; }
+    public function logicalAttempt(): int { return $this->logicalAttempt; }
 
     public function complete(
         string $status,
@@ -87,6 +89,7 @@ class AgentRunRecord
         ?string $estimatedCost,
         ?string $errorType,
         ?string $errorMessage,
+        int $technicalRetry = 0,
     ): void {
         $this->status = $status;
         $this->output = $output;
@@ -97,12 +100,14 @@ class AgentRunRecord
         $this->estimatedCost = $estimatedCost;
         $this->errorType = $errorType;
         $this->errorMessage = $errorMessage;
+        $this->technicalRetry = $technicalRetry;
         $this->finishedAt = new DateTimeImmutable();
     }
 
-    public function fail(string $errorType, string $errorMessage): void
+    public function fail(string $errorType, string $errorMessage, int $technicalRetry = 0): void
     {
         $this->status = 'FAILED';
+        $this->technicalRetry = $technicalRetry;
         $this->errorType = $errorType;
         $this->errorMessage = $errorMessage;
         $this->finishedAt = new DateTimeImmutable();

@@ -16,6 +16,7 @@ final readonly class EngineeringAgentRunResult
         public ?string $model,
         public array $usage,
         public ?string $error = null,
+        public int $technicalRetries = 0,
     ) {
     }
 }
