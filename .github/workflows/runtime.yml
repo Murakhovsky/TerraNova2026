@@ -119,10 +119,15 @@ jobs:
             --actor="$WEB_USER_ID" \
             --confirm=ENABLE_GROWTH \
             --reason="UI cutover browser acceptance"
+          {
+            printf "SET @web_user_id=%s;\n" "$WEB_USER_ID"
+            cat tests/fixtures/ui/dynamic_detail_acceptance.sql
+          } | docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_routes.mjs
           CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_functional.mjs
+          CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_dynamic_details.mjs
       - name: Seed Sales functional acceptance
         env:
           SALES_E2E_EMAIL: sales-functional-acceptance@example.test
