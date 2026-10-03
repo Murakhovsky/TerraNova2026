@@ -149,6 +149,46 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return $result;
     }
 
+    public function issue(int $issueNumber): array
+    {
+        $this->assertAvailable();
+        if ($issueNumber <= 0) throw new RuntimeException('Issue number must be positive.');
+        $issue = $this->request('GET', '/issues/'.$issueNumber, null, [200]);
+
+        $labels = [];
+        foreach (is_array($issue['labels'] ?? null) ? $issue['labels'] : [] as $label) {
+            if (is_array($label) && isset($label['name'])) $labels[] = (string) $label['name'];
+        }
+
+        return [
+            'number' => (int) ($issue['number'] ?? $issueNumber),
+            'title' => (string) ($issue['title'] ?? ''),
+            'body' => (string) ($issue['body'] ?? ''),
+            'state' => (string) ($issue['state'] ?? ''),
+            'url' => (string) ($issue['html_url'] ?? ''),
+            'labels' => $labels,
+            'is_pull_request' => isset($issue['pull_request']),
+        ];
+    }
+
+    public function commentIssue(int $issueNumber, string $body): void
+    {
+        $this->assertAvailable();
+        if ($issueNumber <= 0 || trim($body) === '') throw new RuntimeException('Issue comment requires issue number and body.');
+        $this->request('POST', '/issues/'.$issueNumber.'/comments', ['body' => $body], [201]);
+    }
+
+    public function addIssueLabels(int $issueNumber, array $labels): void
+    {
+        $this->assertAvailable();
+        $labels = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $label): string => trim((string) $label),
+            $labels,
+        ), static fn (string $label): bool => $label !== '')));
+        if ($issueNumber <= 0 || $labels === []) return;
+        $this->request('POST', '/issues/'.$issueNumber.'/labels', ['labels' => $labels], [200]);
+    }
+
     public function pullRequest(int $pullRequestNumber): array
     {
         $this->assertAvailable();

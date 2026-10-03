@@ -29,4 +29,10 @@ interface EngineeringRepositoryGatewayInterface
 
     /** @return array{number:int,url:string,state:string,merged:bool,merge_revision:?string} */
     public function pullRequest(int $pullRequestNumber): array;
+
+    /** @return array{number:int,title:string,body:string,state:string,url:string,labels:list<string>,is_pull_request:bool} */
+    public function issue(int $issueNumber): array;
+    public function commentIssue(int $issueNumber, string $body): void;
+    /** @param list<string> $labels */
+    public function addIssueLabels(int $issueNumber, array $labels): void;
 }
