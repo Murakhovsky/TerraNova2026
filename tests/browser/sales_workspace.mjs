@@ -183,7 +183,7 @@ try {
     throw new Error(`Deal ${dealId} did not persist target stage ${targetStage}.`);
   }
 
-  const dealHref = await movedCard.getAttribute('href');
+  const dealHref = await movedCard.locator('a[href^="/sales/deals/"]').first().getAttribute('href');
   if (!dealHref) throw new Error('Mutation fixture requires a Deal workspace link.');
   assertOk(await page.goto(absolute(dealHref), { waitUntil: 'networkidle' }), 'Deal workspace');
   await page.locator('[data-sales-deal-workspace]').waitFor({ state: 'visible' });
