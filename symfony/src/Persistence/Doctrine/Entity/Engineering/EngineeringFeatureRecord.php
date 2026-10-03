@@ -68,6 +68,8 @@ class EngineeringFeatureRecord
     public function businessGoal(): ?string { return $this->businessGoal; }
     public function risks(): array { return $this->risks ?? []; }
     public function assumptions(): array { return $this->assumptions ?? []; }
+    public function createdAt(): DateTimeImmutable { return $this->createdAt; }
+    public function updatedAt(): DateTimeImmutable { return $this->updatedAt; }
     public function setStatus(string $status): void { $this->status = $status; $this->updatedAt = new DateTimeImmutable(); }
 
     public function applyAnalysis(array $specification, array $contextMap, ?string $repositoryRevision): void
