@@ -46,7 +46,7 @@ final readonly class DoctrineEngineeringTaskStore implements EngineeringTaskStor
                 type: $type,
                 title: $title,
                 description: $description,
-                status: strtoupper((string) ($task['status'] ?? 'PENDING')),
+                status: 'PENDING',
                 assignedRole: $assignedRole,
                 dependencies: $dependencies,
                 acceptanceCriteria: $acceptanceCriteria,
