@@ -63,6 +63,8 @@ jobs:
           docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Sales governance remediation integration
+        run: docker compose exec -T php php tests/integration/sales_qualification_governance_repair.php
       - name: Container and routes
         run: |
           docker compose exec -T php php bin/console lint:container
