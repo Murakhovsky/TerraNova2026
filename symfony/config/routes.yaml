@@ -2125,6 +2125,21 @@ cos_web_workspace_analytics:
   controller: App\Web\Administration\AdministrationAnalyticsController::index
   methods: [GET, HEAD]
 
+cos_web_platform_settings:
+  path: /admin/settings
+  controller: App\Web\Administration\PlatformSettingsController::index
+  methods: [GET, HEAD]
+
+cos_web_platform_settings_llm:
+  path: /admin/settings/llm
+  controller: App\Web\Administration\PlatformSettingsController::llm
+  methods: [GET, HEAD]
+
+cos_web_platform_settings_llm_save:
+  path: /admin/settings/llm
+  controller: App\Web\Administration\PlatformSettingsController::saveLlm
+  methods: [POST]
+
 cos_web_engineering:
   path: /admin/engineering
   controller: App\Web\Engineering\EngineeringFeatureController::index

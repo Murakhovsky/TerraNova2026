@@ -2,7 +2,7 @@
 title: AI, кеш, пошук і файлове сховище
 description: Канонічні межі provider-neutral AI, конфігурації, кешу, пошуку та файлового сховища COS.
 status: active
-updated: 2026-09-18
+updated: 2026-10-04
 kind: architecture
 contract: architecture-v1
 ---
@@ -55,6 +55,43 @@ rules / policies / agent tenant configuration
 ```
 
 Feature flags не створюються як env-перемикачі бізнес-логіки лише заради зручності deployment.
+
+### Налаштування платформи
+
+Канонічна tenant-scoped runtime конфігурація зберігається через `Platform\Settings`:
+
+```text
+Admin UI / Application
+        ↓
+PlatformSettingsReaderInterface / PlatformSettingsWriterInterface
+        ↓
+PlatformSettingsService
+        ↓
+cos_platform_settings        cos_platform_secrets
+                                  ↓
+                     authenticated encryption
+                                  ↓
+                    COS_SECRET_MASTER_KEY (ENV)
+```
+
+Пріоритет ефективного значення:
+
+```text
+DB tenant override
+→ ENV bootstrap/fallback
+→ application default
+```
+
+Секрети не зберігаються у `cos_platform_settings`. Для них існує окремий `cos_platform_secrets` із XChaCha20-Poly1305 authenticated encryption, `encryption_version` та `key_id`. Master key ніколи не зберігається в БД.
+
+Усі mutation операції Platform Settings:
+- tenant-scoped;
+- admin-only на Web surface;
+- CSRF-protected;
+- audit logged;
+- не повертають secret plaintext через UI/API.
+
+Першою дочірньою реалізацією є `/admin/settings/llm`.
 
 ## 29. Кеш
 

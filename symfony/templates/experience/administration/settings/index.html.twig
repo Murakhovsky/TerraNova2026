@@ -1,0 +1,48 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Platform Settings | COS{% endblock %}
+
+{% block workspace_content %}
+<section class="cos-page__stack" data-cos-archetype="{{ page.archetypeId() }}" data-cos-page-state="{{ page.state }}">
+    <twig:CosPageHeader
+        eyebrow="Administration · Platform"
+        title="Platform Settings"
+        subtitle="Централізовані runtime-налаштування COS з tenant scope, audit і окремим encrypted secrets storage."
+    >
+        <twig:CosButton label="Dashboard" href="/admin" variant="ghost" />
+    </twig:CosPageHeader>
+
+    <section class="cos-page__section cos-section-grid" aria-label="Platform settings sections">
+        <article class="cos-card cos-pattern-stack">
+            <div>
+                <p class="cos-card__eyebrow">AI runtime</p>
+                <h2 class="cos-card__title">AI & LLM</h2>
+                <p class="cos-card__copy">Provider, default model, Engineering Agent models, retries, timeout і API credentials.</p>
+            </div>
+            <div class="cos-meta-row">
+                <span>Provider: <strong>{{ summary.llm_provider }}</strong></span>
+                <span>Model: <strong>{{ summary.llm_model }}</strong></span>
+            </div>
+            <a class="cos-button cos-button--primary" href="/admin/settings/llm">Налаштувати LLM</a>
+        </article>
+
+        <article class="cos-card cos-pattern-stack">
+            <div>
+                <p class="cos-card__eyebrow">Platform</p>
+                <h2 class="cos-card__title">Integrations</h2>
+                <p class="cos-card__copy">Наступна дочірня реалізація Platform Settings: зовнішні інтеграції та їх credentials.</p>
+            </div>
+            <span class="cos-badge">planned</span>
+        </article>
+
+        <article class="cos-card cos-pattern-stack">
+            <div>
+                <p class="cos-card__eyebrow">Platform</p>
+                <h2 class="cos-card__title">Security</h2>
+                <p class="cos-card__copy">Політики безпеки, tenant-level runtime constraints і rotation metadata.</p>
+            </div>
+            <span class="cos-badge">planned</span>
+        </article>
+    </section>
+</section>
+{% endblock %}

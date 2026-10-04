@@ -19,6 +19,9 @@
         {% if page.state != 'permission_denied' %}
             <twig:CosButton label="Sales Today" href="/sales/today" variant="primary" />
             <twig:CosButton label="COS" href="/cos/control-center" variant="ghost" />
+            {% if canAdminSettings|default(false) %}
+                <twig:CosButton label="Settings" href="/admin/settings" variant="ghost" />
+            {% endif %}
         {% endif %}
     </twig:CosPageHeader>
 

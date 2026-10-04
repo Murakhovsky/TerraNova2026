@@ -65,7 +65,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         string $correlationId,
         int $technicalRetry,
     ): EngineeringAgentRunResult {
-        $definition = $this->definitions->create($task->role);
+        $definition = $this->definitions->create($task->role, $organizationId);
         $agent = new Agent(strtolower($task->role->value), $definition, tags: ['engineering']);
         $organization = OrganizationId::fromString($organizationId);
         $instance = new AgentInstance($task->id, $organization, $agent, [

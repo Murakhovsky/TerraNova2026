@@ -17,7 +17,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
 
     public function __construct(
         private LlmProviderRegistry $providers,
-        private LlmRoutingPolicy $routing,
+        private LlmRouteResolverInterface $routing,
         private LlmGovernanceRepositoryInterface $governance,
         private MetricsRecorderInterface $metrics,
         private string $budgetCurrency = 'USD',

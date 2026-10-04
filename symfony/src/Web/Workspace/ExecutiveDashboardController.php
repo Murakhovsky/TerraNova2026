@@ -52,6 +52,7 @@ final readonly class ExecutiveDashboardController
                     'permission_denied',
                 ),
                 'dashboard' => $this->presenter->present([]),
+                'canAdminSettings' => false,
             ], Response::HTTP_FORBIDDEN);
         }
 
@@ -67,6 +68,7 @@ final readonly class ExecutiveDashboardController
                     $dashboard->state(),
                 ),
                 'dashboard' => $dashboard,
+                'canAdminSettings' => $tenant->isAdmin(),
             ]);
         } catch (Throwable $error) {
             error_log('workspace.executive_dashboard.read_failed ' . $error->getMessage());
@@ -80,6 +82,7 @@ final readonly class ExecutiveDashboardController
                     'error',
                 ),
                 'dashboard' => $dashboard,
+                'canAdminSettings' => $tenant->isAdmin(),
             ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
     }

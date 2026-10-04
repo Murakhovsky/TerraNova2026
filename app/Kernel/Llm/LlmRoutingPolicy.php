@@ -5,7 +5,7 @@ namespace Kernel\Llm;
 
 use InvalidArgumentException;
 
-final class LlmRoutingPolicy
+final class LlmRoutingPolicy implements LlmRouteResolverInterface
 {
     /** @var list<LlmRoute> */
     private array $defaultRoutes;
