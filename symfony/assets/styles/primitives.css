@@ -156,11 +156,13 @@ body {
 }
 
 .cos-card__title {
+  min-width: 0;
   margin: 0;
   color: var(--cos-color-text);
   font-size: var(--cos-font-lg);
   font-weight: 760;
   letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
 }
 
 .cos-card__copy {
@@ -181,11 +183,13 @@ body {
 }
 
 .cos-metric__value {
+  min-width: 0;
   color: var(--cos-color-text);
   font-size: var(--cos-font-2xl);
   font-weight: 780;
   letter-spacing: -0.03em;
   line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
 .cos-metric__hint {

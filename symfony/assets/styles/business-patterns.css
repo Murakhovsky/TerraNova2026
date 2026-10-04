@@ -589,6 +589,12 @@ a.cos-next-action:focus-visible {
 .cos-timeline__content {
   display: grid;
   gap: var(--cos-space-1);
+  min-width: 0;
+}
+
+.cos-timeline__content :is(strong, p, small, code) {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cos-timeline__content p {
