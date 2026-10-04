@@ -1,5 +1,5 @@
 {% set tag = href ? 'a' : 'div' %}
-<{{ tag }} class="cos-entity-list-item" {% if href %}href="{{ href }}"{% endif %}>
+<{{ tag }} class="cos-entity-list-item" role="listitem" {% if href %}href="{{ href }}"{% endif %}>
     <div class="cos-entity-list-item__body">
         <strong>{{ title }}</strong>
         {% if subtitle %}<span>{{ subtitle }}</span>{% endif %}

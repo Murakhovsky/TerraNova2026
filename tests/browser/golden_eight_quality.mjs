@@ -168,7 +168,29 @@ try {
         - document.documentElement.clientWidth
       ));
       if (overflow > 3) {
-        failures.push(`${profile.name}/${target.name}: horizontal overflow ${overflow}px`);
+        const offenders = await page.evaluate(() => {
+          const viewportWidth = document.documentElement.clientWidth;
+          return Array.from(document.querySelectorAll('body *'))
+            .map((element) => {
+              const rect = element.getBoundingClientRect();
+              const excess = Math.max(0, rect.right - viewportWidth, -rect.left);
+              return {
+                tag: element.tagName.toLowerCase(),
+                id: element.id || '',
+                className: typeof element.className === 'string' ? element.className : '',
+                width: Math.round(rect.width),
+                left: Math.round(rect.left),
+                right: Math.round(rect.right),
+                excess: Math.round(excess),
+              };
+            })
+            .filter((item) => item.excess > 3)
+            .sort((a, b) => b.excess - a.excess)
+            .slice(0, 8);
+        });
+        failures.push(
+          `${profile.name}/${target.name}: horizontal overflow ${overflow}px; offenders=${JSON.stringify(offenders)}`,
+        );
       }
 
       await page.keyboard.press('Tab');
