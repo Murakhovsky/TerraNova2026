@@ -13,6 +13,7 @@ use App\Web\Experience\Golden\GoldenStructureAuditService;
 use App\Web\Experience\Golden\GoldenHumanReviewPacketBuilder;
 use App\Web\Experience\Migration\WorkspaceMigrationPlanner;
 use App\Web\Experience\External\ExternalExperiencePlanner;
+use App\Web\Experience\External\ExternalReferenceAuditService;
 use App\Web\Experience\Registry\CompiledPageContractRegistry;
 use App\Web\Experience\Registry\ExperienceRouteInventory;
 use App\Web\Experience\Registry\PageExperienceStatus;
@@ -39,6 +40,7 @@ final readonly class ExperienceDashboardController
         private GoldenHumanReviewPacketBuilder $goldenReview,
         private WorkspaceMigrationPlanner $workspaceMigration,
         private ExternalExperiencePlanner $externalExperience,
+        private ExternalReferenceAuditService $externalReferences,
         private TenantContextProviderInterface $tenants,
         private WorkspaceShellFactory $shells,
     ) {
@@ -154,6 +156,7 @@ final readonly class ExperienceDashboardController
                     'goldenReview' => $this->goldenReview->build(),
                     'workspaceMigration' => $this->workspaceMigration->plan()->toArray(),
                     'externalExperience' => $this->externalExperience->report()->toArray(),
+                    'externalReferences' => $this->externalReferences->audit()->toArray(),
                     'pages' => array_values(array_map(
                         static fn ($contract): array => [
                             'id' => $contract->id->value,

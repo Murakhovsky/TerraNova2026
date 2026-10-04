@@ -112,6 +112,7 @@ jobs:
           grep -q '"pages"' /tmp/experience-external.json
           grep -q '"public"' /tmp/experience-external.json
           grep -q '"portal"' /tmp/experience-external.json
+          docker compose exec -T php php bin/console cos:experience:external:reference --strict --no-interaction
       - name: Smoke vertical slices
         run: bash bin/verify smoke
       - name: Production cutover Web routes
