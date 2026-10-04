@@ -36,6 +36,11 @@ final class ExperienceCoverageCommand extends Command
         $exemptions = $this->exemptions->all();
 
         $implemented = 0;
+        $visualQa = 0;
+        $functionalQa = 0;
+        $responsiveQa = 0;
+        $accessibilityQa = 0;
+        $humanAccepted = 0;
         $v1Ready = 0;
         $byDomain = [];
 
@@ -48,6 +53,12 @@ final class ExperienceCoverageCommand extends Command
             ], true)) {
                 ++$implemented;
             }
+
+            $visualQa += ($contract->qa['visual'] ?? false) === true ? 1 : 0;
+            $functionalQa += ($contract->qa['functional'] ?? false) === true ? 1 : 0;
+            $responsiveQa += ($contract->qa['responsive'] ?? false) === true ? 1 : 0;
+            $accessibilityQa += ($contract->qa['accessibility'] ?? false) === true ? 1 : 0;
+            $humanAccepted += ($contract->qa['human_acceptance'] ?? false) === true ? 1 : 0;
 
             if ($contract->status === PageExperienceStatus::V1Ready && $contract->quality->isV1Ready()) {
                 ++$v1Ready;
@@ -69,6 +80,11 @@ final class ExperienceCoverageCommand extends Command
             ['Explicit exemptions' => count($exemptions)],
             ['Inventory coverage' => $routeCoverage . '%'],
             ['Implemented or later' => $implemented],
+            ['Visual QA passed' => $visualQa],
+            ['Functional QA passed' => $functionalQa],
+            ['Responsive QA passed' => $responsiveQa],
+            ['Accessibility passed' => $accessibilityQa],
+            ['Human accepted' => $humanAccepted],
             ['Experience V1 ready' => $v1Ready],
         );
 

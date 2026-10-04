@@ -66,6 +66,11 @@ final readonly class ExperienceDashboardController
         $priorityCounts = [];
         $v1Ready = 0;
         $implemented = 0;
+        $visualQa = 0;
+        $functionalQa = 0;
+        $responsiveQa = 0;
+        $accessibilityQa = 0;
+        $humanAccepted = 0;
 
         foreach ($contracts as $contract) {
             $statusCounts[$contract->status->value] = ($statusCounts[$contract->status->value] ?? 0) + 1;
@@ -93,6 +98,12 @@ final readonly class ExperienceDashboardController
                 ++$implemented;
                 ++$domainCounts[$contract->domain]['implemented'];
             }
+
+            $visualQa += ($contract->qa['visual'] ?? false) === true ? 1 : 0;
+            $functionalQa += ($contract->qa['functional'] ?? false) === true ? 1 : 0;
+            $responsiveQa += ($contract->qa['responsive'] ?? false) === true ? 1 : 0;
+            $accessibilityQa += ($contract->qa['accessibility'] ?? false) === true ? 1 : 0;
+            $humanAccepted += ($contract->qa['human_acceptance'] ?? false) === true ? 1 : 0;
 
             if ($contract->status === PageExperienceStatus::V1Ready && $contract->quality->isV1Ready()) {
                 ++$v1Ready;
@@ -122,6 +133,11 @@ final readonly class ExperienceDashboardController
                     'exemptions' => count($exemptions),
                     'coverage' => $coverage,
                     'implemented' => $implemented,
+                    'visualQa' => $visualQa,
+                    'functionalQa' => $functionalQa,
+                    'responsiveQa' => $responsiveQa,
+                    'accessibilityQa' => $accessibilityQa,
+                    'humanAccepted' => $humanAccepted,
                     'v1Ready' => $v1Ready,
                     'statusCounts' => $statusCounts,
                     'priorityCounts' => $priorityCounts,
