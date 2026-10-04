@@ -26,7 +26,7 @@ class WorkflowExecutionRecord
         private string $traceId,
         #[ORM\Column(type: Types::STRING, length: 160)]
         private string $lockKey,
-        #[ORM\Version] #[ORM\Column(type: Types::INTEGER)]
+        #[ORM\Version] #[ORM\Column(type: Types::INTEGER, options: ['default' => 1])]
         private int $version,
         #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
         private DateTimeImmutable $startedAt,
