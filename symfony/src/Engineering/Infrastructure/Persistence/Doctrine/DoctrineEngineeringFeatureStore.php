@@ -71,6 +71,18 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
         $this->entityManager->flush();
     }
 
+    public function updateRequest(string $featureId, string $title, string $description, string $priority): void
+    {
+        $this->record($featureId)->updateRequest($title, $description, $priority);
+        $this->entityManager->flush();
+    }
+
+    public function delete(string $featureId): void
+    {
+        $this->entityManager->remove($this->record($featureId));
+        $this->entityManager->flush();
+    }
+
     public function applyManagerAnalysis(string $featureId, array $specification, array $contextMap, ?string $repositoryRevision): void
     {
         $this->record($featureId)->applyAnalysis($specification, $contextMap, $repositoryRevision);
@@ -87,6 +99,7 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
             'type' => $record->type(),
             'status' => $record->status(),
             'priority' => $record->priority(),
+            'description' => (string) ($record->requestPayload()['description'] ?? ''),
             'external_issue_id' => $record->externalIssueId(),
             'repository_revision' => $record->repositoryRevision(),
             'complexity' => $record->complexity(),

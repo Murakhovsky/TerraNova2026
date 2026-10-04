@@ -155,18 +155,37 @@ try {
   assert(await page.locator('[data-cabinet-primary-actions] a[href="/sales/today"]').count() === 1, 'Manager Cabinet must expose Sales Today.');
   assert(await page.locator('[data-cabinet-workspaces] a[href="/admin/engineering"]').count() === 1, 'Admin Cabinet must expose Engineering workspace.');
 
-  // 1c. Engineering feature can be created from the browser.
+  // 1c. Engineering draft feature can be created, inspected, edited and deleted from the browser.
   await goto200(page, '/admin/engineering', '[data-cos-engineering="index"]');
+  assert(await page.locator('[data-engineering-queue]').count() === 1, 'Engineering Workspace priority queue is missing.');
+  assert(await page.locator('select[name="execution_mode"] option[value="queue"]').count() === 1, 'Engineering create form is missing queue execution mode.');
   const engineeringTitle = `UI acceptance ${suffix}`;
+  const engineeringDescription = 'Browser-created Engineering feature for production cutover acceptance.';
   const engineeringForm = page.locator('form[data-engineering-create]');
   await engineeringForm.locator('input[name="title"]').fill(engineeringTitle);
-  await engineeringForm.locator('textarea[name="description"]').fill('Browser-created Engineering feature for production cutover acceptance.');
+  await engineeringForm.locator('textarea[name="description"]').fill(engineeringDescription);
   await engineeringForm.locator('select[name="priority"]').selectOption('P2');
-  await engineeringForm.locator('input[name="start"]').uncheck();
+  await engineeringForm.locator('select[name="execution_mode"]').selectOption('draft');
   await submitAndWait(page, engineeringForm, (url) => /^\/admin\/engineering\/[0-9a-fA-F-]{36}$/.test(url.pathname) && url.searchParams.has('status_message'));
+  const engineeringPath = new URL(page.url()).pathname;
   assert((await page.locator('body').innerText()).includes(engineeringTitle), 'Browser-created Engineering feature did not render in its workspace.');
-  await goto200(page, '/admin/engineering', '[data-cos-engineering="index"]');
-  assert((await page.locator('body').innerText()).includes(engineeringTitle), 'Browser-created Engineering feature did not persist in the collection.');
+  assert((await page.locator('body').innerText()).includes(engineeringDescription), 'Engineering Description is missing from feature workspace.');
+
+  const engineeringUpdatedTitle = engineeringTitle + ' Updated';
+  const engineeringUpdatedDescription = engineeringDescription + ' Updated.';
+  const engineeringUpdate = page.locator('form[data-engineering-update]');
+  await engineeringUpdate.locator('input[name="title"]').fill(engineeringUpdatedTitle);
+  await engineeringUpdate.locator('textarea[name="description"]').fill(engineeringUpdatedDescription);
+  await engineeringUpdate.locator('select[name="priority"]').selectOption('P1');
+  await submitAndWait(page, engineeringUpdate, (url) => url.pathname === engineeringPath && url.searchParams.has('status_message'));
+  assert((await page.locator('body').innerText()).includes(engineeringUpdatedTitle), 'Engineering feature title edit did not persist.');
+  assert((await page.locator('body').innerText()).includes(engineeringUpdatedDescription), 'Engineering feature Description edit did not persist.');
+  assert(await page.locator('form[data-engineering-update] select[name="priority"]').inputValue() === 'P1', 'Engineering feature priority edit did not persist.');
+
+  const engineeringDelete = page.locator('form[data-engineering-delete]');
+  await engineeringDelete.locator('input[name="confirm_delete"]').check();
+  await submitAndWait(page, engineeringDelete, (url) => url.pathname === '/admin/engineering' && url.searchParams.has('status_message'));
+  assert(!(await page.locator('body').innerText()).includes(engineeringUpdatedTitle), 'Deleted Engineering draft still appears in the collection.');
 
   // 2. Client Case: create -> detail -> edit -> activity -> collection search.
   await goto200(page, '/client-case', '[data-client-case-collection]');

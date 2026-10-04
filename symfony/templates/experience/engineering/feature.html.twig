@@ -27,6 +27,95 @@
         <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Engineering action failed' : 'Engineering updated' }}" copy="{{ statusMessage }}" tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
     {% endif %}
 
+    <section class="cos-page__section" aria-labelledby="engineering-request">
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Original request</p>
+            <h2 id="engineering-request" class="cos-card__title">Description</h2>
+            <div class="cos-card__copy" style="white-space: pre-wrap;">{{ engineering.feature.description|default('Description is not available.') }}</div>
+        </article>
+    </section>
+
+    {% if engineering.workflow is null %}
+        <section class="cos-page__section cos-section-grid" aria-label="Engineering feature management">
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Draft feature</p>
+                <h2 class="cos-card__title">Редагувати запит</h2>
+                <p class="cos-card__copy">До першого запуску можна змінити назву, Description і priority. Після старту requirements стають частиною audit trail.</p>
+                <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/update" data-engineering-update>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <div class="cos-pattern-stack">
+                        <label class="cos-field">
+                            <span>Назва</span>
+                            <input class="cos-input" name="title" maxlength="255" value="{{ engineering.feature.title }}" required>
+                        </label>
+                        <label class="cos-field">
+                            <span>Description</span>
+                            <textarea class="cos-textarea" name="description" rows="12" required>{{ engineering.feature.description }}</textarea>
+                        </label>
+                        <label class="cos-field">
+                            <span>Priority</span>
+                            <select class="cos-select" name="priority">
+                                {% for priority in ['P0','P1','P2','P3'] %}
+                                    <option value="{{ priority }}" {{ engineering.feature.priority == priority ? 'selected' : '' }}>{{ priority }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                    </div>
+                    <button class="cos-button cos-button--primary" type="submit">Зберегти зміни</button>
+                </form>
+            </article>
+
+            <article class="cos-card">
+                <p class="cos-card__eyebrow">Danger zone</p>
+                <h2 class="cos-card__title">Видалити feature</h2>
+                <p class="cos-card__copy">Hard delete доступний тільки до першого запуску workflow. Після запуску історія агентів і artifacts не стирається.</p>
+                <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <label class="cos-field">
+                        <span><input type="checkbox" name="confirm_delete" value="1" required> Підтверджую видалення цього draft feature</span>
+                    </label>
+                    <button class="cos-button cos-button--danger" type="submit">Видалити</button>
+                </form>
+            </article>
+        </section>
+    {% else %}
+        {% set terminalStates = ['DONE', 'CANCELLED', 'READY_FOR_HUMAN_APPROVAL'] %}
+        <section class="cos-page__section" aria-label="Engineering immutable request notice">
+            <twig:CosAlert
+                title="Requirements зафіксовані"
+                copy="Workflow уже запущений, тому початковий request показується read-only. Для зміни вимог створіть новий feature; активний workflow можна скасувати."
+                tone="info"
+            />
+            {% if engineering.workflow.state not in terminalStates %}
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Workflow control</p>
+                    <h2 class="cos-card__title">Скасувати workflow</h2>
+                    <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/cancel" data-engineering-cancel>
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <label class="cos-field">
+                            <span>Причина</span>
+                            <input class="cos-input" name="reason" value="Cancelled from Engineering UI.">
+                        </label>
+                        <button class="cos-button cos-button--danger" type="submit">Cancel workflow</button>
+                    </form>
+                </article>
+            {% elseif engineering.workflow.state in ['CANCELLED', 'FAILED'] %}
+                <article class="cos-card">
+                    <p class="cos-card__eyebrow">Danger zone</p>
+                    <h2 class="cos-card__title">Видалити завершений невдало workflow</h2>
+                    <p class="cos-card__copy">CANCELLED/FAILED workflow можна видалити, якщо він не створив pull request. DONE та workflow з PR зберігаються як audit history.</p>
+                    <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <label class="cos-field">
+                            <span><input type="checkbox" name="confirm_delete" value="1" required> Підтверджую hard delete цього workflow та його локальної історії</span>
+                        </label>
+                        <button class="cos-button cos-button--danger" type="submit">Видалити workflow</button>
+                    </form>
+                </article>
+            {% endif %}
+        </section>
+    {% endif %}
+
     <section class="cos-page__section" aria-label="Engineering controls">
         <article class="cos-card">
             <p class="cos-card__eyebrow">Workflow control</p>
