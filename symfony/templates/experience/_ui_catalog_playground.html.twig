@@ -34,6 +34,8 @@
         <span>tokens {{ catalogAudit.tokensFrozen|default(false) ? 'frozen' : 'open' }}</span>
         <span>typography {{ catalogAudit.typographyFrozen|default(false) ? 'frozen' : 'open' }}</span>
         <span>theme parity {{ catalogAudit.themeParityDeclared|default(false) ? 'required' : 'missing' }}</span>
+        <span>patterns {{ catalogAudit.patternsFrozen|default(false) ? 'V1 frozen' : 'open' }}</span>
+        <span>archetypes {{ catalogAudit.archetypesFrozen|default(false) ? 'V1 frozen' : 'open' }}</span>
     </div>
 
     <div class="cos-ui-playground__toolbar" role="search" aria-label="Filter UI components">

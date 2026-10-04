@@ -124,6 +124,8 @@
             <twig:CosMetric label="Canonical Cos*" value="{{ experience.designSystem.canonicalComponents }}" />
             <twig:CosMetric label="Experimental" value="{{ experience.designSystem.experimental }}" />
             <twig:CosMetric label="Deprecated" value="{{ experience.designSystem.deprecated }}" />
+            <twig:CosMetric label="Pattern API" value="{{ experience.designSystem.patternsFrozen ? 'V1 frozen' : 'open' }}" />
+            <twig:CosMetric label="Archetype API" value="{{ experience.designSystem.archetypesFrozen ? 'V1 frozen' : 'open' }}" />
         </div>
     </section>
 
