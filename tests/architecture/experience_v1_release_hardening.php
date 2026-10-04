@@ -21,7 +21,9 @@ foreach ([
     'p0_p1_accessibility_qa',
     'dead_css_cleanup',
     'dead_js_cleanup',
-    'PENDING_SCANNER_AND_CLEANUP',
+    'legacy_asset_cleanup',
+    'asset_runtime_boundary',
+    'ExperienceAssetDebtScanner',
 ] as $marker) {
     if (!str_contains($service, $marker)) {
         throw new RuntimeException('EX-007 release gate missing: '.$marker);
