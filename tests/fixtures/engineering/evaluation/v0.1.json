@@ -337,7 +337,42 @@
             "operation": "UPDATE",
             "content": "<?php\\n"
           }
-        ]
+        ],
+        "preflight": {
+          "status": "PASS",
+          "blockers": [],
+          "architecture_conflicts": []
+        },
+        "scope": {
+          "requested": [
+            "fixture-change"
+          ],
+          "implemented": [
+            "fixture-change"
+          ],
+          "not_implemented": []
+        },
+        "repository_revision": null,
+        "database_changes": [],
+        "api_changes": [],
+        "acceptance_criteria_evidence": [],
+        "validation": {
+          "commands_required": [],
+          "passed": [],
+          "failed": [],
+          "skipped": []
+        },
+        "architecture_compliance": {
+          "adr_followed": true,
+          "deviations": []
+        },
+        "security": {
+          "checks_performed": [],
+          "findings": []
+        },
+        "deviations_from_plan": [],
+        "risks": [],
+        "follow_up_required": []
       }
     },
     {
@@ -360,7 +395,42 @@
             "operation": "UPDATE",
             "content": "SECRET=x"
           }
-        ]
+        ],
+        "preflight": {
+          "status": "PASS",
+          "blockers": [],
+          "architecture_conflicts": []
+        },
+        "scope": {
+          "requested": [
+            "fixture-change"
+          ],
+          "implemented": [
+            "fixture-change"
+          ],
+          "not_implemented": []
+        },
+        "repository_revision": null,
+        "database_changes": [],
+        "api_changes": [],
+        "acceptance_criteria_evidence": [],
+        "validation": {
+          "commands_required": [],
+          "passed": [],
+          "failed": [],
+          "skipped": []
+        },
+        "architecture_compliance": {
+          "adr_followed": true,
+          "deviations": []
+        },
+        "security": {
+          "checks_performed": [],
+          "findings": []
+        },
+        "deviations_from_plan": [],
+        "risks": [],
+        "follow_up_required": []
       }
     },
     {

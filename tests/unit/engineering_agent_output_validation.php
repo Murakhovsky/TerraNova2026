@@ -237,6 +237,70 @@ try {
 } catch (EngineeringAgentOutputValidationException) {
 }
 
+$developer = [
+    'status' => 'COMPLETED',
+    'preflight' => ['status' => 'PASS', 'blockers' => [], 'architecture_conflicts' => []],
+    'scope' => ['requested' => ['DEV-1'], 'implemented' => ['DEV-1'], 'not_implemented' => []],
+    'repository_revision' => null,
+    'changed_files' => [],
+    'implementation_summary' => 'Implemented approved change.',
+    'database_changes' => [],
+    'api_changes' => [],
+    'acceptance_criteria_evidence' => [['id' => 'AC-001', 'result' => 'PASS']],
+    'tests_added' => ['tests/unit/example.php'],
+    'tests_run' => [],
+    'validation' => ['commands_required' => ['php tests/unit/example.php'], 'passed' => [], 'failed' => [], 'skipped' => []],
+    'architecture_compliance' => ['adr_followed' => true, 'deviations' => []],
+    'security' => ['checks_performed' => [], 'findings' => []],
+    'known_limitations' => [],
+    'deviations_from_plan' => [],
+    'risks' => [],
+    'findings' => [],
+    'follow_up_required' => [],
+    'changes' => [[
+        'path' => 'symfony/src/Example.php',
+        'operation' => 'CREATE',
+        'content' => "<?php\ndeclare(strict_types=1);\n",
+    ]],
+];
+$validator->validate(AgentRole::DEVELOPER, $developer);
+
+$developerFailedValidation = $developer;
+$developerFailedValidation['validation']['failed'] = ['phpstan'];
+try {
+    $validator->validate(AgentRole::DEVELOPER, $developerFailedValidation);
+    throw new RuntimeException('Developer completion with failed validation was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$developerSilentArchitectureChange = $developer;
+$developerSilentArchitectureChange['architecture_compliance']['adr_followed'] = false;
+try {
+    $validator->validate(AgentRole::DEVELOPER, $developerSilentArchitectureChange);
+    throw new RuntimeException('Developer completion with ADR deviation was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$developerNeedsArchitecture = $developer;
+$developerNeedsArchitecture['status'] = 'ARCHITECTURE_REVIEW_REQUIRED';
+$developerNeedsArchitecture['preflight']['status'] = 'BLOCKED';
+$developerNeedsArchitecture['preflight']['architecture_conflicts'] = ['Approved file no longer exists.'];
+$developerNeedsArchitecture['changes'] = [];
+$validator->validate(AgentRole::DEVELOPER, $developerNeedsArchitecture);
+
+$developerNeedsArchitectureWithMutation = $developerNeedsArchitecture;
+$developerNeedsArchitectureWithMutation['changes'] = $developer['changes'];
+try {
+    $validator->validate(AgentRole::DEVELOPER, $developerNeedsArchitectureWithMutation);
+    throw new RuntimeException('Developer architecture escalation with mutations was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$developerWithLimitations = $developer;
+$developerWithLimitations['status'] = 'COMPLETED_WITH_LIMITATIONS';
+$developerWithLimitations['known_limitations'] = ['CI execution evidence is deferred to QA.'];
+$validator->validate(AgentRole::DEVELOPER, $developerWithLimitations);
+
 $reviewerNonCompliantApproval = [
     'status' => 'APPROVED',
     'reviewed_revision' => 'abc123',

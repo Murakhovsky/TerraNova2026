@@ -233,3 +233,16 @@ Principal Architect отримує обмежений набір доказів 
 Engineering roles можуть мати окремі model hints через `COS_ENGINEERING_MANAGER_MODEL`, `COS_ENGINEERING_ARCHITECT_MODEL`, `COS_ENGINEERING_DEVELOPER_MODEL`, `COS_ENGINEERING_REVIEWER_MODEL` і `COS_ENGINEERING_QA_MODEL`. Порожнє значення означає використання загального LLM routing/default model. Docker runtime передає ці змінні явно, тому production deployment не втрачає role-specific routing.
 
 Principal Architect може підготувати зміни архітектурної документації та ADR лише в межах `docs/`. Ці зміни зберігаються як керовані artifacts і застосовуються разом зі змінами Developer, тому repository не отримує окремий технічний commit лише заради документації, а авторство та audit trail залишаються явними.
+
+
+## Інженерна оркестрація: Developer
+
+Після Architecture Gate runtime переводить workflow через `ARCHITECTURE_APPROVED → DEVELOPMENT_PENDING → DEVELOPMENT_RUNNING` і запускає `DEVELOPER` у тому самому Engineering orchestration runtime.
+
+Developer виконує preflight до мутацій: перевіряє repository revision, наявність потрібних файлів, достатність repository evidence та відповідність approved plan. Він не має права мовчки змінити Architecture Decision або Acceptance Criteria.
+
+Керовані результати: `COMPLETED`, `COMPLETED_WITH_LIMITATIONS`, `BLOCKED`, `ARCHITECTURE_REVIEW_REQUIRED`, `SPECIFICATION_REVIEW_REQUIRED`, `SECURITY_REVIEW_REQUIRED`, `FAILED`.
+
+`ARCHITECTURE_REVIEW_REQUIRED` повертає workflow Principal Architect без repository mutation. Specification/security escalation зупиняє автономне виконання на human decision boundary. Лише completion-статуси можуть перейти до bounded repository change set, commit/branch і PR; merge та production deploy залишаються за межами прав Developer.
+
+Developer output зберігає preflight, scope, database/API impact, acceptance-criteria evidence, validation evidence, architecture compliance, security findings, limitations, deviations, risks і follow-up requirements. Відомий failure required validation не може завершитись completion-статусом.

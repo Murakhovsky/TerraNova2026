@@ -194,19 +194,81 @@ final class EngineeringAgentSchemas
     {
         return [
             'type' => 'object',
-            'required' => ['status','repository_revision','changed_files','implementation_summary','acceptance_criteria_evidence','tests_added','tests_run','known_limitations','findings','changes'],
+            'required' => [
+                'status','preflight','scope','repository_revision','changed_files','implementation_summary',
+                'database_changes','api_changes','acceptance_criteria_evidence','tests_added','tests_run',
+                'validation','architecture_compliance','security','known_limitations','deviations_from_plan',
+                'risks','findings','follow_up_required','changes',
+            ],
             'properties' => [
-                'status' => self::baseStatus(['COMPLETED','FAILED','BLOCKED']),
+                'status' => self::baseStatus([
+                    'COMPLETED','COMPLETED_WITH_LIMITATIONS','BLOCKED',
+                    'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED','FAILED',
+                ]),
+                'preflight' => [
+                    'type' => 'object',
+                    'required' => ['status','blockers','architecture_conflicts'],
+                    'properties' => [
+                        'status' => self::baseStatus(['PASS','BLOCKED']),
+                        'blockers' => ['type' => 'array'],
+                        'architecture_conflicts' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'scope' => [
+                    'type' => 'object',
+                    'required' => ['requested','implemented','not_implemented'],
+                    'properties' => [
+                        'requested' => ['type' => 'array'],
+                        'implemented' => ['type' => 'array'],
+                        'not_implemented' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
                 'repository_revision' => ['type' => ['string','null']],
                 'branch' => ['type' => ['string','null']],
                 'pull_request' => ['type' => ['string','integer','null']],
                 'changed_files' => ['type' => 'array'],
                 'implementation_summary' => ['type' => 'string'],
+                'database_changes' => ['type' => ['object','array']],
+                'api_changes' => ['type' => ['object','array']],
                 'acceptance_criteria_evidence' => ['type' => 'array'],
                 'tests_added' => ['type' => 'array'],
                 'tests_run' => ['type' => 'array'],
+                'validation' => [
+                    'type' => 'object',
+                    'required' => ['commands_required','passed','failed','skipped'],
+                    'properties' => [
+                        'commands_required' => ['type' => 'array'],
+                        'passed' => ['type' => 'array'],
+                        'failed' => ['type' => 'array'],
+                        'skipped' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'architecture_compliance' => [
+                    'type' => 'object',
+                    'required' => ['adr_followed','deviations'],
+                    'properties' => [
+                        'adr_followed' => ['type' => 'boolean'],
+                        'deviations' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'security' => [
+                    'type' => 'object',
+                    'required' => ['checks_performed','findings'],
+                    'properties' => [
+                        'checks_performed' => ['type' => 'array'],
+                        'findings' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
                 'known_limitations' => ['type' => 'array'],
+                'deviations_from_plan' => ['type' => 'array'],
+                'risks' => ['type' => 'array'],
                 'findings' => ['type' => 'array'],
+                'follow_up_required' => ['type' => 'array'],
                 'changes' => [
                     'type' => 'array',
                     'maxItems' => 20,

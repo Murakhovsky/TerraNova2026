@@ -232,17 +232,79 @@ final class EngineeringAgentOutputValidator
 
     private function developer(array $output): void
     {
-        $this->required($output, ['status','changed_files','implementation_summary','tests_added','tests_run','known_limitations','findings','changes']);
-        if (($output['status'] ?? null) !== 'COMPLETED') return;
-        if (!is_array($output['changes'] ?? null) || $output['changes'] === []) {
-            throw new EngineeringAgentOutputValidationException('Developer COMPLETED requires at least one repository change.');
+        $this->required($output, [
+            'status','preflight','scope','changed_files','implementation_summary','database_changes','api_changes',
+            'acceptance_criteria_evidence','tests_added','tests_run','validation','architecture_compliance','security',
+            'known_limitations','deviations_from_plan','risks','findings','follow_up_required','changes',
+        ]);
+
+        $status = (string) ($output['status'] ?? '');
+        $allowed = [
+            'COMPLETED','COMPLETED_WITH_LIMITATIONS','BLOCKED',
+            'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED','FAILED',
+        ];
+        if (!in_array($status, $allowed, true)) {
+            throw new EngineeringAgentOutputValidationException('Developer status is invalid.');
         }
+
+        foreach (['preflight','scope','validation','architecture_compliance','security'] as $section) {
+            if (!is_array($output[$section] ?? null)) {
+                throw new EngineeringAgentOutputValidationException('Developer '.$section.' must be an object.');
+            }
+        }
+        $this->required($output['preflight'], ['status','blockers','architecture_conflicts']);
+        $this->required($output['scope'], ['requested','implemented','not_implemented']);
+        $this->required($output['validation'], ['commands_required','passed','failed','skipped']);
+        $this->required($output['architecture_compliance'], ['adr_followed','deviations']);
+        $this->required($output['security'], ['checks_performed','findings']);
+
+        if (!in_array((string) $output['preflight']['status'], ['PASS','BLOCKED'], true)) {
+            throw new EngineeringAgentOutputValidationException('Developer preflight status is invalid.');
+        }
+
+        $reviewStatuses = ['ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED'];
+        if (in_array($status, $reviewStatuses, true)) {
+            if (($output['changes'] ?? []) !== []) {
+                throw new EngineeringAgentOutputValidationException('Developer review escalation must not contain repository mutations.');
+            }
+            if (
+                ($output['preflight']['blockers'] ?? []) === []
+                && ($output['preflight']['architecture_conflicts'] ?? []) === []
+                && ($output['deviations_from_plan'] ?? []) === []
+                && ($output['findings'] ?? []) === []
+            ) {
+                throw new EngineeringAgentOutputValidationException('Developer review escalation requires concrete evidence.');
+            }
+            return;
+        }
+
+        if (in_array($status, ['BLOCKED','FAILED'], true)) return;
+
+        if (($output['preflight']['status'] ?? null) !== 'PASS') {
+            throw new EngineeringAgentOutputValidationException('Developer completion requires PASS preflight.');
+        }
+        if (($output['architecture_compliance']['adr_followed'] ?? null) !== true) {
+            throw new EngineeringAgentOutputValidationException('Developer completion requires explicit ADR compliance.');
+        }
+        if (!is_array($output['validation']['failed'] ?? null) || $output['validation']['failed'] !== []) {
+            throw new EngineeringAgentOutputValidationException('Developer cannot complete with failed required validation checks.');
+        }
+        if ($status === 'COMPLETED' && ($output['known_limitations'] ?? []) !== []) {
+            throw new EngineeringAgentOutputValidationException('Developer COMPLETED cannot contain known limitations; use COMPLETED_WITH_LIMITATIONS.');
+        }
+        if ($status === 'COMPLETED_WITH_LIMITATIONS' && ($output['known_limitations'] ?? []) === []) {
+            throw new EngineeringAgentOutputValidationException('Developer COMPLETED_WITH_LIMITATIONS requires explicit limitations.');
+        }
+        if (!is_array($output['changes'] ?? null) || $output['changes'] === []) {
+            throw new EngineeringAgentOutputValidationException('Developer completion requires at least one repository change.');
+        }
+
         foreach ($output['changes'] as $change) {
             if (!is_array($change)) throw new EngineeringAgentOutputValidationException('Developer change must be an object.');
             $this->required($change, ['path','operation']);
             $path = trim((string) $change['path']);
             $operation = (string) $change['operation'];
-            if ($path === '' || str_starts_with($path, '/') || str_contains($path, '..') || str_contains($path, "\\0")) {
+            if ($path === '' || str_starts_with($path, '/') || str_contains($path, '..') || str_contains($path, "\0")) {
                 throw new EngineeringAgentOutputValidationException('Developer change path is unsafe.');
             }
             if (!in_array($operation, ['CREATE','UPDATE','DELETE'], true)) {
