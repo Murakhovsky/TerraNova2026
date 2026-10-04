@@ -77,6 +77,12 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
         $this->entityManager->flush();
     }
 
+    public function appendPreviousContext(string $featureId, array $context): void
+    {
+        $this->record($featureId)->appendPreviousContext($context);
+        $this->entityManager->flush();
+    }
+
     public function delete(string $featureId): void
     {
         $this->entityManager->remove($this->record($featureId));

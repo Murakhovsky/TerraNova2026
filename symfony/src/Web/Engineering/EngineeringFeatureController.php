@@ -4,11 +4,11 @@ declare(strict_types=1);
 namespace App\Web\Engineering;
 
 use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
+use App\Application\Engineering\Command\RunEngineeringFeatureCommand;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Service\EngineeringCancelService;
-use App\Engineering\Application\Service\EngineeringContinueService;
 use App\Engineering\Application\Service\EngineeringFeatureManagementService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
@@ -39,7 +39,6 @@ final readonly class EngineeringFeatureController
         private EngineeringFeatureStoreInterface $features,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringOrchestrator $orchestrator,
-        private EngineeringContinueService $continue,
         private EngineeringCancelService $cancel,
         private EngineeringFeatureManagementService $featureManagement,
         private EngineeringHumanDecisionService $decisions,
@@ -137,12 +136,17 @@ final readonly class EngineeringFeatureController
                 $this->commandBus->dispatch(new ContinueEngineeringWorkflowsCommand('web-queue'));
                 $message = 'Engineering workflow додано в priority queue · ' . $result->state . '.';
             } elseif ($executionMode === 'immediate') {
-                $result = $this->orchestrator->start(
+                $result = $this->orchestrator->queueImmediate(
                     $featureId,
                     $tenant->organizationId()->value(),
-                    $this->correlation('create', $featureId),
+                    $this->correlation('immediate', $featureId),
                 );
-                $message = 'Engineering workflow запущено негайно · ' . $result->state . '.';
+                $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                    featureId: $featureId,
+                    organizationId: $tenant->organizationId()->value(),
+                    trigger: 'web-create-immediate',
+                ));
+                $message = 'Engineering workflow передано immediate worker · ' . $result->state . '.';
             }
 
             return $this->redirectStatus('/admin/engineering/' . $featureId, $message);
@@ -234,19 +238,30 @@ final readonly class EngineeringFeatureController
         try {
             $featureId = EngineeringId::assert($id);
             $status = $this->ownedStatus($tenant, $featureId);
-            $result = ($status['workflow'] ?? null) === null
-                ? $this->orchestrator->start(
+            foreach ($status['agent_runs'] ?? [] as $agentRun) {
+                if (($agentRun['status'] ?? null) === 'RUNNING') {
+                    throw new \LogicException('Engineering AgentRun already RUNNING; duplicate immediate execution is not allowed.');
+                }
+            }
+
+            $activeWorkflowId = $this->workflows->activeIdForFeature($featureId);
+            if ($activeWorkflowId === null) {
+                $this->orchestrator->queueImmediate(
                     $featureId,
                     $tenant->organizationId()->value(),
                     $this->correlation('run', $featureId),
-                )
-                : $this->continue->continueFeature(
-                    $featureId,
-                    $tenant->organizationId()->value(),
-                    $this->correlation('continue', $featureId),
                 );
+            } else {
+                $this->workflows->markImmediate($activeWorkflowId);
+            }
 
-            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow · ' . $result->state . '.');
+            $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+                trigger: 'web-run-now',
+            ));
+
+            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow передано immediate worker.');
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
         }
@@ -340,16 +355,29 @@ final readonly class EngineeringFeatureController
             }
             if (!$known) throw new \LogicException('Human decision уже не є відкритим.');
 
-            $result = $this->decisions->answerAndResume(
+            $result = $this->decisions->answerAndPrepareResume(
                 requestId: $requestId,
                 selectedOption: $option,
                 comment: trim((string) $request->request->get('comment', '')) ?: null,
                 decidedBy: 'user:' . $tenant->userId()->value(),
                 organizationId: $tenant->organizationId()->value(),
-                correlationId: $this->correlation('decision', $featureId),
             );
 
-            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Human decision прийнято · ' . $result->state . '.');
+            if ($result->next->agent !== null) {
+                $this->workflows->markImmediate($result->workflowId);
+                $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                    featureId: $featureId,
+                    organizationId: $tenant->organizationId()->value(),
+                    trigger: 'web-human-decision',
+                ));
+            }
+
+            return $this->redirectStatus(
+                '/admin/engineering/' . $featureId,
+                $result->next->agent !== null
+                    ? 'Human decision прийнято · resume передано immediate worker.'
+                    : 'Human decision прийнято · ' . $result->state . '.',
+            );
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
         }

@@ -84,6 +84,16 @@ class EngineeringFeatureRecord
         $this->updatedAt = new DateTimeImmutable();
     }
 
+    public function appendPreviousContext(array $context): void
+    {
+        $payload = $this->requestPayload;
+        $history = is_array($payload['previous_context'] ?? null) ? $payload['previous_context'] : [];
+        $history[] = $context;
+        $payload['previous_context'] = $history;
+        $this->requestPayload = $payload;
+        $this->updatedAt = new DateTimeImmutable();
+    }
+
     public function applyAnalysis(array $specification, array $contextMap, ?string $repositoryRevision): void
     {
         $feature = is_array($specification['feature'] ?? null) ? $specification['feature'] : [];

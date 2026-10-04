@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Service;
 
-use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -26,13 +25,12 @@ final readonly class EngineeringHumanDecisionService
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
 
-    public function answerAndResume(
+    public function answerAndPrepareResume(
         string $requestId,
         string $selectedOption,
         ?string $comment,
         string $decidedBy,
         string $organizationId,
-        string $correlationId,
     ): EngineeringHumanDecisionResult {
         $request = $this->humanDecisions->get($requestId);
         $requestFeatureId = (string) ($request['feature_id'] ?? '');
@@ -56,64 +54,29 @@ final readonly class EngineeringHumanDecisionService
         $workflowId = $answer['workflow_id'];
         $decisionId = $answer['decision_id'];
 
-        $next = $this->lock->synchronized($featureId, function () use ($workflowId, $decisionId, $featureId, $isCancel, $decidedBy) {
-            $workflow = $this->workflows->get($workflowId);
-            $directive = $isCancel
-                ? $this->coordinator->cancel($workflow, $decidedBy, 'Human decision selected CANCEL.')
-                : $this->coordinator->resumeAfterHumanDecision($workflow, $decisionId);
-            $this->persistTransitions($workflow, $directive->transitions);
-            $this->features->updateStatus($featureId, $workflow->currentState()->value);
-            return $directive;
-        });
+        $this->features->appendPreviousContext($featureId, [
+            'human_decision' => [
+                'request_id' => $requestId,
+                'decision_id' => $decisionId,
+                'question' => $request['question'] ?? null,
+                'reason' => $request['reason'] ?? null,
+                'selected_option' => $selectedOption,
+                'comment' => $comment,
+                'decided_by' => $decidedBy,
+            ],
+        ]);
 
-        if ($next->agent === AgentRole::ENGINEERING_MANAGER) {
-            $base = $this->features->request($featureId);
-            $history = $base->previousContext;
-            $history[] = [
-                'human_decision' => [
-                    'request_id' => $requestId,
-                    'decision_id' => $decisionId,
-                    'question' => $request['question'] ?? null,
-                    'reason' => $request['reason'] ?? null,
-                    'selected_option' => $selectedOption,
-                    'comment' => $comment,
-                    'decided_by' => $decidedBy,
-                ],
-            ];
-
-            $managerRuns = array_values(array_filter(
-                $this->agentRuns->forFeature($featureId),
-                static fn (array $run): bool => ($run['role'] ?? null) === AgentRole::ENGINEERING_MANAGER->value,
-            ));
-            $logicalAttempt = count($managerRuns) + 1;
-
-            $next = $this->managerStage->execute(
-                featureId: $featureId,
-                workflowId: $workflowId,
-                request: new EngineeringRequest(
-                    requestId: $base->requestId,
-                    description: $base->description,
-                    title: $base->title,
-                    sourceType: $base->sourceType,
-                    sourceReference: $base->sourceReference,
-                    priority: $base->priority,
-                    metadata: $base->metadata,
-                    constraints: $base->constraints,
-                    attachments: $base->attachments,
-                    previousContext: $history,
-                ),
-                organizationId: $organizationId,
-                correlationId: $correlationId,
-                logicalAttempt: $logicalAttempt,
-            );
-        }
-
-        $next = $this->progression->continue(
-            featureId: $featureId,
-            workflowId: $workflowId,
-            directive: $next,
-            organizationId: $organizationId,
-            correlationId: $correlationId,
+        $next = $this->lock->synchronized(
+            $featureId,
+            function () use ($workflowId, $decisionId, $featureId, $isCancel, $decidedBy) {
+                $workflow = $this->workflows->get($workflowId);
+                $directive = $isCancel
+                    ? $this->coordinator->cancel($workflow, $decidedBy, 'Human decision selected CANCEL.')
+                    : $this->coordinator->resumeAfterHumanDecision($workflow, $decisionId);
+                $this->persistTransitions($workflow, $directive->transitions);
+                $this->features->updateStatus($featureId, $workflow->currentState()->value);
+                return $directive;
+            },
         );
 
         $workflow = $this->workflows->get($workflowId);
@@ -121,6 +84,57 @@ final readonly class EngineeringHumanDecisionService
             featureId: $featureId,
             workflowId: $workflowId,
             decisionId: $decisionId,
+            state: $workflow->currentState()->value,
+            next: $next,
+        );
+    }
+
+    public function answerAndResume(
+        string $requestId,
+        string $selectedOption,
+        ?string $comment,
+        string $decidedBy,
+        string $organizationId,
+        string $correlationId,
+    ): EngineeringHumanDecisionResult {
+        $prepared = $this->answerAndPrepareResume(
+            requestId: $requestId,
+            selectedOption: $selectedOption,
+            comment: $comment,
+            decidedBy: $decidedBy,
+            organizationId: $organizationId,
+        );
+
+        $next = $prepared->next;
+        if ($next->agent === AgentRole::ENGINEERING_MANAGER) {
+            $managerRuns = array_values(array_filter(
+                $this->agentRuns->forFeature($prepared->featureId),
+                static fn (array $run): bool => ($run['role'] ?? null) === AgentRole::ENGINEERING_MANAGER->value,
+            ));
+
+            $next = $this->managerStage->execute(
+                featureId: $prepared->featureId,
+                workflowId: $prepared->workflowId,
+                request: $this->features->request($prepared->featureId),
+                organizationId: $organizationId,
+                correlationId: $correlationId,
+                logicalAttempt: count($managerRuns) + 1,
+            );
+        }
+
+        $next = $this->progression->continue(
+            featureId: $prepared->featureId,
+            workflowId: $prepared->workflowId,
+            directive: $next,
+            organizationId: $organizationId,
+            correlationId: $correlationId,
+        );
+
+        $workflow = $this->workflows->get($prepared->workflowId);
+        return new EngineeringHumanDecisionResult(
+            featureId: $prepared->featureId,
+            workflowId: $prepared->workflowId,
+            decisionId: $prepared->decisionId,
             state: $workflow->currentState()->value,
             next: $next,
         );

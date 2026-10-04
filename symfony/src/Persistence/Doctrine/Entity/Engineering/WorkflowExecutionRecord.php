@@ -45,6 +45,7 @@ class WorkflowExecutionRecord
     public function id(): string { return $this->id; }
     public function featureId(): string { return $this->featureId; }
     public function workflowType(): string { return $this->workflowType; }
+    public function markImmediate(): void { $this->workflowType = 'ENGINEERING_IMMEDIATE'; $this->lastActivityAt = new DateTimeImmutable(); }
     public function currentState(): string { return $this->currentState; }
     public function status(): string { return $this->status; }
     public function traceId(): string { return $this->traceId; }

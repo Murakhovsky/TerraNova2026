@@ -53,7 +53,7 @@ final readonly class EngineeringOrchestrator
                 EngineeringWorkflowState::NEW,
                 $correlationId,
             );
-            $this->workflows->create($workflow);
+            $this->workflows->create($workflow, 'ENGINEERING');
             $start = $this->coordinator->startAnalysis($workflow);
             $this->persistTransitions($workflow, $start->transitions);
             $this->features->updateStatus($featureId, 'QUEUED');
@@ -70,6 +70,45 @@ final readonly class EngineeringOrchestrator
                 \App\Engineering\Application\Workflow\WorkflowDirectiveType::RUN_AGENT,
                 \App\Engineering\Domain\Agent\AgentRole::ENGINEERING_MANAGER,
                 'Queued for Engineering worker.',
+            ),
+        );
+    }
+
+    public function queueImmediate(string $featureId, string $organizationId, string $correlationId): EngineeringStartResult
+    {
+        $feature = $this->features->view($featureId);
+        if (($feature['organization_id'] ?? null) !== $organizationId) {
+            throw new \RuntimeException('Engineering feature does not belong to the current organization.');
+        }
+
+        /** @var WorkflowExecution $workflow */
+        $workflow = $this->lock->synchronized($featureId, function () use ($featureId, $correlationId): WorkflowExecution {
+            $active = $this->workflows->activeIdForFeature($featureId);
+            if ($active !== null) {
+                throw new WorkflowAlreadyRunningException('Engineering feature already has active workflow '.$active);
+            }
+
+            $workflow = new WorkflowExecution(
+                EngineeringId::generate(),
+                $featureId,
+                EngineeringWorkflowState::NEW,
+                $correlationId,
+            );
+            $this->workflows->create($workflow, 'ENGINEERING_IMMEDIATE');
+            $start = $this->coordinator->startAnalysis($workflow);
+            $this->persistTransitions($workflow, $start->transitions);
+            $this->features->updateStatus($featureId, 'IMMEDIATE');
+            return $workflow;
+        });
+
+        return new EngineeringStartResult(
+            $featureId,
+            $workflow->id(),
+            'IMMEDIATE',
+            new \App\Engineering\Application\Workflow\WorkflowDirective(
+                \App\Engineering\Application\Workflow\WorkflowDirectiveType::RUN_AGENT,
+                \App\Engineering\Domain\Agent\AgentRole::ENGINEERING_MANAGER,
+                'Scheduled for immediate Engineering worker.',
             ),
         );
     }
