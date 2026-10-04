@@ -88,7 +88,7 @@ pages:
     quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }
 
   - id: sales.deal.workspace
-    route: { name: cos_web_sales_deal, path: /sales/deals/{id}, methods: [GET] }
+    route: { name: cos_web_sales_deal, path: "/sales/deals/{id}", methods: [GET] }
     surface: workspace
     domain: Sales
     capability: sales.deal.view
