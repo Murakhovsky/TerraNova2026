@@ -224,6 +224,11 @@ cos_web_cabinet:
   controller: App\Web\Portal\CabinetController::index
   methods: [GET, HEAD]
 
+cos_web_account_access:
+  path: /account/access
+  controller: App\Web\Account\AccountAccessController
+  methods: [GET, HEAD]
+
 cos_web_cabinet_submission_retired:
   path: /cabinet/submission/{id}
   controller: App\Web\Portal\CabinetController::retiredSubmission

@@ -52,6 +52,7 @@ try {
   await expect200('/cos/en/domains/sales', '[data-cos-public="cos-domain"]');
 
   await expect200('/cabinet', '[data-cos-portal="cabinet"]');
+  await expect200('/account/access', '[data-cos-account-access]');
   await expect200('/workspace/ai', '[data-cos-ai-center]');
   await expect200('/admin/engineering', '[data-cos-engineering="index"]');
 
