@@ -10,7 +10,7 @@ foreach ([
     'PagePresentationFactory',
     'PageArchetype::DomainDashboard',
     'private function presentation',
-    "if ($view !== 'growth/dashboard')",
+    'if ($view !== \'growth/dashboard\')',
 ] as $marker) {
     if (!str_contains($controller, $marker)) {
         throw new RuntimeException('Growth Experience presentation contract missing: ' . $marker);
