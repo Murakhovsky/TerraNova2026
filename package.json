@@ -18,7 +18,8 @@
     "test:web-performance": "node tests/browser/web_performance_budget.mjs",
     "test:web-accessibility": "node tests/browser/web_accessibility.mjs",
     "test:golden-four-accessibility": "node tests/browser/golden_four_accessibility.mjs",
-    "test:golden-eight-quality": "node tests/browser/golden_eight_quality.mjs"
+    "test:golden-eight-quality": "node tests/browser/golden_eight_quality.mjs",
+    "test:external-reference-quality": "node tests/browser/external_reference_quality.mjs"
   },
   "dependencies": {
     "@popperjs/core": "2.11.8",

@@ -198,6 +198,26 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: External reference browser QA
+        env:
+          EXTERNAL_REFERENCE_BASE_URL: http://127.0.0.1:8081
+          EXTERNAL_REFERENCE_EMAIL: sales-functional-acceptance@example.test
+          EXTERNAL_REFERENCE_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          EXTERNAL_REFERENCE_OUTPUT_DIR: tmp/external-reference
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" npm run test:external-reference-quality
+
+      - name: Upload external reference evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-reference-evidence
+          path: tmp/external-reference
+          if-no-files-found: warn
+          retention-days: 14
+
   deploy-dev:
     name: Deploy main to AWS dev
     needs: runtime
