@@ -13,14 +13,28 @@
      {% if v=='growth/experiment' %}data-growth-experiment data-experiment-id="{{ w.brief.experiment.experiment_id|default('') }}"{% endif %}
      {% if v=='growth/settings' %}data-growth-settings{% endif %}
      {% if v=='growth/market' %}data-growth-market{% endif %}>
-  <header class="cos-growth-header">
-    <div><small>Growth · Canonical Workspace</small><h1>{{ pageTitle }}</h1></div>
-    <nav class="cos-growth-actions">
-      <a class="btn btn-outline-secondary" href="/growth">Overview</a>
-      <a class="btn btn-outline-secondary" href="/growth/candidates">Opportunities</a>
-      <a class="btn btn-outline-secondary" href="/growth/accounts">Accounts</a>
-    </nav>
-  </header>
+  {% if v == 'growth/dashboard' %}
+    <twig:CosPageHeader
+      eyebrow="Growth · Opportunity Intelligence"
+      title="Growth Overview"
+      subtitle="Signals, qualified opportunities and the next useful action across the Growth pipeline."
+      metaValue="{{ w.ready_total|default(0) }}"
+      metaLabel="ready opportunities"
+    >
+      <twig:CosButton label="Opportunities" href="/growth/candidates" variant="primary" />
+      <twig:CosButton label="Accounts" href="/growth/accounts" variant="ghost" />
+      <twig:CosButton label="Signals" href="/growth/signals" variant="ghost" />
+    </twig:CosPageHeader>
+  {% else %}
+    <header class="cos-growth-header">
+      <div><small>Growth · Canonical Workspace</small><h1>{{ pageTitle }}</h1></div>
+      <nav class="cos-growth-actions">
+        <a class="btn btn-outline-secondary" href="/growth">Overview</a>
+        <a class="btn btn-outline-secondary" href="/growth/candidates">Opportunities</a>
+        <a class="btn btn-outline-secondary" href="/growth/accounts">Accounts</a>
+      </nav>
+    </header>
+  {% endif %}
 
   {% if v=='error/failure' %}
     <section class="cos-panel">
@@ -30,15 +44,48 @@
     </section>
 
   {% elseif v=='growth/dashboard' %}
-    <section class="cos-growth-kpis">
-      {% for x in [['Candidates',w.candidate_total|default(0)],['Qualified',w.qualified_total|default(0)],['Ready',w.ready_total|default(0)],['Monitoring',w.monitoring_total|default(0)],['Accounts',w.account_total|default(0)],['Signals',w.signal_total|default(0)]] %}
-        <article class="cos-growth-kpi"><small>{{ x[0] }}</small><h2>{{ x[1] }}</h2></article>
-      {% endfor %}
+    <section class="cos-kpi-strip" aria-label="Growth operating state">
+      <twig:CosMetric label="Candidates" value="{{ w.candidate_total|default(0) }}" hint="known opportunities" />
+      <twig:CosMetric label="Qualified" value="{{ w.qualified_total|default(0) }}" hint="passed qualification" />
+      <twig:CosMetric label="Ready" value="{{ w.ready_total|default(0) }}" hint="ready for next action" />
+      <twig:CosMetric label="Monitoring" value="{{ w.monitoring_total|default(0) }}" hint="awaiting stronger signal" />
+      <twig:CosMetric label="Accounts" value="{{ w.account_total|default(0) }}" hint="tracked accounts" />
+      <twig:CosMetric label="Signals" value="{{ w.signal_total|default(0) }}" hint="observed evidence" />
     </section>
-    <section class="cos-panel"><h2>Recently updated opportunities</h2>
-      {% for c in w.recent_candidates|default([]) %}
-        <a class="cos-growth-row" href="/growth/candidates/{{ c.candidate_id|url_encode }}"><span><strong>{{ c.account_name|default(c.subject_id|default('Opportunity')) }}</strong><small>{{ c.candidate_id }}</small></span><span>{{ c.status|upper }}</span><span>{{ c.growth_mode|default('—') }}</span><span>{{ c.target_domain|default('—') }}</span></a>
-      {% else %}<p>No opportunities yet.</p>{% endfor %}
+
+    <twig:CosToolbar label="Growth focus">
+      {% block start %}
+        <span class="cos-badge">Priority: ready opportunities</span>
+      {% endblock %}
+      {% block end %}
+        <twig:CosButton label="Market discovery" href="/growth/market" variant="ghost" />
+        <twig:CosButton label="Learning" href="/growth/learning" variant="ghost" />
+      {% endblock %}
+    </twig:CosToolbar>
+
+    <section class="cos-page__section" aria-labelledby="growth-recent-opportunities">
+      <div class="cos-page__section-head">
+        <div>
+          <h2 id="growth-recent-opportunities">Recently updated opportunities</h2>
+          <p>Start with the newest evidence, then open the opportunity that needs a decision or next action.</p>
+        </div>
+      </div>
+      <div class="cos-page__stack">
+        {% for c in w.recent_candidates|default([]) %}
+          <twig:CosEntityListItem
+            title="{{ c.account_name|default(c.subject_id|default('Opportunity')) }}"
+            subtitle="{{ c.growth_mode|default('Opportunity') }} · {{ c.target_domain|default('unassigned') }}"
+            statusLabel="{{ c.status|default('unknown')|upper }}"
+            href="/growth/candidates/{{ c.candidate_id|url_encode }}"
+            meta="{{ c.candidate_id }}"
+          />
+        {% else %}
+          <twig:CosEmptyState
+            title="No opportunities yet"
+            copy="Growth will surface opportunities here after signals create or update candidates."
+          />
+        {% endfor %}
+      </div>
     </section>
 
   {% elseif v=='growth/accounts' %}
