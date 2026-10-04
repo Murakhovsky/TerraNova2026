@@ -9,10 +9,8 @@ $template = (string) file_get_contents($root . '/symfony/templates/experience/gr
 foreach ([
     'PagePresentationFactory',
     'PageArchetype::DomainDashboard',
-    'PageArchetype::EntityWorkspace',
-    'PageArchetype::SystemControlSurface',
-    'PageArchetype::Collection',
     'private function presentation',
+    "if ($view !== 'growth/dashboard')",
 ] as $marker) {
     if (!str_contains($controller, $marker)) {
         throw new RuntimeException('Growth Experience presentation contract missing: ' . $marker);

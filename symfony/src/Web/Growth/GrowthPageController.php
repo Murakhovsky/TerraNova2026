@@ -386,37 +386,18 @@ final readonly class GrowthPageController
         );
     }
 
-    private function presentation(string $view, int $status): PagePresentation
+    private function presentation(string $view, int $status): ?PagePresentation
     {
+        if ($view !== 'growth/dashboard') {
+            return null;
+        }
+
         $state = $status >= 400 ? 'error' : 'normal';
 
-        return match ($view) {
-            'growth/dashboard' => $this->pages->create(
-                PageArchetype::DomainDashboard,
-                ['PageHeader', 'KpiStrip', 'Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
-                $state,
-            ),
-            'growth/candidate', 'growth/account', 'growth/experiment' => $this->pages->create(
-                PageArchetype::EntityWorkspace,
-                ['WorkspaceHeader', 'EntityHeader', 'ContextPanel', 'Timeline', 'ActionBar', 'EmptyState', 'ErrorState'],
-                $state,
-            ),
-            'growth/settings', 'growth/collectors' => $this->pages->create(
-                PageArchetype::SystemControlSurface,
-                ['PageHeader', 'Toolbar', 'ContextPanel', 'ActionBar', 'EntityList', 'EmptyState', 'ErrorState'],
-                $state,
-            ),
-            'growth/market', 'growth/candidates', 'growth/accounts', 'growth/signals', 'growth/learning', 'growth/experiments' => $this->pages->create(
-                PageArchetype::Collection,
-                ['PageHeader', 'Toolbar', 'FilterBar', 'EntityList', 'EmptyState', 'ErrorState'],
-                $state,
-            ),
-            default => $this->pages->create(
-                PageArchetype::DomainDashboard,
-                ['PageHeader', 'KpiStrip', 'EntityList', 'EmptyState', 'ErrorState'],
-                $state,
-            ),
-        };
+        return $this->pages->create(
+            PageArchetype::DomainDashboard,
+            ['PageHeader', 'KpiStrip', 'Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
+            $state,
+        );
     }
-
 }
