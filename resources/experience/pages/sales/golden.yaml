@@ -1,0 +1,110 @@
+pages:
+  - id: sales.dashboard
+    route: { name: cos_web_sales_dashboard, path: /sales/dashboard, methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.dashboard.view
+    owner: Sales
+    priority: P0
+    status: IMPLEMENTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Understand Sales performance and attention areas."
+      page_purpose: "Sales domain overview with KPIs and actionable operational context."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: [EntityList, EmptyState, ErrorState]
+    primary_action: sales.open_today
+    states: [normal, error]
+    responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }
+
+  - id: sales.today
+    route: { name: cos_web_sales_today, path: /sales/today, methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.today.view
+    owner: Sales
+    priority: P0
+    status: IMPLEMENTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "See the work that needs attention now."
+      page_purpose: "Operational queue for today's Sales work."
+    archetype: operational_queue
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: [KpiStrip, FilterBar, ActionBar, EmptyState, ErrorState]
+    primary_action: sales.execute_next_action
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: queue, tablet: queue, mobile: entity_list }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }
+
+  - id: sales.leads.collection
+    route: { name: cos_web_sales_leads, path: /sales/leads, methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.lead.list
+    owner: Sales
+    priority: P0
+    status: IMPLEMENTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Find leads that require attention and open the next useful action."
+      page_purpose: "Searchable and filterable Sales lead collection."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [ActionBar, SearchBar, EmptyState, ErrorState]
+    primary_action: sales.lead.create
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: entity_list }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }
+
+  - id: sales.pipeline
+    route: { name: cos_web_sales_pipeline, path: /sales/pipeline, methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.pipeline.view
+    owner: Sales
+    priority: P0
+    status: IMPLEMENTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Operate the active Sales pipeline and move work toward outcomes."
+      page_purpose: "Stage-aware operational pipeline."
+    archetype: process_pipeline
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: [FilterBar, KpiStrip, EntityList, ActionBar, EmptyState, ErrorState]
+    primary_action: sales.pipeline.next_action
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: pipeline, tablet: pipeline, mobile: entity_list }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }
+
+  - id: sales.deal.workspace
+    route: { name: cos_web_sales_deal, path: /sales/deals/{id}, methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.deal.view
+    owner: Sales
+    priority: P0
+    status: IMPLEMENTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Move a deal toward the next meaningful outcome."
+      page_purpose: "Canonical workspace for one Sales deal."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [KpiStrip, ContextPanel, Timeline, ActionBar, ErrorState]
+    primary_action: sales.deal.next_action
+    states: [normal, error]
+    responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }

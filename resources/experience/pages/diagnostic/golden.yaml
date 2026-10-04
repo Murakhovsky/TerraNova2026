@@ -1,0 +1,22 @@
+pages:
+  - id: diagnostic.methodology.studio
+    route: { name: cos_web_diagnostic_methodology, path: /admin/diagnostics/methodology-studio, methods: [GET] }
+    surface: system
+    domain: Diagnostic
+    capability: diagnostic.methodology.manage
+    owner: Diagnostic
+    priority: P1
+    status: IMPLEMENTED
+    personas: [administrator, specialist]
+    product:
+      primary_goal: "Inspect and manage diagnostic methodology safely."
+      page_purpose: "System control surface for diagnostic methodology."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: [ContextPanel, ActionBar, EntityList, ErrorState]
+    primary_action: diagnostic.methodology.edit
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: control_surface, tablet: control_surface, mobile: stacked_control_surface }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }
