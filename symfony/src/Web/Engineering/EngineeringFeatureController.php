@@ -72,6 +72,33 @@ final readonly class EngineeringFeatureController
         }
         unset($row);
 
+        $active = $this->workflows->activeForOrganization($tenant->organizationId()->value(), 100);
+        $activeByFeature = [];
+        foreach ($active as $row) {
+            $activeByFeature[$row['feature_id']] = $row;
+        }
+
+        $queuedFeatureIds = array_fill_keys(
+            array_map(static fn (array $row): string => (string) $row['feature_id'], $queue),
+            true,
+        );
+        $activeExecutions = array_values(array_filter(
+            $active,
+            static fn (array $row): bool =>
+                ($row['workflow_type'] ?? null) === 'ENGINEERING_IMMEDIATE'
+                || !isset($queuedFeatureIds[(string) ($row['feature_id'] ?? '')]),
+        ));
+
+        foreach ($features as &$feature) {
+            $workflow = $activeByFeature[$feature['id']] ?? null;
+            $feature['workflow_id'] = $workflow['workflow_id'] ?? null;
+            $feature['workflow_state'] = $workflow['state'] ?? null;
+            $feature['workflow_status'] = $workflow['workflow_status'] ?? null;
+            $feature['workflow_type'] = $workflow['workflow_type'] ?? null;
+            $feature['workflow_last_activity_at'] = $workflow['last_activity_at'] ?? null;
+        }
+        unset($feature);
+
         return new Response(
             $this->twig->render('experience/engineering/index.html.twig', [
                 'shell' => $shell,
@@ -82,6 +109,7 @@ final readonly class EngineeringFeatureController
                 ),
                 'features' => $features,
                 'queue' => $queue,
+                'activeExecutions' => $activeExecutions,
                 'csrfToken' => $this->csrf->token($request),
                 'statusMessage' => trim((string) $request->query->get('status_message', '')),
             ]),

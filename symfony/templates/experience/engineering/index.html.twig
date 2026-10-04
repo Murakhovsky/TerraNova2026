@@ -104,6 +104,50 @@
         {% endif %}
     </section>
 
+    <section class="cos-page__section" aria-labelledby="engineering-active-title" data-engineering-active-executions>
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Live runtime</p>
+            <h2 id="engineering-active-title" class="cos-card__title">Active executions</h2>
+            <p class="cos-card__copy">Run now / immediate workflows не входять у priority queue. Тут показані всі активні execution-и, які виконуються або очікують дії поза чергою.</p>
+        </div>
+
+        {% if activeExecutions is empty %}
+            <twig:CosEmptyState title="Активних execution-ів немає" copy="Immediate або waiting workflows з’являться тут автоматично." />
+        {% else %}
+            <div class="cos-entity-list" role="list">
+                {% for item in activeExecutions %}
+                    <article class="cos-card" role="listitem" data-engineering-active-item="{{ item.feature_id }}">
+                        <div class="cos-pattern-stack">
+                            <div>
+                                <span class="cos-badge">{{ item.workflow_type == 'ENGINEERING_IMMEDIATE' ? 'RUN NOW' : item.workflow_status }}</span>
+                                <span class="cos-badge">{{ item.state }}</span>
+                                <span class="cos-badge">{{ item.priority }}</span>
+                            </div>
+                            <h3 class="cos-card__title"><a href="/admin/engineering/{{ item.feature_id }}">{{ item.title }}</a></h3>
+                            <p class="cos-card__copy">Workflow {{ item.workflow_id }} · last activity {{ item.last_activity_at }}</p>
+                            <div class="cos-form__actions">
+                                <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ item.feature_id }}">Open / Manage</a>
+                                {% if item.state not in ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'] %}
+                                    <form method="post" action="/admin/engineering/{{ item.feature_id }}/run">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <button class="cos-button cos-button--primary" type="submit">Continue now</button>
+                                    </form>
+                                {% else %}
+                                    <span class="cos-badge">Human action required</span>
+                                {% endif %}
+                                <form method="post" action="/admin/engineering/{{ item.feature_id }}/cancel">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <input type="hidden" name="reason" value="Cancelled from Engineering Active executions.">
+                                    <button class="cos-button cos-button--danger" type="submit">Cancel</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+
     <section class="cos-page__section" aria-labelledby="engineering-feature-list">
         <div class="cos-card">
             <p class="cos-card__eyebrow">Workspace</p>
@@ -116,18 +160,23 @@
         {% else %}
             <div class="cos-entity-list" role="list" data-engineering-workspace-list>
                 {% for feature in features %}
-                    {% set isDraft = feature.status == 'NEW' %}
-                    {% set isTerminal = feature.status in ['DONE','CANCELLED','FAILED'] %}
-                    {% set waitsForHuman = feature.status in ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'] %}
+                    {% set displayStatus = feature.workflow_state|default(feature.status) %}
+                    {% set isDraft = not feature.workflow_id and feature.status == 'NEW' %}
+                    {% set isTerminal = displayStatus in ['DONE','CANCELLED','FAILED'] %}
+                    {% set waitsForHuman = displayStatus in ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'] %}
                     <article class="cos-card" role="listitem" data-engineering-feature-row="{{ feature.id }}">
                         <div class="cos-pattern-stack">
                             <div>
-                                <span class="cos-badge">{{ feature.status }}</span>
+                                <span class="cos-badge">{{ displayStatus }}</span>
                                 <span class="cos-badge">{{ feature.priority }}</span>
+                                {% if feature.workflow_type %}<span class="cos-badge">{{ feature.workflow_type == 'ENGINEERING_IMMEDIATE' ? 'RUN NOW' : 'QUEUE' }}</span>{% endif %}
                                 {% if feature.complexity %}<span class="cos-badge">{{ feature.complexity }}</span>{% endif %}
                             </div>
                             <h3 class="cos-card__title"><a href="/admin/engineering/{{ feature.id }}">{{ feature.title }}</a></h3>
-                            <p class="cos-card__copy">Оновлено {{ feature.updated_at }}</p>
+                            <p class="cos-card__copy">
+                                Оновлено {{ feature.updated_at }}
+                                {% if feature.workflow_last_activity_at %} · workflow activity {{ feature.workflow_last_activity_at }}{% endif %}
+                            </p>
                             <div class="cos-form__actions" data-engineering-feature-actions>
                                 <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ feature.id }}">Open / Manage</a>
 
@@ -152,7 +201,7 @@
                                     </form>
                                 {% elseif waitsForHuman %}
                                     <span class="cos-badge">Human action required</span>
-                                {% elseif feature.status in ['CANCELLED','FAILED'] %}
+                                {% elseif displayStatus in ['CANCELLED','FAILED'] %}
                                     <span class="cos-badge">Can be deleted from Manage if no PR exists</span>
                                 {% endif %}
                             </div>

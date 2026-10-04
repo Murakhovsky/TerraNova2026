@@ -125,6 +125,47 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         ], $rows);
     }
 
+    /** @return list<array{feature_id:string,workflow_id:string,workflow_type:string,workflow_status:string,state:string,priority:string,title:string,feature_status:string,started_at:string,last_activity_at:string}> */
+    public function activeForOrganization(string $organizationId, int $limit = 100): array
+    {
+        $limit = max(1, min(100, $limit));
+        $rows = $this->entityManager->getConnection()->createQueryBuilder()
+            ->select(
+                'w.feature_id',
+                'w.id AS workflow_id',
+                'w.workflow_type',
+                'w.status AS workflow_status',
+                'w.current_state AS state',
+                'f.priority',
+                'f.title',
+                'f.status AS feature_status',
+                'w.started_at',
+                'w.last_activity_at',
+            )
+            ->from('cos_engineering_workflows', 'w')
+            ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
+            ->where('f.organization_id = :organization_id')
+            ->andWhere("w.status NOT IN ('COMPLETED','CANCELLED','FAILED')")
+            ->setParameter('organization_id', $organizationId)
+            ->orderBy('w.last_activity_at', 'DESC')
+            ->setMaxResults($limit)
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return array_map(static fn (array $row): array => [
+            'feature_id' => (string) ($row['feature_id'] ?? ''),
+            'workflow_id' => (string) ($row['workflow_id'] ?? ''),
+            'workflow_type' => (string) ($row['workflow_type'] ?? 'ENGINEERING'),
+            'workflow_status' => (string) ($row['workflow_status'] ?? 'RUNNING'),
+            'state' => (string) ($row['state'] ?? ''),
+            'priority' => (string) ($row['priority'] ?? 'P2'),
+            'title' => (string) ($row['title'] ?? ''),
+            'feature_status' => (string) ($row['feature_status'] ?? ''),
+            'started_at' => (string) ($row['started_at'] ?? ''),
+            'last_activity_at' => (string) ($row['last_activity_at'] ?? ''),
+        ], $rows);
+    }
+
     public function get(string $workflowId): WorkflowExecution
     {
         $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);

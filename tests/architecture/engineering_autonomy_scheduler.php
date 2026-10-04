@@ -9,7 +9,7 @@ $store = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructu
 foreach (['ContinueEngineeringWorkflowsCommand', 'engineeringAutonomyEnabled', ".' minutes'"] as $needle) {
     if (!str_contains($scheduler, $needle)) throw new RuntimeException('Engineering scheduler missing '.$needle);
 }
-foreach (['queueForOrganization', 'organizationId', 'continueFeature', "'QA_PLANNING'", "'QA_PENDING'"] as $needle) {
+foreach (['queueForOrganization', 'activeForOrganization', 'organizationId', 'continueFeature', "'QA_PLANNING'", "'QA_PENDING'"] as $needle) {
     if (!str_contains($handler.$store, $needle)) throw new RuntimeException('Engineering scheduler runtime missing '.$needle);
 }
 foreach ([
@@ -17,6 +17,9 @@ foreach ([
     "addOrderBy('w.started_at', 'ASC')",
     "'queue_policy' => 'priority_fifo'",
     "'worker_concurrency' => 1",
+    "w.workflow_type = 'ENGINEERING'",
+    "w.status NOT IN ('COMPLETED','CANCELLED','FAILED')",
+    "'w.workflow_type'",
 ] as $needle) {
     if (!str_contains($handler.$store, $needle)) throw new RuntimeException('Engineering priority queue contract missing '.$needle);
 }
