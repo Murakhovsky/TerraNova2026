@@ -5,6 +5,9 @@
 {% set v = growthView %}
 <div class="cos-page__stack cos-growth-workspace"
      data-controller="growth"
+     data-cos-archetype="{{ page.archetypeId() }}"
+     data-cos-page-state="{{ page.state }}"
+     data-cos-page-density="{{ page.density }}"
      data-csrf="{{ csrfToken }}"
      {% if v=='growth/candidate' %}data-growth-candidate data-candidate-id="{{ w.candidate.candidate_id|default('') }}"{% endif %}
      {% if v=='growth/collectors' %}data-growth-collectors{% endif %}

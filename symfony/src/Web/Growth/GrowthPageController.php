@@ -5,6 +5,9 @@ namespace App\Web\Growth;
 
 use App\Security\SessionCsrfValidator;
 use App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider;
+use App\Web\Experience\Archetype\PageArchetype;
+use App\Web\Experience\Archetype\PagePresentation;
+use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
@@ -53,6 +56,7 @@ final readonly class GrowthPageController
         private TenantContextProviderInterface $tenants,
         private ActiveModuleResolver $modules,
         private WorkspaceShellFactory $shells,
+        private PagePresentationFactory $pages,
         private SessionCsrfValidator $csrf,
         private GrowthWorkspaceReadModelInterface $workspace,
         private GrowthApplicationBoundary $growth,
@@ -372,6 +376,7 @@ final readonly class GrowthPageController
         return new Response(
             $this->twig->render('experience/growth/workspace.html.twig',array_replace($variables,[
                 'shell'=>$shell,
+                'page'=>$this->presentation($view, $status),
                 'pageTitle'=>$title,
                 'growthView'=>$view,
                 'query'=>$request->query->all(),
@@ -379,6 +384,39 @@ final readonly class GrowthPageController
             $status,
             ['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow'],
         );
+    }
+
+    private function presentation(string $view, int $status): PagePresentation
+    {
+        $state = $status >= 400 ? 'error' : 'normal';
+
+        return match ($view) {
+            'growth/dashboard' => $this->pages->create(
+                PageArchetype::DomainDashboard,
+                ['PageHeader', 'KpiStrip', 'EntityList', 'EmptyState', 'ErrorState'],
+                $state,
+            ),
+            'growth/candidate', 'growth/account', 'growth/experiment' => $this->pages->create(
+                PageArchetype::EntityWorkspace,
+                ['WorkspaceHeader', 'EntityHeader', 'ContextPanel', 'Timeline', 'ActionBar', 'EmptyState', 'ErrorState'],
+                $state,
+            ),
+            'growth/settings', 'growth/collectors' => $this->pages->create(
+                PageArchetype::SystemControlSurface,
+                ['PageHeader', 'Toolbar', 'ContextPanel', 'ActionBar', 'EntityList', 'EmptyState', 'ErrorState'],
+                $state,
+            ),
+            'growth/market', 'growth/candidates', 'growth/accounts', 'growth/signals', 'growth/learning', 'growth/experiments' => $this->pages->create(
+                PageArchetype::Collection,
+                ['PageHeader', 'Toolbar', 'FilterBar', 'EntityList', 'EmptyState', 'ErrorState'],
+                $state,
+            ),
+            default => $this->pages->create(
+                PageArchetype::DomainDashboard,
+                ['PageHeader', 'KpiStrip', 'EntityList', 'EmptyState', 'ErrorState'],
+                $state,
+            ),
+        };
     }
 
 }
