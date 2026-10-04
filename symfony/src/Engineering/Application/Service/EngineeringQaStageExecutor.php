@@ -194,6 +194,14 @@ final readonly class EngineeringQaStageExecutor
             throw new RuntimeException('QA execution requires reviewed revision, pull request and implementation branch.');
         }
 
+        $pullRequestState = $this->repository->pullRequest($pullRequest);
+        if (($pullRequestState['merged'] ?? false) === true || ($pullRequestState['state'] ?? null) !== 'open') {
+            throw new RuntimeException('QA execution requires an open, unmerged pull request.');
+        }
+        if (($pullRequestState['head_revision'] ?? null) !== $revision) {
+            throw new RuntimeException('QA refused stale review evidence because pull request head changed after review.');
+        }
+
         $ci = $this->repository->commitChecks($revision);
         if ($ci['state'] === 'PENDING') {
             return new WorkflowDirective(WorkflowDirectiveType::STOP, null, 'QA is waiting for GitHub CI to finish for revision '.$revision.'.');
@@ -214,6 +222,7 @@ final readonly class EngineeringQaStageExecutor
                 'architecture_decision' => $architecture['content'],
                 'development_result' => $development['content'],
                 'review_report' => $review['content'],
+                'pull_request_state' => $pullRequestState,
                 'pull_request_files' => $diff,
                 'ci_evidence' => $ci,
                 'application_surfaces' => [
@@ -279,6 +288,7 @@ final readonly class EngineeringQaStageExecutor
             if (($run->structuredOutput['phase'] ?? null) !== 'EXECUTION') throw new RuntimeException('QA execution must return EXECUTION phase.');
             if (($run->structuredOutput['feature_id'] ?? null) !== $featureId) throw new RuntimeException('QA output feature id does not match workflow feature.');
             if (($run->structuredOutput['tested_revision'] ?? null) !== $revision) throw new RuntimeException('QA output revision does not match reviewed revision.');
+            $this->assertFeatureCoverage($featureSpec['content'], $run->structuredOutput);
 
             $effective = $run->structuredOutput;
             $effective['ci_evidence'] = $ci;
@@ -307,6 +317,9 @@ final readonly class EngineeringQaStageExecutor
                     'evidence' => $ci['checks'],
                 ];
             }
+
+            $this->validator->validate(AgentRole::QA, $effective);
+            $this->assertFeatureCoverage($featureSpec['content'], $effective);
 
             $run = new EngineeringAgentRunResult(
                 runId: $run->runId,
@@ -359,7 +372,7 @@ final readonly class EngineeringQaStageExecutor
             );
 
             $ready = new ReadyForHumanApprovalEvidence(
-                architectureApproved: in_array((string) ($architecture['content']['status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS'], true),
+                architectureApproved: in_array((string) ($architecture['content']['gate_status'] ?? $architecture['content']['status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS'], true),
                 developmentCompleted: in_array((string) ($development['content']['status'] ?? ''), ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true),
                 reviewApproved: ($review['content']['status'] ?? null) === 'APPROVED',
                 qaPassed: $qaStatus === 'PASS',
@@ -397,6 +410,34 @@ final readonly class EngineeringQaStageExecutor
 
             return $next;
         });
+    }
+
+    private function assertFeatureCoverage(array $featureSpec, array $qa): void
+    {
+        $expected = [];
+        foreach (is_array($featureSpec['acceptance_criteria'] ?? null) ? $featureSpec['acceptance_criteria'] : [] as $criterion) {
+            if (!is_array($criterion)) throw new RuntimeException('Feature Specification acceptance criteria are malformed.');
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id === '') throw new RuntimeException('Feature Specification acceptance criterion id is missing.');
+            $expected[$id] = true;
+        }
+
+        $actual = [];
+        foreach (is_array($qa['acceptance_criteria'] ?? null) ? $qa['acceptance_criteria'] : [] as $criterion) {
+            if (!is_array($criterion)) continue;
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id !== '') $actual[$id] = true;
+        }
+
+        $missing = array_diff_key($expected, $actual);
+        $unexpected = array_diff_key($actual, $expected);
+        if ($missing !== [] || $unexpected !== []) {
+            throw new RuntimeException(sprintf(
+                'QA acceptance-criteria coverage mismatch. Missing: %s; unexpected: %s.',
+                implode(', ', array_keys($missing)) ?: 'none',
+                implode(', ', array_keys($unexpected)) ?: 'none',
+            ));
+        }
     }
 
     private function acceptanceCriteriaVerified(array $featureSpec, array $qa): bool

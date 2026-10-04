@@ -273,3 +273,58 @@ QA працює у двох фазах. Після Manager workflow перехо
 QA не має права змінювати production implementation. Він може запропонувати й застосувати автоматизовані тести лише в `tests/` або `symfony/tests/`. Якщо QA додає тести, результат `TESTS_UPDATED` створює нову revision і повертає workflow Reviewer; після повторного `APPROVED` QA тестує вже цю revision.
 
 Фінальні QA status: `PASS`, `FAIL`, `BLOCKED`, `HUMAN_TEST_REQUIRED`. `PASS` вимагає zero failed tests, PASS для всіх blocking Acceptance Criteria та всіх applicable COS invariants, відсутність BLOCKER/MAJOR defects/security findings і успішний deterministic CI. `FAIL` повертає Developer, після чого обов'язково повторюються Reviewer і QA. `HUMAN_TEST_REQUIRED` переходить у human decision boundary і ніколи не прирівнюється до PASS.
+
+
+## Повний автономний цикл Engineering V0.1
+
+Після формалізації запиту Engineering runtime виконує керований цикл:
+
+```text
+Engineering Manager
+→ QA Test Plan
+→ Principal Architect
+→ Developer
+→ Reviewer
+→ QA Verification
+→ READY_FOR_HUMAN_APPROVAL
+→ human merge
+```
+
+State machine визначається deterministic runtime, а не довільним рішенням LLM. Кожний Agent створює структурований artifact, який проходить schema validation і role-specific gate.
+
+### Інваріант ревізії
+
+Після Developer усі downstream-рішення прив'язані до конкретного Git commit:
+
+```text
+implementation revision
+= current PR head reviewed by Reviewer
+= Reviewer reviewed_revision
+= current PR head tested by QA
+= QA tested_revision
+= CI checked revision
+```
+
+Reviewer і QA перед запуском перевіряють, що PR залишається відкритим, не merged і його поточний head SHA дорівнює ревізії, на яку посилається попередній artifact. Зовнішній push робить старий evidence невалідним і зупиняє просування workflow.
+
+Reviewer та QA також повинні покрити весь набір Acceptance Criteria з Feature Specification. Відсутній або невідомий criterion є contract failure, а не мовчазним PASS.
+
+### Бюджет автономності
+
+Локальний step limit доповнюється persistent budget по кількості logical AgentRuns для feature. Це захищає від нескінченних циклів після scheduler resume.
+
+Коли бюджет вичерпано:
+
+```text
+active stage
+→ HUMAN_DECISION_REQUIRED
+→ AUTONOMY_BUDGET
+```
+
+Людина може вибрати `CONTINUE`, що відкриває наступний budget tranche, або `CANCEL`. Без явного рішення autonomous execution не продовжується.
+
+### Фінальний human gate
+
+`READY_FOR_HUMAN_APPROVAL` вимагає approved Architecture Gate, завершеної Development, Reviewer approval, QA PASS, CI SUCCESS, перевірених blocking Acceptance Criteria, відсутності open critical findings, blocking human decisions і незавершених engineering tasks.
+
+Merge та production deploy у V0.1 залишаються human-only.

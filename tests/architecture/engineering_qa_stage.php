@@ -23,6 +23,9 @@ foreach ([
     'ReadyForHumanApprovalEvidence',
     'hasOpenCritical',
     'acceptanceCriteriaVerified',
+    'assertFeatureCoverage',
+    'head_revision',
+    "architecture['content']['gate_status']",
     "str_starts_with(\$path, 'tests/')",
     "str_starts_with(\$path, 'symfony/tests/')",
 ] as $needle) {
@@ -34,6 +37,6 @@ foreach (['QA_TEST_PLAN_READY','QA_TESTS_UPDATED_REVIEW_REQUIRED','AgentRole::PR
 if (!str_contains($workflow, "'QA_PLANNING' => [EngineeringWorkflowState::ARCHITECTURE_PENDING")) throw new RuntimeException('QA planning transition is missing.');
 if (!str_contains($workflow, "'QA_PENDING' => [EngineeringWorkflowState::REVIEW_PENDING")) throw new RuntimeException('QA test-update re-review transition is missing.');
 if (!str_contains($progression, 'AgentRole::QA')) throw new RuntimeException('Autonomous progression does not run QA.');
-if (!str_contains($progression, 'for ($step = 0; $step < 12; ++$step)')) throw new RuntimeException('Autonomous progression lacks a hard safety step limit.');
+foreach (['maxStepsPerProgression','maxLogicalAgentRunsPerFeature','escalateAutonomyBudget'] as $needle) { if (!str_contains($progression, $needle)) throw new RuntimeException('Autonomous progression safety budget missing '.$needle); }
 
 echo "Engineering QA stage passed.\n";

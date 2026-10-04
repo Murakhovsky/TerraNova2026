@@ -8,7 +8,7 @@ $coordinator = (string) file_get_contents($root.'/symfony/src/Engineering/Applic
 $workflow = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/Workflow/EngineeringWorkflowDefinition.php');
 $prompt = (string) file_get_contents($root.'/symfony/config/engineering/prompts/reviewer-v0.1.md');
 
-foreach (['pullRequestFiles','commitChecks','ArtifactType::REVIEW_REPORT','ArtifactType::IMPLEMENTATION_PLAN','ArtifactType::DEVELOPER_HANDOFF',"'implementation_plan'","'ci_results'","'coding_standards'","'security_standards'","'issues'",'REVIEW_PENDING','reviewed_revision','WorkflowCounters'] as $needle) {
+foreach (['pullRequestFiles','pullRequest(','head_revision','commitChecks','ArtifactType::REVIEW_REPORT','ArtifactType::IMPLEMENTATION_PLAN','ArtifactType::DEVELOPER_HANDOFF',"'implementation_plan'","'ci_results'","'coding_standards'","'security_standards'","'issues'",'REVIEW_PENDING','reviewed_revision','assertAcceptanceCriteriaCoverage','WorkflowCounters'] as $needle) {
     if (!str_contains($stage.$gateway, $needle)) throw new RuntimeException('Reviewer stage missing '.$needle);
 }
 foreach (['REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED','AgentRole::PRINCIPAL_ARCHITECT','AgentRole::DEVELOPER','AgentRole::QA'] as $needle) {

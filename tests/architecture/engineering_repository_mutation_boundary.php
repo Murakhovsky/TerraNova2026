@@ -17,6 +17,8 @@ foreach ([
     'compareRevisions',
     "'/contents/'",
     "'/compare/'",
+    "'head_revision'",
+    "'base_revision'",
 ] as $needle) {
     if (!str_contains($gateway, $needle)) throw new RuntimeException('Repository mutation boundary missing '.$needle);
 }
