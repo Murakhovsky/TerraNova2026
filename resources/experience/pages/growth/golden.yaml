@@ -1,0 +1,22 @@
+pages:
+  - id: growth.overview
+    route: { name: cos_growth_overview, path: /growth, methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.overview.view
+    owner: Growth
+    priority: P0
+    status: IMPLEMENTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Understand current Growth signals, opportunities and next actions."
+      page_purpose: "Golden Growth domain dashboard reference for cross-channel prospect intelligence and execution."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: [EntityList, FilterBar, Toolbar, EmptyState, ErrorState]
+    primary_action: growth.open_priority
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 3 }

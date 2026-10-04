@@ -33,6 +33,7 @@
         <twig:CosMetric label="V1 ready" value="{{ experience.v1Ready }}" />
         <twig:CosMetric label="Design components" value="{{ experience.designSystem.canonicalComponents }}" />
         <twig:CosMetric label="Stable / frozen" value="{{ experience.designSystem.stable }}" />
+        <twig:CosMetric label="Golden ready" value="{{ experience.golden.ready }}/{{ experience.golden.required }}" />
     </section>
 
     <section class="cos-page__section" aria-labelledby="experience-domains">
@@ -61,6 +62,47 @@
                         <td>{{ counts.p0p1 }}</td>
                         <td>{{ counts.implemented }}</td>
                         <td>{{ counts.v1Ready }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-golden">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-golden">Golden Experience 8</h2>
+                <p>
+                    Mass migration:
+                    <strong>{{ experience.golden.massMigrationBlocked ? 'BLOCKED' : 'UNBLOCKED' }}</strong>.
+                    Golden readiness requires V1_READY, reference-quality scores and human acceptance.
+                </p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Reference</th>
+                        <th scope="col">Path</th>
+                        <th scope="col">Archetype</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Min quality</th>
+                        <th scope="col">Human</th>
+                        <th scope="col">Golden</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in experience.golden.pages %}
+                    <tr>
+                        <th scope="row"><code>{{ item.id }}</code></th>
+                        <td><a href="{{ item.path }}">{{ item.path }}</a></td>
+                        <td>{{ item.archetype }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>{{ min(item.quality) }}</td>
+                        <td>{{ item.humanAccepted ? 'yes' : 'no' }}</td>
+                        <td><span class="cos-badge">{{ item.ready ? 'READY' : 'NOT READY' }}</span></td>
                     </tr>
                 {% endfor %}
                 </tbody>

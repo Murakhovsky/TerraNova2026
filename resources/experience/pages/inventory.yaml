@@ -617,28 +617,6 @@ pages:
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
 
-  - id: growth.overview
-    route: { name: cos_growth_overview, path: "/growth", methods: [GET] }
-    surface: workspace
-    domain: Growth
-    capability: growth.overview.view
-    owner: Growth
-    priority: P1
-    status: CONTRACTED
-    personas: [growth_manager, specialist]
-    product:
-      primary_goal: "Complete the primary task for /growth without leaving the canonical COS experience."
-      page_purpose: "Canonical Growth domain dashboard surface for /growth."
-    archetype: domain_dashboard
-    patterns:
-      required: [PageHeader, KpiStrip]
-      optional: []
-    primary_action: growth.overview.primary
-    states: [normal]
-    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
-    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
-    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
-
   - id: growth.candidates
     route: { name: cos_growth_candidates, path: "/growth/candidates", methods: [GET] }
     surface: workspace
