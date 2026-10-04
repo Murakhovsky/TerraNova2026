@@ -13,6 +13,7 @@ final readonly class PageDeliveryContextPackageBuilder
         private PageContractRegistryInterface $pages,
         private PageArchetypeRegistry $archetypes,
         private PatternRegistry $patterns,
+        private PageDeliveryAgentContract $agents,
     ) {}
 
     public function build(string $pageId): PageDeliveryContextPackage
@@ -62,6 +63,8 @@ final readonly class PageDeliveryContextPackageBuilder
                 'production_acceptable' => 3,
             ],
             [
+                'agent_roles' => $this->agents->roles(),
+                'rules' => [
                 'Reuse the existing Symfony Experience Platform and canonical components.',
                 'Do not introduce a second frontend runtime or Domain-owned design system.',
                 'Do not move business rules into Twig, Stimulus or browser state.',
@@ -70,6 +73,7 @@ final readonly class PageDeliveryContextPackageBuilder
                 'Do not mark human_acceptance=true automatically.',
                 'Do not promote V1_READY without human acceptance and quality thresholds.',
                 'Return concrete QA evidence for every claimed PASS.',
+                ],
             ],
         );
     }

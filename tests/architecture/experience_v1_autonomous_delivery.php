@@ -6,6 +6,7 @@ $root = dirname(__DIR__, 2);
 $files = [
     'symfony/src/Web/Experience/Delivery/PageDeliveryContextPackage.php',
     'symfony/src/Web/Experience/Delivery/PageDeliveryContextPackageBuilder.php',
+    'symfony/src/Web/Experience/Delivery/PageDeliveryAgentContract.php',
     'symfony/src/Web/Experience/Delivery/PageDeliveryWorkflow.php',
     'symfony/src/Web/Experience/Delivery/PageQaFinding.php',
     'symfony/src/Web/Experience/Delivery/PageDeliveryEvidenceContract.php',
@@ -27,6 +28,7 @@ foreach ([
     'PatternRegistry',
     'human_acceptance',
     'screenshots required',
+    'agent_roles',
     'Do not introduce a second frontend runtime',
 ] as $marker) {
     if (!str_contains($builder, $marker)) {

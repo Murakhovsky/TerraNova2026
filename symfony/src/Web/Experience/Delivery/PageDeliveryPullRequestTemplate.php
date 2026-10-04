@@ -45,7 +45,10 @@ final readonly class PageDeliveryPullRequestTemplate
             '- [ ] No automated process promoted the page to `V1_READY`',
             '',
             '### Experience constraints',
-            ...array_map(static fn (string $item): string => '- '.$item, $package->agentConstraints),
+            ...array_map(
+                static fn (string $item): string => '- '.$item,
+                is_array($package->agentConstraints['rules'] ?? null) ? $package->agentConstraints['rules'] : [],
+            ),
         ]);
     }
 }

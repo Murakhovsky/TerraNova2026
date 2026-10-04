@@ -41,7 +41,7 @@ final readonly class PageDeliveryWorkflow
                 'experience_evidence_contract' => $evidence->toArray(),
                 'experience_pull_request_template' => $pullRequestBody,
             ],
-            constraints: $data['agent_constraints'],
+            constraints: is_array($data['agent_constraints']['rules'] ?? null) ? $data['agent_constraints']['rules'] : [],
             previousContext: [
                 'page_contract' => $contract,
                 'archetype' => $data['archetype'],

@@ -101,6 +101,10 @@ jobs:
           docker compose exec -T php php bin/console cos:web:experience:smoke
           docker compose exec -T php php bin/console cos:web:toolkit:smoke
           docker compose exec -T php php bin/console cos:web:design-system:smoke
+          docker compose exec -T php php bin/console cos:experience:delivery growth.overview > /tmp/experience-delivery.json
+          grep -q '"context_package"' /tmp/experience-delivery.json
+          grep -q '"evidence_contract"' /tmp/experience-delivery.json
+          grep -q '"pull_request_template"' /tmp/experience-delivery.json
       - name: Smoke vertical slices
         run: bash bin/verify smoke
       - name: Production cutover Web routes
