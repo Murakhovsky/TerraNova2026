@@ -27,6 +27,90 @@ final class EngineeringAgentSchemas
     /** @return array<string,mixed> */
     private static function manager(): array
     {
+        $requirement = [
+            'type' => 'object',
+            'required' => ['id','description'],
+            'properties' => [
+                'id' => ['type' => 'string', 'minLength' => 1],
+                'description' => ['type' => 'string', 'minLength' => 1],
+            ],
+            'additionalProperties' => false,
+        ];
+
+        $acceptanceCriterion = [
+            'type' => 'object',
+            'required' => ['id','description','verification_type'],
+            'properties' => [
+                'id' => ['type' => 'string', 'minLength' => 1],
+                'description' => ['type' => 'string', 'minLength' => 1],
+                'verification_type' => self::baseStatus(['unit','integration','api','ui','e2e','manual','security']),
+            ],
+            'additionalProperties' => false,
+        ];
+
+        $risk = [
+            'type' => 'object',
+            'required' => ['id','category','description','severity','reason','mitigation'],
+            'properties' => [
+                'id' => ['type' => 'string', 'minLength' => 1],
+                'category' => self::baseStatus([
+                    'SECURITY','TENANT','AUTH','DATABASE','MIGRATION','BREAKING_CHANGE','API',
+                    'PERFORMANCE','DATA_LOSS','UX','DEPENDENCY','DEPLOYMENT','UNKNOWN_SCOPE',
+                ]),
+                'description' => ['type' => 'string', 'minLength' => 1],
+                'severity' => self::baseStatus(['low','medium','high','critical']),
+                'reason' => ['type' => 'string', 'minLength' => 1],
+                'mitigation' => ['type' => 'string', 'minLength' => 1],
+            ],
+            'additionalProperties' => false,
+        ];
+
+        $assumption = [
+            'type' => 'object',
+            'required' => ['id','description'],
+            'properties' => [
+                'id' => ['type' => 'string', 'minLength' => 1],
+                'description' => ['type' => 'string', 'minLength' => 1],
+            ],
+            'additionalProperties' => false,
+        ];
+
+        $openQuestion = [
+            'type' => 'object',
+            'required' => ['id','question','classification','blocking','reason','options'],
+            'properties' => [
+                'id' => ['type' => 'string', 'minLength' => 1],
+                'question' => ['type' => 'string', 'minLength' => 1],
+                'classification' => self::baseStatus([
+                    'RESOLVABLE_FROM_CODE','RESOLVABLE_FROM_DOCS','ARCHITECT_DECISION',
+                    'PRODUCT_DECISION','BLOCKING_USER_DECISION','NON_BLOCKING',
+                ]),
+                'blocking' => ['type' => 'boolean'],
+                'reason' => ['type' => 'string', 'minLength' => 1],
+                'options' => ['type' => 'array'],
+            ],
+            'additionalProperties' => false,
+        ];
+
+        $task = [
+            'type' => 'object',
+            'required' => ['id','title','type','description','dependencies','acceptance_criteria','assigned_role','status'],
+            'properties' => [
+                'id' => ['type' => 'string', 'minLength' => 1],
+                'title' => ['type' => 'string', 'minLength' => 1],
+                'type' => self::baseStatus([
+                    'ARCHITECTURE','BACKEND','FRONTEND','DATABASE','TEST',
+                    'DOCUMENTATION','REVIEW','SECURITY','DEVOPS','RESEARCH',
+                ]),
+                'description' => ['type' => 'string', 'minLength' => 1],
+                'dependencies' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'acceptance_criteria' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'assigned_role' => self::baseStatus(['PRINCIPAL_ARCHITECT','DEVELOPER','REVIEWER','QA']),
+                'status' => self::baseStatus(['PENDING']),
+            ],
+            'additionalProperties' => false,
+        ];
+
         return [
             'type' => 'object',
             'required' => ['status','feature','context_map','tasks','risks','assumptions','open_questions','decision'],
@@ -34,7 +118,12 @@ final class EngineeringAgentSchemas
                 'status' => self::baseStatus(['SPECIFICATION_READY','HUMAN_DECISION_REQUIRED','BLOCKED','FAILED']),
                 'feature' => [
                     'type' => 'object',
-                    'required' => ['title','type','business_goal','user_problem','current_behavior','expected_behavior','scope','out_of_scope','affected_areas','user_roles','functional_requirements','non_functional_requirements','acceptance_criteria','dependencies','constraints','risks','assumptions','open_questions','priority','complexity'],
+                    'required' => [
+                        'title','type','business_goal','user_problem','current_behavior','expected_behavior',
+                        'scope','out_of_scope','affected_areas','user_roles','functional_requirements',
+                        'non_functional_requirements','acceptance_criteria','dependencies','constraints',
+                        'risks','assumptions','open_questions','priority','complexity',
+                    ],
                     'properties' => [
                         'title' => ['type' => 'string', 'minLength' => 1],
                         'type' => self::baseStatus(['FEATURE','BUG','REFACTOR','MIGRATION','MAINTENANCE']),
@@ -42,35 +131,52 @@ final class EngineeringAgentSchemas
                         'user_problem' => ['type' => ['string','null']],
                         'current_behavior' => ['type' => ['string','null']],
                         'expected_behavior' => ['type' => 'string', 'minLength' => 1],
-                        'scope' => ['type' => 'array', 'minItems' => 1],
-                        'out_of_scope' => ['type' => 'array'],
-                        'affected_areas' => ['type' => 'array'],
-                        'user_roles' => ['type' => 'array'],
-                        'functional_requirements' => ['type' => 'array', 'minItems' => 1],
-                        'non_functional_requirements' => ['type' => 'array'],
-                        'acceptance_criteria' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object']],
+                        'scope' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'string']],
+                        'out_of_scope' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'affected_areas' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'user_roles' => ['type' => 'array', 'items' => ['type' => 'string']],
+                        'functional_requirements' => ['type' => 'array', 'minItems' => 1, 'items' => $requirement],
+                        'non_functional_requirements' => ['type' => 'array', 'items' => $requirement],
+                        'acceptance_criteria' => ['type' => 'array', 'minItems' => 1, 'items' => $acceptanceCriterion],
                         'dependencies' => ['type' => 'array'],
                         'constraints' => ['type' => 'array'],
-                        'risks' => ['type' => 'array'],
-                        'assumptions' => ['type' => 'array'],
-                        'open_questions' => ['type' => 'array'],
+                        'risks' => ['type' => 'array', 'items' => $risk],
+                        'assumptions' => ['type' => 'array', 'items' => $assumption],
+                        'open_questions' => ['type' => 'array', 'items' => $openQuestion],
                         'priority' => self::baseStatus(['P0','P1','P2','P3']),
                         'complexity' => self::baseStatus(['XS','S','M','L','XL']),
                     ],
+                    'additionalProperties' => false,
+                ],
+                'context_map' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'repository_revision' => ['type' => ['string','null']],
+                    ],
                     'additionalProperties' => true,
                 ],
-                'context_map' => ['type' => 'object'],
-                'tasks' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object']],
-                'risks' => ['type' => 'array', 'items' => ['type' => 'object']],
-                'assumptions' => ['type' => 'array', 'items' => ['type' => ['string','object']]],
-                'open_questions' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'tasks' => ['type' => 'array', 'minItems' => 1, 'items' => $task],
+                'risks' => ['type' => 'array', 'items' => $risk],
+                'assumptions' => ['type' => 'array', 'items' => $assumption],
+                'open_questions' => ['type' => 'array', 'items' => $openQuestion],
                 'decision' => [
                     'type' => 'object',
-                    'required' => ['type','reason'],
+                    'required' => ['type','agent','reason','human_decision'],
                     'properties' => [
-                        'type' => self::baseStatus(['RUN_AGENT','REQUEST_HUMAN_DECISION','RETRY','BLOCK','READY_FOR_HUMAN_APPROVAL','STOP']),
+                        'type' => self::baseStatus(['RUN_AGENT','REQUEST_HUMAN_DECISION','BLOCK','STOP']),
                         'agent' => ['type' => ['string','null']],
-                        'reason' => ['type' => 'string'],
+                        'reason' => ['type' => 'string', 'minLength' => 1],
+                        'human_decision' => [
+                            'type' => ['object','null'],
+                            'properties' => [
+                                'question' => ['type' => 'string', 'minLength' => 1],
+                                'reason' => ['type' => 'string', 'minLength' => 1],
+                                'options' => ['type' => 'array', 'minItems' => 1],
+                                'recommended_option' => ['type' => ['string','null']],
+                                'evidence' => ['type' => 'array'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
                     ],
                     'additionalProperties' => false,
                 ],

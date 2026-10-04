@@ -18,9 +18,15 @@ $dataset = json_decode(
     JSON_THROW_ON_ERROR,
 );
 
+$managerCases = array_values(array_filter(
+    $dataset['cases'] ?? [],
+    static fn (array $case): bool => ($case['role'] ?? null) === 'ENGINEERING_MANAGER',
+));
+if (count($managerCases) < 10) throw new RuntimeException('Engineering Manager evaluation set is too small.');
+
 $result = (new EngineeringEvaluationRunner())->run($dataset);
 
-if ($result['cases'] < 10) throw new RuntimeException('Engineering evaluation set is too small.');
+if ($result['cases'] < 18) throw new RuntimeException('Engineering evaluation set is too small.');
 if ($result['failed'] !== 0) {
     throw new RuntimeException('Engineering evaluation regression: '.json_encode($result['results'], JSON_THROW_ON_ERROR));
 }

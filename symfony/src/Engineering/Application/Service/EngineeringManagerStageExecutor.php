@@ -106,21 +106,25 @@ final readonly class EngineeringManagerStageExecutor
                 $this->features->updateStatus($featureId, $workflow->currentState()->value);
 
                 if ($next->type === WorkflowDirectiveType::REQUEST_HUMAN_DECISION) {
-                    $questions = is_array($analysis->featureSpecification['open_questions'] ?? null)
-                        ? $analysis->featureSpecification['open_questions']
+                    $managerDecision = is_array($analysis->featureSpecification['decision']['human_decision'] ?? null)
+                        ? $analysis->featureSpecification['decision']['human_decision']
                         : [];
                     $this->humanDecisions->create(
                         featureId: $featureId,
                         workflowId: $workflow->id(),
                         type: 'PRODUCT_AMBIGUITY',
-                        question: 'Engineering Manager requires a human decision before workflow continuation.',
-                        reason: $next->reason,
-                        options: $questions,
+                        question: (string) ($managerDecision['question'] ?? 'Engineering Manager requires a human decision before workflow continuation.'),
+                        reason: (string) ($managerDecision['reason'] ?? $next->reason),
+                        options: is_array($managerDecision['options'] ?? null) ? $managerDecision['options'] : [],
                         evidence: [
-                            'manager_decision' => $analysis->featureSpecification['decision'] ?? [],
+                            'manager_evidence' => is_array($managerDecision['evidence'] ?? null) ? $managerDecision['evidence'] : [],
+                            'open_questions' => $analysis->featureSpecification['open_questions'] ?? [],
                             'risks' => $analysis->featureSpecification['risks'] ?? [],
                         ],
                         blocking: true,
+                        recommendedOption: isset($managerDecision['recommended_option']) && is_string($managerDecision['recommended_option'])
+                            ? $managerDecision['recommended_option']
+                            : null,
                     );
                 }
 

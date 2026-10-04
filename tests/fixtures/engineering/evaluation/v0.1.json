@@ -14,23 +14,44 @@
         "feature": {
           "title": "Add activity filters",
           "type": "FEATURE",
-          "business_goal": "Managers can narrow activity results.",
-          "expected_behavior": "Actor and date filters are applied.",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
           "scope": [
             "Activity Center filters"
           ],
-          "out_of_scope": [],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
           "functional_requirements": [
             {
-              "id": "FR-001"
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
             }
           ],
           "acceptance_criteria": [
             {
               "id": "AC-001",
-              "description": "Actor filter returns selected actor only.",
+              "description": "Actor filter returns selected actor only within active tenant.",
               "verification_type": "integration"
             }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
           ],
           "risks": [],
           "assumptions": [],
@@ -44,7 +65,15 @@
         "tasks": [
           {
             "id": "TASK-001",
-            "assigned_role": "DEVELOPER"
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
           }
         ],
         "risks": [],
@@ -53,7 +82,8 @@
         "decision": {
           "type": "RUN_AGENT",
           "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
         }
       }
     },
@@ -64,25 +94,46 @@
       "output": {
         "status": "SPECIFICATION_READY",
         "feature": {
-          "title": "Empty plan",
+          "title": "Add activity filters",
           "type": "FEATURE",
-          "business_goal": "Do something.",
-          "expected_behavior": "Behavior changes.",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
           "scope": [
-            "One thing"
+            "Activity Center filters"
           ],
-          "out_of_scope": [],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
           "functional_requirements": [
             {
-              "id": "FR-001"
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
             }
           ],
           "acceptance_criteria": [
             {
               "id": "AC-001",
-              "description": "Observable result.",
-              "verification_type": "unit"
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
             }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
           ],
           "risks": [],
           "assumptions": [],
@@ -90,7 +141,9 @@
           "priority": "P2",
           "complexity": "S"
         },
-        "context_map": {},
+        "context_map": {
+          "repository_revision": "abc123"
+        },
         "tasks": [],
         "risks": [],
         "assumptions": [],
@@ -98,7 +151,8 @@
         "decision": {
           "type": "RUN_AGENT",
           "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Ready."
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
         }
       }
     },
@@ -109,17 +163,34 @@
       "output": {
         "status": "SPECIFICATION_READY",
         "feature": {
-          "title": "Bad AC",
+          "title": "Add activity filters",
           "type": "FEATURE",
-          "business_goal": "Validate ids.",
-          "expected_behavior": "Valid acceptance criteria.",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
           "scope": [
-            "Validation"
+            "Activity Center filters"
           ],
-          "out_of_scope": [],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
           "functional_requirements": [
             {
-              "id": "FR-001"
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
             }
           ],
           "acceptance_criteria": [
@@ -129,17 +200,31 @@
               "verification_type": "unit"
             }
           ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
           "risks": [],
           "assumptions": [],
           "open_questions": [],
           "priority": "P2",
           "complexity": "S"
         },
-        "context_map": {},
+        "context_map": {
+          "repository_revision": "abc123"
+        },
         "tasks": [
           {
             "id": "TASK-001",
-            "assigned_role": "DEVELOPER"
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "whatever"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
           }
         ],
         "risks": [],
@@ -148,7 +233,773 @@
         "decision": {
           "type": "RUN_AGENT",
           "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Ready."
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
+        }
+      }
+    },
+    {
+      "id": "manager-xl-without-decomposition-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "XL"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
+        }
+      }
+    },
+    {
+      "id": "manager-human-decision-without-options-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "HUMAN_DECISION_REQUIRED",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [
+            {
+              "id": "Q-001",
+              "question": "Should filters persist between sessions?",
+              "classification": "BLOCKING_USER_DECISION",
+              "blocking": true,
+              "reason": "The behaviors differ materially.",
+              "options": []
+            }
+          ],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [
+          {
+            "id": "Q-001",
+            "question": "Should filters persist between sessions?",
+            "classification": "BLOCKING_USER_DECISION",
+            "blocking": true,
+            "reason": "The behaviors differ materially.",
+            "options": []
+          }
+        ],
+        "decision": {
+          "type": "REQUEST_HUMAN_DECISION",
+          "agent": null,
+          "reason": "Decision needed.",
+          "human_decision": {
+            "question": "Should filters persist between sessions?",
+            "reason": "The behaviors differ materially.",
+            "options": [],
+            "recommended_option": null,
+            "evidence": []
+          }
+        }
+      }
+    },
+    {
+      "id": "manager-human-decision-valid",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": true,
+      "output": {
+        "status": "HUMAN_DECISION_REQUIRED",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [
+            {
+              "id": "Q-001",
+              "question": "Should filters persist between sessions?",
+              "classification": "BLOCKING_USER_DECISION",
+              "blocking": true,
+              "reason": "The behaviors create materially different product outcomes.",
+              "options": [
+                {
+                  "id": "PERSIST",
+                  "label": "Persist filters"
+                },
+                {
+                  "id": "RESET",
+                  "label": "Reset filters"
+                }
+              ]
+            }
+          ],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [
+          {
+            "id": "Q-001",
+            "question": "Should filters persist between sessions?",
+            "classification": "BLOCKING_USER_DECISION",
+            "blocking": true,
+            "reason": "The behaviors create materially different product outcomes.",
+            "options": [
+              {
+                "id": "PERSIST",
+                "label": "Persist filters"
+              },
+              {
+                "id": "RESET",
+                "label": "Reset filters"
+              }
+            ]
+          }
+        ],
+        "decision": {
+          "type": "REQUEST_HUMAN_DECISION",
+          "agent": null,
+          "reason": "A product decision is required.",
+          "human_decision": {
+            "question": "Should filters persist between sessions?",
+            "reason": "The behaviors create materially different product outcomes.",
+            "options": [
+              {
+                "id": "PERSIST",
+                "label": "Persist filters"
+              },
+              {
+                "id": "RESET",
+                "label": "Reset filters"
+              }
+            ],
+            "recommended_option": "RESET",
+            "evidence": [
+              "No existing convention resolves filter persistence."
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "manager-divergent-canonical-copies-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [
+            {
+              "id": "RISK-001",
+              "category": "API",
+              "description": "Contract drift.",
+              "severity": "medium",
+              "reason": "Response semantics may change.",
+              "mitigation": "Preserve defaults."
+            }
+          ],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
+        }
+      }
+    },
+    {
+      "id": "manager-duplicate-acceptance-id-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            },
+            {
+              "id": "AC-001",
+              "description": "Duplicate criterion.",
+              "verification_type": "unit"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
+        }
+      }
+    },
+    {
+      "id": "manager-cyclic-task-graph-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "First task",
+            "type": "BACKEND",
+            "description": "First cyclic task.",
+            "dependencies": [
+              "TASK-002"
+            ],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          },
+          {
+            "id": "TASK-002",
+            "title": "Second task",
+            "type": "TEST",
+            "description": "Second cyclic task.",
+            "dependencies": [
+              "TASK-001"
+            ],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "QA",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
+        }
+      }
+    },
+    {
+      "id": "manager-unknown-task-dependency-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [
+              "TASK-999"
+            ],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
+        }
+      }
+    },
+    {
+      "id": "manager-wrong-next-agent-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow Activity Center results.",
+          "user_problem": "Large activity feeds are difficult to inspect.",
+          "current_behavior": "Activity Center shows the complete allowed feed.",
+          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [
+            "New activity event types"
+          ],
+          "affected_areas": [
+            "Workspace Activity Center"
+          ],
+          "user_roles": [
+            "tenant user"
+          ],
+          "functional_requirements": [
+            {
+              "id": "FR-001",
+              "description": "User can filter activity by actor."
+            }
+          ],
+          "non_functional_requirements": [
+            {
+              "id": "NFR-001",
+              "description": "Filtering preserves tenant isolation."
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only within active tenant.",
+              "verification_type": "integration"
+            }
+          ],
+          "dependencies": [],
+          "constraints": [
+            "Preserve existing default behavior."
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "title": "Implement Activity Center filters",
+            "type": "BACKEND",
+            "description": "Implement approved filtering behavior after architecture review.",
+            "dependencies": [],
+            "acceptance_criteria": [
+              "AC-001"
+            ],
+            "assigned_role": "DEVELOPER",
+            "status": "PENDING"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "DEVELOPER",
+          "reason": "Specification ready; architecture is mandatory.",
+          "human_decision": null
         }
       }
     },
