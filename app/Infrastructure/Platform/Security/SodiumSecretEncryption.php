@@ -54,11 +54,20 @@ final readonly class SodiumSecretEncryption implements SecretEncryptionInterface
         $raw = trim($this->masterKey);
         if ($raw === '') throw new RuntimeException('COS_SECRET_MASTER_KEY is not configured.');
 
-        $decoded = base64_decode($raw, true);
-        $key = $decoded !== false ? $decoded : $raw;
-        if (strlen($key) !== SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES) {
-            throw new RuntimeException('COS_SECRET_MASTER_KEY must decode to exactly 32 bytes.');
+        if (preg_match('/^[a-f0-9]{64}$/i', $raw) === 1) {
+            $hex = hex2bin($raw);
+            if ($hex !== false) return $hex;
         }
-        return $key;
+
+        $decoded = base64_decode($raw, true);
+        if ($decoded !== false && strlen($decoded) === SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES) {
+            return $decoded;
+        }
+
+        if (strlen($raw) === SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES) {
+            return $raw;
+        }
+
+        throw new RuntimeException('COS_SECRET_MASTER_KEY must be a 32-byte raw, base64, or 64-character hex key.');
     }
 }

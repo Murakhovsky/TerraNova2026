@@ -55,6 +55,8 @@ try {
   await expect200('/account/access', '[data-cos-account-access]');
   await expect200('/workspace/ai', '[data-cos-ai-center]');
   await expect200('/admin/engineering', '[data-cos-engineering="index"]');
+  await expect200('/admin/settings', '[data-cos-archetype]');
+  await expect200('/admin/settings/llm', 'form[action="/admin/settings/llm"]');
 
   // Search/filter paths must exercise native PDO prepares, not just empty-state rendering.
   await expect200('/admin/content?q=cutover');

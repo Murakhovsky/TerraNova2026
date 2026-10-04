@@ -35,4 +35,16 @@ try {
     if ($error->getMessage() === 'Secret decrypted under another tenant context.') throw $error;
 }
 
+$hexCrypto = new SodiumSecretEncryption(str_repeat('ab', 32), 'hex-v1');
+$hexEncrypted = $hexCrypto->encrypt('hex-secret', 'org-1|llm|openai.api_key');
+if ($hexCrypto->decrypt(
+    $hexEncrypted['ciphertext'],
+    $hexEncrypted['nonce'],
+    $hexEncrypted['encryption_version'],
+    $hexEncrypted['key_id'],
+    'org-1|llm|openai.api_key',
+) !== 'hex-secret') {
+    throw new RuntimeException('Hex master key did not round-trip.');
+}
+
 echo "Platform Settings secret encryption passed.\n";

@@ -34,4 +34,17 @@ foreach (['manager.model','architect.model','developer.model','reviewer.model','
 }
 if (str_contains($controller, "name=\"openai_api_key\" value=")) throw new RuntimeException('Secret must never be rendered back into the admin form.');
 
+$settingsController = $read('symfony/src/Web/Administration/PlatformSettingsController.php');
+$settingsIndex = $read('symfony/templates/experience/administration/settings/index.html.twig');
+$settingsLlm = $read('symfony/templates/experience/administration/settings/llm.html.twig');
+foreach ([
+    "['PageHeader', 'Toolbar', 'EntityList', 'EmptyState', 'ErrorState']",
+    "['PageHeader', 'FormSection', 'StickyActions', 'ErrorState']",
+] as $needle) {
+    if (!str_contains($settingsController, $needle)) throw new RuntimeException('Platform Settings page archetype contract missing '.$needle);
+}
+foreach (['<twig:CosToolbar', '<twig:CosFormSection', '<twig:CosStickyActions'] as $needle) {
+    if (!str_contains($settingsIndex.$settingsLlm, $needle)) throw new RuntimeException('Platform Settings template pattern missing '.$needle);
+}
+
 echo "Platform Settings architecture contract passed.\n";
