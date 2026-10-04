@@ -21,6 +21,7 @@ final readonly class ExperienceReleaseHardeningService
         private GoldenExperienceSet $golden,
         private ExternalReferenceAuditService $externalReferences,
         private ExperienceAssetDebtScanner $assetDebt,
+        private ExperienceRouteDebtScanner $routeDebt,
     ) {}
 
     public function report(): ExperienceReleaseReport
@@ -57,10 +58,18 @@ final readonly class ExperienceReleaseHardeningService
         $golden = $this->golden->report();
         $external = $this->externalReferences->audit();
         $assets = $this->assetDebt->scan();
+        $routeDebt = $this->routeDebt->scan();
 
         $gates = [
             'registry_coverage' => ['actual' => $coverage, 'required' => 100, 'pass' => $coverage === 100],
             'design_system' => ['pass' => $design->isGreen(), 'deprecated_components' => $design->deprecated],
+            'deprecated_component_cleanup' => ['pass' => $design->deprecated === 0, 'actual' => $design->deprecated, 'required' => 0],
+            'stale_route_cleanup' => [
+                'pass' => $routeDebt->isGreen(),
+                'missing' => count($routeDebt->missing),
+                'stale' => count($routeDebt->stale),
+                'mismatched' => count($routeDebt->mismatched),
+            ],
             'golden_human_approval' => ['actual' => $golden->ready, 'required' => $golden->required, 'pass' => $golden->isComplete()],
             'external_reference_structure' => ['actual' => $external->passed(), 'required' => 4, 'pass' => $external->isGreen()],
             'p0_v1_ready' => ['actual' => $p0Ready, 'required' => count($p0), 'pass' => $p0Ready === count($p0)],

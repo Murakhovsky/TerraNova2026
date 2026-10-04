@@ -121,6 +121,7 @@ jobs:
           grep -q '"status"' /tmp/experience-release.json
           grep -q '"BLOCKED"' /tmp/experience-release.json
           docker compose exec -T php php bin/console cos:experience:assets --strict --no-interaction
+          docker compose exec -T php php bin/console cos:experience:routes:debt --strict --no-interaction
       - name: Smoke vertical slices
         run: bash bin/verify smoke
       - name: Production cutover Web routes

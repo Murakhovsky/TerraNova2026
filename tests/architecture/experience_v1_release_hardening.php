@@ -23,7 +23,10 @@ foreach ([
     'dead_js_cleanup',
     'legacy_asset_cleanup',
     'asset_runtime_boundary',
+    'deprecated_component_cleanup',
+    'stale_route_cleanup',
     'ExperienceAssetDebtScanner',
+    'ExperienceRouteDebtScanner',
 ] as $marker) {
     if (!str_contains($service, $marker)) {
         throw new RuntimeException('EX-007 release gate missing: '.$marker);
