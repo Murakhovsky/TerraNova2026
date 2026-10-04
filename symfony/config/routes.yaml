@@ -105,6 +105,11 @@ cos_web_design_system_catalog:
   controller: App\Web\Experience\Dev\DesignSystemCatalogController
   methods: [GET, HEAD]
 
+cos_web_experience_dashboard:
+  path: /admin/experience
+  controller: App\Web\Experience\Dev\ExperienceDashboardController
+  methods: [GET, HEAD]
+
 cos_web_visual_stress:
   path: /dev/stress
   controller: App\Web\Experience\Dev\VisualStressController

@@ -113,6 +113,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Experience\Dev\ExperienceDashboardController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Experience\Dev\VisualStressController:
     public: true
     tags: ['controller.service_arguments']
