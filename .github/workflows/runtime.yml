@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/**'
       - 'symfony/**'
+      - 'resources/experience/**'
       - 'docker/**'
       - 'docker-compose.yml'
       - 'deploy/**'
@@ -80,6 +81,8 @@ jobs:
           docker compose exec -T php php bin/console lint:container
           docker compose exec -T php php bin/console debug:router > /tmp/routes.txt
           grep -q 'cos_symfony_home' /tmp/routes.txt
+          docker compose exec -T php php bin/console cos:experience:inventory --strict --compile --no-interaction
+          docker compose exec -T php php bin/console cos:experience:coverage --no-interaction
       - name: Health
         run: |
           for i in $(seq 1 30); do

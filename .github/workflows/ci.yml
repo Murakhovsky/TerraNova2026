@@ -39,6 +39,3 @@ jobs:
           find app symfony/src tests/architecture tests/unit -type f -name '*.php' ! -path 'tests/history/*' -print0 | xargs -0 -n1 php -l
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
-      - name: Experience route inventory gate
-        working-directory: symfony
-        run: php bin/console cos:experience:inventory --strict --compile --no-interaction
