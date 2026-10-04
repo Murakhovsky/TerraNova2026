@@ -79,7 +79,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Answer what is happening inside one business Domain.',
                 ['PageHeader', 'KpiStrip'],
-                ['EntityList', 'EmptyState', 'ErrorState'],
+                ['Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),

@@ -14,7 +14,7 @@ pages:
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip]
-      optional: [EntityList, FilterBar, Toolbar, EmptyState, ErrorState]
+      optional: [Toolbar, EntityList, EmptyState, ErrorState]
     primary_action: growth.open_priority
     states: [normal, loading, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }

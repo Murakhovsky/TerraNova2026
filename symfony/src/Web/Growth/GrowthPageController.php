@@ -393,7 +393,7 @@ final readonly class GrowthPageController
         return match ($view) {
             'growth/dashboard' => $this->pages->create(
                 PageArchetype::DomainDashboard,
-                ['PageHeader', 'KpiStrip', 'EntityList', 'EmptyState', 'ErrorState'],
+                ['PageHeader', 'KpiStrip', 'Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
                 $state,
             ),
             'growth/candidate', 'growth/account', 'growth/experiment' => $this->pages->create(
