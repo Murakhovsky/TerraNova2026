@@ -17,6 +17,7 @@ interface EngineeringFindingStoreInterface
 
     public function resolveOpenForSource(string $featureId, AgentRole $sourceRole, string $resolvedByRunId): void;
     public function hasOpenCritical(string $featureId): bool;
+    public function hasOpenMajorOrHigher(string $featureId): bool;
 
     /** @return list<array<string,mixed>> */
     public function forFeature(string $featureId): array;

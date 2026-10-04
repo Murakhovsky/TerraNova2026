@@ -5,6 +5,7 @@ namespace App\Engineering\Application\Manager;
 
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
+use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Context\RepositoryDiscoveryInterface;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Domain\Agent\AgentRole;
@@ -15,6 +16,7 @@ final readonly class EngineeringManagerAnalysisService
 {
     public function __construct(
         private RepositoryDiscoveryInterface $repository,
+        private EngineeringStandardsProvider $standards,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
     ) {
@@ -46,8 +48,12 @@ final readonly class EngineeringManagerAnalysisService
                     'trust' => 'UNTRUSTED_REPOSITORY_CONTENT',
                     'map' => $contextMap->toArray(),
                 ],
+                'engineering_standards' => $this->standards->all(),
             ],
-            contextRefs: array_column($contextMap->files, 'path'),
+            contextRefs: array_values(array_unique(array_merge(
+                array_column($contextMap->files, 'path'),
+                $this->standards->paths(),
+            ))),
             constraints: [
                 'Do not implement production code.',
                 'Do not make Principal Architect decisions.',

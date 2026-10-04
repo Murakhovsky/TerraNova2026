@@ -6,6 +6,7 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
+use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
@@ -34,6 +35,7 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
+        private EngineeringStandardsProvider $standards,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
@@ -70,6 +72,7 @@ final readonly class EngineeringDeveloperStageExecutor
         $previousReview = $this->artifacts->latest($featureId, ArtifactType::REVIEW_REPORT);
         $previousQa = $this->artifacts->latest($featureId, ArtifactType::QA_REPORT);
         $previousDevelopment = $this->artifacts->latest($featureId, ArtifactType::DEVELOPMENT_RESULT);
+        $humanDecisionHistory = $this->answeredHumanDecisions($featureId);
 
         $this->assertArchitectureGate($architecture, $developerHandoff);
 
@@ -162,6 +165,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'architecture_decision' => $architecture['content'],
                 'implementation_plan' => $implementation['content'],
                 'qa_test_plan' => $testPlan['content'],
+                'engineering_standards' => $this->standards->all(),
                 'developer_handoff' => $developerHandoff['content'],
                 'architecture_documentation' => $architectureDocumentation['content'],
                 'pending_architecture_documentation' => $pendingArchitectureDocumentation,
@@ -174,6 +178,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'tasks' => $this->tasks->forFeature($featureId),
                 'previous_review' => $previousReview['content'] ?? null,
                 'previous_qa' => $previousQa['content'] ?? null,
+                'human_decisions' => $humanDecisionHistory,
             ],
             contextRefs: [
                 'artifact:'.$featureSpec['id'],
@@ -324,8 +329,46 @@ final readonly class EngineeringDeveloperStageExecutor
             );
             $this->persistTransitions($workflow, $next->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
+
+            if ($next->type === \App\Engineering\Application\Workflow\WorkflowDirectiveType::REQUEST_HUMAN_DECISION) {
+                $developerStatus = (string) ($run->structuredOutput['status'] ?? '');
+                $this->humanDecisions->create(
+                    featureId: $featureId,
+                    workflowId: $workflow->id(),
+                    type: $developerStatus === 'SECURITY_REVIEW_REQUIRED' ? 'SECURITY_DECISION' : 'SPECIFICATION_DECISION',
+                    question: $developerStatus === 'SECURITY_REVIEW_REQUIRED'
+                        ? 'Developer requires a human security decision before implementation can continue.'
+                        : 'Developer requires a human specification decision before implementation can continue.',
+                    reason: $next->reason,
+                    options: [
+                        ['id' => 'CONTINUE', 'description' => 'Decision/evidence is supplied; rerun Developer.'],
+                        ['id' => 'CANCEL', 'description' => 'Cancel this engineering workflow.'],
+                    ],
+                    evidence: [
+                        'requested_by_agent' => AgentRole::DEVELOPER->value,
+                        'resume_state' => $workflow->resumeState()?->value,
+                        'developer_status' => $developerStatus,
+                        'preflight' => $run->structuredOutput['preflight'] ?? [],
+                        'findings' => $run->structuredOutput['findings'] ?? [],
+                        'follow_up_required' => $run->structuredOutput['follow_up_required'] ?? [],
+                    ],
+                    blocking: true,
+                    recommendedOption: 'CONTINUE',
+                );
+            }
             return $next;
         });
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function answeredHumanDecisions(string $featureId): array
+    {
+        return array_slice(array_values(array_filter(
+            $this->humanDecisions->historyForFeature($featureId),
+            static fn (array $decision): bool =>
+                ($decision['status'] ?? null) === 'ANSWERED'
+                && ($decision['evidence']['requested_by_agent'] ?? null) === AgentRole::DEVELOPER->value,
+        )), -20);
     }
 
     private function assertArchitectureGate(array $architecture, array $developerHandoff): void
@@ -487,7 +530,11 @@ final readonly class EngineeringDeveloperStageExecutor
                     ['id' => 'CONFIGURED', 'description' => 'Credentials have been configured; resume Developer.'],
                     ['id' => 'CANCEL', 'description' => 'Do not continue this engineering workflow.'],
                 ],
-                evidence: ['required_environment' => ['COS_ENGINEERING_GITHUB_REPOSITORY','COS_ENGINEERING_GITHUB_TOKEN']],
+                evidence: [
+                    'requested_by_agent' => AgentRole::DEVELOPER->value,
+                    'resume_state' => $workflow->resumeState()?->value,
+                    'required_environment' => ['COS_ENGINEERING_GITHUB_REPOSITORY','COS_ENGINEERING_GITHUB_TOKEN'],
+                ],
                 blocking: true,
                 recommendedOption: 'CONFIGURED',
             );

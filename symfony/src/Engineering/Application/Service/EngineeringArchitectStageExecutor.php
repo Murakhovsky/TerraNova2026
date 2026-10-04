@@ -7,6 +7,7 @@ use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Context\EngineeringDatabaseSchemaProviderInterface;
+use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Context\RepositoryFileReaderInterface;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
@@ -49,6 +50,7 @@ final readonly class EngineeringArchitectStageExecutor
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringAgentRunnerInterface $agents,
         private RepositoryFileReaderInterface $repositoryFiles,
+        private EngineeringStandardsProvider $standards,
         private EngineeringDatabaseSchemaProviderInterface $databaseSchema,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringWorkflowLockInterface $lock,
@@ -131,6 +133,7 @@ final readonly class EngineeringArchitectStageExecutor
             inputs: [
                 'feature_spec' => $featureSpec['content'],
                 'qa_test_plan' => $testPlan['content'],
+                'engineering_standards' => $this->standards->all(),
                 'context_map' => $contextMap['content'],
                 'repository_state' => [
                     'context_revision' => $contextRevision !== '' ? $contextRevision : null,
@@ -340,6 +343,7 @@ final readonly class EngineeringArchitectStageExecutor
                     options: is_array($decision['options'] ?? null) ? $decision['options'] : [],
                     evidence: [
                         'requested_by_agent' => AgentRole::PRINCIPAL_ARCHITECT->value,
+                        'resume_state' => $workflow->resumeState()?->value,
                         'architecture_decision' => $architectureDecision['decision'] ?? null,
                         'risks' => $run->structuredOutput['risks'] ?? [],
                         'repository_revision' => $architectureDecision['repository_revision'] ?? null,
@@ -376,6 +380,8 @@ final readonly class EngineeringArchitectStageExecutor
                     ['id' => 'CANCEL', 'description' => 'Cancel this engineering workflow.'],
                 ],
                 evidence: [
+                    'requested_by_agent' => AgentRole::PRINCIPAL_ARCHITECT->value,
+                    'resume_state' => $workflow->resumeState()?->value,
                     'required_environment' => ['COS_ENGINEERING_GITHUB_REPOSITORY','COS_ENGINEERING_GITHUB_TOKEN'],
                     'local_repository_revision' => 'unknown',
                 ],

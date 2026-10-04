@@ -41,6 +41,40 @@ $valid = [
 ];
 $validator->validate(AgentRole::ENGINEERING_MANAGER, $valid);
 
+$managerHuman = $valid;
+$managerHuman['status'] = 'HUMAN_DECISION_REQUIRED';
+$managerHuman['open_questions'] = [[
+    'id' => 'Q-001',
+    'question' => 'Which compatibility behavior should be preserved?',
+    'options' => [['id' => 'PRESERVE'], ['id' => 'BREAK']],
+    'recommended_option' => 'PRESERVE',
+]];
+$validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHuman);
+
+$managerHumanMissingOptions = $managerHuman;
+$managerHumanMissingOptions['open_questions'][0]['options'] = [];
+try {
+    $validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHumanMissingOptions);
+    throw new RuntimeException('Manager human gate without options was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$managerHumanDuplicateOptions = $managerHuman;
+$managerHumanDuplicateOptions['open_questions'][0]['options'] = [['id' => 'PRESERVE'], ['id' => 'preserve']];
+try {
+    $validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHumanDuplicateOptions);
+    throw new RuntimeException('Manager duplicate human options were accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$managerHumanBadRecommendation = $managerHuman;
+$managerHumanBadRecommendation['open_questions'][0]['recommended_option'] = 'NOT_OFFERED';
+try {
+    $validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHumanBadRecommendation);
+    throw new RuntimeException('Manager recommended a human option that was not offered.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
 $noTasks = $valid;
 $noTasks['tasks'] = [];
 try {
@@ -389,7 +423,7 @@ $qaPass = [
     'pull_request' => 42,
     'test_plan' => $qaTestPlan,
     'test_changes' => [],
-    'tests' => ['total' => 3, 'passed' => 3, 'failed' => 0, 'skipped' => 0, 'suites' => ['unit' => 'PASS', 'integration' => 'PASS', 'smoke' => 'PASS']],
+    'tests' => ['total' => 4, 'passed' => 4, 'failed' => 0, 'skipped' => 0, 'suites' => ['unit' => 'PASS', 'integration' => 'PASS', 'functional' => 'PASS', 'smoke' => 'PASS']],
     'acceptance_criteria' => [['id' => 'AC-001', 'status' => 'PASS', 'evidence' => ['type' => 'HTTP_RESPONSE', 'status' => 200]]],
     'system_invariants' => [
         'tenant_isolation' => $applicablePass,
@@ -413,6 +447,22 @@ $qaPass = [
     'repository_revision_after_tests' => null,
 ];
 $validator->validate(AgentRole::QA, $qaPass);
+
+$qaEmptyEvidence = $qaPass;
+$qaEmptyEvidence['acceptance_criteria'][0]['evidence'] = '';
+try {
+    $validator->validate(AgentRole::QA, $qaEmptyEvidence);
+    throw new RuntimeException('QA PASS with empty acceptance evidence was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$qaMissingRequiredSuite = $qaPass;
+unset($qaMissingRequiredSuite['tests']['suites']['smoke']);
+try {
+    $validator->validate(AgentRole::QA, $qaMissingRequiredSuite);
+    throw new RuntimeException('QA PASS without required smoke suite was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
 
 $qaFailedTests = $qaPass;
 $qaFailedTests['tests']['passed'] = 2;

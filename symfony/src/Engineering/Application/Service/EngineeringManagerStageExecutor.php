@@ -109,18 +109,24 @@ final readonly class EngineeringManagerStageExecutor
                     $questions = is_array($analysis->featureSpecification['open_questions'] ?? null)
                         ? $analysis->featureSpecification['open_questions']
                         : [];
+                    $question = $questions[0] ?? null;
+                    if (!is_array($question)) throw new \RuntimeException('Manager human decision requires one validated open question.');
                     $this->humanDecisions->create(
                         featureId: $featureId,
                         workflowId: $workflow->id(),
                         type: 'PRODUCT_AMBIGUITY',
-                        question: 'Engineering Manager requires a human decision before workflow continuation.',
+                        question: (string) ($question['question'] ?? ''),
                         reason: $next->reason,
-                        options: $questions,
+                        options: is_array($question['options'] ?? null) ? $question['options'] : [],
                         evidence: [
+                            'requested_by_agent' => AgentRole::ENGINEERING_MANAGER->value,
+                            'resume_state' => $workflow->resumeState()?->value,
+                            'question_id' => $question['id'] ?? null,
                             'manager_decision' => $analysis->featureSpecification['decision'] ?? [],
                             'risks' => $analysis->featureSpecification['risks'] ?? [],
                         ],
                         blocking: true,
+                        recommendedOption: isset($question['recommended_option']) && is_string($question['recommended_option']) ? $question['recommended_option'] : null,
                     );
                 }
 

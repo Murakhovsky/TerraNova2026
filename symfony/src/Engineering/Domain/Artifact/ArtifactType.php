@@ -17,4 +17,5 @@ enum ArtifactType: string
     case QA_REPORT = 'QA_REPORT';
     case ESCALATION = 'ESCALATION';
     case FINAL_REPORT = 'FINAL_REPORT';
+    case ENGINEERING_LEARNING = 'ENGINEERING_LEARNING';
 }

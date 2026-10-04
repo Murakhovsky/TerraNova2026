@@ -19,7 +19,18 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
     public function start(string $workflowId, EngineeringAgentTask $task, string $traceId): string
     {
         $existing = $this->recordByIdempotencyKey($task->idempotencyKey);
-        if ($existing instanceof AgentRunRecord) return $existing->id();
+        if ($existing instanceof AgentRunRecord) {
+            throw new RuntimeException('Engineering AgentRun idempotency key already exists: '.$task->idempotencyKey);
+        }
+
+        $running = $this->entityManager->getRepository(AgentRunRecord::class)->findOneBy([
+            'featureId' => $task->featureId,
+            'agentRole' => $task->role->value,
+            'status' => 'RUNNING',
+        ]);
+        if ($running instanceof AgentRunRecord) {
+            throw new RuntimeException('Engineering AgentRun is already RUNNING for role '.$task->role->value.'.');
+        }
 
         $runId = EngineeringId::generate();
         $this->entityManager->persist(new AgentRunRecord(
@@ -74,6 +85,31 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
     public function existsByIdempotencyKey(string $idempotencyKey): bool
     {
         return $this->recordByIdempotencyKey($idempotencyKey) instanceof AgentRunRecord;
+    }
+
+    public function failStaleRunning(string $featureId, \App\Engineering\Domain\Agent\AgentRole $role, int $staleAfterSeconds): int
+    {
+        $staleAfterSeconds = max(60, $staleAfterSeconds);
+        $threshold = (new DateTimeImmutable())->modify('-'.$staleAfterSeconds.' seconds');
+        $records = $this->entityManager->getRepository(AgentRunRecord::class)->findBy([
+            'featureId' => $featureId,
+            'agentRole' => $role->value,
+            'status' => 'RUNNING',
+        ]);
+
+        $failed = 0;
+        foreach ($records as $record) {
+            if (!$record instanceof AgentRunRecord || $record->startedAt() > $threshold) continue;
+            $record->fail(
+                'STALE_RUN_RECOVERY',
+                'AgentRun exceeded the recovery timeout and was closed before a new logical attempt.',
+                $record->technicalRetry(),
+            );
+            ++$failed;
+        }
+        if ($failed > 0) $this->entityManager->flush();
+
+        return $failed;
     }
 
     public function byIdempotencyKey(string $idempotencyKey): ?array

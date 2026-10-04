@@ -6,6 +6,8 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringFindingStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Agent\AgentRole;
@@ -19,6 +21,8 @@ final readonly class EngineeringReportBuilder
         private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
+        private EngineeringHumanDecisionStoreInterface $humanDecisions,
+        private EngineeringFindingStoreInterface $findings,
     ) {}
 
     public function build(
@@ -40,11 +44,48 @@ final readonly class EngineeringReportBuilder
 
         $reviewCycles = 0;
         $qaCycles = 0;
+        $developmentAttempts = 0;
+        $architectureRuns = 0;
+        $reviewRejections = 0;
+        $qaRejections = 0;
+        $technicalRetries = 0;
+        $reviewDefects = 0;
+        $qaDefects = 0;
+        $regressions = 0;
         $totalTokens = 0;
         $totalCost = 0.0;
+        $firstDeveloperFinishedAt = null;
+        $readyAt = null;
+        $developerProvider = null;
+        $developerModel = null;
+        $reviewerProvider = null;
+        $reviewerModel = null;
+
         foreach ($runs as $run) {
-            if (($run['role'] ?? null) === AgentRole::REVIEWER->value) ++$reviewCycles;
-            if (($run['role'] ?? null) === AgentRole::QA->value) ++$qaCycles;
+            $role = $run['role'] ?? null;
+            $output = is_array($run['output'] ?? null) ? $run['output'] : [];
+            if ($role === AgentRole::PRINCIPAL_ARCHITECT->value) ++$architectureRuns;
+            if ($role === AgentRole::DEVELOPER->value) {
+                ++$developmentAttempts;
+                $developerProvider = $run['provider'] ?? $developerProvider;
+                $developerModel = $run['model'] ?? $developerModel;
+                if ($firstDeveloperFinishedAt === null && is_string($run['finished_at'] ?? null)) $firstDeveloperFinishedAt = $run['finished_at'];
+            }
+            if ($role === AgentRole::REVIEWER->value) {
+                ++$reviewCycles;
+                $reviewerProvider = $run['provider'] ?? $reviewerProvider;
+                $reviewerModel = $run['model'] ?? $reviewerModel;
+                if (($output['status'] ?? null) === 'REQUEST_CHANGES') ++$reviewRejections;
+                $reviewDefects += count(is_array($output['issues'] ?? null) ? $output['issues'] : []);
+            }
+            if ($role === AgentRole::QA->value) {
+                ++$qaCycles;
+                if (($output['phase'] ?? null) === 'EXECUTION' && ($output['status'] ?? null) === 'FAIL') ++$qaRejections;
+                if (($output['phase'] ?? null) === 'EXECUTION' && ($output['status'] ?? null) === 'PASS' && is_string($run['finished_at'] ?? null)) $readyAt = $run['finished_at'];
+                $qaDefects += count(is_array($output['defects'] ?? null) ? $output['defects'] : []);
+                $regressions += count(is_array($output['regressions'] ?? null) ? $output['regressions'] : []);
+            }
+            $technicalRetries += (int) ($run['technical_retry'] ?? 0);
             $totalTokens += (int) ($run['tokens_input'] ?? 0) + (int) ($run['tokens_output'] ?? 0);
             $totalCost += (float) ($run['cost'] ?? 0.0);
         }
@@ -58,6 +99,37 @@ final readonly class EngineeringReportBuilder
             is_array($developmentContent['known_limitations'] ?? null) ? $developmentContent['known_limitations'] : [],
             is_array($qaContent['known_limitations'] ?? null) ? $qaContent['known_limitations'] : [],
         ), SORT_REGULAR));
+
+        $humanInterventions = count($this->humanDecisions->historyForFeature($featureId));
+        $qaExecutionCycles = max(0, $qaCycles - 1);
+        $startedAt = $workflow->startedAt();
+        $timeToPr = $firstDeveloperFinishedAt !== null
+            ? max(0, (new \DateTimeImmutable($firstDeveloperFinishedAt))->getTimestamp() - $startedAt->getTimestamp())
+            : null;
+        $timeToReady = $readyAt !== null
+            ? max(0, (new \DateTimeImmutable($readyAt))->getTimestamp() - $startedAt->getTimestamp())
+            : null;
+        $success = in_array($status, ['READY_FOR_HUMAN_APPROVAL','DONE'], true);
+        $accepted = $status === 'DONE';
+        $firstPassSuccess = $success
+            && $developmentAttempts === 1
+            && $reviewCycles === 1
+            && $qaExecutionCycles === 1
+            && $humanInterventions === 0
+            && $reviewRejections === 0
+            && $qaRejections === 0;
+
+        $reviewIndependence = 'UNKNOWN';
+        if (is_string($developerProvider) && is_string($reviewerProvider)) {
+            if ($developerProvider !== $reviewerProvider) $reviewIndependence = 'DIFFERENT_PROVIDER';
+            elseif (is_string($developerModel) && is_string($reviewerModel) && $developerModel !== $reviewerModel) $reviewIndependence = 'DIFFERENT_MODEL';
+            else $reviewIndependence = 'SAME_PROVIDER';
+        }
+
+        $openFindings = array_values(array_filter(
+            $this->findings->forFeature($featureId),
+            static fn (array $finding): bool => ($finding['status'] ?? null) === 'OPEN',
+        ));
 
         return [
             'feature' => ['id' => $featureId, 'title' => $feature['title'] ?? null],
@@ -78,6 +150,14 @@ final readonly class EngineeringReportBuilder
             'review' => [
                 'status' => $reviewContent['status'] ?? null,
                 'cycles' => $reviewCycles,
+                'rejections' => $reviewRejections,
+                'independence' => [
+                    'developer_provider' => $developerProvider,
+                    'developer_model' => $developerModel,
+                    'reviewer_provider' => $reviewerProvider,
+                    'reviewer_model' => $reviewerModel,
+                    'classification' => $reviewIndependence,
+                ],
             ],
             'qa' => [
                 'status' => $qaContent['status'] ?? null,
@@ -93,12 +173,37 @@ final readonly class EngineeringReportBuilder
                 'total' => (int) ($ci['total'] ?? 0),
                 'passed' => (int) ($ci['passed'] ?? 0),
                 'failed' => (int) ($ci['failed'] ?? 0),
+                'required_checks' => is_array($qaContent['required_ci_checks'] ?? null) ? $qaContent['required_ci_checks'] : [],
+                'checks' => is_array($ci['checks'] ?? null) ? $ci['checks'] : [],
             ],
             'risks' => $feature['risks'] ?? [],
             'known_limitations' => $limitations,
             'assumptions' => $feature['assumptions'] ?? [],
+            'open_findings' => $openFindings,
             'tasks' => $this->tasks->forFeature($featureId),
             'agent_runs' => $runs,
+            'metrics' => [
+                'success' => $success,
+                'accepted' => $accepted,
+                'first_pass_success' => $firstPassSuccess,
+                'human_interventions' => $humanInterventions,
+                'development_attempts' => $developmentAttempts,
+                'review_cycles' => $reviewCycles,
+                'qa_cycles' => $qaExecutionCycles,
+                'architecture_revalidations' => max(0, $architectureRuns - 1),
+                'technical_retries' => $technicalRetries,
+                'review_rejections' => $reviewRejections,
+                'qa_rejections' => $qaRejections,
+                'defects_found_review' => $reviewDefects,
+                'defects_found_qa' => $qaDefects,
+                'regressions' => $regressions,
+                'total_agent_runs' => count($runs),
+                'total_tokens' => $totalTokens,
+                'total_cost' => round($totalCost, 6),
+                'time_to_pr_seconds' => $timeToPr,
+                'time_to_ready_seconds' => $timeToReady,
+                'duration_seconds' => max(0, time() - $workflow->startedAt()->getTimestamp()),
+            ],
             'total_tokens' => $totalTokens,
             'total_cost' => round($totalCost, 6),
             'duration_seconds' => max(0, time() - $workflow->startedAt()->getTimestamp()),

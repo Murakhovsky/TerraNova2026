@@ -69,7 +69,29 @@ if ($d->agent !== AgentRole::DEVELOPER || $workflow->currentState() !== Engineer
 $coordinator->acceptAgentResult($workflow, AgentRole::DEVELOPER, ['status' => 'COMPLETED']);
 $coordinator->acceptAgentResult($workflow, AgentRole::REVIEWER, ['status' => 'APPROVED'], new WorkflowCounters(2, 4, 1));
 
-$ready = new ReadyForHumanApprovalEvidence(true, true, true, true, true, true, false, false, false);
+$ready = new ReadyForHumanApprovalEvidence(
+    architectureApproved: true,
+    developmentCompleted: true,
+    reviewApproved: true,
+    qaPassed: true,
+    ciPassed: true,
+    allBlockingAcceptanceCriteriaVerified: true,
+    hasOpenCriticalFinding: false,
+    hasBlockingHumanDecision: false,
+    hasRunningTask: false,
+    tenantIsolationVerified: true,
+    authorizationVerified: true,
+    authenticationVerifiedOrNotApplicable: true,
+    migrationVerifiedOrNotApplicable: true,
+    rollbackVerifiedOrNotApplicable: true,
+    apiCompatibilityVerifiedOrNotApplicable: true,
+    staticAnalysisPassed: true,
+    requiredTestsPassed: true,
+    smokePassed: true,
+    documentationImpactChecked: true,
+    hasOpenMajorOrHigherFinding: false,
+    revisionConsistent: true,
+);
 $d = $coordinator->acceptAgentResult($workflow, AgentRole::QA, ['status' => 'PASS'], new WorkflowCounters(2, 4, 2), $ready);
 
 if ($d->type !== WorkflowDirectiveType::READY_FOR_HUMAN_APPROVAL || $workflow->currentState() !== EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL) {
