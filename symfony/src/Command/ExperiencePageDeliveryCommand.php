@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Web\Experience\Delivery\PageDeliveryContextPackageBuilder;
+use App\Web\Experience\Delivery\PageDeliveryEvidenceBuilder;
+use App\Web\Experience\Delivery\PageDeliveryPullRequestTemplate;
 use App\Web\Experience\Delivery\PageDeliveryWorkflow;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -21,6 +23,8 @@ final class ExperiencePageDeliveryCommand extends Command
 {
     public function __construct(
         private readonly PageDeliveryContextPackageBuilder $context,
+        private readonly PageDeliveryEvidenceBuilder $evidence,
+        private readonly PageDeliveryPullRequestTemplate $pullRequestTemplate,
         private readonly PageDeliveryWorkflow $workflow,
     ) {
         parent::__construct();
@@ -41,7 +45,13 @@ final class ExperiencePageDeliveryCommand extends Command
         $pageId = (string) $input->getArgument('page');
 
         if (!$input->getOption('start')) {
-            $io->writeln(json_encode($this->context->build($pageId)->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            $package = $this->context->build($pageId);
+            $evidence = $this->evidence->build($package);
+            $io->writeln(json_encode([
+                'context_package' => $package->toArray(),
+                'evidence_contract' => $evidence->toArray(),
+                'pull_request_template' => $this->pullRequestTemplate->render($package, $evidence),
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
             return Command::SUCCESS;
         }
 

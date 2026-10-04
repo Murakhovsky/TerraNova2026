@@ -11,6 +11,8 @@ final readonly class PageDeliveryWorkflow
 {
     public function __construct(
         private PageDeliveryContextPackageBuilder $context,
+        private PageDeliveryEvidenceBuilder $evidence,
+        private PageDeliveryPullRequestTemplate $pullRequestTemplate,
         private EngineeringOrchestrator $engineering,
     ) {}
 
@@ -19,6 +21,8 @@ final readonly class PageDeliveryWorkflow
         $package = $this->context->build($pageId);
         $data = $package->toArray();
         $contract = $data['page_contract'];
+        $evidence = $this->evidence->build($package);
+        $pullRequestBody = $this->pullRequestTemplate->render($package, $evidence);
 
         return new EngineeringRequest(
             requestId: 'experience-page-'.$pageId.'-'.EngineeringId::generate(),
@@ -34,6 +38,8 @@ final readonly class PageDeliveryWorkflow
             metadata: [
                 'experience_page_id' => $pageId,
                 'experience_context_package' => $data,
+                'experience_evidence_contract' => $evidence->toArray(),
+                'experience_pull_request_template' => $pullRequestBody,
             ],
             constraints: $data['agent_constraints'],
             previousContext: [
@@ -41,6 +47,8 @@ final readonly class PageDeliveryWorkflow
                 'archetype' => $data['archetype'],
                 'patterns' => $data['patterns'],
                 'quality_gate' => $data['quality_gate'],
+                'evidence_contract' => $evidence->toArray(),
+                'pull_request_template' => $pullRequestBody,
             ],
         );
     }

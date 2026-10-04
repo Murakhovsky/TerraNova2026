@@ -8,6 +8,9 @@ $files = [
     'symfony/src/Web/Experience/Delivery/PageDeliveryContextPackageBuilder.php',
     'symfony/src/Web/Experience/Delivery/PageDeliveryWorkflow.php',
     'symfony/src/Web/Experience/Delivery/PageQaFinding.php',
+    'symfony/src/Web/Experience/Delivery/PageDeliveryEvidenceContract.php',
+    'symfony/src/Web/Experience/Delivery/PageDeliveryEvidenceBuilder.php',
+    'symfony/src/Web/Experience/Delivery/PageDeliveryPullRequestTemplate.php',
     'symfony/src/Command/ExperiencePageDeliveryCommand.php',
 ];
 
@@ -32,7 +35,7 @@ foreach ([
 }
 
 $workflow = (string) file_get_contents($root.'/symfony/src/Web/Experience/Delivery/PageDeliveryWorkflow.php');
-foreach (['EngineeringRequest', 'EngineeringOrchestrator', 'experience_page_delivery'] as $marker) {
+foreach (['EngineeringRequest', 'EngineeringOrchestrator', 'experience_page_delivery', 'experience_evidence_contract', 'experience_pull_request_template'] as $marker) {
     if (!str_contains($workflow, $marker)) {
         throw new RuntimeException('EX-004 must reuse the existing Engineering autonomous cycle: '.$marker);
     }
