@@ -35,7 +35,7 @@ final class PageArchetypeRegistry
     /** @var array<string,list<string>> */
     private const STABLE_STATE_MATRIX = [
         'executive_dashboard' => ['normal', 'error', 'permission_denied'],
-        'domain_dashboard' => ['normal', 'error'],
+        'domain_dashboard' => ['normal', 'loading', 'empty', 'error', 'permission_denied'],
         'operational_queue' => ['normal', 'loading', 'empty', 'error', 'permission_denied'],
         'collection' => ['normal', 'empty', 'error'],
         'entity_workspace' => ['normal', 'error'],
