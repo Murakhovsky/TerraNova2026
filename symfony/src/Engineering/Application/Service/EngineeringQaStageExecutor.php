@@ -554,7 +554,19 @@ final readonly class EngineeringQaStageExecutor
                     'Tests: '.((string) ($qa['tests_passed'] ?? 0)).'/'.((string) ($qa['tests_total'] ?? 0)),
                     'CI: '.((string) ($report['ci']['status'] ?? 'UNKNOWN')),
                     'Agent runs: '.((string) ($metrics['total_agent_runs'] ?? 0)),
-                    'Cost: (array $changes): void
+                    'Cost: $'.number_format((float) ($metrics['total_cost'] ?? 0), 6, '.', ''),
+                    'Time to READY: '.((string) ($metrics['time_to_ready_seconds'] ?? '?')).'s',
+                    '',
+                    'Human merge is required before DONE.',
+                ]),
+            );
+        } catch (\Throwable) {
+            // GitHub reporting must not invalidate an otherwise deterministic READY gate.
+        }
+    }
+
+    /** @param list<array<string,mixed>> $changes */
+    private function assertQaTestChanges(array $changes): void
     {
         if ($changes === [] || count($changes) > 20) {
             throw new RuntimeException('QA test mutation set must contain between 1 and 20 files.');
@@ -583,7 +595,7 @@ final readonly class EngineeringQaStageExecutor
         $invariant = $qa['system_invariants'][$name] ?? null;
         if (!is_array($invariant)) return false;
         if (($invariant['applicable'] ?? null) === true) {
-            return ($invariant['status'] ?? null) === 'PASS' && ($invariant['evidence'] ?? null) !== null;
+            return ($invariant['status'] ?? null) === 'PASS' && $this->hasMeaningfulEvidence($invariant['evidence'] ?? null);
         }
         return ($invariant['applicable'] ?? null) === false
             && ($invariant['status'] ?? null) === 'NOT_APPLICABLE'
@@ -694,6 +706,34 @@ final readonly class EngineeringQaStageExecutor
         }
         foreach (array_keys($required) as $path) if (!isset($applied[$path])) return false;
         return true;
+    }
+
+    private function assertFeatureCoverage(array $featureSpec, array $qa): void
+    {
+        $expected = [];
+        foreach (is_array($featureSpec['acceptance_criteria'] ?? null) ? $featureSpec['acceptance_criteria'] : [] as $criterion) {
+            if (!is_array($criterion)) throw new RuntimeException('Feature Specification acceptance criteria are malformed.');
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id === '') throw new RuntimeException('Feature Specification acceptance criterion id is missing.');
+            $expected[$id] = true;
+        }
+
+        $actual = [];
+        foreach (is_array($qa['acceptance_criteria'] ?? null) ? $qa['acceptance_criteria'] : [] as $criterion) {
+            if (!is_array($criterion)) continue;
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id !== '') $actual[$id] = true;
+        }
+
+        $missing = array_diff_key($expected, $actual);
+        $unexpected = array_diff_key($actual, $expected);
+        if ($missing !== [] || $unexpected !== []) {
+            throw new RuntimeException(sprintf(
+                'QA acceptance-criteria coverage mismatch. Missing: %s; unexpected: %s.',
+                implode(', ', array_keys($missing)) ?: 'none',
+                implode(', ', array_keys($unexpected)) ?: 'none',
+            ));
+        }
     }
 
     private function acceptanceCriteriaVerified(array $featureSpec, array $qa): bool
