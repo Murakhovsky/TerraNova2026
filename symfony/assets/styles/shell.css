@@ -311,8 +311,8 @@
   place-items: center;
   width: 2rem;
   height: 2rem;
-  color: var(--cos-color-on-primary);
-  background: var(--cos-color-primary);
+  color: var(--cos-foundation-white);
+  background: var(--cos-color-primary-strong);
   border-radius: var(--cos-radius-pill);
   font-size: var(--cos-font-xs);
   font-weight: 800;

@@ -58,8 +58,9 @@
                     {% else %}
                         <div class="cos-entity-list" role="list">
                             {% for item in section.items %}
-                                <article class="cos-pattern-stack" data-sales-today-item>
+                                <article class="cos-pattern-stack" role="listitem" data-sales-today-item>
                                     <twig:CosEntityListItem
+                                        :listItem="false"
                                         title="{{ item.title }}"
                                         subtitle="{{ item.subtitle }}"
                                         meta="{{ item.meta }}"
