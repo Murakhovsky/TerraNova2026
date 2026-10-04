@@ -105,6 +105,9 @@ jobs:
           grep -q '"context_package"' /tmp/experience-delivery.json
           grep -q '"evidence_contract"' /tmp/experience-delivery.json
           grep -q '"pull_request_template"' /tmp/experience-delivery.json
+          docker compose exec -T php php bin/console cos:experience:migrate --no-interaction > /tmp/experience-migration.txt
+          grep -q 'Workspace Migration' /tmp/experience-migration.txt
+          grep -q 'BLOCKED' /tmp/experience-migration.txt
       - name: Smoke vertical slices
         run: bash bin/verify smoke
       - name: Production cutover Web routes

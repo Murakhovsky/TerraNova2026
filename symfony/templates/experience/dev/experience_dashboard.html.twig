@@ -148,6 +148,47 @@
         </div>
     </section>
 
+    <section class="cos-page__section" aria-labelledby="experience-migration-plan">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-migration-plan">EX-005 Workspace migration plan</h2>
+                <p>
+                    State:
+                    <strong>{{ experience.workspaceMigration.blocked ? 'BLOCKED' : 'READY' }}</strong>.
+                    {{ experience.workspaceMigration.pages }} pages queued after the Golden gate.
+                </p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Stage</th>
+                        <th scope="col">Pages</th>
+                        <th scope="col">First candidates</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for stage in experience.workspaceMigration.stages %}
+                    <tr>
+                        <td>{{ stage.sequence }}</td>
+                        <th scope="row">{{ stage.name }}</th>
+                        <td>{{ stage.count }}</td>
+                        <td>
+                            {% for item in stage.pages|slice(0, 4) %}
+                                <code>{{ item.page_id }}</code>{% if not loop.last %}, {% endif %}
+                            {% else %}
+                                —
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="cos-page__section" aria-labelledby="experience-design-system">
         <div class="cos-page__section-head">
             <div>
