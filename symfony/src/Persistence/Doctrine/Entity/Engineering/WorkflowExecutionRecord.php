@@ -22,7 +22,7 @@ class WorkflowExecutionRecord
         private string $currentState,
         #[ORM\Column(type: Types::STRING, length: 32)]
         private string $status,
-        #[ORM\Column(type: Types::STRING, length: 64)]
+        #[ORM\Column(type: Types::STRING, length: 128)]
         private string $traceId,
         #[ORM\Column(type: Types::STRING, length: 160)]
         private string $lockKey,
