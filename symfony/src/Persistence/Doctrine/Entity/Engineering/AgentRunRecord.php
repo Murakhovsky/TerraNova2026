@@ -36,7 +36,7 @@ class AgentRunRecord
         private int $technicalRetry,
         #[ORM\Column(type: Types::INTEGER)]
         private int $logicalAttempt,
-        #[ORM\Column(type: Types::STRING, length: 64)]
+        #[ORM\Column(type: Types::STRING, length: 128)]
         private string $traceId,
         #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
         private DateTimeImmutable $startedAt,
