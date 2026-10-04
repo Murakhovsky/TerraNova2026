@@ -55,10 +55,16 @@ final readonly class EngineeringReviewerStageExecutor
         $featureSpec = $this->requiredArtifact($featureId, ArtifactType::FEATURE_SPEC);
         $architecture = $this->requiredArtifact($featureId, ArtifactType::ARCHITECTURE_DECISION);
         $implementation = $this->requiredArtifact($featureId, ArtifactType::IMPLEMENTATION_PLAN);
+        $testPlan = $this->requiredArtifact($featureId, ArtifactType::TEST_PLAN);
         $developerHandoff = $this->requiredArtifact($featureId, ArtifactType::DEVELOPER_HANDOFF);
         $development = $this->requiredArtifact($featureId, ArtifactType::DEVELOPMENT_RESULT);
         $pullRequest = (int) ($development['content']['pull_request'] ?? 0);
         $revision = trim((string) ($development['content']['repository_revision'] ?? ''));
+        $previousQa = $this->artifacts->latest($featureId, ArtifactType::QA_REPORT);
+        if (($previousQa['content']['status'] ?? null) === 'TESTS_UPDATED') {
+            $qaRevision = trim((string) ($previousQa['content']['repository_revision_after_tests'] ?? ''));
+            if ($qaRevision !== '') $revision = $qaRevision;
+        }
         if ($pullRequest <= 0 || $revision === '') {
             throw new RuntimeException('Reviewer requires Developer pull request and repository revision.');
         }
@@ -77,6 +83,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'feature_spec' => $featureSpec['content'],
                 'architecture_decision' => $architecture['content'],
                 'implementation_plan' => $implementation['content'],
+                'qa_test_plan' => $testPlan['content'],
                 'developer_handoff' => $developerHandoff['content'],
                 'development_result' => $development['content'],
                 'pull_request_files' => $diff,
@@ -88,6 +95,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'artifact:'.$featureSpec['id'],
                 'artifact:'.$architecture['id'],
                 'artifact:'.$implementation['id'],
+                'artifact:'.$testPlan['id'],
                 'artifact:'.$developerHandoff['id'],
                 'artifact:'.$development['id'],
                 'pull_request:'.$pullRequest,

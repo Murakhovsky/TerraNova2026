@@ -27,90 +27,6 @@ final class EngineeringAgentSchemas
     /** @return array<string,mixed> */
     private static function manager(): array
     {
-        $requirement = [
-            'type' => 'object',
-            'required' => ['id','description'],
-            'properties' => [
-                'id' => ['type' => 'string', 'minLength' => 1],
-                'description' => ['type' => 'string', 'minLength' => 1],
-            ],
-            'additionalProperties' => false,
-        ];
-
-        $acceptanceCriterion = [
-            'type' => 'object',
-            'required' => ['id','description','verification_type'],
-            'properties' => [
-                'id' => ['type' => 'string', 'minLength' => 1],
-                'description' => ['type' => 'string', 'minLength' => 1],
-                'verification_type' => self::baseStatus(['unit','integration','api','ui','e2e','manual','security']),
-            ],
-            'additionalProperties' => false,
-        ];
-
-        $risk = [
-            'type' => 'object',
-            'required' => ['id','category','description','severity','reason','mitigation'],
-            'properties' => [
-                'id' => ['type' => 'string', 'minLength' => 1],
-                'category' => self::baseStatus([
-                    'SECURITY','TENANT','AUTH','DATABASE','MIGRATION','BREAKING_CHANGE','API',
-                    'PERFORMANCE','DATA_LOSS','UX','DEPENDENCY','DEPLOYMENT','UNKNOWN_SCOPE',
-                ]),
-                'description' => ['type' => 'string', 'minLength' => 1],
-                'severity' => self::baseStatus(['low','medium','high','critical']),
-                'reason' => ['type' => 'string', 'minLength' => 1],
-                'mitigation' => ['type' => 'string', 'minLength' => 1],
-            ],
-            'additionalProperties' => false,
-        ];
-
-        $assumption = [
-            'type' => 'object',
-            'required' => ['id','description'],
-            'properties' => [
-                'id' => ['type' => 'string', 'minLength' => 1],
-                'description' => ['type' => 'string', 'minLength' => 1],
-            ],
-            'additionalProperties' => false,
-        ];
-
-        $openQuestion = [
-            'type' => 'object',
-            'required' => ['id','question','classification','blocking','reason','options'],
-            'properties' => [
-                'id' => ['type' => 'string', 'minLength' => 1],
-                'question' => ['type' => 'string', 'minLength' => 1],
-                'classification' => self::baseStatus([
-                    'RESOLVABLE_FROM_CODE','RESOLVABLE_FROM_DOCS','ARCHITECT_DECISION',
-                    'PRODUCT_DECISION','BLOCKING_USER_DECISION','NON_BLOCKING',
-                ]),
-                'blocking' => ['type' => 'boolean'],
-                'reason' => ['type' => 'string', 'minLength' => 1],
-                'options' => ['type' => 'array'],
-            ],
-            'additionalProperties' => false,
-        ];
-
-        $task = [
-            'type' => 'object',
-            'required' => ['id','title','type','description','dependencies','acceptance_criteria','assigned_role','status'],
-            'properties' => [
-                'id' => ['type' => 'string', 'minLength' => 1],
-                'title' => ['type' => 'string', 'minLength' => 1],
-                'type' => self::baseStatus([
-                    'ARCHITECTURE','BACKEND','FRONTEND','DATABASE','TEST',
-                    'DOCUMENTATION','REVIEW','SECURITY','DEVOPS','RESEARCH',
-                ]),
-                'description' => ['type' => 'string', 'minLength' => 1],
-                'dependencies' => ['type' => 'array', 'items' => ['type' => 'string']],
-                'acceptance_criteria' => ['type' => 'array', 'items' => ['type' => 'string']],
-                'assigned_role' => self::baseStatus(['PRINCIPAL_ARCHITECT','DEVELOPER','REVIEWER','QA']),
-                'status' => self::baseStatus(['PENDING']),
-            ],
-            'additionalProperties' => false,
-        ];
-
         return [
             'type' => 'object',
             'required' => ['status','feature','context_map','tasks','risks','assumptions','open_questions','decision'],
@@ -118,12 +34,7 @@ final class EngineeringAgentSchemas
                 'status' => self::baseStatus(['SPECIFICATION_READY','HUMAN_DECISION_REQUIRED','BLOCKED','FAILED']),
                 'feature' => [
                     'type' => 'object',
-                    'required' => [
-                        'title','type','business_goal','user_problem','current_behavior','expected_behavior',
-                        'scope','out_of_scope','affected_areas','user_roles','functional_requirements',
-                        'non_functional_requirements','acceptance_criteria','dependencies','constraints',
-                        'risks','assumptions','open_questions','priority','complexity',
-                    ],
+                    'required' => ['title','type','business_goal','user_problem','current_behavior','expected_behavior','scope','out_of_scope','affected_areas','user_roles','functional_requirements','non_functional_requirements','acceptance_criteria','dependencies','constraints','risks','assumptions','open_questions','priority','complexity'],
                     'properties' => [
                         'title' => ['type' => 'string', 'minLength' => 1],
                         'type' => self::baseStatus(['FEATURE','BUG','REFACTOR','MIGRATION','MAINTENANCE']),
@@ -131,52 +42,35 @@ final class EngineeringAgentSchemas
                         'user_problem' => ['type' => ['string','null']],
                         'current_behavior' => ['type' => ['string','null']],
                         'expected_behavior' => ['type' => 'string', 'minLength' => 1],
-                        'scope' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'string']],
-                        'out_of_scope' => ['type' => 'array', 'items' => ['type' => 'string']],
-                        'affected_areas' => ['type' => 'array', 'items' => ['type' => 'string']],
-                        'user_roles' => ['type' => 'array', 'items' => ['type' => 'string']],
-                        'functional_requirements' => ['type' => 'array', 'minItems' => 1, 'items' => $requirement],
-                        'non_functional_requirements' => ['type' => 'array', 'items' => $requirement],
-                        'acceptance_criteria' => ['type' => 'array', 'minItems' => 1, 'items' => $acceptanceCriterion],
+                        'scope' => ['type' => 'array', 'minItems' => 1],
+                        'out_of_scope' => ['type' => 'array'],
+                        'affected_areas' => ['type' => 'array'],
+                        'user_roles' => ['type' => 'array'],
+                        'functional_requirements' => ['type' => 'array', 'minItems' => 1],
+                        'non_functional_requirements' => ['type' => 'array'],
+                        'acceptance_criteria' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object']],
                         'dependencies' => ['type' => 'array'],
                         'constraints' => ['type' => 'array'],
-                        'risks' => ['type' => 'array', 'items' => $risk],
-                        'assumptions' => ['type' => 'array', 'items' => $assumption],
-                        'open_questions' => ['type' => 'array', 'items' => $openQuestion],
+                        'risks' => ['type' => 'array'],
+                        'assumptions' => ['type' => 'array'],
+                        'open_questions' => ['type' => 'array'],
                         'priority' => self::baseStatus(['P0','P1','P2','P3']),
                         'complexity' => self::baseStatus(['XS','S','M','L','XL']),
                     ],
-                    'additionalProperties' => false,
-                ],
-                'context_map' => [
-                    'type' => 'object',
-                    'properties' => [
-                        'repository_revision' => ['type' => ['string','null']],
-                    ],
                     'additionalProperties' => true,
                 ],
-                'tasks' => ['type' => 'array', 'minItems' => 1, 'items' => $task],
-                'risks' => ['type' => 'array', 'items' => $risk],
-                'assumptions' => ['type' => 'array', 'items' => $assumption],
-                'open_questions' => ['type' => 'array', 'items' => $openQuestion],
+                'context_map' => ['type' => 'object'],
+                'tasks' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object']],
+                'risks' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'assumptions' => ['type' => 'array', 'items' => ['type' => ['string','object']]],
+                'open_questions' => ['type' => 'array', 'items' => ['type' => 'object']],
                 'decision' => [
                     'type' => 'object',
-                    'required' => ['type','agent','reason','human_decision'],
+                    'required' => ['type','reason'],
                     'properties' => [
-                        'type' => self::baseStatus(['RUN_AGENT','REQUEST_HUMAN_DECISION','BLOCK','STOP']),
+                        'type' => self::baseStatus(['RUN_AGENT','REQUEST_HUMAN_DECISION','RETRY','BLOCK','READY_FOR_HUMAN_APPROVAL','STOP']),
                         'agent' => ['type' => ['string','null']],
-                        'reason' => ['type' => 'string', 'minLength' => 1],
-                        'human_decision' => [
-                            'type' => ['object','null'],
-                            'properties' => [
-                                'question' => ['type' => 'string', 'minLength' => 1],
-                                'reason' => ['type' => 'string', 'minLength' => 1],
-                                'options' => ['type' => 'array', 'minItems' => 1],
-                                'recommended_option' => ['type' => ['string','null']],
-                                'evidence' => ['type' => 'array'],
-                            ],
-                            'additionalProperties' => false,
-                        ],
+                        'reason' => ['type' => 'string'],
                     ],
                     'additionalProperties' => false,
                 ],
@@ -473,35 +367,137 @@ final class EngineeringAgentSchemas
     /** @return array<string,mixed> */
     private static function qa(): array
     {
+        $invariant = [
+            'type' => 'object',
+            'required' => ['applicable','status','evidence','reason'],
+            'properties' => [
+                'applicable' => ['type' => 'boolean'],
+                'status' => self::baseStatus(['PASS','FAIL','NOT_APPLICABLE']),
+                'evidence' => ['type' => ['string','array','object','null']],
+                'reason' => ['type' => ['string','null']],
+            ],
+            'additionalProperties' => false,
+        ];
+
         return [
             'type' => 'object',
-            'required' => ['status','tested_revision','test_plan','acceptance_criteria','tests_total','tests_passed','tests_failed','defects','regressions','known_limitations'],
+            'required' => ['phase','status','feature_id','tested_revision','pull_request','test_plan','test_changes'],
             'properties' => [
-                'status' => self::baseStatus(['PASS','FAIL','BLOCKED']),
-                'tested_revision' => ['type' => 'string'],
-                'test_plan_version' => ['type' => ['string','integer','null']],
-                'test_plan' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'phase' => self::baseStatus(['PLAN','EXECUTION']),
+                'status' => self::baseStatus(['PLAN_READY','PASS','FAIL','BLOCKED','HUMAN_TEST_REQUIRED','TESTS_UPDATED']),
+                'feature_id' => ['type' => 'string', 'minLength' => 1],
+                'tested_revision' => ['type' => ['string','null']],
+                'pull_request' => ['type' => ['integer','string','null']],
+                'test_plan' => [
+                    'type' => 'object',
+                    'required' => ['feature_id','version','scenarios','permissions','tenant_cases','api_cases','database_cases','ui_cases','regression_cases','performance_cases','required_suites','prerequisites','test_data','environment_requirements','blocking_checks'],
+                    'properties' => [
+                        'feature_id' => ['type' => 'string', 'minLength' => 1],
+                        'version' => ['type' => ['string','integer']],
+                        'scenarios' => [
+                            'type' => 'object',
+                            'required' => ['positive','negative','edge_cases'],
+                            'properties' => [
+                                'positive' => ['type' => 'array'],
+                                'negative' => ['type' => 'array'],
+                                'edge_cases' => ['type' => 'array'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                        'permissions' => ['type' => 'array'],
+                        'tenant_cases' => ['type' => 'array'],
+                        'api_cases' => ['type' => 'array'],
+                        'database_cases' => ['type' => 'array'],
+                        'ui_cases' => ['type' => 'array'],
+                        'regression_cases' => ['type' => 'array'],
+                        'performance_cases' => ['type' => 'array'],
+                        'required_suites' => [
+                            'type' => 'object',
+                            'required' => ['unit','integration','functional','e2e','smoke'],
+                            'properties' => [
+                                'unit' => ['type' => 'boolean'],
+                                'integration' => ['type' => 'boolean'],
+                                'functional' => ['type' => 'boolean'],
+                                'e2e' => ['type' => 'boolean'],
+                                'smoke' => ['type' => 'boolean'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                        'prerequisites' => ['type' => 'array'],
+                        'test_data' => ['type' => 'array'],
+                        'environment_requirements' => ['type' => 'array'],
+                        'blocking_checks' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'test_changes' => [
+                    'type' => 'array',
+                    'maxItems' => 20,
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['path','operation'],
+                        'properties' => [
+                            'path' => ['type' => 'string', 'minLength' => 1],
+                            'operation' => self::baseStatus(['CREATE','UPDATE']),
+                            'content' => ['type' => 'string', 'maxLength' => 250000],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'tests' => [
+                    'type' => 'object',
+                    'required' => ['total','passed','failed','skipped','suites'],
+                    'properties' => [
+                        'total' => ['type' => 'integer', 'minimum' => 0],
+                        'passed' => ['type' => 'integer', 'minimum' => 0],
+                        'failed' => ['type' => 'integer', 'minimum' => 0],
+                        'skipped' => ['type' => 'integer', 'minimum' => 0],
+                        'suites' => ['type' => 'object'],
+                    ],
+                    'additionalProperties' => false,
+                ],
                 'acceptance_criteria' => [
                     'type' => 'array',
                     'items' => [
                         'type' => 'object',
-                        'required' => ['id','result','evidence'],
+                        'required' => ['id','status','evidence'],
                         'properties' => [
-                            'id' => ['type' => 'string'],
-                            'result' => self::baseStatus(['PASS','FAIL','BLOCKED']),
+                            'id' => ['type' => 'string', 'minLength' => 1],
+                            'status' => self::baseStatus(['PASS','FAIL']),
                             'evidence' => ['type' => ['string','array','object']],
                         ],
-                        'additionalProperties' => true,
+                        'additionalProperties' => false,
                     ],
                 ],
-                'tests_total' => ['type' => 'integer', 'minimum' => 0],
-                'tests_passed' => ['type' => 'integer', 'minimum' => 0],
-                'tests_failed' => ['type' => 'integer', 'minimum' => 0],
-                'defects' => ['type' => 'array'],
+                'system_invariants' => [
+                    'type' => 'object',
+                    'required' => ['tenant_isolation','authorization','authentication','invalid_input','empty_state','loading_state','error_state','api_error_handling','migration','rollback','backward_compatibility'],
+                    'properties' => [
+                        'tenant_isolation' => $invariant,
+                        'authorization' => $invariant,
+                        'authentication' => $invariant,
+                        'invalid_input' => $invariant,
+                        'empty_state' => $invariant,
+                        'loading_state' => $invariant,
+                        'error_state' => $invariant,
+                        'api_error_handling' => $invariant,
+                        'migration' => $invariant,
+                        'rollback' => $invariant,
+                        'backward_compatibility' => $invariant,
+                    ],
+                    'additionalProperties' => false,
+                ],
                 'regressions' => ['type' => 'array'],
+                'defects' => ['type' => 'array'],
+                'security_findings' => ['type' => 'array'],
                 'known_limitations' => ['type' => 'array'],
+                'human_tests_required' => ['type' => 'array'],
+                'blockers' => ['type' => 'array'],
+                'repository_revision_after_tests' => ['type' => ['string','null']],
             ],
             'additionalProperties' => false,
         ];
     }
+
+
 }

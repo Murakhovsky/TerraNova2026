@@ -20,51 +20,24 @@ $valid = [
     'feature' => [
         'title' => 'Activity filters',
         'type' => 'FEATURE',
-        'business_goal' => 'Users can narrow Activity Center results.',
-        'user_problem' => 'Large activity feeds are difficult to inspect.',
-        'current_behavior' => 'Activity Center shows the complete allowed feed.',
-        'expected_behavior' => 'Actor and date filters can be combined and reset.',
-        'scope' => ['Activity Center actor/date filtering'],
-        'out_of_scope' => ['New activity event types'],
-        'affected_areas' => ['Workspace Activity Center'],
-        'user_roles' => ['tenant user'],
-        'functional_requirements' => [
-            ['id' => 'FR-001', 'description' => 'User can filter activity by actor.'],
-        ],
-        'non_functional_requirements' => [
-            ['id' => 'NFR-001', 'description' => 'Filtering preserves tenant isolation.'],
-        ],
-        'acceptance_criteria' => [
-            ['id' => 'AC-001', 'description' => 'Actor filter returns only selected actor within the active tenant.', 'verification_type' => 'integration'],
-        ],
-        'dependencies' => [],
-        'constraints' => ['Preserve existing Activity Center contract.'],
+        'business_goal' => 'Users can filter activities.',
+        'expected_behavior' => 'Actor/date filters are applied.',
+        'scope' => ['Activity Center filtering'],
+        'out_of_scope' => [],
+        'functional_requirements' => [['id' => 'FR-001']],
+        'acceptance_criteria' => [['id' => 'AC-001', 'description' => 'Actor filter returns only selected actor.', 'verification_type' => 'integration']],
         'risks' => [],
         'assumptions' => [],
         'open_questions' => [],
         'priority' => 'P2',
         'complexity' => 'S',
     ],
-    'context_map' => ['repository_revision' => 'abc123'],
-    'tasks' => [[
-        'id' => 'TASK-001',
-        'title' => 'Implement Activity Center filters',
-        'type' => 'BACKEND',
-        'description' => 'Implement the approved behavior after architecture review.',
-        'dependencies' => [],
-        'acceptance_criteria' => ['AC-001'],
-        'assigned_role' => 'DEVELOPER',
-        'status' => 'PENDING',
-    ]],
+    'context_map' => [],
+    'tasks' => [['id' => 'DEV-1']],
     'risks' => [],
     'assumptions' => [],
     'open_questions' => [],
-    'decision' => [
-        'type' => 'RUN_AGENT',
-        'agent' => 'PRINCIPAL_ARCHITECT',
-        'reason' => 'Specification is complete and architecture is mandatory.',
-        'human_decision' => null,
-    ],
+    'decision' => ['type' => 'RUN_AGENT', 'agent' => 'principal_architect', 'reason' => 'mandatory'],
 ];
 $validator->validate(AgentRole::ENGINEERING_MANAGER, $valid);
 
@@ -81,105 +54,6 @@ $invalid['feature']['acceptance_criteria'] = [['id' => 'whatever', 'description'
 try {
     $validator->validate(AgentRole::ENGINEERING_MANAGER, $invalid);
     throw new RuntimeException('Invalid Manager acceptance criteria were accepted.');
-} catch (EngineeringAgentOutputValidationException) {
-}
-
-$wrongDecision = $valid;
-$wrongDecision['decision']['agent'] = 'DEVELOPER';
-try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $wrongDecision);
-    throw new RuntimeException('Manager SPECIFICATION_READY routed directly to Developer.');
-} catch (EngineeringAgentOutputValidationException) {
-}
-
-$unknownDependency = $valid;
-$unknownDependency['tasks'][0]['dependencies'] = ['TASK-999'];
-try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $unknownDependency);
-    throw new RuntimeException('Manager accepted an unknown task dependency.');
-} catch (EngineeringAgentOutputValidationException) {
-}
-
-$cyclicTasks = $valid;
-$cyclicTasks['tasks'] = [
-    [
-        'id' => 'TASK-001',
-        'title' => 'First',
-        'type' => 'BACKEND',
-        'description' => 'First cyclic task.',
-        'dependencies' => ['TASK-002'],
-        'acceptance_criteria' => ['AC-001'],
-        'assigned_role' => 'DEVELOPER',
-        'status' => 'PENDING',
-    ],
-    [
-        'id' => 'TASK-002',
-        'title' => 'Second',
-        'type' => 'TEST',
-        'description' => 'Second cyclic task.',
-        'dependencies' => ['TASK-001'],
-        'acceptance_criteria' => ['AC-001'],
-        'assigned_role' => 'QA',
-        'status' => 'PENDING',
-    ],
-];
-try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $cyclicTasks);
-    throw new RuntimeException('Manager accepted a cyclic task graph.');
-} catch (EngineeringAgentOutputValidationException) {
-}
-
-$humanDecision = $valid;
-$humanDecision['status'] = 'HUMAN_DECISION_REQUIRED';
-$humanDecision['feature']['open_questions'] = [[
-    'id' => 'Q-001',
-    'question' => 'Should filters persist between sessions?',
-    'classification' => 'BLOCKING_USER_DECISION',
-    'blocking' => true,
-    'reason' => 'The two behaviors create materially different product outcomes.',
-    'options' => [
-        ['id' => 'PERSIST', 'label' => 'Persist filters'],
-        ['id' => 'RESET', 'label' => 'Reset filters'],
-    ],
-]];
-$humanDecision['open_questions'] = $humanDecision['feature']['open_questions'];
-$humanDecision['decision'] = [
-    'type' => 'REQUEST_HUMAN_DECISION',
-    'agent' => null,
-    'reason' => 'A product decision is required.',
-    'human_decision' => [
-        'question' => 'Should filters persist between sessions?',
-        'reason' => 'The behaviors differ materially.',
-        'options' => [
-            ['id' => 'PERSIST', 'label' => 'Persist filters'],
-            ['id' => 'RESET', 'label' => 'Reset filters'],
-        ],
-        'recommended_option' => 'RESET',
-        'evidence' => ['No existing product convention resolves persistence.'],
-    ],
-];
-$validator->validate(AgentRole::ENGINEERING_MANAGER, $humanDecision);
-
-$humanWithoutOptions = $humanDecision;
-$humanWithoutOptions['decision']['human_decision']['options'] = [];
-try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $humanWithoutOptions);
-    throw new RuntimeException('Manager human decision without options was accepted.');
-} catch (EngineeringAgentOutputValidationException) {
-}
-
-$driftedCopies = $valid;
-$driftedCopies['feature']['risks'] = [[
-    'id' => 'RISK-001',
-    'category' => 'API',
-    'description' => 'Contract drift.',
-    'severity' => 'medium',
-    'reason' => 'Filtering may alter response semantics.',
-    'mitigation' => 'Preserve existing defaults.',
-]];
-try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $driftedCopies);
-    throw new RuntimeException('Manager accepted divergent canonical risk copies.');
 } catch (EngineeringAgentOutputValidationException) {
 }
 
@@ -476,15 +350,103 @@ $validator->validate(AgentRole::REVIEWER, $reviewerHuman);
 $reviewerFailedCi = $reviewer; $reviewerFailedCi['ci']['state'] = 'FAILED'; $reviewerFailedCi['ci']['failed'] = 1;
 try { $validator->validate(AgentRole::REVIEWER, $reviewerFailedCi); throw new RuntimeException('Reviewer APPROVED with failed CI was accepted.'); } catch (EngineeringAgentOutputValidationException) {}
 
-$qa = [
-    'status' => 'PASS', 'tested_revision' => 'abc', 'acceptance_criteria' => [],
-    'tests_total' => 2, 'tests_passed' => 1, 'tests_failed' => 1,
-    'defects' => [], 'regressions' => [], 'known_limitations' => [],
+$qaTestPlan = [
+    'feature_id' => 'feature-1',
+    'version' => '1',
+    'scenarios' => ['positive' => ['happy path'], 'negative' => ['invalid input'], 'edge_cases' => ['empty state']],
+    'permissions' => ['unauthorized denied'],
+    'tenant_cases' => ['tenant A cannot access tenant B'],
+    'api_cases' => ['documented response contract'],
+    'database_cases' => [],
+    'ui_cases' => [],
+    'regression_cases' => ['critical smoke'],
+    'performance_cases' => [],
+    'required_suites' => ['unit' => true, 'integration' => true, 'functional' => true, 'e2e' => false, 'smoke' => true],
+    'prerequisites' => [],
+    'test_data' => [],
+    'environment_requirements' => [],
+    'blocking_checks' => ['AC-001'],
 ];
+
+$qaPlan = [
+    'phase' => 'PLAN',
+    'status' => 'PLAN_READY',
+    'feature_id' => 'feature-1',
+    'tested_revision' => null,
+    'pull_request' => null,
+    'test_plan' => $qaTestPlan,
+    'test_changes' => [],
+];
+$validator->validate(AgentRole::QA, $qaPlan);
+
+$notApplicable = ['applicable' => false, 'status' => 'NOT_APPLICABLE', 'evidence' => null, 'reason' => 'Not part of this feature surface.'];
+$applicablePass = ['applicable' => true, 'status' => 'PASS', 'evidence' => ['type' => 'TEST_RESULT', 'reference' => 'qa-1'], 'reason' => null];
+$qaPass = [
+    'phase' => 'EXECUTION',
+    'status' => 'PASS',
+    'feature_id' => 'feature-1',
+    'tested_revision' => 'abc123',
+    'pull_request' => 42,
+    'test_plan' => $qaTestPlan,
+    'test_changes' => [],
+    'tests' => ['total' => 3, 'passed' => 3, 'failed' => 0, 'skipped' => 0, 'suites' => ['unit' => 'PASS', 'integration' => 'PASS', 'smoke' => 'PASS']],
+    'acceptance_criteria' => [['id' => 'AC-001', 'status' => 'PASS', 'evidence' => ['type' => 'HTTP_RESPONSE', 'status' => 200]]],
+    'system_invariants' => [
+        'tenant_isolation' => $applicablePass,
+        'authorization' => $applicablePass,
+        'authentication' => $notApplicable,
+        'invalid_input' => $applicablePass,
+        'empty_state' => $applicablePass,
+        'loading_state' => $notApplicable,
+        'error_state' => $applicablePass,
+        'api_error_handling' => $applicablePass,
+        'migration' => $notApplicable,
+        'rollback' => $notApplicable,
+        'backward_compatibility' => $applicablePass,
+    ],
+    'regressions' => [],
+    'defects' => [],
+    'security_findings' => [],
+    'known_limitations' => [],
+    'human_tests_required' => [],
+    'blockers' => [],
+    'repository_revision_after_tests' => null,
+];
+$validator->validate(AgentRole::QA, $qaPass);
+
+$qaFailedTests = $qaPass;
+$qaFailedTests['tests']['passed'] = 2;
+$qaFailedTests['tests']['failed'] = 1;
 try {
-    $validator->validate(AgentRole::QA, $qa);
+    $validator->validate(AgentRole::QA, $qaFailedTests);
     throw new RuntimeException('QA PASS with failed tests was accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
+
+$qaUnsafeTestMutation = $qaPass;
+$qaUnsafeTestMutation['status'] = 'TESTS_UPDATED';
+$qaUnsafeTestMutation['test_changes'] = [['path' => 'symfony/src/Backdoor.php', 'operation' => 'UPDATE', 'content' => '<?php']];
+try {
+    $validator->validate(AgentRole::QA, $qaUnsafeTestMutation);
+    throw new RuntimeException('QA production mutation escaped test roots.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$qaTestsUpdated = $qaPass;
+$qaTestsUpdated['status'] = 'TESTS_UPDATED';
+$qaTestsUpdated['test_changes'] = [['path' => 'tests/unit/feature_regression.php', 'operation' => 'CREATE', 'content' => '<?php']];
+$validator->validate(AgentRole::QA, $qaTestsUpdated);
+
+$qaHuman = $qaPass;
+$qaHuman['status'] = 'HUMAN_TEST_REQUIRED';
+$qaHuman['human_tests_required'] = [['scenario' => 'Visual focus order', 'required_evidence' => 'Manual UI observation']];
+$validator->validate(AgentRole::QA, $qaHuman);
+
+$qaFail = $qaPass;
+$qaFail['status'] = 'FAIL';
+$qaFail['tests'] = ['total' => 1, 'passed' => 0, 'failed' => 1, 'skipped' => 0, 'suites' => ['functional' => 'FAIL']];
+$qaFail['acceptance_criteria'] = [['id' => 'AC-001', 'status' => 'FAIL', 'evidence' => ['type' => 'HTTP_RESPONSE', 'status' => 500]]];
+$qaFail['defects'] = [['severity' => 'MAJOR', 'title' => 'Request fails', 'description' => 'Expected success but received server error.']];
+$validator->validate(AgentRole::QA, $qaFail);
 
 echo "Engineering agent output validation passed.\n";

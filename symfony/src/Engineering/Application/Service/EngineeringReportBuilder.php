@@ -81,10 +81,12 @@ final readonly class EngineeringReportBuilder
             ],
             'qa' => [
                 'status' => $qaContent['status'] ?? null,
-                'cycles' => $qaCycles,
-                'tests_total' => (int) ($qaContent['tests_total'] ?? 0),
-                'tests_passed' => (int) ($qaContent['tests_passed'] ?? 0),
-                'tests_failed' => (int) ($qaContent['tests_failed'] ?? 0),
+                'planning_runs' => min(1, $qaCycles),
+                'execution_cycles' => max(0, $qaCycles - 1),
+                'tests_total' => (int) ($qaContent['tests']['total'] ?? 0),
+                'tests_passed' => (int) ($qaContent['tests']['passed'] ?? 0),
+                'tests_failed' => (int) ($qaContent['tests']['failed'] ?? 0),
+                'tests_skipped' => (int) ($qaContent['tests']['skipped'] ?? 0),
             ],
             'ci' => [
                 'status' => $ci['state'] ?? null,

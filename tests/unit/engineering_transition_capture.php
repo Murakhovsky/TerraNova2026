@@ -19,6 +19,6 @@ $directive = (new EngineeringWorkflowCoordinator())->acceptAgentResult($workflow
 
 if (count($directive->transitions) !== 2) throw new RuntimeException('Manager workflow must expose both persisted transitions.');
 if ($directive->transitions[0]->from !== EngineeringWorkflowState::ANALYSIS || $directive->transitions[0]->to !== EngineeringWorkflowState::SPECIFICATION_READY) throw new RuntimeException('First Manager transition is incorrect.');
-if ($directive->transitions[1]->from !== EngineeringWorkflowState::SPECIFICATION_READY || $directive->transitions[1]->to !== EngineeringWorkflowState::ARCHITECTURE_PENDING) throw new RuntimeException('Second Manager transition is incorrect.');
+if ($directive->transitions[1]->from !== EngineeringWorkflowState::SPECIFICATION_READY || $directive->transitions[1]->to !== EngineeringWorkflowState::QA_PLANNING) throw new RuntimeException('Second Manager transition must schedule QA planning.');
 
 echo "Engineering transition capture passed.\n";

@@ -11,6 +11,12 @@ permissions:
   repository:
     read: true
     write: false
+  test_code:
+    read: true
+    write: true
+    roots:
+      - tests/
+      - symfony/tests/
   github:
     pr_read: true
     checks_read: true

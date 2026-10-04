@@ -8,6 +8,7 @@ $schemaProvider = (string) file_get_contents($root.'/symfony/src/Engineering/Inf
 
 foreach ([
     'ArtifactType::FEATURE_SPEC',
+    'ArtifactType::TEST_PLAN',
     'ArtifactType::CONTEXT_MAP',
     'ArtifactType::ARCHITECTURE_DECISION',
     'ArtifactType::IMPLEMENTATION_PLAN',

@@ -66,6 +66,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         $records = $this->entityManager->getRepository(WorkflowExecutionRecord::class)->findBy(
             ['currentState' => [
                 'ANALYSIS',
+                'QA_PLANNING',
                 'ARCHITECTURE_PENDING',
                 'DEVELOPMENT_RUNNING',
                 'REVIEW_PENDING',

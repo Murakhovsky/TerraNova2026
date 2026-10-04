@@ -29,6 +29,7 @@ if ($workflow->resumeState() !== EngineeringWorkflowState::SPECIFICATION_READY) 
 }
 
 $engine->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, $context);
+$engine->transition($workflow, EngineeringWorkflowState::QA_PLANNING, $context);
 $engine->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, $context);
 
 $engine->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_APPROVED, $context);

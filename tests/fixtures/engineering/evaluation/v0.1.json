@@ -14,44 +14,23 @@
         "feature": {
           "title": "Add activity filters",
           "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
           "scope": [
             "Activity Center filters"
           ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
+          "out_of_scope": [],
           "functional_requirements": [
             {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
+              "id": "FR-001"
             }
           ],
           "acceptance_criteria": [
             {
               "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
+              "description": "Actor filter returns selected actor only.",
               "verification_type": "integration"
             }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
           ],
           "risks": [],
           "assumptions": [],
@@ -65,15 +44,7 @@
         "tasks": [
           {
             "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
+            "assigned_role": "DEVELOPER"
           }
         ],
         "risks": [],
@@ -82,8 +53,7 @@
         "decision": {
           "type": "RUN_AGENT",
           "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
+          "reason": "Specification ready."
         }
       }
     },
@@ -94,46 +64,25 @@
       "output": {
         "status": "SPECIFICATION_READY",
         "feature": {
-          "title": "Add activity filters",
+          "title": "Empty plan",
           "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "business_goal": "Do something.",
+          "expected_behavior": "Behavior changes.",
           "scope": [
-            "Activity Center filters"
+            "One thing"
           ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
+          "out_of_scope": [],
           "functional_requirements": [
             {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
+              "id": "FR-001"
             }
           ],
           "acceptance_criteria": [
             {
               "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
+              "description": "Observable result.",
+              "verification_type": "unit"
             }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
           ],
           "risks": [],
           "assumptions": [],
@@ -141,9 +90,7 @@
           "priority": "P2",
           "complexity": "S"
         },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
+        "context_map": {},
         "tasks": [],
         "risks": [],
         "assumptions": [],
@@ -151,8 +98,7 @@
         "decision": {
           "type": "RUN_AGENT",
           "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
+          "reason": "Ready."
         }
       }
     },
@@ -163,34 +109,17 @@
       "output": {
         "status": "SPECIFICATION_READY",
         "feature": {
-          "title": "Add activity filters",
+          "title": "Bad AC",
           "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
+          "business_goal": "Validate ids.",
+          "expected_behavior": "Valid acceptance criteria.",
           "scope": [
-            "Activity Center filters"
+            "Validation"
           ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
+          "out_of_scope": [],
           "functional_requirements": [
             {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
+              "id": "FR-001"
             }
           ],
           "acceptance_criteria": [
@@ -200,31 +129,17 @@
               "verification_type": "unit"
             }
           ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
           "risks": [],
           "assumptions": [],
           "open_questions": [],
           "priority": "P2",
           "complexity": "S"
         },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
+        "context_map": {},
         "tasks": [
           {
             "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "whatever"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
+            "assigned_role": "DEVELOPER"
           }
         ],
         "risks": [],
@@ -233,773 +148,7 @@
         "decision": {
           "type": "RUN_AGENT",
           "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
-        }
-      }
-    },
-    {
-      "id": "manager-xl-without-decomposition-rejected",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": false,
-      "output": {
-        "status": "SPECIFICATION_READY",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [],
-          "assumptions": [],
-          "open_questions": [],
-          "priority": "P2",
-          "complexity": "XL"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
-        }
-      }
-    },
-    {
-      "id": "manager-human-decision-without-options-rejected",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": false,
-      "output": {
-        "status": "HUMAN_DECISION_REQUIRED",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [],
-          "assumptions": [],
-          "open_questions": [
-            {
-              "id": "Q-001",
-              "question": "Should filters persist between sessions?",
-              "classification": "BLOCKING_USER_DECISION",
-              "blocking": true,
-              "reason": "The behaviors differ materially.",
-              "options": []
-            }
-          ],
-          "priority": "P2",
-          "complexity": "S"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [
-          {
-            "id": "Q-001",
-            "question": "Should filters persist between sessions?",
-            "classification": "BLOCKING_USER_DECISION",
-            "blocking": true,
-            "reason": "The behaviors differ materially.",
-            "options": []
-          }
-        ],
-        "decision": {
-          "type": "REQUEST_HUMAN_DECISION",
-          "agent": null,
-          "reason": "Decision needed.",
-          "human_decision": {
-            "question": "Should filters persist between sessions?",
-            "reason": "The behaviors differ materially.",
-            "options": [],
-            "recommended_option": null,
-            "evidence": []
-          }
-        }
-      }
-    },
-    {
-      "id": "manager-human-decision-valid",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": true,
-      "output": {
-        "status": "HUMAN_DECISION_REQUIRED",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [],
-          "assumptions": [],
-          "open_questions": [
-            {
-              "id": "Q-001",
-              "question": "Should filters persist between sessions?",
-              "classification": "BLOCKING_USER_DECISION",
-              "blocking": true,
-              "reason": "The behaviors create materially different product outcomes.",
-              "options": [
-                {
-                  "id": "PERSIST",
-                  "label": "Persist filters"
-                },
-                {
-                  "id": "RESET",
-                  "label": "Reset filters"
-                }
-              ]
-            }
-          ],
-          "priority": "P2",
-          "complexity": "S"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [
-          {
-            "id": "Q-001",
-            "question": "Should filters persist between sessions?",
-            "classification": "BLOCKING_USER_DECISION",
-            "blocking": true,
-            "reason": "The behaviors create materially different product outcomes.",
-            "options": [
-              {
-                "id": "PERSIST",
-                "label": "Persist filters"
-              },
-              {
-                "id": "RESET",
-                "label": "Reset filters"
-              }
-            ]
-          }
-        ],
-        "decision": {
-          "type": "REQUEST_HUMAN_DECISION",
-          "agent": null,
-          "reason": "A product decision is required.",
-          "human_decision": {
-            "question": "Should filters persist between sessions?",
-            "reason": "The behaviors create materially different product outcomes.",
-            "options": [
-              {
-                "id": "PERSIST",
-                "label": "Persist filters"
-              },
-              {
-                "id": "RESET",
-                "label": "Reset filters"
-              }
-            ],
-            "recommended_option": "RESET",
-            "evidence": [
-              "No existing convention resolves filter persistence."
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": "manager-divergent-canonical-copies-rejected",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": false,
-      "output": {
-        "status": "SPECIFICATION_READY",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [
-            {
-              "id": "RISK-001",
-              "category": "API",
-              "description": "Contract drift.",
-              "severity": "medium",
-              "reason": "Response semantics may change.",
-              "mitigation": "Preserve defaults."
-            }
-          ],
-          "assumptions": [],
-          "open_questions": [],
-          "priority": "P2",
-          "complexity": "S"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
-        }
-      }
-    },
-    {
-      "id": "manager-duplicate-acceptance-id-rejected",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": false,
-      "output": {
-        "status": "SPECIFICATION_READY",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            },
-            {
-              "id": "AC-001",
-              "description": "Duplicate criterion.",
-              "verification_type": "unit"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [],
-          "assumptions": [],
-          "open_questions": [],
-          "priority": "P2",
-          "complexity": "S"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
-        }
-      }
-    },
-    {
-      "id": "manager-cyclic-task-graph-rejected",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": false,
-      "output": {
-        "status": "SPECIFICATION_READY",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [],
-          "assumptions": [],
-          "open_questions": [],
-          "priority": "P2",
-          "complexity": "S"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "First task",
-            "type": "BACKEND",
-            "description": "First cyclic task.",
-            "dependencies": [
-              "TASK-002"
-            ],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          },
-          {
-            "id": "TASK-002",
-            "title": "Second task",
-            "type": "TEST",
-            "description": "Second cyclic task.",
-            "dependencies": [
-              "TASK-001"
-            ],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "QA",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
-        }
-      }
-    },
-    {
-      "id": "manager-unknown-task-dependency-rejected",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": false,
-      "output": {
-        "status": "SPECIFICATION_READY",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [],
-          "assumptions": [],
-          "open_questions": [],
-          "priority": "P2",
-          "complexity": "S"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [
-              "TASK-999"
-            ],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
-        }
-      }
-    },
-    {
-      "id": "manager-wrong-next-agent-rejected",
-      "role": "ENGINEERING_MANAGER",
-      "expected_valid": false,
-      "output": {
-        "status": "SPECIFICATION_READY",
-        "feature": {
-          "title": "Add activity filters",
-          "type": "FEATURE",
-          "business_goal": "Managers can narrow Activity Center results.",
-          "user_problem": "Large activity feeds are difficult to inspect.",
-          "current_behavior": "Activity Center shows the complete allowed feed.",
-          "expected_behavior": "Actor and date filters can be combined and reset.",
-          "scope": [
-            "Activity Center filters"
-          ],
-          "out_of_scope": [
-            "New activity event types"
-          ],
-          "affected_areas": [
-            "Workspace Activity Center"
-          ],
-          "user_roles": [
-            "tenant user"
-          ],
-          "functional_requirements": [
-            {
-              "id": "FR-001",
-              "description": "User can filter activity by actor."
-            }
-          ],
-          "non_functional_requirements": [
-            {
-              "id": "NFR-001",
-              "description": "Filtering preserves tenant isolation."
-            }
-          ],
-          "acceptance_criteria": [
-            {
-              "id": "AC-001",
-              "description": "Actor filter returns selected actor only within active tenant.",
-              "verification_type": "integration"
-            }
-          ],
-          "dependencies": [],
-          "constraints": [
-            "Preserve existing default behavior."
-          ],
-          "risks": [],
-          "assumptions": [],
-          "open_questions": [],
-          "priority": "P2",
-          "complexity": "S"
-        },
-        "context_map": {
-          "repository_revision": "abc123"
-        },
-        "tasks": [
-          {
-            "id": "TASK-001",
-            "title": "Implement Activity Center filters",
-            "type": "BACKEND",
-            "description": "Implement approved filtering behavior after architecture review.",
-            "dependencies": [],
-            "acceptance_criteria": [
-              "AC-001"
-            ],
-            "assigned_role": "DEVELOPER",
-            "status": "PENDING"
-          }
-        ],
-        "risks": [],
-        "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "DEVELOPER",
-          "reason": "Specification ready; architecture is mandatory.",
-          "human_decision": null
+          "reason": "Ready."
         }
       }
     },
@@ -1455,22 +604,230 @@
       }
     },
     {
+      "id": "qa-plan-valid",
+      "role": "QA",
+      "expected_valid": true,
+      "output": {
+        "phase": "PLAN",
+        "status": "PLAN_READY",
+        "feature_id": "feature-1",
+        "tested_revision": null,
+        "pull_request": null,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": []
+      }
+    },
+    {
       "id": "qa-false-pass-rejected",
       "role": "QA",
       "expected_valid": false,
       "output": {
+        "phase": "EXECUTION",
         "status": "PASS",
+        "feature_id": "feature-1",
         "tested_revision": "abc123",
-        "test_plan": [
-          "run integration"
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 2,
+          "passed": 1,
+          "failed": 1,
+          "skipped": 0,
+          "suites": {
+            "unit": "FAIL"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "HTTP_RESPONSE",
+              "status": 200
+            }
+          }
         ],
-        "acceptance_criteria": [],
-        "tests_total": 2,
-        "tests_passed": 1,
-        "tests_failed": 1,
-        "defects": [],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
         "regressions": [],
-        "known_limitations": []
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
       }
     },
     {
@@ -1478,31 +835,354 @@
       "role": "QA",
       "expected_valid": true,
       "output": {
+        "phase": "EXECUTION",
         "status": "FAIL",
+        "feature_id": "feature-1",
         "tested_revision": "abc123",
-        "test_plan": [
-          "run integration"
-        ],
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 1,
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "suites": {
+            "functional": "FAIL"
+          }
+        },
         "acceptance_criteria": [
           {
             "id": "AC-001",
-            "result": "FAIL",
-            "evidence": "test failed"
+            "status": "FAIL",
+            "evidence": {
+              "type": "HTTP_RESPONSE",
+              "status": 500
+            }
           }
         ],
-        "tests_total": 1,
-        "tests_passed": 0,
-        "tests_failed": 1,
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
         "defects": [
           {
-            "severity": "HIGH",
-            "title": "Regression"
+            "severity": "MAJOR",
+            "title": "Regression",
+            "description": "Behavior failed."
           }
         ],
-        "regressions": [
-          "Regression"
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-production-mutation-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "TESTS_UPDATED",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [
+          {
+            "path": "symfony/src/Backdoor.php",
+            "operation": "UPDATE",
+            "content": "<?php"
+          }
         ],
-        "known_limitations": []
+        "tests": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "HTTP_RESPONSE",
+              "status": 200
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
       }
     }
   ]

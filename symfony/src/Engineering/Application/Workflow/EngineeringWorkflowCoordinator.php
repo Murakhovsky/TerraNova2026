@@ -60,6 +60,12 @@ final readonly class EngineeringWorkflowCoordinator
                 'Human decision supplied; rerun Manager analysis with the decision in context.',
                 [$transition],
             ),
+            EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::QA,
+                'Human decision supplied; resume QA Test Plan.',
+                [$transition],
+            ),
             EngineeringWorkflowState::ARCHITECTURE_PENDING => new WorkflowDirective(
                 WorkflowDirectiveType::RUN_AGENT,
                 AgentRole::PRINCIPAL_ARCHITECT,
@@ -188,9 +194,9 @@ final readonly class EngineeringWorkflowCoordinator
 
         $transitions = [
             $this->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, 'MANAGER_SPECIFICATION_READY'),
-            $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'SCHEDULE_ARCHITECT'),
+            $this->transition($workflow, EngineeringWorkflowState::QA_PLANNING, 'SCHEDULE_QA_TEST_PLAN'),
         ];
-        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT, 'Architecture is mandatory for V0.1.', $transitions);
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Acceptance criteria require an independent QA Test Plan before architecture and implementation.', $transitions);
     }
 
     private function afterArchitect(WorkflowExecution $workflow, array $output): WorkflowDirective
@@ -292,7 +298,32 @@ final readonly class EngineeringWorkflowCoordinator
         ?ReadyForHumanApprovalEvidence $readyEvidence,
     ): WorkflowDirective {
         $status = (string) ($output['status'] ?? '');
-        if ($status === 'BLOCKED') return $this->block($workflow, 'QA reported a blocker.');
+
+        if ($workflow->currentState() === EngineeringWorkflowState::QA_PLANNING) {
+            if ($status === 'BLOCKED') return $this->block($workflow, 'QA could not produce a reliable Test Plan.');
+            if ($status === 'HUMAN_TEST_REQUIRED') return $this->human($workflow, 'QA planning requires a human testing decision.');
+            if ($status !== 'PLAN_READY') throw new LogicException('Unexpected QA planning status: '.$status);
+
+            $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'QA_TEST_PLAN_READY');
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::PRINCIPAL_ARCHITECT,
+                'QA Test Plan is ready; architecture must account for testability and required verification.',
+                [$transition],
+            );
+        }
+
+        if ($status === 'TESTS_UPDATED') {
+            $transition = $this->transition($workflow, EngineeringWorkflowState::REVIEW_PENDING, 'QA_TESTS_UPDATED_REVIEW_REQUIRED');
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::REVIEWER,
+                'QA added bounded automated tests; the new revision requires independent review before QA execution continues.',
+                [$transition],
+            );
+        }
+        if ($status === 'HUMAN_TEST_REQUIRED') return $this->human($workflow, 'QA requires explicit human testing evidence before completion.');
+        if ($status === 'BLOCKED') return $this->block($workflow, 'QA reported a non-retryable verification blocker.');
         if ($status === 'PASS') {
             if ($readyEvidence === null) throw new LogicException('QA PASS requires READY gate evidence.');
             $this->ready->assert($readyEvidence);
@@ -310,7 +341,7 @@ final readonly class EngineeringWorkflowCoordinator
             $this->transition($workflow, EngineeringWorkflowState::QA_FAILED, 'QA_FAILED'),
             $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, 'DEVELOPER_QA_FIX_STARTED'),
         ];
-        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'QA defects require development fixes and a new review.', $transitions);
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'QA behavior defects require Developer fixes, then a new Reviewer and QA cycle.', $transitions);
     }
 
     /** @param list<WorkflowTransition> $transitions */

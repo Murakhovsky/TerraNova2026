@@ -54,6 +54,7 @@ final readonly class GitHubEngineeringTransitionObserver implements EngineeringT
     {
         return match ($state) {
             EngineeringWorkflowState::SPECIFICATION_READY => 'Feature Specification is ready.',
+            EngineeringWorkflowState::QA_PLANNING => 'QA is preparing the independent Test Plan.',
             EngineeringWorkflowState::ARCHITECTURE_APPROVED => 'Architecture has been approved.',
             EngineeringWorkflowState::REVIEW_PENDING => 'Development completed; review is pending.',
             EngineeringWorkflowState::CHANGES_REQUESTED => 'Reviewer requested implementation changes.',
