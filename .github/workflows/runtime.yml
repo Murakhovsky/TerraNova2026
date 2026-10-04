@@ -105,6 +105,10 @@ jobs:
           grep -q '"context_package"' /tmp/experience-delivery.json
           grep -q '"evidence_contract"' /tmp/experience-delivery.json
           grep -q '"pull_request_template"' /tmp/experience-delivery.json
+          grep -q '"autonomy": "L2"' /tmp/experience-delivery.json
+          grep -q '"auto_merge": false' /tmp/experience-delivery.json
+          docker compose exec -T php php bin/console cos:experience:delivery global.search > /tmp/experience-delivery-l3.json
+          grep -q '"autonomy": "L3"' /tmp/experience-delivery-l3.json
           docker compose exec -T php php bin/console cos:experience:migrate --no-interaction > /tmp/experience-migration.txt
           grep -q 'Workspace Migration' /tmp/experience-migration.txt
           grep -q 'BLOCKED' /tmp/experience-migration.txt

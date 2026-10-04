@@ -47,10 +47,14 @@ final class ExperiencePageDeliveryCommand extends Command
         if (!$input->getOption('start')) {
             $package = $this->context->build($pageId);
             $evidence = $this->evidence->build($package);
+            $request = $this->workflow->prepare($pageId);
             $io->writeln(json_encode([
                 'context_package' => $package->toArray(),
                 'evidence_contract' => $evidence->toArray(),
                 'pull_request_template' => $this->pullRequestTemplate->render($package, $evidence),
+                'autonomy' => $request->metadata['experience_autonomy_level'] ?? 'L2',
+                'risk' => $request->metadata['experience_risk'] ?? 'HIGH',
+                'auto_merge' => $request->metadata['experience_auto_merge'] ?? false,
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
             return Command::SUCCESS;
         }
