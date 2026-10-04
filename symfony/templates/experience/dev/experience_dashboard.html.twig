@@ -210,6 +210,37 @@
         </div>
     </section>
 
+    <section class="cos-page__section" aria-labelledby="experience-release">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-release">EX-007 Release Hardening</h2>
+                <p>
+                    Experience V1 status:
+                    <strong>{{ experience.release.status }}</strong>.
+                    {{ experience.release.blockers|length }} release blockers remain.
+                </p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Gate</th>
+                        <th scope="col">State</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for name, gate in experience.release.gates %}
+                    <tr>
+                        <th scope="row"><code>{{ name }}</code></th>
+                        <td><span class="cos-badge">{{ gate.pass|default(false) ? 'PASS' : 'BLOCKED' }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="cos-page__section" aria-labelledby="experience-design-system">
         <div class="cos-page__section-head">
             <div>
