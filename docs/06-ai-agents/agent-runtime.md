@@ -2,7 +2,7 @@
 title: Середовище виконання Agent
 description: Як AI Agent приймає рішення в COS без прямого доступу до шару мутацій.
 status: active
-updated: 2026-09-16
+updated: 2026-10-04
 kind: agent
 ---
 
