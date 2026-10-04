@@ -9,6 +9,7 @@ use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\DesignSystem\DesignSystemAuditService;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Golden\GoldenExperienceSet;
+use App\Web\Experience\Golden\GoldenDecisionRegistry;
 use App\Web\Experience\Golden\GoldenStructureAuditService;
 use App\Web\Experience\Golden\GoldenHumanReviewPacketBuilder;
 use App\Web\Experience\Migration\WorkspaceMigrationPlanner;
@@ -37,6 +38,7 @@ final readonly class ExperienceDashboardController
         private RouteExemptionRegistry $exemptions,
         private DesignSystemAuditService $designSystem,
         private GoldenExperienceSet $golden,
+        private GoldenDecisionRegistry $goldenDecisions,
         private GoldenStructureAuditService $goldenStructure,
         private GoldenHumanReviewPacketBuilder $goldenReview,
         private WorkspaceMigrationPlanner $workspaceMigration,
@@ -113,7 +115,9 @@ final readonly class ExperienceDashboardController
             $functionalQa += ($contract->qa['functional'] ?? false) === true ? 1 : 0;
             $responsiveQa += ($contract->qa['responsive'] ?? false) === true ? 1 : 0;
             $accessibilityQa += ($contract->qa['accessibility'] ?? false) === true ? 1 : 0;
-            $humanAccepted += ($contract->qa['human_acceptance'] ?? false) === true ? 1 : 0;
+            $humanAccepted += $this->goldenDecisions->has($contract->id->value)
+                ? ($this->goldenDecisions->accepted($contract->id->value) ? 1 : 0)
+                : ((($contract->qa['human_acceptance'] ?? false) === true) ? 1 : 0);
 
             if ($contract->status === PageExperienceStatus::V1Ready && $contract->quality->isV1Ready()) {
                 ++$v1Ready;

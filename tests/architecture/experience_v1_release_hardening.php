@@ -15,6 +15,7 @@ foreach ([
 $service = (string) file_get_contents($root.'/symfony/src/Web/Experience/Release/ExperienceReleaseHardeningService.php');
 foreach ([
     'registry_coverage',
+    'golden_decision_ledger',
     'golden_human_approval',
     'p0_v1_ready',
     'p1_production_acceptable',

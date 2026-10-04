@@ -85,6 +85,7 @@ jobs:
           docker compose exec -T php php bin/console cos:experience:coverage --no-interaction
           docker compose exec -T php php bin/console cos:experience:design-system:audit --strict --no-interaction
           docker compose exec -T php php bin/console cos:experience:golden --no-interaction
+          docker compose exec -T php php bin/console cos:experience:golden:decisions --no-interaction
           docker compose exec -T php php bin/console cos:experience:golden:structure --strict --no-interaction
       - name: Health
         run: |

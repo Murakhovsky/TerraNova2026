@@ -1,0 +1,51 @@
+version: 1
+status: review
+decisions:
+  core.executive.dashboard:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null
+  sales.dashboard:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null
+  sales.today:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null
+  sales.leads.collection:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null
+  sales.deal.workspace:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null
+  sales.pipeline:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null
+  growth.overview:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null
+  property.map:
+    decision: PENDING
+    actor: null
+    decided_at: null
+    evidence: []
+    note: null

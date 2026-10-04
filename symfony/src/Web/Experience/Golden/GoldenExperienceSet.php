@@ -14,6 +14,7 @@ final readonly class GoldenExperienceSet
 {
     public function __construct(
         private CompiledPageContractRegistry $registry,
+        private GoldenDecisionRegistry $decisions,
         #[Autowire('%kernel.project_dir%/../resources/experience/golden-set.yaml')]
         private string $manifest,
     ) {
@@ -73,7 +74,8 @@ final readonly class GoldenExperienceSet
 
             $scores = $contract->quality->toArray();
             $qualityReady = min($scores) >= $targetQuality;
-            $humanAccepted = ($contract->qa['human_acceptance'] ?? false) === true;
+            $decision = $this->decisions->get($id);
+            $humanAccepted = ($decision['decision'] ?? null) === 'ACCEPT';
             $isReady = $contract->status === PageExperienceStatus::V1Ready
                 && $qualityReady
                 && (!$humanRequired || $humanAccepted);
@@ -90,6 +92,7 @@ final readonly class GoldenExperienceSet
                 'status' => $contract->status->value,
                 'quality' => $scores,
                 'humanAccepted' => $humanAccepted,
+                'humanDecision' => $decision,
                 'ready' => $isReady,
             ];
         }

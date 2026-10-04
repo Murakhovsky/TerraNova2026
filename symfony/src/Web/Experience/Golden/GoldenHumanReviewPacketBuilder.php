@@ -38,7 +38,10 @@ final readonly class GoldenHumanReviewPacketBuilder
                     'visual_quality_is_reference_level',
                     'content_is_clear_and_product_appropriate',
                 ],
-                'decision' => 'PENDING',
+                'decision' => $page['humanDecision']['decision'] ?? 'PENDING',
+                'decision_actor' => $page['humanDecision']['actor'] ?? null,
+                'decision_at' => $page['humanDecision']['decided_at'] ?? null,
+                'decision_note' => $page['humanDecision']['note'] ?? null,
             ];
         }
 
@@ -85,7 +88,16 @@ final readonly class GoldenHumanReviewPacketBuilder
                 $lines[] = '- [ ] '.$criterion;
             }
             $lines[] = '';
-            $lines[] = 'Decision: **ACCEPT / REQUEST_CHANGES**';
+            $lines[] = 'Decision: **'.$page['decision'].'**';
+            if ($page['decision_actor'] !== null) {
+                $lines[] = '- Actor: '.$page['decision_actor'];
+            }
+            if ($page['decision_at'] !== null) {
+                $lines[] = '- Decided at: '.$page['decision_at'];
+            }
+            if ($page['decision_note'] !== null) {
+                $lines[] = '- Note: '.$page['decision_note'];
+            }
             $lines[] = '';
         }
 

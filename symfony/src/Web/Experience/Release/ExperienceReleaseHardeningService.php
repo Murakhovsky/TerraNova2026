@@ -6,6 +6,7 @@ namespace App\Web\Experience\Release;
 use App\Web\Experience\DesignSystem\DesignSystemAuditService;
 use App\Web\Experience\External\ExternalReferenceAuditService;
 use App\Web\Experience\Golden\GoldenExperienceSet;
+use App\Web\Experience\Golden\GoldenDecisionRegistry;
 use App\Web\Experience\Registry\ExperienceRouteInventory;
 use App\Web\Experience\Registry\PageContractRegistryInterface;
 use App\Web\Experience\Registry\PageExperienceStatus;
@@ -19,6 +20,7 @@ final readonly class ExperienceReleaseHardeningService
         private RouteExemptionRegistry $exemptions,
         private DesignSystemAuditService $designSystem,
         private GoldenExperienceSet $golden,
+        private GoldenDecisionRegistry $goldenDecisions,
         private ExternalReferenceAuditService $externalReferences,
         private ExperienceAssetDebtScanner $assetDebt,
         private ExperienceRouteDebtScanner $routeDebt,
@@ -70,7 +72,8 @@ final readonly class ExperienceReleaseHardeningService
                 'stale' => count($routeDebt->stale),
                 'mismatched' => count($routeDebt->mismatched),
             ],
-            'golden_human_approval' => ['actual' => $golden->ready, 'required' => $golden->required, 'pass' => $golden->isComplete()],
+            'golden_decision_ledger' => ['actual' => count($this->goldenDecisions->all()), 'required' => 8, 'pass' => count($this->goldenDecisions->all()) === 8],
+            'golden_human_approval' => ['actual' => $this->goldenDecisions->acceptedCount(), 'required' => $golden->required, 'pass' => $golden->isComplete()],
             'external_reference_structure' => ['actual' => $external->passed(), 'required' => 4, 'pass' => $external->isGreen()],
             'p0_v1_ready' => ['actual' => $p0Ready, 'required' => count($p0), 'pass' => $p0Ready === count($p0)],
             'p1_production_acceptable' => ['actual' => $p1Acceptable, 'required' => count($p1), 'pass' => $p1Acceptable === count($p1)],

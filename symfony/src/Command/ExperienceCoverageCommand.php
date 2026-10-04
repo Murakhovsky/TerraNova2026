@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Web\Experience\Golden\GoldenDecisionRegistry;
 use App\Web\Experience\Registry\CompiledPageContractRegistry;
 use App\Web\Experience\Registry\ExperienceRouteInventory;
 use App\Web\Experience\Registry\PageExperienceStatus;
@@ -24,6 +25,7 @@ final class ExperienceCoverageCommand extends Command
         private readonly ExperienceRouteInventory $inventory,
         private readonly CompiledPageContractRegistry $registry,
         private readonly RouteExemptionRegistry $exemptions,
+        private readonly GoldenDecisionRegistry $goldenDecisions,
     ) {
         parent::__construct();
     }
@@ -58,7 +60,9 @@ final class ExperienceCoverageCommand extends Command
             $functionalQa += ($contract->qa['functional'] ?? false) === true ? 1 : 0;
             $responsiveQa += ($contract->qa['responsive'] ?? false) === true ? 1 : 0;
             $accessibilityQa += ($contract->qa['accessibility'] ?? false) === true ? 1 : 0;
-            $humanAccepted += ($contract->qa['human_acceptance'] ?? false) === true ? 1 : 0;
+            $humanAccepted += $this->goldenDecisions->has($contract->id->value)
+                ? ($this->goldenDecisions->accepted($contract->id->value) ? 1 : 0)
+                : ((($contract->qa['human_acceptance'] ?? false) === true) ? 1 : 0);
 
             if ($contract->status === PageExperienceStatus::V1Ready && $contract->quality->isV1Ready()) {
                 ++$v1Ready;
