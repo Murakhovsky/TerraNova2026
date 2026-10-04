@@ -21,12 +21,16 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
     ) {
     }
 
-    public function create(WorkflowExecution $workflow): void
+    public function create(WorkflowExecution $workflow, string $workflowType = 'ENGINEERING'): void
     {
+        if (!in_array($workflowType, ['ENGINEERING','ENGINEERING_IMMEDIATE'], true)) {
+            throw new \InvalidArgumentException('Unsupported Engineering workflow type.');
+        }
+
         $record = new WorkflowExecutionRecord(
             id: $workflow->id(),
             featureId: $workflow->featureId(),
-            workflowType: 'ENGINEERING',
+            workflowType: $workflowType,
             currentState: $workflow->currentState()->value,
             status: $this->statusFor($workflow->currentState()),
             traceId: $workflow->traceId(),
@@ -60,6 +64,16 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         return $record instanceof WorkflowExecutionRecord ? $record->id() : null;
     }
 
+    public function markImmediate(string $workflowId): void
+    {
+        $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
+        if (!$record instanceof WorkflowExecutionRecord) {
+            throw new RuntimeException('Engineering workflow not found: '.$workflowId);
+        }
+        $record->markImmediate();
+        $this->entityManager->flush();
+    }
+
     public function resumable(int $limit = 20): array
     {
         return $this->orderedQueue(null, $limit);
@@ -87,7 +101,8 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             )
             ->from('cos_engineering_workflows', 'w')
             ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
-            ->where("w.current_state IN ('ANALYSIS','QA_PLANNING','ARCHITECTURE_PENDING','DEVELOPMENT_RUNNING','REVIEW_PENDING','QA_PENDING')")
+            ->where("w.workflow_type = 'ENGINEERING'")
+            ->andWhere("w.current_state IN ('ANALYSIS','QA_PLANNING','ARCHITECTURE_PENDING','DEVELOPMENT_RUNNING','REVIEW_PENDING','QA_PENDING')")
             ->orderBy("CASE f.priority WHEN 'P0' THEN 0 WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 9 END", 'ASC')
             ->addOrderBy('w.started_at', 'ASC')
             ->setMaxResults($limit);

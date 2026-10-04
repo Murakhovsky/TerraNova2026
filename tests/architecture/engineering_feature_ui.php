@@ -38,7 +38,9 @@ foreach ([
     'EngineeringFeatureManagementService',
     'EngineeringCancelService',
     'ContinueEngineeringWorkflowsCommand',
+    'RunEngineeringFeatureCommand',
     'queueForOrganization',
+    'queueImmediate',
 ] as $needle) {
     if (!str_contains($controller, $needle)) throw new RuntimeException('Engineering feature UI controller missing '.$needle);
 }

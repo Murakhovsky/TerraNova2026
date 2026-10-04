@@ -12,6 +12,7 @@ x-app-environment: &app-environment
   MESSENGER_TRANSPORT_DSN: redis://redis:6379/cos_async
   MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/cos_failed
   MESSENGER_ENGINEERING_TRANSPORT_DSN: redis://redis:6379/cos_engineering
+  MESSENGER_ENGINEERING_IMMEDIATE_TRANSPORT_DSN: redis://redis:6379/cos_engineering_immediate
   LLM_ENDPOINT: ${LLM_ENDPOINT:-}
   LLM_TOKEN: ${LLM_TOKEN:-}
   LLM_MODEL: ${LLM_MODEL:-}
@@ -143,6 +144,24 @@ services:
     environment:
       <<: *app-environment
       MESSENGER_CONSUMER_NAME: engineering-worker-1
+      COS_ENGINEERING_GITHUB_REPOSITORY: ${COS_ENGINEERING_GITHUB_REPOSITORY:-}
+      COS_ENGINEERING_GITHUB_TOKEN: ${COS_ENGINEERING_GITHUB_TOKEN:-}
+      COS_ENGINEERING_GITHUB_BASE_BRANCH: ${COS_ENGINEERING_GITHUB_BASE_BRANCH:-main}
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [frontend, backend]
+
+  engineering-immediate-worker:
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["php","bin/console","messenger:consume","engineering_immediate","--keepalive=5","--time-limit=3600","--memory-limit=512M","--failure-limit=1"]
+    environment:
+      <<: *app-environment
+      MESSENGER_CONSUMER_NAME: engineering-immediate-worker-1
       COS_ENGINEERING_GITHUB_REPOSITORY: ${COS_ENGINEERING_GITHUB_REPOSITORY:-}
       COS_ENGINEERING_GITHUB_TOKEN: ${COS_ENGINEERING_GITHUB_TOKEN:-}
       COS_ENGINEERING_GITHUB_BASE_BRANCH: ${COS_ENGINEERING_GITHUB_BASE_BRANCH:-main}
