@@ -92,7 +92,7 @@ Diagnostic domain володіє:
 > LLM contract надає примітив інтелекту. Agent runtime надає контрольований життєвий цикл рішення. Domain визначає бізнесовий сенс обох.
 
 
-## Native OpenAI adapter
+## Нативний адаптер OpenAI
 
 COS має native adapter `Infrastructure\Llm\OpenAiResponsesStructuredLlmClient`, який реалізує `StructuredLlmClientInterface` напряму через OpenAI Responses API.
 
