@@ -173,7 +173,7 @@ try {
           return Array.from(document.querySelectorAll('body *'))
             .map((element) => {
               const rect = element.getBoundingClientRect();
-              const excess = Math.max(0, rect.right - viewportWidth, -rect.left);
+              const excess = Math.max(0, rect.right - viewportWidth);
               return {
                 tag: element.tagName.toLowerCase(),
                 id: element.id || '',
@@ -184,7 +184,7 @@ try {
                 excess: Math.round(excess),
               };
             })
-            .filter((item) => item.excess > 3)
+            .filter((item) => item.excess > 3 && item.width > 0)
             .sort((a, b) => b.excess - a.excess)
             .slice(0, 8);
         });
