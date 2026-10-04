@@ -13,6 +13,7 @@ final readonly class PageDeliveryWorkflow
         private PageDeliveryContextPackageBuilder $context,
         private PageDeliveryEvidenceBuilder $evidence,
         private PageDeliveryPullRequestTemplate $pullRequestTemplate,
+        private ExperienceAutonomyPolicy $autonomy,
         private EngineeringOrchestrator $engineering,
     ) {}
 
@@ -23,6 +24,9 @@ final readonly class PageDeliveryWorkflow
         $contract = $data['page_contract'];
         $evidence = $this->evidence->build($package);
         $pullRequestBody = $this->pullRequestTemplate->render($package, $evidence);
+        $autonomy = $this->autonomy->levelFor($pageId);
+        $this->autonomy->assertAllowed($autonomy);
+        $risk = $this->autonomy->riskFor($pageId);
 
         return new EngineeringRequest(
             requestId: 'experience-page-'.$pageId.'-'.EngineeringId::generate(),
@@ -40,6 +44,9 @@ final readonly class PageDeliveryWorkflow
                 'experience_context_package' => $data,
                 'experience_evidence_contract' => $evidence->toArray(),
                 'experience_pull_request_template' => $pullRequestBody,
+                'experience_autonomy_level' => $autonomy->value,
+                'experience_risk' => $risk,
+                'experience_auto_merge' => false,
             ],
             constraints: is_array($data['agent_constraints']['rules'] ?? null) ? $data['agent_constraints']['rules'] : [],
             previousContext: [
@@ -64,6 +71,9 @@ final readonly class PageDeliveryWorkflow
             'workflow_id' => $result->workflowId,
             'state' => $result->state,
             'next' => $result->next->type->value,
+            'autonomy' => $request->metadata['experience_autonomy_level'] ?? 'L2',
+            'risk' => $request->metadata['experience_risk'] ?? 'HIGH',
+            'auto_merge' => false,
         ];
     }
 }

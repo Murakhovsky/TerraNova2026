@@ -38,11 +38,20 @@ foreach ([
     }
 }
 
+foreach ([
+    '$this->autonomy->riskFor($page->id->value)',
+    '$this->autonomy->levelFor($page->id->value)->value',
+] as $marker) {
+    if (!str_contains($planner, $marker)) {
+        throw new RuntimeException('EX-005 policy-driven autonomy missing: '.$marker);
+    }
+}
+
 $command = (string) file_get_contents($root.'/symfony/src/Command/ExperienceWorkspaceMigrationCommand.php');
 foreach ([
     "name: 'cos:experience:migrate'",
     "addOption('start'",
-    "['Autonomy' => 'L3']",
+    "['Autonomy' => 'L3 max; HIGH risk capped at L2']"
     "['Auto merge' => 'disabled']",
 ] as $marker) {
     if (!str_contains($command, $marker)) {

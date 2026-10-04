@@ -45,7 +45,7 @@ final class ExperienceWorkspaceMigrationCommand extends Command
             ['State' => $plan->blocked ? 'BLOCKED' : 'READY'],
             ['Reason' => $plan->blockedReason !== '' ? $plan->blockedReason : 'Golden gate satisfied'],
             ['Pages queued' => $plan->pages],
-            ['Autonomy' => 'L3'],
+            ['Autonomy' => 'L3 max; HIGH risk capped at L2'],
             ['Auto merge' => 'disabled'],
         );
 

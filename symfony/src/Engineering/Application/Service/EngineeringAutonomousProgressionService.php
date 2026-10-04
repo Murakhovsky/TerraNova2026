@@ -10,6 +10,7 @@ use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterfa
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
 use App\Engineering\Application\Workflow\WorkflowDirective;
+use App\Engineering\Application\Workflow\WorkflowDirectiveType;
 use App\Engineering\Domain\Agent\AgentRole;
 
 final readonly class EngineeringAutonomousProgressionService
@@ -39,6 +40,15 @@ final readonly class EngineeringAutonomousProgressionService
         for ($step = 0; $step < $this->maxStepsPerProgression; ++$step) {
             $role = $directive->agent;
             if ($role === null) return $directive;
+
+            if (!$this->experienceAutonomyAllows($featureId, $workflowId, $role)) {
+                $level = $this->experienceAutonomyLevel($featureId) ?? 'L0';
+                return new WorkflowDirective(
+                    WorkflowDirectiveType::STOP,
+                    null,
+                    'Experience autonomy ceiling '.$level.' reached before '.$role->value.'.',
+                );
+            }
 
             if ($this->runCount($featureId) >= $this->authorizedRunBudget($featureId)) {
                 return $this->escalateAutonomyBudget(
@@ -88,6 +98,47 @@ final readonly class EngineeringAutonomousProgressionService
             $workflowId,
             'Single autonomous progression exceeded its safety step budget.',
         );
+    }
+
+    private function experienceAutonomyAllows(string $featureId, string $workflowId, AgentRole $role): bool
+    {
+        $level = $this->experienceAutonomyLevel($featureId);
+        if ($level === null) {
+            return true;
+        }
+
+        $rank = match ($level) {
+            'L0' => 0,
+            'L1' => 1,
+            'L2' => 2,
+            'L3' => 3,
+            default => 2,
+        };
+
+        $workflow = $this->workflows->get($workflowId);
+        $required = match ($role) {
+            AgentRole::ENGINEERING_MANAGER => 0,
+            AgentRole::PRINCIPAL_ARCHITECT => 1,
+            AgentRole::DEVELOPER => 2,
+            AgentRole::REVIEWER => 3,
+            AgentRole::QA => $workflow->currentState()->value === 'QA_PLANNING' ? 1 : 3,
+        };
+
+        return $rank >= $required;
+    }
+
+    private function experienceAutonomyLevel(string $featureId): ?string
+    {
+        $request = $this->features->request($featureId);
+        if ($request->sourceType !== 'experience_page_delivery') {
+            return null;
+        }
+
+        $level = strtoupper(trim((string) ($request->metadata['experience_autonomy_level'] ?? 'L2')));
+        return match ($level) {
+            'L0', 'L1', 'L2', 'L3' => $level,
+            default => 'L2',
+        };
     }
 
     private function nextAttempt(string $featureId, AgentRole $role): int

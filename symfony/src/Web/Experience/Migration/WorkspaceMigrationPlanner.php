@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Web\Experience\Migration;
 
 use App\Web\Experience\Golden\GoldenExperienceSet;
+use App\Web\Experience\Delivery\ExperienceAutonomyPolicy;
 use App\Web\Experience\Registry\PageContract;
 use App\Web\Experience\Registry\PageContractRegistryInterface;
 use App\Web\Experience\Registry\PageExperienceStatus;
@@ -35,6 +36,7 @@ final readonly class WorkspaceMigrationPlanner
     public function __construct(
         private PageContractRegistryInterface $pages,
         private GoldenExperienceSet $golden,
+        private ExperienceAutonomyPolicy $autonomy,
     ) {}
 
     public function plan(): WorkspaceMigrationPlan
@@ -127,28 +129,9 @@ final readonly class WorkspaceMigrationPlanner
             'priority' => $page->priority,
             'status' => $page->status->value,
             'archetype' => $page->archetype,
-            'risk' => $this->risk($page),
-            'autonomy' => 'L3',
+            'risk' => $this->autonomy->riskFor($page->id->value),
+            'autonomy' => $this->autonomy->levelFor($page->id->value)->value,
         ];
     }
 
-    private function risk(PageContract $page): string
-    {
-        $haystack = strtolower(implode(' ', [
-            $page->id->value,
-            $page->path,
-            $page->capability,
-            $page->primaryAction ?? '',
-        ]));
-
-        if (preg_match('/auth|permission|security|payment|approve|delete|settings/', $haystack)) {
-            return 'HIGH';
-        }
-
-        if (preg_match('/create|edit|update|submit|deal|pipeline|workflow|manage|action/', $haystack)) {
-            return 'MEDIUM';
-        }
-
-        return 'LOW';
-    }
 }
