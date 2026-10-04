@@ -2,7 +2,7 @@
 title: Межа LLM
 description: Незалежний від провайдера контракт структурованого LLM та його відмінність від Agent runtime.
 status: active
-updated: 2026-09-16
+updated: 2026-10-04
 kind: architecture
 ---
 
@@ -90,3 +90,33 @@ Diagnostic domain володіє:
 ## Інваріант
 
 > LLM contract надає примітив інтелекту. Agent runtime надає контрольований життєвий цикл рішення. Domain визначає бізнесовий сенс обох.
+
+
+## Native OpenAI adapter
+
+COS має native adapter `Infrastructure\Llm\OpenAiResponsesStructuredLlmClient`, який реалізує `StructuredLlmClientInterface` напряму через OpenAI Responses API.
+
+Для активації:
+
+```env
+LLM_PROVIDER=openai
+LLM_TOKEN=<OpenAI API key>
+LLM_MODEL=<model id>
+```
+
+`LLM_ENDPOINT` для native OpenAI adapter не використовується. Старий generic HTTP transport залишається доступним через `LLM_PROVIDER=http`.
+
+Native adapter передає `responseSchema` як OpenAI Structured Outputs через `text.format.type=json_schema` з `strict=true`, повертає provider/model/token usage у стандартний `StructuredLlmResponse` і не змінює Domain або Agent contracts.
+
+Таким чином routing лишається:
+
+```text
+Domain / Agent
+→ StructuredLlmClientInterface
+→ GovernedStructuredLlmClient
+→ LlmRoutingPolicy
+→ LlmProviderRegistry
+→ openai | http | fixture
+```
+
+Це дозволяє надалі додати Anthropic/Gemini/інший provider як ще один adapter без окремого LLM Gateway.
