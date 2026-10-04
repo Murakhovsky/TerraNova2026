@@ -75,7 +75,7 @@
           <p>Start with the newest evidence, then open the opportunity that needs a decision or next action.</p>
         </div>
       </div>
-      <div class="cos-page__stack">
+      <div class="cos-page__stack" role="list" aria-label="Recently updated opportunities">
         {% for c in w.recent_candidates|default([]) %}
           <twig:CosEntityListItem
             title="{{ c.account_name|default(c.subject_id|default('Opportunity')) }}"
