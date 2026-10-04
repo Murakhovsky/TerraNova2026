@@ -1285,43 +1285,173 @@
       }
     },
     {
-      "id": "reviewer-critical-approval-rejected",
+      "id": "reviewer-blocker-approval-rejected",
       "role": "REVIEWER",
       "expected_valid": false,
       "output": {
         "status": "APPROVED",
         "reviewed_revision": "abc123",
-        "findings": [
+        "base_revision": "base123",
+        "pull_request": 42,
+        "preflight": {
+          "status": "PASS",
+          "reviewed_revision": "abc123",
+          "diff_complete": true,
+          "required_artifacts_present": true,
+          "ci_evidence_available": true,
+          "blockers": []
+        },
+        "summary": "Review found a blocker.",
+        "issues": [
           {
-            "severity": "CRITICAL",
-            "title": "Tenant leak"
+            "id": "REV-001",
+            "severity": "BLOCKER",
+            "blocking": true,
+            "file": "symfony/src/Example.php",
+            "line": 12,
+            "category": "SECURITY",
+            "problem": "Tenant boundary missing.",
+            "evidence": "No tenant predicate.",
+            "impact": "Cross-tenant exposure.",
+            "expected_fix": "Add tenant scoping."
           }
         ],
-        "acceptance_criteria": [],
-        "architecture_compliance": true,
-        "security_notes": [],
-        "recommendation": "merge"
+        "correctness": {
+          "status": "PASS",
+          "findings": []
+        },
+        "architecture": {
+          "compliant": true,
+          "findings": []
+        },
+        "security": {
+          "status": "FINDINGS",
+          "findings": [
+            "REV-001"
+          ]
+        },
+        "maintainability": {
+          "status": "PASS",
+          "findings": []
+        },
+        "database": {
+          "status": "NOT_APPLICABLE",
+          "findings": []
+        },
+        "api": {
+          "status": "NOT_APPLICABLE",
+          "findings": []
+        },
+        "tests": {
+          "status": "PASS",
+          "findings": []
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "result": "PASS",
+            "evidence": "Covered."
+          }
+        ],
+        "ci": {
+          "state": "PASSED",
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "pending": 0,
+          "checks": []
+        },
+        "unresolved_blockers": [
+          "REV-001"
+        ],
+        "unresolved_majors": [],
+        "recommendation": "Fix blocker."
       }
     },
     {
-      "id": "reviewer-changes-requested-valid",
+      "id": "reviewer-request-changes-valid",
       "role": "REVIEWER",
       "expected_valid": true,
       "output": {
-        "status": "CHANGES_REQUESTED",
+        "status": "REQUEST_CHANGES",
         "reviewed_revision": "abc123",
-        "findings": [
+        "base_revision": "base123",
+        "pull_request": 42,
+        "preflight": {
+          "status": "PASS",
+          "reviewed_revision": "abc123",
+          "diff_complete": true,
+          "required_artifacts_present": true,
+          "ci_evidence_available": true,
+          "blockers": []
+        },
+        "summary": "Review requires a bounded fix.",
+        "issues": [
           {
-            "severity": "HIGH",
-            "title": "Missing guard"
+            "id": "REV-002",
+            "severity": "MAJOR",
+            "blocking": true,
+            "file": "symfony/src/Example.php",
+            "line": 20,
+            "category": "CORRECTNESS",
+            "problem": "Error path returns success.",
+            "evidence": "Catch branch returns 200.",
+            "impact": "Caller receives false success.",
+            "expected_fix": "Return the documented error and add negative test."
           }
         ],
-        "acceptance_criteria": [],
-        "architecture_compliance": false,
-        "security_notes": [
-          "Add guard"
+        "correctness": {
+          "status": "FINDINGS",
+          "findings": [
+            "REV-002"
+          ]
+        },
+        "architecture": {
+          "compliant": true,
+          "findings": []
+        },
+        "security": {
+          "status": "PASS",
+          "findings": []
+        },
+        "maintainability": {
+          "status": "PASS",
+          "findings": []
+        },
+        "database": {
+          "status": "NOT_APPLICABLE",
+          "findings": []
+        },
+        "api": {
+          "status": "PASS",
+          "findings": []
+        },
+        "tests": {
+          "status": "FINDINGS",
+          "findings": [
+            "REV-002"
+          ]
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "result": "FAIL",
+            "evidence": "Negative scenario fails."
+          }
         ],
-        "recommendation": "fix"
+        "ci": {
+          "state": "PASSED",
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "pending": 0,
+          "checks": []
+        },
+        "unresolved_blockers": [],
+        "unresolved_majors": [
+          "REV-002"
+        ],
+        "recommendation": "Return to Developer."
       }
     },
     {

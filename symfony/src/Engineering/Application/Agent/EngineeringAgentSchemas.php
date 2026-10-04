@@ -400,16 +400,70 @@ final class EngineeringAgentSchemas
     /** @return array<string,mixed> */
     private static function reviewer(): array
     {
+        $reviewArea = [
+            'type' => 'object',
+            'required' => ['status','findings'],
+            'properties' => [
+                'status' => self::baseStatus(['PASS','FINDINGS','NOT_APPLICABLE']),
+                'findings' => ['type' => 'array'],
+            ],
+            'additionalProperties' => false,
+        ];
+
         return [
             'type' => 'object',
-            'required' => ['status','reviewed_revision','findings','acceptance_criteria','architecture_compliance','security_notes','recommendation'],
+            'required' => ['status','reviewed_revision','base_revision','pull_request','preflight','summary','issues','correctness','architecture','security','maintainability','database','api','tests','acceptance_criteria','ci','unresolved_blockers','unresolved_majors','recommendation'],
             'properties' => [
-                'status' => self::baseStatus(['APPROVED','CHANGES_REQUESTED','BLOCKED']),
-                'reviewed_revision' => ['type' => 'string'],
-                'findings' => ['type' => 'array', 'items' => ['type' => 'object']],
-                'acceptance_criteria' => ['type' => 'array', 'items' => ['type' => 'object']],
-                'architecture_compliance' => ['type' => ['string','object','boolean']],
-                'security_notes' => ['type' => 'array'],
+                'status' => self::baseStatus(['APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED']),
+                'reviewed_revision' => ['type' => 'string', 'minLength' => 1],
+                'base_revision' => ['type' => 'string', 'minLength' => 1],
+                'pull_request' => ['type' => ['integer','string']],
+                'preflight' => [
+                    'type' => 'object',
+                    'required' => ['status','reviewed_revision','diff_complete','required_artifacts_present','ci_evidence_available','blockers'],
+                    'properties' => [
+                        'status' => self::baseStatus(['PASS','BLOCKED']),
+                        'reviewed_revision' => ['type' => 'string', 'minLength' => 1],
+                        'diff_complete' => ['type' => 'boolean'],
+                        'required_artifacts_present' => ['type' => 'boolean'],
+                        'ci_evidence_available' => ['type' => 'boolean'],
+                        'blockers' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'summary' => ['type' => 'string'],
+                'issues' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['id','severity','blocking','file','line','category','problem','evidence','impact','expected_fix'],
+                        'properties' => [
+                            'id' => ['type' => 'string', 'minLength' => 1],
+                            'severity' => self::baseStatus(['BLOCKER','MAJOR','MINOR','SUGGESTION']),
+                            'blocking' => ['type' => 'boolean'],
+                            'file' => ['type' => ['string','null']],
+                            'line' => ['type' => ['integer','string','null']],
+                            'category' => self::baseStatus(['CORRECTNESS','ARCHITECTURE','SECURITY','MAINTAINABILITY','DATABASE','API','TESTS','OTHER']),
+                            'problem' => ['type' => 'string', 'minLength' => 1],
+                            'evidence' => ['type' => ['string','array','object']],
+                            'impact' => ['type' => 'string', 'minLength' => 1],
+                            'expected_fix' => ['type' => 'string', 'minLength' => 1],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'correctness' => $reviewArea,
+                'architecture' => ['type' => 'object', 'required' => ['compliant','findings'], 'properties' => ['compliant' => ['type' => 'boolean'], 'findings' => ['type' => 'array']], 'additionalProperties' => false],
+                'security' => $reviewArea,
+                'maintainability' => $reviewArea,
+                'database' => $reviewArea,
+                'api' => $reviewArea,
+                'tests' => $reviewArea,
+                'acceptance_criteria' => ['type' => 'array', 'items' => ['type' => 'object', 'required' => ['id','result','evidence'], 'properties' => ['id' => ['type' => 'string', 'minLength' => 1], 'result' => self::baseStatus(['PASS','FAIL','NOT_COVERED']), 'evidence' => ['type' => ['string','array','object']]], 'additionalProperties' => false]],
+                'ci' => ['type' => 'object', 'required' => ['state','total','passed','failed','pending','checks'], 'properties' => ['state' => ['type' => 'string'], 'total' => ['type' => 'integer'], 'passed' => ['type' => 'integer'], 'failed' => ['type' => 'integer'], 'pending' => ['type' => 'integer'], 'checks' => ['type' => 'array']], 'additionalProperties' => false],
+                'unresolved_blockers' => ['type' => 'array'],
+                'unresolved_majors' => ['type' => 'array'],
+                'human_review' => ['type' => ['object','null']],
                 'recommendation' => ['type' => 'string'],
             ],
             'additionalProperties' => false,

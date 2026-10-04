@@ -99,6 +99,13 @@ final readonly class DoctrineEngineeringFindingStore implements EngineeringFindi
     private function severity(string $value): string
     {
         $value = strtoupper(trim($value));
+        $value = match ($value) {
+            'BLOCKER' => FindingSeverity::CRITICAL->value,
+            'MAJOR' => FindingSeverity::HIGH->value,
+            'MINOR' => FindingSeverity::MEDIUM->value,
+            'SUGGESTION' => FindingSeverity::LOW->value,
+            default => $value,
+        };
         return FindingSeverity::tryFrom($value)?->value ?? FindingSeverity::MEDIUM->value;
     }
 

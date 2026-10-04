@@ -246,3 +246,16 @@ Developer виконує preflight до мутацій: перевіряє repos
 `ARCHITECTURE_REVIEW_REQUIRED` повертає workflow Principal Architect без repository mutation. Specification/security escalation зупиняє автономне виконання на human decision boundary. Лише completion-статуси можуть перейти до bounded repository change set, commit/branch і PR; merge та production deploy залишаються за межами прав Developer.
 
 Developer output зберігає preflight, scope, database/API impact, acceptance-criteria evidence, validation evidence, architecture compliance, security findings, limitations, deviations, risks і follow-up requirements. Відомий failure required validation не може завершитись completion-статусом.
+
+
+## Інженерна оркестрація: Reviewer
+
+Після `DEVELOPMENT_COMPLETED` workflow переходить у `REVIEW_PENDING`, де Agent №4 (`REVIEWER`) виконує незалежну перевірку фактичного PR/diff. Reviewer отримує Feature Specification, Architecture Decision, Implementation Plan, Developer Handoff, Development Result, changed files, CI evidence та явні coding/security standards.
+
+Reviewer є read-only щодо production implementation: він не виправляє код, не merge-ить PR і не змінює Acceptance Criteria. Runtime окремо підтримує `COS_ENGINEERING_REVIEWER_MODEL`; для незалежності рекомендується route/model family, відмінний від Developer, коли це доступно через LLM governance.
+
+Severity: `BLOCKER`, `MAJOR`, `MINOR`, `SUGGESTION`. BLOCKER/MAJOR завжди блокують; MINOR блокує лише з `blocking=true`; SUGGESTION не блокує. Reviewer decision обмежений `APPROVED`, `REQUEST_CHANGES`, `ARCHITECTURE_REVIEW_REQUIRED`, `HUMAN_REVIEW_REQUIRED`.
+
+Маршрути: `APPROVED → QA_PENDING → QA`; `REQUEST_CHANGES → CHANGES_REQUESTED → DEVELOPMENT_RUNNING → Developer`; `ARCHITECTURE_REVIEW_REQUIRED → ARCHITECTURE_PENDING → Principal Architect`; `HUMAN_REVIEW_REQUIRED → HUMAN_DECISION_REQUIRED`.
+
+`APPROVED` заборонений при неповному preflight, architecture non-compliance, unresolved blocking issues, BLOCKER/MAJOR, failed required CI або acceptance criterion без PASS evidence.

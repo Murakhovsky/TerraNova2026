@@ -264,23 +264,25 @@ final readonly class EngineeringWorkflowCoordinator
     private function afterReviewer(WorkflowExecution $workflow, array $output, WorkflowCounters $counters): WorkflowDirective
     {
         $status = (string) ($output['status'] ?? '');
-        if ($status === 'BLOCKED') return $this->block($workflow, 'Reviewer reported a blocker.');
         if ($status === 'APPROVED') {
             $transition = $this->transition($workflow, EngineeringWorkflowState::QA_PENDING, 'REVIEW_APPROVED');
-            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Reviewed implementation requires final QA.', [$transition]);
+            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Independent review approved the implementation; final QA is required.', [$transition]);
         }
-        if ($status !== 'CHANGES_REQUESTED') throw new LogicException('Unexpected Reviewer status: '.$status);
-
+        if ($status === 'ARCHITECTURE_REVIEW_REQUIRED') {
+            $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'REVIEW_ARCHITECTURE_REVIEW_REQUIRED');
+            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT, 'Reviewer found implementation evidence that requires Principal Architect revalidation.', [$transition]);
+        }
+        if ($status === 'HUMAN_REVIEW_REQUIRED') return $this->human($workflow, 'Reviewer identified a decision that requires human review.');
+        if ($status !== 'REQUEST_CHANGES') throw new LogicException('Unexpected Reviewer status: '.$status);
         if (!$this->retries->mayRunReview($counters->reviewCycles) || !$this->retries->mayRunDevelopmentFix($counters->developmentFixLoops)) {
             $escalated = $this->transition($workflow, EngineeringWorkflowState::ESCALATED, 'REVIEW_LOOP_LIMIT');
             return $this->human($workflow, 'Review/development loop limit exceeded.', [$escalated]);
         }
-
         $transitions = [
             $this->transition($workflow, EngineeringWorkflowState::CHANGES_REQUESTED, 'REVIEW_CHANGES_REQUESTED'),
             $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, 'DEVELOPER_FIX_STARTED'),
         ];
-        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Reviewer requested implementation changes.', $transitions);
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Reviewer requested bounded implementation changes.', $transitions);
     }
 
     private function afterQa(

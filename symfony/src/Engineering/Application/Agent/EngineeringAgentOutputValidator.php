@@ -538,15 +538,58 @@ final class EngineeringAgentOutputValidator
 
     private function reviewer(array $output): void
     {
-        $this->required($output, ['status','reviewed_revision','findings','acceptance_criteria','architecture_compliance','security_notes','recommendation']);
-        if (($output['status'] ?? null) !== 'APPROVED') return;
-        if (($output['architecture_compliance'] ?? null) !== true) {
-            throw new EngineeringAgentOutputValidationException('Reviewer cannot APPROVE a non-compliant architecture implementation.');
+        $this->required($output, ['status','reviewed_revision','base_revision','pull_request','preflight','summary','issues','correctness','architecture','security','maintainability','database','api','tests','acceptance_criteria','ci','unresolved_blockers','unresolved_majors','recommendation']);
+        $status = (string) ($output['status'] ?? '');
+        if (!in_array($status, ['APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED'], true)) throw new EngineeringAgentOutputValidationException('Reviewer status is invalid.');
+        if (!is_array($output['preflight'] ?? null)) throw new EngineeringAgentOutputValidationException('Reviewer preflight must be an object.');
+        $this->required($output['preflight'], ['status','reviewed_revision','diff_complete','required_artifacts_present','ci_evidence_available','blockers']);
+        if (!in_array((string) $output['preflight']['status'], ['PASS','BLOCKED'], true)) throw new EngineeringAgentOutputValidationException('Reviewer preflight status is invalid.');
+        if ((string) $output['preflight']['reviewed_revision'] !== (string) $output['reviewed_revision']) throw new EngineeringAgentOutputValidationException('Reviewer preflight revision must match reviewed revision.');
+        foreach (['correctness','security','maintainability','database','api','tests'] as $section) {
+            if (!is_array($output[$section] ?? null)) throw new EngineeringAgentOutputValidationException('Reviewer '.$section.' must be an object.');
+            $this->required($output[$section], ['status','findings']);
+            if (!in_array((string) $output[$section]['status'], ['PASS','FINDINGS','NOT_APPLICABLE'], true)) throw new EngineeringAgentOutputValidationException('Reviewer '.$section.' status is invalid.');
         }
-        foreach ($output['findings'] as $finding) {
-            if (is_array($finding) && strtolower((string) ($finding['severity'] ?? '')) === 'critical') {
-                throw new EngineeringAgentOutputValidationException('Reviewer cannot APPROVE with a critical finding.');
-            }
+        if (!is_array($output['architecture'] ?? null)) throw new EngineeringAgentOutputValidationException('Reviewer architecture must be an object.');
+        $this->required($output['architecture'], ['compliant','findings']);
+        if (!is_array($output['ci'] ?? null)) throw new EngineeringAgentOutputValidationException('Reviewer CI evidence must be an object.');
+        $this->required($output['ci'], ['state','total','passed','failed','pending','checks']);
+        $blockingIssues = 0; $blockers = 0; $majors = 0;
+        foreach ($output['issues'] as $issue) {
+            if (!is_array($issue)) throw new EngineeringAgentOutputValidationException('Reviewer issue must be an object.');
+            $this->required($issue, ['id','severity','blocking','file','line','category','problem','evidence','impact','expected_fix']);
+            $severity = (string) $issue['severity'];
+            if (!in_array($severity, ['BLOCKER','MAJOR','MINOR','SUGGESTION'], true)) throw new EngineeringAgentOutputValidationException('Reviewer issue severity is invalid.');
+            if ($severity === 'BLOCKER') ++$blockers;
+            if ($severity === 'MAJOR') ++$majors;
+            if (($issue['blocking'] ?? false) === true) ++$blockingIssues;
+            if (in_array($severity, ['BLOCKER','MAJOR'], true) && ($issue['blocking'] ?? false) !== true) throw new EngineeringAgentOutputValidationException('Reviewer BLOCKER/MAJOR issues must be blocking.');
+            if ($severity === 'SUGGESTION' && ($issue['blocking'] ?? false) === true) throw new EngineeringAgentOutputValidationException('Reviewer SUGGESTION cannot be blocking.');
+            if (trim((string) $issue['problem']) === '' || trim((string) $issue['impact']) === '' || trim((string) $issue['expected_fix']) === '') throw new EngineeringAgentOutputValidationException('Reviewer issue must be actionable.');
+        }
+        foreach ($output['acceptance_criteria'] as $criterion) {
+            if (!is_array($criterion)) throw new EngineeringAgentOutputValidationException('Reviewer acceptance criterion must be an object.');
+            $this->required($criterion, ['id','result','evidence']);
+            if (!in_array((string) $criterion['result'], ['PASS','FAIL','NOT_COVERED'], true)) throw new EngineeringAgentOutputValidationException('Reviewer acceptance criterion result is invalid.');
+        }
+        if ($status === 'APPROVED') {
+            if (($output['preflight']['status'] ?? null) !== 'PASS' || ($output['preflight']['diff_complete'] ?? false) !== true || ($output['preflight']['required_artifacts_present'] ?? false) !== true || ($output['preflight']['ci_evidence_available'] ?? false) !== true) throw new EngineeringAgentOutputValidationException('Reviewer APPROVED requires a complete PASS preflight.');
+            if (($output['architecture']['compliant'] ?? null) !== true) throw new EngineeringAgentOutputValidationException('Reviewer cannot APPROVE architecture-noncompliant implementation.');
+            if ($blockingIssues > 0 || $blockers > 0 || $majors > 0 || ($output['unresolved_blockers'] ?? []) !== [] || ($output['unresolved_majors'] ?? []) !== []) throw new EngineeringAgentOutputValidationException('Reviewer cannot APPROVE with unresolved blocking issues.');
+            if ((int) ($output['ci']['failed'] ?? 0) > 0 || strtoupper((string) ($output['ci']['state'] ?? '')) === 'FAILED') throw new EngineeringAgentOutputValidationException('Reviewer cannot APPROVE with failed required CI.');
+            foreach ($output['acceptance_criteria'] as $criterion) if (($criterion['result'] ?? null) !== 'PASS') throw new EngineeringAgentOutputValidationException('Reviewer APPROVED requires PASS evidence for every acceptance criterion.');
+        }
+        if ($status === 'REQUEST_CHANGES' && $blockingIssues === 0) throw new EngineeringAgentOutputValidationException('REQUEST_CHANGES requires at least one blocking actionable issue.');
+        if ($status === 'ARCHITECTURE_REVIEW_REQUIRED') {
+            if (($output['architecture']['compliant'] ?? true) !== false) throw new EngineeringAgentOutputValidationException('Architecture escalation requires explicit non-compliance.');
+            $architectureEvidence = array_filter($output['issues'], static fn (mixed $issue): bool => is_array($issue) && (($issue['category'] ?? null) === 'ARCHITECTURE'));
+            if ($architectureEvidence === []) throw new EngineeringAgentOutputValidationException('Architecture escalation requires concrete ARCHITECTURE issue evidence.');
+        }
+        if ($status === 'HUMAN_REVIEW_REQUIRED') {
+            $human = $output['human_review'] ?? null;
+            if (!is_array($human)) throw new EngineeringAgentOutputValidationException('HUMAN_REVIEW_REQUIRED requires human_review evidence.');
+            $this->required($human, ['reason','decision_required']);
+            if (trim((string) $human['reason']) === '' || trim((string) $human['decision_required']) === '') throw new EngineeringAgentOutputValidationException('Human review reason and decision cannot be empty.');
         }
     }
 

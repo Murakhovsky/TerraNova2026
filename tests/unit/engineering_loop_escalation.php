@@ -21,7 +21,7 @@ $workflow = new WorkflowExecution(EngineeringId::generate(), EngineeringId::gene
 $directive = (new EngineeringWorkflowCoordinator())->acceptAgentResult(
     $workflow,
     AgentRole::REVIEWER,
-    ['status' => 'CHANGES_REQUESTED'],
+    ['status' => 'REQUEST_CHANGES'],
     new WorkflowCounters(3, 3, 0),
 );
 
