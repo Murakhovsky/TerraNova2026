@@ -48,7 +48,7 @@ if ($d->agent !== AgentRole::DEVELOPER || $workflow->currentState() !== Engineer
 }
 
 $coordinator->acceptAgentResult($workflow, AgentRole::DEVELOPER, ['status' => 'COMPLETED']);
-$d = $coordinator->acceptAgentResult($workflow, AgentRole::REVIEWER, ['status' => 'CHANGES_REQUESTED'], new WorkflowCounters(0, 1, 0));
+$d = $coordinator->acceptAgentResult($workflow, AgentRole::REVIEWER, ['status' => 'REQUEST_CHANGES'], new WorkflowCounters(0, 1, 0));
 if ($d->agent !== AgentRole::DEVELOPER || $workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) throw new RuntimeException('Review fix routing failed.');
 
 $coordinator->acceptAgentResult($workflow, AgentRole::DEVELOPER, ['status' => 'COMPLETED']);

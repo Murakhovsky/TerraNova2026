@@ -301,20 +301,54 @@ $developerWithLimitations['status'] = 'COMPLETED_WITH_LIMITATIONS';
 $developerWithLimitations['known_limitations'] = ['CI execution evidence is deferred to QA.'];
 $validator->validate(AgentRole::DEVELOPER, $developerWithLimitations);
 
-$reviewerNonCompliantApproval = [
+$reviewer = [
     'status' => 'APPROVED',
     'reviewed_revision' => 'abc123',
-    'findings' => [],
-    'acceptance_criteria' => [],
-    'architecture_compliance' => false,
-    'security_notes' => [],
-    'recommendation' => 'continue',
+    'base_revision' => 'base123',
+    'pull_request' => 42,
+    'preflight' => ['status' => 'PASS', 'reviewed_revision' => 'abc123', 'diff_complete' => true, 'required_artifacts_present' => true, 'ci_evidence_available' => true, 'blockers' => []],
+    'summary' => 'Independent review passed.',
+    'issues' => [[
+        'id' => 'REV-001', 'severity' => 'SUGGESTION', 'blocking' => false, 'file' => 'symfony/src/Example.php', 'line' => 10, 'category' => 'MAINTAINABILITY',
+        'problem' => 'A name could be clearer.', 'evidence' => 'Local variable name is generic.', 'impact' => 'Minor readability cost.', 'expected_fix' => 'Consider a clearer name in a future cleanup.',
+    ]],
+    'correctness' => ['status' => 'PASS', 'findings' => []],
+    'architecture' => ['compliant' => true, 'findings' => []],
+    'security' => ['status' => 'PASS', 'findings' => []],
+    'maintainability' => ['status' => 'FINDINGS', 'findings' => ['REV-001']],
+    'database' => ['status' => 'NOT_APPLICABLE', 'findings' => []],
+    'api' => ['status' => 'NOT_APPLICABLE', 'findings' => []],
+    'tests' => ['status' => 'PASS', 'findings' => []],
+    'acceptance_criteria' => [['id' => 'AC-001', 'result' => 'PASS', 'evidence' => 'Diff and tests cover behavior.']],
+    'ci' => ['state' => 'PASSED', 'total' => 2, 'passed' => 2, 'failed' => 0, 'pending' => 0, 'checks' => []],
+    'unresolved_blockers' => [], 'unresolved_majors' => [], 'recommendation' => 'Proceed to QA.',
 ];
-try {
-    $validator->validate(AgentRole::REVIEWER, $reviewerNonCompliantApproval);
-    throw new RuntimeException('Reviewer approved architecture-noncompliant implementation.');
-} catch (EngineeringAgentOutputValidationException) {
-}
+$validator->validate(AgentRole::REVIEWER, $reviewer);
+
+$reviewerBlockerApproved = $reviewer;
+$reviewerBlockerApproved['issues'][0] = ['id' => 'REV-002','severity' => 'BLOCKER','blocking' => true,'file' => 'symfony/src/Example.php','line' => 12,'category' => 'SECURITY','problem' => 'Tenant boundary is missing.','evidence' => 'Query has no tenant predicate.','impact' => 'Cross-tenant data exposure.','expected_fix' => 'Add tenant-scoped repository constraint and regression test.'];
+try { $validator->validate(AgentRole::REVIEWER, $reviewerBlockerApproved); throw new RuntimeException('Reviewer APPROVED with BLOCKER was accepted.'); } catch (EngineeringAgentOutputValidationException) {}
+
+$reviewerChanges = $reviewerBlockerApproved;
+$reviewerChanges['status'] = 'REQUEST_CHANGES';
+$reviewerChanges['unresolved_blockers'] = ['REV-002'];
+$validator->validate(AgentRole::REVIEWER, $reviewerChanges);
+
+$reviewerArchitecture = $reviewerChanges;
+$reviewerArchitecture['status'] = 'ARCHITECTURE_REVIEW_REQUIRED';
+$reviewerArchitecture['architecture'] = ['compliant' => false, 'findings' => ['REV-003']];
+$reviewerArchitecture['issues'][0] = ['id' => 'REV-003','severity' => 'MAJOR','blocking' => true,'file' => null,'line' => null,'category' => 'ARCHITECTURE','problem' => 'Approved plan conflicts with bounded-context ownership.','evidence' => 'Implementation requires a dependency forbidden by the ADR.','impact' => 'Proceeding would create architecture drift.','expected_fix' => 'Principal Architect must revalidate the plan; Reviewer must not redesign it.'];
+$reviewerArchitecture['unresolved_blockers'] = []; $reviewerArchitecture['unresolved_majors'] = ['REV-003'];
+$validator->validate(AgentRole::REVIEWER, $reviewerArchitecture);
+
+$reviewerHuman = $reviewer;
+$reviewerHuman['status'] = 'HUMAN_REVIEW_REQUIRED';
+$reviewerHuman['preflight']['status'] = 'BLOCKED';
+$reviewerHuman['human_review'] = ['reason' => 'Acceptance criterion conflicts with a destructive migration requirement.', 'decision_required' => 'Choose whether data loss is acceptable.'];
+$validator->validate(AgentRole::REVIEWER, $reviewerHuman);
+
+$reviewerFailedCi = $reviewer; $reviewerFailedCi['ci']['state'] = 'FAILED'; $reviewerFailedCi['ci']['failed'] = 1;
+try { $validator->validate(AgentRole::REVIEWER, $reviewerFailedCi); throw new RuntimeException('Reviewer APPROVED with failed CI was accepted.'); } catch (EngineeringAgentOutputValidationException) {}
 
 $qa = [
     'status' => 'PASS', 'tested_revision' => 'abc', 'acceptance_criteria' => [],
