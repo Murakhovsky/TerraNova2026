@@ -32,12 +32,20 @@ sort($canonical);
 sort($helpers);
 
 $registry = (string) file_get_contents($root . '/symfony/src/Web/Experience/Dev/UiCatalogRegistry.php');
-preg_match_all("/\$this->entry\('([^']+)'/", $registry, $matches);
-$catalog = array_values(array_unique($matches[1] ?? []));
-sort($catalog);
 
-if ($canonical !== $catalog) {
-    throw new RuntimeException('Design System catalog does not exactly match canonical Cos* component files.');
+foreach ($canonical as $component) {
+    if (!str_contains($registry, "\$this->entry('" . $component . "'")) {
+        throw new RuntimeException('Canonical component is missing from UI Catalog: ' . $component);
+    }
+}
+
+$declaredEntries = substr_count($registry, "\$this->entry('");
+if ($declaredEntries !== count($canonical)) {
+    throw new RuntimeException(sprintf(
+        'UI Catalog entry count does not match canonical component count: catalog=%d canonical=%d.',
+        $declaredEntries,
+        count($canonical),
+    ));
 }
 
 if (count($componentFiles) !== 65 || count($canonical) !== 63 || count($helpers) !== 2) {
