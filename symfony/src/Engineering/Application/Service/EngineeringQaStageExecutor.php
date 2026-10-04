@@ -716,34 +716,6 @@ final readonly class EngineeringQaStageExecutor
         return true;
     }
 
-    private function assertFeatureCoverage(array $featureSpec, array $qa): void
-    {
-        $expected = [];
-        foreach (is_array($featureSpec['acceptance_criteria'] ?? null) ? $featureSpec['acceptance_criteria'] : [] as $criterion) {
-            if (!is_array($criterion)) throw new RuntimeException('Feature Specification acceptance criteria are malformed.');
-            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
-            if ($id === '') throw new RuntimeException('Feature Specification acceptance criterion id is missing.');
-            $expected[$id] = true;
-        }
-
-        $actual = [];
-        foreach (is_array($qa['acceptance_criteria'] ?? null) ? $qa['acceptance_criteria'] : [] as $criterion) {
-            if (!is_array($criterion)) continue;
-            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
-            if ($id !== '') $actual[$id] = true;
-        }
-
-        $missing = array_diff_key($expected, $actual);
-        $unexpected = array_diff_key($actual, $expected);
-        if ($missing !== [] || $unexpected !== []) {
-            throw new RuntimeException(sprintf(
-                'QA acceptance-criteria coverage mismatch. Missing: %s; unexpected: %s.',
-                implode(', ', array_keys($missing)) ?: 'none',
-                implode(', ', array_keys($unexpected)) ?: 'none',
-            ));
-        }
-    }
-
     private function acceptanceCriteriaVerified(array $featureSpec, array $qa): bool
     {
         $results = [];
