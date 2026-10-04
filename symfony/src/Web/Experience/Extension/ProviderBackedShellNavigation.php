@@ -70,6 +70,13 @@ final readonly class ProviderBackedShellNavigation
                 'ME',
                 $context->activeItem === 'cabinet',
             ),
+            new ShellNavigationItem(
+                'access',
+                'Access',
+                '/account/access',
+                'AC',
+                $context->activeItem === 'access',
+            ),
         ];
 
         $commands = [

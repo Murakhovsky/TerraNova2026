@@ -1,0 +1,46 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Доступ і дозволи | Terra Nova COS{% endblock %}
+
+{% block workspace_content %}
+<section class="cos-page__stack" data-cos-account-access>
+    <twig:CosPageHeader
+        eyebrow="Identity"
+        title="Доступ і дозволи"
+        subtitle="Поточний organization membership і core tenant permissions, з якими COS авторизує цей сеанс."
+    >
+        <twig:CosButton label="До кабінету" href="/cabinet" variant="ghost" />
+    </twig:CosPageHeader>
+
+    <section class="cos-page__section cos-section-grid" aria-label="Identity context">
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Identity</p>
+            <h2 class="cos-card__title">Поточний контекст</h2>
+            <dl class="cos-entity-summary">
+                <div class="cos-entity-summary__item"><dt>User</dt><dd>#{{ userId }}</dd></div>
+                <div class="cos-entity-summary__item"><dt>Organization</dt><dd>{{ organizationId }}</dd></div>
+                <div class="cos-entity-summary__item"><dt>Role</dt><dd>{{ role }}</dd></div>
+            </dl>
+        </article>
+
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Core permissions</p>
+            <h2 class="cos-card__title">Effective tenant access</h2>
+            <div class="cos-entity-list" role="list">
+                {% for permission in permissions %}
+                    <div class="cos-entity-summary__item" role="listitem">
+                        <span><code>{{ permission.code }}</code></span>
+                        <strong>{{ permission.allowed ? 'ALLOWED' : 'DENIED' }}</strong>
+                    </div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+
+    <twig:CosAlert
+        title="Роль щойно змінили?"
+        copy="Активна сесія може ще містити старий authentication context. Вийдіть із COS і увійдіть знову, після чого перевірте цю сторінку."
+        tone="info"
+    />
+</section>
+{% endblock %}

@@ -101,6 +101,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Account\AccountAccessController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\PublicSite\PublicCosController:
     public: true
     tags: ['controller.service_arguments']

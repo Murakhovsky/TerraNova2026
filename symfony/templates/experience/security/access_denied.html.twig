@@ -1,0 +1,44 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Доступ обмежено | Terra Nova COS{% endblock %}
+
+{% block workspace_content %}
+<section class="cos-page__stack" data-cos-access-denied>
+    <twig:CosPageHeader
+        eyebrow="Access control"
+        title="Недостатньо прав для цієї сторінки"
+        subtitle="COS розпізнав вашу сесію, але поточна роль або permission не дозволяє відкрити цей розділ."
+    >
+        <twig:CosButton label="Перевірити мій доступ" href="/account/access" variant="primary" />
+        <twig:CosButton label="До кабінету" href="/cabinet" variant="ghost" />
+    </twig:CosPageHeader>
+
+    <twig:CosAlert
+        title="Запит заблоковано правилами доступу"
+        copy="Перелогіньтесь, якщо роль щойно змінили. Якщо доступ не зʼявився, перевірте membership і permissions поточного акаунта."
+        tone="warning"
+    />
+
+    <section class="cos-page__section cos-section-grid" aria-label="Access diagnostics">
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Поточний контекст</p>
+            <h2 class="cos-card__title">Хто виконує запит</h2>
+            <dl class="cos-entity-summary">
+                <div class="cos-entity-summary__item"><dt>User</dt><dd>#{{ userId }}</dd></div>
+                <div class="cos-entity-summary__item"><dt>Organization</dt><dd>{{ organizationId }}</dd></div>
+                <div class="cos-entity-summary__item"><dt>Role</dt><dd>{{ currentRole }}</dd></div>
+            </dl>
+        </article>
+
+        <article class="cos-card">
+            <p class="cos-card__eyebrow">Вимоги</p>
+            <h2 class="cos-card__title">Що потрібно для доступу</h2>
+            <p class="cos-card__copy">{{ requiredAccess }}</p>
+            {% if requiredPermission %}
+                <p class="cos-card__copy"><strong>Permission:</strong> <code>{{ requiredPermission }}</code></p>
+            {% endif %}
+            <p class="cos-card__copy"><strong>Route:</strong> <code>{{ requestedPath }}</code></p>
+        </article>
+    </section>
+</section>
+{% endblock %}
