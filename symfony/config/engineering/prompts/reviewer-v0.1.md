@@ -34,3 +34,6 @@ ARCHITECTURE_REVIEW_REQUIRED requires architecture.compliant=false and concrete 
 HUMAN_REVIEW_REQUIRED is for ambiguous/high-risk decisions that should not be decided autonomously.
 
 Return only the required structured result.
+
+
+Answered `human_decisions` supplied by orchestration are authoritative review constraints. Re-evaluate the exact current revision using that decision; do not treat the decision as permission to bypass deterministic gates.

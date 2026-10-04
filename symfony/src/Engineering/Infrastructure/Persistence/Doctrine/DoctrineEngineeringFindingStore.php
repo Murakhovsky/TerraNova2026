@@ -72,6 +72,19 @@ final readonly class DoctrineEngineeringFindingStore implements EngineeringFindi
         ]) > 0;
     }
 
+    public function hasOpenMajorOrHigher(string $featureId): bool
+    {
+        $records = $this->entityManager->getRepository(EngineeringFindingRecord::class)->findBy([
+            'featureId' => $featureId,
+            'status' => 'OPEN',
+        ]);
+        foreach ($records as $record) {
+            if (!$record instanceof EngineeringFindingRecord) continue;
+            if (in_array($record->severity(), [FindingSeverity::CRITICAL->value, FindingSeverity::HIGH->value], true)) return true;
+        }
+        return false;
+    }
+
     public function forFeature(string $featureId): array
     {
         $records = $this->entityManager->getRepository(EngineeringFindingRecord::class)->findBy(
