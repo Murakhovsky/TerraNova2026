@@ -602,6 +602,14 @@ final readonly class EngineeringQaStageExecutor
             && trim((string) ($invariant['reason'] ?? '')) !== '';
     }
 
+    private function hasMeaningfulEvidence(mixed $evidence): bool
+    {
+        if (is_string($evidence)) return trim($evidence) !== '';
+        if (is_array($evidence)) return $evidence !== [];
+        if (is_object($evidence)) return true;
+        return is_int($evidence) || is_float($evidence) || is_bool($evidence);
+    }
+
     private function requiredSuitesPassed(array $testPlan, array $qa): bool
     {
         $required = is_array($testPlan['required_suites'] ?? null) ? $testPlan['required_suites'] : [];
