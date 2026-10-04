@@ -29,7 +29,7 @@ foreach ($requiredFiles as $file) {
 }
 
 $inventory = (string) file_get_contents($root . '/symfony/src/Command/ExperienceInventoryCommand.php');
-foreach (['cos:experience:inventory', '--strict', 'Page Contract', 'EXEMPT', 'mismatched'] as $marker) {
+foreach (['cos:experience:inventory', "addOption('strict'", 'Page Contract', 'EXEMPT', 'mismatched'] as $marker) {
     if (!str_contains($inventory, $marker)) {
         throw new RuntimeException('Experience inventory contract missing marker: ' . $marker);
     }
