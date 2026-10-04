@@ -20,6 +20,7 @@ final readonly class ExperienceReleaseHardeningService
         private DesignSystemAuditService $designSystem,
         private GoldenExperienceSet $golden,
         private ExternalReferenceAuditService $externalReferences,
+        private ExperienceAssetDebtScanner $assetDebt,
     ) {}
 
     public function report(): ExperienceReleaseReport
@@ -55,6 +56,7 @@ final readonly class ExperienceReleaseHardeningService
         $design = $this->designSystem->audit();
         $golden = $this->golden->report();
         $external = $this->externalReferences->audit();
+        $assets = $this->assetDebt->scan();
 
         $gates = [
             'registry_coverage' => ['actual' => $coverage, 'required' => 100, 'pass' => $coverage === 100],
@@ -67,8 +69,10 @@ final readonly class ExperienceReleaseHardeningService
             'p0_p1_visual_qa' => ['actual' => $qa([...$p0, ...$p1], 'visual'), 'required' => count($p0) + count($p1)],
             'p0_p1_responsive_qa' => ['actual' => $qa([...$p0, ...$p1], 'responsive'), 'required' => count($p0) + count($p1)],
             'p0_p1_accessibility_qa' => ['actual' => $qa([...$p0, ...$p1], 'accessibility'), 'required' => count($p0) + count($p1)],
-            'dead_css_cleanup' => ['pass' => false, 'status' => 'PENDING_SCANNER_AND_CLEANUP'],
-            'dead_js_cleanup' => ['pass' => false, 'status' => 'PENDING_SCANNER_AND_CLEANUP'],
+            'dead_css_cleanup' => ['pass' => $assets->cssGreen(), 'actual' => count($assets->deadCss), 'required' => 0],
+            'dead_js_cleanup' => ['pass' => $assets->jsGreen(), 'actual' => count($assets->deadJs), 'required' => 0],
+            'legacy_asset_cleanup' => ['pass' => $assets->legacyArtifacts === [], 'actual' => count($assets->legacyArtifacts), 'required' => 0],
+            'asset_runtime_boundary' => ['pass' => $assets->viteBoundaryValid && $assets->canonicalRootsPresent],
         ];
 
         foreach (['p0_p1_functional_qa','p0_p1_visual_qa','p0_p1_responsive_qa','p0_p1_accessibility_qa'] as $key) {

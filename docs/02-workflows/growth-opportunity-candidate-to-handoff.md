@@ -938,7 +938,7 @@ symfony/src/Web/Growth/GrowthPageController.php
 symfony/src/Web/Experience/Extension/Provider/GrowthWebProvider.php
 app/Interfaces/Web/View/growth/experiments.phtml
 app/Interfaces/Web/View/growth/experiment.phtml
-frontend/features/growth/workspace.js
+symfony/assets/growth/workspace.js
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthExperimentRepository.php
 app/Domains/Growth/Automation/Event/GrowthOutcomeFeedbackConsumer.php
 app/Domains/Growth/Infrastructure/Persistence/MySql/MysqlGrowthLearningRepository.php

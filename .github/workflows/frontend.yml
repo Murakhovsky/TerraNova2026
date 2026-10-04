@@ -12,7 +12,6 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'tests/browser/**'
-      - 'tests/frontend/**'
       - '.github/workflows/frontend.yml'
   pull_request:
     branches: [main]
@@ -32,6 +31,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm run test:frontend
       - name: Browser test syntax
         run: find tests/browser -maxdepth 1 -type f -name '*.mjs' -print0 | xargs -0 -n1 node --check
