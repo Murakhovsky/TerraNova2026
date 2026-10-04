@@ -50,13 +50,12 @@
         </div>
         <div class="cos-entity-list" role="list" data-cabinet-workspaces>
             {% for workspace in cabinet.workspaces %}
-                <a class="cos-entity-list__item" href="{{ workspace.href }}" role="listitem">
-                    <span>
-                        <strong>{{ workspace.label }}</strong>
-                        <small>{{ workspace.description }}</small>
-                    </span>
-                    <span aria-hidden="true">→</span>
-                </a>
+                <twig:CosEntityListItem
+                    title="{{ workspace.label }}"
+                    subtitle="{{ workspace.description }}"
+                    href="{{ workspace.href }}"
+                    meta="Open"
+                />
             {% endfor %}
         </div>
     </section>
