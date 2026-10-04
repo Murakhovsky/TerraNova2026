@@ -30,8 +30,8 @@ foreach ([
     'experience_autonomy_level',
     'Experience autonomy ceiling',
     'WorkflowDirectiveType::STOP',
-    "case 'L2':",
-    "case 'L3':",
+    "'L2' => 2",
+    "'L3' => 3",
 ] as $marker) {
     if (!str_contains($progression, $marker)) {
         throw new RuntimeException('Engineering progression does not enforce Experience autonomy: '.$marker);
