@@ -22,35 +22,38 @@ final readonly class ExperienceAssetDebtScanner
         $deadCss = [];
         $deadJs = [];
         $legacy = [];
+        $hasSourceTree = is_dir($this->root.'/frontend') && is_file($this->root.'/vite.config.js');
 
-        foreach ($this->files($this->root.'/frontend') as $absolute) {
-            $relative = $this->relative($absolute);
-            if (in_array($relative, self::ALLOWED_FRONTEND, true)) {
-                continue;
+        if ($hasSourceTree) {
+            foreach ($this->files($this->root.'/frontend') as $absolute) {
+                $relative = $this->relative($absolute);
+                if (in_array($relative, self::ALLOWED_FRONTEND, true)) {
+                    continue;
+                }
+
+                if (str_ends_with($relative, '.css')) {
+                    $deadCss[] = $relative;
+                } elseif (str_ends_with($relative, '.js')) {
+                    $deadJs[] = $relative;
+                } else {
+                    $legacy[] = $relative;
+                }
             }
 
-            if (str_ends_with($relative, '.css')) {
-                $deadCss[] = $relative;
-            } elseif (str_ends_with($relative, '.js')) {
-                $deadJs[] = $relative;
-            } else {
-                $legacy[] = $relative;
+            foreach ([
+                'symfony/assets/styles/domains/growth.css',
+            ] as $relative) {
+                if (is_file($this->root.'/'.$relative)) {
+                    $deadCss[] = $relative;
+                }
             }
-        }
 
-        foreach ([
-            'symfony/assets/styles/domains/growth.css',
-        ] as $relative) {
-            if (is_file($this->root.'/'.$relative)) {
-                $deadCss[] = $relative;
-            }
-        }
-
-        foreach ([
-            'tests/frontend/api_client.mjs',
-        ] as $relative) {
-            if (is_file($this->root.'/'.$relative)) {
-                $legacy[] = $relative;
+            foreach ([
+                'tests/frontend/api_client.mjs',
+            ] as $relative) {
+                if (is_file($this->root.'/'.$relative)) {
+                    $legacy[] = $relative;
+                }
             }
         }
 
@@ -58,19 +61,30 @@ final readonly class ExperienceAssetDebtScanner
         sort($deadJs);
         sort($legacy);
 
-        $vite = is_file($this->root.'/vite.config.js')
-            ? (string) file_get_contents($this->root.'/vite.config.js')
-            : '';
+        if ($hasSourceTree) {
+            $vite = (string) file_get_contents($this->root.'/vite.config.js');
+            $viteBoundary = str_contains($vite, "'spatial-viewer':")
+                && !str_contains($vite, 'frontend/entrypoints/')
+                && !str_contains($vite, 'frontend/features/')
+                && !str_contains($vite, 'frontend/core/');
 
-        $viteBoundary = str_contains($vite, "'spatial-viewer':")
-            && !str_contains($vite, 'frontend/entrypoints/')
-            && !str_contains($vite, 'frontend/features/')
-            && !str_contains($vite, 'frontend/core/');
+            $rootsPresent = is_file($this->root.'/symfony/assets/app.js')
+                && is_file($this->root.'/symfony/assets/styles/app.css')
+                && is_file($this->root.'/frontend/spatial/spatial-viewer.js')
+                && is_file($this->root.'/frontend/spatial/spatial-viewer.css');
+        } else {
+            // Production PHP image intentionally contains compiled runtime artifacts,
+            // not the Node/Vite source tree. Source governance is enforced by the
+            // repository architecture gate; runtime verifies the canonical outputs.
+            $manifest = $this->root.'/symfony/public/build/.vite/manifest.json';
+            $viteBoundary = is_file($manifest)
+                && str_contains((string) file_get_contents($manifest), 'spatial-viewer');
 
-        $rootsPresent = is_file($this->root.'/symfony/assets/app.js')
-            && is_file($this->root.'/symfony/assets/styles/app.css')
-            && is_file($this->root.'/frontend/spatial/spatial-viewer.js')
-            && is_file($this->root.'/frontend/spatial/spatial-viewer.css');
+            $rootsPresent = is_file($this->root.'/symfony/assets/app.js')
+                && is_file($this->root.'/symfony/assets/styles/app.css')
+                && is_dir($this->root.'/symfony/public/assets')
+                && is_file($manifest);
+        }
 
         return new ExperienceAssetDebtReport(
             deadCss: $deadCss,
