@@ -40,6 +40,9 @@ foreach ([
     'ContinueEngineeringWorkflowsCommand',
     'RunEngineeringFeatureCommand',
     'queueForOrganization',
+    'activeForOrganization',
+    'activeExecutions',
+    'workflow_state',
     'queueImmediate',
 ] as $needle) {
     if (!str_contains($controller, $needle)) throw new RuntimeException('Engineering feature UI controller missing '.$needle);
@@ -65,6 +68,9 @@ foreach ([
 foreach ([
     'data-engineering-queue',
     'Priority queue',
+    'data-engineering-active-executions',
+    'Active executions',
+    'displayStatus',
     'P0 → P1 → P2 → P3',
     'data-engineering-workspace-list',
     'data-engineering-feature-actions',
