@@ -361,20 +361,85 @@ final class EngineeringAgentOutputValidator
 
     private function qa(array $output): void
     {
-        $this->required($output, ['status','tested_revision','test_plan','acceptance_criteria','tests_total','tests_passed','tests_failed','defects','regressions','known_limitations']);
-        if (($output['status'] ?? null) === 'PASS' && (int) ($output['tests_failed'] ?? 0) > 0) {
-            throw new EngineeringAgentOutputValidationException('QA cannot PASS with failed tests.');
+        $this->required($output, ['phase','status','feature_id','tested_revision','pull_request','test_plan','test_changes']);
+
+        $phase = (string) $output['phase'];
+        $status = (string) $output['status'];
+        if (!in_array($phase, ['PLAN','EXECUTION'], true)) throw new EngineeringAgentOutputValidationException('QA phase is invalid.');
+        if (!is_array($output['test_plan'] ?? null)) throw new EngineeringAgentOutputValidationException('QA test_plan must be an object.');
+        $this->required($output['test_plan'], ['feature_id','version','scenarios','permissions','tenant_cases','api_cases','database_cases','ui_cases','regression_cases','performance_cases','required_suites','prerequisites','test_data','environment_requirements','blocking_checks']);
+
+        if ($phase === 'PLAN') {
+            if ($status !== 'PLAN_READY') throw new EngineeringAgentOutputValidationException('QA planning phase must return PLAN_READY.');
+            if (($output['tested_revision'] ?? null) !== null || ($output['test_changes'] ?? []) !== []) {
+                throw new EngineeringAgentOutputValidationException('QA planning cannot claim a tested revision or mutate tests.');
+            }
+            if ((string) ($output['test_plan']['feature_id'] ?? '') !== (string) $output['feature_id']) {
+                throw new EngineeringAgentOutputValidationException('QA Test Plan feature id must match output feature id.');
+            }
+            return;
         }
-        if ((int) ($output['tests_passed'] ?? 0) + (int) ($output['tests_failed'] ?? 0) > (int) ($output['tests_total'] ?? 0)) {
-            throw new EngineeringAgentOutputValidationException('QA test totals are inconsistent.');
+
+        if (!in_array($status, ['PASS','FAIL','BLOCKED','HUMAN_TEST_REQUIRED','TESTS_UPDATED'], true)) {
+            throw new EngineeringAgentOutputValidationException('QA execution status is invalid.');
         }
+        $this->required($output, ['tests','acceptance_criteria','system_invariants','regressions','defects','security_findings','known_limitations','human_tests_required','blockers','repository_revision_after_tests']);
+        if ($status !== 'TESTS_UPDATED' && ($output['test_changes'] ?? []) !== []) {
+            throw new EngineeringAgentOutputValidationException('QA test mutations require TESTS_UPDATED status.');
+        }
+        if (trim((string) ($output['tested_revision'] ?? '')) === '') throw new EngineeringAgentOutputValidationException('QA execution requires tested_revision.');
+        if (!is_array($output['tests'] ?? null)) throw new EngineeringAgentOutputValidationException('QA tests must be an object.');
+        $this->required($output['tests'], ['total','passed','failed','skipped','suites']);
+        $total = (int) $output['tests']['total'];
+        $passed = (int) $output['tests']['passed'];
+        $failed = (int) $output['tests']['failed'];
+        $skipped = (int) $output['tests']['skipped'];
+        if ($passed + $failed + $skipped > $total) throw new EngineeringAgentOutputValidationException('QA test totals are inconsistent.');
+
+        foreach ($output['test_changes'] as $change) {
+            if (!is_array($change)) throw new EngineeringAgentOutputValidationException('QA test change must be an object.');
+            $this->required($change, ['path','operation','content']);
+            $path = trim((string) $change['path']);
+            if ($path === '' || str_starts_with($path, '/') || str_contains($path, '..') || str_contains($path, "\0")) throw new EngineeringAgentOutputValidationException('QA test change path is unsafe.');
+            if (!(str_starts_with($path, 'tests/') || str_starts_with($path, 'symfony/tests/'))) throw new EngineeringAgentOutputValidationException('QA may modify only test roots.');
+        }
+
         foreach ($output['acceptance_criteria'] as $criterion) {
             if (!is_array($criterion)) throw new EngineeringAgentOutputValidationException('QA acceptance criterion must be an object.');
-            $this->required($criterion, ['id','result','evidence']);
-            if (!in_array((string) $criterion['result'], ['PASS','FAIL','BLOCKED'], true)) {
-                throw new EngineeringAgentOutputValidationException('QA acceptance criterion result is invalid.');
+            $this->required($criterion, ['id','status','evidence']);
+            if (!in_array((string) $criterion['status'], ['PASS','FAIL'], true)) throw new EngineeringAgentOutputValidationException('QA acceptance criterion status is invalid.');
+            if (($criterion['status'] ?? null) === 'PASS' && ($criterion['evidence'] ?? null) === []) throw new EngineeringAgentOutputValidationException('QA PASS criterion requires evidence.');
+        }
+
+        foreach ($output['system_invariants'] as $name => $invariant) {
+            if (!is_array($invariant)) throw new EngineeringAgentOutputValidationException('QA system invariant '.$name.' must be an object.');
+            $this->required($invariant, ['applicable','status','evidence','reason']);
+            if (($invariant['applicable'] ?? false) === true) {
+                if (!in_array((string) $invariant['status'], ['PASS','FAIL'], true)) throw new EngineeringAgentOutputValidationException('Applicable QA invariant must PASS or FAIL.');
+                if (($invariant['status'] ?? null) === 'PASS' && ($invariant['evidence'] ?? null) === null) throw new EngineeringAgentOutputValidationException('Applicable QA invariant PASS requires evidence.');
+            } else {
+                if (($invariant['status'] ?? null) !== 'NOT_APPLICABLE' || trim((string) ($invariant['reason'] ?? '')) === '') throw new EngineeringAgentOutputValidationException('Non-applicable QA invariant requires NOT_APPLICABLE and reason.');
             }
         }
+
+        if ($status === 'PASS') {
+            if ($failed > 0) throw new EngineeringAgentOutputValidationException('QA cannot PASS with failed tests.');
+            if (($output['test_changes'] ?? []) !== []) throw new EngineeringAgentOutputValidationException('QA PASS cannot contain unreviewed test mutations.');
+            foreach ($output['acceptance_criteria'] as $criterion) if (($criterion['status'] ?? null) !== 'PASS') throw new EngineeringAgentOutputValidationException('QA PASS requires every acceptance criterion to PASS.');
+            foreach ($output['system_invariants'] as $invariant) if (($invariant['applicable'] ?? false) === true && ($invariant['status'] ?? null) !== 'PASS') throw new EngineeringAgentOutputValidationException('QA PASS requires every applicable COS invariant to PASS.');
+            foreach (array_merge($output['defects'], $output['security_findings']) as $finding) {
+                if (is_array($finding) && in_array(strtoupper((string) ($finding['severity'] ?? '')), ['BLOCKER','MAJOR','CRITICAL','HIGH'], true)) throw new EngineeringAgentOutputValidationException('QA cannot PASS with blocking defect/security finding.');
+            }
+        }
+
+        if ($status === 'FAIL') {
+            $hasFailedCriterion = false;
+            foreach ($output['acceptance_criteria'] as $criterion) if (($criterion['status'] ?? null) === 'FAIL') $hasFailedCriterion = true;
+            if ($failed === 0 && !$hasFailedCriterion && ($output['defects'] ?? []) === [] && ($output['security_findings'] ?? []) === []) throw new EngineeringAgentOutputValidationException('QA FAIL requires concrete failure evidence.');
+        }
+        if ($status === 'BLOCKED' && ($output['blockers'] ?? []) === []) throw new EngineeringAgentOutputValidationException('QA BLOCKED requires concrete blockers.');
+        if ($status === 'HUMAN_TEST_REQUIRED' && ($output['human_tests_required'] ?? []) === []) throw new EngineeringAgentOutputValidationException('HUMAN_TEST_REQUIRED requires explicit manual scenarios.');
+        if ($status === 'TESTS_UPDATED' && ($output['test_changes'] ?? []) === []) throw new EngineeringAgentOutputValidationException('TESTS_UPDATED requires bounded test changes.');
     }
 
     /** @return list<string> */

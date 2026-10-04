@@ -211,6 +211,7 @@ Retryable помилка LLM provider може привести до configured 
 ```text
 Engineering Manager
 → FEATURE_SPEC + CONTEXT_MAP
+→ QA Test Plan
 → Principal Architect
 → ARCHITECTURE_DECISION
 → IMPLEMENTATION_PLAN
@@ -259,3 +260,16 @@ Severity: `BLOCKER`, `MAJOR`, `MINOR`, `SUGGESTION`. BLOCKER/MAJOR завжди 
 Маршрути: `APPROVED → QA_PENDING → QA`; `REQUEST_CHANGES → CHANGES_REQUESTED → DEVELOPMENT_RUNNING → Developer`; `ARCHITECTURE_REVIEW_REQUIRED → ARCHITECTURE_PENDING → Principal Architect`; `HUMAN_REVIEW_REQUIRED → HUMAN_DECISION_REQUIRED`.
 
 `APPROVED` заборонений при неповному preflight, architecture non-compliance, unresolved blocking issues, BLOCKER/MAJOR, failed required CI або acceptance criterion без PASS evidence.
+
+
+## Інженерна оркестрація: QA Engineer
+
+Agent №5 (`QA`) відповідає не за естетику коду, а за фактичну поведінку feature відносно Feature Specification та Acceptance Criteria.
+
+QA працює у двох фазах. Після Manager workflow переходить у `QA_PLANNING`: QA формує незалежний `TEST_PLAN` до Architecture/Development. План покриває positive, negative, edge, permissions, tenant, API, database, UI, regression і performance cases та явно визначає required suites: unit, integration, functional, E2E, smoke.
+
+Після `Reviewer APPROVED` QA запускається повторно у `QA_PENDING` на exact reviewed revision. Кожен Acceptance Criterion має `PASS|FAIL` і concrete evidence; формулювання на кшталт "looks okay" не є доказом. Для релевантних feature окремо перевіряються COS invariants: tenant isolation, auth/authz, invalid input, empty/loading/error states, API errors, migration/rollback і backward compatibility. `NOT_APPLICABLE` вимагає причину.
+
+QA не має права змінювати production implementation. Він може запропонувати й застосувати автоматизовані тести лише в `tests/` або `symfony/tests/`. Якщо QA додає тести, результат `TESTS_UPDATED` створює нову revision і повертає workflow Reviewer; після повторного `APPROVED` QA тестує вже цю revision.
+
+Фінальні QA status: `PASS`, `FAIL`, `BLOCKED`, `HUMAN_TEST_REQUIRED`. `PASS` вимагає zero failed tests, PASS для всіх blocking Acceptance Criteria та всіх applicable COS invariants, відсутність BLOCKER/MAJOR defects/security findings і успішний deterministic CI. `FAIL` повертає Developer, після чого обов'язково повторюються Reviewer і QA. `HUMAN_TEST_REQUIRED` переходить у human decision boundary і ніколи не прирівнюється до PASS.

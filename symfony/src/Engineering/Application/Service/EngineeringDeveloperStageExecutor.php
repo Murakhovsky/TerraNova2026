@@ -55,6 +55,7 @@ final readonly class EngineeringDeveloperStageExecutor
         $featureSpec = $this->requiredArtifact($featureId, ArtifactType::FEATURE_SPEC);
         $architecture = $this->requiredArtifact($featureId, ArtifactType::ARCHITECTURE_DECISION);
         $implementation = $this->requiredArtifact($featureId, ArtifactType::IMPLEMENTATION_PLAN);
+        $testPlan = $this->requiredArtifact($featureId, ArtifactType::TEST_PLAN);
         $developerHandoff = $this->artifacts->latest($featureId, ArtifactType::DEVELOPER_HANDOFF);
         $architectureDocumentation = $this->artifacts->latest($featureId, ArtifactType::ARCHITECTURE_DOCUMENTATION);
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
@@ -97,6 +98,8 @@ final readonly class EngineeringDeveloperStageExecutor
             $previousRevision = trim((string) ($previousDevelopment['content']['repository_revision'] ?? ''));
             if ($previousRevision !== '') $workingRevision = $previousRevision;
         }
+        $reviewedRevision = trim((string) ($previousReview['content']['reviewed_revision'] ?? ''));
+        if ($reviewedRevision !== '') $workingRevision = $reviewedRevision;
 
         $allArchitectureDocumentation = is_array($architectureDocumentation['content']['changes'] ?? null)
             ? $architectureDocumentation['content']['changes']
@@ -158,6 +161,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'feature_spec' => $featureSpec['content'],
                 'architecture_decision' => $architecture['content'],
                 'implementation_plan' => $implementation['content'],
+                'qa_test_plan' => $testPlan['content'],
                 'developer_handoff' => $developerHandoff['content'],
                 'architecture_documentation' => $architectureDocumentation['content'],
                 'pending_architecture_documentation' => $pendingArchitectureDocumentation,
@@ -175,6 +179,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'artifact:'.$featureSpec['id'],
                 'artifact:'.$architecture['id'],
                 'artifact:'.$implementation['id'],
+                'artifact:'.$testPlan['id'],
                 'artifact:'.$developerHandoff['id'],
                 'artifact:'.$architectureDocumentation['id'],
                 'artifact:'.$contextMap['id'],

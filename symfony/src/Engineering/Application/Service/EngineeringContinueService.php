@@ -71,6 +71,7 @@ final readonly class EngineeringContinueService
     private function directiveFor(EngineeringWorkflowState $state): WorkflowDirective
     {
         return match ($state) {
+            EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Resume QA Test Plan stage.'),
             EngineeringWorkflowState::ARCHITECTURE_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT, 'Resume Architect stage.'),
             EngineeringWorkflowState::DEVELOPMENT_RUNNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Resume Developer stage.'),
             EngineeringWorkflowState::REVIEW_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::REVIEWER, 'Resume Reviewer stage.'),

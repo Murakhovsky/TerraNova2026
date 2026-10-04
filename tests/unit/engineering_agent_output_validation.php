@@ -350,15 +350,103 @@ $validator->validate(AgentRole::REVIEWER, $reviewerHuman);
 $reviewerFailedCi = $reviewer; $reviewerFailedCi['ci']['state'] = 'FAILED'; $reviewerFailedCi['ci']['failed'] = 1;
 try { $validator->validate(AgentRole::REVIEWER, $reviewerFailedCi); throw new RuntimeException('Reviewer APPROVED with failed CI was accepted.'); } catch (EngineeringAgentOutputValidationException) {}
 
-$qa = [
-    'status' => 'PASS', 'tested_revision' => 'abc', 'acceptance_criteria' => [],
-    'tests_total' => 2, 'tests_passed' => 1, 'tests_failed' => 1,
-    'defects' => [], 'regressions' => [], 'known_limitations' => [],
+$qaTestPlan = [
+    'feature_id' => 'feature-1',
+    'version' => '1',
+    'scenarios' => ['positive' => ['happy path'], 'negative' => ['invalid input'], 'edge_cases' => ['empty state']],
+    'permissions' => ['unauthorized denied'],
+    'tenant_cases' => ['tenant A cannot access tenant B'],
+    'api_cases' => ['documented response contract'],
+    'database_cases' => [],
+    'ui_cases' => [],
+    'regression_cases' => ['critical smoke'],
+    'performance_cases' => [],
+    'required_suites' => ['unit' => true, 'integration' => true, 'functional' => true, 'e2e' => false, 'smoke' => true],
+    'prerequisites' => [],
+    'test_data' => [],
+    'environment_requirements' => [],
+    'blocking_checks' => ['AC-001'],
 ];
+
+$qaPlan = [
+    'phase' => 'PLAN',
+    'status' => 'PLAN_READY',
+    'feature_id' => 'feature-1',
+    'tested_revision' => null,
+    'pull_request' => null,
+    'test_plan' => $qaTestPlan,
+    'test_changes' => [],
+];
+$validator->validate(AgentRole::QA, $qaPlan);
+
+$notApplicable = ['applicable' => false, 'status' => 'NOT_APPLICABLE', 'evidence' => null, 'reason' => 'Not part of this feature surface.'];
+$applicablePass = ['applicable' => true, 'status' => 'PASS', 'evidence' => ['type' => 'TEST_RESULT', 'reference' => 'qa-1'], 'reason' => null];
+$qaPass = [
+    'phase' => 'EXECUTION',
+    'status' => 'PASS',
+    'feature_id' => 'feature-1',
+    'tested_revision' => 'abc123',
+    'pull_request' => 42,
+    'test_plan' => $qaTestPlan,
+    'test_changes' => [],
+    'tests' => ['total' => 3, 'passed' => 3, 'failed' => 0, 'skipped' => 0, 'suites' => ['unit' => 'PASS', 'integration' => 'PASS', 'smoke' => 'PASS']],
+    'acceptance_criteria' => [['id' => 'AC-001', 'status' => 'PASS', 'evidence' => ['type' => 'HTTP_RESPONSE', 'status' => 200]]],
+    'system_invariants' => [
+        'tenant_isolation' => $applicablePass,
+        'authorization' => $applicablePass,
+        'authentication' => $notApplicable,
+        'invalid_input' => $applicablePass,
+        'empty_state' => $applicablePass,
+        'loading_state' => $notApplicable,
+        'error_state' => $applicablePass,
+        'api_error_handling' => $applicablePass,
+        'migration' => $notApplicable,
+        'rollback' => $notApplicable,
+        'backward_compatibility' => $applicablePass,
+    ],
+    'regressions' => [],
+    'defects' => [],
+    'security_findings' => [],
+    'known_limitations' => [],
+    'human_tests_required' => [],
+    'blockers' => [],
+    'repository_revision_after_tests' => null,
+];
+$validator->validate(AgentRole::QA, $qaPass);
+
+$qaFailedTests = $qaPass;
+$qaFailedTests['tests']['passed'] = 2;
+$qaFailedTests['tests']['failed'] = 1;
 try {
-    $validator->validate(AgentRole::QA, $qa);
+    $validator->validate(AgentRole::QA, $qaFailedTests);
     throw new RuntimeException('QA PASS with failed tests was accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
+
+$qaUnsafeTestMutation = $qaPass;
+$qaUnsafeTestMutation['status'] = 'TESTS_UPDATED';
+$qaUnsafeTestMutation['test_changes'] = [['path' => 'symfony/src/Backdoor.php', 'operation' => 'UPDATE', 'content' => '<?php']];
+try {
+    $validator->validate(AgentRole::QA, $qaUnsafeTestMutation);
+    throw new RuntimeException('QA production mutation escaped test roots.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$qaTestsUpdated = $qaPass;
+$qaTestsUpdated['status'] = 'TESTS_UPDATED';
+$qaTestsUpdated['test_changes'] = [['path' => 'tests/unit/feature_regression.php', 'operation' => 'CREATE', 'content' => '<?php']];
+$validator->validate(AgentRole::QA, $qaTestsUpdated);
+
+$qaHuman = $qaPass;
+$qaHuman['status'] = 'HUMAN_TEST_REQUIRED';
+$qaHuman['human_tests_required'] = [['scenario' => 'Visual focus order', 'required_evidence' => 'Manual UI observation']];
+$validator->validate(AgentRole::QA, $qaHuman);
+
+$qaFail = $qaPass;
+$qaFail['status'] = 'FAIL';
+$qaFail['tests'] = ['total' => 1, 'passed' => 0, 'failed' => 1, 'skipped' => 0, 'suites' => ['functional' => 'FAIL']];
+$qaFail['acceptance_criteria'] = [['id' => 'AC-001', 'status' => 'FAIL', 'evidence' => ['type' => 'HTTP_RESPONSE', 'status' => 500]]];
+$qaFail['defects'] = [['severity' => 'MAJOR', 'title' => 'Request fails', 'description' => 'Expected success but received server error.']];
+$validator->validate(AgentRole::QA, $qaFail);
 
 echo "Engineering agent output validation passed.\n";

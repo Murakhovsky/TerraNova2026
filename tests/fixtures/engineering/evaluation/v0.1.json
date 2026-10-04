@@ -604,22 +604,230 @@
       }
     },
     {
+      "id": "qa-plan-valid",
+      "role": "QA",
+      "expected_valid": true,
+      "output": {
+        "phase": "PLAN",
+        "status": "PLAN_READY",
+        "feature_id": "feature-1",
+        "tested_revision": null,
+        "pull_request": null,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": []
+      }
+    },
+    {
       "id": "qa-false-pass-rejected",
       "role": "QA",
       "expected_valid": false,
       "output": {
+        "phase": "EXECUTION",
         "status": "PASS",
+        "feature_id": "feature-1",
         "tested_revision": "abc123",
-        "test_plan": [
-          "run integration"
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 2,
+          "passed": 1,
+          "failed": 1,
+          "skipped": 0,
+          "suites": {
+            "unit": "FAIL"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "HTTP_RESPONSE",
+              "status": 200
+            }
+          }
         ],
-        "acceptance_criteria": [],
-        "tests_total": 2,
-        "tests_passed": 1,
-        "tests_failed": 1,
-        "defects": [],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
         "regressions": [],
-        "known_limitations": []
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
       }
     },
     {
@@ -627,31 +835,354 @@
       "role": "QA",
       "expected_valid": true,
       "output": {
+        "phase": "EXECUTION",
         "status": "FAIL",
+        "feature_id": "feature-1",
         "tested_revision": "abc123",
-        "test_plan": [
-          "run integration"
-        ],
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 1,
+          "passed": 0,
+          "failed": 1,
+          "skipped": 0,
+          "suites": {
+            "functional": "FAIL"
+          }
+        },
         "acceptance_criteria": [
           {
             "id": "AC-001",
-            "result": "FAIL",
-            "evidence": "test failed"
+            "status": "FAIL",
+            "evidence": {
+              "type": "HTTP_RESPONSE",
+              "status": 500
+            }
           }
         ],
-        "tests_total": 1,
-        "tests_passed": 0,
-        "tests_failed": 1,
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
         "defects": [
           {
-            "severity": "HIGH",
-            "title": "Regression"
+            "severity": "MAJOR",
+            "title": "Regression",
+            "description": "Behavior failed."
           }
         ],
-        "regressions": [
-          "Regression"
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-production-mutation-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "TESTS_UPDATED",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [
+          {
+            "path": "symfony/src/Backdoor.php",
+            "operation": "UPDATE",
+            "content": "<?php"
+          }
         ],
-        "known_limitations": []
+        "tests": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "HTTP_RESPONSE",
+              "status": 200
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
       }
     }
   ]

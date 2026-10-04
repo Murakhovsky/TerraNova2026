@@ -367,35 +367,137 @@ final class EngineeringAgentSchemas
     /** @return array<string,mixed> */
     private static function qa(): array
     {
+        $invariant = [
+            'type' => 'object',
+            'required' => ['applicable','status','evidence','reason'],
+            'properties' => [
+                'applicable' => ['type' => 'boolean'],
+                'status' => self::baseStatus(['PASS','FAIL','NOT_APPLICABLE']),
+                'evidence' => ['type' => ['string','array','object','null']],
+                'reason' => ['type' => ['string','null']],
+            ],
+            'additionalProperties' => false,
+        ];
+
         return [
             'type' => 'object',
-            'required' => ['status','tested_revision','test_plan','acceptance_criteria','tests_total','tests_passed','tests_failed','defects','regressions','known_limitations'],
+            'required' => ['phase','status','feature_id','tested_revision','pull_request','test_plan','test_changes'],
             'properties' => [
-                'status' => self::baseStatus(['PASS','FAIL','BLOCKED']),
-                'tested_revision' => ['type' => 'string'],
-                'test_plan_version' => ['type' => ['string','integer','null']],
-                'test_plan' => ['type' => 'array', 'items' => ['type' => 'object']],
+                'phase' => self::baseStatus(['PLAN','EXECUTION']),
+                'status' => self::baseStatus(['PLAN_READY','PASS','FAIL','BLOCKED','HUMAN_TEST_REQUIRED','TESTS_UPDATED']),
+                'feature_id' => ['type' => 'string', 'minLength' => 1],
+                'tested_revision' => ['type' => ['string','null']],
+                'pull_request' => ['type' => ['integer','string','null']],
+                'test_plan' => [
+                    'type' => 'object',
+                    'required' => ['feature_id','version','scenarios','permissions','tenant_cases','api_cases','database_cases','ui_cases','regression_cases','performance_cases','required_suites','prerequisites','test_data','environment_requirements','blocking_checks'],
+                    'properties' => [
+                        'feature_id' => ['type' => 'string', 'minLength' => 1],
+                        'version' => ['type' => ['string','integer']],
+                        'scenarios' => [
+                            'type' => 'object',
+                            'required' => ['positive','negative','edge_cases'],
+                            'properties' => [
+                                'positive' => ['type' => 'array'],
+                                'negative' => ['type' => 'array'],
+                                'edge_cases' => ['type' => 'array'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                        'permissions' => ['type' => 'array'],
+                        'tenant_cases' => ['type' => 'array'],
+                        'api_cases' => ['type' => 'array'],
+                        'database_cases' => ['type' => 'array'],
+                        'ui_cases' => ['type' => 'array'],
+                        'regression_cases' => ['type' => 'array'],
+                        'performance_cases' => ['type' => 'array'],
+                        'required_suites' => [
+                            'type' => 'object',
+                            'required' => ['unit','integration','functional','e2e','smoke'],
+                            'properties' => [
+                                'unit' => ['type' => 'boolean'],
+                                'integration' => ['type' => 'boolean'],
+                                'functional' => ['type' => 'boolean'],
+                                'e2e' => ['type' => 'boolean'],
+                                'smoke' => ['type' => 'boolean'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                        'prerequisites' => ['type' => 'array'],
+                        'test_data' => ['type' => 'array'],
+                        'environment_requirements' => ['type' => 'array'],
+                        'blocking_checks' => ['type' => 'array'],
+                    ],
+                    'additionalProperties' => false,
+                ],
+                'test_changes' => [
+                    'type' => 'array',
+                    'maxItems' => 20,
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['path','operation'],
+                        'properties' => [
+                            'path' => ['type' => 'string', 'minLength' => 1],
+                            'operation' => self::baseStatus(['CREATE','UPDATE']),
+                            'content' => ['type' => 'string', 'maxLength' => 250000],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'tests' => [
+                    'type' => 'object',
+                    'required' => ['total','passed','failed','skipped','suites'],
+                    'properties' => [
+                        'total' => ['type' => 'integer', 'minimum' => 0],
+                        'passed' => ['type' => 'integer', 'minimum' => 0],
+                        'failed' => ['type' => 'integer', 'minimum' => 0],
+                        'skipped' => ['type' => 'integer', 'minimum' => 0],
+                        'suites' => ['type' => 'object'],
+                    ],
+                    'additionalProperties' => false,
+                ],
                 'acceptance_criteria' => [
                     'type' => 'array',
                     'items' => [
                         'type' => 'object',
-                        'required' => ['id','result','evidence'],
+                        'required' => ['id','status','evidence'],
                         'properties' => [
-                            'id' => ['type' => 'string'],
-                            'result' => self::baseStatus(['PASS','FAIL','BLOCKED']),
+                            'id' => ['type' => 'string', 'minLength' => 1],
+                            'status' => self::baseStatus(['PASS','FAIL']),
                             'evidence' => ['type' => ['string','array','object']],
                         ],
-                        'additionalProperties' => true,
+                        'additionalProperties' => false,
                     ],
                 ],
-                'tests_total' => ['type' => 'integer', 'minimum' => 0],
-                'tests_passed' => ['type' => 'integer', 'minimum' => 0],
-                'tests_failed' => ['type' => 'integer', 'minimum' => 0],
-                'defects' => ['type' => 'array'],
+                'system_invariants' => [
+                    'type' => 'object',
+                    'required' => ['tenant_isolation','authorization','authentication','invalid_input','empty_state','loading_state','error_state','api_error_handling','migration','rollback','backward_compatibility'],
+                    'properties' => [
+                        'tenant_isolation' => $invariant,
+                        'authorization' => $invariant,
+                        'authentication' => $invariant,
+                        'invalid_input' => $invariant,
+                        'empty_state' => $invariant,
+                        'loading_state' => $invariant,
+                        'error_state' => $invariant,
+                        'api_error_handling' => $invariant,
+                        'migration' => $invariant,
+                        'rollback' => $invariant,
+                        'backward_compatibility' => $invariant,
+                    ],
+                    'additionalProperties' => false,
+                ],
                 'regressions' => ['type' => 'array'],
+                'defects' => ['type' => 'array'],
+                'security_findings' => ['type' => 'array'],
                 'known_limitations' => ['type' => 'array'],
+                'human_tests_required' => ['type' => 'array'],
+                'blockers' => ['type' => 'array'],
+                'repository_revision_after_tests' => ['type' => ['string','null']],
             ],
             'additionalProperties' => false,
         ];
     }
+
+
 }

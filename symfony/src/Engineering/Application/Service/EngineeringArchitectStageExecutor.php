@@ -65,8 +65,9 @@ final readonly class EngineeringArchitectStageExecutor
     ): WorkflowDirective {
         $featureSpec = $this->artifacts->latest($featureId, ArtifactType::FEATURE_SPEC);
         $contextMap = $this->artifacts->latest($featureId, ArtifactType::CONTEXT_MAP);
-        if ($featureSpec === null || $contextMap === null) {
-            throw new RuntimeException('Architect requires FEATURE_SPEC and CONTEXT_MAP artifacts.');
+        $testPlan = $this->artifacts->latest($featureId, ArtifactType::TEST_PLAN);
+        if ($featureSpec === null || $contextMap === null || $testPlan === null) {
+            throw new RuntimeException('Architect requires FEATURE_SPEC, CONTEXT_MAP and QA TEST_PLAN artifacts.');
         }
 
         $previousArchitecture = $this->artifacts->latest($featureId, ArtifactType::ARCHITECTURE_DECISION);
@@ -129,6 +130,7 @@ final readonly class EngineeringArchitectStageExecutor
             objective: 'Review the approved Feature Specification against repository evidence and produce a complete Architecture Decision, Implementation Plan and Developer Handoff.',
             inputs: [
                 'feature_spec' => $featureSpec['content'],
+                'qa_test_plan' => $testPlan['content'],
                 'context_map' => $contextMap['content'],
                 'repository_state' => [
                     'context_revision' => $contextRevision !== '' ? $contextRevision : null,
@@ -146,6 +148,7 @@ final readonly class EngineeringArchitectStageExecutor
             ],
             contextRefs: array_values(array_filter([
                 'artifact:'.$featureSpec['id'],
+                'artifact:'.$testPlan['id'],
                 'artifact:'.$contextMap['id'],
                 $previousArchitecture !== null ? 'artifact:'.$previousArchitecture['id'] : null,
                 $previousImplementation !== null ? 'artifact:'.$previousImplementation['id'] : null,
@@ -165,7 +168,7 @@ final readonly class EngineeringArchitectStageExecutor
                 'Domain ownership, bounded context, dependencies and public interfaces are explicit.',
                 'Tenant isolation, identity/auth and authorization are explicit.',
                 'Database impact is based on the supplied read-only schema snapshot; migration, API and event impacts are explicit.',
-                'Backward compatibility, security, observability and testing strategy are explicit.',
+                'Backward compatibility, security, observability and testing strategy are explicit and account for the independent QA Test Plan.',
                 'Implementation order, files and completion conditions are explicit.',
                 'Developer handoff is explicit and inherits Architecture Gate conditions.',
                 'Required human decision is explicit when human authority is needed; answered human_decisions are treated as authoritative constraints on rerun.',
@@ -175,6 +178,8 @@ final readonly class EngineeringArchitectStageExecutor
                 'feature_id' => $featureId,
                 'feature_spec_artifact_id' => $featureSpec['id'],
                 'feature_spec_hash' => $featureSpec['content_hash'],
+                'test_plan_artifact_id' => $testPlan['id'],
+                'test_plan_hash' => $testPlan['content_hash'],
                 'context_map_artifact_id' => $contextMap['id'],
                 'context_map_hash' => $contextMap['content_hash'],
                 'context_revision' => $contextRevision !== '' ? $contextRevision : null,
