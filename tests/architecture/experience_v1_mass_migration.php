@@ -51,7 +51,7 @@ $command = (string) file_get_contents($root.'/symfony/src/Command/ExperienceWork
 foreach ([
     "name: 'cos:experience:migrate'",
     "addOption('start'",
-    "['Autonomy' => 'L3 max; HIGH risk capped at L2']"
+    "['Autonomy' => 'L3 max; HIGH risk capped at L2']",
     "['Auto merge' => 'disabled']",
 ] as $marker) {
     if (!str_contains($command, $marker)) {
