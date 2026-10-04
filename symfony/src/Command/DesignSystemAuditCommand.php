@@ -45,6 +45,8 @@ final class DesignSystemAuditCommand extends Command
             ['Tokens frozen' => $report->tokensFrozen ? 'yes' : 'no'],
             ['Typography frozen' => $report->typographyFrozen ? 'yes' : 'no'],
             ['Theme parity required' => $report->themeParityDeclared ? 'yes' : 'no'],
+            ['Pattern API V1 frozen' => $report->patternsFrozen ? 'yes' : 'no'],
+            ['Archetype API V1 frozen' => $report->archetypesFrozen ? 'yes' : 'no'],
         );
 
         if ($report->missingCatalogEntries !== []) {

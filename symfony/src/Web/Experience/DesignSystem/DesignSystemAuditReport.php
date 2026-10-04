@@ -24,6 +24,8 @@ final readonly class DesignSystemAuditReport
         public bool $tokensFrozen,
         public bool $typographyFrozen,
         public bool $themeParityDeclared,
+        public bool $patternsFrozen,
+        public bool $archetypesFrozen,
     ) {
     }
 
@@ -34,7 +36,9 @@ final readonly class DesignSystemAuditReport
             && $this->orphanCatalogEntries === []
             && $this->tokensFrozen
             && $this->typographyFrozen
-            && $this->themeParityDeclared;
+            && $this->themeParityDeclared
+            && $this->patternsFrozen
+            && $this->archetypesFrozen;
     }
 
     /** @return array<string,mixed> */
@@ -54,6 +58,8 @@ final readonly class DesignSystemAuditReport
             'tokensFrozen' => $this->tokensFrozen,
             'typographyFrozen' => $this->typographyFrozen,
             'themeParityDeclared' => $this->themeParityDeclared,
+            'patternsFrozen' => $this->patternsFrozen,
+            'archetypesFrozen' => $this->archetypesFrozen,
         ];
     }
 }

@@ -57,6 +57,10 @@ final readonly class DesignSystemAuditService
             tokensFrozen: ($foundation['tokens']['status'] ?? null) === 'frozen',
             typographyFrozen: ($foundation['typography']['status'] ?? null) === 'frozen',
             themeParityDeclared: ($foundation['themes']['parity'] ?? null) === 'required',
+            patternsFrozen: ($foundation['patterns']['status'] ?? null) === 'frozen'
+                && ($foundation['patterns']['api'] ?? null) === 'v1',
+            archetypesFrozen: ($foundation['archetypes']['status'] ?? null) === 'frozen'
+                && ($foundation['archetypes']['api'] ?? null) === 'v1',
         );
     }
 }

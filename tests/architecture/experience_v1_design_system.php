@@ -64,7 +64,7 @@ foreach (['EXPERIMENTAL_COMPONENTS', 'DEPRECATED_COMPONENTS', "'stable'", "'expe
 }
 
 $foundation = (string) file_get_contents($root . '/resources/experience/design-system/foundation.yaml');
-foreach (['status: frozen', 'primary: Inter', 'supported: [light, dark, system]', 'supported: [comfortable, compact]', 'breaking_change_requires: ADR'] as $marker) {
+foreach (['status: frozen', 'primary: Inter', 'supported: [light, dark, system]', 'supported: [comfortable, compact]', 'pattern_api: v1', 'archetype_api: v1', 'breaking_change_requires: ADR'] as $marker) {
     if (!str_contains($foundation, $marker)) {
         throw new RuntimeException('Design System V1 foundation freeze missing marker: ' . $marker);
     }

@@ -40,7 +40,18 @@ states:
     - empty
     - error
 
+patterns:
+  status: frozen
+  api: v1
+  golden_required_count: 13
+
+archetypes:
+  status: frozen
+  api: v1
+  golden_required_count: 7
+
 freeze:
   component_api: v1
   pattern_api: v1
+  archetype_api: v1
   breaking_change_requires: ADR
