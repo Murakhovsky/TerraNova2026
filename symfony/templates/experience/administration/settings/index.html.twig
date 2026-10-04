@@ -12,6 +12,12 @@
         <twig:CosButton label="Dashboard" href="/admin" variant="ghost" />
     </twig:CosPageHeader>
 
+    <twig:CosToolbar label="Platform settings">
+        {% block start %}
+            <a class="cos-button cos-button--ghost cos-button--sm" href="/admin/settings/llm">AI & LLM</a>
+        {% endblock %}
+    </twig:CosToolbar>
+
     <section class="cos-page__section cos-section-grid" aria-label="Platform settings sections">
         <article class="cos-card cos-pattern-stack">
             <div>

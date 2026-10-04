@@ -75,6 +75,7 @@ wait_for_healthy_service() {
 ensure_secret SYMFONY_APP_SECRET
 ensure_secret SPATIAL_JWT_SECRET
 ensure_secret MERCURE_JWT_SECRET
+ensure_secret COS_SECRET_MASTER_KEY
 
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" build --pull php nginx

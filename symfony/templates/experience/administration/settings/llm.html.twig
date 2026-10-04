@@ -19,8 +19,8 @@
     <form class="cos-page__stack" action="/admin/settings/llm" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
 
-        <section class="cos-card cos-pattern-stack">
-            <div>
+        <twig:CosFormSection title="Основний LLM" description="Provider, модель за замовчуванням і runtime limits.">
+            <div class="cos-pattern-stack">
                 <p class="cos-card__eyebrow">Provider</p>
                 <h2 class="cos-card__title">Основний LLM</h2>
             </div>
@@ -50,10 +50,10 @@
                     <input class="cos-input" name="max_attempts" type="number" min="1" max="10" value="{{ settings.max_attempts }}">
                 </label>
             </div>
-        </section>
+        </twig:CosFormSection>
 
-        <section class="cos-card cos-pattern-stack">
-            <div>
+        <twig:CosFormSection title="OpenAI API key" description="Encrypted secret. Значення назад у форму не повертається.">
+            <div class="cos-pattern-stack">
                 <p class="cos-card__eyebrow">Encrypted secret</p>
                 <h2 class="cos-card__title">OpenAI API key</h2>
                 <p class="cos-card__copy">
@@ -73,10 +73,10 @@
                 <span>Повернути ENV fallback</span>
                 <span><input type="checkbox" name="remove_openai_api_key" value="1"> Видалити DB override ключа</span>
             </label>
-        </section>
+        </twig:CosFormSection>
 
-        <section class="cos-card cos-pattern-stack">
-            <div>
+        <twig:CosFormSection title="Моделі Engineering Agents" description="Порожнє поле повертає роль до ENV/default model.">
+            <div class="cos-pattern-stack">
                 <p class="cos-card__eyebrow">Engineering Agents</p>
                 <h2 class="cos-card__title">Моделі за ролями</h2>
                 <p class="cos-card__copy">Порожнє поле повертає роль до ENV/default model.</p>
@@ -89,11 +89,12 @@
                 <label class="cos-field"><span>Reviewer</span><input class="cos-input" name="reviewer_model" value="{{ settings.reviewer_model }}"></label>
                 <label class="cos-field"><span>QA</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}"></label>
             </div>
-        </section>
+        </twig:CosFormSection>
 
-        <twig:CosActionBar label="Save LLM settings">
+        <twig:CosStickyActions label="Save LLM settings">
+            <a class="cos-button cos-button--ghost" href="/admin/settings">Скасувати</a>
             <button class="cos-button cos-button--primary" type="submit">Зберегти налаштування</button>
-        </twig:CosActionBar>
+        </twig:CosStickyActions>
     </form>
 </section>
 {% endblock %}

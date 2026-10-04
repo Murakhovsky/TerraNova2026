@@ -57,7 +57,7 @@ final readonly class PlatformSettingsController
                 ]),
                 'page' => $this->pages->create(
                     PageArchetype::SystemControlSurface,
-                    ['PageHeader', 'EntityList', 'EmptyState', 'ErrorState'],
+                    ['PageHeader', 'Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
                     'normal',
                 ),
                 'summary' => [
@@ -102,7 +102,7 @@ final readonly class PlatformSettingsController
                 ]),
                 'page' => $this->pages->create(
                     PageArchetype::FormEditor,
-                    ['PageHeader', 'FormSection', 'ActionBar', 'Alert', 'ErrorState'],
+                    ['PageHeader', 'FormSection', 'StickyActions', 'ErrorState'],
                     'normal',
                 ),
                 'settings' => $data,
