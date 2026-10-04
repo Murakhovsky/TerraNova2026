@@ -307,6 +307,12 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
             'merge_revision' => isset($pr['merge_commit_sha']) && is_string($pr['merge_commit_sha'])
                 ? $pr['merge_commit_sha']
                 : null,
+            'head_revision' => isset($pr['head']['sha']) && is_string($pr['head']['sha'])
+                ? $pr['head']['sha']
+                : null,
+            'base_revision' => isset($pr['base']['sha']) && is_string($pr['base']['sha'])
+                ? $pr['base']['sha']
+                : null,
         ];
     }
 

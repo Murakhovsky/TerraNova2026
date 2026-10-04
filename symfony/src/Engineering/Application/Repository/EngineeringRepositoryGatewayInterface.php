@@ -40,7 +40,7 @@ interface EngineeringRepositoryGatewayInterface
     /** @return array{state:string,total:int,passed:int,failed:int,pending:int,checks:list<array<string,mixed>>} */
     public function commitChecks(string $revision): array;
 
-    /** @return array{number:int,url:string,state:string,merged:bool,merge_revision:?string} */
+    /** @return array{number:int,url:string,state:string,merged:bool,merge_revision:?string,head_revision:?string,base_revision:?string} */
     public function pullRequest(int $pullRequestNumber): array;
 
     /** @return array{number:int,title:string,body:string,state:string,url:string,labels:list<string>,is_pull_request:bool} */

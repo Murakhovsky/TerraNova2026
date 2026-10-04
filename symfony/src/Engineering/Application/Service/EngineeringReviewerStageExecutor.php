@@ -69,6 +69,14 @@ final readonly class EngineeringReviewerStageExecutor
             throw new RuntimeException('Reviewer requires Developer pull request and repository revision.');
         }
 
+        $pullRequestState = $this->repository->pullRequest($pullRequest);
+        if (($pullRequestState['merged'] ?? false) === true || ($pullRequestState['state'] ?? null) !== 'open') {
+            throw new RuntimeException('Reviewer requires an open, unmerged pull request.');
+        }
+        if (($pullRequestState['head_revision'] ?? null) !== $revision) {
+            throw new RuntimeException('Reviewer refused stale implementation evidence because pull request head changed.');
+        }
+
         $diff = $this->repository->pullRequestFiles($pullRequest);
         $ci = $this->repository->commitChecks($revision);
         $baseRevision = trim((string) ($architecture['content']['repository_revision'] ?? ''));
@@ -86,6 +94,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'qa_test_plan' => $testPlan['content'],
                 'developer_handoff' => $developerHandoff['content'],
                 'development_result' => $development['content'],
+                'pull_request_state' => $pullRequestState,
                 'pull_request_files' => $diff,
                 'ci_results' => $ci,
                 'coding_standards' => ['Follow existing repository conventions and bounded-context ownership.', 'Reject unnecessary complexity, duplication, coupling and abstractions not required by the approved plan.', 'Require explicit error handling and behavior-focused tests for changed behavior.'],
@@ -155,6 +164,7 @@ final readonly class EngineeringReviewerStageExecutor
                 $reviewOutput['preflight']['required_artifacts_present'] = true;
             }
             $this->validator->validate(AgentRole::REVIEWER, $reviewOutput);
+            $this->assertAcceptanceCriteriaCoverage($featureSpec['content'], $reviewOutput);
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
@@ -207,6 +217,34 @@ final readonly class EngineeringReviewerStageExecutor
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
             return $next;
         });
+    }
+
+    private function assertAcceptanceCriteriaCoverage(array $featureSpec, array $review): void
+    {
+        $expected = [];
+        foreach (is_array($featureSpec['acceptance_criteria'] ?? null) ? $featureSpec['acceptance_criteria'] : [] as $criterion) {
+            if (!is_array($criterion)) throw new RuntimeException('Feature Specification acceptance criteria are malformed.');
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id === '') throw new RuntimeException('Feature Specification acceptance criterion id is missing.');
+            $expected[$id] = true;
+        }
+
+        $actual = [];
+        foreach (is_array($review['acceptance_criteria'] ?? null) ? $review['acceptance_criteria'] : [] as $criterion) {
+            if (!is_array($criterion)) continue;
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id !== '') $actual[$id] = true;
+        }
+
+        $missing = array_diff_key($expected, $actual);
+        $unexpected = array_diff_key($actual, $expected);
+        if ($missing !== [] || $unexpected !== []) {
+            throw new RuntimeException(sprintf(
+                'Reviewer acceptance-criteria coverage mismatch. Missing: %s; unexpected: %s.',
+                implode(', ', array_keys($missing)) ?: 'none',
+                implode(', ', array_keys($unexpected)) ?: 'none',
+            ));
+        }
     }
 
     private function counters(string $featureId): WorkflowCounters
