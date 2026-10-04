@@ -1217,15 +1217,23 @@ services:
       $model: '%env(LLM_MODEL)%'
       $provider: '%env(LLM_PROVIDER)%'
 
+  Infrastructure\Llm\OpenAiResponsesStructuredLlmClient:
+    arguments:
+      $token: '%env(LLM_TOKEN)%'
+      $model: '%env(LLM_MODEL)%'
+
   Kernel\Llm\LlmProviderRegistry:
     arguments:
       $providers:
         primary: '@Infrastructure\Llm\HttpStructuredLlmClient'
+        http: '@Infrastructure\Llm\HttpStructuredLlmClient'
+        fixture: '@Infrastructure\Llm\HttpStructuredLlmClient'
+        openai: '@Infrastructure\Llm\OpenAiResponsesStructuredLlmClient'
 
   wave4.llm.primary_route:
     class: Kernel\Llm\LlmRoute
     arguments:
-      $provider: 'primary'
+      $provider: '%env(LLM_PROVIDER)%'
       $model: '%env(LLM_MODEL)%'
 
   Kernel\Llm\LlmRoutingPolicy:
