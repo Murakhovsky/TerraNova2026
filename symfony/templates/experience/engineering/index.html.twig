@@ -13,7 +13,7 @@
     <twig:CosPageHeader
         eyebrow="COS · Engineering"
         title="Engineering workflows"
-        subtitle="Створення, запуск і контроль автономної розробки без переходу в CLI."
+        subtitle="Створення, priority queue, запуск і контроль автономної розробки без переходу в CLI."
         metaValue="{{ features|length }}"
         metaLabel="recent features"
     />
@@ -30,28 +30,134 @@
         <article class="cos-card">
             <p class="cos-card__eyebrow">New request</p>
             <h2 id="engineering-create-title" class="cos-card__title">Створити Engineering feature</h2>
-            <p class="cos-card__copy">Web UI використовує той самий Application Layer, що API та CLI.</p>
+            <p class="cos-card__copy">Рекомендований режим — Priority queue. Run now обходить чергу, запускає workflow негайно і може виконуватися паралельно з поточним queued workflow.</p>
             <form class="cos-form" method="post" action="/admin/engineering/create" data-engineering-create>
                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                 <div class="cos-form__grid">
-                    <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" maxlength="255" placeholder="Наприклад: Закрити UI cutover"></label>
-                    <label class="cos-field"><span>Priority</span><select class="cos-select" name="priority">{% for priority in ['P0','P1','P2','P3'] %}<option value="{{ priority }}" {{ priority == 'P2' ? 'selected' : '' }}>{{ priority }}</option>{% endfor %}</select></label>
-                    <label class="cos-field" style="grid-column: 1 / -1"><span>Що потрібно зробити</span><textarea class="cos-textarea" name="description" rows="5" required placeholder="Опис результату, обмежень і критеріїв приймання."></textarea></label>
-                    <label class="cos-field"><span><input type="checkbox" name="start" value="1" checked> Одразу запустити workflow</span></label>
+                    <label class="cos-field">
+                        <span>Назва</span>
+                        <input class="cos-input" name="title" maxlength="255" placeholder="Наприклад: Закрити UI cutover">
+                    </label>
+                    <label class="cos-field">
+                        <span>Priority</span>
+                        <select class="cos-select" name="priority">
+                            {% for priority in ['P0','P1','P2','P3'] %}
+                                <option value="{{ priority }}" {{ priority == 'P2' ? 'selected' : '' }}>{{ priority }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="cos-field">
+                        <span>Після створення</span>
+                        <select class="cos-select" name="execution_mode">
+                            <option value="queue" selected>Додати в priority queue</option>
+                            <option value="immediate">Run now · обійти чергу</option>
+                            <option value="draft">Залишити Draft</option>
+                        </select>
+                    </label>
+                    <label class="cos-field" style="grid-column: 1 / -1">
+                        <span>Що потрібно зробити</span>
+                        <textarea class="cos-textarea" name="description" rows="7" required placeholder="Опис результату, обмежень і критеріїв приймання."></textarea>
+                    </label>
                 </div>
                 <button class="cos-button cos-button--primary" type="submit">Створити feature</button>
             </form>
         </article>
     </section>
 
+    <section class="cos-page__section" aria-labelledby="engineering-queue-title" data-engineering-queue>
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Execution queue</p>
+            <h2 id="engineering-queue-title" class="cos-card__title">Priority queue</h2>
+            <p class="cos-card__copy">Порядок Queue: P0 → P1 → P2 → P3. Усередині одного priority — FIFO за часом постановки workflow. Один Engineering worker обробляє queued workflows послідовно; агенти всередині одного workflow також виконуються послідовно. Run now є ручним bypass і може працювати паралельно.</p>
+        </div>
+
+        {% if queue is empty %}
+            <twig:CosEmptyState title="Черга порожня" copy="Queued або resumable Engineering workflows тут з’являться автоматично." />
+        {% else %}
+            <div class="cos-entity-list" role="list">
+                {% for item in queue %}
+                    <article class="cos-card" role="listitem" data-engineering-queue-item="{{ item.feature_id }}">
+                        <div class="cos-pattern-stack">
+                            <div>
+                                <span class="cos-badge">#{{ item.position }}</span>
+                                <span class="cos-badge">{{ item.priority }}</span>
+                                <span class="cos-badge">{{ item.feature_status == 'QUEUED' ? 'QUEUED' : item.state }}</span>
+                            </div>
+                            <h3 class="cos-card__title">{{ item.title }}</h3>
+                            <p class="cos-card__copy">Workflow {{ item.workflow_id }} · queued {{ item.started_at }}</p>
+                            <div class="cos-form__actions">
+                                <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ item.feature_id }}">Open</a>
+                                <form method="post" action="/admin/engineering/{{ item.feature_id }}/run">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <button class="cos-button cos-button--primary" type="submit">Run now / Continue</button>
+                                </form>
+                                <form method="post" action="/admin/engineering/{{ item.feature_id }}/cancel">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <input type="hidden" name="reason" value="Cancelled from Engineering Workspace queue.">
+                                    <button class="cos-button cos-button--danger" type="submit">Cancel</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+
     <section class="cos-page__section" aria-labelledby="engineering-feature-list">
-        <div class="cos-card"><p class="cos-card__eyebrow">Workspace</p><h2 id="engineering-feature-list" class="cos-card__title">Recent features</h2></div>
+        <div class="cos-card">
+            <p class="cos-card__eyebrow">Workspace</p>
+            <h2 id="engineering-feature-list" class="cos-card__title">Features</h2>
+            <p class="cos-card__copy">Статус і базові дії доступні прямо зі списку. Детальне редагування Description та audit history — всередині feature.</p>
+        </div>
+
         {% if features is empty %}
             <twig:CosEmptyState title="Engineering feature-ів ще немає" copy="Створіть перший request у формі вище." />
         {% else %}
-            <div class="cos-entity-list" role="list">
+            <div class="cos-entity-list" role="list" data-engineering-workspace-list>
                 {% for feature in features %}
-                    <twig:CosEntityListItem title="{{ feature.title }}" subtitle="{{ feature.status }} · {{ feature.priority }} · {{ feature.complexity|default('n/a') }}" meta="{{ feature.updated_at }}" href="/admin/engineering/{{ feature.id }}" />
+                    {% set isDraft = feature.status == 'NEW' %}
+                    {% set isTerminal = feature.status in ['DONE','CANCELLED','FAILED'] %}
+                    {% set waitsForHuman = feature.status in ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'] %}
+                    <article class="cos-card" role="listitem" data-engineering-feature-row="{{ feature.id }}">
+                        <div class="cos-pattern-stack">
+                            <div>
+                                <span class="cos-badge">{{ feature.status }}</span>
+                                <span class="cos-badge">{{ feature.priority }}</span>
+                                {% if feature.complexity %}<span class="cos-badge">{{ feature.complexity }}</span>{% endif %}
+                            </div>
+                            <h3 class="cos-card__title"><a href="/admin/engineering/{{ feature.id }}">{{ feature.title }}</a></h3>
+                            <p class="cos-card__copy">Оновлено {{ feature.updated_at }}</p>
+                            <div class="cos-form__actions" data-engineering-feature-actions>
+                                <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ feature.id }}">Open / Manage</a>
+
+                                {% if isDraft %}
+                                    <form method="post" action="/admin/engineering/{{ feature.id }}/queue">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <button class="cos-button cos-button--primary" type="submit">Queue</button>
+                                    </form>
+                                    <form method="post" action="/admin/engineering/{{ feature.id }}/run">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <button class="cos-button cos-button--ghost" type="submit">Run now</button>
+                                    </form>
+                                {% elseif not isTerminal and not waitsForHuman %}
+                                    <form method="post" action="/admin/engineering/{{ feature.id }}/run">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <button class="cos-button cos-button--primary" type="submit">Continue now</button>
+                                    </form>
+                                    <form method="post" action="/admin/engineering/{{ feature.id }}/cancel">
+                                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                        <input type="hidden" name="reason" value="Cancelled from Engineering Workspace.">
+                                        <button class="cos-button cos-button--danger" type="submit">Cancel</button>
+                                    </form>
+                                {% elseif waitsForHuman %}
+                                    <span class="cos-badge">Human action required</span>
+                                {% elseif feature.status in ['CANCELLED','FAILED'] %}
+                                    <span class="cos-badge">Can be deleted from Manage if no PR exists</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
                 {% endfor %}
             </div>
         {% endif %}

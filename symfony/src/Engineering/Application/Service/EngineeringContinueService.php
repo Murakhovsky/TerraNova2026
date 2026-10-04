@@ -37,6 +37,7 @@ final readonly class EngineeringContinueService
         $workflow = $this->workflows->get($workflowId);
 
         if ($workflow->currentState() === EngineeringWorkflowState::ANALYSIS) {
+            $this->features->updateStatus($featureId, EngineeringWorkflowState::ANALYSIS->value);
             if ($this->hasRunningRole($featureId, AgentRole::ENGINEERING_MANAGER)) {
                 $next = new WorkflowDirective(
                     WorkflowDirectiveType::STOP,

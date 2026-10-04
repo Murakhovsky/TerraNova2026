@@ -20,7 +20,7 @@ final readonly class ContinueEngineeringWorkflowsCommandHandler implements Comma
 
     public function __invoke(ContinueEngineeringWorkflowsCommand $command): array
     {
-        $rows = $this->workflows->resumable($this->limit);
+        $rows = $this->workflows->queueForOrganization($this->organizationId, $this->limit);
         $results = [];
 
         foreach ($rows as $row) {
@@ -35,6 +35,7 @@ final readonly class ContinueEngineeringWorkflowsCommandHandler implements Comma
                 );
                 $results[] = [
                     'feature_id' => $featureId,
+                    'priority' => (string) ($row['priority'] ?? 'P2'),
                     'status' => 'continued',
                     'state' => $result->state,
                     'next' => $result->next->type->value,
@@ -42,6 +43,7 @@ final readonly class ContinueEngineeringWorkflowsCommandHandler implements Comma
             } catch (Throwable $error) {
                 $results[] = [
                     'feature_id' => $featureId,
+                    'priority' => (string) ($row['priority'] ?? 'P2'),
                     'status' => 'failed',
                     'error' => mb_substr($error->getMessage(), 0, 500),
                 ];
@@ -50,6 +52,8 @@ final readonly class ContinueEngineeringWorkflowsCommandHandler implements Comma
 
         return [
             'trigger' => trim($command->trigger) !== '' ? trim($command->trigger) : 'scheduler',
+            'queue_policy' => 'priority_fifo',
+            'worker_concurrency' => 1,
             'candidates' => count($rows),
             'results' => $results,
         ];
