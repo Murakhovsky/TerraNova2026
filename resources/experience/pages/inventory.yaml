@@ -1871,3 +1871,46 @@ pages:
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
 
+  - id: platform.settings
+    route: { name: cos_web_platform_settings, path: "/admin/settings", methods: [GET, HEAD] }
+    surface: system
+    domain: Platform
+    capability: platform.settings.view
+    owner: Platform
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator]
+    product:
+      primary_goal: "Inspect and configure platform-level settings safely."
+      page_purpose: "Canonical platform settings control surface."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: [FormSection, ErrorState]
+    primary_action: platform.settings.open_llm
+    states: [normal, error, permission_denied]
+    responsive: { desktop: control_surface, tablet: control_surface, mobile: stacked_control_surface }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: platform.settings.llm
+    route: { name: cos_web_platform_settings_llm, path: "/admin/settings/llm", methods: [GET, HEAD] }
+    surface: system
+    domain: Platform
+    capability: platform.settings.llm.view
+    owner: Platform
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator]
+    product:
+      primary_goal: "Inspect and configure governed LLM routing and provider settings."
+      page_purpose: "Canonical LLM settings control surface."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: [FormSection, ErrorState]
+    primary_action: platform.settings.llm.edit
+    states: [normal, error, permission_denied]
+    responsive: { desktop: control_surface, tablet: control_surface, mobile: stacked_control_surface }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
