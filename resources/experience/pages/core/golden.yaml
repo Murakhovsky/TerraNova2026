@@ -18,5 +18,5 @@ pages:
     primary_action: workspace.open_priority
     states: [normal, error, permission_denied]
     responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
-    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }

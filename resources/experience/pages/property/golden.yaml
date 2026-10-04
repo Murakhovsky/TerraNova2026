@@ -18,5 +18,5 @@ pages:
     primary_action: property.open_selected
     states: [normal, loading, empty, error, permission_denied]
     responsive: { desktop: map_with_context, tablet: map_with_drawer, mobile: map_with_sheet }
-    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: true }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }

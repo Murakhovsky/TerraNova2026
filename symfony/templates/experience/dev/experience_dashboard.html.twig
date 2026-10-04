@@ -34,6 +34,7 @@
         <twig:CosMetric label="Design components" value="{{ experience.designSystem.canonicalComponents }}" />
         <twig:CosMetric label="Stable / frozen" value="{{ experience.designSystem.stable }}" />
         <twig:CosMetric label="Golden ready" value="{{ experience.golden.ready }}/{{ experience.golden.required }}" />
+        <twig:CosMetric label="Golden structure" value="{{ experience.goldenStructure.passed }}/{{ experience.goldenStructure.total }}" />
     </section>
 
     <section class="cos-page__section" aria-labelledby="experience-domains">
@@ -76,6 +77,7 @@
                 <p>
                     Mass migration:
                     <strong>{{ experience.golden.massMigrationBlocked ? 'BLOCKED' : 'UNBLOCKED' }}</strong>.
+                    Structural audit: {{ experience.goldenStructure.passed }}/{{ experience.goldenStructure.total }}.
                     Golden readiness requires V1_READY, reference-quality scores and human acceptance.
                 </p>
             </div>

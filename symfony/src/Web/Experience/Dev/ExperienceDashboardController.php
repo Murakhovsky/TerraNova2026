@@ -9,6 +9,7 @@ use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\DesignSystem\DesignSystemAuditService;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Golden\GoldenExperienceSet;
+use App\Web\Experience\Golden\GoldenStructureAuditService;
 use App\Web\Experience\Registry\CompiledPageContractRegistry;
 use App\Web\Experience\Registry\ExperienceRouteInventory;
 use App\Web\Experience\Registry\PageExperienceStatus;
@@ -31,6 +32,7 @@ final readonly class ExperienceDashboardController
         private RouteExemptionRegistry $exemptions,
         private DesignSystemAuditService $designSystem,
         private GoldenExperienceSet $golden,
+        private GoldenStructureAuditService $goldenStructure,
         private TenantContextProviderInterface $tenants,
         private WorkspaceShellFactory $shells,
     ) {
@@ -126,6 +128,7 @@ final readonly class ExperienceDashboardController
                     'domains' => $domainCounts,
                     'designSystem' => $this->designSystem->audit()->toArray(),
                     'golden' => $this->golden->report()->toArray(),
+                    'goldenStructure' => $this->goldenStructure->audit()->toArray(),
                     'pages' => array_values(array_map(
                         static fn ($contract): array => [
                             'id' => $contract->id->value,
