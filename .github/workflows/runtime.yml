@@ -166,6 +166,26 @@ jobs:
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs
 
+      - name: Golden Eight browser QA
+        env:
+          GOLDEN_EIGHT_BASE_URL: http://127.0.0.1:8081
+          GOLDEN_EIGHT_EMAIL: sales-functional-acceptance@example.test
+          GOLDEN_EIGHT_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          GOLDEN_EIGHT_OUTPUT_DIR: tmp/golden-eight
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" npm run test:golden-eight-quality
+
+      - name: Upload Golden Eight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-eight-evidence
+          path: tmp/golden-eight
+          if-no-files-found: warn
+          retention-days: 14
+
   deploy-dev:
     name: Deploy main to AWS dev
     needs: runtime
