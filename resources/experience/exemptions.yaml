@@ -1,0 +1,9 @@
+exemptions:
+  - route: cos_web_auth_logout
+    path: "/auth/logout"
+    reason: redirect_action
+    description: "Logout invalidates the session and redirects; it is not an HTML page surface."
+  - route: cos_web_property_pdf
+    path: "/property/pdf/{slug}"
+    reason: redirect_alias
+    description: "Legacy PDF route redirects to the canonical property presentation print mode."

@@ -7,6 +7,7 @@ namespace App\Command;
 use App\Web\Experience\Registry\CompiledPageContractRegistry;
 use App\Web\Experience\Registry\ExperienceRouteInventory;
 use App\Web\Experience\Registry\PageExperienceStatus;
+use App\Web\Experience\Registry\RouteExemptionRegistry;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -22,6 +23,7 @@ final class ExperienceCoverageCommand extends Command
     public function __construct(
         private readonly ExperienceRouteInventory $inventory,
         private readonly CompiledPageContractRegistry $registry,
+        private readonly RouteExemptionRegistry $exemptions,
     ) {
         parent::__construct();
     }
@@ -31,6 +33,7 @@ final class ExperienceCoverageCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $routes = $this->inventory->productionHtmlRoutes();
         $contracts = $this->registry->all();
+        $exemptions = $this->exemptions->all();
 
         $implemented = 0;
         $v1Ready = 0;
@@ -56,11 +59,15 @@ final class ExperienceCoverageCommand extends Command
         }
 
         ksort($byDomain);
+        $covered = count($contracts) + count($exemptions);
+        $routeCoverage = count($routes) > 0 ? (int) round(($covered / count($routes)) * 100) : 100;
 
         $io->title('COS Experience Coverage');
         $io->definitionList(
-            ['Pages discovered' => count($routes)],
-            ['Contracted' => count($contracts)],
+            ['Production HTML routes' => count($routes)],
+            ['Page Contracts' => count($contracts)],
+            ['Explicit exemptions' => count($exemptions)],
+            ['Inventory coverage' => $routeCoverage . '%'],
             ['Implemented or later' => $implemented],
             ['Experience V1 ready' => $v1Ready],
         );
