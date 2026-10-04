@@ -106,7 +106,7 @@ LLM_MODEL=<model id>
 
 `LLM_ENDPOINT` для native OpenAI adapter не використовується. Старий generic HTTP transport залишається доступним через `LLM_PROVIDER=http`.
 
-Native adapter передає `responseSchema` як OpenAI Structured Outputs через `text.format.type=json_schema` з `strict=true`, повертає provider/model/token usage у стандартний `StructuredLlmResponse` і не змінює Domain або Agent contracts.
+Native adapter передає `responseSchema` як OpenAI Structured Outputs через `text.format.type=json_schema`. Для schema, сумісних зі strict subset OpenAI, він використовує `strict=true`; для legacy/flexible schema з free-form object/array поверхнями автоматично використовує `strict=false`, після чого Domain/Agent validation залишається authoritative application-side gate. Це не змінює provider/model/token usage contract у `StructuredLlmResponse`.
 
 Таким чином routing лишається:
 
