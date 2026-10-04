@@ -1,0 +1,100 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}LLM Settings | COS{% endblock %}
+
+{% block workspace_content %}
+<section class="cos-page__stack" data-cos-archetype="{{ page.archetypeId() }}" data-cos-page-state="{{ page.state }}">
+    <twig:CosPageHeader
+        eyebrow="Platform Settings · AI"
+        title="LLM runtime"
+        subtitle="Runtime-конфігурація моделей та provider credentials без рестарту контейнерів."
+    >
+        <twig:CosButton label="Platform Settings" href="/admin/settings" variant="ghost" />
+    </twig:CosPageHeader>
+
+    {% if settings.status_message %}
+        <twig:CosAlert title="Platform Settings" copy="{{ settings.status_message }}" tone="{{ settings.status_error ? 'danger' : 'positive' }}" />
+    {% endif %}
+
+    <form class="cos-page__stack" action="/admin/settings/llm" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+
+        <twig:CosFormSection title="Основний LLM" description="Provider, модель за замовчуванням і runtime limits.">
+            <div class="cos-pattern-stack">
+                <p class="cos-card__eyebrow">Provider</p>
+                <h2 class="cos-card__title">Основний LLM</h2>
+            </div>
+
+            <div class="cos-section-grid">
+                <label class="cos-field">
+                    <span>Provider</span>
+                    <select class="cos-select" name="provider">
+                        {% for provider in ['openai','http','fixture'] %}
+                            <option value="{{ provider }}" {% if settings.provider == provider %}selected{% endif %}>{{ provider }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="cos-field">
+                    <span>Default model</span>
+                    <input class="cos-input" name="default_model" type="text" value="{{ settings.default_model }}" placeholder="model id">
+                </label>
+
+                <label class="cos-field">
+                    <span>Timeout, seconds</span>
+                    <input class="cos-input" name="timeout_seconds" type="number" min="1" max="600" value="{{ settings.timeout_seconds }}">
+                </label>
+
+                <label class="cos-field">
+                    <span>Max attempts</span>
+                    <input class="cos-input" name="max_attempts" type="number" min="1" max="10" value="{{ settings.max_attempts }}">
+                </label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection title="OpenAI API key" description="Encrypted secret. Значення назад у форму не повертається.">
+            <div class="cos-pattern-stack">
+                <p class="cos-card__eyebrow">Encrypted secret</p>
+                <h2 class="cos-card__title">OpenAI API key</h2>
+                <p class="cos-card__copy">
+                    {% if settings.api_key_configured %}
+                        Ключ налаштовано{% if settings.api_key_suffix %}, suffix ••••{{ settings.api_key_suffix }}{% endif %}. Значення ніколи не повертається у форму.
+                    {% else %}
+                        Ключ ще не налаштовано.
+                    {% endif %}
+                </p>
+            </div>
+
+            <label class="cos-field">
+                <span>Replace API key</span>
+                <input class="cos-input" name="openai_api_key" type="password" autocomplete="new-password" placeholder="залиште порожнім, щоб не змінювати">
+            </label>
+            <label class="cos-field">
+                <span>Повернути ENV fallback</span>
+                <span><input type="checkbox" name="remove_openai_api_key" value="1"> Видалити DB override ключа</span>
+            </label>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection title="Моделі Engineering Agents" description="Порожнє поле повертає роль до ENV/default model.">
+            <div class="cos-pattern-stack">
+                <p class="cos-card__eyebrow">Engineering Agents</p>
+                <h2 class="cos-card__title">Моделі за ролями</h2>
+                <p class="cos-card__copy">Порожнє поле повертає роль до ENV/default model.</p>
+            </div>
+
+            <div class="cos-section-grid">
+                <label class="cos-field"><span>Manager</span><input class="cos-input" name="manager_model" value="{{ settings.manager_model }}"></label>
+                <label class="cos-field"><span>Architect</span><input class="cos-input" name="architect_model" value="{{ settings.architect_model }}"></label>
+                <label class="cos-field"><span>Developer</span><input class="cos-input" name="developer_model" value="{{ settings.developer_model }}"></label>
+                <label class="cos-field"><span>Reviewer</span><input class="cos-input" name="reviewer_model" value="{{ settings.reviewer_model }}"></label>
+                <label class="cos-field"><span>QA</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}"></label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosStickyActions label="Save LLM settings">
+            <a class="cos-button cos-button--ghost" href="/admin/settings">Скасувати</a>
+            <button class="cos-button cos-button--primary" type="submit">Зберегти налаштування</button>
+        </twig:CosStickyActions>
+    </form>
+</section>
+{% endblock %}

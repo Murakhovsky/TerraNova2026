@@ -10,7 +10,7 @@ foreach ([
     'StructuredLlmClientInterface',
     'https://api.openai.com/v1/responses',
     "'type' => 'json_schema'",
-    "'strict' => true",
+    'isStrictSchemaCompatible',
     "'max_output_tokens'",
     "'input_tokens'",
     "'output_tokens'",

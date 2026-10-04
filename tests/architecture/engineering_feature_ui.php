@@ -5,15 +5,26 @@ $root = dirname(__DIR__, 2);
 $routes = (string) file_get_contents($root.'/symfony/config/routes.yaml');
 $controller = (string) file_get_contents($root.'/symfony/src/Web/Engineering/EngineeringFeatureController.php');
 $template = (string) file_get_contents($root.'/symfony/templates/experience/engineering/feature.html.twig');
+$indexTemplate = (string) file_get_contents($root.'/symfony/templates/experience/engineering/index.html.twig');
 $status = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringStatusService.php');
 $navigation = (string) file_get_contents($root.'/symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php');
 $commands = (string) file_get_contents($root.'/symfony/src/Web/Experience/Shell/CoreCommandCatalog.php');
+$management = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringFeatureManagementService.php');
+$store = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringFeatureStore.php');
 
 foreach ([
     '/admin/engineering',
     '/admin/engineering/{id}',
     'EngineeringFeatureController::index',
     'EngineeringFeatureController::show',
+    '/admin/engineering/{id}/update',
+    '/admin/engineering/{id}/delete',
+    '/admin/engineering/{id}/cancel',
+    '/admin/engineering/{id}/queue',
+    'EngineeringFeatureController::queue',
+    'EngineeringFeatureController::update',
+    'EngineeringFeatureController::delete',
+    'EngineeringFeatureController::cancel',
 ] as $needle) {
     if (!str_contains($routes, $needle)) throw new RuntimeException('Engineering feature UI route missing '.$needle);
 }
@@ -24,6 +35,15 @@ foreach ([
     'EngineeringStatusService',
     'recentForOrganization',
     'SystemControlSurface',
+    'EngineeringFeatureManagementService',
+    'EngineeringCancelService',
+    'ContinueEngineeringWorkflowsCommand',
+    'RunEngineeringFeatureCommand',
+    'queueForOrganization',
+    'activeForOrganization',
+    'activeExecutions',
+    'workflow_state',
+    'queueImmediate',
 ] as $needle) {
     if (!str_contains($controller, $needle)) throw new RuntimeException('Engineering feature UI controller missing '.$needle);
 }
@@ -35,8 +55,37 @@ foreach ([
     'AgentRuns',
     'Final Report',
     'Open pull request',
+    'Description',
+    'data-engineering-update',
+    'data-engineering-delete',
+    'data-engineering-cancel',
 ] as $needle) {
     if (!str_contains($template, $needle)) throw new RuntimeException('Engineering feature UI missing '.$needle);
+}
+
+
+
+foreach ([
+    'data-engineering-queue',
+    'Priority queue',
+    'data-engineering-active-executions',
+    'Active executions',
+    'displayStatus',
+    'P0 → P1 → P2 → P3',
+    'data-engineering-workspace-list',
+    'data-engineering-feature-actions',
+    'execution_mode',
+    'Run now',
+    'Cancel',
+] as $needle) {
+    if (!str_contains($indexTemplate, $needle)) throw new RuntimeException('Engineering Workspace queue UI missing '.$needle);
+}
+
+foreach (['latestIdForFeature', 'Started Engineering workflow is immutable', 'updateRequest', 'delete'] as $needle) {
+    if (!str_contains($management, $needle)) throw new RuntimeException('Engineering feature management guard missing '.$needle);
+}
+foreach (["'description' =>", 'updateRequest(', 'entityManager->remove'] as $needle) {
+    if (!str_contains($store, $needle)) throw new RuntimeException('Engineering feature persistence missing '.$needle);
 }
 
 if (!str_contains($status, 'latestIdForFeature')) {

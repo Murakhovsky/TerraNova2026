@@ -22,11 +22,11 @@ class WorkflowExecutionRecord
         private string $currentState,
         #[ORM\Column(type: Types::STRING, length: 32)]
         private string $status,
-        #[ORM\Column(type: Types::STRING, length: 64)]
+        #[ORM\Column(type: Types::STRING, length: 128)]
         private string $traceId,
         #[ORM\Column(type: Types::STRING, length: 160)]
         private string $lockKey,
-        #[ORM\Version] #[ORM\Column(type: Types::INTEGER)]
+        #[ORM\Version] #[ORM\Column(type: Types::INTEGER, options: ['default' => 1])]
         private int $version,
         #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
         private DateTimeImmutable $startedAt,
@@ -45,6 +45,7 @@ class WorkflowExecutionRecord
     public function id(): string { return $this->id; }
     public function featureId(): string { return $this->featureId; }
     public function workflowType(): string { return $this->workflowType; }
+    public function markImmediate(): void { $this->workflowType = 'ENGINEERING_IMMEDIATE'; $this->lastActivityAt = new DateTimeImmutable(); }
     public function currentState(): string { return $this->currentState; }
     public function status(): string { return $this->status; }
     public function traceId(): string { return $this->traceId; }

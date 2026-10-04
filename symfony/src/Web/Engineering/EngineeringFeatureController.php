@@ -3,9 +3,13 @@ declare(strict_types=1);
 
 namespace App\Web\Engineering;
 
+use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
+use App\Application\Engineering\Command\RunEngineeringFeatureCommand;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
-use App\Engineering\Application\Service\EngineeringContinueService;
+use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Service\EngineeringCancelService;
+use App\Engineering\Application\Service\EngineeringFeatureManagementService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Application\Service\EngineeringStatusService;
@@ -22,6 +26,7 @@ use Kernel\Tenant\Model\TenantPermissions;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Throwable;
 use Twig\Environment;
 
@@ -32,12 +37,15 @@ final readonly class EngineeringFeatureController
         private TenantContextProviderInterface $tenants,
         private EngineeringStatusService $engineering,
         private EngineeringFeatureStoreInterface $features,
+        private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringOrchestrator $orchestrator,
-        private EngineeringContinueService $continue,
+        private EngineeringCancelService $cancel,
+        private EngineeringFeatureManagementService $featureManagement,
         private EngineeringHumanDecisionService $decisions,
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private PagePresentationFactory $pages,
+        private MessageBusInterface $commandBus,
     ) {}
 
     public function index(Request $request): Response
@@ -57,6 +65,40 @@ final readonly class EngineeringFeatureController
             new ShellBreadcrumb('Engineering'),
         ]);
 
+        $features = $this->features->recentForOrganization($tenant->organizationId()->value(), 50);
+        $queue = $this->workflows->queueForOrganization($tenant->organizationId()->value(), 100);
+        foreach ($queue as $index => &$row) {
+            $row['position'] = $index + 1;
+        }
+        unset($row);
+
+        $active = $this->workflows->activeForOrganization($tenant->organizationId()->value(), 100);
+        $activeByFeature = [];
+        foreach ($active as $row) {
+            $activeByFeature[$row['feature_id']] = $row;
+        }
+
+        $queuedFeatureIds = array_fill_keys(
+            array_map(static fn (array $row): string => (string) $row['feature_id'], $queue),
+            true,
+        );
+        $activeExecutions = array_values(array_filter(
+            $active,
+            static fn (array $row): bool =>
+                ($row['workflow_type'] ?? null) === 'ENGINEERING_IMMEDIATE'
+                || !isset($queuedFeatureIds[(string) ($row['feature_id'] ?? '')]),
+        ));
+
+        foreach ($features as &$feature) {
+            $workflow = $activeByFeature[$feature['id']] ?? null;
+            $feature['workflow_id'] = $workflow['workflow_id'] ?? null;
+            $feature['workflow_state'] = $workflow['state'] ?? null;
+            $feature['workflow_status'] = $workflow['workflow_status'] ?? null;
+            $feature['workflow_type'] = $workflow['workflow_type'] ?? null;
+            $feature['workflow_last_activity_at'] = $workflow['last_activity_at'] ?? null;
+        }
+        unset($feature);
+
         return new Response(
             $this->twig->render('experience/engineering/index.html.twig', [
                 'shell' => $shell,
@@ -65,7 +107,9 @@ final readonly class EngineeringFeatureController
                     ['PageHeader', 'Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
                     'normal',
                 ),
-                'features' => $this->features->recentForOrganization($tenant->organizationId()->value(), 50),
+                'features' => $features,
+                'queue' => $queue,
+                'activeExecutions' => $activeExecutions,
                 'csrfToken' => $this->csrf->token($request),
                 'statusMessage' => trim((string) $request->query->get('status_message', '')),
             ]),
@@ -87,6 +131,10 @@ final readonly class EngineeringFeatureController
         $description = trim((string) $request->request->get('description', ''));
         $title = trim((string) $request->request->get('title', ''));
         $priority = strtoupper(trim((string) $request->request->get('priority', 'P2')));
+        $executionMode = strtolower(trim((string) $request->request->get('execution_mode', '')));
+        if ($executionMode === '') {
+            $executionMode = $request->request->getBoolean('start') ? 'immediate' : 'draft';
+        }
         if ($description === '') {
             return $this->redirectStatus('/admin/engineering', 'ERROR: Опис engineering request обов’язковий.');
         }
@@ -106,14 +154,27 @@ final readonly class EngineeringFeatureController
                 'user:' . $tenant->userId()->value(),
             );
 
-            $message = 'Engineering feature створено.';
-            if ($request->request->getBoolean('start')) {
-                $result = $this->orchestrator->start(
+            $message = 'Engineering feature створено як draft.';
+            if ($executionMode === 'queue') {
+                $result = $this->orchestrator->queue(
                     $featureId,
                     $tenant->organizationId()->value(),
-                    $this->correlation('create', $featureId),
+                    $this->correlation('queue', $featureId),
                 );
-                $message = 'Engineering workflow запущено · ' . $result->state . '.';
+                $this->commandBus->dispatch(new ContinueEngineeringWorkflowsCommand('web-queue'));
+                $message = 'Engineering workflow додано в priority queue · ' . $result->state . '.';
+            } elseif ($executionMode === 'immediate') {
+                $result = $this->orchestrator->queueImmediate(
+                    $featureId,
+                    $tenant->organizationId()->value(),
+                    $this->correlation('immediate', $featureId),
+                );
+                $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                    featureId: $featureId,
+                    organizationId: $tenant->organizationId()->value(),
+                    trigger: 'web-create-immediate',
+                ));
+                $message = 'Engineering workflow передано immediate worker · ' . $result->state . '.';
             }
 
             return $this->redirectStatus('/admin/engineering/' . $featureId, $message);
@@ -174,6 +235,28 @@ final readonly class EngineeringFeatureController
         );
     }
 
+    public function queue(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->ownedStatus($tenant, $featureId);
+            $result = $this->orchestrator->queue(
+                $featureId,
+                $tenant->organizationId()->value(),
+                $this->correlation('queue', $featureId),
+            );
+            $this->commandBus->dispatch(new ContinueEngineeringWorkflowsCommand('web-queue'));
+
+            return $this->redirectStatus('/admin/engineering', 'Workflow додано в priority queue · ' . $result->state . '.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering', 'ERROR: ' . $error->getMessage());
+        }
+    }
+
     public function run(Request $request, string $id): Response
     {
         $tenant = $this->manager();
@@ -183,19 +266,96 @@ final readonly class EngineeringFeatureController
         try {
             $featureId = EngineeringId::assert($id);
             $status = $this->ownedStatus($tenant, $featureId);
-            $result = ($status['workflow'] ?? null) === null
-                ? $this->orchestrator->start(
+            foreach ($status['agent_runs'] ?? [] as $agentRun) {
+                if (($agentRun['status'] ?? null) === 'RUNNING') {
+                    throw new \LogicException('Engineering AgentRun already RUNNING; duplicate immediate execution is not allowed.');
+                }
+            }
+
+            $activeWorkflowId = $this->workflows->activeIdForFeature($featureId);
+            if ($activeWorkflowId === null) {
+                $this->orchestrator->queueImmediate(
                     $featureId,
                     $tenant->organizationId()->value(),
                     $this->correlation('run', $featureId),
-                )
-                : $this->continue->continueFeature(
-                    $featureId,
-                    $tenant->organizationId()->value(),
-                    $this->correlation('continue', $featureId),
                 );
+            } else {
+                $this->workflows->markImmediate($activeWorkflowId);
+            }
 
-            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow · ' . $result->state . '.');
+            $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+                trigger: 'web-run-now',
+            ));
+
+            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow передано immediate worker.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
+        }
+    }
+
+    public function update(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->featureManagement->update(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+                title: (string) $request->request->get('title', ''),
+                description: (string) $request->request->get('description', ''),
+                priority: (string) $request->request->get('priority', ''),
+            );
+
+            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Engineering feature оновлено.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
+        }
+    }
+
+    public function delete(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            if (!$request->request->getBoolean('confirm_delete')) {
+                throw new \InvalidArgumentException('Підтвердьте видалення Engineering feature.');
+            }
+
+            $this->featureManagement->delete(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+            );
+
+            return $this->redirectStatus('/admin/engineering', 'Engineering feature видалено.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
+        }
+    }
+
+    public function cancel(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->ownedStatus($tenant, $featureId);
+            $result = $this->cancel->cancel(
+                featureId: $featureId,
+                actorId: 'user:' . $tenant->userId()->value(),
+                reason: trim((string) $request->request->get('reason', '')) ?: 'Cancelled from Engineering UI.',
+            );
+
+            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow скасовано · ' . $result['state'] . '.');
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
         }
@@ -223,16 +383,29 @@ final readonly class EngineeringFeatureController
             }
             if (!$known) throw new \LogicException('Human decision уже не є відкритим.');
 
-            $result = $this->decisions->answerAndResume(
+            $result = $this->decisions->answerAndPrepareResume(
                 requestId: $requestId,
                 selectedOption: $option,
                 comment: trim((string) $request->request->get('comment', '')) ?: null,
                 decidedBy: 'user:' . $tenant->userId()->value(),
                 organizationId: $tenant->organizationId()->value(),
-                correlationId: $this->correlation('decision', $featureId),
             );
 
-            return $this->redirectStatus('/admin/engineering/' . $featureId, 'Human decision прийнято · ' . $result->state . '.');
+            if ($result->next->agent !== null) {
+                $this->workflows->markImmediate($result->workflowId);
+                $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                    featureId: $featureId,
+                    organizationId: $tenant->organizationId()->value(),
+                    trigger: 'web-human-decision',
+                ));
+            }
+
+            return $this->redirectStatus(
+                '/admin/engineering/' . $featureId,
+                $result->next->agent !== null
+                    ? 'Human decision прийнято · resume передано immediate worker.'
+                    : 'Human decision прийнято · ' . $result->state . '.',
+            );
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
         }

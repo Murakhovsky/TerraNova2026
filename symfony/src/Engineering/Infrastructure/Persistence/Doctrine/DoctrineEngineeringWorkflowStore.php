@@ -21,12 +21,16 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
     ) {
     }
 
-    public function create(WorkflowExecution $workflow): void
+    public function create(WorkflowExecution $workflow, string $workflowType = 'ENGINEERING'): void
     {
+        if (!in_array($workflowType, ['ENGINEERING','ENGINEERING_IMMEDIATE'], true)) {
+            throw new \InvalidArgumentException('Unsupported Engineering workflow type.');
+        }
+
         $record = new WorkflowExecutionRecord(
             id: $workflow->id(),
             featureId: $workflow->featureId(),
-            workflowType: 'ENGINEERING',
+            workflowType: $workflowType,
             currentState: $workflow->currentState()->value,
             status: $this->statusFor($workflow->currentState()),
             traceId: $workflow->traceId(),
@@ -60,27 +64,106 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         return $record instanceof WorkflowExecutionRecord ? $record->id() : null;
     }
 
+    public function markImmediate(string $workflowId): void
+    {
+        $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
+        if (!$record instanceof WorkflowExecutionRecord) {
+            throw new RuntimeException('Engineering workflow not found: '.$workflowId);
+        }
+        $record->markImmediate();
+        $this->entityManager->flush();
+    }
+
     public function resumable(int $limit = 20): array
     {
-        $limit = max(1, min(100, $limit));
-        $records = $this->entityManager->getRepository(WorkflowExecutionRecord::class)->findBy(
-            ['currentState' => [
-                'ANALYSIS',
-                'QA_PLANNING',
-                'ARCHITECTURE_PENDING',
-                'DEVELOPMENT_RUNNING',
-                'REVIEW_PENDING',
-                'QA_PENDING',
-            ]],
-            ['lastActivityAt' => 'ASC'],
-            $limit,
-        );
+        return $this->orderedQueue(null, $limit);
+    }
 
-        return array_map(static fn (WorkflowExecutionRecord $record): array => [
-            'feature_id' => $record->featureId(),
-            'workflow_id' => $record->id(),
-            'state' => $record->currentState(),
-        ], $records);
+    public function queueForOrganization(string $organizationId, int $limit = 100): array
+    {
+        return $this->orderedQueue($organizationId, $limit);
+    }
+
+    /** @return list<array{feature_id:string,workflow_id:string,state:string,priority:string,started_at:string}> */
+    private function orderedQueue(?string $organizationId, int $limit): array
+    {
+        $limit = max(1, min(100, $limit));
+        $qb = $this->entityManager->getConnection()->createQueryBuilder();
+        $qb
+            ->select(
+                'w.feature_id',
+                'w.id AS workflow_id',
+                'w.current_state AS state',
+                'f.priority',
+                'f.title',
+                'f.status AS feature_status',
+                'w.started_at',
+            )
+            ->from('cos_engineering_workflows', 'w')
+            ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
+            ->where("w.workflow_type = 'ENGINEERING'")
+            ->andWhere("w.current_state IN ('ANALYSIS','QA_PLANNING','ARCHITECTURE_PENDING','DEVELOPMENT_RUNNING','REVIEW_PENDING','QA_PENDING')")
+            ->orderBy("CASE f.priority WHEN 'P0' THEN 0 WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 9 END", 'ASC')
+            ->addOrderBy('w.started_at', 'ASC')
+            ->setMaxResults($limit);
+
+        if ($organizationId !== null) {
+            $qb->andWhere('f.organization_id = :organization_id')
+                ->setParameter('organization_id', $organizationId);
+        }
+
+        $rows = $qb->executeQuery()->fetchAllAssociative();
+
+        return array_map(static fn (array $row): array => [
+            'feature_id' => (string) ($row['feature_id'] ?? ''),
+            'workflow_id' => (string) ($row['workflow_id'] ?? ''),
+            'state' => (string) ($row['state'] ?? ''),
+            'priority' => (string) ($row['priority'] ?? 'P2'),
+            'title' => (string) ($row['title'] ?? ''),
+            'feature_status' => (string) ($row['feature_status'] ?? ''),
+            'started_at' => (string) ($row['started_at'] ?? ''),
+        ], $rows);
+    }
+
+    /** @return list<array{feature_id:string,workflow_id:string,workflow_type:string,workflow_status:string,state:string,priority:string,title:string,feature_status:string,started_at:string,last_activity_at:string}> */
+    public function activeForOrganization(string $organizationId, int $limit = 100): array
+    {
+        $limit = max(1, min(100, $limit));
+        $rows = $this->entityManager->getConnection()->createQueryBuilder()
+            ->select(
+                'w.feature_id',
+                'w.id AS workflow_id',
+                'w.workflow_type',
+                'w.status AS workflow_status',
+                'w.current_state AS state',
+                'f.priority',
+                'f.title',
+                'f.status AS feature_status',
+                'w.started_at',
+                'w.last_activity_at',
+            )
+            ->from('cos_engineering_workflows', 'w')
+            ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
+            ->where('f.organization_id = :organization_id')
+            ->andWhere("w.status NOT IN ('COMPLETED','CANCELLED','FAILED')")
+            ->setParameter('organization_id', $organizationId)
+            ->orderBy('w.last_activity_at', 'DESC')
+            ->setMaxResults($limit)
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return array_map(static fn (array $row): array => [
+            'feature_id' => (string) ($row['feature_id'] ?? ''),
+            'workflow_id' => (string) ($row['workflow_id'] ?? ''),
+            'workflow_type' => (string) ($row['workflow_type'] ?? 'ENGINEERING'),
+            'workflow_status' => (string) ($row['workflow_status'] ?? 'RUNNING'),
+            'state' => (string) ($row['state'] ?? ''),
+            'priority' => (string) ($row['priority'] ?? 'P2'),
+            'title' => (string) ($row['title'] ?? ''),
+            'feature_status' => (string) ($row['feature_status'] ?? ''),
+            'started_at' => (string) ($row['started_at'] ?? ''),
+            'last_activity_at' => (string) ($row['last_activity_at'] ?? ''),
+        ], $rows);
     }
 
     public function get(string $workflowId): WorkflowExecution

@@ -2130,6 +2130,21 @@ cos_web_workspace_analytics:
   controller: App\Web\Administration\AdministrationAnalyticsController::index
   methods: [GET, HEAD]
 
+cos_web_platform_settings:
+  path: /admin/settings
+  controller: App\Web\Administration\PlatformSettingsController::index
+  methods: [GET, HEAD]
+
+cos_web_platform_settings_llm:
+  path: /admin/settings/llm
+  controller: App\Web\Administration\PlatformSettingsController::llm
+  methods: [GET, HEAD]
+
+cos_web_platform_settings_llm_save:
+  path: /admin/settings/llm
+  controller: App\Web\Administration\PlatformSettingsController::saveLlm
+  methods: [POST]
+
 cos_web_engineering:
   path: /admin/engineering
   controller: App\Web\Engineering\EngineeringFeatureController::index
@@ -2146,9 +2161,33 @@ cos_web_engineering_run:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_web_engineering_queue:
+  path: /admin/engineering/{id}/queue
+  controller: App\Web\Engineering\EngineeringFeatureController::queue
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_human_decision:
   path: /admin/engineering/{id}/human-decision
   controller: App\Web\Engineering\EngineeringFeatureController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_update:
+  path: /admin/engineering/{id}/update
+  controller: App\Web\Engineering\EngineeringFeatureController::update
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_delete:
+  path: /admin/engineering/{id}/delete
+  controller: App\Web\Engineering\EngineeringFeatureController::delete
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_cancel:
+  path: /admin/engineering/{id}/cancel
+  controller: App\Web\Engineering\EngineeringFeatureController::cancel
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 

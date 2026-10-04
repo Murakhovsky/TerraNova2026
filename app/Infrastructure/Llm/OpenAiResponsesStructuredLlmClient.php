@@ -9,6 +9,7 @@ use Kernel\Llm\LlmProviderException;
 use Kernel\Llm\StructuredLlmClientInterface;
 use Kernel\Llm\StructuredLlmRequest;
 use Kernel\Llm\StructuredLlmResponse;
+use Platform\Settings\Contract\PlatformSettingsReaderInterface;
 use RuntimeException;
 
 final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInterface
@@ -23,22 +24,38 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
         private readonly int $maxAttempts = 3,
         private readonly string $endpoint = self::DEFAULT_ENDPOINT,
         private readonly ?Closure $transport = null,
+        private readonly ?PlatformSettingsReaderInterface $settings = null,
     ) {}
 
     public function complete(StructuredLlmRequest $request): StructuredLlmResponse
     {
-        $token = trim($this->token);
+        $organizationId = $request->organizationId;
+        $token = trim((string) (
+            $organizationId !== null && $this->settings !== null
+                ? $this->settings->secret($organizationId, 'llm', 'openai.api_key', $this->token)
+                : $this->token
+        ));
         if ($token === '') {
             throw new LlmProviderException(self::PROVIDER, false, 'OpenAI API token is not configured.');
         }
 
-        $model = trim((string) $request->model) !== '' ? trim((string) $request->model) : trim($this->model);
+        $fallbackModel = $organizationId !== null && $this->settings !== null
+            ? (string) $this->settings->value($organizationId, 'llm', 'default_model', $this->model)
+            : $this->model;
+        $model = trim((string) $request->model) !== '' ? trim((string) $request->model) : trim($fallbackModel);
         if ($model === '') {
             throw new LlmProviderException(self::PROVIDER, false, 'OpenAI model is not configured.');
         }
 
+        $timeoutSeconds = $organizationId !== null && $this->settings !== null
+            ? max(1, (int) $this->settings->value($organizationId, 'llm', 'timeout_seconds', $this->timeoutSeconds))
+            : $this->timeoutSeconds;
+        $maxAttempts = $organizationId !== null && $this->settings !== null
+            ? max(1, (int) $this->settings->value($organizationId, 'llm', 'max_attempts', $this->maxAttempts))
+            : $this->maxAttempts;
+
         $payload = $this->payload($request, $model);
-        [$status, $raw] = $this->send($payload);
+        [$status, $raw] = $this->send($payload, $token, $timeoutSeconds, $maxAttempts);
         $decoded = $this->decode($raw, $status);
 
         $text = $this->extractOutputText($decoded);
@@ -99,7 +116,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
                 'format' => [
                     'type' => 'json_schema',
                     'name' => $this->schemaName($request->useCase),
-                    'strict' => true,
+                    'strict' => $this->isStrictSchemaCompatible($request->responseSchema),
                     'schema' => $request->responseSchema,
                 ],
             ],
@@ -113,12 +130,12 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
     }
 
     /** @return array{0:int,1:string} */
-    private function send(array $payload): array
+    private function send(array $payload, string $token, int $timeoutSeconds, int $maxAttempts): array
     {
         $body = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         if ($this->transport !== null) {
-            $result = ($this->transport)($this->endpoint, $this->token, $body, $this->timeoutSeconds);
+            $result = ($this->transport)($this->endpoint, $token, $body, $timeoutSeconds);
             if (!is_array($result) || !isset($result[0], $result[1])) {
                 throw new RuntimeException('OpenAI test transport must return [status, body].');
             }
@@ -140,7 +157,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
         $lastBody = '';
         $lastError = '';
 
-        for ($attempt = 1; $attempt <= max(1, $this->maxAttempts); ++$attempt) {
+        for ($attempt = 1; $attempt <= max(1, $maxAttempts); ++$attempt) {
             $curl = curl_init($this->endpoint);
             if ($curl === false) {
                 throw new LlmProviderException(self::PROVIDER, true, 'Unable to initialize OpenAI transport.');
@@ -149,10 +166,10 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             curl_setopt_array($curl, [
                 CURLOPT_POST => true,
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CONNECTTIMEOUT => min(10, $this->timeoutSeconds),
-                CURLOPT_TIMEOUT => max(1, $this->timeoutSeconds),
+                CURLOPT_CONNECTTIMEOUT => min(10, $timeoutSeconds),
+                CURLOPT_TIMEOUT => max(1, $timeoutSeconds),
                 CURLOPT_HTTPHEADER => [
-                    'Authorization: Bearer '.$this->token,
+                    'Authorization: Bearer '.$token,
                     'Content-Type: application/json',
                 ],
                 CURLOPT_POSTFIELDS => $body,
@@ -169,7 +186,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             }
 
             $retryable = $lastStatus === 0 || $lastStatus === 408 || $lastStatus === 409 || $lastStatus === 429 || $lastStatus >= 500;
-            if (!$retryable || $attempt >= max(1, $this->maxAttempts)) {
+            if (!$retryable || $attempt >= max(1, $maxAttempts)) {
                 break;
             }
             usleep(100000 * (2 ** ($attempt - 1)));
@@ -229,6 +246,64 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
         }
 
         return null;
+    }
+
+    /** @param array<string,mixed> $schema */
+    private function isStrictSchemaCompatible(array $schema): bool
+    {
+        $type = $schema['type'] ?? null;
+        $types = is_array($type) ? $type : [$type];
+
+        if (in_array('object', $types, true)) {
+            if (($schema['additionalProperties'] ?? null) !== false) {
+                return false;
+            }
+
+            $properties = $schema['properties'] ?? [];
+            $required = $schema['required'] ?? [];
+            if (!is_array($properties) || !is_array($required)) {
+                return false;
+            }
+
+            $propertyNames = array_keys($properties);
+            $requiredNames = array_values(array_filter($required, 'is_string'));
+            sort($propertyNames);
+            sort($requiredNames);
+            if ($propertyNames !== $requiredNames) {
+                return false;
+            }
+
+            foreach ($properties as $propertySchema) {
+                if (!is_array($propertySchema) || !$this->isStrictSchemaCompatible($propertySchema)) {
+                    return false;
+                }
+            }
+        }
+
+        if (in_array('array', $types, true)) {
+            $items = $schema['items'] ?? null;
+            if (!is_array($items) || !$this->isStrictSchemaCompatible($items)) {
+                return false;
+            }
+        }
+
+        foreach (['anyOf', 'oneOf'] as $composition) {
+            if (!isset($schema[$composition])) continue;
+            if (!is_array($schema[$composition]) || $schema[$composition] === []) return false;
+            foreach ($schema[$composition] as $candidate) {
+                if (!is_array($candidate) || !$this->isStrictSchemaCompatible($candidate)) {
+                    return false;
+                }
+            }
+        }
+
+        foreach (['allOf', 'not', 'if', 'then', 'else', 'dependentRequired', 'dependentSchemas', 'patternProperties'] as $unsupported) {
+            if (array_key_exists($unsupported, $schema)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function schemaName(?string $useCase): string
