@@ -189,6 +189,26 @@
         </div>
     </section>
 
+    <section class="cos-page__section" aria-labelledby="experience-external">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-external">EX-006 Portal/Public Experience</h2>
+                <p>
+                    {{ experience.externalExperience.pages }} external pages:
+                    {{ experience.externalExperience.surfaces.public }} public,
+                    {{ experience.externalExperience.surfaces.portal }} portal.
+                    Shared Design System, separate UX purpose from internal Workspace.
+                </p>
+            </div>
+        </div>
+        <div class="cos-kpi-strip">
+            <twig:CosMetric label="External pages" value="{{ experience.externalExperience.pages }}" />
+            <twig:CosMetric label="P0" value="{{ experience.externalExperience.p0 }}" />
+            <twig:CosMetric label="P1" value="{{ experience.externalExperience.p1 }}" />
+            <twig:CosMetric label="V1 ready" value="{{ experience.externalExperience.v1_ready }}" />
+        </div>
+    </section>
+
     <section class="cos-page__section" aria-labelledby="experience-design-system">
         <div class="cos-page__section-head">
             <div>

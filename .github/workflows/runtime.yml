@@ -108,6 +108,10 @@ jobs:
           docker compose exec -T php php bin/console cos:experience:migrate --no-interaction > /tmp/experience-migration.txt
           grep -q 'Workspace Migration' /tmp/experience-migration.txt
           grep -q 'BLOCKED' /tmp/experience-migration.txt
+          docker compose exec -T php php bin/console cos:experience:external --json --no-interaction > /tmp/experience-external.json
+          grep -q '"pages"' /tmp/experience-external.json
+          grep -q '"public"' /tmp/experience-external.json
+          grep -q '"portal"' /tmp/experience-external.json
       - name: Smoke vertical slices
         run: bash bin/verify smoke
       - name: Production cutover Web routes
