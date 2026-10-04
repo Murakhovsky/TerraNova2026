@@ -116,7 +116,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
                 'format' => [
                     'type' => 'json_schema',
                     'name' => $this->schemaName($request->useCase),
-                    'strict' => true,
+                    'strict' => $this->isStrictSchemaCompatible($request->responseSchema),
                     'schema' => $request->responseSchema,
                 ],
             ],
@@ -246,6 +246,64 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
         }
 
         return null;
+    }
+
+    /** @param array<string,mixed> $schema */
+    private function isStrictSchemaCompatible(array $schema): bool
+    {
+        $type = $schema['type'] ?? null;
+        $types = is_array($type) ? $type : [$type];
+
+        if (in_array('object', $types, true)) {
+            if (($schema['additionalProperties'] ?? null) !== false) {
+                return false;
+            }
+
+            $properties = $schema['properties'] ?? [];
+            $required = $schema['required'] ?? [];
+            if (!is_array($properties) || !is_array($required)) {
+                return false;
+            }
+
+            $propertyNames = array_keys($properties);
+            $requiredNames = array_values(array_filter($required, 'is_string'));
+            sort($propertyNames);
+            sort($requiredNames);
+            if ($propertyNames !== $requiredNames) {
+                return false;
+            }
+
+            foreach ($properties as $propertySchema) {
+                if (!is_array($propertySchema) || !$this->isStrictSchemaCompatible($propertySchema)) {
+                    return false;
+                }
+            }
+        }
+
+        if (in_array('array', $types, true)) {
+            $items = $schema['items'] ?? null;
+            if (!is_array($items) || !$this->isStrictSchemaCompatible($items)) {
+                return false;
+            }
+        }
+
+        foreach (['anyOf', 'oneOf'] as $composition) {
+            if (!isset($schema[$composition])) continue;
+            if (!is_array($schema[$composition]) || $schema[$composition] === []) return false;
+            foreach ($schema[$composition] as $candidate) {
+                if (!is_array($candidate) || !$this->isStrictSchemaCompatible($candidate)) {
+                    return false;
+                }
+            }
+        }
+
+        foreach (['allOf', 'not', 'if', 'then', 'else', 'dependentRequired', 'dependentSchemas', 'patternProperties'] as $unsupported) {
+            if (array_key_exists($unsupported, $schema)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function schemaName(?string $useCase): string

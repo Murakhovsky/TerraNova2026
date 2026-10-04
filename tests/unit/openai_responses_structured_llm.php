@@ -67,6 +67,34 @@ if (!str_contains((string) ($captured['body']['input'][0]['content'][0]['text'] 
     throw new RuntimeException('OpenAI adapter did not preserve the untrusted-context boundary.');
 }
 
+
+$looseRequest = new StructuredLlmRequest(
+    systemPrompt: 'Return the requested engineering structure.',
+    userPrompt: 'Plan the feature.',
+    context: ['feature_id' => 'COS-185'],
+    responseSchema: [
+        'type' => 'object',
+        'required' => ['feature'],
+        'properties' => [
+            'feature' => [
+                'type' => 'object',
+                'properties' => [
+                    'title' => ['type' => 'string'],
+                ],
+                'additionalProperties' => true,
+            ],
+        ],
+        'additionalProperties' => false,
+    ],
+    model: 'gpt-request-model',
+    organizationId: 'default',
+    useCase: 'agent.engineering_manager',
+);
+$loosePayload = $client->payload($looseRequest, 'gpt-request-model');
+if (($loosePayload['text']['format']['strict'] ?? null) !== false) {
+    throw new RuntimeException('OpenAI adapter must downgrade non-strict-compatible schemas instead of sending invalid strict Structured Outputs.');
+}
+
 $retryClient = new OpenAiResponsesStructuredLlmClient(
     token: 'test-token',
     model: 'gpt-test',
