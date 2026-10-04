@@ -120,3 +120,19 @@ Domain / Agent
 ```
 
 Це дозволяє надалі додати Anthropic/Gemini/інший provider як ще один adapter без окремого LLM Gateway.
+
+## Runtime-налаштування
+
+LLM runtime використовує Platform Settings як tenant-scoped override:
+
+```text
+/admin/settings/llm
+→ Platform Settings DB
+→ PlatformSettingsLlmRouteResolver
+→ GovernedStructuredLlmClient
+→ provider adapter
+```
+
+DB має пріоритет над ENV для `llm.provider`, `llm.default_model`, `llm.timeout_seconds`, `llm.max_attempts` та Engineering role models. OpenAI API key зберігається тільки як encrypted secret `llm.openai.api_key`.
+
+ENV залишається bootstrap/fallback, тому fresh deployment може стартувати без попередньо заповненої Settings DB.

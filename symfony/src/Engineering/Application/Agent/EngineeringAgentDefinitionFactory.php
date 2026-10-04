@@ -5,6 +5,7 @@ namespace App\Engineering\Application\Agent;
 
 use App\Engineering\Domain\Agent\AgentRole;
 use Kernel\Agent\AgentDefinition;
+use Platform\Settings\Contract\PlatformSettingsReaderInterface;
 use RuntimeException;
 
 final class EngineeringAgentDefinitionFactory
@@ -15,9 +16,10 @@ final class EngineeringAgentDefinitionFactory
         private readonly string $developerModel = '',
         private readonly string $reviewerModel = '',
         private readonly string $qaModel = '',
+        private readonly ?PlatformSettingsReaderInterface $settings = null,
     ) {}
 
-    public function create(AgentRole $role): AgentDefinition
+    public function create(AgentRole $role, ?string $organizationId = null): AgentDefinition
     {
         return new AgentDefinition(
             name: strtolower($role->value),
@@ -31,7 +33,7 @@ final class EngineeringAgentDefinitionFactory
             domainName: 'engineering',
             enabled: true,
             profile: 'engineering',
-            model: $this->model($role),
+            model: $this->model($role, $organizationId),
             contextSources: null,
             confidenceThreshold: 0.0,
             maxActionsPerRun: 0,
@@ -40,8 +42,16 @@ final class EngineeringAgentDefinitionFactory
         );
     }
 
-    private function model(AgentRole $role): ?string
+    private function model(AgentRole $role, ?string $organizationId): ?string
     {
+        $key = match ($role) {
+            AgentRole::ENGINEERING_MANAGER => 'manager.model',
+            AgentRole::PRINCIPAL_ARCHITECT => 'architect.model',
+            AgentRole::DEVELOPER => 'developer.model',
+            AgentRole::REVIEWER => 'reviewer.model',
+            AgentRole::QA => 'qa.model',
+        };
+
         $model = match ($role) {
             AgentRole::ENGINEERING_MANAGER => $this->managerModel,
             AgentRole::PRINCIPAL_ARCHITECT => $this->architectModel,
@@ -49,6 +59,10 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::REVIEWER => $this->reviewerModel,
             AgentRole::QA => $this->qaModel,
         };
+        if ($organizationId !== null && $this->settings !== null) {
+            $model = (string) $this->settings->value($organizationId, 'engineering', $key, $model);
+        }
+
         $model = trim($model);
         return $model !== '' ? $model : null;
     }

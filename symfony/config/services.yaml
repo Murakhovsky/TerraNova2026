@@ -45,6 +45,8 @@ parameters:
   env(COS_ENGINEERING_DEVELOPER_MODEL): ''
   env(COS_ENGINEERING_REVIEWER_MODEL): ''
   env(COS_ENGINEERING_QA_MODEL): ''
+  env(COS_SECRET_MASTER_KEY): ''
+  env(COS_SECRET_MASTER_KEY_ID): 'env-v1'
 
 services:
   _defaults:
@@ -317,6 +319,29 @@ services:
 
   Platform\Storage\Contract\FileStorageInterface:
     alias: Infrastructure\Storage\LocalFileStorage
+
+  Infrastructure\Platform\Persistence\MySql\Settings\MysqlPlatformSettingsRepository:
+    arguments:
+      $database: '@Infrastructure\Platform\Persistence\Pdo\PdoConnection'
+
+  Platform\Settings\Contract\PlatformSettingsRepositoryInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Settings\MysqlPlatformSettingsRepository
+
+  Infrastructure\Platform\Security\SodiumSecretEncryption:
+    arguments:
+      $masterKey: '%env(COS_SECRET_MASTER_KEY)%'
+      $keyId: '%env(COS_SECRET_MASTER_KEY_ID)%'
+
+  Platform\Settings\Contract\SecretEncryptionInterface:
+    alias: Infrastructure\Platform\Security\SodiumSecretEncryption
+
+  Platform\Settings\Service\PlatformSettingsService: ~
+
+  Platform\Settings\Contract\PlatformSettingsReaderInterface:
+    alias: Platform\Settings\Service\PlatformSettingsService
+
+  Platform\Settings\Contract\PlatformSettingsWriterInterface:
+    alias: Platform\Settings\Service\PlatformSettingsService
 
   Infrastructure\Platform\Persistence\MySql\FeatureFlag\MysqlFeatureFlagRepository:
     arguments:
@@ -1221,6 +1246,7 @@ services:
     arguments:
       $token: '%env(LLM_TOKEN)%'
       $model: '%env(LLM_MODEL)%'
+      $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
 
   Kernel\Llm\LlmProviderRegistry:
     arguments:
@@ -1241,13 +1267,21 @@ services:
       $defaultRoutes:
         - '@wave4.llm.primary_route'
 
+  Infrastructure\Llm\PlatformSettingsLlmRouteResolver:
+    arguments:
+      $fallback: '@Kernel\Llm\LlmRoutingPolicy'
+      $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
+
+  Kernel\Llm\LlmRouteResolverInterface:
+    alias: Infrastructure\Llm\PlatformSettingsLlmRouteResolver
+
   Kernel\Llm\StructuredLlmClientInterface:
     alias: Kernel\Llm\GovernedStructuredLlmClient
 
   Kernel\Llm\GovernedStructuredLlmClient:
     arguments:
       $providers: '@Kernel\Llm\LlmProviderRegistry'
-      $routing: '@Kernel\Llm\LlmRoutingPolicy'
+      $routing: '@Kernel\Llm\LlmRouteResolverInterface'
       $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
       $resilience: '@Kernel\Resilience\ExternalCallExecutor'
@@ -2583,6 +2617,19 @@ services:
 
   App\Web\Administration\AdministrationUsersController:
     public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Administration\PlatformSettingsController:
+    public: true
+    arguments:
+      $fallbackProvider: '%env(LLM_PROVIDER)%'
+      $fallbackModel: '%env(LLM_MODEL)%'
+      $fallbackToken: '%env(LLM_TOKEN)%'
+      $fallbackManagerModel: '%env(COS_ENGINEERING_MANAGER_MODEL)%'
+      $fallbackArchitectModel: '%env(COS_ENGINEERING_ARCHITECT_MODEL)%'
+      $fallbackDeveloperModel: '%env(COS_ENGINEERING_DEVELOPER_MODEL)%'
+      $fallbackReviewerModel: '%env(COS_ENGINEERING_REVIEWER_MODEL)%'
+      $fallbackQaModel: '%env(COS_ENGINEERING_QA_MODEL)%'
     tags: ['controller.service_arguments']
 
   App\Web\Portal\CabinetController:
