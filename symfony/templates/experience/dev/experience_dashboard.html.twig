@@ -117,6 +117,37 @@
         </div>
     </section>
 
+    <section class="cos-page__section" aria-labelledby="experience-human-review">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-human-review">Golden human review</h2>
+                <p>Automated QA is evidence, not product acceptance. EX-005 stays blocked until all eight decisions are explicit.</p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Page</th>
+                        <th scope="col">Route</th>
+                        <th scope="col">Structure</th>
+                        <th scope="col">Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in experience.goldenReview.pages %}
+                    <tr>
+                        <th scope="row"><code>{{ item.id }}</code></th>
+                        <td><a href="{{ item.path }}">{{ item.path }}</a></td>
+                        <td>{{ item.structure.passed|default(false) ? 'PASS' : 'FAIL' }}</td>
+                        <td><span class="cos-badge">{{ item.decision }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <section class="cos-page__section" aria-labelledby="experience-design-system">
         <div class="cos-page__section-head">
             <div>

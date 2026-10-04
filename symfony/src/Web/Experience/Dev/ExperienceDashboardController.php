@@ -10,6 +10,7 @@ use App\Web\Experience\DesignSystem\DesignSystemAuditService;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Golden\GoldenExperienceSet;
 use App\Web\Experience\Golden\GoldenStructureAuditService;
+use App\Web\Experience\Golden\GoldenHumanReviewPacketBuilder;
 use App\Web\Experience\Registry\CompiledPageContractRegistry;
 use App\Web\Experience\Registry\ExperienceRouteInventory;
 use App\Web\Experience\Registry\PageExperienceStatus;
@@ -33,6 +34,7 @@ final readonly class ExperienceDashboardController
         private DesignSystemAuditService $designSystem,
         private GoldenExperienceSet $golden,
         private GoldenStructureAuditService $goldenStructure,
+        private GoldenHumanReviewPacketBuilder $goldenReview,
         private TenantContextProviderInterface $tenants,
         private WorkspaceShellFactory $shells,
     ) {
@@ -145,6 +147,7 @@ final readonly class ExperienceDashboardController
                     'designSystem' => $this->designSystem->audit()->toArray(),
                     'golden' => $this->golden->report()->toArray(),
                     'goldenStructure' => $this->goldenStructure->audit()->toArray(),
+                    'goldenReview' => $this->goldenReview->build(),
                     'pages' => array_values(array_map(
                         static fn ($contract): array => [
                             'id' => $contract->id->value,
