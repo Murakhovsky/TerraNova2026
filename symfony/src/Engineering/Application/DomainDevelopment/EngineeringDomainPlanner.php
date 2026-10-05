@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
+use App\Engineering\Application\Policy\EngineeringPolicyEngine;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
@@ -18,6 +19,8 @@ final readonly class EngineeringDomainPlanner
         private EngineeringDomainAgentService $agents,
         private EngineeringDomainContextBuilder $context,
         private EngineeringArtifactDependencyGraph $artifactGraph,
+        private EngineeringDomainHumanGateService $humanGates,
+        private EngineeringPolicyEngine $policy = new EngineeringPolicyEngine(),
         private FeatureDependencyGraph $graph = new FeatureDependencyGraph(),
     ) {}
 
