@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_instrument_identifiers (
     KEY ix_cm_identifier_instrument (organization_id,instrument_id),
     CONSTRAINT fk_cm_identifier_instrument FOREIGN KEY (organization_id,instrument_id)
         REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
-        ON UPDATE CASCADE ON DELETE CASCADE
+        ON UPDATE RESTRICT ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tn_capital_market_relationships (
@@ -60,10 +60,10 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_relationships (
     KEY ix_cm_relationship_target (organization_id,target_instrument_id,status),
     CONSTRAINT fk_cm_relationship_source FOREIGN KEY (organization_id,source_instrument_id)
         REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT fk_cm_relationship_target FOREIGN KEY (organization_id,target_instrument_id)
         REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT chk_cm_relationship_status CHECK (status IN ('ACTIVE','INACTIVE')),
     CONSTRAINT chk_cm_relationship_distinct CHECK (source_instrument_id <> target_instrument_id),
     CONSTRAINT chk_cm_relationship_window CHECK (effective_to IS NULL OR effective_to > effective_from)
@@ -85,13 +85,13 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_pairs (
     KEY ix_cm_pair_members (organization_id,instrument_a_id,instrument_b_id,status),
     CONSTRAINT fk_cm_pair_a FOREIGN KEY (organization_id,instrument_a_id)
         REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT fk_cm_pair_b FOREIGN KEY (organization_id,instrument_b_id)
         REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT fk_cm_pair_relationship FOREIGN KEY (organization_id,relationship_id)
         REFERENCES tn_capital_market_relationships (organization_id,relationship_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT chk_cm_pair_distinct CHECK (instrument_a_id <> instrument_b_id),
     CONSTRAINT chk_cm_pair_status CHECK (status IN ('ACTIVE','INACTIVE'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_venue_capabilities (
     PRIMARY KEY (organization_id,venue_id,capability),
     CONSTRAINT fk_cm_venue_capability_venue FOREIGN KEY (organization_id,venue_id)
         REFERENCES tn_capital_market_venues (organization_id,venue_id)
-        ON UPDATE CASCADE ON DELETE CASCADE
+        ON UPDATE RESTRICT ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tn_capital_market_venue_instruments (
@@ -148,10 +148,10 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_venue_instruments (
     KEY ix_cm_instrument_venues (organization_id,instrument_id,status),
     CONSTRAINT fk_cm_venue_instrument_venue FOREIGN KEY (organization_id,venue_id)
         REFERENCES tn_capital_market_venues (organization_id,venue_id)
-        ON UPDATE CASCADE ON DELETE CASCADE,
+        ON UPDATE RESTRICT ON DELETE CASCADE,
     CONSTRAINT fk_cm_venue_instrument_instrument FOREIGN KEY (organization_id,instrument_id)
         REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT chk_cm_venue_instrument_status CHECK (status IN ('ACTIVE','SUSPENDED','DELISTED')),
     CONSTRAINT chk_cm_venue_price_precision CHECK (price_precision <= 30),
     CONSTRAINT chk_cm_venue_quantity_precision CHECK (quantity_precision <= 30),
