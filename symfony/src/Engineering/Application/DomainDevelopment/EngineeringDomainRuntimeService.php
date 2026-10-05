@@ -25,6 +25,11 @@ final readonly class EngineeringDomainRuntimeService
         private int $defaultMaxParallelDevelopers = 2,
         private int $defaultMaxParallelReviews = 2,
         private int $defaultMaxParallelQa = 2,
+        private int $defaultMaxFeatureRetries = 3,
+        private int $defaultMaxDomainIntegrationCycles = 3,
+        private int $defaultContextBudget = 120000,
+        private int $defaultTokenBudget = 1000000,
+        private float $defaultCostBudget = 25.0,
     ) {}
 
     public function create(
@@ -39,6 +44,11 @@ final readonly class EngineeringDomainRuntimeService
         int $maxParallelDevelopers = 0,
         int $maxParallelReviews = 0,
         int $maxParallelQa = 0,
+        int $maxFeatureRetries = -1,
+        int $maxDomainIntegrationCycles = 0,
+        int $contextBudget = 0,
+        int $tokenBudget = 0,
+        float $costBudget = -1.0,
     ): string {
         if (trim($organizationId) === '') throw new InvalidArgumentException('Organization id is required.');
         $targetRepository = trim($targetRepository);
@@ -49,6 +59,11 @@ final readonly class EngineeringDomainRuntimeService
         $maxParallelDevelopers = $maxParallelDevelopers > 0 ? $maxParallelDevelopers : $this->defaultMaxParallelDevelopers;
         $maxParallelReviews = $maxParallelReviews > 0 ? $maxParallelReviews : $this->defaultMaxParallelReviews;
         $maxParallelQa = $maxParallelQa > 0 ? $maxParallelQa : $this->defaultMaxParallelQa;
+        $maxFeatureRetries = $maxFeatureRetries >= 0 ? $maxFeatureRetries : $this->defaultMaxFeatureRetries;
+        $maxDomainIntegrationCycles = $maxDomainIntegrationCycles > 0 ? $maxDomainIntegrationCycles : $this->defaultMaxDomainIntegrationCycles;
+        $contextBudget = $contextBudget > 0 ? $contextBudget : $this->defaultContextBudget;
+        $tokenBudget = $tokenBudget > 0 ? $tokenBudget : $this->defaultTokenBudget;
+        $costBudget = $costBudget >= 0 ? $costBudget : $this->defaultCostBudget;
 
         $id = EngineeringId::generate();
         $targetBranch = trim($targetBranch);
@@ -70,6 +85,11 @@ final readonly class EngineeringDomainRuntimeService
             $maxParallelDevelopers,
             $maxParallelReviews,
             $maxParallelQa,
+            $maxFeatureRetries,
+            $maxDomainIntegrationCycles,
+            $contextBudget,
+            $tokenBudget,
+            $costBudget,
         );
         $this->domains->saveArtifact(
             $id,
@@ -97,6 +117,13 @@ final readonly class EngineeringDomainRuntimeService
                     'developers' => $maxParallelDevelopers,
                     'reviews' => $maxParallelReviews,
                     'qa' => $maxParallelQa,
+                ],
+                'budgets' => [
+                    'max_feature_retries' => $maxFeatureRetries,
+                    'max_domain_integration_cycles' => $maxDomainIntegrationCycles,
+                    'context_budget' => $contextBudget,
+                    'token_budget' => $tokenBudget,
+                    'cost_budget' => $costBudget,
                 ],
             ],
             'engineering-domain:create:'.$id,
