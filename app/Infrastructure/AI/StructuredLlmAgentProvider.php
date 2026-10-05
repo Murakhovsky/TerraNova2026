@@ -57,9 +57,13 @@ final readonly class StructuredLlmAgentProvider implements LlmProviderInterface
             model: $response->model,
             usage: array_filter([
                 'input_tokens' => $response->inputTokens,
+                'cached_input_tokens' => $response->cachedInputTokens,
                 'output_tokens' => $response->outputTokens,
+                'reasoning_tokens' => $response->reasoningTokens,
                 'cost_amount' => $response->costAmount,
                 'cost_currency' => $response->costCurrency,
+                'cost_source' => $response->costSource,
+                'pricing_version' => $response->pricingVersion,
             ], static fn (mixed $value): bool => $value !== null),
             metadata: [
                 'organization_id' => $context->organizationId->value(),
