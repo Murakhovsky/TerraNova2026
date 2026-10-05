@@ -12,9 +12,13 @@ final class EngineeringAgentSchemas
     {
         return match ($role) {
             AgentRole::ENGINEERING_MANAGER => self::manager(),
+            AgentRole::PRODUCT_REQUIREMENTS => self::manager(),
+            AgentRole::QA_PLANNER => self::qa(),
             AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
             AgentRole::DEVELOPER => self::developer(),
             AgentRole::REVIEWER => self::reviewer(),
+            AgentRole::QA_EXECUTOR => self::qa(),
+            AgentRole::INTEGRATION_RELEASE => self::manager(),
             AgentRole::QA => self::qa(),
         };
     }
