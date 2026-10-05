@@ -28,6 +28,11 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         int $maxParallelDevelopers = 2,
         int $maxParallelReviews = 2,
         int $maxParallelQa = 2,
+        int $maxFeatureRetries = 3,
+        int $maxDomainIntegrationCycles = 3,
+        int $contextBudget = 120000,
+        int $tokenBudget = 1000000,
+        float $costBudget = 25.0,
     ): void {
         $id = EngineeringId::assert($id);
         $domainKey = $this->key($domainKey);
@@ -47,6 +52,11 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
             'max_parallel_developers' => max(1, min(20, $maxParallelDevelopers)),
             'max_parallel_reviews' => max(1, min(20, $maxParallelReviews)),
             'max_parallel_qa' => max(1, min(20, $maxParallelQa)),
+            'max_feature_retries' => max(0, min(50, $maxFeatureRetries)),
+            'max_domain_integration_cycles' => max(1, min(20, $maxDomainIntegrationCycles)),
+            'context_budget' => max(10000, $contextBudget),
+            'token_budget' => max(1000, $tokenBudget),
+            'cost_budget' => max(0.0, $costBudget),
             'status_reason' => null,
             'created_by' => $createdBy,
             'created_at' => $this->now(),
@@ -788,6 +798,11 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         $row['max_parallel_developers'] = (int) ($row['max_parallel_developers'] ?? 2);
         $row['max_parallel_reviews'] = (int) ($row['max_parallel_reviews'] ?? 2);
         $row['max_parallel_qa'] = (int) ($row['max_parallel_qa'] ?? 2);
+        $row['max_feature_retries'] = (int) ($row['max_feature_retries'] ?? 3);
+        $row['max_domain_integration_cycles'] = (int) ($row['max_domain_integration_cycles'] ?? 3);
+        $row['context_budget'] = (int) ($row['context_budget'] ?? 120000);
+        $row['token_budget'] = (int) ($row['token_budget'] ?? 1000000);
+        $row['cost_budget'] = (float) ($row['cost_budget'] ?? 25.0);
         return $row;
     }
 
