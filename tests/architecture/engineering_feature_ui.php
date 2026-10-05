@@ -15,8 +15,10 @@ $store = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructu
 foreach ([
     '/admin/engineering',
     '/admin/engineering/{id}',
+    '/admin/engineering/{id}/live',
     'EngineeringFeatureController::index',
     'EngineeringFeatureController::show',
+    'EngineeringFeatureController::live',
     '/admin/engineering/{id}/update',
     '/admin/engineering/{id}/delete',
     '/admin/engineering/{id}/cancel',
@@ -53,6 +55,10 @@ foreach ([
     'workspaceView',
     'workspaceQuery',
     'queueImmediate',
+    'activeOperation',
+    'latest_agent',
+    'active_operation',
+    'engineering_live_status_failed',
 ] as $needle) {
     if (!str_contains($controller, $needle)) throw new RuntimeException('Engineering feature UI controller missing '.$needle);
 }
@@ -77,6 +83,11 @@ foreach ([
     'engineering-details-tabs',
     'data-tabs-target="panel"',
     'data-engineering-update',
+    'data-engineering-live-url',
+    'data-engineering-live-terminal',
+    'Live · автооновлення 2с',
+    'Workflow активний · очікування наступної runtime-події',
+    'setInterval(poll, 2000)',
     'Перевірити merge та завершити',
     'data-engineering-delete',
 ] as $needle) {
