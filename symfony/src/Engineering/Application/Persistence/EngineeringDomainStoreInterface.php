@@ -18,6 +18,11 @@ interface EngineeringDomainStoreInterface
         int $maxParallelDevelopers = 2,
         int $maxParallelReviews = 2,
         int $maxParallelQa = 2,
+        int $maxFeatureRetries = 3,
+        int $maxDomainIntegrationCycles = 3,
+        int $contextBudget = 120000,
+        int $tokenBudget = 1000000,
+        float $costBudget = 25.0,
     ): void;
 
     /** @return array<string,mixed> */
