@@ -63,6 +63,12 @@ final class TableOwnership
             'tn_growth_experiments', 'tn_growth_experiment_assignments',
             'tn_growth_experiment_decision_runs', 'tn_growth_experiment_decision_recommendations',
         ],
+        'CapitalMarkets' => [
+            'tn_capital_market_instruments', 'tn_capital_market_instrument_identifiers',
+            'tn_capital_market_relationships', 'tn_capital_market_pairs',
+            'tn_capital_market_venues', 'tn_capital_market_venue_capabilities',
+            'tn_capital_market_venue_instruments', 'capital_market_user_capabilities',
+        ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [
             'diagnostic_packs', 'diagnostic_sessions', 'diagnostic_evidence', 'diagnostic_records',

@@ -14,6 +14,14 @@ generated: true
 
 | Модуль | Міграція | Задіяні таблиці |
 | --- | --- | --- |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `capital_market_user_capabilities` |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `tn_capital_market_instrument_identifiers` |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `tn_capital_market_instruments` |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `tn_capital_market_pairs` |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `tn_capital_market_relationships` |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `tn_capital_market_venue_capabilities` |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `tn_capital_market_venue_instruments` |
+| `capital_markets` | `app/migrations/20261005_000124_capital_markets_foundation.sql` | `tn_capital_market_venues` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |

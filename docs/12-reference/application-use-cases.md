@@ -16,6 +16,7 @@ generated: true
 
 | Модуль | Точок входу |
 | --- | ---: |
+| `capital_markets` | 0 |
 | `construction` | 0 |
 | `diagnostic` | 10 |
 | `finance` | 0 |
@@ -26,6 +27,10 @@ generated: true
 | `real_estate` | 0 |
 | `sales` | 8 |
 | `service` | 0 |
+
+## Capital Markets (`capital_markets`)
+
+Точок входу Application UseCase не знайдено.
 
 ## Construction (`construction`)
 

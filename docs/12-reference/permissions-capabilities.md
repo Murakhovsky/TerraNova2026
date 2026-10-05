@@ -18,7 +18,7 @@ generated: true
 
 | Класифікація | Кількість | Значення |
 | --- | ---: | --- |
-| `both` | 10 | Capability присутня і в runtime catalogue, і в manifest. |
+| `both` | 19 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
 | `manifest-only` | 130 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
@@ -26,6 +26,15 @@ generated: true
 
 | Модуль | Capability | Runtime | Manifest | Класифікація | Runtime source | Manifest source |
 | --- | --- | --- | --- | --- | --- | --- |
+| `capital_markets` | `capital_markets.audit.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.instrument.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.instrument.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.relationship.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.relationship.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.venue.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.venue.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `diagnostic` | `diagnostic.methodology.compile` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.semantic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.state.rebuild` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
@@ -176,6 +185,7 @@ Runtime vocabularies підключаються до генератора **яв
 
 | Модуль | Symbol | Джерело |
 | --- | --- | --- |
+| `capital_markets` | `Domains\CapitalMarkets\Model\CapitalMarketsCapability` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` |
 | `sales` | `Domains\Sales\Model\SalesCapability` | `app/Domains/Sales/Model/SalesCapability.php` |
 
 ## Тлумачення

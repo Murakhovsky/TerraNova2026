@@ -14,6 +14,7 @@ generated: true
 
 | Модуль | Contributor | Файлів джерел маршрутів |
 | --- | --- | ---: |
+| `capital_markets` | — | 0 |
 | `construction` | — | 0 |
 | `diagnostic` | — | 0 |
 | `finance` | — | 0 |

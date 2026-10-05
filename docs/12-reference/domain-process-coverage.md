@@ -16,13 +16,14 @@ generated: true
 
 ## Підсумок
 
-- **Installable Domains:** 10
+- **Installable Domains:** 11
 - **Покрито канонічним процесом:** 6
-- **Явних exemptions:** 4
+- **Явних exemptions:** 5
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `capital_markets` · Capital Markets | `0.2.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `construction` · Construction | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `diagnostic` · Diagnostics | `1.0.0` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
@@ -35,6 +36,11 @@ generated: true
 | `service` · Service | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 
 ## Канонічне ownership процесів
+
+### Capital Markets (`capital_markets`)
+
+- **Exempt:** CM-FOUNDATION owns structural registries and supporting CRUD only; the first canonical Capital Markets business process begins with the Market Intelligence feature pack, while trading and execution remain intentionally absent.
+- **Owner:** Capital Markets Architecture
 
 ### Construction (`construction`)
 
@@ -93,6 +99,7 @@ generated: true
 
 | Domain | Owner | Причина |
 | --- | --- | --- |
+| `capital_markets` | Capital Markets Architecture | CM-FOUNDATION owns structural registries and supporting CRUD only; the first canonical Capital Markets business process begins with the Market Intelligence feature pack, while trading and execution remain intentionally absent. |
 | `construction` | COS Architecture | V1 skeleton only; executable Construction process models are intentionally deferred until Construction runtime implementation. |
 | `finance` | COS Architecture | V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation. |
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |

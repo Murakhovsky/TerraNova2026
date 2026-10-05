@@ -1713,6 +1713,57 @@ services:
       $assignDealOwner: '@Domains\Sales\Application\UseCase\AssignDealOwner'
       $scheduleLeadFollowup: '@Domains\Sales\Application\UseCase\ScheduleLeadFollowup'
 
+  # Capital Markets CM-FOUNDATION runtime
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Domain\Contract\InstrumentRepository:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelationshipRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Domain\Contract\RelationshipRepository:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelationshipRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlVenueRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Domain\Contract\VenueRepository:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlVenueRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalMarketsAccessControl:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalMarketsAccessControl
+
+  Domains\CapitalMarkets\Infrastructure\Event\KernelCapitalMarketsEventPublisher:
+    arguments:
+      $events: '@Kernel\Event\EventBus'
+
+  Domains\CapitalMarkets\Application\Contract\CapitalMarketsEventPublisherInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Event\KernelCapitalMarketsEventPublisher
+
+  Domains\CapitalMarkets\Application\Audit\CapitalMarketsAuditTrail: ~
+
+  Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate: ~
+
+  Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService: ~
+
+  Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary:
+    alias: Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService
+
+  Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
+
+  App\Web\CapitalMarkets\CapitalMarketsPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Infrastructure\Module\ModuleCatalogFactory:
     arguments:
       $domainsPath: '%kernel.project_dir%/../app/Domains'
@@ -1741,6 +1792,12 @@ services:
 
   growthNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\GrowthWebProvider
+
+  capitalMarketsDomainModule:
+    alias: Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule
+
+  capitalMarketsNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\CapitalMarketsWebProvider
 
   App\Infrastructure\Module\PdoModuleStateRepository:
     arguments:
@@ -1773,6 +1830,7 @@ services:
     arguments:
       $modules:
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
+        - '@Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule'
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'

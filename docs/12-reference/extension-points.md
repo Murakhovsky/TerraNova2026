@@ -18,10 +18,10 @@ generated: true
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
 | `web.actions` | module-defined | 1 |
-| `web.commands` | module-defined | 4 |
-| `web.navigation` | module-defined | 4 |
-| `web.search` | module-defined | 4 |
-| `web.workspace` | module-defined | 4 |
+| `web.commands` | module-defined | 5 |
+| `web.navigation` | module-defined | 5 |
+| `web.search` | module-defined | 5 |
+| `web.workspace` | module-defined | 5 |
 | `web.workspace.extensions` | module-defined | 1 |
 
 ## `api.routes`
@@ -62,6 +62,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
@@ -73,6 +74,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
@@ -84,6 +86,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
@@ -95,6 +98,7 @@ generated: true
 
 | Модуль | Service |
 | --- | --- |
+| `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
 | `property` | `propertyNavigationContributor` |

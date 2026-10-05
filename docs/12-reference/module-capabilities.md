@@ -20,6 +20,7 @@ generated: true
 
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `capital_markets` | Capital Markets | `0.2.0` | `0.2.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
@@ -30,6 +31,28 @@ generated: true
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
 | `service` | Service | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Service/module.php` |
+
+## Capital Markets (`capital_markets`)
+
+**Опис із manifest:** Autonomous Capital Markets bounded context for instrument identity, economic relationships and venue registry. Foundation has no market-data or trading execution runtime.
+
+- runtime service модуля: `capitalMarketsDomainModule`;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: `app/migrations/20261005_000124_capital_markets_foundation.sql`.
+
+### Задекларовані capabilities
+
+- `capital_markets.audit.view`;
+- `capital_markets.instrument.manage`;
+- `capital_markets.instrument.view`;
+- `capital_markets.manage`;
+- `capital_markets.relationship.manage`;
+- `capital_markets.relationship.view`;
+- `capital_markets.venue.manage`;
+- `capital_markets.venue.view`;
+- `capital_markets.view`;
 
 ## Construction (`construction`)
 

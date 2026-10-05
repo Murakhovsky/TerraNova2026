@@ -2634,3 +2634,116 @@ cos_api_engineering_domain_approve:
   controller: App\Http\Api\V1\Controller\EngineeringDomainController::approve
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
+
+# Capital Markets CM-FOUNDATION UI
+capital_markets_overview:
+  path: /capital-markets
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::overview
+  methods: [GET]
+
+capital_markets_instruments:
+  path: /capital-markets/instruments
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::instruments
+  methods: [GET]
+
+capital_markets_instrument_create:
+  path: /capital-markets/instruments
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::createInstrument
+  methods: [POST]
+
+capital_markets_instrument:
+  path: /capital-markets/instruments/{id}
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::instrument
+  methods: [GET]
+
+capital_markets_instrument_update:
+  path: /capital-markets/instruments/{id}
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::updateInstrument
+  methods: [POST]
+
+capital_markets_relationships:
+  path: /capital-markets/relationships
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::relationships
+  methods: [GET]
+
+capital_markets_relationship_create:
+  path: /capital-markets/relationships
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::createRelationship
+  methods: [POST]
+
+capital_markets_venues:
+  path: /capital-markets/venues
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::venues
+  methods: [GET]
+
+capital_markets_venue_create:
+  path: /capital-markets/venues
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::createVenue
+  methods: [POST]
+
+capital_markets_venue_instrument_register:
+  path: /capital-markets/venues/{id}/instruments
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::registerVenueInstrument
+  methods: [POST]
+
+# Capital Markets CM-FOUNDATION API
+cos_api_v1_capital_markets_instruments:
+  path: /api/v1/capital-markets/instruments
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::instruments
+  methods: [GET]
+
+cos_api_v1_capital_markets_instrument_create:
+  path: /api/v1/capital-markets/instruments
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::createInstrument
+  methods: [POST]
+
+cos_api_v1_capital_markets_instrument:
+  path: /api/v1/capital-markets/instruments/{id}
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::instrument
+  methods: [GET]
+
+cos_api_v1_capital_markets_instrument_update:
+  path: /api/v1/capital-markets/instruments/{id}
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::updateInstrument
+  methods: [PATCH]
+
+cos_api_v1_capital_markets_instrument_identifier:
+  path: /api/v1/capital-markets/instruments/{id}/identifiers
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::addInstrumentIdentifier
+  methods: [POST]
+
+cos_api_v1_capital_markets_instrument_relationships:
+  path: /api/v1/capital-markets/instruments/{id}/relationships
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::instrumentRelationships
+  methods: [GET]
+
+cos_api_v1_capital_markets_relationships:
+  path: /api/v1/capital-markets/relationships
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::relationships
+  methods: [GET]
+
+cos_api_v1_capital_markets_relationship_create:
+  path: /api/v1/capital-markets/relationships
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::createRelationship
+  methods: [POST]
+
+cos_api_v1_capital_markets_venues:
+  path: /api/v1/capital-markets/venues
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::venues
+  methods: [GET]
+
+cos_api_v1_capital_markets_venue_create:
+  path: /api/v1/capital-markets/venues
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::createVenue
+  methods: [POST]
+
+cos_api_v1_capital_markets_venue_instruments:
+  path: /api/v1/capital-markets/venues/{id}/instruments
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::venueInstruments
+  methods: [GET]
+
+cos_api_v1_capital_markets_venue_instrument_register:
+  path: /api/v1/capital-markets/venues/{id}/instruments
+  controller: App\Http\Api\V1\Controller\CapitalMarketsController::registerVenueInstrument
+  methods: [POST]
+
