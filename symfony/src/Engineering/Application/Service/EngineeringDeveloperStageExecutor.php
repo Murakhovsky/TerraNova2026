@@ -43,6 +43,7 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringSpecialistReportCollector $specialistReports,
+        private EngineeringArtifactInvalidationService $invalidation,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -374,7 +375,7 @@ final readonly class EngineeringDeveloperStageExecutor
             throw $error;
         }
 
-        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId): WorkflowDirective {
+        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId, $previousDevelopment): WorkflowDirective {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) {
                 throw new WorkflowAlreadyRunningException('Engineering workflow changed while Developer was running.');
@@ -388,13 +389,16 @@ final readonly class EngineeringDeveloperStageExecutor
                 in_array($developerStatus, ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true) ? 'COMPLETED' : ($developerStatus === 'BLOCKED' ? 'BLOCKED' : 'FAILED'),
                 ['status' => $developerStatus, 'revision' => $run->structuredOutput['repository_revision'] ?? null],
             );
-            $this->artifacts->createVersion(
+            $newDevelopment = $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::DEVELOPMENT_RESULT,
                 $run->structuredOutput,
                 agentRunId: $engineeringRunId,
                 createdByAgent: AgentRole::DEVELOPER->value,
             );
+            if ($previousDevelopment !== null && ($previousDevelopment['content_hash'] ?? null) !== ($newDevelopment['content_hash'] ?? null)) {
+                $this->invalidation->afterImplementationRevision($featureId);
+            }
 
             $next = $this->coordinator->acceptAgentResult(
                 $workflow,
