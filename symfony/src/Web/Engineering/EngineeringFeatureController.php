@@ -600,10 +600,12 @@ final readonly class EngineeringFeatureController
 
         $runs = is_array($data['agent_runs'] ?? null) ? $data['agent_runs'] : [];
         $roles = [];
+        $runDurations = [];
+        $agentRuntimeSeconds = 0;
         foreach ($runs as $run) {
             if (!is_array($run)) continue;
             $role = (string) ($run['role'] ?? 'UNKNOWN');
-            $roles[$role] ??= ['runs' => 0, 'completed' => 0, 'failed' => 0, 'running' => 0, 'tokens' => 0, 'cost' => 0.0];
+            $roles[$role] ??= ['runs' => 0, 'completed' => 0, 'failed' => 0, 'running' => 0, 'tokens' => 0, 'cost' => 0.0, 'duration_seconds' => 0];
             ++$roles[$role]['runs'];
             $runStatus = strtoupper((string) ($run['status'] ?? 'UNKNOWN'));
             if (in_array($runStatus, ['COMPLETED','APPROVED','PASS','PASSED','SUCCESS'], true)) ++$roles[$role]['completed'];
@@ -620,17 +622,40 @@ final readonly class EngineeringFeatureController
             } elseif (($run['cost'] ?? null) !== null) {
                 $roles[$role]['cost'] += (float) $run['cost'];
             }
+
+            $runDuration = $this->durationSeconds(
+                is_string($run['started_at'] ?? null) ? $run['started_at'] : null,
+                is_string($run['finished_at'] ?? null) ? $run['finished_at'] : null,
+            );
+            if ($runDuration !== null) {
+                $runId = trim((string) ($run['id'] ?? ''));
+                if ($runId !== '') {
+                    $runDurations[$runId] = [
+                        'seconds' => $runDuration,
+                        'label' => $this->durationLabel($runDuration),
+                    ];
+                }
+                $roles[$role]['duration_seconds'] += $runDuration;
+                $agentRuntimeSeconds += $runDuration;
+            }
         }
+
+        foreach ($roles as &$roleMetrics) {
+            $roleMetrics['duration_label'] = $this->durationLabel((int) $roleMetrics['duration_seconds']);
+        }
+        unset($roleMetrics);
 
         $currentAgent = null;
         for ($i = count($runs) - 1; $i >= 0; --$i) {
             $candidate = $runs[$i] ?? null;
             if (!is_array($candidate) || strtoupper((string) ($candidate['status'] ?? '')) !== 'RUNNING') continue;
+            $candidateId = (string) ($candidate['id'] ?? '');
             $currentAgent = [
                 'role' => (string) ($candidate['role'] ?? 'AGENT'),
-                'run_id' => (string) ($candidate['id'] ?? ''),
+                'run_id' => $candidateId,
                 'task_id' => $candidate['task_id'] ?? null,
                 'started_at' => $candidate['started_at'] ?? null,
+                'duration_label' => $runDurations[$candidateId]['label'] ?? '—',
             ];
             break;
         }
@@ -673,6 +698,10 @@ final readonly class EngineeringFeatureController
             is_string($data['workflow']['started_at'] ?? null) ? $data['workflow']['started_at'] : null,
             is_string($data['workflow']['finished_at'] ?? null) ? $data['workflow']['finished_at'] : null,
         );
+        $timeline = is_array($data['timeline'] ?? null) ? $data['timeline'] : [];
+        $lastEvent = $timeline[0] ?? null;
+        $heartbeatAt = is_string($data['workflow']['heartbeat_at'] ?? null) ? $data['workflow']['heartbeat_at'] : null;
+        $lastActivityAt = is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null;
 
         return [
             'state' => $state,
@@ -694,6 +723,18 @@ final readonly class EngineeringFeatureController
             'current_agent' => $currentAgent,
             'duration_seconds' => $durationSeconds,
             'duration_label' => $this->durationLabel($durationSeconds),
+            'agent_runtime_seconds' => $agentRuntimeSeconds,
+            'agent_runtime_label' => $this->durationLabel($agentRuntimeSeconds),
+            'run_durations' => $runDurations,
+            'heartbeat_label' => $this->relativeTimeLabel($heartbeatAt),
+            'last_activity_label' => $this->relativeTimeLabel($lastActivityAt),
+            'last_event' => is_array($lastEvent) ? [
+                'id' => (string) ($lastEvent['reference_id'] ?? ''),
+                'title' => (string) ($lastEvent['title'] ?? ''),
+                'status' => (string) ($lastEvent['status'] ?? ''),
+                'time' => (string) ($lastEvent['time'] ?? ''),
+                'time_label' => $this->relativeTimeLabel(is_string($lastEvent['time'] ?? null) ? $lastEvent['time'] : null),
+            ] : null,
             'stages' => $stages,
             'usage' => $usage,
             'tokens' => $usage['total_tokens'] ?? null,
@@ -785,6 +826,29 @@ final readonly class EngineeringFeatureController
         if ($hours < 24) return $hours.'г '.str_pad((string) $minutes, 2, '0', STR_PAD_LEFT).'хв';
         $days = intdiv($hours, 24);
         return $days.'д '.($hours % 24).'г';
+    }
+
+    private function relativeTimeLabel(?string $timestamp): string
+    {
+        if ($timestamp === null || trim($timestamp) === '') return 'немає даних';
+
+        try {
+            $then = new \DateTimeImmutable($timestamp);
+            $age = max(0, time() - $then->getTimestamp());
+            if ($age < 5) return 'щойно';
+            if ($age < 60) return $age.' с тому';
+            if ($age < 3600) return intdiv($age, 60).' хв тому';
+            if ($age < 86400) {
+                $hours = intdiv($age, 3600);
+                $minutes = intdiv($age % 3600, 60);
+                return $hours.' г'.($minutes > 0 ? ' '.$minutes.' хв' : '').' тому';
+            }
+            $days = intdiv($age, 86400);
+            $hours = intdiv($age % 86400, 3600);
+            return $days.' д'.($hours > 0 ? ' '.$hours.' г' : '').' тому';
+        } catch (\Throwable) {
+            return 'невідомо';
+        }
     }
 
     private function runtimeHealth(string $status, string $state, ?string $lastActivityAt): string
