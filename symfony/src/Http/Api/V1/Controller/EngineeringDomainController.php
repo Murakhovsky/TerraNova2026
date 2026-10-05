@@ -46,10 +46,10 @@ final readonly class EngineeringDomainController
         $name = trim((string) ($input['name'] ?? ''));
         $specification = trim((string) ($input['master_specification'] ?? ''));
         $repository = trim((string) ($input['target_repository'] ?? ''));
-        if ($domainKey === '' || $name === '' || $specification === '' || $repository === '') {
+        if ($domainKey === '' || $name === '' || $specification === '') {
             return $this->error(
                 'domain_input_required',
-                'domain_key, name, master_specification and target_repository are required.',
+                'domain_key, name and master_specification are required.',
                 422,
             );
         }
