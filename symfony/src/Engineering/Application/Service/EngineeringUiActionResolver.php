@@ -33,13 +33,14 @@ final readonly class EngineeringUiActionResolver
             || in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true);
         $draft = !$hasWorkflow && $featureStatus === 'NEW';
         $stalled = in_array($health, ['STALE','STALLED'], true);
+        $activeExecution = $hasWorkflow && $workflowStatus === 'RUNNING' && !$stalled;
 
         return [
             'open' => true,
             'edit' => $draft,
             'queue' => $draft,
             'run' => $draft,
-            'continue' => $hasWorkflow && !$terminal && !$waitingHuman && !$readyForHumanApproval && !$stalled,
+            'continue' => $hasWorkflow && !$terminal && !$waitingHuman && !$readyForHumanApproval && !$stalled && !$activeExecution,
             'resume' => $hasWorkflow && !$terminal && !$waitingHuman && !$readyForHumanApproval && $stalled,
             'cancel' => $hasWorkflow && !$terminal,
             'resolve_human' => $waitingHuman,
