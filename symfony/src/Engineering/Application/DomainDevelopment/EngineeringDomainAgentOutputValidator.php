@@ -117,10 +117,16 @@ final readonly class EngineeringDomainAgentOutputValidator
         if (!is_array($migrationPlan) || array_is_list($migrationPlan)) {
             throw new RuntimeException('Approved Domain Architecture requires structured MigrationPlan.');
         }
-        foreach (['migration_order','dependencies','forward_validation','rollback_strategy','data_migration','compatibility_window'] as $field) {
+        foreach (['migration_order','dependencies','forward_validation','rollback_strategy','data_migration','compatibility_window','risk','requires_downtime','destructive'] as $field) {
             if (!array_key_exists($field, $migrationPlan)) throw new RuntimeException('MigrationPlan missing '.$field.'.');
         }
         if (!is_array($migrationPlan['migration_order'])) throw new RuntimeException('MigrationPlan migration_order must be an array.');
+        if (!in_array(strtoupper((string) $migrationPlan['risk']), ['LOW','MEDIUM','HIGH','CRITICAL'], true)) {
+            throw new RuntimeException('MigrationPlan risk is invalid.');
+        }
+        if (!is_bool($migrationPlan['requires_downtime']) || !is_bool($migrationPlan['destructive'])) {
+            throw new RuntimeException('MigrationPlan downtime/destructive flags must be boolean.');
+        }
 
         foreach (is_array($output['contracts'] ?? null) ? $output['contracts'] : [] as $contract) {
             if (!is_array($contract)) throw new RuntimeException('Domain contract must be an object.');
