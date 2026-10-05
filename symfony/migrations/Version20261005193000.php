@@ -31,6 +31,22 @@ final class Version20261005193000 extends AbstractMigration
         $this->addSql("ALTER TABLE cos_engineering_domain_features
             ADD engineering_feature_history JSON NULL AFTER engineering_feature_id");
 
+        $this->addSql("ALTER TABLE cos_engineering_domain_agent_runs
+            ADD runtime_id VARCHAR(36) NULL AFTER id,
+            ADD feature_id VARCHAR(36) NULL AFTER domain_id,
+            ADD state VARCHAR(48) NULL AFTER status,
+            ADD started_at DATETIME(6) NULL AFTER state,
+            ADD finished_at DATETIME(6) NULL AFTER started_at,
+            ADD input_payload JSON NULL AFTER finished_at,
+            ADD output_payload JSON NULL AFTER input_payload,
+            ADD artifact_payload JSON NULL AFTER output_payload,
+            ADD repository_revision VARCHAR(128) NULL AFTER artifact_payload,
+            ADD cost_amount DECIMAL(14,6) NULL AFTER repository_revision,
+            ADD token_usage JSON NULL AFTER cost_amount,
+            ADD errors_payload JSON NULL AFTER token_usage,
+            ADD INDEX idx_cos_eng_domain_run_runtime (runtime_id),
+            ADD INDEX idx_cos_eng_domain_run_state (domain_id, state, started_at)");
+
         $this->addSql(<<<'SQL'
 CREATE TABLE cos_engineering_domain_human_decisions (
     id VARCHAR(36) NOT NULL,
@@ -99,6 +115,7 @@ SQL);
         $this->addSql('DROP TABLE cos_engineering_domain_runtime_events');
         $this->addSql('DROP TABLE cos_engineering_domain_human_decisions');
         $this->addSql('DROP TABLE cos_engineering_domain_artifact_dependencies');
+        $this->addSql('ALTER TABLE cos_engineering_domain_agent_runs DROP INDEX idx_cos_eng_domain_run_state, DROP INDEX idx_cos_eng_domain_run_runtime, DROP errors_payload, DROP token_usage, DROP cost_amount, DROP repository_revision, DROP artifact_payload, DROP output_payload, DROP input_payload, DROP finished_at, DROP started_at, DROP state, DROP feature_id, DROP runtime_id');
         $this->addSql('ALTER TABLE cos_engineering_domain_features DROP engineering_feature_history');
         $this->addSql('ALTER TABLE cos_engineering_domains DROP cost_budget, DROP token_budget, DROP context_budget, DROP max_domain_integration_cycles, DROP max_feature_retries, DROP max_parallel_qa, DROP max_parallel_reviews, DROP max_parallel_developers');
     }
