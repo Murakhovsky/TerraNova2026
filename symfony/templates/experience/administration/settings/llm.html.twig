@@ -92,10 +92,14 @@
 
             <div class="cos-section-grid">
                 <label class="cos-field"><span>Manager</span><input class="cos-input" name="manager_model" value="{{ settings.manager_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>Product / Requirements</span><input class="cos-input" name="product_model" value="{{ settings.product_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>QA Planner</span><input class="cos-input" name="qa_planner_model" value="{{ settings.qa_planner_model }}" list="openai-model-catalog"></label>
                 <label class="cos-field"><span>Architect</span><input class="cos-input" name="architect_model" value="{{ settings.architect_model }}" list="openai-model-catalog"></label>
                 <label class="cos-field"><span>Developer</span><input class="cos-input" name="developer_model" value="{{ settings.developer_model }}" list="openai-model-catalog"></label>
                 <label class="cos-field"><span>Reviewer</span><input class="cos-input" name="reviewer_model" value="{{ settings.reviewer_model }}" list="openai-model-catalog"></label>
-                <label class="cos-field"><span>QA</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>QA Executor</span><input class="cos-input" name="qa_executor_model" value="{{ settings.qa_executor_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>Integration &amp; Release</span><input class="cos-input" name="integration_release_model" value="{{ settings.integration_release_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>Legacy QA fallback</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}" list="openai-model-catalog"></label>
             </div>
         </twig:CosFormSection>
 
