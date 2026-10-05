@@ -1,3 +1,10 @@
+---
+title: Engineering Runtime V2.0 Final Master Specification
+status: current
+updated: 2026-10-06
+kind: developer
+---
+
 # ENGINEERING RUNTIME V2.0  
 ## Complex Domain Development Framework
 
