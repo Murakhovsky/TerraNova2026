@@ -15,6 +15,7 @@ final readonly class UpdateAdministrationUserCommand implements CommandInterface
     public function __construct(
         public int $userId,
         public array $input,
+        public string $organizationId,
         public array $actor,
     ) {
     }
