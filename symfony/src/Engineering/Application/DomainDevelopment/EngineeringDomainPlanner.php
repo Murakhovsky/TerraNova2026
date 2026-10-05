@@ -5,6 +5,7 @@ namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Application\Policy\EngineeringPolicyEngine;
+use App\Engineering\Application\Policy\EngineeringSharedKernelRegistry;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
@@ -22,6 +23,7 @@ final readonly class EngineeringDomainPlanner
         private EngineeringDomainContextCompressor $compressor,
         private EngineeringArtifactDependencyGraph $artifactGraph,
         private EngineeringDomainHumanGateService $humanGates,
+        private EngineeringSharedKernelRegistry $sharedKernel = new EngineeringSharedKernelRegistry(),
         private EngineeringPolicyEngine $policy = new EngineeringPolicyEngine(),
         private FeatureDependencyGraph $graph = new FeatureDependencyGraph(),
     ) {}
@@ -252,6 +254,10 @@ final readonly class EngineeringDomainPlanner
                     'check_equivalent_class' => true,
                     'check_shared_primitive' => true,
                     'check_existing_domain_contract' => true,
+                ],
+                'shared_kernel' => [
+                    'primitives' => $this->sharedKernel->primitives(),
+                    'reuse_rule' => $this->sharedKernel->reuseRule(),
                 ],
             ],
             $correlationId.':architect',
