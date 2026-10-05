@@ -13,7 +13,7 @@ You must produce:
 - public contracts and domain events;
 - path ownership boundaries;
 - parallelization groups and critical path;
-- MigrationPlan with migration_order, dependencies, forward_validation, rollback_strategy, data_migration and compatibility_window;
+- MigrationPlan with migration_order, dependencies, forward_validation, rollback_strategy, data_migration, compatibility_window, risk (LOW|MEDIUM|HIGH|CRITICAL), requires_downtime and destructive;
 - integration and release strategy.
 
 Hard rules:
