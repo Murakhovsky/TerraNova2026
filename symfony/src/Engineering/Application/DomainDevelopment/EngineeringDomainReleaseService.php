@@ -108,7 +108,6 @@ final readonly class EngineeringDomainReleaseService
             'Assemble and verify the completed Domain before Domain QA. Validate cross-feature compatibility, contracts, events, migration ordering, routing, DI/configuration and the integrated repository revision without changing business semantics.',
             [
                 'mode' => 'INTEGRATION_MODE',
-                'mode' => 'DOMAIN_RELEASE_MODE',
                 'domain' => $domain,
                 'features' => $featureEvidence,
                 'contracts' => $this->domains->contracts($domainId),
@@ -186,6 +185,7 @@ final readonly class EngineeringDomainReleaseService
             AgentRole::INTEGRATION_RELEASE,
             'Assess release readiness after independent Domain QA. Do not repeat implementation or bypass failed QA.',
             [
+                'mode' => 'DOMAIN_RELEASE_MODE',
                 'domain' => $domain,
                 'features' => $featureEvidence,
                 'contracts' => $this->domains->contracts($domainId),
