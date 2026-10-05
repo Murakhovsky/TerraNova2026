@@ -43,6 +43,7 @@ final readonly class EngineeringReportBuilder
         $workflow = $this->workflows->get($workflowId);
 
         $reviewCycles = 0;
+        $qaPlanningRuns = 0;
         $qaCycles = 0;
         $developmentAttempts = 0;
         $architectureRuns = 0;
@@ -78,10 +79,15 @@ final readonly class EngineeringReportBuilder
                 if (($output['status'] ?? null) === 'REQUEST_CHANGES') ++$reviewRejections;
                 $reviewDefects += count(is_array($output['issues'] ?? null) ? $output['issues'] : []);
             }
-            if ($role === AgentRole::QA->value) {
+            $legacyQaPlan = $role === AgentRole::QA->value && ($output['phase'] ?? null) === 'PLAN';
+            $legacyQaExecution = $role === AgentRole::QA->value && ($output['phase'] ?? null) === 'EXECUTION';
+            if ($role === AgentRole::QA_PLANNER->value || $legacyQaPlan) {
+                ++$qaPlanningRuns;
+            }
+            if ($role === AgentRole::QA_EXECUTOR->value || $legacyQaExecution) {
                 ++$qaCycles;
-                if (($output['phase'] ?? null) === 'EXECUTION' && ($output['status'] ?? null) === 'FAIL') ++$qaRejections;
-                if (($output['phase'] ?? null) === 'EXECUTION' && ($output['status'] ?? null) === 'PASS' && is_string($run['finished_at'] ?? null)) $readyAt = $run['finished_at'];
+                if (($output['status'] ?? null) === 'FAIL') ++$qaRejections;
+                if (($output['status'] ?? null) === 'PASS' && is_string($run['finished_at'] ?? null)) $readyAt = $run['finished_at'];
                 $qaDefects += count(is_array($output['defects'] ?? null) ? $output['defects'] : []);
                 $regressions += count(is_array($output['regressions'] ?? null) ? $output['regressions'] : []);
             }
@@ -101,7 +107,7 @@ final readonly class EngineeringReportBuilder
         ), SORT_REGULAR));
 
         $humanInterventions = count($this->humanDecisions->historyForFeature($featureId));
-        $qaExecutionCycles = max(0, $qaCycles - 1);
+        $qaExecutionCycles = $qaCycles;
         $startedAt = $workflow->startedAt();
         $timeToPr = $firstDeveloperFinishedAt !== null
             ? max(0, (new \DateTimeImmutable($firstDeveloperFinishedAt))->getTimestamp() - $startedAt->getTimestamp())
@@ -161,8 +167,8 @@ final readonly class EngineeringReportBuilder
             ],
             'qa' => [
                 'status' => $qaContent['status'] ?? null,
-                'planning_runs' => min(1, $qaCycles),
-                'execution_cycles' => max(0, $qaCycles - 1),
+                'planning_runs' => $qaPlanningRuns,
+                'execution_cycles' => $qaExecutionCycles,
                 'tests_total' => (int) ($qaContent['tests']['total'] ?? 0),
                 'tests_passed' => (int) ($qaContent['tests']['passed'] ?? 0),
                 'tests_failed' => (int) ($qaContent['tests']['failed'] ?? 0),
