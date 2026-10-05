@@ -10,6 +10,7 @@ use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainFeatureStatus;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
+use App\Engineering\Domain\DomainDevelopment\EngineeringDomainRuntimeEventType;
 use RuntimeException;
 
 final readonly class EngineeringDomainReleaseService
@@ -53,7 +54,25 @@ final readonly class EngineeringDomainReleaseService
             }
         }
 
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_INTEGRATION_COMPLETED->value,
+            null,
+            ['required_features_complete' => true],
+            $correlationId,
+            'domain-integration-completed:v'.((string) ($domain['version'] ?? 1)),
+        );
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::DOMAIN_QA->value);
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_QA_STARTED->value,
+            null,
+            ['domain_version' => (int) ($domain['version'] ?? 1)],
+            $correlationId,
+            'domain-qa-started:v'.((string) ($domain['version'] ?? 1)),
+        );
         $featureEvidence = [];
         foreach ($features as $feature) {
             $engineeringFeatureId = $feature['engineering_feature_id'] ?? null;
@@ -135,6 +154,15 @@ final readonly class EngineeringDomainReleaseService
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA_EXECUTOR->value);
 
         $qaStatus = (string) ($result['status'] ?? '');
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_QA_COMPLETED->value,
+            null,
+            ['status' => $qaStatus, 'tested_revision' => $repositoryRevision],
+            $correlationId,
+            'domain-qa-completed:v'.((string) ($domain['version'] ?? 1)).':'.$qaStatus.':'.($repositoryRevision ?? 'none'),
+        );
         if ($qaStatus !== 'PASS') {
             $state = $qaStatus === 'FAIL' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value;
             $this->domains->updateStatus($domainId, $state, 'Domain QA returned '.$qaStatus.'.');
@@ -202,6 +230,19 @@ final readonly class EngineeringDomainReleaseService
             'DOMAIN_RUNTIME',
         );
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::RELEASE_READY->value);
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_RELEASE_READY->value,
+            null,
+            [
+                'repository_revision' => $repositoryRevision,
+                'integration_pull_request' => $integrationPullRequest,
+                'release_manifest_generated' => true,
+            ],
+            $correlationId,
+            'domain-release-ready:v'.((string) ($domain['version'] ?? 1)).':'.($repositoryRevision ?? 'none'),
+        );
 
         return $this->view($domainId, ['release_manifest' => $manifest]);
     }
