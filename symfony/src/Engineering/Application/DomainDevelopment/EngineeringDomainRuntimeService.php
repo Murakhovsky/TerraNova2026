@@ -5,7 +5,9 @@ namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
+use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainRuntimeEventType;
+use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use InvalidArgumentException;
 use RuntimeException;
@@ -67,6 +69,17 @@ final readonly class EngineeringDomainRuntimeService
             $maxParallelDevelopers,
             $maxParallelReviews,
             $maxParallelQa,
+        );
+        $this->domains->saveArtifact(
+            $id,
+            EngineeringDomainArtifactType::DOMAIN_FEATURE_FLAGS->value,
+            [
+                'DOMAIN_ENABLED' => false,
+                'FEATURE_ENABLED' => [],
+                'INTEGRATION_ENABLED' => false,
+                'PRODUCTION_EXECUTION_ENABLED' => false,
+            ],
+            $createdBy,
         );
         $this->domains->recordRuntimeEvent(
             $id,
@@ -133,6 +146,59 @@ final readonly class EngineeringDomainRuntimeService
     {
         $this->assertTenant($domainId, $organizationId);
         return $this->release->approve($domainId, $approvedBy);
+    }
+
+    /** @param array<string,mixed> $flags @return array<string,mixed> */
+    public function updateFeatureFlags(string $domainId, string $organizationId, array $flags, string $updatedBy): array
+    {
+        $this->assertTenant($domainId, $organizationId);
+        $domain = $this->domains->domain($domainId);
+        $normalized = $this->normalizeFeatureFlags($flags);
+
+        if ($normalized['PRODUCTION_EXECUTION_ENABLED'] === true
+            && ($domain['status'] ?? null) !== EngineeringDomainStatus::COMPLETED->value) {
+            throw new RuntimeException('Production execution can be enabled only after human-approved Domain completion.');
+        }
+
+        $artifact = $this->domains->saveArtifact(
+            $domainId,
+            EngineeringDomainArtifactType::DOMAIN_FEATURE_FLAGS->value,
+            $normalized,
+            $updatedBy,
+        );
+
+        return [
+            'domain' => $domain,
+            'feature_flags' => $artifact,
+        ];
+    }
+
+    /** @param array<string,mixed> $flags @return array{DOMAIN_ENABLED:bool,FEATURE_ENABLED:array<string,bool>,INTEGRATION_ENABLED:bool,PRODUCTION_EXECUTION_ENABLED:bool} */
+    private function normalizeFeatureFlags(array $flags): array
+    {
+        foreach (['DOMAIN_ENABLED','INTEGRATION_ENABLED','PRODUCTION_EXECUTION_ENABLED'] as $key) {
+            if (!array_key_exists($key, $flags) || !is_bool($flags[$key])) {
+                throw new InvalidArgumentException('Domain feature flag '.$key.' must be boolean.');
+            }
+        }
+        $featureEnabled = $flags['FEATURE_ENABLED'] ?? null;
+        if (!is_array($featureEnabled) || array_is_list($featureEnabled)) {
+            throw new InvalidArgumentException('FEATURE_ENABLED must be a feature-key boolean map.');
+        }
+        $normalizedFeatures = [];
+        foreach ($featureEnabled as $key => $enabled) {
+            $key = trim((string) $key);
+            if ($key === '' || !is_bool($enabled)) throw new InvalidArgumentException('FEATURE_ENABLED entries must be feature-key booleans.');
+            $normalizedFeatures[$key] = $enabled;
+        }
+        ksort($normalizedFeatures);
+
+        return [
+            'DOMAIN_ENABLED' => $flags['DOMAIN_ENABLED'],
+            'FEATURE_ENABLED' => $normalizedFeatures,
+            'INTEGRATION_ENABLED' => $flags['INTEGRATION_ENABLED'],
+            'PRODUCTION_EXECUTION_ENABLED' => $flags['PRODUCTION_EXECUTION_ENABLED'],
+        ];
     }
 
     private function assertTenant(string $domainId, string $organizationId): void
