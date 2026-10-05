@@ -329,7 +329,11 @@ final class EngineeringAgentOutputValidator
     {
         $this->required($output, ['status','reviewed_revision','base_revision','pull_request','preflight','summary','issues','correctness','architecture','security','maintainability','database','api','tests','acceptance_criteria','ci','unresolved_blockers','unresolved_majors','recommendation']);
         $status = (string) ($output['status'] ?? '');
-        if (!in_array($status, ['APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED'], true)) throw new EngineeringAgentOutputValidationException('Reviewer status is invalid.');
+        if (!in_array($status, [
+            'APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED',
+            'SECURITY_REVIEW_REQUIRED','MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED',
+            'DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED'
+        ], true)) throw new EngineeringAgentOutputValidationException('Reviewer status is invalid.');
         if (!is_array($output['preflight'] ?? null)) throw new EngineeringAgentOutputValidationException('Reviewer preflight must be an object.');
         $this->required($output['preflight'], ['status','reviewed_revision','diff_complete','required_artifacts_present','ci_evidence_available','blockers']);
         if (!in_array((string) $output['preflight']['status'], ['PASS','BLOCKED'], true)) throw new EngineeringAgentOutputValidationException('Reviewer preflight status is invalid.');
@@ -393,7 +397,8 @@ final class EngineeringAgentOutputValidator
         $status = (string) ($output['status'] ?? '');
         $allowed = [
             'COMPLETED','COMPLETED_WITH_LIMITATIONS','BLOCKED',
-            'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED','FAILED',
+            'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED',
+            'MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED','DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','FAILED',
         ];
         if (!in_array($status, $allowed, true)) {
             throw new EngineeringAgentOutputValidationException('Developer status is invalid.');
@@ -414,7 +419,10 @@ final class EngineeringAgentOutputValidator
             throw new EngineeringAgentOutputValidationException('Developer preflight status is invalid.');
         }
 
-        $reviewStatuses = ['ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED'];
+        $reviewStatuses = [
+            'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED',
+            'MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED','DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED',
+        ];
         if (in_array($status, $reviewStatuses, true)) {
             if (($output['changes'] ?? []) !== []) {
                 throw new EngineeringAgentOutputValidationException('Developer review escalation must not contain repository mutations.');
