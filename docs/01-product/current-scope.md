@@ -15,6 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
+| Capital_markets | `0.1.0` | Architecture Foundation; installable, disabled by default; instrument/venue/economic-relation model + deterministic finance vocabulary; без market data, persistence та execution runtime |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
@@ -27,6 +28,12 @@ kind: product
 | Real_estate | `1.0.0` | V1-stable brokerage runtime поверх Property: Opportunity → Property Match → Offer → Viewing → Reservation; schema `0.2.0`; conflict-safe replay semantics |
 
 Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
+
+## Capital Markets: фінансовий Architecture Foundation
+
+Capital Markets `0.1.0` вводить автономний bounded context для фінансових ринків без передчасного trading runtime. Поточний main-slice після merge міститиме `InstrumentDescriptor`, instrument families, economic relationship graph, venue model, deterministic `Price / Quantity / Rate`, reuse Kernel `Money`, permissions, feature flags, audit vocabulary та базові Domain Events.
+
+Execution, market-data adapters, ledger, portfolio, strategies, agents і live trading ще **не є реалізованою поведінкою**. Перший executable process з'явиться у Market Intelligence pack, тому V0.1 має explicit process-coverage exemption.
 
 ## Growth: інтелект можливостей
 
