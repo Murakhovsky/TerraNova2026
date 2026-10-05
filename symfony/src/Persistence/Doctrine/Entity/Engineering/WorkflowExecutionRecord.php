@@ -82,6 +82,22 @@ class WorkflowExecutionRecord
         if ($currentTaskId !== null) $this->currentTaskId = $currentTaskId;
     }
 
+    public function markRuntimeIssue(string $health, string $reason, ?string $currentAgentRunId = null, ?string $currentTaskId = null): void
+    {
+        $health = strtoupper(trim($health));
+        if (!in_array($health, ['DEGRADED','STALE','STALLED'], true)) {
+            throw new \InvalidArgumentException('Unsupported Engineering runtime issue health '.$health.'.');
+        }
+        $now = new DateTimeImmutable();
+        $this->lastActivityAt = $now;
+        $this->heartbeatAt = $now;
+        $this->healthStatus = $health;
+        $this->runtimeReason = trim($reason) !== '' ? mb_substr(trim($reason), 0, 4000) : 'Runtime issue detected.';
+        $this->stalledAt = $health === 'STALLED' ? ($this->stalledAt ?? $now) : null;
+        if ($currentAgentRunId !== null) $this->currentAgentRunId = $currentAgentRunId;
+        if ($currentTaskId !== null) $this->currentTaskId = $currentTaskId;
+    }
+
     public function syncState(string $currentState, ?string $resumeState, ?DateTimeImmutable $finishedAt, string $status, ?string $reason = null): void
     {
         $this->currentState = $currentState;
