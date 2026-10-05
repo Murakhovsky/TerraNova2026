@@ -71,6 +71,7 @@ final readonly class EngineeringArchitectStageExecutor
         $contextMap = $this->artifacts->latest($featureId, ArtifactType::CONTEXT_MAP);
         $testPlan = $this->artifacts->latest($featureId, ArtifactType::TEST_PLAN);
         $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
+        $targetBranch = trim((string) ($domainContext['content']['target_branch'] ?? ''));
         if ($featureSpec === null || $contextMap === null || $testPlan === null) {
             throw new RuntimeException('Architect requires FEATURE_SPEC, CONTEXT_MAP and QA TEST_PLAN artifacts.');
         }
@@ -91,7 +92,7 @@ final readonly class EngineeringArchitectStageExecutor
                 'repository.current_base_revision',
                 'Read current repository base revision',
                 $correlationId,
-                fn (): string => $this->repository->currentBaseRevision(),
+                fn (): string => $this->repository->currentBaseRevision($targetBranch !== '' ? $targetBranch : null),
                 details: static fn (string $revision): array => ['revision' => $revision],
             );
             if ($contextRevision !== '' && $contextRevision !== 'unknown' && $contextRevision !== $repositoryRevision) {
@@ -195,6 +196,7 @@ final readonly class EngineeringArchitectStageExecutor
                     'context_revision' => $contextRevision !== '' ? $contextRevision : null,
                     'repository_revision' => $repositoryRevision,
                     'revalidation' => $previousArchitecture !== null,
+                    'target_branch' => $targetBranch !== '' ? $targetBranch : $this->repository->configuredBaseBranch(),
                 ],
                 'repository_diff' => $repositoryDiff,
                 'repository_files' => $repositoryFiles,
