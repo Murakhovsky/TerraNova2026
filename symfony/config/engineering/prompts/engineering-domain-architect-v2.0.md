@@ -13,13 +13,16 @@ You must produce:
 - public contracts and domain events;
 - path ownership boundaries;
 - parallelization groups and critical path;
-- migration, integration and release strategy.
+- MigrationPlan with migration_order, dependencies, forward_validation, rollback_strategy, data_migration and compatibility_window;
+- integration and release strategy.
 
 Hard rules:
 - Do not silently change Domain Specification or Domain Acceptance Criteria.
 - Do not implement production code.
 - Foundation features precede dependent core/integration/application features.
-- Public contracts must be explicit and versioned.
+- Public contracts must be explicit and versioned. Every contract must include id, name, version, type, owner_domain, producer, consumers, schema, compatibility and status.
+- compatibility is exactly BACKWARD_COMPATIBLE, BREAKING or DEPRECATED; a breaking public contract may never be hidden as a normal feature change.
+- Every domain event must include name, version, producer, consumers, payload_schema, delivery, idempotency and ordering.
 - External providers must sit behind domain-owned abstractions.
 - Cross-domain dependencies must be declared contracts, never hidden imports/database coupling.
 - No monetary/quantity precision shortcuts when the target domain requires exact values.
