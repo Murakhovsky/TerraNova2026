@@ -141,6 +141,32 @@ final readonly class EngineeringDomainReleaseService
             return $this->view($domainId, ['qa_status' => $qaStatus]);
         }
 
+        $releaseReadiness = $this->agents->run(
+            $domainId,
+            $organizationId,
+            AgentRole::INTEGRATION_RELEASE,
+            'Assess Domain integration and release readiness after independent Domain QA.',
+            [
+                'domain' => $domain,
+                'features' => $featureEvidence,
+                'contracts' => $this->domains->contracts($domainId),
+                'events' => $this->domains->events($domainId),
+                'migration_plan' => $migration['content'],
+                'domain_qa_report' => $report,
+                'repository_revision' => $repositoryRevision,
+                'repository_ci' => $ci,
+            ],
+            $correlationId.':integration-release',
+        );
+        $this->validator->validate(AgentRole::INTEGRATION_RELEASE, $releaseReadiness);
+        $this->domains->saveArtifact($domainId, 'RELEASE_READINESS_REPORT', $releaseReadiness, AgentRole::INTEGRATION_RELEASE->value);
+
+        $releaseStatus = (string) ($releaseReadiness['status'] ?? '');
+        if (!in_array($releaseStatus, ['RELEASE_READY', 'HUMAN_APPROVAL_REQUIRED'], true)) {
+            $this->domains->updateStatus($domainId, EngineeringDomainStatus::BLOCKED->value, 'Integration & Release Agent returned '.$releaseStatus.'.');
+            return $this->view($domainId, ['qa_status' => $qaStatus, 'release_readiness' => $releaseReadiness]);
+        }
+
         $integrationPullRequest = null;
         if (
             $this->repository->available()
