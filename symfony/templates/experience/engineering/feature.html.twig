@@ -3,6 +3,52 @@
 {% block title %}Engineering · {{ engineering.feature.title }} | COS{% endblock %}
 
 {% block workspace_content %}
+{% set statusLabels = {
+    'RUNNING': 'ВИКОНУЄТЬСЯ',
+    'HEALTHY': 'НОРМА',
+    'STALE': 'НЕАКТИВНИЙ',
+    'STALLED': 'ЗУПИНЕНО',
+    'WAITING': 'ОЧІКУЄ',
+    'TERMINAL': 'ЗАВЕРШЕНО',
+    'COMPLETED': 'ЗАВЕРШЕНО',
+    'CANCELLED': 'СКАСОВАНО',
+    'FAILED': 'ПОМИЛКА',
+    'NOT_REACHED': 'ЩЕ НЕ РОЗПОЧАТО',
+    'ANALYSIS': 'АНАЛІЗ',
+    'QA_PLANNING': 'ПЛАН ПЕРЕВІРКИ',
+    'ARCHITECTURE_PENDING': 'АРХІТЕКТУРА',
+    'DEVELOPMENT_RUNNING': 'РОЗРОБКА',
+    'REVIEW_PENDING': 'РЕВ’Ю',
+    'QA_PENDING': 'QA',
+    'READY_FOR_HUMAN_APPROVAL': 'ОЧІКУЄ ПІДТВЕРДЖЕННЯ',
+    'HUMAN_DECISION_REQUIRED': 'ПОТРІБНЕ РІШЕННЯ',
+    'BLOCKED': 'ЗАБЛОКОВАНО',
+    'ESCALATED': 'ЕСКАЛАЦІЯ',
+    'DONE': 'ГОТОВО'
+} %}
+{% set roleLabels = {
+    'ENGINEERING_MANAGER': 'Менеджер розробки',
+    'PRINCIPAL_ARCHITECT': 'Архітектор',
+    'ARCHITECT': 'Архітектор',
+    'DEVELOPER': 'Розробник',
+    'REVIEWER': 'Рев’юер',
+    'QA': 'QA'
+} %}
+{% set qualityLabels = {
+    'NOT_REACHED': 'ЩЕ НЕ ДОСЯГНУТО',
+    'FINDINGS': 'Є ЗАУВАЖЕННЯ',
+    'PASSED': 'ПРОЙДЕНО',
+    'IN_PROGRESS': 'ТРИВАЄ'
+} %}
+{% set eventTypeLabels = {
+    'REPOSITORY': 'РЕПОЗИТОРІЙ',
+    'WATCHDOG': 'КОНТРОЛЬ',
+    'RUNTIME': 'СИСТЕМА',
+    'AGENT': 'АГЕНТ',
+    'TOOL': 'ІНСТРУМЕНТ',
+    'WORKFLOW': 'ПРОЦЕС',
+    'EVENT': 'ПОДІЯ'
+} %}
 <section
     class="cos-page__stack"
     data-cos-engineering="feature"
@@ -22,9 +68,9 @@
         .engineering-head__title{margin:2px 0 6px}
         .engineering-head__meta,.engineering-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
         .engineering-inline form{margin:0}
-        .engineering-summary{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px}
-        .engineering-summary__item{padding:10px 12px;border:1px solid var(--cos-border,#e1e5ea);border-radius:10px;background:var(--cos-surface,#fff)}
-        .engineering-summary__label{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);margin-bottom:4px}
+        .engineering-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:stretch}
+        .engineering-summary__item{padding:10px 12px;min-height:74px;border:1px solid var(--cos-border,#e1e5ea);border-radius:10px;background:var(--cos-surface,#fff);display:flex;flex-direction:column;gap:2px}
+        .engineering-summary__label{display:block;font-size:.69rem;text-transform:uppercase;letter-spacing:.04em;color:var(--cos-text-secondary,#667085);margin-bottom:2px}
         .engineering-summary__value{font-size:.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis}
         .engineering-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:10px}
         .engineering-panel{border:1px solid var(--cos-border,#e1e5ea);border-radius:12px;background:var(--cos-surface,#fff);overflow:hidden}
@@ -51,7 +97,7 @@
         .engineering-stage{padding:8px 10px;border:1px solid var(--cos-border,#e1e5ea);border-radius:9px;background:var(--cos-surface,#fff);min-width:0}
         .engineering-stage strong{display:block;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .engineering-stage span{font-size:.7rem;color:var(--cos-text-secondary,#667085)}
-        @media(max-width:1350px){.engineering-summary{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:900px){.engineering-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}.engineering-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
+        @media(max-width:1350px){.engineering-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.engineering-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}.engineering-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
     </style>
 
     <div class="engineering-head">
@@ -60,12 +106,12 @@
             <h1 class="engineering-head__title">{{ engineering.feature.title }}</h1>
             <div class="engineering-head__meta">
                 <span class="cos-badge">{{ engineering.feature.priority }}</span>
-                <span class="cos-badge" data-engineering-live-target="workflowStatus">{{ summary.display_status }}</span>
-                <span class="cos-badge" data-engineering-live-target="state">{{ summary.state }}</span>
+                <span class="cos-badge" data-engineering-live-target="workflowStatus">{{ statusLabels[summary.display_status]|default(summary.display_status) }}</span>
+                <span class="cos-badge" data-engineering-live-target="state">{{ statusLabels[summary.state]|default(summary.state) }}</span>
                 {% if summary.health in ['STALE','STALLED'] %}
-                    <span class="cos-badge engineering-warning" data-engineering-live-target="health">⚠ {{ summary.health }}</span>
+                    <span class="cos-badge engineering-warning" data-engineering-live-target="health">⚠ {{ statusLabels[summary.health]|default(summary.health) }}</span>
                 {% else %}
-                    <span class="engineering-muted" data-engineering-live-target="health">{{ summary.health }}</span>
+                    <span class="engineering-muted" data-engineering-live-target="health">{{ statusLabels[summary.health]|default(summary.health) }}</span>
                 {% endif %}
                 {% if engineering.feature.external_issue_id %}<span class="cos-badge">GitHub #{{ engineering.feature.external_issue_id }}</span>{% endif %}
             </div>
@@ -124,7 +170,7 @@
     <details class="engineering-panel engineering-details">
         <summary class="engineering-panel__head">
             <span>Вимоги та опис</span>
-            <span class="engineering-muted">{{ engineering.workflow ? 'зафіксовано після старту workflow' : 'редагується до старту' }}</span>
+            <span class="engineering-muted">{{ engineering.workflow ? 'зафіксовано після старту процесу' : 'редагується до старту' }}</span>
         </summary>
         <div class="engineering-panel__body">
             {% if engineering.workflow is null %}
@@ -157,7 +203,7 @@
                 {% for decision in engineering.open_human_decisions %}
                     <article style="margin-bottom:12px">
                         <strong>{{ decision.question|default('Потрібне рішення') }}</strong>
-                        <p class="engineering-muted">{{ decision.reason|default('Workflow очікує на рішення.') }}</p>
+                        <p class="engineering-muted">{{ decision.reason|default('Процес очікує на рішення.') }}</p>
                         <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/human-decision">
                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                             <input type="hidden" name="request_id" value="{{ decision.id }}">
@@ -180,11 +226,11 @@
     {% endif %}
 
     <section class="engineering-summary" aria-label="Зведення execution">
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value" data-engineering-live-target="workflowStatus">{{ summary.display_status }}</span></div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value" data-engineering-live-target="state">{{ summary.state }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value" data-engineering-live-target="workflowStatus">{{ statusLabels[summary.display_status]|default(summary.display_status) }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value" data-engineering-live-target="state">{{ statusLabels[summary.state]|default(summary.state) }}</span></div>
         <div class="engineering-summary__item">
-            <span class="engineering-summary__label">Runtime</span>
-            <span class="engineering-summary__value" data-engineering-live-target="health">{{ summary.health }}</span>
+            <span class="engineering-summary__label">Стан runtime</span>
+            <span class="engineering-summary__value" data-engineering-live-target="health">{{ statusLabels[summary.health]|default(summary.health) }}</span>
             <span
                 class="engineering-table__meta"
                 data-engineering-live-target="heartbeat"
@@ -194,7 +240,7 @@
         </div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">Поточний агент</span>
-            <span class="engineering-summary__value" data-engineering-live-target="currentAgent">{{ summary.current_agent.role|default('—') }}</span>
+            <span class="engineering-summary__value" data-engineering-live-target="currentAgent">{{ summary.current_agent ? roleLabels[summary.current_agent.role]|default(summary.current_agent.role) : '—' }}</span>
             <span class="engineering-table__meta" data-engineering-live-target="currentActivity">
                 {% if summary.current_agent %}
                     {{ summary.current_agent.duration_label }} · {{ summary.current_agent.run_id }}
@@ -208,18 +254,18 @@
         <div class="engineering-summary__item"><span class="engineering-summary__label">Запуски агентів</span><span class="engineering-summary__value" data-engineering-live-target="agentRuns">{{ summary.agent_runs }}</span></div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">Задачі</span><span class="engineering-summary__value" data-engineering-live-target="tasks">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
         <div class="engineering-summary__item">
-            <span class="engineering-summary__label">Тривалість workflow</span>
+            <span class="engineering-summary__label">Тривалість процесу</span>
             <span
                 class="engineering-summary__value"
                 data-engineering-live-target="workflowDuration"
                 data-engineering-live-duration-start="{{ engineering.workflow.started_at|default('') }}"
                 data-engineering-live-duration-finish="{{ engineering.workflow.finished_at|default('') }}"
             >{{ summary.duration_label }}</span>
-            <span class="engineering-table__meta">активна робота агентів: <span data-engineering-live-target="agentRuntime">{{ summary.agent_runtime_label }}</span></span>
+            <span class="engineering-table__meta">робота агентів: <span data-engineering-live-target="agentRuntime">{{ summary.agent_runtime_label }}</span></span>
         </div>
         <div class="engineering-summary__item">
-            <span class="engineering-summary__label">Tokens</span>
-            <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'unavailable' }}</span>
+            <span class="engineering-summary__label">Токени</span>
+            <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'ще немає' }}</span>
         </div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">
@@ -232,25 +278,31 @@
         </div>
     </section>
 
-    <section class="engineering-stages" aria-label="Етапи workflow">
+    <section class="engineering-stages" aria-label="Етапи процесу">
         {% for stage in summary.stages %}
             <div class="engineering-stage">
                 <strong>{{ stage.label }}</strong>
-                <span>{{ stage.status }}</span>
+                <span>{{ statusLabels[stage.status]|default(stage.status) }}</span>
             </div>
         {% endfor %}
     </section>
 
-    {% if summary.tokens is null %}
+    {% if summary.tokens is null and summary.agent_runs == 0 %}
         <twig:CosAlert
-            title="Немає даних про токени"
-            copy="Provider usage не прив’язаний до цього workflow. COS не підміняє невідоме значення нулем; перевірте correlation у LLM ledger нижче."
+            title="LLM ще не запускався"
+            copy="Зараз система готує контекст для першого агента. Токени й вартість з’являться після першого виклику LLM."
+            tone="info"
+        />
+    {% elseif summary.tokens is null %}
+        <twig:CosAlert
+            title="Не вдалося прив’язати використання LLM"
+            copy="Агент уже запускався, але облік токенів не зв’язаний із цим процесом. Це проблема correlation/ledger, а не нульове використання."
             tone="warning"
         />
     {% elseif summary.cost is null %}
         <twig:CosAlert
             title="Токени обліковані, вартість ще не визначена"
-            copy="Provider не повернув cost, а для цієї моделі немає налаштованої ставки в Platform Settings namespace llm_pricing. Токени показані фактично; $0.0000 більше не використовується як фальшиве значення."
+            copy="Провайдер не повернув вартість, а для цієї моделі немає налаштованої ставки. Кількість токенів показана фактично."
             tone="warning"
         />
     {% endif %}
@@ -274,7 +326,7 @@
                                 class="engineering-terminal__muted"
                                 data-engineering-live-timestamp="{{ event.time|default('') }}"
                             >{{ event.time|default('') }}</span>
-                            <strong>{{ event.type|default('EVENT') }}</strong>
+                            <strong>{{ eventTypeLabels[event.type|default('EVENT')]|default(event.type|default('ПОДІЯ')) }}</strong>
                             <span>
                                 {{ event.title|default('') }}
                                 {% if event.status|default('') %} · {{ event.status }}{% endif %}
@@ -289,14 +341,14 @@
         <section class="engineering-panel">
             <div class="engineering-panel__head">
                 <h2>Контроль якості</h2>
-                <span class="cos-badge">{{ summary.quality_state }}</span>
+                <span class="cos-badge">{{ qualityLabels[summary.quality_state]|default(summary.quality_state) }}</span>
             </div>
             <div class="engineering-panel__body">
                 {% if summary.roles is not empty %}
                     <div class="engineering-role-list" aria-label="Участь агентів">
                         {% for role, metrics in summary.roles %}
                             <div class="engineering-role-row">
-                                <strong>{{ role }}</strong>
+                                <strong>{{ roleLabels[role]|default(role) }}</strong>
                                 <span>{{ metrics.runs }}×</span>
                                 <span>
                                     {% if metrics.running > 0 %}● {{ metrics.running }}
@@ -313,11 +365,11 @@
                     </div>
                 {% endif %}
                 {% if summary.quality_state == 'NOT_REACHED' %}
-                    <strong>Review/QA ще не були досягнуті.</strong>
-                    <p class="engineering-muted">Відсутність findings не означає PASS, якщо Reviewer або QA не запускалися.</p>
+                    <strong>Рев’ю та QA ще не запускалися.</strong>
+                    <p class="engineering-muted">Відсутність зауважень ще не означає успішну перевірку, доки рев’юер або QA не запускалися.</p>
                 {% elseif summary.open_findings is empty %}
-                    <strong>Відкритих findings немає.</strong>
-                    <p class="engineering-muted">Reviewer: {{ summary.review_reached ? 'виконувався' : 'не виконувався' }} · QA: {{ summary.qa_reached ? 'виконувався' : 'не виконувався' }}</p>
+                    <strong>Відкритих зауважень немає.</strong>
+                    <p class="engineering-muted">Рев’юер: {{ summary.review_reached ? 'виконувався' : 'не виконувався' }} · QA: {{ summary.qa_reached ? 'виконувався' : 'не виконувався' }}</p>
                 {% else %}
                     {% for finding in summary.open_findings %}
                         <div style="margin-bottom:8px">
@@ -338,7 +390,7 @@
         {'key': 'technical', 'label': 'Артефакти та аудит'}
     ] %}
 
-    <twig:CosTabs id="engineering-details-tabs" label="Деталі workflow" :items="engineeringTabs" active="agents">
+    <twig:CosTabs id="engineering-details-tabs" label="Деталі процесу" :items="engineeringTabs" active="agents">
         <section
             id="engineering-details-tabs-panel-agents"
             role="tabpanel"
@@ -349,14 +401,14 @@
     <section class="engineering-panel" aria-labelledby="engineering-runs">
         <div class="engineering-panel__head">
             <h2 id="engineering-runs">Запуски агентів</h2>
-            <span class="engineering-muted">{{ summary.agent_runs }} runs</span>
+            <span class="engineering-muted">{{ summary.agent_runs }} запуск(ів)</span>
         </div>
         {% if engineering.agent_runs is empty %}
             <div class="engineering-panel__body engineering-muted">Жоден агент ще не запускався.</div>
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
-                    <thead><tr><th>Роль</th><th>Статус</th><th>Модель</th><th>Tokens</th><th>Вартість</th><th>Повтори</th><th>Тривалість</th><th>Початок / кінець</th><th>Результат</th></tr></thead>
+                    <thead><tr><th>Роль</th><th>Статус</th><th>Модель</th><th>Токени</th><th>Вартість</th><th>Повтори</th><th>Тривалість</th><th>Початок / кінець</th><th>Результат</th></tr></thead>
                     <tbody>
                     {% for run in engineering.agent_runs %}
                         {% set ledgerUsage = run.ledger_usage|default(null) %}
@@ -368,7 +420,7 @@
                             <td><strong>{{ run.role }}</strong><div class="engineering-muted">{{ run.id }}</div></td>
                             <td>{{ run.status }}{% if run.error_type %}<div class="engineering-danger">{{ run.error_type }}</div>{% endif %}</td>
                             <td>{{ run.provider|default('unknown') }} / {{ run.model|default('unknown') }}</td>
-                            <td>{{ runTokens is not null ? runTokens|number_format(0, '.', ' ') : 'unavailable' }}</td>
+                            <td>{{ runTokens is not null ? runTokens|number_format(0, '.', ' ') : 'ще немає' }}</td>
                             <td>
                                 {% if runCost is not null %}
                                     USD {{ runCost|number_format(4, '.', '') }}
@@ -563,7 +615,7 @@
                             <td>{{ inv.output_tokens is not null ? inv.output_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
                             <td>{{ inv.reasoning_tokens is not null ? inv.reasoning_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
                             <td>{{ inv.total_tokens is not null ? inv.total_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
-                            <td>{{ inv.cost_amount is not null ? ((inv.cost_currency|default('USD')) ~ ' ' ~ inv.cost_amount|number_format(6, '.', '')) : 'unavailable' }}</td>
+                            <td>{{ inv.cost_amount is not null ? ((inv.cost_currency|default('USD')) ~ ' ' ~ inv.cost_amount|number_format(6, '.', '')) : 'ще немає' }}</td>
                             <td>{{ inv.cost_source|default('unavailable') }}{% if inv.pricing_version|default('') %}<div class="engineering-muted">{{ inv.pricing_version }}</div>{% endif %}</td>
                             <td>{{ inv.latency_ms is not null ? (inv.latency_ms ~ ' ms') : 'n/a' }}</td>
                             <td><code>{{ inv.provider_request_id|default('n/a') }}</code></td>
