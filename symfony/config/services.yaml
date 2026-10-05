@@ -50,6 +50,7 @@ parameters:
   env(COS_ENGINEERING_DEVELOPER_MODEL): ''
   env(COS_ENGINEERING_REVIEWER_MODEL): ''
   env(COS_ENGINEERING_QA_MODEL): ''
+  env(COS_LLM_PRICING_JSON): ''
   env(COS_SECRET_MASTER_KEY): ''
   env(COS_SECRET_MASTER_KEY_ID): 'env-v1'
 
@@ -1285,6 +1286,7 @@ services:
   Infrastructure\Llm\PlatformSettingsLlmPricingResolver:
     arguments:
       $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
+      $fallbackCatalogJson: '%env(COS_LLM_PRICING_JSON)%'
 
   Kernel\Llm\LlmPricingResolverInterface:
     alias: Infrastructure\Llm\PlatformSettingsLlmPricingResolver
