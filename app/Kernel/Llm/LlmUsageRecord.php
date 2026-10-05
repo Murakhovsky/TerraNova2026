@@ -22,6 +22,7 @@ final readonly class LlmUsageRecord
         public ?int $reasoningTokens = null,
         public ?string $costSource = null,
         public ?string $pricingVersion = null,
+        public ?string $providerRequestId = null,
     ) {
     }
 }
