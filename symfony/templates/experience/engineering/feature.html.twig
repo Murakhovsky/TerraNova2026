@@ -270,7 +270,10 @@
                 {% else %}
                     {% for event in engineering.timeline %}
                         <div class="engineering-terminal__row">
-                            <span class="engineering-terminal__muted">{{ event.time|default('') }}</span>
+                            <span
+                                class="engineering-terminal__muted"
+                                data-engineering-live-timestamp="{{ event.time|default('') }}"
+                            >{{ event.time|default('') }}</span>
                             <strong>{{ event.type|default('EVENT') }}</strong>
                             <span>
                                 {{ event.title|default('') }}
