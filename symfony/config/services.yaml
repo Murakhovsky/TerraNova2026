@@ -1742,10 +1742,12 @@ services:
   Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalMarketsAccessControl
 
-  Domains\CapitalMarkets\Infrastructure\Integration\OutboxCapitalMarketsEventPublisher: ~
+  Domains\CapitalMarkets\Infrastructure\Event\KernelCapitalMarketsEventPublisher:
+    arguments:
+      $events: '@Kernel\Event\EventBus'
 
   Domains\CapitalMarkets\Application\Contract\CapitalMarketsEventPublisherInterface:
-    alias: Domains\CapitalMarkets\Infrastructure\Integration\OutboxCapitalMarketsEventPublisher
+    alias: Domains\CapitalMarkets\Infrastructure\Event\KernelCapitalMarketsEventPublisher
 
   Domains\CapitalMarkets\Application\Audit\CapitalMarketsAuditTrail: ~
 
@@ -1757,6 +1759,10 @@ services:
     alias: Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService
 
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
+
+  App\Web\CapitalMarkets\CapitalMarketsPageController:
+    public: true
+    tags: ['controller.service_arguments']
 
   App\Infrastructure\Module\ModuleCatalogFactory:
     arguments:
