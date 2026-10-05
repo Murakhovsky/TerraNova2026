@@ -167,6 +167,38 @@ final readonly class EngineeringFeatureController
             ]);
         }
 
+        $view = strtolower(trim((string) $request->query->get('view', 'all')));
+        if (!in_array($view, ['all','running','queued','attention','completed','cancelled'], true)) $view = 'all';
+        $query = mb_strtolower(trim((string) $request->query->get('q', '')));
+
+        if ($view !== 'all' || $query !== '') {
+            $workspaceRows = array_values(array_filter(
+                $workspaceRows,
+                static function (array $row) use ($view, $query): bool {
+                    $displayStatus = strtoupper((string) ($row['display_status'] ?? ''));
+                    $health = strtoupper((string) ($row['health'] ?? ''));
+                    $matchesView = match ($view) {
+                        'running' => $displayStatus === 'RUNNING',
+                        'queued' => $displayStatus === 'QUEUED',
+                        'attention' => in_array($displayStatus, ['FAILED','STALE','STALLED','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)
+                            || in_array($health, ['STALE','STALLED'], true),
+                        'completed' => $displayStatus === 'COMPLETED',
+                        'cancelled' => $displayStatus === 'CANCELLED',
+                        default => true,
+                    };
+                    if (!$matchesView) return false;
+                    if ($query === '') return true;
+                    $haystack = mb_strtolower(trim(
+                        (string) ($row['title'] ?? '').' '.
+                        (string) ($row['description'] ?? '').' '.
+                        (string) ($row['workflow_state'] ?? '').' '.
+                        (string) ($row['latest_agent_role'] ?? '')
+                    ));
+                    return str_contains($haystack, $query);
+                },
+            ));
+        }
+
         return new Response(
             $this->twig->render('experience/engineering/index.html.twig', [
                 'shell' => $shell,
@@ -178,6 +210,8 @@ final readonly class EngineeringFeatureController
                 'features' => $features,
                 'workspaceRows' => $workspaceRows,
                 'workspaceStats' => $stats,
+                'workspaceView' => $view,
+                'workspaceQuery' => $query,
                 'queue' => $queue,
                 'activeExecutions' => $active,
                 'csrfToken' => $this->csrf->token($request),
