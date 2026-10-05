@@ -314,7 +314,15 @@
                                             {% endfor %}
                                         </div>
                                     {% endif %}
-                                    <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
+                                    {% if run.output.decision|default('') %}<div><strong>Decision:</strong> {{ run.output.decision }}</div>{% endif %}
+                                    {% if run.output.reason|default('') %}<div><strong>Reason:</strong> {{ run.output.reason }}</div>{% endif %}
+                                    {% if run.output.proposed_actions|default([]) is not empty %}
+                                        <div><strong>Proposed actions:</strong> {{ run.output.proposed_actions|length }}</div>
+                                    {% endif %}
+                                    <details class="engineering-details" style="margin-top:6px">
+                                        <summary>Structured output</summary>
+                                        <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
+                                    </details>
                                     <div class="engineering-muted">trace: {{ run.trace_id|default('n/a') }}</div>
                                 </details>
                             </td>
@@ -377,7 +385,7 @@
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
-                    <thead><tr><th>Час</th><th>Provider / model</th><th>Use case</th><th>Input</th><th>Cached</th><th>Output</th><th>Reasoning</th><th>Total</th><th>Вартість</th><th>Джерело ціни</th><th>Latency</th><th>Correlation</th></tr></thead>
+                    <thead><tr><th>Час</th><th>Provider / model</th><th>Use case</th><th>Input</th><th>Cached</th><th>Output</th><th>Reasoning</th><th>Total</th><th>Вартість</th><th>Джерело ціни</th><th>Latency</th><th>Provider request</th><th>Correlation</th></tr></thead>
                     <tbody>
                     {% for inv in engineering.llm_invocations %}
                         <tr>
@@ -392,6 +400,7 @@
                             <td>{{ inv.cost_amount is not null ? ((inv.cost_currency|default('USD')) ~ ' ' ~ inv.cost_amount|number_format(6, '.', '')) : 'unavailable' }}</td>
                             <td>{{ inv.cost_source|default('unavailable') }}{% if inv.pricing_version|default('') %}<div class="engineering-muted">{{ inv.pricing_version }}</div>{% endif %}</td>
                             <td>{{ inv.latency_ms is not null ? (inv.latency_ms ~ ' ms') : 'n/a' }}</td>
+                            <td><code>{{ inv.provider_request_id|default('n/a') }}</code></td>
                             <td><code>{{ inv.correlation_id }}</code></td>
                         </tr>
                     {% endfor %}
