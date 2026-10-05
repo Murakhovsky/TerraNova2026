@@ -11,11 +11,14 @@ use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
 use App\Engineering\Domain\Workflow\EngineeringId;
+use DateTimeImmutable;
 use Kernel\Agent\Contract\AgentRuntimeInterface;
 use Kernel\Agent\Model\Agent;
 use Kernel\Agent\Model\AgentContext;
 use Kernel\Agent\Model\AgentInstance;
 use Kernel\Agent\Model\AgentRunStatus;
+use Kernel\Execution\ExecutionFailureClassifier;
+use Kernel\Execution\ExecutionFailureKind;
 use Kernel\Shared\Domain\OrganizationId;
 use RuntimeException;
 
@@ -31,6 +34,7 @@ final readonly class EngineeringDomainAgentService
         private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
         private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
         private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
+        private int $maxTechnicalRetries = 2,
     ) {}
 
     /** @param array<string,mixed> $inputs @return array<string,mixed> */
