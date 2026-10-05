@@ -27,13 +27,21 @@ final class EngineeringAgentOutputValidator
     private function productRequirements(array $output): void
     {
         $this->manager($output);
+        $allowed = [
+            AgentRole::QA_PLANNER->value,
+            AgentRole::PRINCIPAL_ARCHITECT->value,
+            AgentRole::DEVELOPER->value,
+            AgentRole::REVIEWER->value,
+            AgentRole::QA_EXECUTOR->value,
+        ];
         foreach ($output['tasks'] as $index => $task) {
             if (!is_array($task)) continue;
             $role = strtoupper(trim((string) ($task['assigned_role'] ?? '')));
-            if ($role === AgentRole::QA->value) {
+            if ($role !== '' && !in_array($role, $allowed, true)) {
                 throw new EngineeringAgentOutputValidationException(sprintf(
-                    'Product task %d uses legacy QA role; use QA_PLANNER or QA_EXECUTOR explicitly.',
+                    'Product task %d has invalid downstream role %s.',
                     $index,
+                    $role,
                 ));
             }
         }
