@@ -75,6 +75,8 @@ final class FeatureDependencyGraph
                 EngineeringDomainFeatureStatus::NOT_STARTED->value,
                 EngineeringDomainFeatureStatus::READY->value,
                 EngineeringDomainFeatureStatus::WAITING->value,
+                EngineeringDomainFeatureStatus::STALE->value,
+                EngineeringDomainFeatureStatus::REVALIDATION_REQUIRED->value,
             ], true)) continue;
 
             $allComplete = true;
