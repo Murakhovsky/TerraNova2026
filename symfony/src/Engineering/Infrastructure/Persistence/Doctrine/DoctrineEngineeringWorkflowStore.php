@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface;
 use App\Engineering\Application\Workflow\EngineeringTransitionObserverInterface;
 use App\Engineering\Domain\Workflow\EngineeringWorkflowState;
 use App\Engineering\Domain\Workflow\WorkflowExecution;
@@ -18,6 +19,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EngineeringTransitionObserverInterface $observer,
+        private EngineeringExecutionEventStoreInterface $events,
     ) {
     }
 
@@ -123,7 +125,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         $db = $this->entityManager->getConnection();
 
         $rows = $db->fetchAllAssociative(
-            "SELECT w.id, w.current_state, w.status,
+            "SELECT w.id, w.feature_id, w.trace_id, w.current_state, w.status, w.health_status,
                     TIMESTAMPDIFF(SECOND, COALESCE(w.heartbeat_at, w.last_activity_at), UTC_TIMESTAMP(6)) AS age_seconds
              FROM cos_engineering_workflows w
              INNER JOIN cos_engineering_features f ON f.id = w.feature_id
@@ -162,6 +164,27 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                  WHERE id = :id",
                 ['health' => $health, 'reason' => $reason, 'id' => (string) $row['id']],
             );
+            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
+            if ($previousHealth !== $health) {
+                $this->events->append(
+                    (string) $row['feature_id'],
+                    (string) $row['id'],
+                    'WATCHDOG',
+                    'runtime.health_changed',
+                    $health,
+                    sprintf('Runtime health changed from %s to %s', $previousHealth, $health),
+                    [
+                        'previous_health' => $previousHealth,
+                        'health' => $health,
+                        'age_seconds' => $age,
+                        'stale_after_seconds' => $staleAfterSeconds,
+                        'stalled_after_seconds' => $stalledAfterSeconds,
+                        'reason' => $reason,
+                    ],
+                    correlationId: (string) ($row['trace_id'] ?? ''),
+                    error: $health === 'STALLED' ? $reason : null,
+                );
+            }
         }
 
         $this->entityManager->clear(WorkflowExecutionRecord::class);
