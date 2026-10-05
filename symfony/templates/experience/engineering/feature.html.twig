@@ -13,6 +13,13 @@
     'COMPLETED': 'ЗАВЕРШЕНО',
     'CANCELLED': 'СКАСОВАНО',
     'FAILED': 'ПОМИЛКА',
+    'ERROR': 'ПОМИЛКА',
+    'STARTED': 'РОЗПОЧАТО',
+    'APPROVED': 'СХВАЛЕНО',
+    'PASS': 'ПРОЙДЕНО',
+    'PASSED': 'ПРОЙДЕНО',
+    'SUCCESS': 'УСПІШНО',
+    'TIMED_OUT': 'ТАЙМАУТ',
     'NOT_REACHED': 'ЩЕ НЕ РОЗПОЧАТО',
     'ANALYSIS': 'АНАЛІЗ',
     'QA_PLANNING': 'ПЛАН ПЕРЕВІРКИ',
@@ -236,7 +243,7 @@
                 data-engineering-live-target="heartbeat"
                 data-timestamp="{{ engineering.workflow.heartbeat_at|default('') }}"
                 title="{{ engineering.workflow.heartbeat_at|default('heartbeat n/a') }}"
-            >heartbeat: {{ summary.heartbeat_label }}</span>
+            >сигнал: {{ summary.heartbeat_label }}</span>
         </div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">Поточний агент</span>
@@ -329,7 +336,7 @@
                             <strong>{{ eventTypeLabels[event.type|default('EVENT')]|default(event.type|default('ПОДІЯ')) }}</strong>
                             <span>
                                 {{ event.title|default('') }}
-                                {% if event.status|default('') %} · {{ event.status }}{% endif %}
+                                {% if event.status|default('') %} · {{ statusLabels[event.status]|default(event.status) }}{% endif %}
                                 {% if event.detail|default('') %} · {{ event.detail }}{% endif %}
                             </span>
                         </div>
