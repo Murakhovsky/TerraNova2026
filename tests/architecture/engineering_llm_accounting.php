@@ -43,6 +43,9 @@ foreach (['runCorrelationId', "':agent:'"] as $needle) {
 foreach (['attachLedgerUsage','ledger_usage','cost_sources','pricing_versions'] as $needle) {
     if (!str_contains($status.$template, $needle)) throw new RuntimeException('Agent-run ledger attribution missing '.$needle);
 }
+foreach (['LlmPricingResolverInterface','withEstimatedCosts','READ_MODEL_','organization_id'] as $needle) {
+    if (!str_contains($readModel, $needle)) throw new RuntimeException('Historical Engineering cost estimation missing '.$needle);
+}
 foreach (['Cached','Reasoning','Provider request','Джерело ціни'] as $needle) {
     if (!str_contains($template, $needle)) throw new RuntimeException('Engineering detailed usage UI missing '.$needle);
 }
