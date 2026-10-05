@@ -50,7 +50,10 @@
                 <span class="engineering-muted">{{ workspaceStats.completed }} завершено</span>
             </div>
         </div>
-        <details class="engineering-create cos-card" style="padding:10px 14px;min-width:180px">
+        <div class="engineering-actions">
+            <a class="cos-button cos-button--ghost" href="/admin/engineering/domains">Domain Development</a>
+        </div>
+                <details class="engineering-create cos-card" style="padding:10px 14px;min-width:180px">
             <summary>+ Нове завдання</summary>
             <div class="engineering-create__body">
                 <form class="cos-form" method="post" action="/admin/engineering/create" data-engineering-create>
