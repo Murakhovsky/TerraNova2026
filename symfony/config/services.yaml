@@ -1338,6 +1338,10 @@ services:
   App\Engineering\Application\Agent\EngineeringAgentRunnerInterface:
     alias: App\Engineering\Application\Agent\EngineeringAgentRunner
 
+  App\Engineering\Application\Agent\AgentCapabilityRegistry:
+    arguments:
+      $configDirectory: '%kernel.project_dir%/config/engineering/agents'
+
   App\Engineering\Application\Agent\EngineeringAgentDefinitionFactory:
     arguments:
       $managerModel: '%env(COS_ENGINEERING_MANAGER_MODEL)%'
