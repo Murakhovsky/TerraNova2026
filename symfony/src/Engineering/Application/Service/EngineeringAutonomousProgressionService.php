@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Service;
 
+use App\Engineering\Application\Agent\EngineeringAgentAssignmentService;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -22,6 +23,7 @@ final readonly class EngineeringAutonomousProgressionService
         private EngineeringDeveloperStageExecutor $developer,
         private EngineeringReviewerStageExecutor $reviewer,
         private EngineeringQaExecutorStageExecutor $qaExecutor,
+        private EngineeringAgentAssignmentService $assignments,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringFeatureStoreInterface $features,
@@ -42,6 +44,8 @@ final readonly class EngineeringAutonomousProgressionService
         for ($step = 0; $step < $this->maxStepsPerProgression; ++$step) {
             $role = $directive->agent;
             if ($role === null) return $directive;
+
+            $this->assignments->assertAssignable($featureId, $role, 'FEATURE', 'MEDIUM');
 
             if (!$this->experienceAutonomyAllows($featureId, $workflowId, $role)) {
                 $level = $this->experienceAutonomyLevel($featureId) ?? 'L0';
