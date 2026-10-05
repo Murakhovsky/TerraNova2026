@@ -129,6 +129,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                     'cost_amount' => $costKnown ? (float) ($row['cost_amount'] ?? 0) : null,
                     'cost_currency' => $costKnown ? 'USD' : null,
                     'cost_complete' => $costKnown,
+                    'cost_sources' => $costKnown ? ['AGENT_RUN_FALLBACK'] : [],
+                    'pricing_versions' => [],
                     'models' => [],
                 ];
             }
