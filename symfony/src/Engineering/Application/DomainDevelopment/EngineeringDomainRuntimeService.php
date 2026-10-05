@@ -87,6 +87,9 @@ final readonly class EngineeringDomainRuntimeService
             ],
             'engineering-domain:create:'.$id,
             'domain-created:v1',
+            actor: $createdBy,
+            reason: 'Domain Initiative created from Master Specification.',
+            result: EngineeringDomainStatus::DRAFT->value,
         );
         return $id;
     }
