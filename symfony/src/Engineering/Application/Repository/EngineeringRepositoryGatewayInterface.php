@@ -6,6 +6,7 @@ namespace App\Engineering\Application\Repository;
 interface EngineeringRepositoryGatewayInterface
 {
     public function available(): bool;
+    public function configuredRepository(): string;
     public function currentBaseRevision(?string $branch = null): string;
     public function configuredBaseBranch(): string;
     public function ensureBranch(string $branch, string $baseRevision): string;
