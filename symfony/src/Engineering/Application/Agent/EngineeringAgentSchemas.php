@@ -12,9 +12,13 @@ final class EngineeringAgentSchemas
     {
         return match ($role) {
             AgentRole::ENGINEERING_MANAGER => self::manager(),
+            AgentRole::PRODUCT_REQUIREMENTS => self::manager(),
+            AgentRole::QA_PLANNER => self::qa(),
             AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
             AgentRole::DEVELOPER => self::developer(),
             AgentRole::REVIEWER => self::reviewer(),
+            AgentRole::QA_EXECUTOR => self::qa(),
+            AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
             AgentRole::QA => self::qa(),
         };
     }
@@ -499,5 +503,36 @@ final class EngineeringAgentSchemas
         ];
     }
 
+
+
+    /** @return array<string,mixed> */
+    private static function integrationRelease(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','integration_summary','release_checks','known_limitations','required_human_decisions'],
+            'properties' => [
+                'status' => self::baseStatus(['RELEASE_READY','BLOCKED','HUMAN_DECISION_REQUIRED','FAILED']),
+                'integration_summary' => ['type' => ['string','object','array']],
+                'release_checks' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['id','status','blocking','evidence'],
+                        'properties' => [
+                            'id' => ['type' => 'string', 'minLength' => 1],
+                            'status' => self::baseStatus(['PASS','FAIL','BLOCKED','NOT_APPLICABLE']),
+                            'blocking' => ['type' => 'boolean'],
+                            'evidence' => ['type' => ['string','array','object','number','boolean','null']],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'known_limitations' => ['type' => 'array'],
+                'required_human_decisions' => ['type' => 'array'],
+            ],
+            'additionalProperties' => false,
+        ];
+    }
 
 }
