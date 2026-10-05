@@ -280,7 +280,7 @@
                 {% if summary.usage.cost_sources|default([]) is not empty %} · {{ summary.usage.cost_sources|join(', ') }}{% endif %}
             </span>
             <span class="engineering-summary__value">
-                {% if summary.cost is not null %}{{ summary.usage.cost_currency|default('USD') }} {{ summary.cost|number_format(4, '.', '') }}{% else %}unavailable{% endif %}
+                {% if summary.cost is not null %}{{ summary.usage.cost_currency|default('USD') }} {{ summary.cost|number_format(4, '.', '') }}{% else %}ще немає{% endif %}
             </span>
         </div>
     </section>
@@ -518,7 +518,7 @@
         {% if engineering.tasks is empty %}
             <div class="engineering-panel__body">
                 <strong>Execution plan не створено.</strong>
-                <p class="engineering-muted">Якщо workflow завершив analysis без persisted task decomposition, це слід вважати відсутністю plan, а не порожньою декоративною таблицею.</p>
+                <p class="engineering-muted">Якщо процес завершив аналіз без збереженого плану задач, це означає, що план не був створений.</p>
             </div>
         {% else %}
             <div class="engineering-table-wrap">
@@ -556,7 +556,7 @@
             <span class="engineering-muted">{{ engineering.execution_events|length }} подій</span>
         </div>
         {% if engineering.execution_events is empty %}
-            <div class="engineering-panel__body engineering-muted">Окремий журнал tool/repository actions для цього workflow ще порожній.</div>
+            <div class="engineering-panel__body engineering-muted">Окремий журнал дій інструментів і репозиторію для цього процесу ще порожній.</div>
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
@@ -604,7 +604,7 @@
         </div>
         {% if engineering.llm_invocations is empty %}
             <div class="engineering-panel__body">
-                <strong>Provider ledger для цього workflow не знайдено.</strong>
+                <strong>Журнал використання LLM для цього процесу не знайдено.</strong>
                 <p class="engineering-muted">Це не дорівнює 0 tokens / $0. Якщо OpenAI usage існує, але correlation не з'єднаний з AgentRun, accounting потребує виправлення.</p>
             </div>
         {% else %}
@@ -623,7 +623,7 @@
                             <td>{{ inv.reasoning_tokens is not null ? inv.reasoning_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
                             <td>{{ inv.total_tokens is not null ? inv.total_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
                             <td>{{ inv.cost_amount is not null ? ((inv.cost_currency|default('USD')) ~ ' ' ~ inv.cost_amount|number_format(6, '.', '')) : 'ще немає' }}</td>
-                            <td>{{ inv.cost_source|default('unavailable') }}{% if inv.pricing_version|default('') %}<div class="engineering-muted">{{ inv.pricing_version }}</div>{% endif %}</td>
+                            <td>{{ inv.cost_source|default('не визначено') }}{% if inv.pricing_version|default('') %}<div class="engineering-muted">{{ inv.pricing_version }}</div>{% endif %}</td>
                             <td>{{ inv.latency_ms is not null ? (inv.latency_ms ~ ' ms') : 'n/a' }}</td>
                             <td><code>{{ inv.provider_request_id|default('n/a') }}</code></td>
                             <td><code>{{ inv.correlation_id }}</code></td>
@@ -665,12 +665,12 @@
             <div class="engineering-panel__head"><h2>Технічні дані / аудит</h2><span class="engineering-muted">raw identifiers</span></div>
             <div class="engineering-panel__body">
                 <div><strong>Feature ID:</strong> <code>{{ engineering.feature.id }}</code></div>
-                <div><strong>Workflow ID:</strong> <code>{{ engineering.workflow.id|default('n/a') }}</code></div>
+                <div><strong>ID процесу:</strong> <code>{{ engineering.workflow.id|default('n/a') }}</code></div>
                 <div><strong>Trace:</strong> <code>{{ engineering.workflow.trace_id|default('n/a') }}</code></div>
                 <div><strong>Остання активність:</strong> {{ engineering.workflow.last_activity_at|default('не запускалось') }}</div>
-                <div><strong>Heartbeat:</strong> {{ engineering.workflow.heartbeat_at|default('немає') }}</div>
-                <div><strong>Runtime health:</strong> {{ engineering.workflow.health_status|default('UNKNOWN') }}</div>
-                {% if engineering.workflow.stalled_at|default('') %}<div><strong>Stalled at:</strong> {{ engineering.workflow.stalled_at }}</div>{% endif %}
+                <div><strong>Сигнал:</strong> {{ engineering.workflow.heartbeat_at|default('немає') }}</div>
+                <div><strong>Стан runtime:</strong> {{ engineering.workflow.health_status|default('UNKNOWN') }}</div>
+                {% if engineering.workflow.stalled_at|default('') %}<div><strong>Зупинено о:</strong> {{ engineering.workflow.stalled_at }}</div>{% endif %}
                 {% if engineering.workflow.runtime_reason|default('') %}<div><strong>Причина:</strong> {{ engineering.workflow.runtime_reason }}</div>{% endif %}
                 <div><strong>Початок:</strong> {{ engineering.workflow.started_at|default('не запускалось') }}</div>
                 <div><strong>Завершення:</strong> {{ engineering.workflow.finished_at|default('не завершено') }}</div>
@@ -684,7 +684,7 @@
         <details class="engineering-panel engineering-details">
             <summary class="engineering-panel__head"><span>Danger zone</span><span class="engineering-muted">hard delete</span></summary>
             <div class="engineering-panel__body">
-                <p class="engineering-muted">Hard delete доступний тільки для draft або CANCELLED/FAILED workflow без pull request.</p>
+                <p class="engineering-muted">Повне видалення доступне тільки для чернетки або скасованого/невдалого процесу без pull request.</p>
                 <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <label><input type="checkbox" name="confirm_delete" value="1" required> Підтверджую видалення локальної Engineering історії</label>
