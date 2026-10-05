@@ -141,7 +141,7 @@ final readonly class EngineeringStatusService
                 $detail = trim(implode(' · ', array_values(array_filter([
                     (string) ($run['provider'] ?? '').'/'.(string) ($run['model'] ?? ''),
                     $tokens !== null ? number_format($tokens, 0, '.', ' ').' tokens' : null,
-                    ($run['cost'] ?? null) !== null ? '.number_format((float) $run['cost'], 4, '.', '') : null,
+                    ($run['cost'] ?? null) !== null ? 'USD '.number_format((float) $run['cost'], 4, '.', '') : null,
                     ($run['error_message'] ?? null) !== null ? 'ERROR: '.(string) $run['error_message'] : null,
                 ], static fn (mixed $value): bool => $value !== null && $value !== ''),)));
                 $events[] = [
