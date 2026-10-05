@@ -16,6 +16,7 @@ use App\Engineering\Domain\Agent\AgentRole;
 final readonly class EngineeringAutonomousProgressionService
 {
     public function __construct(
+        private EngineeringProductRequirementsStageExecutor $product,
         private EngineeringArchitectStageExecutor $architect,
         private EngineeringDeveloperStageExecutor $developer,
         private EngineeringReviewerStageExecutor $reviewer,
@@ -59,6 +60,13 @@ final readonly class EngineeringAutonomousProgressionService
             }
 
             $directive = match ($role) {
+                AgentRole::PRODUCT_REQUIREMENTS => $this->product->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::PRODUCT_REQUIREMENTS),
+                ),
                 AgentRole::PRINCIPAL_ARCHITECT => $this->architect->execute(
                     featureId: $featureId,
                     workflowId: $workflowId,
@@ -80,14 +88,17 @@ final readonly class EngineeringAutonomousProgressionService
                     correlationId: $correlationId,
                     logicalAttempt: $this->nextAttempt($featureId, AgentRole::REVIEWER),
                 ),
+                AgentRole::QA_PLANNER,
+                AgentRole::QA_EXECUTOR,
                 AgentRole::QA => $this->qa->execute(
                     featureId: $featureId,
                     workflowId: $workflowId,
                     organizationId: $organizationId,
                     correlationId: $correlationId,
-                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::QA),
+                    logicalAttempt: $this->nextAttempt($featureId, $role),
                 ),
-                default => $directive,
+                AgentRole::ENGINEERING_MANAGER,
+                AgentRole::INTEGRATION_RELEASE => $directive,
             };
 
             if ($directive->agent === $role) return $directive;
@@ -118,9 +129,13 @@ final readonly class EngineeringAutonomousProgressionService
         $workflow = $this->workflows->get($workflowId);
         $required = match ($role) {
             AgentRole::ENGINEERING_MANAGER => 0,
+            AgentRole::PRODUCT_REQUIREMENTS,
+            AgentRole::QA_PLANNER,
             AgentRole::PRINCIPAL_ARCHITECT => 1,
             AgentRole::DEVELOPER => 2,
-            AgentRole::REVIEWER => 3,
+            AgentRole::REVIEWER,
+            AgentRole::QA_EXECUTOR,
+            AgentRole::INTEGRATION_RELEASE => 3,
             AgentRole::QA => $workflow->currentState()->value === 'QA_PLANNING' ? 1 : 3,
         };
 
