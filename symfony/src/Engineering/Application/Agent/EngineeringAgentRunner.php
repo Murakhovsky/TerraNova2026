@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Agent;
 
+use App\Engineering\Application\Policy\AgentCapabilityRegistry;
+use App\Engineering\Application\Policy\RuntimeCapabilityRegistry;
 use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use Kernel\Agent\Contract\AgentRuntimeInterface;
@@ -19,6 +21,8 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         private EngineeringAgentDefinitionFactory $definitions = new EngineeringAgentDefinitionFactory(),
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
+        private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
+        private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
         private int $maxTechnicalRetries = 2,
     ) {
     }
@@ -94,6 +98,8 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             data: $this->secrets->sanitize([
                 'context_refs' => $task->contextRefs,
                 'input_snapshot' => $task->inputSnapshot,
+                'agent_capabilities' => $this->agentCapabilities->forRole($task->role),
+                'runtime_capabilities' => $this->runtimeCapabilities->forRuntime('EngineeringRuntime'),
             ]),
             metadata: [
                 'engineering_feature_id' => $task->featureId,
