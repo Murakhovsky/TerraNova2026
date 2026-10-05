@@ -636,6 +636,10 @@ final readonly class EngineeringFeatureController
             count($data['open_human_decisions'] ?? []),
         );
         $stages = $this->stagePipeline($data, $state, $workflowStatus);
+        $durationSeconds = $this->durationSeconds(
+            is_string($data['workflow']['started_at'] ?? null) ? $data['workflow']['started_at'] : null,
+            is_string($data['workflow']['finished_at'] ?? null) ? $data['workflow']['finished_at'] : null,
+        );
 
         return [
             'state' => $state,
@@ -655,6 +659,8 @@ final readonly class EngineeringFeatureController
             'agent_runs' => count($runs),
             'roles' => $roles,
             'current_agent' => $currentAgent,
+            'duration_seconds' => $durationSeconds,
+            'duration_label' => $this->durationLabel($durationSeconds),
             'stages' => $stages,
             'usage' => $usage,
             'tokens' => $usage['total_tokens'] ?? null,
@@ -720,6 +726,32 @@ final readonly class EngineeringFeatureController
             $result[] = ['key' => $key, 'label' => $order[$key], 'status' => $status];
         }
         return $result;
+    }
+
+    private function durationSeconds(?string $startedAt, ?string $finishedAt): ?int
+    {
+        if ($startedAt === null || trim($startedAt) === '') return null;
+        try {
+            $start = new \DateTimeImmutable($startedAt);
+            $end = ($finishedAt !== null && trim($finishedAt) !== '')
+                ? new \DateTimeImmutable($finishedAt)
+                : new \DateTimeImmutable();
+            return max(0, $end->getTimestamp() - $start->getTimestamp());
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function durationLabel(?int $seconds): string
+    {
+        if ($seconds === null) return '—';
+        if ($seconds < 60) return $seconds.'с';
+        if ($seconds < 3600) return intdiv($seconds, 60).'хв '.($seconds % 60).'с';
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        if ($hours < 24) return $hours.'г '.str_pad((string) $minutes, 2, '0', STR_PAD_LEFT).'хв';
+        $days = intdiv($hours, 24);
+        return $days.'д '.($hours % 24).'г';
     }
 
     private function runtimeHealth(string $status, string $state, ?string $lastActivityAt): string
