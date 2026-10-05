@@ -161,8 +161,8 @@
     <section class="engineering-summary" aria-label="Зведення execution">
         <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value">{{ summary.workflow_status }}</span></div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value">{{ summary.state }}</span></div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Agent runs</span><span class="engineering-summary__value">{{ summary.agent_runs }}</span></div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Tasks</span><span class="engineering-summary__value">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Запуски агентів</span><span class="engineering-summary__value">{{ summary.agent_runs }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Задачі</span><span class="engineering-summary__value">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">Tokens</span>
             <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'unavailable' }}</span>
@@ -187,10 +187,16 @@
         {% endfor %}
     </section>
 
-    {% if summary.tokens is null or summary.cost is null %}
+    {% if summary.tokens is null %}
         <twig:CosAlert
-            title="Облік використання неповний"
-            copy="COS не має повних даних provider usage/cost для цього workflow. Невідоме значення не підміняється нулем."
+            title="Немає даних про токени"
+            copy="Provider usage не прив’язаний до цього workflow. COS не підміняє невідоме значення нулем; перевірте correlation у LLM ledger нижче."
+            tone="warning"
+        />
+    {% elseif summary.cost is null %}
+        <twig:CosAlert
+            title="Токени обліковані, вартість ще не визначена"
+            copy="Provider не повернув cost, а для цієї моделі немає налаштованої ставки в Platform Settings namespace llm_pricing. Токени показані фактично; $0.0000 більше не використовується як фальшиве значення."
             tone="warning"
         />
     {% endif %}
@@ -388,7 +394,7 @@
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
-                    <thead><tr><th>Час</th><th>Provider / model</th><th>Use case</th><th>Input</th><th>Cached</th><th>Output</th><th>Reasoning</th><th>Total</th><th>Вартість</th><th>Джерело ціни</th><th>Latency</th><th>Provider request</th><th>Correlation</th></tr></thead>
+                    <thead><tr><th>Час</th><th>Provider / модель</th><th>Сценарій</th><th>Вхідні</th><th>Cached</th><th>Вихідні</th><th>Reasoning</th><th>Усього</th><th>Вартість</th><th>Джерело ціни</th><th>Затримка</th><th>Provider request</th><th>Correlation</th></tr></thead>
                     <tbody>
                     {% for inv in engineering.llm_invocations %}
                         <tr>
@@ -547,7 +553,7 @@
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
-                    <thead><tr><th>Час</th><th>Provider / model</th><th>Use case</th><th>Input</th><th>Output</th><th>Total</th><th>Cost</th><th>Latency</th><th>Correlation</th></tr></thead>
+                    <thead><tr><th>Час</th><th>Provider / модель</th><th>Сценарій</th><th>Вхідні</th><th>Вихідні</th><th>Усього</th><th>Cost</th><th>Затримка</th><th>Correlation</th></tr></thead>
                     <tbody>
                     {% for inv in engineering.llm_invocations %}
                         <tr>
