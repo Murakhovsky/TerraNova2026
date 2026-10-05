@@ -5,6 +5,7 @@ namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface;
 use App\Engineering\Application\Workflow\EngineeringTransitionObserverInterface;
 use App\Engineering\Domain\Workflow\EngineeringWorkflowState;
 use App\Engineering\Domain\Workflow\WorkflowExecution;
@@ -114,8 +115,28 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             throw new RuntimeException('Engineering workflow not found: '.$workflowId);
         }
         if (in_array($record->status(), ['COMPLETED','CANCELLED','FAILED'], true)) return;
+        $previousHealth = $record->healthStatus();
+        $previousReason = $record->runtimeReason();
         $record->touchRuntime($agentRunId, $taskId);
         $this->entityManager->flush();
+        if (in_array($previousHealth, ['STALE','STALLED'], true)) {
+            $this->events->append(
+                $record->featureId(),
+                $record->id(),
+                'WATCHDOG',
+                'workflow.heartbeat_recovered',
+                'HEALTHY',
+                'Workflow runtime heartbeat recovered',
+                [
+                    'previous_health' => $previousHealth,
+                    'previous_reason' => $previousReason,
+                    'current_task_id' => $taskId,
+                    'current_agent_run_id' => $agentRunId,
+                ],
+                $agentRunId,
+                $record->traceId(),
+            );
+        }
     }
 
     public function refreshRuntimeHealthForOrganization(string $organizationId, int $staleAfterSeconds = 600, int $stalledAfterSeconds = 1800): array
@@ -161,6 +182,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                 $reason = null;
             }
 
+            $previousHealth = strtoupper((string) ($row['previous_health'] ?? 'UNKNOWN'));
             $db->executeStatement(
                 "UPDATE cos_engineering_workflows
                  SET health_status = :health,
@@ -169,6 +191,23 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                  WHERE id = :id",
                 ['health' => $health, 'reason' => $reason, 'id' => (string) $row['id']],
             );
+            if ($previousHealth !== $health) {
+                $this->events->append(
+                    (string) $row['feature_id'],
+                    (string) $row['id'],
+                    'WATCHDOG',
+                    'workflow.health_changed',
+                    $health,
+                    'Workflow runtime health changed from '.$previousHealth.' to '.$health,
+                    [
+                        'previous_health' => $previousHealth,
+                        'health' => $health,
+                        'age_seconds' => $age,
+                        'reason' => $reason,
+                    ],
+                    correlationId: (string) ($row['trace_id'] ?? ''),
+                );
+            }
             $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
             if ($previousHealth !== $health) {
                 $this->events->append(
