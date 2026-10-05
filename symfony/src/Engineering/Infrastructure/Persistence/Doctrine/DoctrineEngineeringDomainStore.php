@@ -609,6 +609,125 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         }, $rows);
     }
 
+    public function createHumanDecision(
+        string $domainId,
+        string $organizationId,
+        string $gateType,
+        string $resumeStatus,
+        string $question,
+        string $reason,
+        array $options,
+        array $evidence,
+        string $requestedBy,
+    ): string {
+        $domainId = EngineeringId::assert($domainId);
+        $gateType = strtoupper(trim($gateType));
+        $resumeStatus = strtoupper(trim($resumeStatus));
+        if ($gateType === '' || $resumeStatus === '' || trim($question) === '') {
+            throw new \InvalidArgumentException('Domain human gate requires type, resume status and question.');
+        }
+
+        $existing = $this->db()->fetchOne(
+            "SELECT id FROM cos_engineering_domain_human_decisions WHERE domain_id=:domain_id AND gate_type=:gate_type AND status='OPEN' ORDER BY created_at DESC LIMIT 1",
+            ['domain_id' => $domainId, 'gate_type' => $gateType],
+        );
+        if (is_string($existing) && $existing !== '') return $existing;
+
+        $id = EngineeringId::generate();
+        $this->db()->insert('cos_engineering_domain_human_decisions', [
+            'id' => $id,
+            'domain_id' => $domainId,
+            'organization_id' => $organizationId,
+            'gate_type' => $gateType,
+            'status' => 'OPEN',
+            'resume_status' => $resumeStatus,
+            'question' => trim($question),
+            'reason' => trim($reason),
+            'options_payload' => json_encode($options, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'evidence_payload' => json_encode($evidence, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'answer_payload' => null,
+            'requested_by' => trim($requestedBy) !== '' ? trim($requestedBy) : 'DOMAIN_RUNTIME',
+            'answered_by' => null,
+            'created_at' => $this->now(),
+            'answered_at' => null,
+        ]);
+        return $id;
+    }
+
+    public function openHumanDecisions(string $domainId): array
+    {
+        return $this->humanDecisionRows($domainId, true);
+    }
+
+    public function humanDecisionHistory(string $domainId): array
+    {
+        return $this->humanDecisionRows($domainId, false);
+    }
+
+    public function answerHumanDecision(
+        string $domainId,
+        string $decisionId,
+        string $selectedOption,
+        string $answeredBy,
+        ?string $notes = null,
+    ): array {
+        $domainId = EngineeringId::assert($domainId);
+        $decisionId = EngineeringId::assert($decisionId);
+        $row = $this->db()->fetchAssociative(
+            'SELECT * FROM cos_engineering_domain_human_decisions WHERE id=:id AND domain_id=:domain_id',
+            ['id' => $decisionId, 'domain_id' => $domainId],
+        );
+        if (!is_array($row)) throw new RuntimeException('Domain human decision not found.');
+        if (($row['status'] ?? null) !== 'OPEN') throw new RuntimeException('Domain human decision is already resolved.');
+
+        $options = $this->json($row['options_payload'] ?? null);
+        $selectedOption = strtoupper(trim($selectedOption));
+        $valid = [];
+        foreach ($options as $option) {
+            if (!is_array($option)) continue;
+            $id = strtoupper(trim((string) ($option['id'] ?? '')));
+            if ($id !== '') $valid[$id] = true;
+        }
+        if ($selectedOption === '' || !isset($valid[$selectedOption])) {
+            throw new \InvalidArgumentException('Selected Domain human decision option is invalid.');
+        }
+
+        $answer = [
+            'selected_option' => $selectedOption,
+            'notes' => $notes !== null ? trim($notes) : null,
+        ];
+        $this->db()->update('cos_engineering_domain_human_decisions', [
+            'status' => 'ANSWERED',
+            'answer_payload' => json_encode($answer, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'answered_by' => trim($answeredBy),
+            'answered_at' => $this->now(),
+        ], ['id' => $decisionId, 'domain_id' => $domainId]);
+
+        $row['status'] = 'ANSWERED';
+        $row['answer'] = $answer;
+        $row['answered_by'] = trim($answeredBy);
+        $row['options'] = $options;
+        $row['evidence'] = $this->json($row['evidence_payload'] ?? null);
+        unset($row['options_payload'], $row['evidence_payload'], $row['answer_payload']);
+        return $row;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function humanDecisionRows(string $domainId, bool $openOnly): array
+    {
+        $sql = 'SELECT * FROM cos_engineering_domain_human_decisions WHERE domain_id=:domain_id';
+        if ($openOnly) $sql .= " AND status='OPEN'";
+        $sql .= ' ORDER BY created_at DESC';
+        $rows = $this->db()->fetchAllAssociative($sql, ['domain_id' => EngineeringId::assert($domainId)]);
+        return array_map(function (array $row): array {
+            $row['options'] = $this->json($row['options_payload'] ?? null);
+            $row['evidence'] = $this->json($row['evidence_payload'] ?? null);
+            $row['answer'] = $this->json($row['answer_payload'] ?? null);
+            unset($row['options_payload'], $row['evidence_payload'], $row['answer_payload']);
+            return $row;
+        }, $rows);
+    }
+
     public function recordRuntimeEvent(
         string $domainId,
         string $organizationId,
