@@ -25,6 +25,14 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         string $targetBranch,
         string $createdBy,
         int $maxParallelFeatures = 3,
+        int $maxParallelDevelopers = 2,
+        int $maxParallelReviews = 2,
+        int $maxParallelQa = 2,
+        int $maxFeatureRetries = 3,
+        int $maxDomainIntegrationCycles = 3,
+        int $contextBudget = 120000,
+        int $tokenBudget = 1000000,
+        float $costBudget = 25.0,
     ): void {
         $id = EngineeringId::assert($id);
         $domainKey = $this->key($domainKey);
@@ -41,6 +49,14 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
             'target_repository' => trim($targetRepository),
             'target_branch' => trim($targetBranch) !== '' ? trim($targetBranch) : 'main',
             'max_parallel_features' => max(1, min(20, $maxParallelFeatures)),
+            'max_parallel_developers' => max(1, min(20, $maxParallelDevelopers)),
+            'max_parallel_reviews' => max(1, min(20, $maxParallelReviews)),
+            'max_parallel_qa' => max(1, min(20, $maxParallelQa)),
+            'max_feature_retries' => max(0, min(50, $maxFeatureRetries)),
+            'max_domain_integration_cycles' => max(1, min(20, $maxDomainIntegrationCycles)),
+            'context_budget' => max(10000, $contextBudget),
+            'token_budget' => max(1000, $tokenBudget),
+            'cost_budget' => max(0.0, $costBudget),
             'status_reason' => null,
             'created_by' => $createdBy,
             'created_at' => $this->now(),
@@ -86,14 +102,19 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
             "SELECT * FROM cos_engineering_domain_artifacts WHERE domain_id=:domain_id AND type=:type AND status='ACTIVE' ORDER BY version DESC LIMIT 1",
             ['domain_id' => $domainId, 'type' => $type],
         );
+
+        $normalized = $this->normalize($content);
+        $hash = hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        if (is_array($previous) && hash_equals((string) ($previous['content_hash'] ?? ''), $hash)) {
+            return $this->artifactView($previous);
+        }
+
         $version = is_array($previous) ? ((int) $previous['version'] + 1) : 1;
         if (is_array($previous)) {
             $db->update('cos_engineering_domain_artifacts', ['status' => 'SUPERSEDED'], ['id' => $previous['id']]);
         }
 
-        $normalized = $this->normalize($content);
         $id = EngineeringId::generate();
-        $hash = hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $db->insert('cos_engineering_domain_artifacts', [
             'id' => $id,
             'domain_id' => $domainId,
@@ -136,6 +157,59 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
             ['domain_id' => EngineeringId::assert($domainId)],
         );
         return array_map(fn (array $row): array => $this->artifactView($row), $rows);
+    }
+
+    public function artifactHistory(string $domainId, ?string $type = null): array
+    {
+        $params = ['domain_id' => EngineeringId::assert($domainId)];
+        $sql = 'SELECT * FROM cos_engineering_domain_artifacts WHERE domain_id=:domain_id';
+        if ($type !== null && trim($type) !== '') {
+            $sql .= ' AND type=:type';
+            $params['type'] = strtoupper(trim($type));
+        }
+        $sql .= ' ORDER BY type ASC, version DESC, created_at DESC';
+
+        $rows = $this->db()->fetchAllAssociative($sql, $params);
+        return array_map(fn (array $row): array => $this->artifactView($row), $rows);
+    }
+
+    public function replaceArtifactDependencies(string $domainId, array $edges): void
+    {
+        $domainId = EngineeringId::assert($domainId);
+        $db = $this->db();
+        $db->beginTransaction();
+        try {
+            $db->delete('cos_engineering_domain_artifact_dependencies', ['domain_id' => $domainId]);
+            foreach ($edges as $edge) {
+                if (!is_array($edge)) continue;
+                $source = EngineeringId::assert((string) ($edge['source_artifact_id'] ?? ''));
+                $target = EngineeringId::assert((string) ($edge['target_artifact_id'] ?? ''));
+                $relationship = strtoupper(trim((string) ($edge['relationship'] ?? 'DERIVES')));
+                if ($source === $target) continue;
+                $db->insert('cos_engineering_domain_artifact_dependencies', [
+                    'id' => EngineeringId::generate(),
+                    'domain_id' => $domainId,
+                    'source_artifact_id' => $source,
+                    'target_artifact_id' => $target,
+                    'relationship' => mb_substr($relationship !== '' ? $relationship : 'DERIVES', 0, 64),
+                    'created_at' => $this->now(),
+                ]);
+            }
+            $db->commit();
+        } catch (\Throwable $error) {
+            if ($db->isTransactionActive()) $db->rollBack();
+            throw $error;
+        }
+    }
+
+    public function artifactDependencies(string $domainId): array
+    {
+        return $this->db()->fetchAllAssociative(
+            'SELECT source_artifact_id, target_artifact_id, relationship, created_at '
+            .'FROM cos_engineering_domain_artifact_dependencies WHERE domain_id=:domain_id '
+            .'ORDER BY relationship, source_artifact_id, target_artifact_id',
+            ['domain_id' => EngineeringId::assert($domainId)],
+        );
     }
 
     public function replacePlan(string $domainId, array $capabilities, array $features, array $dependencies): void
@@ -225,10 +299,42 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
 
     public function capabilities(string $domainId): array
     {
-        return $this->db()->fetchAllAssociative(
+        $rows = $this->db()->fetchAllAssociative(
             'SELECT * FROM cos_engineering_domain_capabilities WHERE domain_id=:domain_id ORDER BY sort_order ASC, capability_key ASC',
             ['domain_id' => EngineeringId::assert($domainId)],
         );
+        return array_map(function (array $row): array {
+            $row['required'] = (bool) ($row['required'] ?? false);
+            $row['metadata'] = $this->json($row['metadata'] ?? null);
+            return $row;
+        }, $rows);
+    }
+
+    public function updateCapabilityStatus(string $domainId, string $capabilityKey, string $status, ?string $reason = null): void
+    {
+        $status = strtoupper(trim($status));
+        if (!in_array($status, ['NOT_STARTED','WAITING','RUNNING','IMPLEMENTED','REVALIDATION_REQUIRED','BLOCKED','COMPLETE'], true)) {
+            throw new \InvalidArgumentException('Invalid Domain capability status: '.$status);
+        }
+
+        $metadata = $this->db()->fetchOne(
+            'SELECT metadata FROM cos_engineering_domain_capabilities WHERE domain_id=:domain_id AND capability_key=:capability_key',
+            ['domain_id' => EngineeringId::assert($domainId), 'capability_key' => $this->key($capabilityKey)],
+        );
+        if ($metadata === false) throw new RuntimeException('Domain capability not found: '.$capabilityKey);
+        $payload = $this->json($metadata);
+        if ($reason !== null && trim($reason) !== '') $payload['status_reason'] = trim($reason);
+        else unset($payload['status_reason']);
+
+        $updated = $this->db()->update('cos_engineering_domain_capabilities', [
+            'status' => $status,
+            'metadata' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'updated_at' => $this->now(),
+        ], [
+            'domain_id' => EngineeringId::assert($domainId),
+            'capability_key' => $this->key($capabilityKey),
+        ]);
+        if ($updated === 0) throw new RuntimeException('Domain capability not found: '.$capabilityKey);
     }
 
     public function features(string $domainId): array
@@ -258,6 +364,37 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         );
     }
 
+    public function replaceDependencies(string $domainId, array $dependencies): void
+    {
+        $domainId = EngineeringId::assert($domainId);
+        $db = $this->db();
+        $linked = (int) $db->fetchOne(
+            'SELECT COUNT(*) FROM cos_engineering_domain_features WHERE domain_id=:domain_id AND engineering_feature_id IS NOT NULL',
+            ['domain_id' => $domainId],
+        );
+        if ($linked > 0) throw new RuntimeException('Dependency graph cannot be edited after child Feature workflows have been linked.');
+
+        $db->beginTransaction();
+        try {
+            $db->delete('cos_engineering_domain_dependencies', ['domain_id' => $domainId]);
+            foreach ($dependencies as $dependency) {
+                if (!is_array($dependency)) continue;
+                $db->insert('cos_engineering_domain_dependencies', [
+                    'id' => EngineeringId::generate(),
+                    'domain_id' => $domainId,
+                    'feature_key' => $this->key((string) ($dependency['feature_key'] ?? '')),
+                    'depends_on_key' => $this->key((string) ($dependency['depends_on_key'] ?? '')),
+                    'dependency_type' => strtoupper((string) ($dependency['type'] ?? 'REQUIRES')),
+                    'created_at' => $this->now(),
+                ]);
+            }
+            $db->commit();
+        } catch (\Throwable $error) {
+            if ($db->isTransactionActive()) $db->rollBack();
+            throw $error;
+        }
+    }
+
     public function linkEngineeringFeature(
         string $domainId,
         string $featureKey,
@@ -265,16 +402,50 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         int $architectureVersion,
         array $contractSnapshot,
     ): void {
-        $updated = $this->db()->update('cos_engineering_domain_features', [
-            'engineering_feature_id' => EngineeringId::assert($engineeringFeatureId),
+        $domainId = EngineeringId::assert($domainId);
+        $featureKey = $this->key($featureKey);
+        $engineeringFeatureId = EngineeringId::assert($engineeringFeatureId);
+        $db = $this->db();
+
+        $current = $db->fetchAssociative(
+            'SELECT engineering_feature_id, engineering_feature_history, architecture_version, contract_snapshot, status '
+            .'FROM cos_engineering_domain_features WHERE domain_id=:domain_id AND feature_key=:feature_key',
+            ['domain_id' => $domainId, 'feature_key' => $featureKey],
+        );
+        if (!is_array($current)) throw new RuntimeException('Domain feature not found: '.$featureKey);
+
+        $history = $this->json($current['engineering_feature_history'] ?? null);
+        $previousId = is_string($current['engineering_feature_id'] ?? null) ? trim((string) $current['engineering_feature_id']) : '';
+        if ($previousId !== '' && $previousId !== $engineeringFeatureId) {
+            $alreadyArchived = false;
+            foreach ($history as $item) {
+                if (is_array($item) && ($item['engineering_feature_id'] ?? null) === $previousId) {
+                    $alreadyArchived = true;
+                    break;
+                }
+            }
+            if (!$alreadyArchived) {
+                $history[] = [
+                    'engineering_feature_id' => $previousId,
+                    'architecture_version' => $current['architecture_version'] !== null ? (int) $current['architecture_version'] : null,
+                    'contract_snapshot' => $this->json($current['contract_snapshot'] ?? null),
+                    'status' => (string) ($current['status'] ?? ''),
+                    'superseded_at' => $this->now(),
+                ];
+            }
+        }
+
+        $updated = $db->update('cos_engineering_domain_features', [
+            'engineering_feature_id' => $engineeringFeatureId,
+            'engineering_feature_history' => json_encode($history, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'architecture_version' => max(1, $architectureVersion),
             'contract_snapshot' => json_encode($contractSnapshot, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'status' => EngineeringDomainFeatureStatus::RUNNING->value,
             'status_reason' => null,
             'updated_at' => $this->now(),
         ], [
-            'domain_id' => EngineeringId::assert($domainId),
-            'feature_key' => $this->key($featureKey),
+            'domain_id' => $domainId,
+            'feature_key' => $featureKey,
         ]);
         if ($updated === 0) throw new RuntimeException('Domain feature not found: '.$featureKey);
     }
@@ -465,18 +636,49 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         ?string $model,
         array $usage,
         ?string $error,
+        ?string $runtimeId = null,
+        ?string $featureId = null,
+        ?string $state = null,
+        ?string $startedAt = null,
+        ?string $finishedAt = null,
+        array $inputs = [],
+        array $outputs = [],
+        array $artifacts = [],
+        ?string $repositoryRevision = null,
+        array $errors = [],
     ): void {
+        $runtimeId = $runtimeId !== null && trim($runtimeId) !== '' ? EngineeringId::assert($runtimeId) : null;
+        $tokens = [];
+        foreach (['input_tokens','cached_input_tokens','output_tokens','reasoning_tokens'] as $field) {
+            if (isset($usage[$field]) && is_numeric($usage[$field])) $tokens[$field] = max(0, (int) $usage[$field]);
+        }
+        $cost = isset($usage['cost_amount']) && is_numeric($usage['cost_amount'])
+            ? max(0.0, (float) $usage['cost_amount'])
+            : null;
+
         $this->db()->insert('cos_engineering_domain_agent_runs', [
-            'id' => EngineeringId::generate(),
+            'id' => $runtimeId ?? EngineeringId::generate(),
+            'runtime_id' => $runtimeId,
             'domain_id' => EngineeringId::assert($domainId),
+            'feature_id' => $featureId !== null && trim($featureId) !== '' ? EngineeringId::assert($featureId) : null,
             'agent_role' => $role,
             'status' => $status,
+            'state' => $state !== null ? mb_substr(trim($state), 0, 48) : null,
+            'started_at' => $startedAt,
+            'finished_at' => $finishedAt,
+            'input_payload' => json_encode($inputs, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'output_payload' => json_encode($outputs, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'artifact_payload' => json_encode($artifacts, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'repository_revision' => $repositoryRevision !== null && trim($repositoryRevision) !== '' ? mb_substr(trim($repositoryRevision), 0, 128) : null,
+            'cost_amount' => $cost,
+            'token_usage' => json_encode($tokens, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'errors_payload' => json_encode($errors, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'correlation_id' => mb_substr($correlationId, 0, 128),
             'provider' => $provider,
             'model' => $model,
             'usage_payload' => json_encode($usage, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'error_message' => $error,
-            'created_at' => $this->now(),
+            'created_at' => $finishedAt ?? $this->now(),
         ]);
     }
 
@@ -488,7 +690,185 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         );
         return array_map(function (array $row): array {
             $row['usage'] = $this->json($row['usage_payload'] ?? null);
-            unset($row['usage_payload']);
+            $row['inputs'] = $this->json($row['input_payload'] ?? null);
+            $row['outputs'] = $this->json($row['output_payload'] ?? null);
+            $row['artifacts'] = $this->json($row['artifact_payload'] ?? null);
+            $row['token_usage'] = $this->json($row['token_usage'] ?? null);
+            $row['errors'] = $this->json($row['errors_payload'] ?? null);
+            $row['cost_amount'] = $row['cost_amount'] !== null ? (float) $row['cost_amount'] : null;
+            unset($row['usage_payload'], $row['input_payload'], $row['output_payload'], $row['artifact_payload'], $row['errors_payload']);
+            return $row;
+        }, $rows);
+    }
+
+    public function createHumanDecision(
+        string $domainId,
+        string $organizationId,
+        string $gateType,
+        string $resumeStatus,
+        string $question,
+        string $reason,
+        array $options,
+        array $evidence,
+        string $requestedBy,
+    ): string {
+        $domainId = EngineeringId::assert($domainId);
+        $gateType = strtoupper(trim($gateType));
+        $resumeStatus = strtoupper(trim($resumeStatus));
+        if ($gateType === '' || $resumeStatus === '' || trim($question) === '') {
+            throw new \InvalidArgumentException('Domain human gate requires type, resume status and question.');
+        }
+
+        $existing = $this->db()->fetchOne(
+            "SELECT id FROM cos_engineering_domain_human_decisions WHERE domain_id=:domain_id AND gate_type=:gate_type AND status='OPEN' ORDER BY created_at DESC LIMIT 1",
+            ['domain_id' => $domainId, 'gate_type' => $gateType],
+        );
+        if (is_string($existing) && $existing !== '') return $existing;
+
+        $id = EngineeringId::generate();
+        $this->db()->insert('cos_engineering_domain_human_decisions', [
+            'id' => $id,
+            'domain_id' => $domainId,
+            'organization_id' => $organizationId,
+            'gate_type' => $gateType,
+            'status' => 'OPEN',
+            'resume_status' => $resumeStatus,
+            'question' => trim($question),
+            'reason' => trim($reason),
+            'options_payload' => json_encode($options, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'evidence_payload' => json_encode($evidence, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'answer_payload' => null,
+            'requested_by' => trim($requestedBy) !== '' ? trim($requestedBy) : 'DOMAIN_RUNTIME',
+            'answered_by' => null,
+            'created_at' => $this->now(),
+            'answered_at' => null,
+        ]);
+        return $id;
+    }
+
+    public function openHumanDecisions(string $domainId): array
+    {
+        return $this->humanDecisionRows($domainId, true);
+    }
+
+    public function humanDecisionHistory(string $domainId): array
+    {
+        return $this->humanDecisionRows($domainId, false);
+    }
+
+    public function answerHumanDecision(
+        string $domainId,
+        string $decisionId,
+        string $selectedOption,
+        string $answeredBy,
+        ?string $notes = null,
+    ): array {
+        $domainId = EngineeringId::assert($domainId);
+        $decisionId = EngineeringId::assert($decisionId);
+        $row = $this->db()->fetchAssociative(
+            'SELECT * FROM cos_engineering_domain_human_decisions WHERE id=:id AND domain_id=:domain_id',
+            ['id' => $decisionId, 'domain_id' => $domainId],
+        );
+        if (!is_array($row)) throw new RuntimeException('Domain human decision not found.');
+        if (($row['status'] ?? null) !== 'OPEN') throw new RuntimeException('Domain human decision is already resolved.');
+
+        $options = $this->json($row['options_payload'] ?? null);
+        $selectedOption = strtoupper(trim($selectedOption));
+        $valid = [];
+        foreach ($options as $option) {
+            if (!is_array($option)) continue;
+            $id = strtoupper(trim((string) ($option['id'] ?? '')));
+            if ($id !== '') $valid[$id] = true;
+        }
+        if ($selectedOption === '' || !isset($valid[$selectedOption])) {
+            throw new \InvalidArgumentException('Selected Domain human decision option is invalid.');
+        }
+
+        $answer = [
+            'selected_option' => $selectedOption,
+            'notes' => $notes !== null ? trim($notes) : null,
+        ];
+        $this->db()->update('cos_engineering_domain_human_decisions', [
+            'status' => 'ANSWERED',
+            'answer_payload' => json_encode($answer, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'answered_by' => trim($answeredBy),
+            'answered_at' => $this->now(),
+        ], ['id' => $decisionId, 'domain_id' => $domainId]);
+
+        $row['status'] = 'ANSWERED';
+        $row['answer'] = $answer;
+        $row['answered_by'] = trim($answeredBy);
+        $row['options'] = $options;
+        $row['evidence'] = $this->json($row['evidence_payload'] ?? null);
+        unset($row['options_payload'], $row['evidence_payload'], $row['answer_payload']);
+        return $row;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function humanDecisionRows(string $domainId, bool $openOnly): array
+    {
+        $sql = 'SELECT * FROM cos_engineering_domain_human_decisions WHERE domain_id=:domain_id';
+        if ($openOnly) $sql .= " AND status='OPEN'";
+        $sql .= ' ORDER BY created_at DESC';
+        $rows = $this->db()->fetchAllAssociative($sql, ['domain_id' => EngineeringId::assert($domainId)]);
+        return array_map(function (array $row): array {
+            $row['options'] = $this->json($row['options_payload'] ?? null);
+            $row['evidence'] = $this->json($row['evidence_payload'] ?? null);
+            $row['answer'] = $this->json($row['answer_payload'] ?? null);
+            unset($row['options_payload'], $row['evidence_payload'], $row['answer_payload']);
+            return $row;
+        }, $rows);
+    }
+
+    public function recordRuntimeEvent(
+        string $domainId,
+        string $organizationId,
+        string $eventType,
+        ?string $featureKey,
+        array $payload,
+        string $correlationId,
+        string $dedupeKey,
+        string $actor = 'SYSTEM',
+        ?string $reason = null,
+        ?string $artifactId = null,
+        ?string $repositoryRevision = null,
+        ?string $result = null,
+    ): void {
+        $eventType = trim($eventType);
+        $dedupeKey = trim($dedupeKey);
+        if ($eventType === '' || $dedupeKey === '') throw new \InvalidArgumentException('Domain runtime event type and dedupe key are required.');
+
+        $this->db()->executeStatement(
+            'INSERT IGNORE INTO cos_engineering_domain_runtime_events '
+            .'(id, domain_id, organization_id, event_type, feature_key, actor, reason, artifact_id, repository_revision, result, payload, correlation_id, dedupe_key, created_at) '
+            .'VALUES (:id, :domain_id, :organization_id, :event_type, :feature_key, :actor, :reason, :artifact_id, :repository_revision, :result, :payload, :correlation_id, :dedupe_key, :created_at)',
+            [
+                'id' => EngineeringId::generate(),
+                'domain_id' => EngineeringId::assert($domainId),
+                'organization_id' => $organizationId,
+                'event_type' => $eventType,
+                'feature_key' => $featureKey !== null && trim($featureKey) !== '' ? $this->key($featureKey) : null,
+                'actor' => mb_substr(trim($actor) !== '' ? trim($actor) : 'SYSTEM', 0, 128),
+                'reason' => $reason !== null ? mb_substr(trim($reason), 0, 500) : null,
+                'artifact_id' => $artifactId !== null && trim($artifactId) !== '' ? EngineeringId::assert($artifactId) : null,
+                'repository_revision' => $repositoryRevision !== null && trim($repositoryRevision) !== '' ? mb_substr(trim($repositoryRevision), 0, 128) : null,
+                'result' => $result !== null && trim($result) !== '' ? mb_substr(strtoupper(trim($result)), 0, 64) : null,
+                'payload' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'correlation_id' => mb_substr(trim($correlationId), 0, 128),
+                'dedupe_key' => mb_substr($dedupeKey, 0, 191),
+                'created_at' => $this->now(),
+            ],
+        );
+    }
+
+    public function runtimeEvents(string $domainId, int $limit = 200): array
+    {
+        $rows = $this->db()->fetchAllAssociative(
+            'SELECT * FROM cos_engineering_domain_runtime_events WHERE domain_id=:domain_id ORDER BY created_at DESC, id DESC LIMIT '.max(1, min(500, $limit)),
+            ['domain_id' => EngineeringId::assert($domainId)],
+        );
+        return array_map(function (array $row): array {
+            $row['payload'] = $this->json($row['payload'] ?? null);
             return $row;
         }, $rows);
     }
@@ -497,12 +877,20 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
     {
         $row['version'] = (int) $row['version'];
         $row['max_parallel_features'] = (int) $row['max_parallel_features'];
+        $row['max_parallel_developers'] = (int) ($row['max_parallel_developers'] ?? 2);
+        $row['max_parallel_reviews'] = (int) ($row['max_parallel_reviews'] ?? 2);
+        $row['max_parallel_qa'] = (int) ($row['max_parallel_qa'] ?? 2);
+        $row['max_feature_retries'] = (int) ($row['max_feature_retries'] ?? 3);
+        $row['max_domain_integration_cycles'] = (int) ($row['max_domain_integration_cycles'] ?? 3);
+        $row['context_budget'] = (int) ($row['context_budget'] ?? 120000);
+        $row['token_budget'] = (int) ($row['token_budget'] ?? 1000000);
+        $row['cost_budget'] = (float) ($row['cost_budget'] ?? 25.0);
         return $row;
     }
 
     private function featureView(array $row): array
     {
-        foreach (['acceptance_criteria','owned_paths','shared_paths','forbidden_paths','contracts_consumed','contracts_produced','contract_snapshot','metadata'] as $key) {
+        foreach (['acceptance_criteria','owned_paths','shared_paths','forbidden_paths','contracts_consumed','contracts_produced','contract_snapshot','engineering_feature_history','metadata'] as $key) {
             $row[$key] = $this->json($row[$key] ?? null);
         }
         $row['required'] = (bool) $row['required'];

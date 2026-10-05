@@ -2161,6 +2161,64 @@ cos_web_engineering_create:
   controller: App\Web\Engineering\EngineeringFeatureController::create
   methods: [POST]
 
+cos_web_engineering_domains:
+  path: /admin/engineering/domains
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::index
+  methods: [GET, HEAD]
+
+cos_web_engineering_domain_create:
+  path: /admin/engineering/domains/create
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::create
+  methods: [POST]
+
+cos_web_engineering_domain_plan:
+  path: /admin/engineering/domains/{id}/plan
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::plan
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_tick:
+  path: /admin/engineering/domains/{id}/tick
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::tick
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_verify:
+  path: /admin/engineering/domains/{id}/verify
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::verify
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_approve:
+  path: /admin/engineering/domains/{id}/approve
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::approve
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_feature_flags:
+  path: /admin/engineering/domains/{id}/feature-flags
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::featureFlags
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_human_decision:
+  path: /admin/engineering/domains/{id}/human-decision
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_dependency_graph:
+  path: /admin/engineering/domains/{id}/dependency-graph
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::dependencyGraph
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain:
+  path: /admin/engineering/domains/{id}
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::show
+  methods: [GET, HEAD]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_run:
   path: /admin/engineering/{id}/run
   controller: App\Web\Engineering\EngineeringFeatureController::run
@@ -2632,5 +2690,25 @@ cos_api_engineering_domain_verify:
 cos_api_engineering_domain_approve:
   path: /api/engineering/domains/{id}/approve
   controller: App\Http\Api\V1\Controller\EngineeringDomainController::approve
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_api_engineering_domain_feature_flags:
+  path: /api/engineering/domains/{id}/feature-flags
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::featureFlags
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+
+cos_api_engineering_domain_human_decision:
+  path: /api/engineering/domains/{id}/human-decision
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+
+cos_api_engineering_domain_dependency_graph:
+  path: /api/engineering/domains/{id}/dependency-graph
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::dependencyGraph
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }

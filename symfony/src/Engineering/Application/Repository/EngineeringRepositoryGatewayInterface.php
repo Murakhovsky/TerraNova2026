@@ -6,9 +6,13 @@ namespace App\Engineering\Application\Repository;
 interface EngineeringRepositoryGatewayInterface
 {
     public function available(): bool;
+    public function configuredRepository(): string;
     public function currentBaseRevision(?string $branch = null): string;
     public function configuredBaseBranch(): string;
     public function ensureBranch(string $branch, string $baseRevision): string;
+
+    /** @return list<array{path:string,type:string,size:?int,sha:string}> */
+    public function repositoryTree(string $revision): array;
 
     /**
      * Read exact repository files at a specific revision.

@@ -38,7 +38,7 @@ final readonly class EngineeringContinueService
         $this->workflows->touchRuntime($workflowId);
         $workflow = $this->workflows->get($workflowId);
         $this->features->updateStatus($featureId, $workflow->currentState()->value);
-        $activeRole = $this->roleForState($workflow->currentState());
+        $activeRole = $this->roleForState($featureId, $workflow->currentState());
         if ($activeRole !== null) {
             $recoveredStaleRuns = $this->agentRuns->failStaleRunning($featureId, $activeRole, $this->staleRunSeconds);
             if ($recoveredStaleRuns > 0) {
@@ -68,17 +68,25 @@ final readonly class EngineeringContinueService
         }
 
         if ($workflow->currentState() === EngineeringWorkflowState::ANALYSIS) {
-            $next = $this->managerStage->execute(
-                featureId: $featureId,
-                workflowId: $workflowId,
-                request: $this->features->request($featureId),
-                organizationId: $organizationId,
-                correlationId: $correlationId,
-                logicalAttempt: $this->nextAttempt($featureId, AgentRole::ENGINEERING_MANAGER),
-            );
+            if ($activeRole === AgentRole::PRODUCT_REQUIREMENTS) {
+                $next = new WorkflowDirective(
+                    WorkflowDirectiveType::RUN_AGENT,
+                    AgentRole::PRODUCT_REQUIREMENTS,
+                    'Resume Product / Requirements stage after completed Manager analysis.',
+                );
+            } else {
+                $next = $this->managerStage->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    request: $this->features->request($featureId),
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::ENGINEERING_MANAGER),
+                );
+            }
             $next = $this->progression->continue($featureId, $workflowId, $next, $organizationId, $correlationId);
         } else {
-            $next = $this->directiveFor($workflow->currentState());
+            $next = $this->directiveFor($featureId, $workflow->currentState());
             $next = $this->progression->continue($featureId, $workflowId, $next, $organizationId, $correlationId);
         }
 
@@ -92,12 +100,25 @@ final readonly class EngineeringContinueService
         );
     }
 
-    private function roleForState(EngineeringWorkflowState $state): ?AgentRole
+    private function roleForState(string $featureId, EngineeringWorkflowState $state): ?AgentRole
     {
+        if ($state === EngineeringWorkflowState::ANALYSIS) {
+            $managerCompleted = false;
+            foreach ($this->agentRuns->forFeature($featureId) as $run) {
+                if (($run['role'] ?? null) === AgentRole::PRODUCT_REQUIREMENTS->value && ($run['status'] ?? null) === 'RUNNING') {
+                    return AgentRole::PRODUCT_REQUIREMENTS;
+                }
+                if (($run['role'] ?? null) === AgentRole::ENGINEERING_MANAGER->value && ($run['status'] ?? null) === 'COMPLETED') {
+                    $managerCompleted = true;
+                }
+            }
+            return $managerCompleted ? AgentRole::PRODUCT_REQUIREMENTS : AgentRole::ENGINEERING_MANAGER;
+        }
+
+        $v2 = $this->isV2Feature($featureId);
         return match ($state) {
-            EngineeringWorkflowState::ANALYSIS => AgentRole::ENGINEERING_MANAGER,
-            EngineeringWorkflowState::QA_PLANNING,
-            EngineeringWorkflowState::QA_PENDING => AgentRole::QA,
+            EngineeringWorkflowState::QA_PLANNING => $v2 ? AgentRole::QA_PLANNER : AgentRole::QA,
+            EngineeringWorkflowState::QA_PENDING => $v2 ? AgentRole::QA_EXECUTOR : AgentRole::QA,
             EngineeringWorkflowState::ARCHITECTURE_PENDING => AgentRole::PRINCIPAL_ARCHITECT,
             EngineeringWorkflowState::DEVELOPMENT_RUNNING => AgentRole::DEVELOPER,
             EngineeringWorkflowState::REVIEW_PENDING => AgentRole::REVIEWER,
@@ -105,20 +126,35 @@ final readonly class EngineeringContinueService
         };
     }
 
-    private function directiveFor(EngineeringWorkflowState $state): WorkflowDirective
+    private function directiveFor(string $featureId, EngineeringWorkflowState $state): WorkflowDirective
     {
+        $v2 = $this->isV2Feature($featureId);
         return match ($state) {
-            EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Resume QA Test Plan stage.'),
+            EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, $v2 ? AgentRole::QA_PLANNER : AgentRole::QA, 'Resume QA Test Plan stage.'),
             EngineeringWorkflowState::ARCHITECTURE_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT, 'Resume Architect stage.'),
             EngineeringWorkflowState::DEVELOPMENT_RUNNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Resume Developer stage.'),
             EngineeringWorkflowState::REVIEW_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::REVIEWER, 'Resume Reviewer stage.'),
-            EngineeringWorkflowState::QA_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Resume QA stage and re-check CI.'),
+            EngineeringWorkflowState::QA_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, $v2 ? AgentRole::QA_EXECUTOR : AgentRole::QA, 'Resume QA stage and re-check CI.'),
             EngineeringWorkflowState::HUMAN_DECISION_REQUIRED => new WorkflowDirective(WorkflowDirectiveType::STOP, null, 'Workflow is waiting for a human decision.'),
             EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL => new WorkflowDirective(WorkflowDirectiveType::READY_FOR_HUMAN_APPROVAL, null, 'Workflow is ready for human approval/merge.'),
             EngineeringWorkflowState::BLOCKED,
             EngineeringWorkflowState::ESCALATED => new WorkflowDirective(WorkflowDirectiveType::STOP, null, 'Workflow requires explicit human intervention from state '.$state->value.'.'),
             default => new WorkflowDirective(WorkflowDirectiveType::STOP, null, 'No autonomous continuation is defined from state '.$state->value.'.'),
         };
+    }
+
+    private function isV2Feature(string $featureId): bool
+    {
+        foreach ($this->agentRuns->forFeature($featureId) as $run) {
+            if (in_array(($run['role'] ?? null), [
+                AgentRole::PRODUCT_REQUIREMENTS->value,
+                AgentRole::QA_PLANNER->value,
+                AgentRole::QA_EXECUTOR->value,
+            ], true)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private function hasRunningRole(string $featureId, AgentRole $role): bool

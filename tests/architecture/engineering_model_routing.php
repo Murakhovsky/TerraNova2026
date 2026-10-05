@@ -8,7 +8,7 @@ $compose = (string) file_get_contents($root.'/docker-compose.yml');
 $envExample = (string) file_get_contents($root.'/.env.docker.example');
 
 if (!str_contains($provider, 'useCase: $this->useCase($definition)')) throw new RuntimeException('Canonical AgentRuntime provider still uses a fixed use case.');
-foreach (['managerModel','architectModel','developerModel','reviewerModel','qaModel','model($role, $organizationId)','PlatformSettingsReaderInterface','manager.model','architect.model','developer.model','reviewer.model','qa.model','promptFile($role)','config/engineering/prompts/'] as $needle) {
+foreach (['managerModel','architectModel','developerModel','reviewerModel','qaModel','model($role, $organizationId)','PlatformSettingsReaderInterface','manager.model','product.model','qa_planner.model','architect.model','developer.model','reviewer.model','qa_executor.model','integration_release.model','qa.model','promptFile($role)','config/engineering/prompts/'] as $needle) {
     if (!str_contains($factory, $needle)) throw new RuntimeException('Engineering model routing hint missing '.$needle);
 }
 foreach (['COS_ENGINEERING_MANAGER_MODEL','COS_ENGINEERING_ARCHITECT_MODEL','COS_ENGINEERING_DEVELOPER_MODEL','COS_ENGINEERING_REVIEWER_MODEL','COS_ENGINEERING_QA_MODEL'] as $env) {

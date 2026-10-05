@@ -54,6 +54,17 @@ if (!str_contains($architectDefinition->systemPrompt, 'NEEDS_HUMAN_DECISION')) {
     throw new RuntimeException('Principal Architect prompt does not expose canonical Architecture Gate.');
 }
 
+$documentation = EngineeringAgentSchemas::forRole(AgentRole::DOCUMENTATION);
+foreach (['status','target_locale','documents','notes'] as $field) {
+    if (!in_array($field, $documentation['required'], true)) throw new RuntimeException('Documentation schema missing '.$field);
+}
+$documentationDefinition = $factory->create(AgentRole::DOCUMENTATION);
+foreach (['translate','technical identifiers','Do not invent'] as $needle) {
+    if (!str_contains($documentationDefinition->systemPrompt, $needle)) {
+        throw new RuntimeException('Documentation specialist prompt missing '.$needle);
+    }
+}
+
 $manager = EngineeringAgentSchemas::forRole(AgentRole::ENGINEERING_MANAGER);
 foreach (['status','feature','context_map','tasks','risks','assumptions','open_questions','decision'] as $field) {
     if (!in_array($field, $manager['required'], true)) throw new RuntimeException('Manager schema missing '.$field);

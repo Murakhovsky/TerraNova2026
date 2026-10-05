@@ -39,7 +39,10 @@ final readonly class ContinueEngineeringDomainsCommandHandler implements Command
             $correlationId = 'engineering-domain:scheduler:'.$domainId.':'.EngineeringId::generate();
             try {
                 $result = match ($status) {
-                    EngineeringDomainStatus::DRAFT->value => $this->runtime->plan(
+                    EngineeringDomainStatus::DRAFT->value,
+                    EngineeringDomainStatus::ANALYSIS->value,
+                    EngineeringDomainStatus::DECOMPOSITION->value,
+                    EngineeringDomainStatus::ARCHITECTURE->value => $this->runtime->plan(
                         $domainId,
                         $this->organizationId,
                         $correlationId,

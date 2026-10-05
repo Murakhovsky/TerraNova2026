@@ -11,11 +11,82 @@ final class EngineeringAgentOutputValidator
     {
         match ($role) {
             AgentRole::ENGINEERING_MANAGER => $this->manager($output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->productRequirements($output),
+            AgentRole::QA_PLANNER,
+            AgentRole::QA_EXECUTOR,
+            AgentRole::QA => $this->qa($output),
             AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
             AgentRole::DEVELOPER => $this->developer($output),
             AgentRole::REVIEWER => $this->reviewer($output),
-            AgentRole::QA => $this->qa($output),
+            AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
+            AgentRole::DOCUMENTATION => $this->documentation($output),
         };
+    }
+
+
+
+    private function documentation(array $output): void
+    {
+        $this->required($output, ['status','target_locale','documents','notes']);
+        $status = strtoupper(trim((string) ($output['status'] ?? '')));
+        if (!in_array($status, ['TRANSLATED','BLOCKED','FAILED'], true)) {
+            throw new EngineeringAgentOutputValidationException('Documentation status is invalid.');
+        }
+        if ($status !== 'TRANSLATED') return;
+
+        if (trim((string) ($output['target_locale'] ?? '')) === '') {
+            throw new EngineeringAgentOutputValidationException('Documentation translation requires target_locale.');
+        }
+        if (!is_array($output['documents'] ?? null)) {
+            throw new EngineeringAgentOutputValidationException('Documentation translation requires documents.');
+        }
+
+        $audiences = [];
+        foreach ($output['documents'] as $document) {
+            if (!is_array($document)) throw new EngineeringAgentOutputValidationException('Documentation item must be an object.');
+            $this->required($document, ['audience','title','content_markdown']);
+            $audience = strtoupper(trim((string) $document['audience']));
+            if (!in_array($audience, ['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER'], true)) {
+                throw new EngineeringAgentOutputValidationException('Documentation audience is invalid.');
+            }
+            if (isset($audiences[$audience])) {
+                throw new EngineeringAgentOutputValidationException('Documentation audience must be unique: '.$audience);
+            }
+            if (trim((string) $document['title']) === '' || trim((string) $document['content_markdown']) === '') {
+                throw new EngineeringAgentOutputValidationException('Translated documentation title/content cannot be empty.');
+            }
+            $audiences[$audience] = true;
+        }
+
+        foreach (['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER'] as $audience) {
+            if (!isset($audiences[$audience])) {
+                throw new EngineeringAgentOutputValidationException('Translated documentation missing '.$audience.'.');
+            }
+        }
+    }
+
+
+    private function productRequirements(array $output): void
+    {
+        $this->manager($output);
+        $allowed = [
+            AgentRole::QA_PLANNER->value,
+            AgentRole::PRINCIPAL_ARCHITECT->value,
+            AgentRole::DEVELOPER->value,
+            AgentRole::REVIEWER->value,
+            AgentRole::QA_EXECUTOR->value,
+        ];
+        foreach ($output['tasks'] as $index => $task) {
+            if (!is_array($task)) continue;
+            $role = strtoupper(trim((string) ($task['assigned_role'] ?? '')));
+            if ($role !== '' && !in_array($role, $allowed, true)) {
+                throw new EngineeringAgentOutputValidationException(sprintf(
+                    'Product task %d has invalid downstream role %s.',
+                    $index,
+                    $role,
+                ));
+            }
+        }
     }
 
     private function manager(array $output): void
@@ -51,7 +122,7 @@ final class EngineeringAgentOutputValidator
             if (trim((string) ($task['id'] ?? '')) === '') {
                 throw new EngineeringAgentOutputValidationException(sprintf('Engineering task %d requires a stable id.', $index));
             }
-            if (isset($task['assigned_role']) && !in_array(strtoupper((string) $task['assigned_role']), ['PRINCIPAL_ARCHITECT','DEVELOPER','REVIEWER','QA'], true)) {
+            if (isset($task['assigned_role']) && !in_array(strtoupper((string) $task['assigned_role']), ['PRODUCT_REQUIREMENTS','QA_PLANNER','PRINCIPAL_ARCHITECT','DEVELOPER','REVIEWER','QA_EXECUTOR','INTEGRATION_RELEASE','QA'], true)) {
                 throw new EngineeringAgentOutputValidationException(sprintf('Engineering task %d has an invalid assigned role.', $index));
             }
         }
@@ -556,4 +627,30 @@ final class EngineeringAgentOutputValidator
             }
         }
     }
+
+    private function integrationRelease(array $output): void
+    {
+        $this->required($output, ['status','integration_summary','release_checks','known_limitations','required_human_decisions']);
+        $status = (string) ($output['status'] ?? '');
+        if (!in_array($status, ['RELEASE_READY','BLOCKED','HUMAN_DECISION_REQUIRED','FAILED'], true)) {
+            throw new EngineeringAgentOutputValidationException('Integration & Release status is invalid.');
+        }
+        if (!is_array($output['release_checks'] ?? null)) {
+            throw new EngineeringAgentOutputValidationException('Integration & Release checks must be an array.');
+        }
+        if ($status === 'RELEASE_READY') {
+            foreach ($output['release_checks'] as $check) {
+                if (!is_array($check)) {
+                    throw new EngineeringAgentOutputValidationException('Integration & Release check must be an object.');
+                }
+                if (($check['blocking'] ?? false) === true && ($check['status'] ?? null) !== 'PASS') {
+                    throw new EngineeringAgentOutputValidationException('RELEASE_READY requires all blocking release checks to PASS.');
+                }
+            }
+            if (($output['required_human_decisions'] ?? []) !== []) {
+                throw new EngineeringAgentOutputValidationException('RELEASE_READY cannot contain unresolved human decisions.');
+            }
+        }
+    }
+
 }

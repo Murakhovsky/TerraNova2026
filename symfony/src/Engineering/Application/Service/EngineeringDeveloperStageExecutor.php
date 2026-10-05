@@ -15,6 +15,7 @@ use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Policy\AgentCapabilityRegistry;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
 use App\Engineering\Application\Workflow\WorkflowAlreadyRunningException;
@@ -43,6 +44,7 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
+        private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
     ) {}
 
     public function execute(
@@ -276,6 +278,16 @@ final readonly class EngineeringDeveloperStageExecutor
             $this->validator->validate(AgentRole::DEVELOPER, $run->structuredOutput);
 
             if (in_array((string) ($run->structuredOutput['status'] ?? ''), ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true)) {
+                foreach (['repository_write','commit','pull_request'] as $capability) {
+                    if (!$this->agentCapabilities->allows(AgentRole::DEVELOPER, $capability)) {
+                        throw new RuntimeException('Developer Agent capability policy denies '.$capability.'.');
+                    }
+                }
+                if ($this->agentCapabilities->allows(AgentRole::DEVELOPER, 'merge')
+                    || $this->agentCapabilities->allows(AgentRole::DEVELOPER, 'production')) {
+                    throw new RuntimeException('Developer Agent capability registry must deny merge and production.');
+                }
+
                 $domainKey = trim((string) ($domainContext['content']['domain_key'] ?? ''));
                 $branch = $domainKey !== '' ? 'engineering/'.$domainKey.'/'.$featureId : 'engineering/'.$featureId;
                 $developerChanges = is_array($run->structuredOutput['changes'] ?? null) ? $run->structuredOutput['changes'] : [];

@@ -15,6 +15,14 @@ interface EngineeringDomainStoreInterface
         string $targetBranch,
         string $createdBy,
         int $maxParallelFeatures = 3,
+        int $maxParallelDevelopers = 2,
+        int $maxParallelReviews = 2,
+        int $maxParallelQa = 2,
+        int $maxFeatureRetries = 3,
+        int $maxDomainIntegrationCycles = 3,
+        int $contextBudget = 120000,
+        int $tokenBudget = 1000000,
+        float $costBudget = 25.0,
     ): void;
 
     /** @return array<string,mixed> */
@@ -34,11 +42,25 @@ interface EngineeringDomainStoreInterface
     /** @return list<array<string,mixed>> */
     public function artifacts(string $domainId): array;
 
+    /** @return list<array<string,mixed>> */
+    public function artifactHistory(string $domainId, ?string $type = null): array;
+
+
+    /** @param list<array{source_artifact_id:string,target_artifact_id:string,relationship:string}> $edges */
+    public function replaceArtifactDependencies(string $domainId, array $edges): void;
+
+    /** @return list<array<string,mixed>> */
+    public function artifactDependencies(string $domainId): array;
+
+
     /** @param list<array<string,mixed>> $capabilities @param list<array<string,mixed>> $features @param list<array<string,mixed>> $dependencies */
     public function replacePlan(string $domainId, array $capabilities, array $features, array $dependencies): void;
 
     /** @return list<array<string,mixed>> */
     public function capabilities(string $domainId): array;
+
+    public function updateCapabilityStatus(string $domainId, string $capabilityKey, string $status, ?string $reason = null): void;
+
 
     /** @return list<array<string,mixed>> */
     public function features(string $domainId): array;
@@ -48,6 +70,10 @@ interface EngineeringDomainStoreInterface
 
     /** @return list<array<string,mixed>> */
     public function dependencies(string $domainId): array;
+
+    /** @param list<array<string,mixed>> $dependencies */
+    public function replaceDependencies(string $domainId, array $dependencies): void;
+
 
     public function linkEngineeringFeature(
         string $domainId,
@@ -88,8 +114,65 @@ interface EngineeringDomainStoreInterface
         ?string $model,
         array $usage,
         ?string $error,
+        ?string $runtimeId = null,
+        ?string $featureId = null,
+        ?string $state = null,
+        ?string $startedAt = null,
+        ?string $finishedAt = null,
+        array $inputs = [],
+        array $outputs = [],
+        array $artifacts = [],
+        ?string $repositoryRevision = null,
+        array $errors = [],
     ): void;
 
     /** @return list<array<string,mixed>> */
     public function agentRuns(string $domainId): array;
+
+    public function recordRuntimeEvent(
+        string $domainId,
+        string $organizationId,
+        string $eventType,
+        ?string $featureKey,
+        array $payload,
+        string $correlationId,
+        string $dedupeKey,
+        string $actor = 'SYSTEM',
+        ?string $reason = null,
+        ?string $artifactId = null,
+        ?string $repositoryRevision = null,
+        ?string $result = null,
+    ): void;
+
+    /** @return list<array<string,mixed>> */
+    public function runtimeEvents(string $domainId, int $limit = 200): array;
+
+    public function createHumanDecision(
+        string $domainId,
+        string $organizationId,
+        string $gateType,
+        string $resumeStatus,
+        string $question,
+        string $reason,
+        array $options,
+        array $evidence,
+        string $requestedBy,
+    ): string;
+
+    /** @return list<array<string,mixed>> */
+    public function openHumanDecisions(string $domainId): array;
+
+    /** @return list<array<string,mixed>> */
+    public function humanDecisionHistory(string $domainId): array;
+
+    /** @return array<string,mixed> */
+    public function answerHumanDecision(
+        string $domainId,
+        string $decisionId,
+        string $selectedOption,
+        string $answeredBy,
+        ?string $notes = null,
+    ): array;
+
+
 }

@@ -10,6 +10,7 @@ final readonly class EngineeringRetryPolicy
         private int $maxDevelopmentFixLoops = 3,
         private int $maxReviewCycles = 3,
         private int $maxQaCycles = 3,
+        private int $maxArchitectureCycles = 3,
     ) {
     }
 
@@ -17,4 +18,5 @@ final readonly class EngineeringRetryPolicy
     public function mayRunDevelopmentFix(int $completedFixLoops): bool { return $completedFixLoops < $this->maxDevelopmentFixLoops; }
     public function mayRunReview(int $completedReviewCycles): bool { return $completedReviewCycles < $this->maxReviewCycles; }
     public function mayRunQa(int $completedQaCycles): bool { return $completedQaCycles < $this->maxQaCycles; }
+    public function mayRunArchitecture(int $completedArchitectureCycles): bool { return $completedArchitectureCycles < $this->maxArchitectureCycles; }
 }

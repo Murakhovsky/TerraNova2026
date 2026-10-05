@@ -13,9 +13,24 @@ $requiredFiles = [
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentService.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentSchemas.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentOutputValidator.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainConcurrencyGate.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainBudgetGuard.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainContextCompressor.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationTranslationService.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAnalyticsService.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDependencyEditor.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainHumanGateService.php',
+    'symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php',
+    'symfony/src/Engineering/Application/Policy/AgentCapabilityRegistry.php',
+    'symfony/src/Engineering/Application/Policy/RuntimeCapabilityRegistry.php',
+    'symfony/src/Engineering/Domain/DomainDevelopment/EngineeringDomainRuntimeEventType.php',
     'symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringDomainStore.php',
     'symfony/src/Http/Api/V1/Controller/EngineeringDomainController.php',
     'symfony/migrations/Version20261005170000.php',
+    'symfony/migrations/Version20261005193000.php',
 ];
 
 foreach ($requiredFiles as $file) {
@@ -27,6 +42,10 @@ $scheduler = (string) file_get_contents($root.'/symfony/src/Engineering/Applicat
 $release = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainReleaseService.php');
 $store = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringDomainStore.php');
 $migration = (string) file_get_contents($root.'/symfony/migrations/Version20261005170000.php');
+$completionMigration = (string) file_get_contents($root.'/symfony/migrations/Version20261005193000.php');
+$concurrency = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainConcurrencyGate.php');
+$events = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/DomainDevelopment/EngineeringDomainRuntimeEventType.php');
+$progression = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringAutonomousProgressionService.php');
 $routes = (string) file_get_contents($root.'/symfony/config/routes.yaml');
 $services = (string) file_get_contents($root.'/symfony/config/services.yaml');
 $schedule = (string) file_get_contents($root.'/symfony/src/Scheduler/CosScheduleProvider.php');
@@ -36,6 +55,27 @@ $developer = (string) file_get_contents($root.'/symfony/src/Engineering/Applicat
 $reviewer = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringReviewerStageExecutor.php');
 $qa = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringQaStageExecutor.php');
 $gateway = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Repository/EngineeringRepositoryGatewayInterface.php');
+$artifactTypes = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/DomainDevelopment/EngineeringDomainArtifactType.php');
+$drift = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDriftDetector.php');
+$secretGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Security/EngineeringSecretIsolationGuard.php');
+$domainValidator = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentOutputValidator.php');
+$budgetGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainBudgetGuard.php');
+$compressor = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainContextCompressor.php');
+$repositoryIndex = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php');
+$documentation = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php');
+$documentationTranslation = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationTranslationService.php');
+$analytics = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAnalyticsService.php');
+$dependencyEditor = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDependencyEditor.php');
+$artifactGraph = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php');
+$humanGates = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainHumanGateService.php');
+$policy = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php');
+$agentCapabilities = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/AgentCapabilityRegistry.php');
+$runtimeCapabilities = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/RuntimeCapabilityRegistry.php');
+$domainAgentService = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentService.php');
+$featureBudgetGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringFeatureBudgetGuard.php');
+$retryPolicy = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/Workflow/EngineeringRetryPolicy.php');
+$workflowCounters = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Workflow/WorkflowCounters.php');
+$structuredProvider = (string) file_get_contents($root.'/app/Infrastructure/AI/StructuredLlmAgentProvider.php');
 
 foreach ([
     'DOMAIN_SPECIFICATION',
@@ -48,6 +88,20 @@ foreach ([
     'INTEGRATION_STRATEGY',
 ] as $needle) {
     if (!str_contains($planner, $needle)) throw new RuntimeException('Domain planning is missing '.$needle);
+}
+
+foreach ([
+    'DOMAIN_SPECIFICATION','CAPABILITY_SPECIFICATION','FEATURE_CONTEXT_PACK','FEATURE_DEPENDENCY_GRAPH',
+    'DOMAIN_ARCHITECTURE','DOMAIN_ARCHITECTURE_CONSTITUTION','CONTRACT_REGISTRY','DOMAIN_EVENT_REGISTRY',
+    'DOMAIN_QA_PLAN','DOMAIN_QA_REPORT','DOMAIN_RELEASE_MANIFEST',
+] as $artifact) {
+    if (!str_contains($artifactTypes, $artifact)) throw new RuntimeException('Canonical Domain artifact type missing '.$artifact);
+}
+foreach (['REVALIDATION_REQUIRED','STALE','contract_snapshot','architecture_version'] as $needle) {
+    if (!str_contains($drift, $needle)) throw new RuntimeException('Domain drift detector missing '.$needle);
+}
+foreach (['EngineeringCancelService','revalidation_of','REVALIDATION_REQUIRED','STALE','linkEngineeringFeature'] as $needle) {
+    if (!str_contains($scheduler, $needle)) throw new RuntimeException('Automatic Domain revalidation missing '.$needle);
 }
 
 foreach ([
@@ -70,6 +124,13 @@ foreach ([
     'openPullRequest',
 ] as $needle) {
     if (!str_contains($release, $needle)) throw new RuntimeException('Domain release gate is missing '.$needle);
+}
+
+foreach (['completeCapabilities','assertMandatoryCapabilitiesComplete','assertDomainAcceptanceCoverage'] as $needle) {
+    if (!str_contains($release, $needle)) throw new RuntimeException('Domain Definition of Done release gate missing '.$needle);
+}
+foreach (['DOMAIN_ARCHITECTURE','ARCHITECTURE_TESTS','CONTRACT_TESTS','MIGRATION_PLAN','SECURITY_CHECKS','CRITICAL_SMOKE'] as $needle) {
+    if (!str_contains($domainValidator, $needle)) throw new RuntimeException('Domain mandatory release check missing '.$needle);
 }
 
 foreach ([
@@ -95,6 +156,37 @@ foreach ([
     if (!str_contains($store, $needle)) throw new RuntimeException('Domain registry history is missing '.$needle);
 }
 
+
+// TZ §77 — independent Domain concurrency limits with configuration defaults.
+foreach (['max_parallel_features','max_parallel_developers','max_parallel_reviews','max_parallel_qa','cos_engineering_domain_runtime_events'] as $needle) {
+    if (!str_contains($completionMigration, $needle)) throw new RuntimeException('Domain Runtime completion migration missing '.$needle);
+}
+foreach (['max_parallel_developers','max_parallel_reviews','max_parallel_qa','EngineeringWorkflowState::DEVELOPMENT_RUNNING','EngineeringWorkflowState::REVIEW_PENDING','EngineeringWorkflowState::QA_PENDING'] as $needle) {
+    if (!str_contains($concurrency, $needle)) throw new RuntimeException('Domain concurrency gate missing '.$needle);
+}
+if (!str_contains($progression, 'domainConcurrency->decision')) throw new RuntimeException('Feature progression does not enforce Domain stage concurrency.');
+
+// TZ §78 — canonical orchestration event vocabulary and lifecycle wiring.
+foreach ([
+    'DomainCreated','DomainSpecificationReady','DomainDecompositionReady','DomainArchitectureApproved',
+    'CapabilityReady','FeatureReady','FeatureStarted','FeatureCompleted','FeatureBlocked',
+    'ContractChanged','ArchitectureChanged','DomainIntegrationStarted','DomainIntegrationCompleted',
+    'DomainQaStarted','DomainQaCompleted','DomainReleaseReady',
+] as $event) {
+    if (!str_contains($events, "'".$event."'")) throw new RuntimeException('Domain orchestration event missing '.$event);
+}
+foreach (['recordRuntimeEvent','runtimeEvents'] as $needle) {
+    if (!str_contains($store, $needle)) throw new RuntimeException('Domain runtime event ledger missing '.$needle);
+}
+
+
+foreach (['password','api_key','Bearer','vault','secret','REDACTED'] as $needle) {
+    if (!str_contains($secretGuard, $needle)) throw new RuntimeException('Engineering secret isolation guard missing '.$needle);
+}
+if (!str_contains($completionMigration, 'engineering_feature_history')) {
+    throw new RuntimeException('Domain child workflow supersession history is not persisted.');
+}
+
 if (!str_contains($services, 'EngineeringDomainStoreInterface')) throw new RuntimeException('Domain store DI alias is missing.');
 foreach (['/api/engineering/domains', '/plan', '/tick', '/verify', '/approve'] as $needle) {
     if (!str_contains($routes, $needle)) throw new RuntimeException('Domain control-plane route missing '.$needle);
@@ -111,8 +203,90 @@ foreach ([$manager, $architect, $developer, $reviewer, $qa] as $stage) {
 foreach (['assertDomainPathPolicy', 'owned_paths', 'shared_paths', 'forbidden_paths'] as $needle) {
     if (!str_contains($developer, $needle)) throw new RuntimeException('Developer Domain path enforcement missing '.$needle);
 }
-foreach (['currentBaseRevision(?string $branch = null)', 'configuredBaseBranch', 'ensureBranch', '?string $baseBranch = null'] as $needle) {
+foreach (['configuredRepository()', 'currentBaseRevision(?string $branch = null)', 'configuredBaseBranch', 'ensureBranch', '?string $baseBranch = null'] as $needle) {
     if (!str_contains($gateway, $needle)) throw new RuntimeException('Repository gateway lacks integration branch contract '.$needle);
+}
+
+
+foreach (['max_feature_retries','max_domain_integration_cycles','context_budget','token_budget','cost_budget'] as $needle) {
+    if (!str_contains($completionMigration, $needle)) throw new RuntimeException('Domain safety budget persistence missing '.$needle);
+}
+foreach (['DOMAIN_RESOURCE_BUDGET','tokens_used','token_budget','cost_used','cost_budget','context_bytes','context_budget'] as $needle) {
+    if (!str_contains($budgetGuard, $needle)) throw new RuntimeException('Domain resource budget guard missing '.$needle);
+}
+foreach (['full_artifact','canonical_summary','hash','relevant_sections'] as $needle) {
+    if (!str_contains($compressor, $needle)) throw new RuntimeException('Domain context compression missing '.$needle);
+}
+foreach (['classes','interfaces','services','entities','routes','migrations','tests','modules','dependencies'] as $needle) {
+    if (!str_contains($repositoryIndex, "'".$needle."'")) throw new RuntimeException('Repository Context Index missing '.$needle);
+}
+foreach (['DOMAIN_DOCUMENTATION_PUBLIC','DOMAIN_DOCUMENTATION_INTEGRATOR','DOMAIN_DOCUMENTATION_DEVELOPER','DOMAIN_DOCUMENTATION_TRANSLATIONS'] as $needle) {
+    if (!str_contains($documentation.$artifactTypes, $needle)) throw new RuntimeException('Domain documentation generation missing '.$needle);
+}
+foreach (['replaceArtifactDependencies','artifactDependencies'] as $needle) {
+    if (!str_contains($artifactGraph.$store, $needle)) throw new RuntimeException('Domain artifact dependency graph missing '.$needle);
+}
+foreach (['createHumanDecision','answerHumanDecision','openHumanDecisions','humanDecisionHistory'] as $needle) {
+    if (!str_contains($humanGates.$store, $needle)) throw new RuntimeException('Domain Human Control Plane missing '.$needle);
+}
+foreach (['sharedKernelModificationRequiresHuman','contractChangeRequiresHuman','migrationRequiresHuman','domainReleaseRequiresHuman'] as $needle) {
+    if (!str_contains($policy, $needle)) throw new RuntimeException('Engineering Policy Engine missing '.$needle);
+}
+foreach (['repository_write','merge','production'] as $needle) {
+    if (!str_contains($agentCapabilities, $needle)) throw new RuntimeException('Agent Capability Registry missing '.$needle);
+}
+foreach (['GitHub','CI','Repository','TestRunner','ProductionExecution'] as $needle) {
+    if (!str_contains($runtimeCapabilities, $needle)) throw new RuntimeException('Runtime Capability Registry missing '.$needle);
+}
+foreach (['architecture_tests','domain_isolation','contract_cases','migration_cases','security','smoke'] as $needle) {
+    if (!str_contains($domainValidator, $needle)) throw new RuntimeException('Domain QA formal test contract missing '.$needle);
+}
+foreach (['/human-decision','/feature-flags'] as $needle) {
+    if (!str_contains($routes, $needle)) throw new RuntimeException('Domain Human/activation control route missing '.$needle);
+}
+
+
+foreach (['AgentRole::DOCUMENTATION','target_locale','documents'] as $needle) {
+    if (!str_contains($documentationTranslation.$domainValidator, $needle)) {
+        throw new RuntimeException('Automatic documentation translation missing '.$needle);
+    }
+}
+foreach (['artifactHistory','architecture_history','total_tokens','total_cost','token_budget_utilization','cost_budget_utilization'] as $needle) {
+    if (!str_contains($analytics.$store, $needle)) throw new RuntimeException('Domain P2 analytics missing '.$needle);
+}
+foreach (['replaceDependencies','HUMAN_VISUAL_EDITOR','assertValid','Dependency graph is immutable'] as $needle) {
+    if (!str_contains($dependencyEditor.$store, $needle)) throw new RuntimeException('Visual dependency editor missing '.$needle);
+}
+foreach (['DOCUMENTATION','DOMAIN_DOCUMENTATION_TRANSLATIONS'] as $needle) {
+    if (!str_contains($domainValidator.$artifactTypes, $needle)) throw new RuntimeException('Documentation release contract missing '.$needle);
+}
+
+
+foreach (['runtime_id','feature_id','state','started_at','finished_at','input_payload','output_payload','artifact_payload','repository_revision','cost_amount','token_usage','errors_payload'] as $needle) {
+    if (!str_contains($completionMigration, $needle)) throw new RuntimeException('Domain AgentRun observability envelope missing '.$needle);
+}
+foreach (['ExecutionFailureClassifier','AUTO_RETRY','RETURN_TO_AGENT','DOMAIN_AGENT_RETRY_','maxTechnicalRetries'] as $needle) {
+    if (!str_contains($domainAgentService, $needle)) throw new RuntimeException('Domain Agent failure recovery missing '.$needle);
+}
+foreach (['maxArchitectureCycles','mayRunArchitecture'] as $needle) {
+    if (!str_contains($retryPolicy, $needle)) throw new RuntimeException('Architecture loop protection missing '.$needle);
+}
+if (!str_contains($workflowCounters, 'architectureCycles')) {
+    throw new RuntimeException('Workflow counters do not track architecture cycles.');
+}
+foreach (['feature_token_budget','feature_cost_budget','domain_token_budget','domain_cost_budget','agent_run_token_budget','agent_run_cost_budget'] as $needle) {
+    if (!str_contains($featureBudgetGuard.$scheduler, $needle)) throw new RuntimeException('Three-level Engineering resource budget missing '.$needle);
+}
+foreach (['llm_max_output_tokens','llm_max_cost_amount'] as $needle) {
+    if (!str_contains($structuredProvider, $needle)) throw new RuntimeException('Agent Run provider budget ceiling missing '.$needle);
+}
+
+
+foreach (['maxSemanticRetries','semantic_retry_feedback','RETURN_TO_AGENT'] as $needle) {
+    if (!str_contains($domainAgentService, $needle)) throw new RuntimeException('Domain semantic retry contract missing '.$needle);
+}
+foreach (['completeCapabilities','Required features complete; integration/release checks clean; capability acceptance criteria passed in Domain QA.'] as $needle) {
+    if (!str_contains($release, $needle)) throw new RuntimeException('Capability Definition of Done missing '.$needle);
 }
 
 echo "Engineering Domain Runtime V2 architecture passed.\n";

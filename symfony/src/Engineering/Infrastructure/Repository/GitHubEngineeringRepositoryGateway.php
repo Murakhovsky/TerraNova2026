@@ -20,6 +20,13 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return trim($this->repositoryFullName) !== '' && trim($this->token) !== '';
     }
 
+    public function configuredRepository(): string
+    {
+        $repository = trim($this->repositoryFullName);
+        if ($repository === '') throw new RuntimeException('Engineering GitHub repository is not configured.');
+        return $repository;
+    }
+
     public function currentBaseRevision(?string $branch = null): string
     {
         $this->assertAvailable();
@@ -33,6 +40,39 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
     public function configuredBaseBranch(): string
     {
         return $this->assertBranch($this->baseBranch);
+    }
+
+    public function repositoryTree(string $revision): array
+    {
+        $this->assertAvailable();
+        $revision = trim($revision);
+        if ($revision === '') throw new RuntimeException('Repository revision is required.');
+
+        $response = $this->request(
+            'GET',
+            '/git/trees/'.rawurlencode($revision).'?recursive=1',
+            null,
+            [200],
+        );
+        if (($response['truncated'] ?? false) === true) {
+            throw new RuntimeException('GitHub repository tree is truncated; Engineering index cannot be authoritative.');
+        }
+
+        $result = [];
+        foreach (is_array($response['tree'] ?? null) ? $response['tree'] : [] as $entry) {
+            if (!is_array($entry)) continue;
+            $path = trim((string) ($entry['path'] ?? ''));
+            $type = trim((string) ($entry['type'] ?? ''));
+            $sha = trim((string) ($entry['sha'] ?? ''));
+            if ($path === '' || $type === '' || $sha === '') continue;
+            $result[] = [
+                'path' => $path,
+                'type' => $type,
+                'size' => isset($entry['size']) ? (int) $entry['size'] : null,
+                'sha' => $sha,
+            ];
+        }
+        return $result;
     }
 
     public function filesAtRevision(array $paths, string $revision): array

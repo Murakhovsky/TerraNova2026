@@ -62,7 +62,7 @@ final readonly class EngineeringWorkflowCoordinator
             ),
             EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(
                 WorkflowDirectiveType::RUN_AGENT,
-                AgentRole::QA,
+                AgentRole::QA_PLANNER,
                 'Human decision supplied; resume QA Test Plan.',
                 [$transition],
             ),
@@ -88,7 +88,7 @@ final readonly class EngineeringWorkflowCoordinator
             ),
             EngineeringWorkflowState::QA_PENDING => new WorkflowDirective(
                 WorkflowDirectiveType::RUN_AGENT,
-                AgentRole::QA,
+                AgentRole::QA_EXECUTOR,
                 'Human decision supplied; resume QA.',
                 [$transition],
             ),
@@ -178,10 +178,15 @@ final readonly class EngineeringWorkflowCoordinator
     ): WorkflowDirective {
         return match ($role) {
             AgentRole::ENGINEERING_MANAGER => $this->afterManager($workflow, $output),
-            AgentRole::PRINCIPAL_ARCHITECT => $this->afterArchitect($workflow, $output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->afterProductRequirements($workflow, $output),
+            AgentRole::QA_PLANNER,
+            AgentRole::QA_EXECUTOR,
+            AgentRole::QA => $this->afterQa($workflow, $output, $counters, $readyEvidence),
+            AgentRole::PRINCIPAL_ARCHITECT => $this->afterArchitect($workflow, $output, $counters),
             AgentRole::DEVELOPER => $this->afterDeveloper($workflow, $output),
             AgentRole::REVIEWER => $this->afterReviewer($workflow, $output, $counters),
-            AgentRole::QA => $this->afterQa($workflow, $output, $counters, $readyEvidence),
+            AgentRole::INTEGRATION_RELEASE,
+            AgentRole::DOCUMENTATION => throw new LogicException($role->value.' is a Domain-level role, not a Feature workflow stage.'),
         };
     }
 
@@ -192,6 +197,15 @@ final readonly class EngineeringWorkflowCoordinator
         if (in_array($status, ['BLOCKED','FAILED'], true)) return $this->block($workflow, 'Manager analysis could not complete.');
         if ($status !== 'SPECIFICATION_READY') throw new LogicException('Unexpected Engineering Manager status: '.$status);
 
+        if (($output['product_handoff_required'] ?? false) === true) {
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::PRODUCT_REQUIREMENTS,
+                'Manager analysis is complete; Product / Requirements must produce the authoritative Feature Specification.',
+            );
+        }
+
+        // V0.1 compatibility path for historical deterministic tests and persisted workflows.
         $transitions = [
             $this->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, 'MANAGER_SPECIFICATION_READY'),
             $this->transition($workflow, EngineeringWorkflowState::QA_PLANNING, 'SCHEDULE_QA_TEST_PLAN'),
@@ -199,8 +213,32 @@ final readonly class EngineeringWorkflowCoordinator
         return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Acceptance criteria require an independent QA Test Plan before architecture and implementation.', $transitions);
     }
 
-    private function afterArchitect(WorkflowExecution $workflow, array $output): WorkflowDirective
+    private function afterProductRequirements(WorkflowExecution $workflow, array $output): WorkflowDirective
     {
+        $status = (string) ($output['status'] ?? '');
+        if ($status === 'HUMAN_DECISION_REQUIRED') return $this->human($workflow, 'Product / Requirements found a blocking product decision.');
+        if (in_array($status, ['BLOCKED','FAILED'], true)) return $this->block($workflow, 'Product / Requirements could not complete the authoritative specification.');
+        if ($status !== 'SPECIFICATION_READY') throw new LogicException('Unexpected Product / Requirements status: '.$status);
+
+        $transitions = [
+            $this->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, 'PRODUCT_SPECIFICATION_READY'),
+            $this->transition($workflow, EngineeringWorkflowState::QA_PLANNING, 'SCHEDULE_QA_PLANNER'),
+        ];
+        return new WorkflowDirective(
+            WorkflowDirectiveType::RUN_AGENT,
+            AgentRole::QA_PLANNER,
+            'Authoritative Acceptance Criteria require an independent QA Test Plan before architecture and implementation.',
+            $transitions,
+        );
+    }
+
+    private function afterArchitect(WorkflowExecution $workflow, array $output, WorkflowCounters $counters): WorkflowDirective
+    {
+        if (!$this->retries->mayRunArchitecture(max(0, $counters->architectureCycles - 1))) {
+            $escalated = $this->transition($workflow, EngineeringWorkflowState::ESCALATED, 'ARCHITECTURE_LOOP_LIMIT');
+            return $this->human($workflow, 'Architecture cycle limit exceeded.', [$escalated]);
+        }
+
         $status = (string) ($output['status'] ?? '');
         if ($status === 'NEEDS_HUMAN_DECISION') return $this->human($workflow, 'Architect requires a human architecture/product decision.');
         if ($status === 'REJECTED') return $this->block($workflow, 'Architecture gate rejected the feature for development.');
@@ -272,7 +310,7 @@ final readonly class EngineeringWorkflowCoordinator
         $status = (string) ($output['status'] ?? '');
         if ($status === 'APPROVED') {
             $transition = $this->transition($workflow, EngineeringWorkflowState::QA_PENDING, 'REVIEW_APPROVED');
-            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Independent review approved the implementation; final QA is required.', [$transition]);
+            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA_EXECUTOR, 'Independent review approved the implementation; final QA is required.', [$transition]);
         }
         if ($status === 'ARCHITECTURE_REVIEW_REQUIRED') {
             $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'REVIEW_ARCHITECTURE_REVIEW_REQUIRED');

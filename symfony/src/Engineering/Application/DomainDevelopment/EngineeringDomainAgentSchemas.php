@@ -12,9 +12,14 @@ final class EngineeringDomainAgentSchemas
     public static function forRole(AgentRole $role): array
     {
         return match ($role) {
-            AgentRole::ENGINEERING_MANAGER => self::manager(),
-            AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
+            AgentRole::ENGINEERING_MANAGER,
+            AgentRole::PRODUCT_REQUIREMENTS => self::manager(),
+            AgentRole::QA_PLANNER,
+            AgentRole::QA_EXECUTOR,
             AgentRole::QA => self::qa(),
+            AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
+            AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
+            AgentRole::DOCUMENTATION => self::documentation(),
             default => throw new InvalidArgumentException('Agent role does not support Domain Development mode: '.$role->value),
         };
     }
@@ -73,7 +78,7 @@ final class EngineeringDomainAgentSchemas
                     'minItems' => 1,
                     'items' => [
                         'type' => 'object',
-                        'required' => ['key','name','description','kind','required','depends_on'],
+                        'required' => ['key','name','description','kind','required','depends_on','acceptance_criteria'],
                         'properties' => [
                             'key' => ['type' => 'string'],
                             'name' => ['type' => 'string'],
@@ -81,6 +86,7 @@ final class EngineeringDomainAgentSchemas
                             'kind' => ['type' => 'string', 'enum' => ['FOUNDATION','CORE','INTEGRATION','APPLICATION','UI','INFRASTRUCTURE']],
                             'required' => ['type' => 'boolean'],
                             'depends_on' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'acceptance_criteria' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'string']],
                         ],
                         'additionalProperties' => false,
                     ],
@@ -103,7 +109,7 @@ final class EngineeringDomainAgentSchemas
                 'domain_qa_plan' => [
                     'type' => 'object',
                     'required' => [
-                        'domain_acceptance_criteria','cross_feature_workflows','cross_domain_workflows','contract_cases','migration_cases',
+                        'domain_acceptance_criteria','cross_feature_workflows','cross_domain_workflows','contract_cases','architecture_tests','domain_isolation','migration_cases',
                         'permissions','tenant_isolation','security','performance','resilience','regression','smoke','release_blocking_checks',
                     ],
                     'properties' => [
@@ -111,6 +117,20 @@ final class EngineeringDomainAgentSchemas
                         'cross_feature_workflows' => ['type' => 'array'],
                         'cross_domain_workflows' => ['type' => 'array'],
                         'contract_cases' => ['type' => 'array'],
+                        'architecture_tests' => ['type' => 'array'],
+                        'domain_isolation' => [
+                            'type' => 'object',
+                            'required' => ['namespace_boundaries','database_boundaries','infrastructure_imports','cross_domain_access','module_ownership','public_private_services'],
+                            'properties' => [
+                                'namespace_boundaries' => ['type' => 'array'],
+                                'database_boundaries' => ['type' => 'array'],
+                                'infrastructure_imports' => ['type' => 'array'],
+                                'cross_domain_access' => ['type' => 'array'],
+                                'module_ownership' => ['type' => 'array'],
+                                'public_private_services' => ['type' => 'array'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
                         'migration_cases' => ['type' => 'array'],
                         'permissions' => ['type' => 'array'],
                         'tenant_isolation' => ['type' => 'array'],
@@ -118,7 +138,7 @@ final class EngineeringDomainAgentSchemas
                         'performance' => ['type' => 'array'],
                         'resilience' => ['type' => 'array'],
                         'regression' => ['type' => 'array'],
-                        'smoke' => ['type' => 'array'],
+                        'smoke' => ['type' => 'array', 'maxItems' => 30],
                         'release_blocking_checks' => ['type' => 'array'],
                     ],
                     'additionalProperties' => true,
@@ -163,6 +183,8 @@ final class EngineeringDomainAgentSchemas
                     'required' => [
                         'bounded_context','module_structure','namespace_structure','domain_layers','aggregate_boundaries','database_boundaries',
                         'api_boundaries','event_contracts','integration_contracts','dependency_rules','security_boundaries','permissions_model',
+                        'module_ownership','service_visibility','forbidden_namespace_dependencies','forbidden_database_dependencies',
+                        'forbidden_infrastructure_imports','cross_domain_access',
                         'audit_model','feature_flags','observability','failure_model','migration_strategy','testing_strategy',
                     ],
                     'properties' => [
@@ -178,8 +200,24 @@ final class EngineeringDomainAgentSchemas
                         'dependency_rules' => ['type' => 'array'],
                         'security_boundaries' => ['type' => ['array','object']],
                         'permissions_model' => ['type' => ['array','object']],
+                        'module_ownership' => ['type' => ['array','object']],
+                        'service_visibility' => ['type' => ['array','object']],
+                        'forbidden_namespace_dependencies' => ['type' => 'array'],
+                        'forbidden_database_dependencies' => ['type' => 'array'],
+                        'forbidden_infrastructure_imports' => ['type' => 'array'],
+                        'cross_domain_access' => ['type' => ['array','object']],
                         'audit_model' => ['type' => ['array','object']],
-                        'feature_flags' => ['type' => ['array','object']],
+                        'feature_flags' => [
+                            'type' => 'object',
+                            'required' => ['DOMAIN_ENABLED','FEATURE_ENABLED','INTEGRATION_ENABLED','PRODUCTION_EXECUTION_ENABLED'],
+                            'properties' => [
+                                'DOMAIN_ENABLED' => ['type' => 'boolean'],
+                                'FEATURE_ENABLED' => ['type' => 'object', 'additionalProperties' => ['type' => 'boolean']],
+                                'INTEGRATION_ENABLED' => ['type' => 'boolean'],
+                                'PRODUCTION_EXECUTION_ENABLED' => ['type' => 'boolean'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
                         'observability' => ['type' => ['array','object']],
                         'failure_model' => ['type' => ['array','object']],
                         'migration_strategy' => ['type' => ['array','object','string']],
@@ -238,17 +276,145 @@ final class EngineeringDomainAgentSchemas
                         'additionalProperties' => false,
                     ],
                 ],
-                'contracts' => ['type' => 'array'],
-                'events' => ['type' => 'array'],
+                'contracts' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['id','name','version','type','owner_domain','producer','consumers','schema','compatibility','status','test_suite'],
+                        'properties' => [
+                            'id' => ['type' => 'string', 'minLength' => 1],
+                            'key' => ['type' => 'string'],
+                            'name' => ['type' => 'string', 'minLength' => 1],
+                            'version' => ['type' => 'string', 'minLength' => 1],
+                            'type' => ['type' => 'string', 'enum' => ['DOMAIN_INTERFACE','APPLICATION_INTERFACE','API_CONTRACT','EVENT_CONTRACT','DATABASE_CONTRACT','INTEGRATION_CONTRACT','PERMISSION_CONTRACT']],
+                            'owner_domain' => ['type' => 'string', 'minLength' => 1],
+                            'producer' => ['type' => 'string'],
+                            'consumers' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'schema' => ['type' => ['array','object']],
+                            'compatibility' => ['type' => 'string', 'enum' => ['BACKWARD_COMPATIBLE','BREAKING','DEPRECATED']],
+                            'status' => ['type' => 'string', 'enum' => ['ACTIVE','DEPRECATED']],
+                            'test_suite' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'string']],
+                        ],
+                        'additionalProperties' => true,
+                    ],
+                ],
+                'events' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['name','version','producer','consumers','payload_schema','delivery','idempotency','ordering'],
+                        'properties' => [
+                            'key' => ['type' => 'string'],
+                            'name' => ['type' => 'string', 'minLength' => 1],
+                            'version' => ['type' => 'string', 'minLength' => 1],
+                            'producer' => ['type' => 'string', 'minLength' => 1],
+                            'consumers' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'payload_schema' => ['type' => ['array','object']],
+                            'delivery' => ['type' => 'string', 'minLength' => 1],
+                            'idempotency' => ['type' => 'string', 'minLength' => 1],
+                            'ordering' => ['type' => 'string', 'minLength' => 1],
+                        ],
+                        'additionalProperties' => true,
+                    ],
+                ],
                 'parallelization_groups' => ['type' => 'array'],
                 'critical_path' => ['type' => 'array'],
-                'migration_plan' => ['type' => ['object','array']],
+                'migration_plan' => [
+                    'type' => 'object',
+                    'required' => ['migration_order','dependencies','forward_validation','rollback_strategy','data_migration','compatibility_window','risk','requires_downtime','destructive'],
+                    'properties' => [
+                        'migration_order' => ['type' => 'array'],
+                        'dependencies' => ['type' => ['array','object']],
+                        'forward_validation' => ['type' => ['array','object','string']],
+                        'rollback_strategy' => ['type' => ['array','object','string']],
+                        'data_migration' => ['type' => ['array','object','string']],
+                        'compatibility_window' => ['type' => ['array','object','string']],
+                        'risk' => ['type' => 'string', 'enum' => ['LOW','MEDIUM','HIGH','CRITICAL']],
+                        'requires_downtime' => ['type' => 'boolean'],
+                        'destructive' => ['type' => 'boolean'],
+                    ],
+                    'additionalProperties' => true,
+                ],
                 'integration_strategy' => ['type' => ['object','array','string']],
                 'release_strategy' => ['type' => ['object','array','string']],
-                'required_human_decisions' => ['type' => 'array'],
+                'required_human_decisions' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['type','question','reason'],
+                        'properties' => [
+                            'type' => ['type' => 'string', 'enum' => ['DOMAIN_ARCHITECTURE','BREAKING_CONTRACT','SECURITY_BOUNDARY','MIGRATION_RISK','EXTERNAL_PRODUCTION_INTEGRATION']],
+                            'question' => ['type' => 'string', 'minLength' => 1],
+                            'reason' => ['type' => 'string', 'minLength' => 1],
+                            'options' => ['type' => 'array'],
+                            'evidence' => ['type' => ['array','object','string']],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
                 'conditions' => ['type' => 'array'],
             ],
             'additionalProperties' => false,
         ];
     }
+
+    /** @return array<string,mixed> */
+    private static function documentation(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','target_locale','documents','notes'],
+            'properties' => [
+                'status' => ['type' => 'string', 'enum' => ['TRANSLATED','BLOCKED','FAILED']],
+                'target_locale' => ['type' => 'string', 'minLength' => 2],
+                'documents' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['audience','title','content_markdown'],
+                        'properties' => [
+                            'audience' => ['type' => 'string', 'enum' => ['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER']],
+                            'title' => ['type' => 'string', 'minLength' => 1],
+                            'content_markdown' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 200000],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'notes' => ['type' => 'array', 'items' => ['type' => 'string']],
+            ],
+            'additionalProperties' => false,
+        ];
+    }
+
+
+    /** @return array<string,mixed> */
+    private static function integrationRelease(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','integration_summary','release_checks','known_limitations','required_human_decisions'],
+            'properties' => [
+                'status' => ['type' => 'string', 'enum' => ['RELEASE_READY','BLOCKED','HUMAN_DECISION_REQUIRED','FAILED']],
+                'integration_summary' => ['type' => ['string','object','array']],
+                'release_checks' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['id','status','blocking','evidence'],
+                        'properties' => [
+                            'id' => ['type' => 'string'],
+                            'status' => ['type' => 'string', 'enum' => ['PASS','FAIL','BLOCKED','NOT_APPLICABLE']],
+                            'blocking' => ['type' => 'boolean'],
+                            'evidence' => ['type' => ['array','object','string','number','boolean','null']],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'known_limitations' => ['type' => 'array'],
+                'required_human_decisions' => ['type' => 'array'],
+            ],
+            'additionalProperties' => false,
+        ];
+    }
+
 }

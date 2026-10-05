@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Service;
 
+use App\Engineering\Application\DomainDevelopment\EngineeringDomainConcurrencyGate;
+use App\Engineering\Application\DomainDevelopment\EngineeringFeatureBudgetGuard;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -16,6 +18,7 @@ use App\Engineering\Domain\Agent\AgentRole;
 final readonly class EngineeringAutonomousProgressionService
 {
     public function __construct(
+        private EngineeringProductRequirementsStageExecutor $product,
         private EngineeringArchitectStageExecutor $architect,
         private EngineeringDeveloperStageExecutor $developer,
         private EngineeringReviewerStageExecutor $reviewer,
@@ -25,6 +28,8 @@ final readonly class EngineeringAutonomousProgressionService
         private EngineeringFeatureStoreInterface $features,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringWorkflowLockInterface $lock,
+        private EngineeringDomainConcurrencyGate $domainConcurrency,
+        private EngineeringFeatureBudgetGuard $resourceBudgets,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
         private int $maxStepsPerProgression = 16,
         private int $maxLogicalAgentRunsPerFeature = 16,
@@ -50,6 +55,16 @@ final readonly class EngineeringAutonomousProgressionService
                 );
             }
 
+            $resourceBudget = $this->resourceBudgets->decision($featureId);
+            if (($resourceBudget['allowed'] ?? false) !== true) {
+                return $this->escalateResourceBudget(
+                    $featureId,
+                    $workflowId,
+                    implode(' ', $resourceBudget['reasons'] ?? ['Engineering resource budget exhausted.']),
+                    is_array($resourceBudget['evidence'] ?? null) ? $resourceBudget['evidence'] : [],
+                );
+            }
+
             if ($this->runCount($featureId) >= $this->authorizedRunBudget($featureId)) {
                 return $this->escalateAutonomyBudget(
                     $featureId,
@@ -58,7 +73,29 @@ final readonly class EngineeringAutonomousProgressionService
                 );
             }
 
+            $concurrency = $this->domainConcurrency->decision($featureId, $role);
+            if (!$concurrency['allowed']) {
+                return new WorkflowDirective(
+                    WorkflowDirectiveType::STOP,
+                    null,
+                    sprintf(
+                        'Domain %s concurrency limit reached before %s: %d contender(s), limit %d.',
+                        $concurrency['scope'],
+                        $role->value,
+                        $concurrency['active'],
+                        $concurrency['limit'],
+                    ),
+                );
+            }
+
             $directive = match ($role) {
+                AgentRole::PRODUCT_REQUIREMENTS => $this->product->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::PRODUCT_REQUIREMENTS),
+                ),
                 AgentRole::PRINCIPAL_ARCHITECT => $this->architect->execute(
                     featureId: $featureId,
                     workflowId: $workflowId,
@@ -80,14 +117,17 @@ final readonly class EngineeringAutonomousProgressionService
                     correlationId: $correlationId,
                     logicalAttempt: $this->nextAttempt($featureId, AgentRole::REVIEWER),
                 ),
+                AgentRole::QA_PLANNER,
+                AgentRole::QA_EXECUTOR,
                 AgentRole::QA => $this->qa->execute(
                     featureId: $featureId,
                     workflowId: $workflowId,
                     organizationId: $organizationId,
                     correlationId: $correlationId,
-                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::QA),
+                    logicalAttempt: $this->nextAttempt($featureId, $role),
                 ),
-                default => $directive,
+                AgentRole::ENGINEERING_MANAGER,
+                AgentRole::INTEGRATION_RELEASE => $directive,
             };
 
             if ($directive->agent === $role) return $directive;
@@ -118,9 +158,13 @@ final readonly class EngineeringAutonomousProgressionService
         $workflow = $this->workflows->get($workflowId);
         $required = match ($role) {
             AgentRole::ENGINEERING_MANAGER => 0,
+            AgentRole::PRODUCT_REQUIREMENTS,
+            AgentRole::QA_PLANNER,
             AgentRole::PRINCIPAL_ARCHITECT => 1,
             AgentRole::DEVELOPER => 2,
-            AgentRole::REVIEWER => 3,
+            AgentRole::REVIEWER,
+            AgentRole::QA_EXECUTOR,
+            AgentRole::INTEGRATION_RELEASE => 3,
             AgentRole::QA => $workflow->currentState()->value === 'QA_PLANNING' ? 1 : 3,
         };
 
@@ -165,6 +209,53 @@ final readonly class EngineeringAutonomousProgressionService
         }
 
         return $this->maxLogicalAgentRunsPerFeature * (1 + $extensions);
+    }
+
+    /** @param array<string,mixed> $evidence */
+    private function escalateResourceBudget(
+        string $featureId,
+        string $workflowId,
+        string $reason,
+        array $evidence,
+    ): WorkflowDirective {
+        return $this->lock->synchronized(
+            $featureId,
+            function () use ($featureId, $workflowId, $reason, $evidence): WorkflowDirective {
+                $workflow = $this->workflows->get($workflowId);
+                $next = $this->coordinator->requireHumanDecision($workflow, $reason);
+
+                foreach ($next->transitions as $transition) {
+                    $this->workflows->saveTransition($workflow, $transition);
+                }
+                $this->features->updateStatus($featureId, $workflow->currentState()->value);
+
+                $hasOpen = false;
+                foreach ($this->humanDecisions->openForFeature($featureId) as $decision) {
+                    if (($decision['type'] ?? null) === 'RESOURCE_BUDGET') {
+                        $hasOpen = true;
+                        break;
+                    }
+                }
+                if (!$hasOpen) {
+                    $this->humanDecisions->create(
+                        featureId: $featureId,
+                        workflowId: $workflowId,
+                        type: 'RESOURCE_BUDGET',
+                        question: 'The Engineering Feature exhausted its resource budget. Continue with an extended budget?',
+                        reason: $reason,
+                        options: [
+                            ['id' => 'CONTINUE', 'description' => 'Authorize one additional Feature resource-budget window.'],
+                            ['id' => 'CANCEL', 'description' => 'Stop this Engineering workflow.'],
+                        ],
+                        evidence: $evidence,
+                        blocking: true,
+                        recommendedOption: 'CANCEL',
+                    );
+                }
+
+                return $next;
+            },
+        );
     }
 
     private function escalateAutonomyBudget(string $featureId, string $workflowId, string $reason): WorkflowDirective

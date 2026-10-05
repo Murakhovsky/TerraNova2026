@@ -206,7 +206,7 @@ Retryable помилка LLM provider може привести до configured 
 
 Інженерна автоматизація використовує той самий Kernel Agent runtime, а не окремий паралельний фреймворк для агентів.
 
-Обов’язковий шлях V0.1:
+Feature-level шлях V2.0:
 
 ```text
 Engineering Manager
@@ -231,7 +231,7 @@ Principal Architect отримує обмежений набір доказів 
 
 Тільки перші два дозволяють перейти до Development. Перед першим запуском Developer повторно перевіряє, що затверджена repository revision усе ще є актуальною. Якщо `main` змінився, orchestration повертає роботу Principal Architect для revalidation замість реалізації за застарілим планом.
 
-Engineering roles можуть мати окремі model hints через `COS_ENGINEERING_MANAGER_MODEL`, `COS_ENGINEERING_ARCHITECT_MODEL`, `COS_ENGINEERING_DEVELOPER_MODEL`, `COS_ENGINEERING_REVIEWER_MODEL` і `COS_ENGINEERING_QA_MODEL`. Порожнє значення означає використання загального LLM routing/default model. Docker runtime передає ці змінні явно, тому production deployment не втрачає role-specific routing.
+Engineering roles мають окремі model hints. Legacy ENV hints зберігаються для Manager, Architect, Developer, Reviewer і QA; V2 ролі `PRODUCT_REQUIREMENTS`, `QA_PLANNER`, `QA_EXECUTOR` та `INTEGRATION_RELEASE` налаштовуються через Platform Settings (`product.model`, `qa_planner.model`, `qa_executor.model`, `integration_release.model`) і за відсутності override успадковують відповідно Manager/QA/Reviewer fallback.
 
 Principal Architect може підготувати зміни архітектурної документації та ADR лише в межах `docs/`. Ці зміни зберігаються як керовані artifacts і застосовуються разом зі змінами Developer, тому repository не отримує окремий технічний commit лише заради документації, а авторство та audit trail залишаються явними.
 
@@ -257,35 +257,36 @@ Reviewer є read-only щодо production implementation: він не випра
 
 Severity: `BLOCKER`, `MAJOR`, `MINOR`, `SUGGESTION`. BLOCKER/MAJOR завжди блокують; MINOR блокує лише з `blocking=true`; SUGGESTION не блокує. Reviewer decision обмежений `APPROVED`, `REQUEST_CHANGES`, `ARCHITECTURE_REVIEW_REQUIRED`, `HUMAN_REVIEW_REQUIRED`.
 
-Маршрути: `APPROVED → QA_PENDING → QA`; `REQUEST_CHANGES → CHANGES_REQUESTED → DEVELOPMENT_RUNNING → Developer`; `ARCHITECTURE_REVIEW_REQUIRED → ARCHITECTURE_PENDING → Principal Architect`; `HUMAN_REVIEW_REQUIRED → HUMAN_DECISION_REQUIRED`.
+Маршрути: `APPROVED → QA_PENDING → QA_EXECUTOR`; `REQUEST_CHANGES → CHANGES_REQUESTED → DEVELOPMENT_RUNNING → Developer`; `ARCHITECTURE_REVIEW_REQUIRED → ARCHITECTURE_PENDING → Principal Architect`; `HUMAN_REVIEW_REQUIRED → HUMAN_DECISION_REQUIRED`.
 
 `APPROVED` заборонений при неповному preflight, architecture non-compliance, unresolved blocking issues, BLOCKER/MAJOR, failed required CI або acceptance criterion без PASS evidence.
 
 
-## Інженерна оркестрація: QA Engineer
+## Інженерна оркестрація: QA Planner та QA Executor
 
-Agent №5 (`QA`) відповідає не за естетику коду, а за фактичну поведінку feature відносно Feature Specification та Acceptance Criteria.
+`QA_PLANNER` працює до Architecture/Development і відповідає за незалежний план перевірки. `QA_EXECUTOR` працює після Reviewer approval і відповідає за фактичну поведінку feature відносно Feature Specification та Acceptance Criteria. Legacy роль `QA` збережена лише для persisted V0.1 runs.
 
-QA працює у двох фазах. Після Manager workflow переходить у `QA_PLANNING`: QA формує незалежний `TEST_PLAN` до Architecture/Development. План покриває positive, negative, edge, permissions, tenant, API, database, UI, regression і performance cases та явно визначає required suites: unit, integration, functional, E2E, smoke.
+Після Product / Requirements workflow переходить у `QA_PLANNING`: QA Planner формує незалежний `TEST_PLAN` до Architecture/Development. План покриває positive, negative, edge, permissions, tenant, API, database, UI, regression і performance cases та явно визначає required suites: unit, integration, functional, E2E, smoke.
 
-Після `Reviewer APPROVED` QA запускається повторно у `QA_PENDING` на exact reviewed revision. Кожен Acceptance Criterion має `PASS|FAIL` і concrete evidence; формулювання на кшталт "looks okay" не є доказом. Для релевантних feature окремо перевіряються COS invariants: tenant isolation, auth/authz, invalid input, empty/loading/error states, API errors, migration/rollback і backward compatibility. `NOT_APPLICABLE` вимагає причину.
+Після `Reviewer APPROVED` QA Executor запускається у `QA_PENDING` на exact reviewed revision. Кожен Acceptance Criterion має `PASS|FAIL` і concrete evidence; формулювання на кшталт "looks okay" не є доказом. Для релевантних feature окремо перевіряються COS invariants: tenant isolation, auth/authz, invalid input, empty/loading/error states, API errors, migration/rollback і backward compatibility. `NOT_APPLICABLE` вимагає причину.
 
 QA не має права змінювати production implementation. Він може запропонувати й застосувати автоматизовані тести лише в `tests/` або `symfony/tests/`. Якщо QA додає тести, результат `TESTS_UPDATED` створює нову revision і повертає workflow Reviewer; після повторного `APPROVED` QA тестує вже цю revision.
 
 Фінальні QA status: `PASS`, `FAIL`, `BLOCKED`, `HUMAN_TEST_REQUIRED`. `PASS` вимагає zero failed tests, PASS для всіх blocking Acceptance Criteria та всіх applicable COS invariants, відсутність BLOCKER/MAJOR defects/security findings і успішний deterministic CI. `FAIL` повертає Developer, після чого обов'язково повторюються Reviewer і QA. `HUMAN_TEST_REQUIRED` переходить у human decision boundary і ніколи не прирівнюється до PASS.
 
 
-## Повний автономний цикл Engineering V0.1
+## Повний автономний цикл Engineering V2.0
 
 Після формалізації запиту Engineering runtime виконує керований цикл:
 
 ```text
 Engineering Manager
-→ QA Test Plan
+→ Product / Requirements
+→ QA Planner
 → Principal Architect
 → Developer
 → Reviewer
-→ QA Verification
+→ QA Executor
 → READY_FOR_HUMAN_APPROVAL
 → human merge
 ```
@@ -328,3 +329,48 @@ active stage
 `READY_FOR_HUMAN_APPROVAL` вимагає approved Architecture Gate, завершеної Development, Reviewer approval, QA PASS, CI SUCCESS, перевірених blocking Acceptance Criteria, відсутності open critical findings, blocking human decisions і незавершених engineering tasks.
 
 Merge та production deploy у V0.1 залишаються human-only.
+
+
+## Середовище розробки складних доменів Engineering Runtime V2.0
+
+Для великих bounded context користувач не створює вручну десятки Feature workflows. У `/admin/engineering/domains` він створює Domain Initiative, задає goal через Master Specification і за потреби змінює integration branch та concurrency limits. Якщо repository override порожній, Runtime використовує canonical Engineering repository із конфігурації.
+
+Керований шлях:
+
+~~~text
+Create Domain
+→ Engineering Manager
+→ Product / Requirements
+→ Domain Specification + Domain Acceptance Criteria
+→ QA Planner
+→ Principal Architect
+→ Domain Architecture + Architecture Constitution
+→ Capability / Feature decomposition
+→ dependency-driven Feature workflows
+→ integration
+→ QA Executor
+→ Integration & Release
+→ Domain Release Manifest
+→ human merge / release approval
+~~~
+
+Human Control Plane залишається на рівні goal, scope, architecture exceptions, risk і release. Scheduler сам визначає готові Feature за dependency graph, резервує repository paths, створює child Engineering workflows та продовжує їх до Domain integration.
+
+### Паралельність виконання
+
+Domain має чотири незалежні межі:
+
+~~~text
+max_parallel_features
+max_parallel_developers
+max_parallel_reviews
+max_parallel_qa
+~~~
+
+Default значення приходять із `COS_ENGINEERING_DOMAIN_MAX_PARALLEL_*`. `max_parallel_features` обмежує кількість одночасно активних child workflows, а stage limits застосовуються безпосередньо перед Developer, Reviewer і QA AgentRun. Очікування через concurrency gate не змінює deterministic workflow state і може бути безпечно продовжене scheduler-ом.
+
+### Журнал подій оркестрації
+
+Domain Runtime зберігає idempotent orchestration events із correlation id, optional feature key та evidence payload. Канонічний lifecycle включає `DomainCreated`, `DomainSpecificationReady`, `DomainDecompositionReady`, `DomainArchitectureApproved`, `CapabilityReady`, `FeatureReady`, `FeatureStarted`, `FeatureCompleted`, `FeatureBlocked`, `ContractChanged`, `ArchitectureChanged`, `DomainIntegrationStarted`, `DomainIntegrationCompleted`, `DomainQaStarted`, `DomainQaCompleted`, `DomainReleaseReady`.
+
+Workspace показує event ledger поряд з Domain Agent executions, тому стан Domain можна відновити не з декоративного status badge, а з persisted runtime evidence.

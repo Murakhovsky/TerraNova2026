@@ -46,10 +46,10 @@ final readonly class EngineeringDomainController
         $name = trim((string) ($input['name'] ?? ''));
         $specification = trim((string) ($input['master_specification'] ?? ''));
         $repository = trim((string) ($input['target_repository'] ?? ''));
-        if ($domainKey === '' || $name === '' || $specification === '' || $repository === '') {
+        if ($domainKey === '' || $name === '' || $specification === '') {
             return $this->error(
                 'domain_input_required',
-                'domain_key, name, master_specification and target_repository are required.',
+                'domain_key, name and master_specification are required.',
                 422,
             );
         }
@@ -63,7 +63,15 @@ final readonly class EngineeringDomainController
                 targetRepository: $repository,
                 targetBranch: trim((string) ($input['target_branch'] ?? '')),
                 createdBy: 'user:'.$tenant->userId()->value(),
-                maxParallelFeatures: max(1, min(20, (int) ($input['max_parallel_features'] ?? 3))),
+                maxParallelFeatures: max(0, min(20, (int) ($input['max_parallel_features'] ?? 0))),
+                maxParallelDevelopers: max(0, min(20, (int) ($input['max_parallel_developers'] ?? 0))),
+                maxParallelReviews: max(0, min(20, (int) ($input['max_parallel_reviews'] ?? 0))),
+                maxParallelQa: max(0, min(20, (int) ($input['max_parallel_qa'] ?? 0))),
+                maxFeatureRetries: max(-1, min(50, (int) ($input['max_feature_retries'] ?? -1))),
+                maxDomainIntegrationCycles: max(0, min(20, (int) ($input['max_domain_integration_cycles'] ?? 0))),
+                contextBudget: max(0, (int) ($input['context_budget'] ?? 0)),
+                tokenBudget: max(0, (int) ($input['token_budget'] ?? 0)),
+                costBudget: isset($input['cost_budget']) ? max(0.0, (float) $input['cost_budget']) : -1.0,
             );
 
             return new JsonResponse([
@@ -144,6 +152,80 @@ final readonly class EngineeringDomainController
                     $this->correlationId($request, 'verify', $domainId),
                 ),
             ], 202);
+        } catch (Throwable $error) {
+            return $this->exception($error);
+        }
+    }
+
+    public function dependencyGraph(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $tenant = $this->tenants->current();
+            $input = $this->input($request);
+            $dependencies = $input['dependencies'] ?? null;
+            if (!is_array($dependencies)) {
+                return $this->error('domain_dependencies_required', 'dependencies must be an array.', 422);
+            }
+            $domainId = EngineeringId::assert($id);
+            return new JsonResponse([
+                'ok' => true,
+                'data' => $this->runtime->updateDependencies(
+                    $domainId,
+                    $tenant->organizationId()->value(),
+                    $dependencies,
+                    'user:'.$tenant->userId()->value(),
+                    $this->correlationId($request, 'dependency-graph', $domainId),
+                ),
+            ]);
+        } catch (Throwable $error) {
+            return $this->exception($error);
+        }
+    }
+
+    public function humanDecision(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $tenant = $this->tenants->current();
+            $input = $this->input($request);
+            $decisionId = trim((string) ($input['decision_id'] ?? ''));
+            $selectedOption = trim((string) ($input['selected_option'] ?? ''));
+            if ($decisionId === '' || $selectedOption === '') {
+                return $this->error('domain_decision_input_required', 'decision_id and selected_option are required.', 422);
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'data' => $this->runtime->answerHumanDecision(
+                    EngineeringId::assert($id),
+                    $tenant->organizationId()->value(),
+                    EngineeringId::assert($decisionId),
+                    $selectedOption,
+                    'user:'.$tenant->userId()->value(),
+                    isset($input['notes']) ? (string) $input['notes'] : null,
+                ),
+            ]);
+        } catch (Throwable $error) {
+            return $this->exception($error);
+        }
+    }
+
+    public function featureFlags(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $tenant = $this->tenants->current();
+            $input = $this->input($request);
+            return new JsonResponse([
+                'ok' => true,
+                'data' => $this->runtime->updateFeatureFlags(
+                    EngineeringId::assert($id),
+                    $tenant->organizationId()->value(),
+                    $input,
+                    'user:'.$tenant->userId()->value(),
+                ),
+            ]);
         } catch (Throwable $error) {
             return $this->exception($error);
         }

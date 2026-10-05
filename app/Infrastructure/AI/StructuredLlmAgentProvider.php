@@ -37,6 +37,12 @@ final readonly class StructuredLlmAgentProvider implements LlmProviderInterface
             ],
             responseSchema: $this->schemas->create($definition),
             model: $definition->model,
+            maxOutputTokens: isset($context->metadata['llm_max_output_tokens']) && is_numeric($context->metadata['llm_max_output_tokens'])
+                ? max(1, (int) $context->metadata['llm_max_output_tokens'])
+                : null,
+            maxCostAmount: isset($context->metadata['llm_max_cost_amount']) && is_numeric($context->metadata['llm_max_cost_amount'])
+                ? max(0.000001, (float) $context->metadata['llm_max_cost_amount'])
+                : null,
             organizationId: $context->organizationId->value(),
             useCase: $this->useCase($definition),
             correlationId: $context->correlationId,
