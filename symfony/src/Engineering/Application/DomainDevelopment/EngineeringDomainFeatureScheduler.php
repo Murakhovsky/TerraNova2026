@@ -11,6 +11,7 @@ use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainFeatureStatus;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
+use App\Engineering\Domain\DomainDevelopment\EngineeringDomainRuntimeEventType;
 use App\Engineering\Domain\DomainDevelopment\FeatureDependencyGraph;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use RuntimeException;
@@ -41,7 +42,7 @@ final readonly class EngineeringDomainFeatureScheduler
         }
 
         $this->ensureIntegrationBranch($domain);
-        $this->syncLinkedFeatures($domainId);
+        $this->syncLinkedFeatures($domainId, $organizationId, $correlationId);
         $drift = $this->drift->refresh($domainId);
         $domainFeatures = $this->domains->features($domainId);
         $dependencies = $this->domains->dependencies($domainId);
@@ -59,6 +60,28 @@ final readonly class EngineeringDomainFeatureScheduler
         ));
         $capacity = max(0, (int) $domain['max_parallel_features'] - $running);
         $readyKeys = $this->graph->ready($domainFeatures, $dependencies);
+        foreach ($readyKeys as $featureKey) {
+            $feature = null;
+            foreach ($domainFeatures as $candidate) {
+                if (($candidate['feature_key'] ?? null) === $featureKey) {
+                    $feature = $candidate;
+                    break;
+                }
+            }
+            $this->domains->recordRuntimeEvent(
+                $domainId,
+                $organizationId,
+                EngineeringDomainRuntimeEventType::FEATURE_READY->value,
+                $featureKey,
+                [
+                    'architecture_version' => $feature['architecture_version'] ?? null,
+                    'priority' => $feature['priority'] ?? null,
+                    'kind' => $feature['kind'] ?? null,
+                ],
+                $correlationId,
+                'feature-ready:'.$featureKey.':v'.((string) ($domain['version'] ?? 1)),
+            );
+        }
         $byKey = [];
         foreach ($domainFeatures as $feature) $byKey[(string) $feature['feature_key']] = $feature;
         usort($readyKeys, function (string $a, string $b) use ($byKey): int {
@@ -118,15 +141,33 @@ final readonly class EngineeringDomainFeatureScheduler
                 );
                 $this->domains->linkEngineeringFeature($domainId, $featureKey, $engineeringFeatureId, $architectureVersion, $contractSnapshot);
                 $this->engineering->queue($engineeringFeatureId, $organizationId, mb_substr($correlationId.':'.$featureKey, 0, 128));
+                $this->domains->recordRuntimeEvent(
+                    $domainId,
+                    $organizationId,
+                    EngineeringDomainRuntimeEventType::FEATURE_STARTED->value,
+                    $featureKey,
+                    ['engineering_feature_id' => $engineeringFeatureId, 'architecture_version' => $architectureVersion],
+                    $correlationId,
+                    'feature-started:'.$featureKey.':'.$engineeringFeatureId,
+                );
                 $scheduled[] = ['feature_key' => $featureKey, 'engineering_feature_id' => $engineeringFeatureId];
                 --$capacity;
             } catch (\Throwable $error) {
                 $this->domains->releasePaths($domainId, $featureKey);
                 $this->domains->updateFeatureStatus($domainId, $featureKey, EngineeringDomainFeatureStatus::BLOCKED->value, $error->getMessage());
+                $this->domains->recordRuntimeEvent(
+                    $domainId,
+                    $organizationId,
+                    EngineeringDomainRuntimeEventType::FEATURE_BLOCKED->value,
+                    $featureKey,
+                    ['reason' => $error->getMessage(), 'phase' => 'SCHEDULING'],
+                    $correlationId,
+                    'feature-blocked:'.$featureKey.':scheduling:'.hash('sha256', $error->getMessage()),
+                );
             }
         }
 
-        $this->syncLinkedFeatures($domainId);
+        $this->syncLinkedFeatures($domainId, $organizationId, $correlationId);
         $domainFeatures = $this->domains->features($domainId);
         $required = array_filter($domainFeatures, static fn (array $feature): bool => (bool) $feature['required']);
         $allRequiredComplete = $required !== [] && array_reduce(
@@ -134,10 +175,19 @@ final readonly class EngineeringDomainFeatureScheduler
             static fn (bool $carry, array $feature): bool => $carry && $feature['status'] === EngineeringDomainFeatureStatus::COMPLETED->value,
             true,
         );
-        $this->domains->updateStatus(
-            $domainId,
-            $allRequiredComplete ? EngineeringDomainStatus::INTEGRATION->value : EngineeringDomainStatus::IMPLEMENTATION->value,
-        );
+        $nextDomainStatus = $allRequiredComplete ? EngineeringDomainStatus::INTEGRATION->value : EngineeringDomainStatus::IMPLEMENTATION->value;
+        $this->domains->updateStatus($domainId, $nextDomainStatus);
+        if ($allRequiredComplete) {
+            $this->domains->recordRuntimeEvent(
+                $domainId,
+                $organizationId,
+                EngineeringDomainRuntimeEventType::DOMAIN_INTEGRATION_STARTED->value,
+                null,
+                ['features' => count($domainFeatures), 'required_features' => count($required)],
+                $correlationId,
+                'domain-integration-started:v'.((string) ($domain['version'] ?? 1)),
+            );
+        }
 
         return [
             'domain_id' => $domainId,
@@ -168,7 +218,7 @@ final readonly class EngineeringDomainFeatureScheduler
         }
     }
 
-    private function syncLinkedFeatures(string $domainId): void
+    private function syncLinkedFeatures(string $domainId, string $organizationId, string $correlationId): void
     {
         foreach ($this->domains->features($domainId) as $domainFeature) {
             $engineeringFeatureId = $domainFeature['engineering_feature_id'] ?? null;
@@ -179,15 +229,46 @@ final readonly class EngineeringDomainFeatureScheduler
                 continue;
             }
             $status = strtoupper((string) ($feature['status'] ?? ''));
+            $featureKey = (string) $domainFeature['feature_key'];
             if ($status === 'DONE') {
-                $this->domains->updateFeatureStatus($domainId, (string) $domainFeature['feature_key'], EngineeringDomainFeatureStatus::COMPLETED->value);
-                $this->domains->releasePaths($domainId, (string) $domainFeature['feature_key']);
+                $wasComplete = ($domainFeature['status'] ?? null) === EngineeringDomainFeatureStatus::COMPLETED->value;
+                $this->domains->updateFeatureStatus($domainId, $featureKey, EngineeringDomainFeatureStatus::COMPLETED->value);
+                $this->domains->releasePaths($domainId, $featureKey);
+                if (!$wasComplete) {
+                    $this->domains->recordRuntimeEvent(
+                        $domainId,
+                        $organizationId,
+                        EngineeringDomainRuntimeEventType::FEATURE_COMPLETED->value,
+                        $featureKey,
+                        ['engineering_feature_id' => $engineeringFeatureId],
+                        $correlationId,
+                        'feature-completed:'.$featureKey.':'.$engineeringFeatureId,
+                    );
+                }
             } elseif ($status === 'FAILED') {
-                $this->domains->updateFeatureStatus($domainId, (string) $domainFeature['feature_key'], EngineeringDomainFeatureStatus::FAILED->value, 'Child Engineering workflow failed.');
-                $this->domains->releasePaths($domainId, (string) $domainFeature['feature_key']);
+                $this->domains->updateFeatureStatus($domainId, $featureKey, EngineeringDomainFeatureStatus::FAILED->value, 'Child Engineering workflow failed.');
+                $this->domains->releasePaths($domainId, $featureKey);
+                $this->domains->recordRuntimeEvent(
+                    $domainId,
+                    $organizationId,
+                    EngineeringDomainRuntimeEventType::FEATURE_BLOCKED->value,
+                    $featureKey,
+                    ['engineering_feature_id' => $engineeringFeatureId, 'reason' => 'Child Engineering workflow failed.'],
+                    $correlationId,
+                    'feature-blocked:'.$featureKey.':failed:'.$engineeringFeatureId,
+                );
             } elseif ($status === 'CANCELLED') {
-                $this->domains->updateFeatureStatus($domainId, (string) $domainFeature['feature_key'], EngineeringDomainFeatureStatus::CANCELLED->value, 'Child Engineering workflow cancelled.');
-                $this->domains->releasePaths($domainId, (string) $domainFeature['feature_key']);
+                $this->domains->updateFeatureStatus($domainId, $featureKey, EngineeringDomainFeatureStatus::CANCELLED->value, 'Child Engineering workflow cancelled.');
+                $this->domains->releasePaths($domainId, $featureKey);
+                $this->domains->recordRuntimeEvent(
+                    $domainId,
+                    $organizationId,
+                    EngineeringDomainRuntimeEventType::FEATURE_BLOCKED->value,
+                    $featureKey,
+                    ['engineering_feature_id' => $engineeringFeatureId, 'reason' => 'Child Engineering workflow cancelled.'],
+                    $correlationId,
+                    'feature-blocked:'.$featureKey.':cancelled:'.$engineeringFeatureId,
+                );
             } elseif (!in_array($domainFeature['status'], [
                 EngineeringDomainFeatureStatus::BLOCKED->value,
                 EngineeringDomainFeatureStatus::STALE->value,
