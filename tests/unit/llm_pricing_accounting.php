@@ -4,6 +4,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 require $root.'/vendor/autoload.php';
 
+use Infrastructure\Llm\OpenAiModelCatalog;
 use Infrastructure\Llm\PlatformSettingsLlmPricingResolver;
 use Platform\Settings\Contract\PlatformSettingsReaderInterface;
 
@@ -25,7 +26,8 @@ $settings = new class implements PlatformSettingsReaderInterface {
     }
 };
 
-$resolver = new PlatformSettingsLlmPricingResolver($settings);
+$catalog = new OpenAiModelCatalog();
+$resolver = new PlatformSettingsLlmPricingResolver($settings, $catalog);
 $estimate = $resolver->estimate('org-1', 'openai', 'gpt-test', 1_000_000, 500_000, 200_000, 100_000);
 if ($estimate === null) throw new RuntimeException('Pricing estimate was not created.');
 if (abs($estimate->amount - 5.7) > 0.000001) throw new RuntimeException('Cached-token pricing math drifted: '.$estimate->amount);
@@ -44,7 +46,7 @@ $emptySettings = new class implements PlatformSettingsReaderInterface {
     public function namespace(string $organizationId, string $namespace): array { return []; }
 };
 
-$builtIn = new PlatformSettingsLlmPricingResolver($emptySettings);
+$builtIn = new PlatformSettingsLlmPricingResolver($emptySettings, $catalog);
 $cases = [
     'gpt-6-astra' => [10.0, 50.0, 35.0],
     'gpt-6.1-sol' => [2.0, 10.0, 7.0],
