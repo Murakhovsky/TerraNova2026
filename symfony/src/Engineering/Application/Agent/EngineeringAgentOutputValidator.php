@@ -10,11 +10,11 @@ final class EngineeringAgentOutputValidator
     public function validate(AgentRole $role, array $output): void
     {
         match ($role) {
-            AgentRole::ENGINEERING_MANAGER => $this->manager($output),
+            AgentRole::ENGINEERING_MANAGER, AgentRole::PRODUCT_REQUIREMENTS, AgentRole::INTEGRATION_RELEASE => $this->manager($output),
+            AgentRole::QA_PLANNER, AgentRole::QA_EXECUTOR, AgentRole::QA => $this->qa($output),
             AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
             AgentRole::DEVELOPER => $this->developer($output),
             AgentRole::REVIEWER => $this->reviewer($output),
-            AgentRole::QA => $this->qa($output),
         };
     }
 
