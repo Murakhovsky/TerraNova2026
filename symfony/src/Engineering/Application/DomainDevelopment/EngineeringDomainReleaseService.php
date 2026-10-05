@@ -23,6 +23,7 @@ final readonly class EngineeringDomainReleaseService
         private EngineeringDomainAgentOutputValidator $validator,
         private EngineeringDomainDriftDetector $drift,
         private EngineeringArtifactDependencyGraph $artifactGraph,
+        private EngineeringDomainDocumentationService $documentation,
         private EngineeringDomainHumanGateService $humanGates,
     ) {}
 
@@ -242,6 +243,18 @@ final readonly class EngineeringDomainReleaseService
             return $this->view($domainId, ['qa_status' => $qaStatus]);
         }
 
+        $documentation = $this->documentation->generate($domainId);
+        foreach ([
+            'public' => EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_PUBLIC,
+            'integrator' => EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_INTEGRATOR,
+            'developer' => EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_DEVELOPER,
+            'translations' => EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_TRANSLATIONS,
+        ] as $key => $type) {
+            if (!isset($documentation[$key]) || ($documentation[$key]['type'] ?? null) !== $type->value) {
+                throw new RuntimeException('Domain documentation generation did not produce '.$type->value.'.');
+            }
+        }
+
         $integrationRelease = $this->agents->run(
             $domainId,
             $organizationId,
@@ -259,6 +272,12 @@ final readonly class EngineeringDomainReleaseService
                 'repository_revision' => $repositoryRevision,
                 'repository_ci' => $ci,
                 'integration_strategy' => $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::INTEGRATION_STRATEGY->value)['content'] ?? [],
+                'documentation' => array_map(static fn (array $artifact): array => [
+                    'artifact_id' => $artifact['id'],
+                    'type' => $artifact['type'],
+                    'version' => $artifact['version'],
+                    'hash' => $artifact['content_hash'],
+                ], $documentation),
             ],
             $correlationId.':integration-release',
         );
