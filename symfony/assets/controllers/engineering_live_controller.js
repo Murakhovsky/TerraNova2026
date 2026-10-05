@@ -149,7 +149,7 @@ export default class extends Controller {
 
         if (this.hasHeartbeatTarget) {
             const timestamp = this.heartbeatTarget.dataset.timestamp || '';
-            this.heartbeatTarget.textContent = 'heartbeat: ' + this.relativeTime(timestamp);
+            this.heartbeatTarget.textContent = 'сигнал: ' + this.relativeTime(timestamp);
         }
 
         if (this.hasPollStatusTarget && this.lastPollAt !== null) {
