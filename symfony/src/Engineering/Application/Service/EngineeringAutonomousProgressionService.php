@@ -136,6 +136,18 @@ final readonly class EngineeringAutonomousProgressionService
                     correlationId: $correlationId,
                     logicalAttempt: $this->nextAttempt($featureId, AgentRole::QA_EXECUTOR),
                 ),
+                AgentRole::SECURITY_SPECIALIST,
+                AgentRole::DATABASE_MIGRATION_SPECIALIST,
+                AgentRole::PERFORMANCE_SPECIALIST,
+                AgentRole::DEVOPS_SPECIALIST,
+                AgentRole::DOCUMENTATION_SPECIALIST,
+                AgentRole::API_SPECIALIST => $this->specialists->executeRole(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    role: $role,
+                ),
                 default => $directive,
             };
 
