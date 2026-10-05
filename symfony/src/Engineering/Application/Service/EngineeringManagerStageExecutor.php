@@ -76,13 +76,22 @@ final readonly class EngineeringManagerStageExecutor
             throw $error;
         }
 
-        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $plan, $correlationId): string {
-            $workflow = $this->workflows->get($workflowId);
-            if ($workflow->currentState() !== EngineeringWorkflowState::ANALYSIS) {
-                throw new WorkflowAlreadyRunningException('Manager stage can run only from ANALYSIS.');
-            }
-            return $this->agentRuns->start($workflowId, $plan->task, $correlationId);
-        });
+        try {
+            $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $plan, $correlationId): string {
+                $workflow = $this->workflows->get($workflowId);
+                if ($workflow->currentState() !== EngineeringWorkflowState::ANALYSIS) {
+                    throw new WorkflowAlreadyRunningException('Manager stage can run only from ANALYSIS.');
+                }
+                return $this->agentRuns->start($workflowId, $plan->task, $correlationId);
+            });
+        } catch (\Throwable $error) {
+            $this->workflows->markRuntimeIssue(
+                $workflowId,
+                'STALLED',
+                'AgentRun start failed after repository discovery: '.mb_substr($error->getMessage(), 0, 500),
+            );
+            throw $error;
+        }
 
         try {
             $analysis = $this->manager->execute($plan, $organizationId, $correlationId);

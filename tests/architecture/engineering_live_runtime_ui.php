@@ -17,6 +17,9 @@ $template = $read('symfony/templates/experience/engineering/feature.html.twig');
 $controller = $read('symfony/assets/controllers/engineering_live_controller.js');
 $uiActions = $read('symfony/src/Engineering/Application/Service/EngineeringUiActionResolver.php');
 $page = $read('symfony/src/Web/Engineering/EngineeringFeatureController.php');
+$security = $read('symfony/config/packages/security.yaml');
+$authenticator = $read('symfony/src/Security/SessionAuthenticator.php');
+$managerStage = $read('symfony/src/Engineering/Application/Service/EngineeringManagerStageExecutor.php');
 
 foreach ([
     'cos_engineering_feature_live:',
@@ -44,10 +47,16 @@ foreach ([
     'data-engineering-live-target="terminal"',
     'data-engineering-live-target="pollStatus"',
     'data-engineering-live-target="heartbeat"',
-    'Тривалість workflow',
-    'активна робота агентів',
+    'Тривалість процесу',
+    'робота агентів:',
     'data-engineering-live-duration-start',
+    'data-engineering-live-duration-stop',
     'data-engineering-live-timestamp',
+    'LLM ще не запускався',
+    'Токени',
+    'Стан runtime',
+    'ЩЕ НЕ РОЗПОЧАТО',
+    'Менеджер розробки',
 ] as $needle) {
     if (!str_contains($template, $needle)) {
         throw new RuntimeException('Engineering live UI missing '.$needle);
@@ -66,6 +75,12 @@ foreach ([
     "mysqlUtc[1] + 'T'",
     ".padEnd(3, '0')",
     "health === 'STALLED' ? 'STALLED' : status",
+    'localizeStatus(',
+    'localizeRole(',
+    'localizeEventType(',
+    'currentStopAt',
+    "health === 'STALLED'",
+    "'сигнал: '",
     'без нових подій',
 ] as $needle) {
     if (!str_contains($controller, $needle)) {
@@ -85,6 +100,7 @@ foreach ([
     "'run_durations'",
     "'heartbeat_label'",
     "'display_status'",
+    "'duration_stop_at'",
     "\$resolvedHealth === 'STALLED' ? 'STALLED' : \$workflowStatus",
     "\$runtimeHealth === 'STALLED' => 'STALLED'",
     'relativeTimeLabel(',
@@ -92,6 +108,22 @@ foreach ([
     if (!str_contains($page, $needle)) {
         throw new RuntimeException('Engineering runtime duration presentation missing '.$needle);
     }
+}
+
+
+foreach ([
+    "api/engineering",
+    "path: '^/api/engineering(?:/|$)'",
+] as $needle) {
+    if (!str_contains($security, $needle)) {
+        throw new RuntimeException('Engineering live API is outside the authenticated firewall: '.$needle);
+    }
+}
+if (!str_contains($authenticator, "str_starts_with(\$path,'/api/engineering')")) {
+    throw new RuntimeException('SessionAuthenticator does not authenticate Engineering live API requests.');
+}
+if (!str_contains($managerStage, 'AgentRun start failed after repository discovery:')) {
+    throw new RuntimeException('Engineering Manager does not surface pre-AgentRun start failures.');
 }
 
 echo "Engineering live runtime UI contract passed.\n";

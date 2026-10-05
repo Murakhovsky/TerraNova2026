@@ -695,14 +695,18 @@ final readonly class EngineeringFeatureController
         );
         $displayStatus = !$terminal && $resolvedHealth === 'STALLED' ? 'STALLED' : $workflowStatus;
         $stages = $this->stagePipeline($data, $state, $workflowStatus, $resolvedHealth);
+        $heartbeatAt = is_string($data['workflow']['heartbeat_at'] ?? null) ? $data['workflow']['heartbeat_at'] : null;
+        $lastActivityAt = is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null;
+        $stalledAt = is_string($data['workflow']['stalled_at'] ?? null) ? $data['workflow']['stalled_at'] : null;
+        $durationStopAt = is_string($data['workflow']['finished_at'] ?? null) && trim((string) $data['workflow']['finished_at']) !== ''
+            ? (string) $data['workflow']['finished_at']
+            : ($resolvedHealth === 'STALLED' ? ($stalledAt ?: $heartbeatAt ?: $lastActivityAt) : null);
         $durationSeconds = $this->durationSeconds(
             is_string($data['workflow']['started_at'] ?? null) ? $data['workflow']['started_at'] : null,
-            is_string($data['workflow']['finished_at'] ?? null) ? $data['workflow']['finished_at'] : null,
+            $durationStopAt,
         );
         $timeline = is_array($data['timeline'] ?? null) ? $data['timeline'] : [];
         $lastEvent = $timeline[0] ?? null;
-        $heartbeatAt = is_string($data['workflow']['heartbeat_at'] ?? null) ? $data['workflow']['heartbeat_at'] : null;
-        $lastActivityAt = is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null;
 
         return [
             'state' => $state,
@@ -725,6 +729,7 @@ final readonly class EngineeringFeatureController
             'current_agent' => $currentAgent,
             'duration_seconds' => $durationSeconds,
             'duration_label' => $this->durationLabel($durationSeconds),
+            'duration_stop_at' => $durationStopAt,
             'agent_runtime_seconds' => $agentRuntimeSeconds,
             'agent_runtime_label' => $this->durationLabel($agentRuntimeSeconds),
             'run_durations' => $runDurations,
@@ -755,11 +760,11 @@ final readonly class EngineeringFeatureController
     private function stagePipeline(array $data, string $state, string $workflowStatus, string $runtimeHealth): array
     {
         $order = [
-            'ANALYSIS' => 'Analysis',
-            'QA_PLANNING' => 'QA Plan',
-            'ARCHITECTURE_PENDING' => 'Architecture',
-            'DEVELOPMENT_RUNNING' => 'Development',
-            'REVIEW_PENDING' => 'Review',
+            'ANALYSIS' => 'Аналіз',
+            'QA_PLANNING' => 'План перевірки',
+            'ARCHITECTURE_PENDING' => 'Архітектура',
+            'DEVELOPMENT_RUNNING' => 'Розробка',
+            'REVIEW_PENDING' => 'Рев’ю',
             'QA_PENDING' => 'QA',
         ];
         $keys = array_keys($order);
