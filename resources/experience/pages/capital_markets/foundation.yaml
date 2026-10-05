@@ -1,0 +1,110 @@
+pages:
+  - id: capital_markets.overview
+    route: { name: capital_markets_overview, path: /capital-markets, methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.view
+    owner: Capital Markets
+    priority: P1
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Understand the structural state of the Capital Markets foundation and open the relevant registry."
+      page_purpose: "Foundation overview for instruments, economic relationships and venues without market-data or execution surfaces."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: [EntityList, EmptyState, ErrorState]
+    primary_action: capital_markets.instrument.create
+    states: [normal, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+  - id: capital_markets.instruments
+    route: { name: capital_markets_instruments, path: /capital-markets/instruments, methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.instrument.view
+    owner: Capital Markets
+    priority: P1
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Find canonical financial instruments and create or open the instrument that needs structural maintenance."
+      page_purpose: "Canonical Capital Markets instrument registry collection."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [ActionBar, EmptyState, ErrorState]
+    primary_action: capital_markets.instrument.create
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: entity_list }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+  - id: capital_markets.instrument.workspace
+    route: { name: capital_markets_instrument, path: "/capital-markets/instruments/{id}", methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.instrument.view
+    owner: Capital Markets
+    priority: P1
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Inspect one canonical instrument together with its identifiers, economic relationships and venue mappings."
+      page_purpose: "Canonical workspace for one Capital Markets instrument."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [ContextPanel, ActionBar, EmptyState, ErrorState]
+    primary_action: capital_markets.instrument.update
+    states: [normal, error]
+    responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+  - id: capital_markets.relationships
+    route: { name: capital_markets_relationships, path: /capital-markets/relationships, methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.relationship.view
+    owner: Capital Markets
+    priority: P1
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Inspect and define explicit directed economic relationships between canonical instruments."
+      page_purpose: "Collection of typed economic relationships such as REPRESENTS, UNDERLYING_OF and HEDGES."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [ActionBar, EmptyState, ErrorState]
+    primary_action: capital_markets.relationship.create
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: entity_list }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+  - id: capital_markets.venues
+    route: { name: capital_markets_venues, path: /capital-markets/venues, methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.venue.view
+    owner: Capital Markets
+    priority: P1
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Inspect supported venues, their capabilities and canonical instrument mappings."
+      page_purpose: "Capital Markets venue registry without external connectivity or market-data execution."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [ActionBar, EmptyState, ErrorState]
+    primary_action: capital_markets.venue.create
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: entity_list }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
