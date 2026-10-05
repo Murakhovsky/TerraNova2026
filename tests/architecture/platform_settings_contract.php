@@ -30,7 +30,7 @@ foreach (['/admin/settings','/admin/settings/llm','SessionCsrfValidator','isAdmi
 foreach (['PlatformSettingsReaderInterface','openai.api_key','timeout_seconds','max_attempts'] as $needle) {
     if (!str_contains($openai, $needle)) throw new RuntimeException('OpenAI runtime settings contract missing '.$needle);
 }
-foreach (['manager.model','architect.model','developer.model','reviewer.model','qa.model'] as $needle) {
+foreach (['manager.model','product.model','qa_planner.model','architect.model','developer.model','reviewer.model','qa_executor.model','integration_release.model','qa.model'] as $needle) {
     if (!str_contains($factory, $needle)) throw new RuntimeException('Engineering model settings contract missing '.$needle);
 }
 if (str_contains($controller, "name=\"openai_api_key\" value=")) throw new RuntimeException('Secret must never be rendered back into the admin form.');
