@@ -7,5 +7,9 @@ use Domains\CapitalMarkets\Domain\Event\AbstractCapitalMarketsEvent;
 
 interface CapitalMarketsEventPublisherInterface
 {
-    public function publish(AbstractCapitalMarketsEvent $event):void;
+    public function publish(
+        AbstractCapitalMarketsEvent $event,
+        ?string $correlationId=null,
+        ?int $actorId=null,
+    ):void;
 }

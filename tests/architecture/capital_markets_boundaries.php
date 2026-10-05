@@ -138,6 +138,24 @@ foreach([
     }
 }
 
+$foundationService=(string)file_get_contents($domainRoot.'/Application/Service/CapitalMarketsFoundationService.php');
+foreach(['TransactionManagerInterface','transactional(fn():array=>$this->createInstrument($command))','transactional(fn():array=>$this->createRelationship($command))','transactional(fn():array=>$this->createVenue($command))'] as $needle){
+    if(!str_contains($foundationService,$needle)){
+        throw new RuntimeException('Capital Markets application transaction boundary missing: '.$needle);
+    }
+}
+foreach([
+    $domainRoot.'/Infrastructure/Persistence/MySql/MysqlInstrumentRepository.php',
+    $domainRoot.'/Infrastructure/Persistence/MySql/MysqlVenueRepository.php',
+] as $repositoryFile){
+    $repositorySource=(string)file_get_contents($repositoryFile);
+    foreach(['$ownsTransaction=!$this->connection->inTransaction()','if($ownsTransaction)$this->connection->commit()'] as $needle){
+        if(!str_contains($repositorySource,$needle)){
+            throw new RuntimeException('Capital Markets repository must cooperate with outer transaction: '.basename($repositoryFile).' -> '.$needle);
+        }
+    }
+}
+
 $eventPublisher=(string)file_get_contents($domainRoot.'/Infrastructure/Event/KernelCapitalMarketsEventPublisher.php');
 foreach(['Kernel\\Event\\EventBus','Kernel\\Event\\DomainEvent','Kernel\\Event\\EventMetadata'] as $needle){
     if(!str_contains($eventPublisher,$needle)){
@@ -164,9 +182,12 @@ foreach([
     if(!str_contains($readme,$needle))throw new RuntimeException('Capital Markets foundation boundary is undocumented: '.$needle);
 }
 
-foreach(['Order.php','Trade.php','Position.php','Portfolio.php','Backtest.php'] as $forbiddenEntity){
-    $matches=glob($domainRoot.'/**/'.$forbiddenEntity);
-    if($matches!==false&&$matches!==[])throw new RuntimeException('Out-of-scope execution entity exists: '.$forbiddenEntity);
+$domainIterator=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($domainRoot));
+foreach($domainIterator as $candidate){
+    if(!$candidate->isFile())continue;
+    if(in_array($candidate->getFilename(),['Order.php','Trade.php','Position.php','Portfolio.php','Backtest.php'],true)){
+        throw new RuntimeException('Out-of-scope execution entity exists: '.$candidate->getFilename());
+    }
 }
 
 echo sprintf("Capital Markets boundaries passed: %d pure domain files.\n",count($files));

@@ -76,6 +76,8 @@ Authentication and tenant context come from \`Kernel\\Tenant\\Contract\\TenantCo
 
 Mutating HTTP surfaces require tenant context, module enabled state, the granular Capital Markets capability and CSRF validation.
 
+Foundation mutations are wrapped by the shared `TransactionManagerInterface`. Business state, Platform Audit and `Kernel\\Event\\EventBus` persistence therefore participate in one database transaction; repository-local transactions yield to an already active application transaction.
+
 ## API and UI
 
 The canonical API follows the existing COS strategy and therefore uses \`/api/v1/capital-markets/*\`. The workspace entry point is \`/capital-markets\`, with Instruments, Relationships and Venues as Foundation sections. No trading dashboard or fake market metrics exist.

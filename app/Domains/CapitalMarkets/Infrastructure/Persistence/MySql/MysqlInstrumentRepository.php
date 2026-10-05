@@ -21,7 +21,8 @@ final readonly class MysqlInstrumentRepository implements InstrumentRepository
 
     public function save(string $organizationId,InstrumentDescriptor $instrument,array $identifiers):void
     {
-        $this->connection->beginTransaction();
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
         try{
             $exists=$this->connection->prepare(
                 'SELECT 1 FROM tn_capital_market_instruments
