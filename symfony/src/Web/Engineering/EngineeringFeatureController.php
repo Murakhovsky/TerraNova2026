@@ -693,7 +693,8 @@ final readonly class EngineeringFeatureController
             $resolvedHealth,
             count($data['open_human_decisions'] ?? []),
         );
-        $stages = $this->stagePipeline($data, $state, $workflowStatus);
+        $displayStatus = !$terminal && $resolvedHealth === 'STALLED' ? 'STALLED' : $workflowStatus;
+        $stages = $this->stagePipeline($data, $state, $workflowStatus, $resolvedHealth);
         $durationSeconds = $this->durationSeconds(
             is_string($data['workflow']['started_at'] ?? null) ? $data['workflow']['started_at'] : null,
             is_string($data['workflow']['finished_at'] ?? null) ? $data['workflow']['finished_at'] : null,
@@ -706,6 +707,7 @@ final readonly class EngineeringFeatureController
         return [
             'state' => $state,
             'workflow_status' => $workflowStatus,
+            'display_status' => $displayStatus,
             'health' => $resolvedHealth,
             'terminal' => $terminal,
             'waits_for_human' => $waitsForHuman,
@@ -750,7 +752,7 @@ final readonly class EngineeringFeatureController
     }
 
     /** @return list<array{key:string,label:string,status:string}> */
-    private function stagePipeline(array $data, string $state, string $workflowStatus): array
+    private function stagePipeline(array $data, string $state, string $workflowStatus, string $runtimeHealth): array
     {
         $order = [
             'ANALYSIS' => 'Analysis',
@@ -794,6 +796,7 @@ final readonly class EngineeringFeatureController
                     in_array($state, ['CANCELLED'], true) || $workflowStatus === 'CANCELLED' => 'CANCELLED',
                     in_array($state, ['FAILED'], true) || $workflowStatus === 'FAILED' => 'FAILED',
                     in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true) => 'WAITING',
+                    $runtimeHealth === 'STALLED' => 'STALLED',
                     default => 'RUNNING',
                 };
             }

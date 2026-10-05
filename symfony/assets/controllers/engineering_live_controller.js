@@ -85,7 +85,8 @@ export default class extends Controller {
             const status = String(workflow.status || workflow.workflow_status || this.initialStatusValue || 'UNKNOWN').toUpperCase();
             const health = this.resolveHealth(workflow, state, status);
 
-            this.setText(this.workflowStatusTargets, status);
+            const displayStatus = !this.isTerminal(state, status) && health === 'STALLED' ? 'STALLED' : status;
+            this.setText(this.workflowStatusTargets, displayStatus);
             this.setText(this.stateTargets, state);
             this.setText(this.healthTargets, health.replace(/^/, ['STALE', 'STALLED'].includes(health) ? '⚠ ' : ''));
 

@@ -60,7 +60,7 @@
             <h1 class="engineering-head__title">{{ engineering.feature.title }}</h1>
             <div class="engineering-head__meta">
                 <span class="cos-badge">{{ engineering.feature.priority }}</span>
-                <span class="cos-badge" data-engineering-live-target="workflowStatus">{{ summary.workflow_status }}</span>
+                <span class="cos-badge" data-engineering-live-target="workflowStatus">{{ summary.display_status }}</span>
                 <span class="cos-badge" data-engineering-live-target="state">{{ summary.state }}</span>
                 {% if summary.health in ['STALE','STALLED'] %}
                     <span class="cos-badge engineering-warning" data-engineering-live-target="health">⚠ {{ summary.health }}</span>
@@ -180,7 +180,7 @@
     {% endif %}
 
     <section class="engineering-summary" aria-label="Зведення execution">
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value" data-engineering-live-target="workflowStatus">{{ summary.workflow_status }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value" data-engineering-live-target="workflowStatus">{{ summary.display_status }}</span></div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value" data-engineering-live-target="state">{{ summary.state }}</span></div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">Runtime</span>
