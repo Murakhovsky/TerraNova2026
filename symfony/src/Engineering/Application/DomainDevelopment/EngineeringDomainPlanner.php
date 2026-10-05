@@ -379,6 +379,67 @@ final readonly class EngineeringDomainPlanner
             'features' => $featureContexts,
         ], AgentRole::PRINCIPAL_ARCHITECT->value);
 
+        foreach ($contracts as $contract) {
+            if (!is_array($contract)) continue;
+            $compatibility = (string) ($contract['compatibility'] ?? '');
+            if (!$this->policy->contractChangeRequiresHuman($compatibility)) continue;
+            $this->humanGates->request(
+                $domainId,
+                $organizationId,
+                'BREAKING_CONTRACT_'.strtoupper((string) ($contract['id'] ?? $contract['key'] ?? $contract['name'] ?? 'UNKNOWN')),
+                EngineeringDomainStatus::READY_FOR_IMPLEMENTATION,
+                'Approve breaking public contract '.((string) ($contract['name'] ?? $contract['id'] ?? 'unknown')).'?',
+                'Engineering Policy forbids autonomous approval of BREAKING public contracts.',
+                [
+                    'contract' => $contract,
+                    'architecture_artifact_id' => $architectureArtifact['id'],
+                    'architecture_version' => $architectureArtifact['version'],
+                ],
+                'ENGINEERING_POLICY_ENGINE',
+            );
+        }
+
+        $migrationPlan = is_array($architect['migration_plan'] ?? null) ? $architect['migration_plan'] : [];
+        if ($this->policy->migrationRequiresHuman($migrationPlan)) {
+            $this->humanGates->request(
+                $domainId,
+                $organizationId,
+                'RISKY_MIGRATION',
+                EngineeringDomainStatus::READY_FOR_IMPLEMENTATION,
+                'Approve risky Domain migration plan?',
+                'Engineering Policy requires a human decision for high-risk, destructive or downtime migrations.',
+                [
+                    'migration_plan' => $migrationPlan,
+                    'architecture_artifact_id' => $architectureArtifact['id'],
+                    'architecture_version' => $architectureArtifact['version'],
+                ],
+                'ENGINEERING_POLICY_ENGINE',
+            );
+        }
+
+        $proposedFlags = is_array($architecture['feature_flags'] ?? null) ? $architecture['feature_flags'] : [];
+        if (($proposedFlags['PRODUCTION_EXECUTION_ENABLED'] ?? false) === true) {
+            $this->humanGates->request(
+                $domainId,
+                $organizationId,
+                'EXTERNAL_PRODUCTION_INTEGRATION',
+                EngineeringDomainStatus::READY_FOR_IMPLEMENTATION,
+                'Approve architecture that proposes production execution?',
+                'Production execution and external production integrations are outside autonomous Engineering authority.',
+                [
+                    'proposed_feature_flags' => $proposedFlags,
+                    'architecture_artifact_id' => $architectureArtifact['id'],
+                    'architecture_version' => $architectureArtifact['version'],
+                ],
+                'ENGINEERING_POLICY_ENGINE',
+            );
+        }
+
+        if ($this->domains->openHumanDecisions($domainId) !== []) {
+            $this->artifactGraph->rebuild($domainId);
+            return $this->view($domainId);
+        }
+
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::READY_FOR_IMPLEMENTATION->value);
         $this->artifactGraph->rebuild($domainId);
 
