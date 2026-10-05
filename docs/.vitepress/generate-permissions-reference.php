@@ -6,6 +6,14 @@ $checkOnly = in_array('--check', $argv, true);
 
 $catalogues = [
     [
+        'module' => 'capital_markets',
+        'class' => \Domains\CapitalMarkets\Model\CapitalMarketsCapability::class,
+        'source' => 'app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php',
+        'requires' => [
+            'app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php',
+        ],
+    ],
+    [
         'module' => 'sales',
         'class' => \Domains\Sales\Model\SalesCapability::class,
         'source' => 'app/Domains/Sales/Model/SalesCapability.php',
