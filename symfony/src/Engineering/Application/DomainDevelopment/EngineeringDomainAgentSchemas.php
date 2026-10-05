@@ -155,7 +155,7 @@ final class EngineeringDomainAgentSchemas
             'type' => 'object',
             'required' => ['status','integration_summary','release_readiness','blocking_issues','required_human_decisions'],
             'properties' => [
-                'status' => ['type' => 'string', 'enum' => ['RELEASE_READY','NOT_READY','HUMAN_APPROVAL_REQUIRED','BLOCKED']],
+                'status' => ['type' => 'string', 'enum' => ['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS','REWORK_REQUIRED','ARCHITECTURE_REVIEW_REQUIRED','RELEASE_READY','NOT_READY','HUMAN_APPROVAL_REQUIRED','BLOCKED']],
                 'integration_summary' => ['type' => ['object','array','string']],
                 'release_readiness' => ['type' => ['object','array']],
                 'blocking_issues' => ['type' => 'array'],
