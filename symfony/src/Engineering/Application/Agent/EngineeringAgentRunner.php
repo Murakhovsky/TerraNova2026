@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Agent;
 
+use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use Kernel\Agent\Contract\AgentRuntimeInterface;
 use Kernel\Agent\Model\Agent;
@@ -17,6 +18,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         private AgentRuntimeInterface $runtime,
         private EngineeringAgentDefinitionFactory $definitions = new EngineeringAgentDefinitionFactory(),
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
+        private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
         private int $maxTechnicalRetries = 2,
     ) {
     }
@@ -82,17 +84,17 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         $context = new AgentContext(
             organizationId: $organization,
             correlationId: $correlationId,
-            input: [
+            input: $this->secrets->sanitize([
                 'question' => $task->objective,
                 'inputs' => $task->inputs,
                 'constraints' => $task->constraints,
                 'completion_criteria' => $task->completionCriteria,
                 'expected_output_schema' => $task->expectedOutputSchema,
-            ],
-            data: [
+            ]),
+            data: $this->secrets->sanitize([
                 'context_refs' => $task->contextRefs,
                 'input_snapshot' => $task->inputSnapshot,
-            ],
+            ]),
             metadata: [
                 'engineering_feature_id' => $task->featureId,
                 'engineering_task_id' => $task->id,
