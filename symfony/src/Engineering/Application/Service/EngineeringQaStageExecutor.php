@@ -8,6 +8,7 @@ use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -43,6 +44,7 @@ final readonly class EngineeringQaStageExecutor
         private EngineeringReportBuilder $reports,
         private EngineeringStandardsProvider $standards,
         private EngineeringRepositoryGatewayInterface $repository,
+        private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
@@ -213,7 +215,21 @@ final readonly class EngineeringQaStageExecutor
             throw new RuntimeException('QA execution requires reviewed revision, pull request and implementation branch.');
         }
 
-        $pullRequestState = $this->repository->pullRequest($pullRequest);
+        $pullRequestState = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'GIT',
+            'repository.pull_request_state',
+            'Read pull request state for QA',
+            $correlationId,
+            fn (): array => $this->repository->pullRequest($pullRequest),
+            details: static fn (array $state): array => [
+                'number' => $pullRequest,
+                'state' => $state['state'] ?? null,
+                'merged' => $state['merged'] ?? null,
+                'head_revision' => $state['head_revision'] ?? null,
+            ],
+        );
         if (($pullRequestState['merged'] ?? false) === true || ($pullRequestState['state'] ?? null) !== 'open') {
             throw new RuntimeException('QA execution requires an open, unmerged pull request.');
         }
@@ -221,11 +237,43 @@ final readonly class EngineeringQaStageExecutor
             throw new RuntimeException('QA refused stale review evidence because pull request head changed after review.');
         }
 
-        $ci = $this->repository->commitChecks($revision);
+        $ci = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'CI',
+            'repository.commit_checks',
+            'Read deterministic CI evidence for QA',
+            $correlationId,
+            fn (): array => $this->repository->commitChecks($revision),
+            details: static fn (array $ci): array => [
+                'revision' => $revision,
+                'state' => $ci['state'] ?? null,
+                'total' => $ci['total'] ?? null,
+                'passed' => $ci['passed'] ?? null,
+                'failed' => $ci['failed'] ?? null,
+                'pending' => $ci['pending'] ?? null,
+            ],
+        );
         if ($ci['state'] === 'PENDING') {
             return new WorkflowDirective(WorkflowDirectiveType::STOP, null, 'QA is waiting for GitHub CI to finish for revision '.$revision.'.');
         }
-        $diff = $this->repository->pullRequestFiles($pullRequest);
+        $diff = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'GIT',
+            'repository.pull_request_files',
+            'Read pull request diff for QA',
+            $correlationId,
+            fn (): array => $this->repository->pullRequestFiles($pullRequest),
+            details: static fn (array $files): array => [
+                'pull_request' => $pullRequest,
+                'file_count' => count($files),
+                'files' => array_values(array_filter(array_map(
+                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                    $files,
+                ))),
+            ],
+        );
 
         $task = new EngineeringAgentTask(
             id: EngineeringId::generate(),
@@ -317,11 +365,27 @@ final readonly class EngineeringQaStageExecutor
 
             if (($effective['status'] ?? null) === 'TESTS_UPDATED') {
                 $this->assertQaTestChanges($effective['test_changes'] ?? []);
-                $mutation = $this->repository->commitChanges(
-                    baseRevision: $revision,
-                    branch: $branch,
-                    changes: $effective['test_changes'],
-                    message: 'test(engineering): add QA coverage for '.$this->features->view($featureId)['title'],
+                $qaChanges = is_array($effective['test_changes'] ?? null) ? $effective['test_changes'] : [];
+                $mutation = $this->journal->around(
+                    $featureId,
+                    $workflowId,
+                    'GIT',
+                    'repository.commit_qa_tests',
+                    'Commit QA-authored test coverage',
+                    $correlationId,
+                    fn (): array => $this->repository->commitChanges(
+                        baseRevision: $revision,
+                        branch: $branch,
+                        changes: $qaChanges,
+                        message: 'test(engineering): add QA coverage for '.$this->features->view($featureId)['title'],
+                    ),
+                    $engineeringRunId,
+                    static fn (array $result): array => [
+                        'branch' => $result['branch'] ?? null,
+                        'revision' => $result['revision'] ?? null,
+                        'changed_files' => $result['changed_files'] ?? [],
+                        'change_count' => count($qaChanges),
+                    ],
                 );
                 $effective['repository_revision_after_tests'] = $mutation['revision'];
             } elseif ($ci['state'] === 'FAILED') {
@@ -361,7 +425,7 @@ final readonly class EngineeringQaStageExecutor
             throw $error;
         }
 
-        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId, $ci, $featureSpec, $architecture, $development, $review, $implementation, $testPlan, $pullRequest): WorkflowDirective {
+        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId, $ci, $featureSpec, $architecture, $development, $review, $implementation, $testPlan, $pullRequest, $correlationId): WorkflowDirective {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::QA_PENDING) {
                 throw new WorkflowAlreadyRunningException('Engineering workflow changed while QA was running.');
@@ -395,7 +459,22 @@ final readonly class EngineeringQaStageExecutor
                 createdByAgent: AgentRole::QA->value,
             );
 
-            $prState = $this->repository->pullRequest($pullRequest);
+            $prState = $this->journal->around(
+                $featureId,
+                $workflowId,
+                'GIT',
+                'repository.pull_request_revalidate',
+                'Revalidate pull request head before readiness gate',
+                $correlationId,
+                fn (): array => $this->repository->pullRequest($pullRequest),
+                $engineeringRunId,
+                static fn (array $state): array => [
+                    'number' => $pullRequest,
+                    'state' => $state['state'] ?? null,
+                    'head_revision' => $state['head_revision'] ?? null,
+                    'merged' => $state['merged'] ?? null,
+                ],
+            );
             $ready = new ReadyForHumanApprovalEvidence(
                 architectureApproved: in_array((string) ($architecture['content']['gate_status'] ?? $architecture['content']['status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS'], true),
                 developmentCompleted: in_array((string) ($development['content']['status'] ?? ''), ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true),
