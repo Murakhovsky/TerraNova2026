@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Llm;
 
+use Kernel\Llm\LlmModelCatalogInterface;
 use Kernel\Llm\LlmPriceEstimate;
 use Kernel\Llm\LlmPricingResolverInterface;
 use Platform\Settings\Contract\PlatformSettingsReaderInterface;
@@ -11,6 +12,7 @@ final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingRes
 {
     public function __construct(
         private PlatformSettingsReaderInterface $settings,
+        private LlmModelCatalogInterface $modelCatalog,
         private string $fallbackCatalogJson = '',
     ) {}
 
@@ -27,8 +29,17 @@ final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingRes
 
         $providerKey = $this->key($provider);
         $modelKey = $this->key($model);
-        $catalog = $this->fallbackCatalog();
+        $catalog = $this->modelCatalog->pricingCatalog();
+        foreach ($this->fallbackCatalog() as $key => $value) {
+            if (is_array($value)) {
+                $value['source'] = 'ENV_FALLBACK';
+                $catalog[(string) $key] = $value;
+            }
+        }
         foreach ($this->settings->namespace($organizationId, 'llm_pricing') as $key => $value) {
+            if (is_array($value)) {
+                $value['source'] = 'PLATFORM_SETTINGS';
+            }
             $catalog[(string) $key] = $value;
         }
         $price = null;
@@ -46,17 +57,24 @@ final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingRes
 
         $cached = max(0, min((int) ($cachedInputTokens ?? 0), (int) ($inputTokens ?? 0)));
         $uncachedInput = max(0, (int) ($inputTokens ?? 0) - $cached);
-        $cachedRate = $this->rate($price['cached_input_per_million'] ?? null) ?? $inputRate;
+        $configuredCachedRate = $this->rate($price['cached_input_per_million'] ?? null);
+        $cachedRate = $configuredCachedRate ?? $inputRate;
+        $standardInputRateUsedForCache = $cached > 0 && $configuredCachedRate === null;
 
         $amount = 0.0;
         if ($inputRate !== null) $amount += ($uncachedInput / 1_000_000) * $inputRate;
         if ($cachedRate !== null) $amount += ($cached / 1_000_000) * $cachedRate;
         if ($outputRate !== null) $amount += (max(0, (int) ($outputTokens ?? 0)) / 1_000_000) * $outputRate;
 
+        $source = 'CALCULATED_'.strtoupper(trim((string) ($price['source'] ?? 'CATALOG')));
+        if ($standardInputRateUsedForCache) {
+            $source .= '_STANDARD_INPUT_RATE_FOR_CACHE';
+        }
+
         return new LlmPriceEstimate(
             amount: round($amount, 8),
             currency: strtoupper(trim((string) ($price['currency'] ?? 'USD'))) ?: 'USD',
-            source: 'CALCULATED_SETTINGS',
+            source: $source,
             pricingVersion: isset($price['version']) && is_scalar($price['version']) ? (string) $price['version'] : null,
         );
     }
