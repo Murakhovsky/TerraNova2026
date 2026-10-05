@@ -46,6 +46,23 @@ final readonly class EngineeringDomainAgentOutputValidator
             if (isset($ids[$id])) throw new RuntimeException('Duplicate Domain Acceptance Criterion: '.$id);
             $ids[$id] = true;
         }
+        foreach ($output['capabilities'] as $capability) {
+            if (!is_array($capability)) throw new RuntimeException('Domain capability must be an object.');
+            foreach (['key','name','description','kind','required','depends_on','acceptance_criteria'] as $field) {
+                if (!array_key_exists($field, $capability)) throw new RuntimeException('Domain capability missing '.$field.'.');
+            }
+            $capabilityKey = trim((string) $capability['key']);
+            if ($capabilityKey === '') throw new RuntimeException('Domain capability key is required.');
+            if (!is_array($capability['acceptance_criteria']) || $capability['acceptance_criteria'] === []) {
+                throw new RuntimeException('Domain capability '.$capabilityKey.' requires acceptance criteria.');
+            }
+            foreach ($capability['acceptance_criteria'] as $criterionId) {
+                $criterionId = strtoupper(trim((string) $criterionId));
+                if (!isset($ids[$criterionId])) {
+                    throw new RuntimeException('Capability '.$capabilityKey.' references unknown Domain Acceptance Criterion '.$criterionId.'.');
+                }
+            }
+        }
     }
 
     /** @param array<string,mixed> $output */
