@@ -64,6 +64,7 @@ final readonly class EngineeringDeveloperStageExecutor
         $architectureDocumentation = $this->artifacts->latest($featureId, ArtifactType::ARCHITECTURE_DOCUMENTATION);
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
         $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
+        $targetBranch = trim((string) ($domainContext['content']['target_branch'] ?? ''));
 
         if ($developerHandoff === null || $architectureDocumentation === null) {
             return $this->requireArchitectureRevalidation(
@@ -92,7 +93,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'repository.current_base_revision',
                 'Verify repository revision before development',
                 $correlationId,
-                fn (): string => $this->repository->currentBaseRevision(),
+                fn (): string => $this->repository->currentBaseRevision($targetBranch !== '' ? $targetBranch : null),
                 details: static fn (string $revision): array => ['revision' => $revision],
             );
             if ($currentBaseRevision !== $baseRevision) {
@@ -275,7 +276,8 @@ final readonly class EngineeringDeveloperStageExecutor
             $this->validator->validate(AgentRole::DEVELOPER, $run->structuredOutput);
 
             if (in_array((string) ($run->structuredOutput['status'] ?? ''), ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true)) {
-                $branch = 'engineering/'.$featureId;
+                $domainKey = trim((string) ($domainContext['content']['domain_key'] ?? ''));
+                $branch = $domainKey !== '' ? 'engineering/'.$domainKey.'/'.$featureId : 'engineering/'.$featureId;
                 $developerChanges = is_array($run->structuredOutput['changes'] ?? null) ? $run->structuredOutput['changes'] : [];
                 $this->assertDomainPathPolicy($developerChanges, $domainContext['content'] ?? null);
                 $this->assertDeveloperChangeEvidence($developerChanges, $implementation['content'], $repositoryFiles);
@@ -325,6 +327,7 @@ final readonly class EngineeringDeveloperStageExecutor
                         branch: $mutation['branch'],
                         title: $pullRequestTitle,
                         body: $pullRequestBody,
+                        baseBranch: $targetBranch !== '' ? $targetBranch : null,
                     ),
                     $engineeringRunId,
                     static fn (array $result): array => [
