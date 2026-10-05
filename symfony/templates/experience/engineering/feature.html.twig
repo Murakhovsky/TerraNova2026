@@ -267,6 +267,7 @@
                 data-engineering-live-target="workflowDuration"
                 data-engineering-live-duration-start="{{ engineering.workflow.started_at|default('') }}"
                 data-engineering-live-duration-finish="{{ engineering.workflow.finished_at|default('') }}"
+                data-engineering-live-duration-stop="{{ summary.duration_stop_at|default('') }}"
             >{{ summary.duration_label }}</span>
             <span class="engineering-table__meta">робота агентів: <span data-engineering-live-target="agentRuntime">{{ summary.agent_runtime_label }}</span></span>
         </div>
