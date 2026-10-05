@@ -36,10 +36,21 @@ final readonly class EngineeringContinueService
         $workflowId = $this->workflows->activeIdForFeature($featureId);
         if ($workflowId === null) throw new RuntimeException('Engineering feature has no active workflow.');
         $workflow = $this->workflows->get($workflowId);
-            $this->features->updateStatus($featureId, EngineeringWorkflowState::ANALYSIS->value);
+        $this->features->updateStatus($featureId, $workflow->currentState()->value);
         $activeRole = $this->roleForState($workflow->currentState());
         if ($activeRole !== null) {
-            $this->agentRuns->failStaleRunning($featureId, $activeRole, $this->staleRunSeconds);
+            $recoveredStaleRuns = $this->agentRuns->failStaleRunning($featureId, $activeRole, $this->staleRunSeconds);
+            if ($recoveredStaleRuns > 0) {
+                $this->features->appendPreviousContext($featureId, [
+                    'engineering_recovery' => [
+                        'workflow_id' => $workflowId,
+                        'state' => $workflow->currentState()->value,
+                        'correlation_id' => $correlationId,
+                        'attempted_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
+                        'recovered_stale_runs' => $recoveredStaleRuns,
+                    ],
+                ]);
+            }
             if ($this->hasRunningRole($featureId, $activeRole)) {
                 $next = new WorkflowDirective(
                     WorkflowDirectiveType::STOP,

@@ -7,6 +7,9 @@ $definition = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/
 $ready = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/Workflow/ReadyForHumanApprovalGuard.php');
 $qa = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringQaStageExecutor.php');
 $finalize = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringFinalizeService.php');
+$continue = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringContinueService.php');
+$acceptance = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Acceptance/EngineeringV01AcceptanceVerifier.php');
+$acceptanceCommand = (string) file_get_contents($root.'/symfony/src/Command/EngineeringAcceptanceCommand.php');
 $evaluation = json_decode((string) file_get_contents($root.'/tests/fixtures/engineering/evaluation/v0.1.json'), true, 512, JSON_THROW_ON_ERROR);
 
 foreach ([
@@ -44,5 +47,24 @@ foreach ([
 
 if (!str_contains($finalize, "if (!\$pr['merged']")) throw new RuntimeException('V0.1 DONE must require verified human merge.');
 if (count($evaluation['cases'] ?? []) < 30) throw new RuntimeException('V0.1 requires at least 30 engineering evals.');
+
+foreach ([
+    'revision_chain_consistent',
+    'agent_run_idempotency_unique',
+    'fix_loop_full_rerun_chain',
+    'human_gate_resume_exact_stage',
+    'recovery_continue_evidence',
+] as $needle) {
+    if (!str_contains($acceptance, $needle)) throw new RuntimeException('V0.1 acceptance verifier missing '.$needle);
+}
+if (!str_contains($acceptanceCommand, 'cos:engineering:v01:acceptance')) {
+    throw new RuntimeException('V0.1 persisted acceptance command is missing.');
+}
+if (str_contains($continue, 'updateStatus($featureId, EngineeringWorkflowState::ANALYSIS->value)')) {
+    throw new RuntimeException('Recovery must not overwrite persisted workflow state with ANALYSIS.');
+}
+foreach (['engineering_recovery', 'recovered_stale_runs', '$workflow->currentState()->value'] as $needle) {
+    if (!str_contains($continue, $needle)) throw new RuntimeException('Recovery evidence contract missing '.$needle);
+}
 
 echo "Engineering V0.1 release contract passed.\n";
