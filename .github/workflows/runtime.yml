@@ -102,6 +102,7 @@ jobs:
           COS_WEB_SMOKE_BASE_URL: http://127.0.0.1:8081
           COS_WEB_SMOKE_EMAIL: production-cutover-web@example.test
           COS_WEB_SMOKE_PASSWORD: Production-Cutover-Web-CI-Ab9!
+          COS_WEB_FOREIGN_USER_EMAIL: foreign-tenant-user@example.test
         run: |
           WEB_HASH="$(php -r 'echo password_hash(getenv("COS_WEB_SMOKE_PASSWORD"), PASSWORD_DEFAULT);')"
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
@@ -112,8 +113,18 @@ jobs:
             SELECT 'default',id,'admin','ACTIVE' FROM tn_users WHERE email='$COS_WEB_SMOKE_EMAIL'
             ON DUPLICATE KEY UPDATE role='admin',status='ACTIVE';
           "
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO cos_organizations (id,name,status)
+            VALUES ('foreign-tenant','Foreign Tenant','ACTIVE')
+            ON DUPLICATE KEY UPDATE name='Foreign Tenant',status='ACTIVE';
+            INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
+            VALUES ('foreign-tenant','$COS_WEB_FOREIGN_USER_EMAIL','$WEB_HASH','Foreign Tenant User','manager','active')
+            ON DUPLICATE KEY UPDATE organization_id='foreign-tenant',full_name='Foreign Tenant User',role='manager',status='active';
+          "
           WEB_USER_ID="$(docker compose exec -T mysql mysql -N -s -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT id FROM tn_users WHERE email='$COS_WEB_SMOKE_EMAIL' LIMIT 1;")"
+          FOREIGN_USER_ID="$(docker compose exec -T mysql mysql -N -s -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT id FROM tn_users WHERE email='$COS_WEB_FOREIGN_USER_EMAIL' LIMIT 1;")"
           test -n "$WEB_USER_ID"
+          test -n "$FOREIGN_USER_ID"
           docker compose exec -T php php bin/console cos:growth:cutover enable \
             --organization=default \
             --actor="$WEB_USER_ID" \
@@ -126,7 +137,8 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_routes.mjs
-          CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_functional.mjs
+          COS_WEB_FOREIGN_USER_ID="$FOREIGN_USER_ID" CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_functional.mjs
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT full_name FROM tn_users WHERE id=$FOREIGN_USER_ID AND organization_id='foreign-tenant' LIMIT 1")" = "Foreign Tenant User"
           if ! CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_dynamic_details.mjs; then
             docker compose logs --no-color --tail=250 php nginx
             exit 1
