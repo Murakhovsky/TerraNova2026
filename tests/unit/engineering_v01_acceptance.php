@@ -37,12 +37,12 @@ $baseStatus = static function () use ($featureId, $workflowId, $artifact): array
         ],
         'tasks' => [],
         'agent_runs' => [
-            ['role' => 'ENGINEERING_MANAGER', 'status' => 'COMPLETED', 'idempotency_key' => 'manager-1', 'output' => ['status' => 'SPECIFICATION_READY']],
-            ['role' => 'QA', 'status' => 'COMPLETED', 'idempotency_key' => 'qa-plan-1', 'output' => ['phase' => 'PLAN', 'status' => 'PLAN_READY']],
+            ['role' => 'PRODUCT_REQUIREMENTS', 'status' => 'COMPLETED', 'idempotency_key' => 'product-1', 'output' => ['status' => 'SPECIFICATION_READY']],
+            ['role' => 'QA_PLANNER', 'status' => 'COMPLETED', 'idempotency_key' => 'qa-plan-1', 'output' => ['phase' => 'PLAN', 'status' => 'PLAN_READY']],
             ['role' => 'PRINCIPAL_ARCHITECT', 'status' => 'COMPLETED', 'idempotency_key' => 'architect-1', 'output' => ['status' => 'APPROVED']],
             ['role' => 'DEVELOPER', 'status' => 'COMPLETED', 'idempotency_key' => 'developer-1', 'output' => ['status' => 'COMPLETED', 'repository_revision' => 'rev-2', 'pull_request' => 184]],
             ['role' => 'REVIEWER', 'status' => 'COMPLETED', 'idempotency_key' => 'reviewer-1', 'output' => ['status' => 'APPROVED', 'reviewed_revision' => 'rev-2', 'pull_request' => 184]],
-            ['role' => 'QA', 'status' => 'COMPLETED', 'idempotency_key' => 'qa-exec-1', 'output' => ['phase' => 'EXECUTION', 'status' => 'PASS', 'tested_revision' => 'rev-2', 'pull_request' => 184]],
+            ['role' => 'QA_EXECUTOR', 'status' => 'COMPLETED', 'idempotency_key' => 'qa-exec-1', 'output' => ['phase' => 'EXECUTION', 'status' => 'PASS', 'tested_revision' => 'rev-2', 'pull_request' => 184]],
         ],
         'artifacts' => [
             'FEATURE_SPEC' => $artifact(['acceptance_criteria' => [['id' => 'AC-001']]]),
