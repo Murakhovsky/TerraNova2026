@@ -1344,6 +1344,9 @@ services:
   App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFeatureStore
 
+  App\Engineering\Application\Persistence\EngineeringDomainStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringDomainStore
+
   App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringWorkflowStore
 
