@@ -19,6 +19,7 @@ final readonly class EngineeringDomainRuntimeService
         private EngineeringDomainPlanner $planner,
         private EngineeringDomainFeatureScheduler $scheduler,
         private EngineeringDomainReleaseService $release,
+        private EngineeringDomainHumanGateService $humanGates,
         private EngineeringRepositoryGatewayInterface $repository,
         private int $defaultMaxParallelFeatures = 3,
         private int $defaultMaxParallelDevelopers = 2,
@@ -146,6 +147,31 @@ final readonly class EngineeringDomainRuntimeService
     {
         $this->assertTenant($domainId, $organizationId);
         return $this->release->approve($domainId, $approvedBy);
+    }
+
+    /** @return array<string,mixed> */
+    public function answerHumanDecision(
+        string $domainId,
+        string $organizationId,
+        string $decisionId,
+        string $selectedOption,
+        string $answeredBy,
+        ?string $notes = null,
+    ): array {
+        $this->assertTenant($domainId, $organizationId);
+        $decision = $this->humanGates->answer(
+            $domainId,
+            EngineeringId::assert($decisionId),
+            $selectedOption,
+            $answeredBy,
+            $notes,
+        );
+
+        return [
+            'decision' => $decision,
+            'domain' => $this->domains->domain($domainId),
+            'open_human_decisions' => $this->domains->openHumanDecisions($domainId),
+        ];
     }
 
     /** @param array<string,mixed> $flags @return array<string,mixed> */
