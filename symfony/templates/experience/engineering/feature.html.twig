@@ -260,37 +260,22 @@
         </section>
     </div>
 
-    <section class="engineering-panel" aria-labelledby="engineering-tasks">
-        <div class="engineering-panel__head">
-            <h2 id="engineering-tasks">План виконання</h2>
-            <span class="engineering-muted">{{ summary.tasks_completed }}/{{ summary.tasks_total }} completed</span>
-        </div>
-        {% if engineering.tasks is empty %}
-            <div class="engineering-panel__body">
-                <strong>Execution plan не створено.</strong>
-                <p class="engineering-muted">Якщо workflow завершив analysis без persisted task decomposition, це слід вважати відсутністю plan, а не порожньою декоративною таблицею.</p>
-            </div>
-        {% else %}
-            <div class="engineering-table-wrap">
-                <table class="engineering-table">
-                    <thead><tr><th>Task</th><th>Назва</th><th>Роль</th><th>Статус</th><th>Attempt</th><th>Dependencies</th></tr></thead>
-                    <tbody>
-                    {% for task in engineering.tasks %}
-                        <tr>
-                            <td>{{ task.external_key }}</td>
-                            <td><strong>{{ task.title|default(task.description|default('')) }}</strong><div class="engineering-muted">{{ task.description|default('') }}</div></td>
-                            <td>{{ task.assigned_role }}</td>
-                            <td>{{ task.status }}</td>
-                            <td>{{ task.attempt|default(0) }}/{{ task.max_attempts|default(0) }}</td>
-                            <td>{{ task.dependencies|default([])|join(', ') ?: '—' }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
-    </section>
+    {% set engineeringTabs = [
+        {'key': 'agents', 'label': 'Агенти · ' ~ summary.agent_runs},
+        {'key': 'plan', 'label': 'План · ' ~ summary.tasks_total},
+        {'key': 'actions', 'label': 'Дії · ' ~ engineering.execution_events|length},
+        {'key': 'usage', 'label': 'LLM · ' ~ engineering.llm_invocations|length},
+        {'key': 'technical', 'label': 'Артефакти та аудит'}
+    ] %}
 
+    <twig:CosTabs id="engineering-details-tabs" label="Деталі workflow" :items="engineeringTabs" active="agents">
+        <section
+            id="engineering-details-tabs-panel-agents"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-agents"
+            data-tabs-target="panel"
+            data-tab-key="agents"
+        >
     <section class="engineering-panel" aria-labelledby="engineering-runs">
         <div class="engineering-panel__head">
             <h2 id="engineering-runs">Запуски агентів</h2>
@@ -352,7 +337,56 @@
             </div>
         {% endif %}
     </section>
+        </section>
 
+        <section
+            id="engineering-details-tabs-panel-plan"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-plan"
+            data-tabs-target="panel"
+            data-tab-key="plan"
+            hidden
+        >
+    <section class="engineering-panel" aria-labelledby="engineering-tasks">
+        <div class="engineering-panel__head">
+            <h2 id="engineering-tasks">План виконання</h2>
+            <span class="engineering-muted">{{ summary.tasks_completed }}/{{ summary.tasks_total }} completed</span>
+        </div>
+        {% if engineering.tasks is empty %}
+            <div class="engineering-panel__body">
+                <strong>Execution plan не створено.</strong>
+                <p class="engineering-muted">Якщо workflow завершив analysis без persisted task decomposition, це слід вважати відсутністю plan, а не порожньою декоративною таблицею.</p>
+            </div>
+        {% else %}
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Task</th><th>Назва</th><th>Роль</th><th>Статус</th><th>Attempt</th><th>Dependencies</th></tr></thead>
+                    <tbody>
+                    {% for task in engineering.tasks %}
+                        <tr>
+                            <td>{{ task.external_key }}</td>
+                            <td><strong>{{ task.title|default(task.description|default('')) }}</strong><div class="engineering-muted">{{ task.description|default('') }}</div></td>
+                            <td>{{ task.assigned_role }}</td>
+                            <td>{{ task.status }}</td>
+                            <td>{{ task.attempt|default(0) }}/{{ task.max_attempts|default(0) }}</td>
+                            <td>{{ task.dependencies|default([])|join(', ') ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+        </section>
+
+        <section
+            id="engineering-details-tabs-panel-actions"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-actions"
+            data-tabs-target="panel"
+            data-tab-key="actions"
+            hidden
+        >
     <section class="engineering-panel" aria-labelledby="engineering-actions">
         <div class="engineering-panel__head">
             <h2 id="engineering-actions">Інструменти та дії</h2>
@@ -390,7 +424,16 @@
             </div>
         {% endif %}
     </section>
+        </section>
 
+        <section
+            id="engineering-details-tabs-panel-usage"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-usage"
+            data-tabs-target="panel"
+            data-tab-key="usage"
+            hidden
+        >
     <section class="engineering-panel">
         <div class="engineering-panel__head">
             <h2>Облік LLM</h2>
@@ -428,7 +471,16 @@
             </div>
         {% endif %}
     </section>
+        </section>
 
+        <section
+            id="engineering-details-tabs-panel-technical"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-technical"
+            data-tabs-target="panel"
+            data-tab-key="technical"
+            hidden
+        >
     <div class="engineering-grid">
         <section class="engineering-panel">
             <div class="engineering-panel__head"><h2>Артефакти / репозиторій</h2><span class="engineering-muted">{{ engineering.artifacts|length }} artifacts</span></div>
@@ -462,6 +514,8 @@
             </div>
         </section>
     </div>
+        </section>
+    </twig:CosTabs>
 
     {% if engineering.workflow is null or summary.can_retry %}
         <details class="engineering-panel engineering-details">
