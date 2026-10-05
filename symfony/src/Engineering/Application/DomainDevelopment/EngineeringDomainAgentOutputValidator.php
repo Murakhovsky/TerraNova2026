@@ -15,12 +15,33 @@ final readonly class EngineeringDomainAgentOutputValidator
     public function validate(AgentRole $role, array $output, ?string $phase = null): void
     {
         match ($role) {
-            AgentRole::ENGINEERING_MANAGER, AgentRole::PRODUCT_REQUIREMENTS => $this->manager($output),
-            AgentRole::QA_PLANNER, AgentRole::QA_EXECUTOR, AgentRole::QA => $this->qa($output, $phase),
+            AgentRole::ENGINEERING_MANAGER => $this->manager($output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->productRequirements($output),
+            AgentRole::QA_PLANNER => $this->qaPlanner($output),
+            AgentRole::QA_EXECUTOR => $this->qaExecutor($output),
+            AgentRole::QA => $this->qa($output, $phase),
             AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
             AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
             default => throw new RuntimeException('Unsupported Domain Development validation role: '.$role->value),
         };
+    }
+
+    /** @param array<string,mixed> $output */
+    private function productRequirements(array $output): void
+    {
+        $this->manager($output);
+    }
+
+    /** @param array<string,mixed> $output */
+    private function qaPlanner(array $output): void
+    {
+        $this->qa($output, 'PLAN');
+    }
+
+    /** @param array<string,mixed> $output */
+    private function qaExecutor(array $output): void
+    {
+        $this->qa($output, 'EXECUTION');
     }
 
     /** @param array<string,mixed> $output */
