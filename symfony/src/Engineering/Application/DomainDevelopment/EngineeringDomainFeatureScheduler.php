@@ -7,6 +7,7 @@ use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
+use App\Engineering\Application\Service\EngineeringCancelService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainFeatureStatus;
@@ -22,6 +23,7 @@ final readonly class EngineeringDomainFeatureScheduler
         private EngineeringDomainStoreInterface $domains,
         private EngineeringFeatureStoreInterface $features,
         private EngineeringOrchestrator $engineering,
+        private EngineeringCancelService $cancel,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringDomainContextBuilder $context,
         private EngineeringDomainDriftDetector $drift,
