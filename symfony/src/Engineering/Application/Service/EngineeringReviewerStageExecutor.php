@@ -62,6 +62,7 @@ final readonly class EngineeringReviewerStageExecutor
         $architecture = $this->requiredArtifact($featureId, ArtifactType::ARCHITECTURE_DECISION);
         $implementation = $this->requiredArtifact($featureId, ArtifactType::IMPLEMENTATION_PLAN);
         $testPlan = $this->requiredArtifact($featureId, ArtifactType::TEST_PLAN);
+        $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
         $humanDecisionHistory = $this->answeredHumanDecisions($featureId);
         $developerHandoff = $this->requiredArtifact($featureId, ArtifactType::DEVELOPER_HANDOFF);
         $development = $this->requiredArtifact($featureId, ArtifactType::DEVELOPMENT_RESULT);
@@ -145,6 +146,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'architecture_decision' => $architecture['content'],
                 'implementation_plan' => $implementation['content'],
                 'qa_test_plan' => $testPlan['content'],
+                'domain_context_pack' => $domainContext['content'] ?? null,
                 'developer_handoff' => $developerHandoff['content'],
                 'development_result' => $development['content'],
                 'pull_request_state' => $pullRequestState,
@@ -162,6 +164,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'artifact:'.$testPlan['id'],
                 'artifact:'.$developerHandoff['id'],
                 'artifact:'.$development['id'],
+                ...($domainContext !== null ? ['artifact:'.$domainContext['id']] : []),
                 'pull_request:'.$pullRequest,
             ],
             constraints: [
@@ -171,6 +174,7 @@ final readonly class EngineeringReviewerStageExecutor
                 'MINOR findings block only when explicitly marked blocking; SUGGESTION never blocks.',
                 'Every acceptance criterion must have evidence.',
                 'Do not modify production implementation, merge the PR or change acceptance criteria.',
+                'When DOMAIN_CONTEXT_PACK is present, verify Architecture Constitution, contract compatibility and owned/shared/forbidden path boundaries independently.',
             ],
             expectedOutputSchema: 'reviewer-result-v0.1',
             completionCriteria: [
@@ -190,6 +194,8 @@ final readonly class EngineeringReviewerStageExecutor
                 'implementation_plan_hash' => $implementation['content_hash'],
                 'developer_handoff_hash' => $developerHandoff['content_hash'],
                 'development_result_hash' => $development['content_hash'],
+                'domain_context_pack_hash' => $domainContext['content_hash'] ?? null,
+                'domain_architecture_version' => $domainContext['content']['architecture_version'] ?? null,
                 'logical_attempt' => $logicalAttempt,
             ],
         );

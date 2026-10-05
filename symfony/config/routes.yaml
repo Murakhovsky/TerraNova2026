@@ -2581,3 +2581,45 @@ cos_web_spatial_scene:
   controller: App\Web\Spatial\SpatialPageController::scene
   methods: [GET]
   requirements: { slug: '[A-Za-z0-9_-]+' }
+
+
+# Engineering Runtime V2 — complex Domain development control plane.
+cos_api_engineering_domains:
+  path: /api/engineering/domains
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::index
+  methods: [GET]
+
+cos_api_engineering_domain_create:
+  path: /api/engineering/domains
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::create
+  methods: [POST]
+
+cos_api_engineering_domain_get:
+  path: /api/engineering/domains/{id}
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::get
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_api_engineering_domain_plan:
+  path: /api/engineering/domains/{id}/plan
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::plan
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_api_engineering_domain_tick:
+  path: /api/engineering/domains/{id}/tick
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::tick
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_api_engineering_domain_verify:
+  path: /api/engineering/domains/{id}/verify
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::verify
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_api_engineering_domain_approve:
+  path: /api/engineering/domains/{id}/approve
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::approve
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }

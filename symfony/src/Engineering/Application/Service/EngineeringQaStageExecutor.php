@@ -82,6 +82,7 @@ final readonly class EngineeringQaStageExecutor
     ): WorkflowDirective {
         $featureSpec = $this->requiredArtifact($featureId, ArtifactType::FEATURE_SPEC);
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
+        $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
         $humanDecisionHistory = $this->answeredHumanDecisions($featureId);
 
         $task = new EngineeringAgentTask(
@@ -95,12 +96,14 @@ final readonly class EngineeringQaStageExecutor
                 'feature_spec' => $featureSpec['content'],
                 'acceptance_criteria' => $featureSpec['content']['acceptance_criteria'] ?? [],
                 'context_map' => $contextMap['content'],
+                'domain_context_pack' => $domainContext['content'] ?? null,
                 'human_decisions' => $humanDecisionHistory,
                 'engineering_standards' => $this->standards->all(),
             ],
             contextRefs: [
                 'artifact:'.$featureSpec['id'],
                 'artifact:'.$contextMap['id'],
+                ...($domainContext !== null ? ['artifact:'.$domainContext['id']] : []),
             ],
             constraints: [
                 'Do not inspect or assume future implementation details.',
@@ -108,6 +111,7 @@ final readonly class EngineeringQaStageExecutor
                 'Cover positive, negative, edge, permissions, tenant, API, database, UI, regression and performance cases where applicable.',
                 'Mark required test suites explicitly.',
                 'Do not mutate repository content during planning.',
+                'When DOMAIN_CONTEXT_PACK is present, include Domain Architecture Constitution, dependency contracts and path boundaries in the independent test plan.',
                 'Return HUMAN_TEST_REQUIRED when a necessary verification decision/evidence cannot be automated; return BLOCKED only for a concrete non-human blocker.',
             ],
             expectedOutputSchema: 'qa-result-v0.1',
@@ -122,6 +126,8 @@ final readonly class EngineeringQaStageExecutor
                 'feature_id' => $featureId,
                 'feature_spec_hash' => $featureSpec['content_hash'],
                 'context_map_hash' => $contextMap['content_hash'],
+                'domain_context_pack_hash' => $domainContext['content_hash'] ?? null,
+                'domain_architecture_version' => $domainContext['content']['architecture_version'] ?? null,
                 'logical_attempt' => $logicalAttempt,
             ],
         );
@@ -202,6 +208,7 @@ final readonly class EngineeringQaStageExecutor
         $review = $this->requiredArtifact($featureId, ArtifactType::REVIEW_REPORT);
         $implementation = $this->requiredArtifact($featureId, ArtifactType::IMPLEMENTATION_PLAN);
         $testPlan = $this->requiredArtifact($featureId, ArtifactType::TEST_PLAN);
+        $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
         $humanDecisionHistory = $this->answeredHumanDecisions($featureId);
 
         if (($review['content']['status'] ?? null) !== 'APPROVED') {
@@ -286,6 +293,7 @@ final readonly class EngineeringQaStageExecutor
                 'feature_spec' => $featureSpec['content'],
                 'acceptance_criteria' => $featureSpec['content']['acceptance_criteria'] ?? [],
                 'qa_test_plan' => $testPlan['content'],
+                'domain_context_pack' => $domainContext['content'] ?? null,
                 'architecture_decision' => $architecture['content'],
                 'development_result' => $development['content'],
                 'review_report' => $review['content'],
@@ -307,12 +315,14 @@ final readonly class EngineeringQaStageExecutor
                 'artifact:'.$architecture['id'],
                 'artifact:'.$development['id'],
                 'artifact:'.$review['id'],
+                ...($domainContext !== null ? ['artifact:'.$domainContext['id']] : []),
                 'pull_request:'.$pullRequest,
                 'commit:'.$revision,
             ],
             constraints: [
                 'Verify behavior, not code aesthetics.',
                 'Use concrete evidence for every PASS.',
+                'When DOMAIN_CONTEXT_PACK is present, verify behavior against parent Domain contracts and invariants where applicable.',
                 'Do not modify production implementation.',
                 'QA-authored repository changes are allowed only under tests/ or symfony/tests/.',
                 'If automated tests are added, return TESTS_UPDATED so Reviewer re-checks the new revision.',

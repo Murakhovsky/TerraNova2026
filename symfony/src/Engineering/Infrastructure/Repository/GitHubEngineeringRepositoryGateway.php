@@ -20,13 +20,19 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return trim($this->repositoryFullName) !== '' && trim($this->token) !== '';
     }
 
-    public function currentBaseRevision(): string
+    public function currentBaseRevision(?string $branch = null): string
     {
         $this->assertAvailable();
-        $ref = $this->request('GET', '/git/ref/heads/'.rawurlencode($this->baseBranch), null, [200]);
+        $branch = $this->assertBranch($branch !== null && trim($branch) !== '' ? $branch : $this->baseBranch);
+        $ref = $this->request('GET', '/git/ref/heads/'.rawurlencode($branch), null, [200]);
         $sha = (string) ($ref['object']['sha'] ?? '');
-        if ($sha === '') throw new RuntimeException('GitHub base branch does not expose a revision.');
+        if ($sha === '') throw new RuntimeException('GitHub branch '.$branch.' does not expose a revision.');
         return $sha;
+    }
+
+    public function configuredBaseBranch(): string
+    {
+        return $this->assertBranch($this->baseBranch);
     }
 
     public function filesAtRevision(array $paths, string $revision): array
@@ -185,13 +191,15 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         ];
     }
 
-    public function openPullRequest(string $branch, string $title, string $body): array
+    public function openPullRequest(string $branch, string $title, string $body, ?string $baseBranch = null): array
     {
         $this->assertAvailable();
+        $branch = $this->assertBranch($branch);
+        $baseBranch = $this->assertBranch($baseBranch !== null && trim($baseBranch) !== '' ? $baseBranch : $this->baseBranch);
         $response = $this->request('POST', '/pulls', [
             'title' => trim($title) !== '' ? $title : 'Engineering change',
             'head' => $branch,
-            'base' => $this->baseBranch,
+            'base' => $baseBranch,
             'body' => $body,
             'draft' => false,
         ], [201, 422]);
@@ -369,7 +377,7 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return compact('state','total','passed','failed','pending','checks');
     }
 
-    private function ensureBranch(string $branch, string $baseRevision): string
+    public function ensureBranch(string $branch, string $baseRevision): string
     {
         $existing = $this->requestNullable('GET', '/git/ref/heads/'.rawurlencode($branch), [200, 404]);
         if (is_array($existing) && isset($existing['object']['sha'])) {

@@ -6,7 +6,9 @@ namespace App\Engineering\Application\Repository;
 interface EngineeringRepositoryGatewayInterface
 {
     public function available(): bool;
-    public function currentBaseRevision(): string;
+    public function currentBaseRevision(?string $branch = null): string;
+    public function configuredBaseBranch(): string;
+    public function ensureBranch(string $branch, string $baseRevision): string;
 
     /**
      * Read exact repository files at a specific revision.
@@ -32,7 +34,7 @@ interface EngineeringRepositoryGatewayInterface
     ): array;
 
     /** @return array{number:int,url:string,title:string} */
-    public function openPullRequest(string $branch, string $title, string $body): array;
+    public function openPullRequest(string $branch, string $title, string $body, ?string $baseBranch = null): array;
 
     /** @return list<array{path:string,status:string,additions:int,deletions:int,patch:?string}> */
     public function pullRequestFiles(int $pullRequestNumber): array;
