@@ -22,6 +22,12 @@ cos_engineering_feature_get:
   methods: [GET]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_engineering_feature_live:
+  path: /api/engineering/features/{id}/live
+  controller: App\Http\Api\V1\Controller\EngineeringController::live
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_engineering_feature_run:
   path: /api/engineering/features/{id}/run
   controller: App\Http\Api\V1\Controller\EngineeringController::run
