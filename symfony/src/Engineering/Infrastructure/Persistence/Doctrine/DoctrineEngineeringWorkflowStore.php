@@ -177,6 +177,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
 
         $rows = $db->fetchAllAssociative(
             "SELECT w.id, w.feature_id, w.trace_id, w.current_state, w.status, w.health_status,
+                    f.status AS feature_status,
                     TIMESTAMPDIFF(SECOND, COALESCE(w.heartbeat_at, w.last_activity_at), UTC_TIMESTAMP(6)) AS age_seconds
              FROM cos_engineering_workflows w
              INNER JOIN cos_engineering_features f ON f.id = w.feature_id
@@ -212,7 +213,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                 $reason = null;
             }
 
-            $previousHealth = strtoupper((string) ($row['previous_health'] ?? 'UNKNOWN'));
+            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
             $db->executeStatement(
                 "UPDATE cos_engineering_workflows
                  SET health_status = :health,
@@ -221,24 +222,6 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                  WHERE id = :id",
                 ['health' => $health, 'reason' => $reason, 'id' => (string) $row['id']],
             );
-            if ($previousHealth !== $health) {
-                $this->events->append(
-                    (string) $row['feature_id'],
-                    (string) $row['id'],
-                    'WATCHDOG',
-                    'workflow.health_changed',
-                    $health,
-                    'Workflow runtime health changed from '.$previousHealth.' to '.$health,
-                    [
-                        'previous_health' => $previousHealth,
-                        'health' => $health,
-                        'age_seconds' => $age,
-                        'reason' => $reason,
-                    ],
-                    correlationId: (string) ($row['trace_id'] ?? ''),
-                );
-            }
-            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
             if ($previousHealth !== $health) {
                 $this->events->append(
                     (string) $row['feature_id'],
