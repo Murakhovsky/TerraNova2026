@@ -63,6 +63,7 @@ final readonly class EngineeringDeveloperStageExecutor
         $developerHandoff = $this->artifacts->latest($featureId, ArtifactType::DEVELOPER_HANDOFF);
         $architectureDocumentation = $this->artifacts->latest($featureId, ArtifactType::ARCHITECTURE_DOCUMENTATION);
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
+        $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
 
         if ($developerHandoff === null || $architectureDocumentation === null) {
             return $this->requireArchitectureRevalidation(
@@ -197,6 +198,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'architecture_documentation' => $architectureDocumentation['content'],
                 'pending_architecture_documentation' => $pendingArchitectureDocumentation,
                 'context_map' => $contextMap['content'],
+                'domain_context_pack' => $domainContext['content'] ?? null,
                 'repository_state' => [
                     'architecture_base_revision' => $baseRevision,
                     'working_revision' => $workingRevision,
@@ -215,6 +217,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'artifact:'.$developerHandoff['id'],
                 'artifact:'.$architectureDocumentation['id'],
                 'artifact:'.$contextMap['id'],
+                ...($domainContext !== null ? ['artifact:'.$domainContext['id']] : []),
             ],
             constraints: array_values(array_merge(
                 [
@@ -227,6 +230,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     'Do not overwrite architecture documentation authored by Principal Architect.',
                     'Do not claim tests were executed by the runtime; CI is authoritative.',
                     'Do not merge or deploy.',
+                    'When DOMAIN_CONTEXT_PACK is present, obey its Architecture Constitution, contract snapshot and path policy exactly.',
                 ],
                 is_array($developerHandoff['content']['mandatory_constraints'] ?? null) ? $developerHandoff['content']['mandatory_constraints'] : [],
                 is_array($developerHandoff['content']['forbidden_changes'] ?? null)
@@ -248,6 +252,8 @@ final readonly class EngineeringDeveloperStageExecutor
                 'feature_spec_artifact_id' => $featureSpec['id'],
                 'architecture_artifact_id' => $architecture['id'],
                 'implementation_plan_artifact_id' => $implementation['id'],
+                'domain_context_pack_hash' => $domainContext['content_hash'] ?? null,
+                'domain_architecture_version' => $domainContext['content']['architecture_version'] ?? null,
                 'logical_attempt' => $logicalAttempt,
             ],
         );
@@ -271,6 +277,7 @@ final readonly class EngineeringDeveloperStageExecutor
             if (in_array((string) ($run->structuredOutput['status'] ?? ''), ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true)) {
                 $branch = 'engineering/'.$featureId;
                 $developerChanges = is_array($run->structuredOutput['changes'] ?? null) ? $run->structuredOutput['changes'] : [];
+                $this->assertDomainPathPolicy($developerChanges, $domainContext['content'] ?? null);
                 $this->assertDeveloperChangeEvidence($developerChanges, $implementation['content'], $repositoryFiles);
                 $changes = $this->mergeChanges(
                     $pendingArchitectureDocumentation,
@@ -488,6 +495,55 @@ final readonly class EngineeringDeveloperStageExecutor
         }
 
         return null;
+    }
+
+    /** @param list<array<string,mixed>> $changes @param array<string,mixed>|null $domainContext */
+    private function assertDomainPathPolicy(array $changes, ?array $domainContext): void
+    {
+        if ($domainContext === null) return;
+        $policy = is_array($domainContext['path_policy'] ?? null) ? $domainContext['path_policy'] : [];
+        $owned = $this->normalizedPolicyPaths($policy['owned_paths'] ?? []);
+        $shared = $this->normalizedPolicyPaths($policy['shared_paths'] ?? []);
+        $forbidden = $this->normalizedPolicyPaths($policy['forbidden_paths'] ?? []);
+        $allowed = array_values(array_unique(array_merge($owned, $shared)));
+
+        foreach ($changes as $change) {
+            if (!is_array($change)) continue;
+            $path = str_replace('\\', '/', trim((string) ($change['path'] ?? '')));
+            foreach ($forbidden as $prefix) {
+                if ($this->pathMatchesPolicy($path, $prefix)) {
+                    throw new RuntimeException('Developer change violates Domain forbidden path policy: '.$path);
+                }
+            }
+            if ($allowed === []) {
+                throw new RuntimeException('Domain feature has no owned/shared path policy; repository mutation is blocked.');
+            }
+            $matched = false;
+            foreach ($allowed as $prefix) {
+                if ($this->pathMatchesPolicy($path, $prefix)) { $matched = true; break; }
+            }
+            if (!$matched) {
+                throw new RuntimeException('Developer change is outside Domain owned/shared paths: '.$path);
+            }
+        }
+    }
+
+    /** @return list<string> */
+    private function normalizedPolicyPaths(mixed $paths): array
+    {
+        if (!is_array($paths)) return [];
+        $out = [];
+        foreach ($paths as $path) {
+            if (!is_scalar($path)) continue;
+            $value = rtrim(str_replace('\\', '/', trim((string) $path)), '/');
+            if ($value !== '') $out[$value] = true;
+        }
+        return array_keys($out);
+    }
+
+    private function pathMatchesPolicy(string $path, string $policyPath): bool
+    {
+        return $path === $policyPath || str_starts_with($path, rtrim($policyPath, '/').'/');
     }
 
     /**
