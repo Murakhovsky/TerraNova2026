@@ -176,7 +176,7 @@ try {
   const engineeringRequirements = page.locator('details:has(form[data-engineering-update])');
   assert(await engineeringRequirements.count() === 1, 'Engineering draft requirements editor is missing.');
   await engineeringRequirements.locator(':scope > summary').click();
-  assert((await page.locator('body').innerText()).includes(engineeringDescription), 'Engineering Description is missing from expanded requirements.');
+  assert(await page.locator('form[data-engineering-update] textarea[name="description"]').inputValue() === engineeringDescription, 'Engineering Description is missing from expanded requirements.');
 
   const engineeringUpdatedTitle = engineeringTitle + ' Updated';
   const engineeringUpdatedDescription = engineeringDescription + ' Updated.';
@@ -190,7 +190,7 @@ try {
   if (!(await updatedRequirements.evaluate((node) => node.open))) {
     await updatedRequirements.locator(':scope > summary').click();
   }
-  assert((await page.locator('body').innerText()).includes(engineeringUpdatedDescription), 'Engineering feature Description edit did not persist.');
+  assert(await page.locator('form[data-engineering-update] textarea[name="description"]').inputValue() === engineeringUpdatedDescription, 'Engineering feature Description edit did not persist.');
   assert(await page.locator('form[data-engineering-update] select[name="priority"]').inputValue() === 'P1', 'Engineering feature priority edit did not persist.');
 
   const engineeringDelete = page.locator('form[data-engineering-delete]');
