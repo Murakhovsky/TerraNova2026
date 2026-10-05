@@ -5,7 +5,7 @@ $root = dirname(__DIR__, 2);
 $service = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringContinueService.php');
 $command = (string) file_get_contents($root.'/symfony/src/Command/EngineeringContinueCommand.php');
 
-foreach (['QA_PLANNING', 'QA_PENDING', 'REVIEW_PENDING', 'DEVELOPMENT_RUNNING', 'ARCHITECTURE_PENDING', 'hasRunningRole', 'roleForState', 'failStaleRunning', 'staleRunSeconds'] as $needle) {
+foreach (['QA_PLANNING', 'QA_PENDING', 'REVIEW_PENDING', 'DEVELOPMENT_RUNNING', 'ARCHITECTURE_PENDING', 'hasRunningRole', 'roleForState', 'isV2Feature', 'AgentRole::QA_PLANNER', 'AgentRole::QA_EXECUTOR', 'AgentRole::QA', 'failStaleRunning', 'staleRunSeconds'] as $needle) {
     if (!str_contains($service, $needle)) throw new RuntimeException('Engineering continue service missing '.$needle);
 }
 if (!str_contains($command, 'cos:engineering:continue')) throw new RuntimeException('Engineering continue CLI command missing.');
