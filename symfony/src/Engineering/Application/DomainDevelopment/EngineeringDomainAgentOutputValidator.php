@@ -259,6 +259,7 @@ final readonly class EngineeringDomainAgentOutputValidator
             'MIGRATION_PLAN',
             'SECURITY_CHECKS',
             'CRITICAL_SMOKE',
+            'DOCUMENTATION',
             'CI',
         ];
         $checksById = [];
