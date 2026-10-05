@@ -1,0 +1,85 @@
+version: 1
+pages:
+  core.executive.dashboard:
+    template: symfony/templates/experience/admin/dashboard.html.twig
+    required:
+      - '<twig:CosPageHeader'
+      - 'class="cos-kpi-strip"'
+      - '<twig:CosEntityListItem'
+      - '<twig:CosEmptyState'
+      - '<twig:CosAlert'
+    forbidden: ['tn-', 'style=', '<script']
+
+  sales.dashboard:
+    template: symfony/templates/experience/sales/dashboard.html.twig
+    required:
+      - '<twig:CosPageHeader'
+      - 'class="cos-kpi-strip"'
+      - '<twig:CosEntityListItem'
+      - '<twig:CosEmptyState'
+      - '<twig:CosAlert'
+    forbidden: ['tn-', 'style=', '<script']
+
+  sales.today:
+    template: symfony/templates/experience/sales/today.html.twig
+    required:
+      - '<twig:CosPageHeader'
+      - '<twig:CosEntityListItem'
+      - '<twig:CosActionBar'
+      - '<twig:CosEmptyState'
+    forbidden: ['tn-', 'style=', '<script']
+
+  sales.leads.collection:
+    template: symfony/templates/experience/sales/leads.html.twig
+    required:
+      - '<twig:CosPageHeader'
+      - '<twig:CosFilterBar'
+      - '<twig:CosEntityListItem'
+      - '<twig:CosActionBar'
+      - '<twig:CosEmptyState'
+    forbidden: ['tn-', 'style=', '<script']
+
+  sales.deal.workspace:
+    template: symfony/templates/experience/sales/deal_workspace.html.twig
+    required:
+      - '<twig:CosWorkspace'
+      - '<twig:CosEntityHeader'
+      - '<twig:CosActionBar'
+      - '<twig:CosTimeline'
+      - '<twig:CosEmptyState'
+    forbidden: ['style=', '<script']
+
+  sales.pipeline:
+    template: symfony/templates/experience/sales/pipeline.html.twig
+    required:
+      - '<twig:CosPageHeader'
+      - '<twig:CosToolbar'
+      - '<twig:CosFilterBar'
+      - '<twig:SalesPipelineBoard'
+      - '<twig:CosEmptyState'
+    forbidden: ['tn-', 'style=', '<script']
+
+  growth.overview:
+    template: symfony/templates/experience/growth/workspace.html.twig
+    scope_start: "{% elseif v=='growth/dashboard' %}"
+    scope_end: "{% elseif v=='growth/accounts' %}"
+    required:
+      - '<twig:CosMetric'
+      - '<twig:CosToolbar'
+      - '<twig:CosEntityListItem'
+      - '<twig:CosEmptyState'
+    forbidden:
+      - 'cos-growth-kpis'
+      - 'cos-growth-kpi'
+      - 'cos-growth-row'
+
+  property.map:
+    template: symfony/templates/experience/property/map.html.twig
+    required:
+      - '<twig:CosPageHeader'
+      - '<twig:CosToolbar'
+      - '<twig:CosContextPanel'
+      - '<twig:CosEntityListItem'
+      - '<twig:CosEmptyState'
+      - '<twig:CosActionBar'
+    forbidden: ['tn-', 'style=', '<script']

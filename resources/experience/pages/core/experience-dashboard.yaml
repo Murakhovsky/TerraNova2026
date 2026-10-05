@@ -1,0 +1,22 @@
+pages:
+  - id: core.experience.dashboard
+    route: { name: cos_web_experience_dashboard, path: /admin/experience, methods: [GET, HEAD] }
+    surface: system
+    domain: Core
+    capability: experience.governance.view
+    owner: COS Experience Platform
+    priority: P0
+    status: IMPLEMENTED
+    personas: [administrator, engineering_manager]
+    product:
+      primary_goal: "Understand Experience V1 coverage, readiness, design-system state and blockers."
+      page_purpose: "Canonical governance dashboard for the COS Experience production system."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: [KpiStrip, DataGrid, EntityList]
+    primary_action: experience.open_ui_catalog
+    states: [normal]
+    responsive: { desktop: control_surface, tablet: control_surface, mobile: stacked_control_surface }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 3 }

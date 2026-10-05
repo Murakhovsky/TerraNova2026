@@ -1,0 +1,296 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}COS Experience V1{% endblock %}
+
+{% block workspace_content %}
+<div class="cos-page" data-cos-experience-dashboard>
+    <twig:CosPageHeader
+        title="COS Experience V1"
+        subtitle="Registry coverage, page readiness and Design System governance in one operational view."
+        metaValue="{{ experience.coverage }}%"
+        metaLabel="route coverage"
+    >
+        <twig:CosButton label="UI Catalog" href="/dev/ui" variant="ghost" />
+        <twig:CosButton label="Visual Stress" href="/dev/stress" variant="ghost" />
+    </twig:CosPageHeader>
+
+    <twig:CosToolbar label="Experience governance">
+        {% block start %}
+            <span class="cos-badge">Registry {{ experience.contracts }}</span>
+            <span class="cos-badge">Exemptions {{ experience.exemptions }}</span>
+        {% endblock %}
+        {% block end %}
+            <span class="cos-status cos-status--{{ experience.designSystem.green ? 'positive' : 'warning' }}">
+                Design System {{ experience.designSystem.green ? 'green' : 'attention' }}
+            </span>
+        {% endblock %}
+    </twig:CosToolbar>
+
+    <section class="cos-kpi-strip" aria-label="Experience V1 summary">
+        <twig:CosMetric label="Production routes" value="{{ experience.routes }}" />
+        <twig:CosMetric label="Contracts" value="{{ experience.contracts }}" />
+        <twig:CosMetric label="Implemented+" value="{{ experience.implemented }}" />
+        <twig:CosMetric label="Functional QA" value="{{ experience.functionalQa }}" />
+        <twig:CosMetric label="Visual QA" value="{{ experience.visualQa }}" />
+        <twig:CosMetric label="Responsive QA" value="{{ experience.responsiveQa }}" />
+        <twig:CosMetric label="Accessibility" value="{{ experience.accessibilityQa }}" />
+        <twig:CosMetric label="Human accepted" value="{{ experience.humanAccepted }}" />
+        <twig:CosMetric label="V1 ready" value="{{ experience.v1Ready }}" />
+        <twig:CosMetric label="Design components" value="{{ experience.designSystem.canonicalComponents }}" />
+        <twig:CosMetric label="Stable / frozen" value="{{ experience.designSystem.stable }}" />
+        <twig:CosMetric label="Golden ready" value="{{ experience.golden.ready }}/{{ experience.golden.required }}" />
+        <twig:CosMetric label="Golden structure" value="{{ experience.goldenStructure.passed }}/{{ experience.goldenStructure.total }}" />
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-domains">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-domains">Domain readiness</h2>
+                <p>Inventory is complete. Readiness is intentionally separate from mere route coverage.</p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Domain</th>
+                        <th scope="col">Pages</th>
+                        <th scope="col">P0/P1</th>
+                        <th scope="col">Implemented+</th>
+                        <th scope="col">V1 ready</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for domain, counts in experience.domains %}
+                    <tr>
+                        <th scope="row">{{ domain }}</th>
+                        <td>{{ counts.total }}</td>
+                        <td>{{ counts.p0p1 }}</td>
+                        <td>{{ counts.implemented }}</td>
+                        <td>{{ counts.v1Ready }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-golden">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-golden">Golden Experience 8</h2>
+                <p>
+                    Mass migration:
+                    <strong>{{ experience.golden.massMigrationBlocked ? 'BLOCKED' : 'UNBLOCKED' }}</strong>.
+                    Structural audit: {{ experience.goldenStructure.passed }}/{{ experience.goldenStructure.total }}.
+                    Golden readiness requires V1_READY, reference-quality scores and human acceptance.
+                </p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Reference</th>
+                        <th scope="col">Path</th>
+                        <th scope="col">Archetype</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Min quality</th>
+                        <th scope="col">Human</th>
+                        <th scope="col">Golden</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in experience.golden.pages %}
+                    <tr>
+                        <th scope="row"><code>{{ item.id }}</code></th>
+                        <td><a href="{{ item.path }}">{{ item.path }}</a></td>
+                        <td>{{ item.archetype }}</td>
+                        <td>{{ item.status }}</td>
+                        <td>{{ min(item.quality) }}</td>
+                        <td>{{ item.humanAccepted ? 'yes' : 'no' }}</td>
+                        <td><span class="cos-badge">{{ item.ready ? 'READY' : 'NOT READY' }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-human-review">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-human-review">Golden human review</h2>
+                <p>Automated QA is evidence, not product acceptance. EX-005 stays blocked until all eight decisions are explicit.</p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Page</th>
+                        <th scope="col">Route</th>
+                        <th scope="col">Structure</th>
+                        <th scope="col">Decision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in experience.goldenReview.pages %}
+                    <tr>
+                        <th scope="row"><code>{{ item.id }}</code></th>
+                        <td><a href="{{ item.path }}">{{ item.path }}</a></td>
+                        <td>{{ item.structure.passed|default(false) ? 'PASS' : 'FAIL' }}</td>
+                        <td><span class="cos-badge">{{ item.decision }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-migration-plan">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-migration-plan">EX-005 Workspace migration plan</h2>
+                <p>
+                    State:
+                    <strong>{{ experience.workspaceMigration.blocked ? 'BLOCKED' : 'READY' }}</strong>.
+                    {{ experience.workspaceMigration.pages }} pages queued after the Golden gate.
+                </p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Stage</th>
+                        <th scope="col">Pages</th>
+                        <th scope="col">First candidates</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for stage in experience.workspaceMigration.stages %}
+                    <tr>
+                        <td>{{ stage.sequence }}</td>
+                        <th scope="row">{{ stage.name }}</th>
+                        <td>{{ stage.count }}</td>
+                        <td>
+                            {% for item in stage.pages|slice(0, 4) %}
+                                <code>{{ item.page_id }}</code>{% if not loop.last %}, {% endif %}
+                            {% else %}
+                                —
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-external">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-external">EX-006 Portal/Public Experience</h2>
+                <p>
+                    {{ experience.externalExperience.pages }} external pages:
+                    {{ experience.externalExperience.surfaces.public }} public,
+                    {{ experience.externalExperience.surfaces.portal }} portal.
+                    Shared Design System, separate UX purpose from internal Workspace.
+                    Reference set: {{ experience.externalReferences.passed }}/{{ experience.externalReferences.total }} canonical.
+                </p>
+            </div>
+        </div>
+        <div class="cos-kpi-strip">
+            <twig:CosMetric label="External pages" value="{{ experience.externalExperience.pages }}" />
+            <twig:CosMetric label="P0" value="{{ experience.externalExperience.p0 }}" />
+            <twig:CosMetric label="P1" value="{{ experience.externalExperience.p1 }}" />
+            <twig:CosMetric label="V1 ready" value="{{ experience.externalExperience.v1_ready }}" />
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-release">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-release">EX-007 Release Hardening</h2>
+                <p>
+                    Experience V1 status:
+                    <strong>{{ experience.release.status }}</strong>.
+                    {{ experience.release.blockers|length }} release blockers remain.
+                </p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Gate</th>
+                        <th scope="col">State</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for name, gate in experience.release.gates %}
+                    <tr>
+                        <th scope="row"><code>{{ name }}</code></th>
+                        <td><span class="cos-badge">{{ gate.pass|default(false) ? 'PASS' : 'BLOCKED' }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-design-system">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-design-system">Design System V1</h2>
+                <p>EX-002 audit baseline and freeze state.</p>
+            </div>
+        </div>
+        <div class="cos-kpi-strip">
+            <twig:CosMetric label="Component files" value="{{ experience.designSystem.componentClassFiles }}" />
+            <twig:CosMetric label="Canonical Cos*" value="{{ experience.designSystem.canonicalComponents }}" />
+            <twig:CosMetric label="Experimental" value="{{ experience.designSystem.experimental }}" />
+            <twig:CosMetric label="Deprecated" value="{{ experience.designSystem.deprecated }}" />
+            <twig:CosMetric label="Pattern API" value="{{ experience.designSystem.patternsFrozen ? 'V1 frozen' : 'open' }}" />
+            <twig:CosMetric label="Archetype API" value="{{ experience.designSystem.archetypesFrozen ? 'V1 frozen' : 'open' }}" />
+        </div>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-pages">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-pages">Registered pages</h2>
+                <p>Contracts are inventory truth. CONTRACTED does not mean visually or functionally accepted.</p>
+            </div>
+        </div>
+        <div class="cos-ui-catalog__surface">
+            <table class="cos-data-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Page</th>
+                        <th scope="col">Route</th>
+                        <th scope="col">Domain</th>
+                        <th scope="col">Priority</th>
+                        <th scope="col">Archetype</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in experience.pages %}
+                    <tr>
+                        <td><code>{{ item.id }}</code></td>
+                        <td><a href="{{ item.path }}">{{ item.path }}</a></td>
+                        <td>{{ item.domain }}</td>
+                        <td>{{ item.priority }}</td>
+                        <td>{{ item.archetype }}</td>
+                        <td><span class="cos-badge">{{ item.status }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,6 +1,7 @@
 {% set catalogGroups = uiCatalog.groups|default({}) %}
 {% set catalogCategories = uiCatalog.categories|default([]) %}
 {% set catalogStats = uiCatalog.stats|default({'components': 0, 'categories': 0}) %}
+{% set catalogAudit = uiCatalog.audit|default({}) %}
 
 <section
     class="cos-ui-catalog__section cos-ui-playground"
@@ -19,8 +20,22 @@
         </div>
         <div class="cos-ui-playground__stats" aria-label="Catalog statistics">
             <span><strong data-ui-catalog-target="count">{{ catalogStats.components }}</strong> visible</span>
-            <span>{{ catalogStats.stable|default(0) }} stable</span>
+            <span>{{ catalogStats.stable|default(0) }} stable / frozen</span>
+            <span>{{ catalogStats.experimental|default(0) }} experimental</span>
+            <span>{{ catalogStats.deprecated|default(0) }} deprecated</span>
         </div>
+    </div>
+
+    <div class="cos-ui-playground__audit" aria-label="Design System V1 audit">
+        <strong>Design System V1: {{ catalogAudit.green|default(false) ? 'green' : 'attention required' }}</strong>
+        <span>{{ catalogAudit.componentClassFiles|default(0) }} component-layer PHP classes</span>
+        <span>{{ catalogAudit.canonicalComponents|default(0) }} canonical Cos* components</span>
+        <span>{{ catalogAudit.runtimeHelpers|default([])|length }} runtime helpers excluded from component API</span>
+        <span>tokens {{ catalogAudit.tokensFrozen|default(false) ? 'frozen' : 'open' }}</span>
+        <span>typography {{ catalogAudit.typographyFrozen|default(false) ? 'frozen' : 'open' }}</span>
+        <span>theme parity {{ catalogAudit.themeParityDeclared|default(false) ? 'required' : 'missing' }}</span>
+        <span>patterns {{ catalogAudit.patternsFrozen|default(false) ? 'V1 frozen' : 'open' }}</span>
+        <span>archetypes {{ catalogAudit.archetypesFrozen|default(false) ? 'V1 frozen' : 'open' }}</span>
     </div>
 
     <div class="cos-ui-playground__toolbar" role="search" aria-label="Filter UI components">
@@ -73,6 +88,7 @@
                             <div class="cos-ui-playground__entry-head">
                                 <code>{{ entry.name }}</code>
                                 <span class="cos-ui-playground__maturity cos-ui-playground__maturity--{{ entry.maturity }}">{{ entry.maturity }}</span>
+                                {% if entry.frozen %}<span class="cos-ui-playground__maturity">v{{ entry.contractVersion }} frozen</span>{% endif %}
                             </div>
                             <p>{{ entry.description }}</p>
                             <div class="cos-ui-playground__states" aria-label="Supported reference states">

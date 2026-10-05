@@ -25,16 +25,22 @@ final class PageArchetypeRegistry
     private const STABLE_ARCHETYPE_IDS = [
         'executive_dashboard',
         'domain_dashboard',
+        'operational_queue',
         'collection',
         'entity_workspace',
+        'process_pipeline',
+        'map_spatial',
     ];
 
     /** @var array<string,list<string>> */
     private const STABLE_STATE_MATRIX = [
         'executive_dashboard' => ['normal', 'error', 'permission_denied'],
-        'domain_dashboard' => ['normal', 'error'],
+        'domain_dashboard' => ['normal', 'loading', 'empty', 'error', 'permission_denied'],
+        'operational_queue' => ['normal', 'loading', 'empty', 'error', 'permission_denied'],
         'collection' => ['normal', 'empty', 'error'],
         'entity_workspace' => ['normal', 'error'],
+        'process_pipeline' => ['normal', 'loading', 'empty', 'error', 'permission_denied'],
+        'map_spatial' => ['normal', 'loading', 'empty', 'error', 'permission_denied'],
     ];
 
     /** @return array<string,PageArchetypeDefinition> */
@@ -73,7 +79,7 @@ final class PageArchetypeRegistry
                 'workspace',
                 'Answer what is happening inside one business Domain.',
                 ['PageHeader', 'KpiStrip'],
-                ['EntityList', 'EmptyState', 'ErrorState'],
+                ['Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),
@@ -140,7 +146,7 @@ final class PageArchetypeRegistry
                 'system',
                 'Inspect runtime state, diagnostics, architecture and controlled system actions.',
                 ['PageHeader', 'Toolbar'],
-                ['KpiStrip', 'FilterBar', 'ActivityFeed', 'Timeline', 'ContextPanel', 'ActionBar', 'EntityList', 'DataGrid', 'EmptyState', 'ErrorState'],
+                ['KpiStrip', 'FilterBar', 'FormSection', 'ActivityFeed', 'Timeline', 'ContextPanel', 'ActionBar', 'EntityList', 'DataGrid', 'EmptyState', 'ErrorState'],
                 ['comfortable', 'compact'],
                 $workspaceResponsive,
             ),

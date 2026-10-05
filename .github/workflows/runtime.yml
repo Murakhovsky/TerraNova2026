@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/**'
       - 'symfony/**'
+      - 'resources/experience/**'
       - 'docker/**'
       - 'docker-compose.yml'
       - 'deploy/**'
@@ -80,6 +81,12 @@ jobs:
           docker compose exec -T php php bin/console lint:container
           docker compose exec -T php php bin/console debug:router > /tmp/routes.txt
           grep -q 'cos_symfony_home' /tmp/routes.txt
+          docker compose exec -T php php bin/console cos:experience:inventory --strict --compile --no-interaction
+          docker compose exec -T php php bin/console cos:experience:coverage --no-interaction
+          docker compose exec -T php php bin/console cos:experience:design-system:audit --strict --no-interaction
+          docker compose exec -T php php bin/console cos:experience:golden --no-interaction
+          docker compose exec -T php php bin/console cos:experience:golden:decisions --no-interaction
+          docker compose exec -T php php bin/console cos:experience:golden:structure --strict --no-interaction
       - name: Health
         run: |
           for i in $(seq 1 30); do
@@ -95,6 +102,27 @@ jobs:
           docker compose exec -T php php bin/console cos:web:experience:smoke
           docker compose exec -T php php bin/console cos:web:toolkit:smoke
           docker compose exec -T php php bin/console cos:web:design-system:smoke
+          docker compose exec -T php php bin/console cos:experience:delivery growth.overview > /tmp/experience-delivery.json
+          grep -q '"context_package"' /tmp/experience-delivery.json
+          grep -q '"evidence_contract"' /tmp/experience-delivery.json
+          grep -q '"pull_request_template"' /tmp/experience-delivery.json
+          grep -q '"autonomy": "L2"' /tmp/experience-delivery.json
+          grep -q '"auto_merge": false' /tmp/experience-delivery.json
+          docker compose exec -T php php bin/console cos:experience:delivery global.search > /tmp/experience-delivery-l3.json
+          grep -q '"autonomy": "L3"' /tmp/experience-delivery-l3.json
+          docker compose exec -T php php bin/console cos:experience:migrate --no-interaction > /tmp/experience-migration.txt
+          grep -q 'Workspace Migration' /tmp/experience-migration.txt
+          grep -q 'BLOCKED' /tmp/experience-migration.txt
+          docker compose exec -T php php bin/console cos:experience:external --json --no-interaction > /tmp/experience-external.json
+          grep -q '"pages"' /tmp/experience-external.json
+          grep -q '"public"' /tmp/experience-external.json
+          grep -q '"portal"' /tmp/experience-external.json
+          docker compose exec -T php php bin/console cos:experience:external:reference --strict --no-interaction
+          docker compose exec -T php php bin/console cos:experience:release --json --no-interaction > /tmp/experience-release.json
+          grep -q '"status"' /tmp/experience-release.json
+          grep -q '"BLOCKED"' /tmp/experience-release.json
+          docker compose exec -T php php bin/console cos:experience:assets --strict --no-interaction
+          docker compose exec -T php php bin/console cos:experience:routes:debt --strict --no-interaction
       - name: Smoke vertical slices
         run: bash bin/verify smoke
       - name: Production cutover Web routes
@@ -171,6 +199,46 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs
+
+      - name: Golden Eight browser QA
+        env:
+          GOLDEN_EIGHT_BASE_URL: http://127.0.0.1:8081
+          GOLDEN_EIGHT_EMAIL: sales-functional-acceptance@example.test
+          GOLDEN_EIGHT_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          GOLDEN_EIGHT_OUTPUT_DIR: tmp/golden-eight
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" npm run test:golden-eight-quality
+
+      - name: Upload Golden Eight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-eight-evidence
+          path: tmp/golden-eight
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: External reference browser QA
+        env:
+          EXTERNAL_REFERENCE_BASE_URL: http://127.0.0.1:8081
+          EXTERNAL_REFERENCE_EMAIL: sales-functional-acceptance@example.test
+          EXTERNAL_REFERENCE_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          EXTERNAL_REFERENCE_OUTPUT_DIR: tmp/external-reference
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" npm run test:external-reference-quality
+
+      - name: Upload external reference evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-reference-evidence
+          path: tmp/external-reference
+          if-no-files-found: warn
+          retention-days: 14
 
   deploy-dev:
     name: Deploy main to AWS dev

@@ -26,5 +26,8 @@ foreach (['Foundation', 'Actions', 'Feedback', 'Forms', 'Interaction', 'Data', '
 $stats = $registry->stats();
 assert($stats['components'] === count($entries));
 assert($stats['categories'] === count($categories));
+assert($stats['stable'] + $stats['experimental'] + $stats['deprecated'] === count($entries));
+assert($stats['experimental'] > 0);
+assert($stats['frozen'] === $stats['stable']);
 
 echo "UI Catalog registry OK\n";

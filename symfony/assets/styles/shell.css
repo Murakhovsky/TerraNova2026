@@ -31,8 +31,8 @@
   width: 2rem;
   height: 2rem;
   border-radius: var(--cos-radius-sm);
-  color: var(--cos-color-shell-text);
-  background: var(--cos-color-primary);
+  color: var(--cos-foundation-white);
+  background: var(--cos-color-primary-strong);
   font-size: var(--cos-font-sm);
   font-weight: 800;
 }
@@ -210,7 +210,7 @@
   min-width: 15rem;
   min-height: var(--cos-control-height);
   padding: 0 var(--cos-space-3);
-  color: var(--cos-color-text-muted);
+  color: var(--cos-color-text-soft);
   background: var(--cos-color-surface-subtle);
   border: 1px solid var(--cos-color-border);
   border-radius: var(--cos-radius-sm);
@@ -225,7 +225,7 @@
 
 .cos-shell__search-trigger kbd {
   padding: 0.15rem 0.35rem;
-  color: var(--cos-color-text-muted);
+  color: var(--cos-color-text-soft);
   background: var(--cos-color-surface);
   border: 1px solid var(--cos-color-border);
   border-radius: var(--cos-radius-xs);
@@ -257,8 +257,8 @@
   min-width: 1.15rem;
   height: 1.15rem;
   padding: 0 0.25rem;
-  color: var(--cos-color-on-primary);
-  background: var(--cos-color-primary);
+  color: var(--cos-foundation-white);
+  background: var(--cos-color-primary-strong);
   border: 2px solid var(--cos-color-surface);
   border-radius: var(--cos-radius-pill);
   font-size: 0.625rem;
@@ -311,8 +311,8 @@
   place-items: center;
   width: 2rem;
   height: 2rem;
-  color: var(--cos-color-on-primary);
-  background: var(--cos-color-primary);
+  color: var(--cos-foundation-white);
+  background: var(--cos-color-primary-strong);
   border-radius: var(--cos-radius-pill);
   font-size: var(--cos-font-xs);
   font-weight: 800;
@@ -535,6 +535,17 @@ turbo-frame[aria-busy="true"] .cos-command__list {
   .cos-shell__activity-label,
   .cos-shell__profile {
     display: none;
+  }
+
+  .cos-shell__breadcrumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--cos-touch-target-min);
+    padding-inline: var(--cos-space-1);
+  }
+
+  .cos-shell__search-trigger kbd {
+    color: var(--cos-color-text-soft);
   }
 
   .cos-shell__content {

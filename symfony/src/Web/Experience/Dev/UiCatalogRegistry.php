@@ -6,6 +6,24 @@ namespace App\Web\Experience\Dev;
 
 final class UiCatalogRegistry
 {
+    /** @var list<string> */
+    private const EXPERIMENTAL_COMPONENTS = [
+        'CosBulkActionBar',
+        'CosRealtimeSubscription',
+        'CosAIContext',
+        'CosAgentRun',
+        'CosAgentStatus',
+        'CosAgentResult',
+        'CosAgentMetric',
+        'CosAgentEvidence',
+        'CosAgentRecommendation',
+        'CosAgentWarning',
+        'CosAgentAction',
+    ];
+
+    /** @var list<string> */
+    private const DEPRECATED_COMPONENTS = [];
+
     /** @return list<UiCatalogEntry> */
     public function entries(): array
     {
@@ -103,7 +121,7 @@ final class UiCatalogRegistry
         return array_keys($this->grouped());
     }
 
-    /** @return array{components:int,categories:int,stable:int,reference:int,experimental:int} */
+    /** @return array{components:int,categories:int,stable:int,experimental:int,deprecated:int,frozen:int} */
     public function stats(): array
     {
         $entries = $this->entries();
@@ -113,8 +131,9 @@ final class UiCatalogRegistry
             'components' => count($entries),
             'categories' => count($this->categories()),
             'stable' => $maturity['stable'] ?? 0,
-            'reference' => $maturity['reference'] ?? 0,
             'experimental' => $maturity['experimental'] ?? 0,
+            'deprecated' => $maturity['deprecated'] ?? 0,
+            'frozen' => $maturity['stable'] ?? 0,
         ];
     }
 
@@ -125,8 +144,28 @@ final class UiCatalogRegistry
         string $description,
         array $states,
         string $reference,
-        string $maturity = 'stable',
+        ?string $maturity = null,
     ): UiCatalogEntry {
-        return new UiCatalogEntry($name, $category, $description, $states, $reference, $maturity);
+        return new UiCatalogEntry(
+            $name,
+            $category,
+            $description,
+            $states,
+            $reference,
+            $maturity ?? $this->maturityFor($name),
+        );
+    }
+
+    private function maturityFor(string $name): string
+    {
+        if (in_array($name, self::DEPRECATED_COMPONENTS, true)) {
+            return 'deprecated';
+        }
+
+        if (in_array($name, self::EXPERIMENTAL_COMPONENTS, true)) {
+            return 'experimental';
+        }
+
+        return 'stable';
     }
 }

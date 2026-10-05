@@ -1,0 +1,22 @@
+pages:
+  - id: property.map
+    route: { name: cos_web_property_map, path: /property/map, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Property
+    capability: property.map.view
+    owner: Property
+    priority: P0
+    status: IMPLEMENTED
+    personas: [manager, specialist]
+    product:
+      primary_goal: "Explore properties spatially without losing entity context."
+      page_purpose: "Operational property map with governed filters and context."
+    archetype: map_spatial
+    patterns:
+      required: [PageHeader, Toolbar, ContextPanel]
+      optional: [FilterBar, EntityList, EmptyState, ErrorState]
+    primary_action: property.open_selected
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: map_with_context, tablet: map_with_drawer, mobile: map_with_sheet }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 3, ux: 3, visual: 3, responsive: 3, accessibility: 3, content: 3 }

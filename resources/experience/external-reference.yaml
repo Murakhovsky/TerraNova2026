@@ -1,0 +1,31 @@
+version: 1
+status: candidate
+pages:
+  auth.login:
+    path: /auth/login
+    surface: public
+    archetype: form_editor
+    template: symfony/templates/experience/public/auth_login.html.twig
+    required: ['public_shell.html.twig', '<twig:CosPageHeader', '<twig:CosFormSection', '<twig:CosStickyActions', 'data-cos-archetype']
+    forbidden: ['workspace_shell.html.twig', 'cos-shell__sidebar']
+  cabinet:
+    path: /cabinet
+    surface: portal
+    archetype: portal
+    template: symfony/templates/experience/portal/cabinet.html.twig
+    required: ['portal_shell.html.twig', '<twig:CosPageHeader', 'role="list"', 'data-cos-archetype']
+    forbidden: ['workspace_shell.html.twig', 'cos-shell__sidebar']
+  property.catalog:
+    path: /property/catalog
+    surface: public
+    archetype: public_catalog
+    template: symfony/templates/experience/public/property_catalog.html.twig
+    required: ['public_shell.html.twig', '<twig:CosPageHeader', '<twig:CosFilterBar', '<twig:CosEmptyState', 'data-cos-archetype']
+    forbidden: ['workspace_shell.html.twig', 'cos-shell__sidebar']
+  public.cos.lang:
+    path: /cos/en
+    surface: public
+    archetype: public_detail_marketing
+    template: symfony/templates/experience/public/cos_landing.html.twig
+    required: ['public_shell.html.twig', '<twig:CosPageHeader', '<twig:CosActionBar', 'data-cos-archetype']
+    forbidden: ['workspace_shell.html.twig', 'cos-shell__sidebar']

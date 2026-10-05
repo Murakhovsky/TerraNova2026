@@ -1,0 +1,57 @@
+version: 1
+status: frozen
+
+tokens:
+  status: frozen
+  source: symfony/assets/styles/tokens.css
+  policy:
+    - components consume semantic tokens instead of hardcoded colors
+    - new foundation tokens require design-system review
+    - stable token removal requires deprecation and migration
+
+typography:
+  status: frozen
+  primary: Inter
+  fallback: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  mono: '"SFMono-Regular", Consolas, "Liberation Mono", monospace'
+  source: symfony/assets/styles/typography.css
+  policy:
+    - remote font loading is not required for runtime correctness
+    - numeric business data uses tabular lining numerals
+    - display, title, heading, body, meta and label are canonical roles
+
+themes:
+  supported: [light, dark, system]
+  parity: required
+
+density:
+  supported: [comfortable, compact]
+  parity: required
+
+states:
+  canonical:
+    - normal
+    - hover
+    - active
+    - focus
+    - selected
+    - disabled
+    - loading
+    - empty
+    - error
+
+patterns:
+  status: frozen
+  api: v1
+  golden_required_count: 13
+
+archetypes:
+  status: frozen
+  api: v1
+  golden_required_count: 7
+
+freeze:
+  component_api: v1
+  pattern_api: v1
+  archetype_api: v1
+  breaking_change_requires: ADR

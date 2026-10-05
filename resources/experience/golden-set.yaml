@@ -1,0 +1,19 @@
+version: 1
+status: candidate
+required_count: 8
+pages:
+  - core.executive.dashboard
+  - sales.dashboard
+  - sales.today
+  - sales.leads.collection
+  - sales.deal.workspace
+  - sales.pipeline
+  - growth.overview
+  - property.map
+
+definition:
+  minimum_status: IMPLEMENTED
+  target_status: V1_READY
+  target_quality: 4
+  human_approval_required: true
+  mass_migration_blocked_until_ready: true

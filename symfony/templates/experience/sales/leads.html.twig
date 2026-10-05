@@ -64,12 +64,14 @@
                     {% for lead in leads.items %}
                         <article
                             class="cos-card cos-pattern-stack"
+                            role="listitem"
                             data-controller="sales-lead"
                             data-sales-lead-lead-id-value="{{ lead.id }}"
                             data-sales-lead-csrf-value="{{ csrfToken }}"
                             data-lead-id="{{ lead.id }}"
                         >
                             <twig:CosEntityListItem
+                                :listItem="false"
                                 title="{{ lead.name }}"
                                 subtitle="{{ lead.source ~ ' · ' ~ lead.contact }}"
                                 meta="{{ lead.ownerName }}"

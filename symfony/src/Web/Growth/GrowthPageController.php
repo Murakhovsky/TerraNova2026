@@ -5,6 +5,9 @@ namespace App\Web\Growth;
 
 use App\Security\SessionCsrfValidator;
 use App\Application\Growth\ReadModel\GrowthSignalPollingStatusProvider;
+use App\Web\Experience\Archetype\PageArchetype;
+use App\Web\Experience\Archetype\PagePresentation;
+use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
@@ -53,6 +56,7 @@ final readonly class GrowthPageController
         private TenantContextProviderInterface $tenants,
         private ActiveModuleResolver $modules,
         private WorkspaceShellFactory $shells,
+        private PagePresentationFactory $pages,
         private SessionCsrfValidator $csrf,
         private GrowthWorkspaceReadModelInterface $workspace,
         private GrowthApplicationBoundary $growth,
@@ -372,6 +376,7 @@ final readonly class GrowthPageController
         return new Response(
             $this->twig->render('experience/growth/workspace.html.twig',array_replace($variables,[
                 'shell'=>$shell,
+                'page'=>$this->presentation($view, $status),
                 'pageTitle'=>$title,
                 'growthView'=>$view,
                 'query'=>$request->query->all(),
@@ -381,4 +386,18 @@ final readonly class GrowthPageController
         );
     }
 
+    private function presentation(string $view, int $status): ?PagePresentation
+    {
+        if ($view !== 'growth/dashboard') {
+            return null;
+        }
+
+        $state = $status >= 400 ? 'error' : 'normal';
+
+        return $this->pages->create(
+            PageArchetype::DomainDashboard,
+            ['PageHeader', 'KpiStrip', 'Toolbar', 'EntityList', 'EmptyState', 'ErrorState'],
+            $state,
+        );
+    }
 }

@@ -15,4 +15,5 @@ final class CosEntityListItem
     public string $statusTone = 'neutral';
     public ?string $href = null;
     public ?string $meta = null;
+    public bool $listItem = true;
 }

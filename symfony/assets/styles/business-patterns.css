@@ -163,10 +163,12 @@
 
 .cos-entity-header__meta dd,
 .cos-entity-card__meta dd {
+  min-width: 0;
   margin: 0;
   color: var(--cos-color-text);
   font-size: var(--cos-font-sm);
   font-weight: var(--cos-font-weight-medium);
+  overflow-wrap: anywhere;
 }
 
 .cos-entity-header__actions {
@@ -203,13 +205,22 @@
 }
 
 .cos-entity-summary__item > strong {
+  min-width: 0;
   color: var(--cos-color-text);
   font-size: var(--cos-font-lg);
+  overflow-wrap: anywhere;
 }
 
 .cos-entity-summary__item > small {
+  min-width: 0;
   color: var(--cos-color-text-muted);
   font-size: var(--cos-font-xs);
+  overflow-wrap: anywhere;
+}
+
+.cos-entity-summary__item dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cos-entity-card {
@@ -578,6 +589,12 @@ a.cos-next-action:focus-visible {
 .cos-timeline__content {
   display: grid;
   gap: var(--cos-space-1);
+  min-width: 0;
+}
+
+.cos-timeline__content :is(strong, p, small, code) {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cos-timeline__content p {

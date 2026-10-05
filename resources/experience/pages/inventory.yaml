@@ -1,0 +1,1916 @@
+# Auto-inventoried Experience V1 page contracts.
+# These records establish ownership and migration scope. CONTRACTED is not a quality claim.
+pages:
+  - id: global.search
+    route: { name: cos_web_global_search, path: "/workspace/search", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Core
+    capability: global.search.view
+    owner: Core
+    priority: P0
+    status: CONTRACTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Complete the primary task for /workspace/search without leaving the canonical COS experience."
+      page_purpose: "Canonical Core collection surface for /workspace/search."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: global.search.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: activity.center
+    route: { name: cos_web_activity_center, path: "/workspace/activity-center", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Core
+    capability: activity.center.view
+    owner: Core
+    priority: P0
+    status: CONTRACTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Complete the primary task for /workspace/activity-center without leaving the canonical COS experience."
+      page_purpose: "Canonical Core operational queue surface for /workspace/activity-center."
+    archetype: operational_queue
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: activity.center.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: ai.panel
+    route: { name: cos_web_ai_panel, path: "/workspace/ai", methods: [GET, HEAD] }
+    surface: workspace
+    domain: AI
+    capability: ai.panel.view
+    owner: AI
+    priority: P0
+    status: CONTRACTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Complete the primary task for /workspace/ai without leaving the canonical COS experience."
+      page_purpose: "Canonical AI system control surface surface for /workspace/ai."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: ai.panel.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: auth.login
+    route: { name: cos_web_auth_login, path: "/auth/login", methods: [GET] }
+    surface: public
+    domain: Identity
+    capability: auth.login.view
+    owner: Identity
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /auth/login without leaving the canonical COS experience."
+      page_purpose: "Canonical Identity form editor surface for /auth/login."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: auth.login.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: auth.register
+    route: { name: cos_web_auth_register, path: "/auth/register", methods: [GET] }
+    surface: public
+    domain: Identity
+    capability: auth.register.view
+    owner: Identity
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /auth/register without leaving the canonical COS experience."
+      page_purpose: "Canonical Identity form editor surface for /auth/register."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: auth.register.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: symfony.home
+    route: { name: cos_symfony_home, path: "/", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: symfony.home.view
+    owner: Public
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for / without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: symfony.home.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.terra.nova
+    route: { name: cos_web_public_terra_nova, path: "/terra-nova", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.terra.nova.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /terra-nova without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /terra-nova."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.terra.nova.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.agency
+    route: { name: cos_web_public_agency, path: "/agency", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.agency.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /agency without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /agency."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.agency.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.services
+    route: { name: cos_web_public_services, path: "/services", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.services.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /services without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /services."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.services.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.partners
+    route: { name: cos_web_public_partners, path: "/partners", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.partners.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /partners without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /partners."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.partners.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.team
+    route: { name: cos_web_public_team, path: "/team", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.team.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /team without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /team."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.team.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.cases
+    route: { name: cos_web_public_cases, path: "/cases", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.cases.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /cases without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /cases."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.cases.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.vacancies
+    route: { name: cos_web_public_vacancies, path: "/vacancies", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.vacancies.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /vacancies without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /vacancies."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.vacancies.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.contacts
+    route: { name: cos_web_public_contacts, path: "/contacts", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.contacts.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /contacts without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /contacts."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.contacts.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.it
+    route: { name: cos_web_public_it, path: "/it", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.it.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /it without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /it."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.it.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.art
+    route: { name: cos_web_public_art, path: "/art", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.art.view
+    owner: Public
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /art without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /art."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.art.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.cos
+    route: { name: cos_web_public_cos, path: "/cos", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.cos.view
+    owner: Public
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /cos without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /cos."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.cos.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.cos.lang
+    route: { name: cos_web_public_cos_lang, path: "/cos/{lang}", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.cos.lang.view
+    owner: Public
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /cos/lang without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /cos/{lang}."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.cos.lang.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: public.cos.domain
+    route: { name: cos_web_public_cos_domain, path: "/cos/{lang}/domains/{slug}", methods: [GET, HEAD] }
+    surface: public
+    domain: Public
+    capability: public.cos.domain.view
+    owner: Public
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /cos/lang/domains/slug without leaving the canonical COS experience."
+      page_purpose: "Canonical Public public detail marketing surface for /cos/{lang}/domains/{slug}."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: public.cos.domain.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: cabinet
+    route: { name: cos_web_cabinet, path: "/cabinet", methods: [GET, HEAD] }
+    surface: portal
+    domain: Account
+    capability: cabinet.view
+    owner: Account
+    priority: P1
+    status: CONTRACTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Complete the primary task for /cabinet without leaving the canonical COS experience."
+      page_purpose: "Canonical Account portal surface for /cabinet."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: cabinet.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: account.access
+    route: { name: cos_web_account_access, path: "/account/access", methods: [GET, HEAD] }
+    surface: portal
+    domain: Account
+    capability: account.access.view
+    owner: Account
+    priority: P1
+    status: CONTRACTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Complete the primary task for /account/access without leaving the canonical COS experience."
+      page_purpose: "Canonical Account portal surface for /account/access."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: account.access.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: cabinet.submission.retired
+    route: { name: cos_web_cabinet_submission_retired, path: "/cabinet/submission/{id}", methods: [GET, HEAD] }
+    surface: portal
+    domain: Account
+    capability: cabinet.submission.retired.view
+    owner: Account
+    priority: P1
+    status: DEPRECATED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Complete the primary task for /cabinet/submission/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Account portal surface for /cabinet/submission/{id}."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: cabinet.submission.retired.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: content.admin
+    route: { name: cos_web_content_admin, path: "/admin/content", methods: [GET, HEAD] }
+    surface: system
+    domain: Content
+    capability: content.admin.view
+    owner: Content
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator, content_manager]
+    product:
+      primary_goal: "Complete the primary task for /admin/content without leaving the canonical COS experience."
+      page_purpose: "Canonical Content collection surface for /admin/content."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: content.admin.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: content.admin.edit.new
+    route: { name: cos_web_content_admin_edit_new, path: "/admin/content/edit", methods: [GET, HEAD] }
+    surface: system
+    domain: Content
+    capability: content.admin.edit.new.view
+    owner: Content
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator, content_manager]
+    product:
+      primary_goal: "Complete the primary task for /admin/content/edit without leaving the canonical COS experience."
+      page_purpose: "Canonical Content form editor surface for /admin/content/edit."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: content.admin.edit.new.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: content.admin.edit
+    route: { name: cos_web_content_admin_edit, path: "/admin/content/edit/{id}", methods: [GET, HEAD] }
+    surface: system
+    domain: Content
+    capability: content.admin.edit.view
+    owner: Content
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator, content_manager]
+    product:
+      primary_goal: "Complete the primary task for /admin/content/edit/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Content form editor surface for /admin/content/edit/{id}."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: content.admin.edit.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: blog.index
+    route: { name: cos_web_blog_index, path: "/blog", methods: [GET, HEAD] }
+    surface: public
+    domain: Content
+    capability: blog.index.view
+    owner: Content
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /blog without leaving the canonical COS experience."
+      page_purpose: "Canonical Content public catalog surface for /blog."
+    archetype: public_catalog
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: blog.index.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: blog.article
+    route: { name: cos_web_blog_article, path: "/blog/{slug}", methods: [GET, HEAD] }
+    surface: public
+    domain: Content
+    capability: blog.article.view
+    owner: Content
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /blog/slug without leaving the canonical COS experience."
+      page_purpose: "Canonical Content public detail marketing surface for /blog/{slug}."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: blog.article.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: guide
+    route: { name: cos_web_guide, path: "/guide/{slug}", methods: [GET, HEAD] }
+    surface: public
+    domain: Content
+    capability: guide.view
+    owner: Content
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /guide/slug without leaving the canonical COS experience."
+      page_purpose: "Canonical Content public detail marketing surface for /guide/{slug}."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: guide.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.candidates
+    route: { name: cos_growth_candidates, path: "/growth/candidates", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.candidates.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/candidates without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth collection surface for /growth/candidates."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: growth.candidates.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.candidate
+    route: { name: cos_growth_candidate, path: "/growth/candidates/{id}", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.candidate.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/candidates/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth entity workspace surface for /growth/candidates/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: growth.candidate.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.accounts
+    route: { name: cos_growth_accounts, path: "/growth/accounts", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.accounts.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/accounts without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth collection surface for /growth/accounts."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: growth.accounts.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.account
+    route: { name: cos_growth_account, path: "/growth/accounts/{id}", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.account.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/accounts/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth entity workspace surface for /growth/accounts/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: growth.account.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.signals
+    route: { name: cos_growth_signals, path: "/growth/signals", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.signals.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/signals without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth collection surface for /growth/signals."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: growth.signals.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.collectors
+    route: { name: cos_growth_collectors, path: "/growth/collectors", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.collectors.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/collectors without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth system control surface surface for /growth/collectors."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: growth.collectors.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.learning
+    route: { name: cos_growth_learning, path: "/growth/learning", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.learning.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/learning without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth collection surface for /growth/learning."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: growth.learning.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.experiments
+    route: { name: cos_growth_experiments, path: "/growth/experiments", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.experiments.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/experiments without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth collection surface for /growth/experiments."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: growth.experiments.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.experiment
+    route: { name: cos_growth_experiment, path: "/growth/experiments/{id}", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.experiment.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/experiments/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth entity workspace surface for /growth/experiments/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: growth.experiment.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.market
+    route: { name: cos_growth_market, path: "/growth/market", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.market.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/market without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth collection surface for /growth/market."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: growth.market.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: growth.settings
+    route: { name: cos_growth_settings, path: "/growth/settings", methods: [GET] }
+    surface: workspace
+    domain: Growth
+    capability: growth.settings.view
+    owner: Growth
+    priority: P1
+    status: CONTRACTED
+    personas: [growth_manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /growth/settings without leaving the canonical COS experience."
+      page_purpose: "Canonical Growth system control surface surface for /growth/settings."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: growth.settings.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: workspace.users
+    route: { name: cos_web_workspace_users, path: "/admin/users", methods: [GET, HEAD] }
+    surface: system
+    domain: Identity
+    capability: workspace.users.view
+    owner: Identity
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator]
+    product:
+      primary_goal: "Complete the primary task for /admin/users without leaving the canonical COS experience."
+      page_purpose: "Canonical Identity collection surface for /admin/users."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: workspace.users.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: workspace.analytics
+    route: { name: cos_web_workspace_analytics, path: "/admin/analytics", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Core
+    capability: workspace.analytics.view
+    owner: Core
+    priority: P1
+    status: CONTRACTED
+    personas: [executive, manager]
+    product:
+      primary_goal: "Complete the primary task for /admin/analytics without leaving the canonical COS experience."
+      page_purpose: "Canonical Core domain dashboard surface for /admin/analytics."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: []
+    primary_action: workspace.analytics.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: engineering
+    route: { name: cos_web_engineering, path: "/admin/engineering", methods: [GET, HEAD] }
+    surface: system
+    domain: Engineering
+    capability: engineering.view
+    owner: Engineering
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator, engineering_manager]
+    product:
+      primary_goal: "Complete the primary task for /admin/engineering without leaving the canonical COS experience."
+      page_purpose: "Canonical Engineering system control surface surface for /admin/engineering."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: engineering.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: engineering.feature
+    route: { name: cos_web_engineering_feature, path: "/admin/engineering/{id}", methods: [GET, HEAD] }
+    surface: system
+    domain: Engineering
+    capability: engineering.feature.view
+    owner: Engineering
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator, engineering_manager]
+    product:
+      primary_goal: "Complete the primary task for /admin/engineering/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Engineering entity workspace surface for /admin/engineering/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: engineering.feature.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: client.cases
+    route: { name: cos_web_client_cases, path: "/client-case", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Sales
+    capability: client.cases.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Complete the primary task for /client-case without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales collection surface for /client-case."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: client.cases.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: client.case.inbox
+    route: { name: cos_web_client_case_inbox, path: "/client-case/inbox", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Sales
+    capability: client.case.inbox.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Complete the primary task for /client-case/inbox without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales operational queue surface for /client-case/inbox."
+    archetype: operational_queue
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: client.case.inbox.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: client.case.show
+    route: { name: cos_web_client_case_show, path: "/client-case/show/{id}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Sales
+    capability: client.case.show.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Complete the primary task for /client-case/show/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales entity workspace surface for /client-case/show/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: client.case.show.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.root
+    route: { name: cos_web_property_root, path: "/property", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.root.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public catalog surface for /property."
+    archetype: public_catalog
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: property.root.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.catalog
+    route: { name: cos_web_property_catalog, path: "/property/catalog", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.catalog.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/catalog without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public catalog surface for /property/catalog."
+    archetype: public_catalog
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: property.catalog.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.favour
+    route: { name: cos_web_property_favour, path: "/property/favour", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.favour.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/favour without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public catalog surface for /property/favour."
+    archetype: public_catalog
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: property.favour.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.show
+    route: { name: cos_web_property_show, path: "/property/show/{slug}", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.show.view
+    owner: Property
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/show/slug without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public detail marketing surface for /property/show/{slug}."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: property.show.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.presentation
+    route: { name: cos_web_property_presentation, path: "/property/presentation/{slug}", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.presentation.view
+    owner: Property
+    priority: P0
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/presentation/slug without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public detail marketing surface for /property/presentation/{slug}."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: property.presentation.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.type
+    route: { name: cos_web_property_type, path: "/property/type/{code}", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.type.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/type/code without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public catalog surface for /property/type/{code}."
+    archetype: public_catalog
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: property.type.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.city
+    route: { name: cos_web_property_city, path: "/property/city/{slug}", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.city.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/city/slug without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public catalog surface for /property/city/{slug}."
+    archetype: public_catalog
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: property.city.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.landing
+    route: { name: cos_web_property_landing, path: "/nerukhomist/{location}/{type}", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.landing.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /nerukhomist/location/type without leaving the canonical COS experience."
+      page_purpose: "Canonical Property public catalog surface for /nerukhomist/{location}/{type}."
+    archetype: public_catalog
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: property.landing.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.submit
+    route: { name: cos_web_property_submit, path: "/property/submit", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.submit.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/submit without leaving the canonical COS experience."
+      page_purpose: "Canonical Property form editor surface for /property/submit."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: property.submit.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.create.alias
+    route: { name: cos_web_property_create_alias, path: "/property/create", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.create.alias.view
+    owner: Property
+    priority: P1
+    status: SUPERSEDED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /property/create without leaving the canonical COS experience."
+      page_purpose: "Canonical Property form editor surface for /property/create."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: property.create.alias.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.submit.alias
+    route: { name: cos_web_property_submit_alias, path: "/submit-property", methods: [GET, HEAD] }
+    surface: public
+    domain: Property
+    capability: property.submit.alias.view
+    owner: Property
+    priority: P1
+    status: SUPERSEDED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /submit-property without leaving the canonical COS experience."
+      page_purpose: "Canonical Property form editor surface for /submit-property."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: property.submit.alias.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.manage
+    route: { name: cos_web_property_manage, path: "/property/manage", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Property
+    capability: property.manage.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /property/manage without leaving the canonical COS experience."
+      page_purpose: "Canonical Property collection surface for /property/manage."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: property.manage.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.listing
+    route: { name: cos_web_property_listing, path: "/property/listing", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Property
+    capability: property.listing.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /property/listing without leaving the canonical COS experience."
+      page_purpose: "Canonical Property collection surface for /property/listing."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: property.listing.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.submissions
+    route: { name: cos_web_property_submissions, path: "/property/submissions", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Property
+    capability: property.submissions.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /property/submissions without leaving the canonical COS experience."
+      page_purpose: "Canonical Property collection surface for /property/submissions."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: property.submissions.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.submission
+    route: { name: cos_web_property_submission, path: "/property/submission/{id}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Property
+    capability: property.submission.view
+    owner: Property
+    priority: P1
+    status: CONTRACTED
+    personas: [manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /property/submission/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Property entity workspace surface for /property/submission/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: property.submission.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: cos.control.center
+    route: { name: cos_web_cos_control_center, path: "/cos/control-center", methods: [GET, HEAD] }
+    surface: system
+    domain: Operations
+    capability: cos.control.center.view
+    owner: Operations
+    priority: P0
+    status: CONTRACTED
+    personas: [administrator, operator]
+    product:
+      primary_goal: "Complete the primary task for /cos/control-center without leaving the canonical COS experience."
+      page_purpose: "Canonical Operations system control surface surface for /cos/control-center."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: cos.control.center.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.root
+    route: { name: cos_web_sales_root, path: "/sales", methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.root.view
+    owner: Sales
+    priority: P0
+    status: SUPERSEDED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Complete the primary task for /sales without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales operational queue surface for /sales."
+    archetype: operational_queue
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: []
+    primary_action: sales.root.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.lead
+    route: { name: cos_web_sales_lead, path: "/sales/leads/{id}", methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.lead.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Complete the primary task for /sales/leads/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales entity workspace surface for /sales/leads/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: sales.lead.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.deals
+    route: { name: cos_web_sales_deals, path: "/sales/deals", methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.deals.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Complete the primary task for /sales/deals without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales collection surface for /sales/deals."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: []
+    primary_action: sales.deals.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.director
+    route: { name: cos_web_sales_director, path: "/sales/director", methods: [GET] }
+    surface: workspace
+    domain: Sales
+    capability: sales.director.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, sales_agent]
+    product:
+      primary_goal: "Complete the primary task for /sales/director without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales domain dashboard surface for /sales/director."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: []
+    primary_action: sales.director.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin
+    route: { name: cos_web_sales_admin, path: "/sales/admin", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.pipelines.page
+    route: { name: cos_web_sales_admin_pipelines_page, path: "/sales/admin/pipelines", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.pipelines.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/pipelines without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin/pipelines."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.pipelines.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.pipeline.page
+    route: { name: cos_web_sales_admin_pipeline_page, path: "/sales/admin/pipelines/{id}", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.pipeline.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/pipelines/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales entity workspace surface for /sales/admin/pipelines/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: sales.admin.pipeline.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.rules.page
+    route: { name: cos_web_sales_admin_rules_page, path: "/sales/admin/rules", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.rules.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/rules without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin/rules."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.rules.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.rule.page
+    route: { name: cos_web_sales_admin_rule_page, path: "/sales/admin/rules/{id}", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.rule.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/rules/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales entity workspace surface for /sales/admin/rules/{id}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: sales.admin.rule.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.agents.page
+    route: { name: cos_web_sales_admin_agents_page, path: "/sales/admin/agents", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.agents.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/agents without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin/agents."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.agents.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.agent.page
+    route: { name: cos_web_sales_admin_agent_page, path: "/sales/admin/agents/{name}", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.agent.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/agents/name without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales entity workspace surface for /sales/admin/agents/{name}."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: []
+    primary_action: sales.admin.agent.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.actions.page
+    route: { name: cos_web_sales_admin_actions_page, path: "/sales/admin/actions", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.actions.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/actions without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin/actions."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.actions.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.teams.page
+    route: { name: cos_web_sales_admin_teams_page, path: "/sales/admin/teams", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.teams.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/teams without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin/teams."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.teams.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.integrations.page
+    route: { name: cos_web_sales_admin_integrations_page, path: "/sales/admin/integrations", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.integrations.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/integrations without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin/integrations."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.integrations.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: sales.admin.health.page
+    route: { name: cos_web_sales_admin_health_page, path: "/sales/admin/health", methods: [GET] }
+    surface: system
+    domain: Sales
+    capability: sales.admin.health.page.view
+    owner: Sales
+    priority: P0
+    status: CONTRACTED
+    personas: [sales_manager, administrator]
+    product:
+      primary_goal: "Complete the primary task for /sales/admin/health without leaving the canonical COS experience."
+      page_purpose: "Canonical Sales system control surface surface for /sales/admin/health."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: sales.admin.health.page.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: architecture
+    route: { name: cos_web_architecture, path: "/cos/architecture", methods: [GET] }
+    surface: system
+    domain: Architecture
+    capability: architecture.view
+    owner: Architecture
+    priority: P2
+    status: CONTRACTED
+    personas: [administrator, engineer]
+    product:
+      primary_goal: "Complete the primary task for /cos/architecture without leaving the canonical COS experience."
+      page_purpose: "Canonical Architecture system control surface surface for /cos/architecture."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: architecture.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: architecture.graph
+    route: { name: cos_web_architecture_graph, path: "/cos/architecture/graph", methods: [GET] }
+    surface: system
+    domain: Architecture
+    capability: architecture.graph.view
+    owner: Architecture
+    priority: P2
+    status: CONTRACTED
+    personas: [administrator, engineer]
+    product:
+      primary_goal: "Complete the primary task for /cos/architecture/graph without leaving the canonical COS experience."
+      page_purpose: "Canonical Architecture system control surface surface for /cos/architecture/graph."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: architecture.graph.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: architecture.health
+    route: { name: cos_web_architecture_health, path: "/cos/architecture/health", methods: [GET] }
+    surface: system
+    domain: Architecture
+    capability: architecture.health.view
+    owner: Architecture
+    priority: P2
+    status: CONTRACTED
+    personas: [administrator, engineer]
+    product:
+      primary_goal: "Complete the primary task for /cos/architecture/health without leaving the canonical COS experience."
+      page_purpose: "Canonical Architecture system control surface surface for /cos/architecture/health."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: []
+    primary_action: architecture.health.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: diagnostic.report
+    route: { name: cos_web_diagnostic_report, path: "/diagnostics/{session}/report", methods: [GET] }
+    surface: workspace
+    domain: Diagnostic
+    capability: diagnostic.report.view
+    owner: Diagnostic
+    priority: P1
+    status: CONTRACTED
+    personas: [manager, specialist]
+    product:
+      primary_goal: "Complete the primary task for /diagnostics/session/report without leaving the canonical COS experience."
+      page_purpose: "Canonical Diagnostic public detail marketing surface for /diagnostics/{session}/report."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: diagnostic.report.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: spatial.manage
+    route: { name: cos_web_spatial_manage, path: "/spatial/manage", methods: [GET] }
+    surface: workspace
+    domain: Spatial
+    capability: spatial.manage.view
+    owner: Spatial
+    priority: P1
+    status: CONTRACTED
+    personas: [specialist, manager]
+    product:
+      primary_goal: "Complete the primary task for /spatial/manage without leaving the canonical COS experience."
+      page_purpose: "Canonical Spatial map spatial surface for /spatial/manage."
+    archetype: map_spatial
+    patterns:
+      required: [PageHeader, Toolbar, ContextPanel]
+      optional: []
+    primary_action: spatial.manage.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: spatial.edit.new
+    route: { name: cos_web_spatial_edit_new, path: "/spatial/edit", methods: [GET] }
+    surface: workspace
+    domain: Spatial
+    capability: spatial.edit.new.view
+    owner: Spatial
+    priority: P1
+    status: CONTRACTED
+    personas: [specialist, manager]
+    product:
+      primary_goal: "Complete the primary task for /spatial/edit without leaving the canonical COS experience."
+      page_purpose: "Canonical Spatial form editor surface for /spatial/edit."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: spatial.edit.new.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: spatial.edit
+    route: { name: cos_web_spatial_edit, path: "/spatial/edit/{id}", methods: [GET] }
+    surface: workspace
+    domain: Spatial
+    capability: spatial.edit.view
+    owner: Spatial
+    priority: P1
+    status: CONTRACTED
+    personas: [specialist, manager]
+    product:
+      primary_goal: "Complete the primary task for /spatial/edit/id without leaving the canonical COS experience."
+      page_purpose: "Canonical Spatial form editor surface for /spatial/edit/{id}."
+    archetype: form_editor
+    patterns:
+      required: [PageHeader, FormSection, StickyActions]
+      optional: []
+    primary_action: spatial.edit.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: spatial.scene
+    route: { name: cos_web_spatial_scene, path: "/spatial/scene/{slug}", methods: [GET] }
+    surface: public
+    domain: Spatial
+    capability: spatial.scene.view
+    owner: Spatial
+    priority: P1
+    status: CONTRACTED
+    personas: [visitor]
+    product:
+      primary_goal: "Complete the primary task for /spatial/scene/slug without leaving the canonical COS experience."
+      page_purpose: "Canonical Spatial public detail marketing surface for /spatial/scene/{slug}."
+    archetype: public_detail_marketing
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: spatial.scene.primary
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: platform.settings
+    route: { name: cos_web_platform_settings, path: "/admin/settings", methods: [GET, HEAD] }
+    surface: system
+    domain: Platform
+    capability: platform.settings.view
+    owner: Platform
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator]
+    product:
+      primary_goal: "Inspect and configure platform-level settings safely."
+      page_purpose: "Canonical platform settings control surface."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: [FormSection, ErrorState]
+    primary_action: platform.settings.open_llm
+    states: [normal, error, permission_denied]
+    responsive: { desktop: control_surface, tablet: control_surface, mobile: stacked_control_surface }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: platform.settings.llm
+    route: { name: cos_web_platform_settings_llm, path: "/admin/settings/llm", methods: [GET, HEAD] }
+    surface: system
+    domain: Platform
+    capability: platform.settings.llm.view
+    owner: Platform
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator]
+    product:
+      primary_goal: "Inspect and configure governed LLM routing and provider settings."
+      page_purpose: "Canonical LLM settings control surface."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar]
+      optional: [FormSection, ErrorState]
+    primary_action: platform.settings.llm.edit
+    states: [normal, error, permission_denied]
+    responsive: { desktop: control_surface, tablet: control_surface, mobile: stacked_control_surface }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }

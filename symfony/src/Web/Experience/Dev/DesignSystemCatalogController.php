@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Web\Experience\Dev;
 
+use App\Web\Experience\DesignSystem\DesignSystemAuditService;
 use App\Web\Experience\Form\Reference\FormsCatalogInput;
 use App\Web\Experience\Form\Reference\FormsCatalogType;
 use Symfony\Component\Form\FormFactoryInterface;
@@ -18,6 +19,7 @@ final readonly class DesignSystemCatalogController
         private FormFactoryInterface $forms,
         private DataGridCatalogDemo $dataGrid,
         private UiCatalogRegistry $uiCatalog,
+        private DesignSystemAuditService $designSystemAudit,
     ) {
     }
 
@@ -37,6 +39,7 @@ final readonly class DesignSystemCatalogController
                     'groups' => $this->uiCatalog->grouped(),
                     'categories' => $this->uiCatalog->categories(),
                     'stats' => $this->uiCatalog->stats(),
+                    'audit' => $this->designSystemAudit->audit()->toArray(),
                 ],
             ]),
             Response::HTTP_OK,
