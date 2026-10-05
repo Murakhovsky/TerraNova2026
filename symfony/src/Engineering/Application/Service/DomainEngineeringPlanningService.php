@@ -287,7 +287,7 @@ final readonly class DomainEngineeringPlanningService
 
     private function prompt(string $name): string
     {
-        $path = dirname(__DIR__, 3).'/config/engineering/prompts/'.$name;
+        $path = dirname(__DIR__, 4).'/config/engineering/prompts/'.$name;
         $content = @file_get_contents($path);
         if (!is_string($content) || trim($content) === '') throw new RuntimeException('Domain Engineering prompt unavailable: '.$path);
         return trim($content);

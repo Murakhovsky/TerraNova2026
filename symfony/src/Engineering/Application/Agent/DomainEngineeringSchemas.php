@@ -107,7 +107,7 @@ final class DomainEngineeringSchemas
     /** @return array<string,mixed> */
     public static function architect(): array
     {
-        $flex = ['type' => ['object','array','string']];
+        $detail = ['type' => 'array', 'items' => ['type' => 'string']];
         return [
             'type' => 'object',
             'required' => ['status','domain_architecture','constitution','contracts','domain_acceptance_criteria','implementation_policy','risks','human_decision'],
@@ -122,24 +122,24 @@ final class DomainEngineeringSchemas
                         'failure_model','migration_strategy','testing_strategy'
                     ],
                     'properties' => [
-                        'bounded_context' => $flex,
-                        'module_structure' => $flex,
-                        'namespace_structure' => $flex,
-                        'domain_layers' => $flex,
-                        'aggregate_boundaries' => $flex,
-                        'database_boundaries' => $flex,
-                        'api_boundaries' => $flex,
-                        'event_contracts' => $flex,
-                        'integration_contracts' => $flex,
-                        'dependency_rules' => $flex,
-                        'security_boundaries' => $flex,
-                        'permissions_model' => $flex,
-                        'audit_model' => $flex,
-                        'feature_flags' => $flex,
-                        'observability' => $flex,
-                        'failure_model' => $flex,
-                        'migration_strategy' => $flex,
-                        'testing_strategy' => $flex,
+                        'bounded_context' => $detail,
+                        'module_structure' => $detail,
+                        'namespace_structure' => $detail,
+                        'domain_layers' => $detail,
+                        'aggregate_boundaries' => $detail,
+                        'database_boundaries' => $detail,
+                        'api_boundaries' => $detail,
+                        'event_contracts' => $detail,
+                        'integration_contracts' => $detail,
+                        'dependency_rules' => $detail,
+                        'security_boundaries' => $detail,
+                        'permissions_model' => $detail,
+                        'audit_model' => $detail,
+                        'feature_flags' => $detail,
+                        'observability' => $detail,
+                        'failure_model' => $detail,
+                        'migration_strategy' => $detail,
+                        'testing_strategy' => $detail,
                     ],
                     'additionalProperties' => false,
                 ],
