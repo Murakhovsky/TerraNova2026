@@ -46,6 +46,8 @@ foreach ([
     'workflow_state',
     'workspaceFactsForFeatures',
     'runtimeHealth',
+    'workspaceView',
+    'workspaceQuery',
     'queueImmediate',
 ] as $needle) {
     if (!str_contains($controller, $needle)) throw new RuntimeException('Engineering feature UI controller missing '.$needle);
@@ -66,6 +68,8 @@ foreach ([
     'health_status',
     'Інструменти та дії',
     'engineering.execution_events',
+    'engineering-details-tabs',
+    'data-tabs-target="panel"',
     'data-engineering-update',
     'data-engineering-delete',
 ] as $needle) {
@@ -78,6 +82,8 @@ foreach ([
     'P0 → P1 → P2 → P3',
     'data-engineering-workspace-list',
     'execution_mode',
+    'Фільтри Engineering',
+    'name="q"',
     'облік недоступний',
     'Потрібне рішення',
     'Повторити',
