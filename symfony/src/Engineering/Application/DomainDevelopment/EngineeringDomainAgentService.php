@@ -26,11 +26,11 @@ final readonly class EngineeringDomainAgentService
         private EngineeringDomainStoreInterface $domains,
         private EngineeringAgentDefinitionFactory $definitions,
         private EngineeringDomainAgentOutputValidator $validator,
+        private EngineeringDomainBudgetGuard $budgets,
+        private EngineeringDomainHumanGateService $humanGates,
         private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
         private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
         private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
-        private EngineeringDomainBudgetGuard $budgets,
-        private EngineeringDomainHumanGateService $humanGates,
     ) {}
 
     /** @param array<string,mixed> $inputs @return array<string,mixed> */
