@@ -152,6 +152,34 @@ final readonly class EngineeringDomainController
         }
     }
 
+    public function humanDecision(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $tenant = $this->tenants->current();
+            $input = $this->input($request);
+            $decisionId = trim((string) ($input['decision_id'] ?? ''));
+            $selectedOption = trim((string) ($input['selected_option'] ?? ''));
+            if ($decisionId === '' || $selectedOption === '') {
+                return $this->error('domain_decision_input_required', 'decision_id and selected_option are required.', 422);
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'data' => $this->runtime->answerHumanDecision(
+                    EngineeringId::assert($id),
+                    $tenant->organizationId()->value(),
+                    EngineeringId::assert($decisionId),
+                    $selectedOption,
+                    'user:'.$tenant->userId()->value(),
+                    isset($input['notes']) ? (string) $input['notes'] : null,
+                ),
+            ]);
+        } catch (Throwable $error) {
+            return $this->exception($error);
+        }
+    }
+
     public function featureFlags(Request $request, string $id): JsonResponse
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
