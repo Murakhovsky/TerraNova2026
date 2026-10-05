@@ -53,6 +53,7 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::PRINCIPAL_ARCHITECT,
             AgentRole::QA_EXECUTOR,
             AgentRole::INTEGRATION_RELEASE,
+            AgentRole::DOCUMENTATION,
             AgentRole::QA,
         ], true)) {
             throw new RuntimeException('Engineering role does not support Domain Development mode: '.$role->value);
@@ -90,6 +91,7 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::REVIEWER => 'reviewer.model',
             AgentRole::QA_EXECUTOR => 'qa_executor.model',
             AgentRole::INTEGRATION_RELEASE => 'integration_release.model',
+            AgentRole::DOCUMENTATION => 'documentation.model',
             AgentRole::QA => 'qa.model',
         };
 
@@ -102,6 +104,7 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::REVIEWER => $this->reviewerModel,
             AgentRole::QA_EXECUTOR => $this->qaModel,
             AgentRole::INTEGRATION_RELEASE => $this->reviewerModel,
+            AgentRole::DOCUMENTATION => $this->managerModel,
             AgentRole::QA => $this->qaModel,
         };
         if ($organizationId !== null && $this->settings !== null) {
@@ -134,6 +137,7 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::PRINCIPAL_ARCHITECT => 'engineering-domain-architect-v2.0.md',
             AgentRole::QA_EXECUTOR => 'engineering-domain-qa-executor-v2.0.md',
             AgentRole::INTEGRATION_RELEASE => 'engineering-domain-integration-release-v2.0.md',
+            AgentRole::DOCUMENTATION => 'engineering-domain-documentation-v2.0.md',
             AgentRole::QA => 'engineering-domain-qa-v2.0.md',
             default => throw new RuntimeException('Engineering role does not support Domain Development mode: '.$role->value),
         };
@@ -158,6 +162,7 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::REVIEWER => 'reviewer-v0.1.md',
             AgentRole::QA_EXECUTOR => 'qa-executor-v2.0.md',
             AgentRole::INTEGRATION_RELEASE => 'integration-release-v2.0.md',
+            AgentRole::DOCUMENTATION => 'documentation-v2.0.md',
             AgentRole::QA => 'qa-v0.1.md',
         };
 
