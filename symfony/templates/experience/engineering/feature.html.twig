@@ -72,7 +72,7 @@
             {% elseif summary.can_run %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <button class="cos-button cos-button--primary" type="submit">Продовжити</button>
+                    <button class="cos-button cos-button--primary" type="submit">{{ summary.health == 'STALLED' ? 'Відновити workflow' : 'Продовжити' }}</button>
                 </form>
             {% elseif summary.can_retry %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
