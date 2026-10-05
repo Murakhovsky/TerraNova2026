@@ -26,6 +26,7 @@ use Domains\CapitalMarkets\Domain\Venue\VenueType;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Kernel\Module\ModuleDefinition;
 use Kernel\Shared\Domain\Money;
+use Platform\FeatureFlag\Model\FeatureFlagKey;
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
@@ -50,6 +51,9 @@ $aaplx = new InstrumentDescriptor(
     ['provider_symbol' => 'AAPLx'],
 );
 
+$assert(count(InstrumentFamily::cases()) === 15, 'Master instrument-family coverage drifted.');
+$assert(count(EconomicRelationshipType::cases()) === 11, 'Economic relationship vocabulary drifted.');
+$assert(count(VenueType::cases()) === 9, 'Venue type vocabulary drifted.');
 $assert($aapl->family === InstrumentFamily::Equity, 'Equity family was not preserved.');
 $assert($aaplx->family === InstrumentFamily::TokenizedSecurity, 'Tokenized security family was not preserved.');
 
@@ -98,6 +102,10 @@ $assert($money->currency() === 'USD', 'Capital Markets must reuse Kernel Money.'
 
 $assert(in_array('capital_markets.live.execute', CapitalMarketsCapability::values(), true), 'Live execution permission is missing.');
 $assert(in_array('capital_markets.live_trading', CapitalMarketsFeatureFlag::values(), true), 'Live trading feature flag is missing.');
+foreach (CapitalMarketsFeatureFlag::cases() as $flag) {
+    $key = new FeatureFlagKey($flag->value);
+    $assert($key->value === $flag->value, 'Capital Markets feature flag is invalid for Platform runtime: ' . $flag->value);
+}
 $assert(CapitalMarketsAuditAction::RiskDecisionRecorded->value === 'capital_markets.risk.decision_recorded', 'Audit action vocabulary is unstable.');
 $assert(CapitalMarketsAuditResourceType::Instrument->value === 'capital_markets.instrument', 'Audit resource vocabulary is unstable.');
 
