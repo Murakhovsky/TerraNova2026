@@ -26,6 +26,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
         private ?EngineeringFeatureBudgetGuard $resourceBudgets = null,
         private int $maxTechnicalRetries = 2,
+        private int $maxSemanticRetries = 2,
     ) {
     }
 
@@ -33,36 +34,53 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
     {
         $lastError = null;
         $runCorrelationId = $this->runCorrelationId($correlationId, $task->id);
+        $semanticFeedback = null;
 
-        for ($technicalRetry = 0; $technicalRetry <= $this->maxTechnicalRetries; ++$technicalRetry) {
-            $result = $this->executeOnce($task, $organizationId, $runCorrelationId, $technicalRetry);
-
-            if ($result->status !== AgentRunStatus::COMPLETED->value) {
-                $lastError = new EngineeringAgentTechnicalFailureException(
-                    $result->error ?? 'Engineering Agent runtime failed.',
+        for ($semanticRetry = 0; $semanticRetry <= $this->maxSemanticRetries; ++$semanticRetry) {
+            for ($technicalRetry = 0; $technicalRetry <= $this->maxTechnicalRetries; ++$technicalRetry) {
+                $result = $this->executeOnce(
+                    $task,
+                    $organizationId,
+                    $runCorrelationId,
                     $technicalRetry,
+                    $semanticRetry,
+                    $semanticFeedback,
                 );
-                if ($technicalRetry < $this->maxTechnicalRetries) continue;
-                throw $lastError;
-            }
 
-            try {
-                $this->validator->validate($task->role, $result->structuredOutput);
-                return $result;
-            } catch (EngineeringAgentOutputValidationException $error) {
-                $lastError = $error;
-                if ($technicalRetry < $this->maxTechnicalRetries) continue;
+                if ($result->status !== AgentRunStatus::COMPLETED->value) {
+                    $lastError = new EngineeringAgentTechnicalFailureException(
+                        $result->error ?? 'Engineering Agent runtime failed.',
+                        $technicalRetry,
+                    );
+                    if ($technicalRetry < $this->maxTechnicalRetries) continue;
+                    throw $lastError;
+                }
 
-                throw new EngineeringAgentTechnicalFailureException(
-                    'Engineering Agent returned invalid structured output after technical retries: '.$error->getMessage(),
-                    $technicalRetry,
-                    $error,
-                );
+                try {
+                    $this->validator->validate($task->role, $result->structuredOutput);
+                    return $result;
+                } catch (EngineeringAgentOutputValidationException $error) {
+                    $lastError = $error;
+                    if ($semanticRetry < $this->maxSemanticRetries) {
+                        $semanticFeedback = [
+                            'attempt' => $semanticRetry + 1,
+                            'validation_error' => $error->getMessage(),
+                            'instruction' => 'Return a corrected structured result for the same objective and scope. Do not invent facts or change Acceptance Criteria.',
+                        ];
+                        break;
+                    }
+
+                    throw new EngineeringAgentTechnicalFailureException(
+                        'Engineering Agent returned invalid structured output after semantic retries: '.$error->getMessage(),
+                        $technicalRetry,
+                        $error,
+                    );
+                }
             }
         }
 
         throw new EngineeringAgentTechnicalFailureException(
-            $lastError?->getMessage() ?? 'Engineering Agent technical retry loop exhausted.',
+            $lastError?->getMessage() ?? 'Engineering Agent retry loop exhausted.',
             $this->maxTechnicalRetries,
             $lastError,
         );
@@ -78,6 +96,8 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         string $organizationId,
         string $correlationId,
         int $technicalRetry,
+        int $semanticRetry = 0,
+        ?array $semanticFeedback = null,
     ): EngineeringAgentRunResult {
         $definition = $this->definitions->create($task->role, $organizationId);
         $agent = new Agent(strtolower($task->role->value), $definition, tags: ['engineering']);
@@ -86,6 +106,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             'feature_id' => $task->featureId,
             'idempotency_key' => $task->idempotencyKey,
             'technical_retry' => $technicalRetry,
+            'semantic_retry' => $semanticRetry,
         ]);
         $input = $this->secrets->sanitize([
             'question' => $task->objective,
@@ -93,6 +114,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             'constraints' => $task->constraints,
             'completion_criteria' => $task->completionCriteria,
             'expected_output_schema' => $task->expectedOutputSchema,
+            'semantic_retry_feedback' => $semanticFeedback,
         ]);
         $data = $this->secrets->sanitize([
             'context_refs' => $task->contextRefs,
@@ -141,6 +163,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
                 'engineering_role' => $task->role->value,
                 'idempotency_key' => $task->idempotencyKey,
                 'technical_retry' => $technicalRetry,
+                'semantic_retry' => $semanticRetry,
                 'resource_budget' => $budgetEvidence,
                 'llm_max_output_tokens' => isset($budgetEvidence['max_output_tokens'])
                     ? max(1, (int) $budgetEvidence['max_output_tokens'])
