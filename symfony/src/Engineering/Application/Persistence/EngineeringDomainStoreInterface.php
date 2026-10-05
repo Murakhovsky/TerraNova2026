@@ -114,6 +114,16 @@ interface EngineeringDomainStoreInterface
         ?string $model,
         array $usage,
         ?string $error,
+        ?string $runtimeId = null,
+        ?string $featureId = null,
+        ?string $state = null,
+        ?string $startedAt = null,
+        ?string $finishedAt = null,
+        array $inputs = [],
+        array $outputs = [],
+        array $artifacts = [],
+        ?string $repositoryRevision = null,
+        array $errors = [],
     ): void;
 
     /** @return list<array<string,mixed>> */
