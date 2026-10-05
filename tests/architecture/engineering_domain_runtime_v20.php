@@ -16,6 +16,14 @@ $requiredFiles = [
     'symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringDomainStore.php',
     'symfony/src/Http/Api/V1/Controller/EngineeringDomainController.php',
     'symfony/migrations/Version20261005170000.php',
+    'symfony/config/engineering/agents/product-requirements.yaml',
+    'symfony/config/engineering/agents/qa-planner.yaml',
+    'symfony/config/engineering/agents/qa-executor.yaml',
+    'symfony/config/engineering/agents/integration-release.yaml',
+    'symfony/config/engineering/prompts/engineering-domain-product-v2.0.md',
+    'symfony/config/engineering/prompts/engineering-domain-qa-planner-v2.0.md',
+    'symfony/config/engineering/prompts/engineering-domain-qa-executor-v2.0.md',
+    'symfony/config/engineering/prompts/engineering-domain-integration-release-v2.0.md',
 ];
 
 foreach ($requiredFiles as $file) {
@@ -36,6 +44,10 @@ $developer = (string) file_get_contents($root.'/symfony/src/Engineering/Applicat
 $reviewer = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringReviewerStageExecutor.php');
 $qa = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringQaStageExecutor.php');
 $gateway = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Repository/EngineeringRepositoryGatewayInterface.php');
+
+foreach (['AgentRole::PRODUCT_REQUIREMENTS', 'AgentRole::QA_PLANNER'] as $needle) {
+    if (!str_contains($planner, $needle)) throw new RuntimeException('Domain agent separation is missing '.$needle);
+}
 
 foreach ([
     'DOMAIN_SPECIFICATION',
@@ -68,6 +80,9 @@ foreach ([
     'Domain integration pull request must be merged',
     'configuredBaseBranch',
     'openPullRequest',
+    'AgentRole::QA_EXECUTOR',
+    'AgentRole::INTEGRATION_RELEASE',
+    'RELEASE_READINESS_REPORT',
 ] as $needle) {
     if (!str_contains($release, $needle)) throw new RuntimeException('Domain release gate is missing '.$needle);
 }
