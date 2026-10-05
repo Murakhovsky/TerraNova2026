@@ -82,6 +82,14 @@ final readonly class EngineeringDomainReleaseService
             $review = $status['artifacts']['REVIEW_REPORT']['content'] ?? null;
             $development = $status['artifacts']['DEVELOPMENT_RESULT']['content'] ?? null;
             $final = $status['artifacts']['FINAL_REPORT']['content'] ?? null;
+            $findings = is_array($status['findings'] ?? null) ? $status['findings'] : [];
+            $blockingFindings = array_values(array_filter($findings, static function (mixed $finding): bool {
+                if (!is_array($finding) || strtoupper((string) ($finding['status'] ?? 'OPEN')) !== 'OPEN') return false;
+                return in_array(strtoupper((string) ($finding['severity'] ?? '')), ['BLOCKER','MAJOR','CRITICAL','HIGH'], true);
+            }));
+            if ($blockingFindings !== []) {
+                throw new RuntimeException('Domain release blocked by open BLOCKER/MAJOR finding in feature '.$feature['feature_key'].'.');
+            }
             if ((bool) $feature['required']) {
                 if (!is_array($qa) || ($qa['status'] ?? null) !== 'PASS') {
                     throw new RuntimeException('Required Domain feature lacks QA PASS evidence: '.$feature['feature_key']);
@@ -101,6 +109,7 @@ final readonly class EngineeringDomainReleaseService
                 'qa' => $qa,
                 'development' => $development,
                 'final_report' => $final,
+                'findings' => $findings,
             ];
         }
 
@@ -143,6 +152,12 @@ final readonly class EngineeringDomainReleaseService
             $correlationId.':domain-qa',
         );
         $this->validator->validate(AgentRole::QA_EXECUTOR, $result, 'EXECUTION');
+        if (($result['status'] ?? null) === 'PASS') {
+            $this->assertDomainAcceptanceCoverage(
+                is_array($domainAcArtifact['content']['criteria'] ?? null) ? $domainAcArtifact['content']['criteria'] : [],
+                is_array($result['acceptance_criteria'] ?? null) ? $result['acceptance_criteria'] : [],
+            );
+        }
 
         $report = array_merge($result, [
             'tested_revision' => $repositoryRevision,
@@ -320,6 +335,53 @@ final readonly class EngineeringDomainReleaseService
             'known_limitations' => $qa['known_limitations'] ?? [],
             'generated_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ];
+    }
+
+    /** @param list<array<string,mixed>> $expected @param list<array<string,mixed>> $actual */
+    private function assertDomainAcceptanceCoverage(array $expected, array $actual): void
+    {
+        $expectedIds = [];
+        foreach ($expected as $criterion) {
+            if (!is_array($criterion)) continue;
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id !== '') $expectedIds[$id] = $criterion;
+        }
+        if ($expectedIds === []) throw new RuntimeException('Domain QA PASS requires authoritative Domain Acceptance Criteria.');
+
+        $actualById = [];
+        foreach ($actual as $criterion) {
+            if (!is_array($criterion)) continue;
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id !== '') $actualById[$id] = $criterion;
+        }
+
+        $missing = array_diff_key($expectedIds, $actualById);
+        $unexpected = array_diff_key($actualById, $expectedIds);
+        if ($missing !== [] || $unexpected !== []) {
+            throw new RuntimeException(sprintf(
+                'Domain QA acceptance-criteria coverage mismatch. Missing: %s; unexpected: %s.',
+                implode(', ', array_keys($missing)) ?: 'none',
+                implode(', ', array_keys($unexpected)) ?: 'none',
+            ));
+        }
+
+        foreach ($expectedIds as $id => $criterion) {
+            $result = $actualById[$id];
+            $blocking = !array_key_exists('blocking', $criterion) || ($criterion['blocking'] ?? true) === true;
+            if ($blocking && ($result['status'] ?? null) !== 'PASS') {
+                throw new RuntimeException('Domain release requires PASS for blocking Acceptance Criterion '.$id.'.');
+            }
+            if ($blocking && !$this->meaningfulEvidence($result['evidence'] ?? null)) {
+                throw new RuntimeException('Domain release requires evidence for blocking Acceptance Criterion '.$id.'.');
+            }
+        }
+    }
+
+    private function meaningfulEvidence(mixed $value): bool
+    {
+        if (is_string($value)) return trim($value) !== '';
+        if (is_array($value)) return $value !== [];
+        return is_scalar($value) && $value !== null;
     }
 
     private function requiredArtifact(string $domainId, EngineeringDomainArtifactType $type): array
