@@ -131,8 +131,16 @@ final readonly class EngineeringDomainReleaseService
         if ($this->repository->available()) {
             $repositoryRevision = $this->repository->currentBaseRevision((string) $domain['target_branch']);
             $ci = $this->repository->commitChecks($repositoryRevision);
-            if (($ci['failed'] ?? 0) > 0 || ($ci['state'] ?? null) === 'FAILED') {
-                $this->domains->updateStatus($domainId, EngineeringDomainStatus::BLOCKED->value, 'Integrated repository revision has failed CI.');
+            if (
+                strtoupper((string) ($ci['state'] ?? '')) !== 'SUCCESS'
+                || (int) ($ci['failed'] ?? 0) > 0
+                || (int) ($ci['pending'] ?? 0) > 0
+            ) {
+                $this->domains->updateStatus(
+                    $domainId,
+                    EngineeringDomainStatus::BLOCKED->value,
+                    'Integrated repository revision requires green CI before Domain QA.',
+                );
                 return $this->view($domainId, ['repository_revision' => $repositoryRevision, 'ci' => $ci]);
             }
         }
