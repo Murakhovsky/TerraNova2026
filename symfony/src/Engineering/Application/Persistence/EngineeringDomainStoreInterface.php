@@ -15,6 +15,9 @@ interface EngineeringDomainStoreInterface
         string $targetBranch,
         string $createdBy,
         int $maxParallelFeatures = 3,
+        int $maxParallelDevelopers = 2,
+        int $maxParallelReviews = 2,
+        int $maxParallelQa = 2,
     ): void;
 
     /** @return array<string,mixed> */
@@ -92,4 +95,18 @@ interface EngineeringDomainStoreInterface
 
     /** @return list<array<string,mixed>> */
     public function agentRuns(string $domainId): array;
+
+    public function recordRuntimeEvent(
+        string $domainId,
+        string $organizationId,
+        string $eventType,
+        ?string $featureKey,
+        array $payload,
+        string $correlationId,
+        string $dedupeKey,
+    ): void;
+
+    /** @return list<array<string,mixed>> */
+    public function runtimeEvents(string $domainId, int $limit = 200): array;
+
 }
