@@ -350,24 +350,38 @@
                                 <details class="engineering-details">
                                     <summary>Деталі</summary>
                                     {% if run.error_message %}<p class="engineering-danger">{{ run.error_message }}</p>{% endif %}
+                                    {% if run.input_snapshot|default([]) is not empty %}
+                                        <details class="engineering-details" style="margin:8px 0">
+                                            <summary>Вхідний контекст агента</summary>
+                                            <div class="engineering-agent-output">{{ run.input_snapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                        </details>
+                                    {% endif %}
                                     {% if run.runtime_steps|default([]) is not empty %}
                                         <div style="margin:8px 0">
-                                            <strong>Runtime steps</strong>
+                                            <strong>Кроки runtime</strong>
                                             {% for step in run.runtime_steps %}
-                                                <div class="engineering-muted">
-                                                    #{{ step.sequence|default('?') }} · {{ step.type|default('step') }} · {{ step.status|default('UNKNOWN') }}
-                                                    {% if step.error|default('') %} · {{ step.error }}{% endif %}
-                                                </div>
+                                                <details class="engineering-details" style="margin-top:4px">
+                                                    <summary>#{{ step.sequence|default('?') }} · {{ step.type|default('step') }} · {{ step.status|default('UNKNOWN') }}</summary>
+                                                    {% if step.error|default('') %}<div class="engineering-danger">{{ step.error }}</div>{% endif %}
+                                                    {% if step.input|default([]) is not empty %}
+                                                        <div class="engineering-muted">Вхід</div>
+                                                        <div class="engineering-agent-output">{{ step.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                    {% endif %}
+                                                    {% if step.output|default([]) is not empty %}
+                                                        <div class="engineering-muted">Вихід</div>
+                                                        <div class="engineering-agent-output">{{ step.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                    {% endif %}
+                                                </details>
                                             {% endfor %}
                                         </div>
                                     {% endif %}
-                                    {% if run.output.decision|default('') %}<div><strong>Decision:</strong> {{ run.output.decision }}</div>{% endif %}
-                                    {% if run.output.reason|default('') %}<div><strong>Reason:</strong> {{ run.output.reason }}</div>{% endif %}
+                                    {% if run.output.decision|default('') %}<div><strong>Рішення:</strong> {{ run.output.decision }}</div>{% endif %}
+                                    {% if run.output.reason|default('') %}<div><strong>Причина:</strong> {{ run.output.reason }}</div>{% endif %}
                                     {% if run.output.proposed_actions|default([]) is not empty %}
-                                        <div><strong>Proposed actions:</strong> {{ run.output.proposed_actions|length }}</div>
+                                        <div><strong>Запропоновані дії:</strong> {{ run.output.proposed_actions|length }}</div>
                                     {% endif %}
                                     <details class="engineering-details" style="margin-top:6px">
-                                        <summary>Structured output</summary>
+                                        <summary>Структурований результат</summary>
                                         <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
                                     </details>
                                     <div class="engineering-muted">trace: {{ run.trace_id|default('n/a') }}</div>
