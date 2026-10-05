@@ -243,7 +243,7 @@ final readonly class EngineeringDomainReleaseService
             return $this->view($domainId, ['qa_status' => $qaStatus]);
         }
 
-        $documentation = $this->documentation->generate($domainId);
+        $documentation = $this->documentation->generate($domainId, $correlationId.':documentation');
         foreach ([
             'public' => EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_PUBLIC,
             'integrator' => EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_INTEGRATOR,
