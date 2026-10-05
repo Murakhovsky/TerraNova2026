@@ -78,6 +78,25 @@ final readonly class EngineeringDomainAgentOutputValidator
         }
         if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS'], true)) return;
         if (!is_array($output['domain_architecture']) || $output['domain_architecture'] === []) throw new RuntimeException('Approved Domain Architecture cannot be empty.');
+        foreach ([
+            'module_structure','namespace_structure','domain_layers','database_boundaries','dependency_rules',
+            'module_ownership','service_visibility','forbidden_namespace_dependencies','forbidden_database_dependencies',
+            'forbidden_infrastructure_imports','cross_domain_access',
+        ] as $field) {
+            if (!array_key_exists($field, $output['domain_architecture'])) {
+                throw new RuntimeException('Domain Architecture isolation contract missing '.$field.'.');
+            }
+        }
+        foreach (['module_structure','namespace_structure','domain_layers','database_boundaries','dependency_rules','module_ownership','service_visibility'] as $field) {
+            if (!is_array($output['domain_architecture'][$field]) || $output['domain_architecture'][$field] === []) {
+                throw new RuntimeException('Domain Architecture requires non-empty '.$field.'.');
+            }
+        }
+        foreach (['forbidden_namespace_dependencies','forbidden_database_dependencies','forbidden_infrastructure_imports'] as $field) {
+            if (!is_array($output['domain_architecture'][$field])) {
+                throw new RuntimeException('Domain Architecture '.$field.' must be an array.');
+            }
+        }
         $featureFlags = $output['domain_architecture']['feature_flags'] ?? null;
         if (!is_array($featureFlags) || array_is_list($featureFlags)) throw new RuntimeException('Approved Domain Architecture requires structured feature flags.');
         foreach (['DOMAIN_ENABLED','FEATURE_ENABLED','INTEGRATION_ENABLED','PRODUCTION_EXECUTION_ENABLED'] as $flag) {
@@ -201,8 +220,16 @@ final readonly class EngineeringDomainAgentOutputValidator
             if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['security'] ?? []) === []) {
                 throw new RuntimeException('Domain QA Plan requires security-check coverage.');
             }
-            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['smoke'] ?? []) === []) {
-                throw new RuntimeException('Domain QA Plan requires a curated critical smoke suite.');
+            if ($status === 'PLAN_READY') {
+                foreach (['cross_domain_workflows','permissions','tenant_isolation','performance','resilience'] as $section) {
+                    if (!is_array($output['domain_qa_plan'][$section] ?? null) || $output['domain_qa_plan'][$section] === []) {
+                        throw new RuntimeException('Domain QA Plan requires explicit '.$section.' coverage or structured NOT_APPLICABLE evidence.');
+                    }
+                }
+                $smoke = $output['domain_qa_plan']['smoke'] ?? [];
+                if (!is_array($smoke) || count($smoke) < 10 || count($smoke) > 30) {
+                    throw new RuntimeException('Curated Domain smoke suite must contain 10–30 critical workflows.');
+                }
             }
             $isolation = $output['domain_qa_plan']['domain_isolation'] ?? null;
             if ($status === 'PLAN_READY') {
