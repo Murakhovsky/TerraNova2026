@@ -5,6 +5,7 @@ namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use App\Engineering\Domain\Workflow\EngineeringId;
@@ -18,6 +19,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EngineeringWorkflowStoreInterface $workflows,
+        private EngineeringExecutionEventStoreInterface $events,
     ) {}
 
     public function start(string $workflowId, EngineeringAgentTask $task, string $traceId): string
@@ -55,6 +57,22 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             taskId: $task->id,
         ));
         $this->entityManager->flush();
+        $this->events->append(
+            $task->featureId,
+            $workflowId,
+            'AGENT',
+            'agent.run_started',
+            'STARTED',
+            $task->role->value.' agent run started',
+            [
+                'role' => $task->role->value,
+                'task_id' => $task->id,
+                'logical_attempt' => max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
+                'objective' => mb_substr($task->objective, 0, 500),
+            ],
+            $runId,
+            $traceId,
+        );
         $this->workflows->touchRuntime($workflowId, $runId, $task->id);
         return $runId;
     }
@@ -81,6 +99,28 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             technicalRetry: $result->technicalRetries,
         );
         $this->entityManager->flush();
+        $this->events->append(
+            $record->featureId(),
+            $record->workflowExecutionId(),
+            'AGENT',
+            'agent.run_completed',
+            strtoupper($result->status),
+            $record->agentRole().' agent run completed',
+            [
+                'role' => $record->agentRole(),
+                'provider' => $result->provider,
+                'model' => $result->model,
+                'input_tokens' => $usage['input_tokens'] ?? null,
+                'output_tokens' => $usage['output_tokens'] ?? null,
+                'cost_amount' => $usage['cost_amount'] ?? null,
+                'technical_retries' => $result->technicalRetries,
+                'runtime_steps' => count($result->steps),
+            ],
+            $record->id(),
+            $record->traceId(),
+            null,
+            $result->error,
+        );
         $this->workflows->touchRuntime($record->workflowExecutionId(), $record->id(), $record->taskId());
     }
 
@@ -90,6 +130,23 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         if (!$record instanceof AgentRunRecord) throw new RuntimeException('Engineering AgentRun not found: '.$engineeringRunId);
         $record->fail($errorType, $errorMessage, $technicalRetry);
         $this->entityManager->flush();
+        $this->events->append(
+            $record->featureId(),
+            $record->workflowExecutionId(),
+            'AGENT',
+            'agent.run_failed',
+            'FAILED',
+            $record->agentRole().' agent run failed',
+            [
+                'role' => $record->agentRole(),
+                'error_type' => $errorType,
+                'technical_retries' => $technicalRetry,
+            ],
+            $record->id(),
+            $record->traceId(),
+            null,
+            $errorMessage,
+        );
         $this->workflows->touchRuntime($record->workflowExecutionId(), $record->id(), $record->taskId());
     }
 
@@ -111,10 +168,24 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         $failed = 0;
         foreach ($records as $record) {
             if (!$record instanceof AgentRunRecord || $record->startedAt() > $threshold) continue;
+            $message = 'AgentRun exceeded the recovery timeout and was closed before a new logical attempt.';
             $record->fail(
                 'STALE_RUN_RECOVERY',
-                'AgentRun exceeded the recovery timeout and was closed before a new logical attempt.',
+                $message,
                 $record->technicalRetry(),
+            );
+            $this->events->append(
+                $record->featureId(),
+                $record->workflowExecutionId(),
+                'WATCHDOG',
+                'agent.stale_run_recovered',
+                'FAILED',
+                $record->agentRole().' stale run closed by recovery',
+                ['role' => $record->agentRole(), 'stale_after_seconds' => $staleAfterSeconds],
+                $record->id(),
+                $record->traceId(),
+                null,
+                $message,
             );
             ++$failed;
         }
