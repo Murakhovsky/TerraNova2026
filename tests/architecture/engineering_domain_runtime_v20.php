@@ -13,9 +13,12 @@ $requiredFiles = [
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentService.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentSchemas.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentOutputValidator.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainConcurrencyGate.php',
+    'symfony/src/Engineering/Domain/DomainDevelopment/EngineeringDomainRuntimeEventType.php',
     'symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringDomainStore.php',
     'symfony/src/Http/Api/V1/Controller/EngineeringDomainController.php',
     'symfony/migrations/Version20261005170000.php',
+    'symfony/migrations/Version20261005193000.php',
 ];
 
 foreach ($requiredFiles as $file) {
@@ -27,6 +30,10 @@ $scheduler = (string) file_get_contents($root.'/symfony/src/Engineering/Applicat
 $release = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainReleaseService.php');
 $store = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringDomainStore.php');
 $migration = (string) file_get_contents($root.'/symfony/migrations/Version20261005170000.php');
+$completionMigration = (string) file_get_contents($root.'/symfony/migrations/Version20261005193000.php');
+$concurrency = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainConcurrencyGate.php');
+$events = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/DomainDevelopment/EngineeringDomainRuntimeEventType.php');
+$progression = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringAutonomousProgressionService.php');
 $routes = (string) file_get_contents($root.'/symfony/config/routes.yaml');
 $services = (string) file_get_contents($root.'/symfony/config/services.yaml');
 $schedule = (string) file_get_contents($root.'/symfony/src/Scheduler/CosScheduleProvider.php');
@@ -93,6 +100,29 @@ foreach ([
     'event_key',
 ] as $needle) {
     if (!str_contains($store, $needle)) throw new RuntimeException('Domain registry history is missing '.$needle);
+}
+
+
+// TZ §77 — independent Domain concurrency limits with configuration defaults.
+foreach (['max_parallel_features','max_parallel_developers','max_parallel_reviews','max_parallel_qa','cos_engineering_domain_runtime_events'] as $needle) {
+    if (!str_contains($completionMigration, $needle)) throw new RuntimeException('Domain Runtime completion migration missing '.$needle);
+}
+foreach (['max_parallel_developers','max_parallel_reviews','max_parallel_qa','EngineeringWorkflowState::DEVELOPMENT_RUNNING','EngineeringWorkflowState::REVIEW_PENDING','EngineeringWorkflowState::QA_PENDING'] as $needle) {
+    if (!str_contains($concurrency, $needle)) throw new RuntimeException('Domain concurrency gate missing '.$needle);
+}
+if (!str_contains($progression, 'domainConcurrency->decision')) throw new RuntimeException('Feature progression does not enforce Domain stage concurrency.');
+
+// TZ §78 — canonical orchestration event vocabulary and lifecycle wiring.
+foreach ([
+    'DomainCreated','DomainSpecificationReady','DomainDecompositionReady','DomainArchitectureApproved',
+    'CapabilityReady','FeatureReady','FeatureStarted','FeatureCompleted','FeatureBlocked',
+    'ContractChanged','ArchitectureChanged','DomainIntegrationStarted','DomainIntegrationCompleted',
+    'DomainQaStarted','DomainQaCompleted','DomainReleaseReady',
+] as $event) {
+    if (!str_contains($events, "'".$event."'")) throw new RuntimeException('Domain orchestration event missing '.$event);
+}
+foreach (['recordRuntimeEvent','runtimeEvents'] as $needle) {
+    if (!str_contains($store, $needle)) throw new RuntimeException('Domain runtime event ledger missing '.$needle);
 }
 
 if (!str_contains($services, 'EngineeringDomainStoreInterface')) throw new RuntimeException('Domain store DI alias is missing.');
