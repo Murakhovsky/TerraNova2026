@@ -341,7 +341,13 @@ final readonly class EngineeringDomainReleaseService
             'contracts' => $this->domains->contracts((string) $domain['id']),
             'events' => $this->domains->events((string) $domain['id']),
             'migration_plan' => $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::MIGRATION_PLAN->value)['content'] ?? [],
-            'feature_flags' => $architecture['content']['feature_flags'] ?? [],
+            'feature_flags' => $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::DOMAIN_FEATURE_FLAGS->value)['content'] ?? [
+                'DOMAIN_ENABLED' => false,
+                'FEATURE_ENABLED' => [],
+                'INTEGRATION_ENABLED' => false,
+                'PRODUCTION_EXECUTION_ENABLED' => false,
+            ],
+            'proposed_feature_flags' => $architecture['content']['feature_flags'] ?? [],
             'qa_result' => [
                 'status' => $qa['status'] ?? null,
                 'tested_revision' => $qa['tested_revision'] ?? null,
