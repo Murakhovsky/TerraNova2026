@@ -283,8 +283,19 @@ final readonly class EngineeringWorkflowCoordinator
                 [$transition],
             );
         }
-        if ($status === 'SECURITY_REVIEW_REQUIRED') {
-            return $this->human($workflow, 'Developer found a security decision outside the approved implementation contract.');
+        $developerSpecialists = [
+            'SECURITY_REVIEW_REQUIRED' => AgentRole::SECURITY_SPECIALIST,
+            'MIGRATION_REVIEW_REQUIRED' => AgentRole::DATABASE_MIGRATION_SPECIALIST,
+            'PERFORMANCE_REVIEW_REQUIRED' => AgentRole::PERFORMANCE_SPECIALIST,
+            'DEVOPS_REVIEW_REQUIRED' => AgentRole::DEVOPS_SPECIALIST,
+            'API_REVIEW_REQUIRED' => AgentRole::API_SPECIALIST,
+        ];
+        if (isset($developerSpecialists[$status])) {
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                $developerSpecialists[$status],
+                'Developer requires independent specialist review before implementation can continue.',
+            );
         }
         if ($status === 'BLOCKED') return $this->block($workflow, 'Developer reported a non-retryable blocker.');
         if ($status === 'FAILED') return $this->block($workflow, 'Developer failed without a retryable runtime classification.');
@@ -313,6 +324,20 @@ final readonly class EngineeringWorkflowCoordinator
         if ($status === 'ARCHITECTURE_REVIEW_REQUIRED') {
             $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'REVIEW_ARCHITECTURE_REVIEW_REQUIRED');
             return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT, 'Reviewer found implementation evidence that requires Principal Architect revalidation.', [$transition]);
+        }
+        $reviewSpecialists = [
+            'SECURITY_REVIEW_REQUIRED' => AgentRole::SECURITY_SPECIALIST,
+            'MIGRATION_REVIEW_REQUIRED' => AgentRole::DATABASE_MIGRATION_SPECIALIST,
+            'PERFORMANCE_REVIEW_REQUIRED' => AgentRole::PERFORMANCE_SPECIALIST,
+            'DEVOPS_REVIEW_REQUIRED' => AgentRole::DEVOPS_SPECIALIST,
+            'API_REVIEW_REQUIRED' => AgentRole::API_SPECIALIST,
+        ];
+        if (isset($reviewSpecialists[$status])) {
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                $reviewSpecialists[$status],
+                'Reviewer requires independent specialist revalidation.',
+            );
         }
         if ($status === 'HUMAN_REVIEW_REQUIRED') return $this->human($workflow, 'Reviewer identified a decision that requires human review.');
         if ($status !== 'REQUEST_CHANGES') throw new LogicException('Unexpected Reviewer status: '.$status);
