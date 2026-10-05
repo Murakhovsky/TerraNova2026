@@ -193,6 +193,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             $response->reasoningTokens,
             $response->costSource ?? ($response->costAmount !== null ? 'PROVIDER' : null),
             $response->pricingVersion,
+            $response->providerRequestId,
         );
 
         if ($reservation !== null) {
@@ -248,6 +249,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             reasoningTokens: $response->reasoningTokens,
             costSource: $estimate->source,
             pricingVersion: $estimate->pricingVersion,
+            providerRequestId: $response->providerRequestId,
         );
     }
 
