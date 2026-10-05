@@ -512,6 +512,11 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         array $payload,
         string $correlationId,
         string $dedupeKey,
+        string $actor = 'SYSTEM',
+        ?string $reason = null,
+        ?string $artifactId = null,
+        ?string $repositoryRevision = null,
+        ?string $result = null,
     ): void {
         $eventType = trim($eventType);
         $dedupeKey = trim($dedupeKey);
@@ -519,14 +524,19 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
 
         $this->db()->executeStatement(
             'INSERT IGNORE INTO cos_engineering_domain_runtime_events '
-            .'(id, domain_id, organization_id, event_type, feature_key, payload, correlation_id, dedupe_key, created_at) '
-            .'VALUES (:id, :domain_id, :organization_id, :event_type, :feature_key, :payload, :correlation_id, :dedupe_key, :created_at)',
+            .'(id, domain_id, organization_id, event_type, feature_key, actor, reason, artifact_id, repository_revision, result, payload, correlation_id, dedupe_key, created_at) '
+            .'VALUES (:id, :domain_id, :organization_id, :event_type, :feature_key, :actor, :reason, :artifact_id, :repository_revision, :result, :payload, :correlation_id, :dedupe_key, :created_at)',
             [
                 'id' => EngineeringId::generate(),
                 'domain_id' => EngineeringId::assert($domainId),
                 'organization_id' => $organizationId,
                 'event_type' => $eventType,
                 'feature_key' => $featureKey !== null && trim($featureKey) !== '' ? $this->key($featureKey) : null,
+                'actor' => mb_substr(trim($actor) !== '' ? trim($actor) : 'SYSTEM', 0, 128),
+                'reason' => $reason !== null ? mb_substr(trim($reason), 0, 500) : null,
+                'artifact_id' => $artifactId !== null && trim($artifactId) !== '' ? EngineeringId::assert($artifactId) : null,
+                'repository_revision' => $repositoryRevision !== null && trim($repositoryRevision) !== '' ? mb_substr(trim($repositoryRevision), 0, 128) : null,
+                'result' => $result !== null && trim($result) !== '' ? mb_substr(strtoupper(trim($result)), 0, 64) : null,
                 'payload' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'correlation_id' => mb_substr(trim($correlationId), 0, 128),
                 'dedupe_key' => mb_substr($dedupeKey, 0, 191),
