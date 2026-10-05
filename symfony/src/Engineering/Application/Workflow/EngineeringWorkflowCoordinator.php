@@ -101,6 +101,34 @@ final readonly class EngineeringWorkflowCoordinator
         };
     }
 
+    public function specialistRework(WorkflowExecution $workflow, string $reason): WorkflowDirective
+    {
+        if ($workflow->currentState() === EngineeringWorkflowState::DEVELOPMENT_RUNNING) {
+            $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'SPECIALIST_ARCHITECTURE_REWORK_REQUIRED');
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::PRINCIPAL_ARCHITECT,
+                $reason,
+                [$transition],
+            );
+        }
+
+        if ($workflow->currentState() === EngineeringWorkflowState::REVIEW_PENDING) {
+            $transitions = [
+                $this->transition($workflow, EngineeringWorkflowState::CHANGES_REQUESTED, 'SPECIALIST_IMPLEMENTATION_REWORK_REQUIRED'),
+                $this->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING, 'SPECIALIST_DEVELOPER_FIX_STARTED'),
+            ];
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::DEVELOPER,
+                $reason,
+                $transitions,
+            );
+        }
+
+        return $this->human($workflow, $reason);
+    }
+
     public function requireHumanDecision(WorkflowExecution $workflow, string $reason): WorkflowDirective
     {
         return $this->human($workflow, $reason);
