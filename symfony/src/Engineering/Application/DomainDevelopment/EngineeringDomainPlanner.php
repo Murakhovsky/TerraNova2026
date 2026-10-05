@@ -218,6 +218,10 @@ final readonly class EngineeringDomainPlanner
             ['artifact_id' => $architectureArtifact['id'], 'version' => $architectureArtifact['version'], 'status' => $architectStatus],
             $correlationId,
             'domain-architecture-approved:v'.$architectureArtifact['version'],
+            actor: AgentRole::PRINCIPAL_ARCHITECT->value,
+            reason: 'Domain Architecture passed the architecture gate.',
+            artifactId: (string) $architectureArtifact['id'],
+            result: $architectStatus,
         );
         $this->domains->recordRuntimeEvent(
             $domainId,
@@ -227,6 +231,10 @@ final readonly class EngineeringDomainPlanner
             ['artifact_id' => $architectureArtifact['id'], 'version' => $architectureArtifact['version'], 'content_hash' => $architectureArtifact['content_hash']],
             $correlationId,
             'architecture-changed:v'.$architectureArtifact['version'],
+            actor: AgentRole::PRINCIPAL_ARCHITECT->value,
+            reason: 'New canonical Domain Architecture revision became active.',
+            artifactId: (string) $architectureArtifact['id'],
+            result: 'ACTIVE',
         );
         $decomposition = [
             'capabilities' => $architectCapabilities,
