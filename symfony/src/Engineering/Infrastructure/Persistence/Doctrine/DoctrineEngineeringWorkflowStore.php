@@ -176,7 +176,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         $db = $this->entityManager->getConnection();
 
         $rows = $db->fetchAllAssociative(
-            "SELECT w.id, w.feature_id, w.trace_id, w.current_state, w.status, w.health_status,
+            "SELECT w.id, w.feature_id, w.trace_id, w.current_state, w.status, w.health_status, w.runtime_reason,
                     f.status AS feature_status,
                     TIMESTAMPDIFF(SECOND, COALESCE(w.heartbeat_at, w.last_activity_at), UTC_TIMESTAMP(6)) AS age_seconds
              FROM cos_engineering_workflows w
@@ -186,10 +186,11 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             ['organization_id' => $organizationId],
         );
 
-        $counts = ['healthy' => 0, 'stale' => 0, 'stalled' => 0, 'waiting' => 0];
+        $counts = ['healthy' => 0, 'degraded' => 0, 'stale' => 0, 'stalled' => 0, 'waiting' => 0];
         foreach ($rows as $row) {
             $state = (string) ($row['current_state'] ?? '');
             $featureStatus = strtoupper((string) ($row['feature_status'] ?? ''));
+            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
             $age = max(0, (int) ($row['age_seconds'] ?? 0));
             if ($featureStatus === 'QUEUED') {
                 $health = 'WAITING';
@@ -207,13 +208,16 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                 $health = 'STALE';
                 ++$counts['stale'];
                 $reason = sprintf('Runtime heartbeat is delayed by %d seconds.', $age);
+            } elseif ($previousHealth === 'DEGRADED') {
+                $health = 'DEGRADED';
+                ++$counts['degraded'];
+                $reason = trim((string) ($row['runtime_reason'] ?? '')) ?: 'Runtime reported a recoverable failure.';
             } else {
                 $health = 'HEALTHY';
                 ++$counts['healthy'];
                 $reason = null;
             }
 
-            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
             $db->executeStatement(
                 "UPDATE cos_engineering_workflows
                  SET health_status = :health,
