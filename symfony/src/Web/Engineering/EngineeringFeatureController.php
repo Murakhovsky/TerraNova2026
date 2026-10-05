@@ -98,6 +98,7 @@ final readonly class EngineeringFeatureController
             'queued' => count($queue),
             'attention' => 0,
             'completed' => 0,
+            'cancelled' => 0,
             'total' => count($features),
         ];
 
@@ -127,8 +128,11 @@ final readonly class EngineeringFeatureController
             } elseif (in_array($status, ['COMPLETED'], true) || $state === 'DONE') {
                 $displayStatus = 'COMPLETED';
                 ++$stats['completed'];
-            } elseif (in_array($status, ['CANCELLED','FAILED'], true) || in_array($state, ['CANCELLED','FAILED'], true)) {
-                $displayStatus = $status !== '' ? $status : $state;
+            } elseif ($status === 'CANCELLED' || $state === 'CANCELLED') {
+                $displayStatus = 'CANCELLED';
+                ++$stats['cancelled'];
+            } elseif ($status === 'FAILED' || $state === 'FAILED') {
+                $displayStatus = 'FAILED';
                 ++$stats['attention'];
             } elseif (in_array($health, ['STALE','STALLED'], true)) {
                 $displayStatus = $health;
