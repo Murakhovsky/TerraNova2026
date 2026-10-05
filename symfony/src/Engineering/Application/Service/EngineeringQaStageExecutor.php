@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
+use App\Engineering\Application\Agent\EngineeringAgentToolPermissionPolicy;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Agent\EngineeringSpecialistReportCollector;
@@ -48,6 +49,7 @@ final readonly class EngineeringQaStageExecutor
         private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringSpecialistReportCollector $specialistReports,
+        private EngineeringAgentToolPermissionPolicy $toolPolicy,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
