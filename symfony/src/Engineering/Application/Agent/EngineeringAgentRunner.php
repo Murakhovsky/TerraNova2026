@@ -109,6 +109,18 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             usage: $output?->usage ?? [],
             error: $run->status() === AgentRunStatus::FAILED ? $run->error() : null,
             technicalRetries: $technicalRetry,
+            steps: array_map(
+                static fn (\Kernel\Agent\Model\AgentStep $step): array => [
+                    'id' => $step->id,
+                    'sequence' => $step->sequence,
+                    'type' => $step->type,
+                    'status' => $step->status()->value,
+                    'input' => $step->input,
+                    'output' => $step->output(),
+                    'error' => $step->error(),
+                ],
+                $run->steps(),
+            ),
         );
     }
 }
