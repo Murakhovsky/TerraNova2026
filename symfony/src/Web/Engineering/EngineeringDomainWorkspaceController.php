@@ -220,6 +220,34 @@ final readonly class EngineeringDomainWorkspaceController
         return $this->mutate($request, $id, 'approve');
     }
 
+    public function humanDecision(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $domainId = EngineeringId::assert($id);
+            $decisionId = EngineeringId::assert((string) $request->request->get('decision_id', ''));
+            $selectedOption = trim((string) $request->request->get('selected_option', ''));
+            if ($selectedOption === '') throw new \InvalidArgumentException('Human decision option is required.');
+
+            $result = $this->runtime->answerHumanDecision(
+                $domainId,
+                $tenant->organizationId()->value(),
+                $decisionId,
+                $selectedOption,
+                'user:'.$tenant->userId()->value(),
+                (string) $request->request->get('notes', ''),
+            );
+
+            $status = (string) ($result['domain']['status'] ?? 'updated');
+            return $this->redirectStatus('/admin/engineering/domains/'.$domainId, 'Human Gate resolved · '.$status.'.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/domains/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
+        }
+    }
+
     public function featureFlags(Request $request, string $id): Response
     {
         $tenant = $this->manager();
