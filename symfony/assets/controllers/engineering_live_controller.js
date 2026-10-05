@@ -43,6 +43,7 @@ export default class extends Controller {
         );
         this.clockTimer = window.setInterval(() => this.tick(), 1000);
 
+        this.formatStaticTimestamps();
         this.refresh();
         this.tick();
     }
@@ -91,7 +92,7 @@ export default class extends Controller {
             if (this.hasHeartbeatTarget) {
                 const heartbeat = workflow.heartbeat_at || workflow.last_activity_at || '';
                 this.heartbeatTarget.dataset.timestamp = heartbeat;
-                this.heartbeatTarget.title = heartbeat || 'heartbeat n/a';
+                this.heartbeatTarget.title = heartbeat ? this.formatTimestamp(heartbeat) : 'heartbeat n/a';
             }
 
             if (this.hasAgentRunsTarget) {
@@ -225,7 +226,7 @@ export default class extends Controller {
 
                 const time = document.createElement('span');
                 time.className = 'engineering-terminal__muted';
-                time.textContent = String(event?.time || '');
+                time.textContent = this.formatTimestamp(event?.time || '');
 
                 const type = document.createElement('strong');
                 type.textContent = String(event?.type || 'EVENT');
@@ -270,8 +271,8 @@ export default class extends Controller {
         }
 
         const timestamp = workflow?.heartbeat_at || workflow?.last_activity_at || '';
-        const then = Date.parse(timestamp);
-        if (!Number.isFinite(then)) {
+        const then = this.parseTimestamp(timestamp);
+        if (then === null) {
             return persisted || 'UNKNOWN';
         }
 
@@ -291,10 +292,10 @@ export default class extends Controller {
     }
 
     durationSeconds(startedAt, finishedAt) {
-        const start = Date.parse(startedAt);
-        if (!Number.isFinite(start)) return null;
-        const end = finishedAt ? Date.parse(finishedAt) : Date.now();
-        if (!Number.isFinite(end)) return null;
+        const start = this.parseTimestamp(startedAt);
+        if (start === null) return null;
+        const end = finishedAt ? this.parseTimestamp(finishedAt) : Date.now();
+        if (end === null) return null;
         return Math.max(0, Math.floor((end - start) / 1000));
     }
 
@@ -309,8 +310,8 @@ export default class extends Controller {
     }
 
     relativeTime(timestamp) {
-        const then = Date.parse(timestamp);
-        if (!Number.isFinite(then)) return 'немає даних';
+        const then = this.parseTimestamp(timestamp);
+        if (then === null) return 'немає даних';
         const age = Math.max(0, Math.floor((Date.now() - then) / 1000));
         if (age < 5) return 'щойно';
         if (age < 60) return age + ' с тому';
@@ -323,6 +324,39 @@ export default class extends Controller {
         const days = Math.floor(age / 86400);
         const hours = Math.floor((age % 86400) / 3600);
         return days + ' д' + (hours > 0 ? ' ' + hours + ' г' : '') + ' тому';
+    }
+
+    parseTimestamp(timestamp) {
+        const value = String(timestamp || '').trim();
+        if (value === '') return null;
+
+        // Engineering persistence stores MySQL DATETIME values in UTC without an offset.
+        // Treat that legacy/runtime shape as UTC, then render it in the browser's local timezone.
+        const mysqlUtc = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?$/);
+        const normalized = mysqlUtc
+            ? mysqlUtc[1] + 'T' + mysqlUtc[2] + (mysqlUtc[3] ? '.' + mysqlUtc[3].slice(0, 3).padEnd(3, '0') : '') + 'Z'
+            : value;
+        const parsed = Date.parse(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    formatTimestamp(timestamp) {
+        const parsed = this.parseTimestamp(timestamp);
+        if (parsed === null) return String(timestamp || '').replace(/\.\d+$/, '');
+        const date = new Date(parsed);
+        const pad = (value) => String(value).padStart(2, '0');
+        return [
+            pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + '.' + date.getFullYear(),
+            pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds()),
+        ].join(' ');
+    }
+
+    formatStaticTimestamps() {
+        this.element.querySelectorAll('[data-engineering-live-timestamp]').forEach((node) => {
+            const timestamp = node.dataset.engineeringLiveTimestamp || '';
+            node.textContent = this.formatTimestamp(timestamp);
+            node.title = timestamp;
+        });
     }
 
     setText(targets, value) {

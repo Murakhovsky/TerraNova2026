@@ -47,6 +47,7 @@ foreach ([
     'Тривалість workflow',
     'активна робота агентів',
     'data-engineering-live-duration-start',
+    'data-engineering-live-timestamp',
 ] as $needle) {
     if (!str_contains($template, $needle)) {
         throw new RuntimeException('Engineering live UI missing '.$needle);
@@ -59,6 +60,11 @@ foreach ([
     'renderTimeline(',
     'relativeTime(',
     'formatDuration(',
+    'parseTimestamp(',
+    'formatTimestamp(',
+    'formatStaticTimestamps(',
+    "mysqlUtc[1] + 'T'",
+    ".padEnd(3, '0')",
     'без нових подій',
 ] as $needle) {
     if (!str_contains($controller, $needle)) {
