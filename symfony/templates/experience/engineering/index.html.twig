@@ -90,7 +90,7 @@
         />
     {% endif %}
 
-    <section class="cos-page__section" aria-labelledby="engineering-workspace-list">
+    <section class="cos-page__section" aria-labelledby="engineering-workspace-list" data-engineering-workspace-list>
         <div class="engineering-toolbar" style="margin-bottom:8px">
             <div>
                 <h2 id="engineering-workspace-list" class="cos-section-title" style="margin:0">Процеси</h2>
@@ -106,7 +106,7 @@
             <twig:CosEmptyState title="Engineering завдань ще немає" copy="Створіть перше завдання кнопкою у верхній частині сторінки." />
         {% else %}
             <div class="engineering-table-wrap">
-                <table class="engineering-table" data-engineering-workspace-list>
+                <table class="engineering-table">
                     <thead>
                     <tr>
                         <th>Завдання</th>
