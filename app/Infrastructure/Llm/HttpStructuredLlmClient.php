@@ -98,6 +98,7 @@ final class HttpStructuredLlmClient implements LlmClientInterface, StructuredLlm
             isset($decoded['usage']['reasoning_tokens']) ? (int) $decoded['usage']['reasoning_tokens'] : null,
             isset($decoded['cost']['source']) ? (string) $decoded['cost']['source'] : null,
             isset($decoded['cost']['pricing_version']) ? (string) $decoded['cost']['pricing_version'] : null,
+            isset($decoded['request_id']) ? (string) $decoded['request_id'] : null,
         );
     }
 
