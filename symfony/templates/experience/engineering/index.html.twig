@@ -219,6 +219,12 @@
                                     {% if actions.resolve_human|default(false) %}
                                         <span class="cos-badge">Потрібне рішення</span>
                                     {% endif %}
+                                    {% if actions.finalize|default(false) %}
+                                        <form method="post" action="/admin/engineering/{{ feature.id }}/finalize">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <button class="cos-button cos-button--primary" type="submit">Перевірити merge</button>
+                                        </form>
+                                    {% endif %}
                                     {% if actions.retry|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
