@@ -15,12 +15,15 @@ use SplFileInfo;
 final readonly class LocalRepositoryDiscovery implements RepositoryDiscoveryInterface
 {
     private const EXTENSIONS = ['php','md','yaml','yml','json','twig','js','mjs','sql'];
-    private const EXCLUDED_DIRECTORIES = ['.git','vendor','node_modules','var','archive','coverage'];
+    private const EXCLUDED_DIRECTORIES = ['.git','vendor','node_modules','var','archive','coverage','cache','logs','tmp','uploads','dist','build','.idea'];
 
     public function __construct(
         private string $repositoryRoot,
         private int $maxFiles = 20,
         private int $maxFileBytes = 131072,
+        private int $maxScannedFiles = 4000,
+        private int $maxTotalReadBytes = 33554432,
+        private int $maxScanMilliseconds = 8000,
     ) {
     }
 
@@ -33,6 +36,12 @@ final readonly class LocalRepositoryDiscovery implements RepositoryDiscoveryInte
 
         $keywords = $this->keywords($request->searchText());
         $ranked = [];
+        $startedAt = hrtime(true);
+        $scannedFiles = 0;
+        $readBytes = 0;
+        $maxScannedFiles = max(100, $this->maxScannedFiles);
+        $maxTotalReadBytes = max($this->maxFileBytes, $this->maxTotalReadBytes);
+        $maxScanMilliseconds = max(250, $this->maxScanMilliseconds);
 
         $directory = new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS);
         $filter = new RecursiveCallbackFilterIterator(
@@ -46,10 +55,19 @@ final readonly class LocalRepositoryDiscovery implements RepositoryDiscoveryInte
         );
 
         foreach (new RecursiveIteratorIterator($filter) as $file) {
-            if (!$file instanceof SplFileInfo || !$file->isFile() || $file->getSize() > $this->maxFileBytes) continue;
+            if (++$scannedFiles > $maxScannedFiles || $this->elapsedMilliseconds($startedAt) >= $maxScanMilliseconds) {
+                break;
+            }
+            if (!$file instanceof SplFileInfo || !$file->isFile()) continue;
+
+            $fileSize = $file->getSize();
+            if ($fileSize > $this->maxFileBytes) continue;
+            if ($readBytes + $fileSize > $maxTotalReadBytes) break;
+
             $path = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
             $content = @file_get_contents($file->getPathname());
             if ($content === false) continue;
+            $readBytes += strlen($content);
 
             $score = $this->score($path, $content, $keywords);
             if ($score <= 0) continue;
@@ -133,6 +151,11 @@ final readonly class LocalRepositoryDiscovery implements RepositoryDiscoveryInte
         if (!str_starts_with($value, 'ref: ')) return $value;
         $ref = $root.'/.git/'.substr($value, 5);
         return is_file($ref) ? trim((string) file_get_contents($ref)) : 'unknown';
+    }
+
+    private function elapsedMilliseconds(int $startedAt): int
+    {
+        return (int) ((hrtime(true) - $startedAt) / 1_000_000);
     }
 
     private function filterPaths(array $files, callable $predicate): array
