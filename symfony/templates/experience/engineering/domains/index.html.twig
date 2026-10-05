@@ -1,0 +1,133 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Engineering Domains | COS{% endblock %}
+
+{% block workspace_content %}
+<section class="cos-page__stack" data-cos-engineering-domain="index" data-cos-archetype="{{ page.archetypeId() }}">
+    <style>
+        .domain-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+        .domain-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+        .domain-stat,.domain-card{border:1px solid var(--cos-border,#dfe3ea);border-radius:12px;background:var(--cos-surface,#fff)}
+        .domain-stat{padding:10px 12px}
+        .domain-stat small{display:block;color:var(--cos-text-secondary,#667085);text-transform:uppercase;font-size:.68rem;letter-spacing:.05em}
+        .domain-stat strong{display:block;font-size:1.25rem;margin-top:3px}
+        .domain-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .domain-card{padding:14px}
+        .domain-card__head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+        .domain-card__title{margin:0 0 4px;font-size:1rem}
+        .domain-muted{color:var(--cos-text-secondary,#667085)}
+        .domain-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+        .domain-create summary{cursor:pointer;font-weight:700}
+        .domain-create__body{margin-top:12px}
+        .domain-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        @media(max-width:900px){.domain-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.domain-grid{grid-template-columns:1fr}}
+    </style>
+
+    <div class="domain-head">
+        <div>
+            <p class="cos-card__eyebrow">COS · Engineering Runtime V2</p>
+            <h1 class="cos-page-title" style="margin:2px 0 4px">Domain Development</h1>
+            <p class="cos-card__copy" style="margin:0">Один Master Specification → керована декомпозиція → feature workflows → інтеграція → Domain QA → release gate.</p>
+        </div>
+        <div class="domain-actions">
+            <a class="cos-button cos-button--ghost" href="/admin/engineering">Feature workflows</a>
+            <details class="domain-create cos-card" style="padding:10px 14px;min-width:210px">
+                <summary>+ Create Domain</summary>
+                <div class="domain-create__body">
+                    <form class="cos-form" method="post" action="/admin/engineering/domains/create">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <div class="cos-form__grid">
+                            <label class="cos-field">
+                                <span>Domain key</span>
+                                <input class="cos-input" name="domain_key" maxlength="96" required placeholder="capital-markets">
+                            </label>
+                            <label class="cos-field">
+                                <span>Назва</span>
+                                <input class="cos-input" name="name" maxlength="255" required placeholder="Capital Markets">
+                            </label>
+                            <label class="cos-field">
+                                <span>Repository</span>
+                                <input class="cos-input" name="target_repository" required value="Murakhovsky/TerraNova2026">
+                            </label>
+                            <label class="cos-field">
+                                <span>Integration branch</span>
+                                <input class="cos-input" name="target_branch" placeholder="domain/capital-markets">
+                            </label>
+                            <label class="cos-field">
+                                <span>Max parallel features</span>
+                                <input class="cos-input" type="number" name="max_parallel_features" min="1" max="20" value="3">
+                            </label>
+                            <label class="cos-field">
+                                <span>Запуск</span>
+                                <select class="cos-select" name="start_now">
+                                    <option value="1" selected>Створити і запустити Runtime</option>
+                                    <option value="0">Лише чернетка</option>
+                                </select>
+                            </label>
+                            <label class="cos-field" style="grid-column:1/-1">
+                                <span>Master Specification</span>
+                                <textarea class="cos-textarea" name="master_specification" rows="14" required placeholder="Повне ТЗ Domain..."></textarea>
+                            </label>
+                        </div>
+                        <button class="cos-button cos-button--primary" type="submit">Створити Domain</button>
+                    </form>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    {% if statusMessage %}
+        <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Помилка Domain Runtime' : 'Domain Runtime оновлено' }}"
+                       copy="{{ statusMessage }}"
+                       tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
+    {% endif %}
+
+    <div class="domain-stats" aria-label="Domain Runtime summary">
+        {% for label, value in {
+            'Усього': stats.total,
+            'Активні': stats.active,
+            'Потребують уваги': stats.attention,
+            'Release ready': stats.release_ready,
+            'Завершені': stats.completed
+        } %}
+            <div class="domain-stat"><small>{{ label }}</small><strong>{{ value }}</strong></div>
+        {% endfor %}
+    </div>
+
+    <section class="cos-page__section">
+        <div class="domain-head" style="margin-bottom:10px">
+            <div>
+                <h2 class="cos-section-title" style="margin:0">Domain Initiatives</h2>
+                <p class="cos-card__copy" style="margin:3px 0 0">Runtime сам створює leaf Feature workflows згідно dependency DAG. Людина керує goal, scope, exceptions, risk і release.</p>
+            </div>
+        </div>
+
+        {% if domains is empty %}
+            <twig:CosEmptyState title="Domain Initiatives ще немає" copy="Створіть Domain і передайте Runtime Master Specification." />
+        {% else %}
+            <div class="domain-grid">
+                {% for item in domains %}
+                    <article class="domain-card" data-engineering-domain-row="{{ item.id }}">
+                        <div class="domain-card__head">
+                            <div>
+                                <h3 class="domain-card__title"><a href="/admin/engineering/domains/{{ item.id }}">{{ item.name }}</a></h3>
+                                <div class="domain-muted">{{ item.domain_key }} · v{{ item.version }}</div>
+                            </div>
+                            <span class="cos-badge">{{ item.status }}</span>
+                        </div>
+                        {% if item.status_reason %}<p class="domain-muted">{{ item.status_reason }}</p>{% endif %}
+                        <div class="domain-meta">
+                            <span class="cos-badge">{{ item.max_parallel_features }} parallel</span>
+                            <span class="cos-badge">{{ item.target_branch }}</span>
+                            <span class="domain-muted">updated {{ item.updated_at }}</span>
+                        </div>
+                        <div class="domain-actions" style="margin-top:12px">
+                            <a class="cos-button cos-button--primary" href="/admin/engineering/domains/{{ item.id }}">Відкрити workspace</a>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}
