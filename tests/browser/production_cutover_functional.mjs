@@ -162,6 +162,9 @@ try {
   assert(await page.locator('select[name="execution_mode"] option[value="queue"]').count() === 1, 'Engineering create form is missing queue execution mode.');
   const engineeringTitle = `UI acceptance ${suffix}`;
   const engineeringDescription = 'Browser-created Engineering feature for production cutover acceptance.';
+  const engineeringCreate = page.locator('details.engineering-create');
+  assert(await engineeringCreate.count() === 1, 'Engineering compact create control is missing.');
+  await engineeringCreate.locator(':scope > summary').click();
   const engineeringForm = page.locator('form[data-engineering-create]');
   await engineeringForm.locator('input[name="title"]').fill(engineeringTitle);
   await engineeringForm.locator('textarea[name="description"]').fill(engineeringDescription);
