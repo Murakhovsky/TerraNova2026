@@ -297,7 +297,7 @@ final class EngineeringDomainAgentSchemas
                 'critical_path' => ['type' => 'array'],
                 'migration_plan' => [
                     'type' => 'object',
-                    'required' => ['migration_order','dependencies','forward_validation','rollback_strategy','data_migration','compatibility_window'],
+                    'required' => ['migration_order','dependencies','forward_validation','rollback_strategy','data_migration','compatibility_window','risk','requires_downtime','destructive'],
                     'properties' => [
                         'migration_order' => ['type' => 'array'],
                         'dependencies' => ['type' => ['array','object']],
@@ -305,6 +305,9 @@ final class EngineeringDomainAgentSchemas
                         'rollback_strategy' => ['type' => ['array','object','string']],
                         'data_migration' => ['type' => ['array','object','string']],
                         'compatibility_window' => ['type' => ['array','object','string']],
+                        'risk' => ['type' => 'string', 'enum' => ['LOW','MEDIUM','HIGH','CRITICAL']],
+                        'requires_downtime' => ['type' => 'boolean'],
+                        'destructive' => ['type' => 'boolean'],
                     ],
                     'additionalProperties' => true,
                 ],
