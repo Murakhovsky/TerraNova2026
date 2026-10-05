@@ -67,7 +67,10 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         $usage = $result->usage;
         $record->complete(
             status: strtoupper($result->status),
-            output: array_merge($result->structuredOutput, ['_kernel_run_id' => $result->runId]),
+            output: array_merge($result->structuredOutput, [
+                '_kernel_run_id' => $result->runId,
+                '_runtime_steps' => $result->steps,
+            ]),
             provider: $result->provider ?? 'unknown',
             model: $result->model ?? 'unknown',
             tokensInput: isset($usage['input_tokens']) ? (int) $usage['input_tokens'] : null,
@@ -167,6 +170,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             'provider' => $record->modelProvider(),
             'model' => $record->model(),
             'output' => $record->output(),
+            'runtime_steps' => is_array($record->output()['_runtime_steps'] ?? null) ? $record->output()['_runtime_steps'] : [],
             'tokens_input' => $record->tokensInput(),
             'tokens_output' => $record->tokensOutput(),
             'cost' => $record->estimatedCost() !== null ? (float) $record->estimatedCost() : null,
