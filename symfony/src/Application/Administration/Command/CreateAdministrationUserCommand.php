@@ -9,7 +9,7 @@ use Kernel\Application\Command\CommandInterface;
 final readonly class CreateAdministrationUserCommand implements CommandInterface
 {
     /** @param array<string,mixed> $input */
-    public function __construct(public array $input)
+    public function __construct(public array $input, public string $organizationId)
     {
     }
 }
