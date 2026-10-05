@@ -1,6 +1,8 @@
 ---
 title: Engineering Runtime V2.0 Final Master Specification
+description: Канонічна технічна специфікація Engineering Runtime V2.0 та моделі інженерних агентів COS.
 status: current
+generated: true
 updated: 2026-10-06
 kind: developer
 ---
