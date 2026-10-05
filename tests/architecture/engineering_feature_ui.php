@@ -63,6 +63,8 @@ foreach ([
     'runtime_steps',
     'heartbeat_at',
     'health_status',
+    'Інструменти та дії',
+    'engineering.execution_events',
     'data-engineering-update',
     'data-engineering-delete',
 ] as $needle) {
@@ -75,7 +77,7 @@ foreach ([
     'P0 → P1 → P2 → P3',
     'data-engineering-workspace-list',
     'execution_mode',
-    'usage unavailable',
+    'облік недоступний',
     'Потрібне рішення',
     'Повторити',
 ] as $needle) {
