@@ -86,9 +86,10 @@ export default class extends Controller {
             const health = this.resolveHealth(workflow, state, status);
 
             const displayStatus = !this.isTerminal(state, status) && health === 'STALLED' ? 'STALLED' : status;
-            this.setText(this.workflowStatusTargets, displayStatus);
-            this.setText(this.stateTargets, state);
-            this.setText(this.healthTargets, health.replace(/^/, ['STALE', 'STALLED'].includes(health) ? '⚠ ' : ''));
+            this.setText(this.workflowStatusTargets, this.localizeStatus(displayStatus));
+            this.setText(this.stateTargets, this.localizeStatus(state));
+            const healthLabel = this.localizeStatus(health);
+            this.setText(this.healthTargets, ['STALE', 'STALLED'].includes(health) ? '⚠ ' + healthLabel : healthLabel);
 
             if (this.hasHeartbeatTarget) {
                 const heartbeat = workflow.heartbeat_at || workflow.last_activity_at || '';
@@ -165,7 +166,7 @@ export default class extends Controller {
         const running = runs.find((run) => String(run?.status || '').toUpperCase() === 'RUNNING');
         if (running) {
             if (this.hasCurrentAgentTarget) {
-                this.currentAgentTarget.textContent = String(running.role || 'AGENT');
+                this.currentAgentTarget.textContent = this.localizeRole(running.role || 'AGENT');
             }
             if (this.hasCurrentActivityTarget) {
                 const duration = this.durationSeconds(running.started_at || '', '');
@@ -230,7 +231,7 @@ export default class extends Controller {
                 time.textContent = this.formatTimestamp(event?.time || '');
 
                 const type = document.createElement('strong');
-                type.textContent = String(event?.type || 'EVENT');
+                type.textContent = this.localizeEventType(event?.type || 'EVENT');
 
                 const message = document.createElement('span');
                 const parts = [
@@ -358,6 +359,63 @@ export default class extends Controller {
             node.textContent = this.formatTimestamp(timestamp);
             node.title = timestamp;
         });
+    }
+
+    localizeStatus(value) {
+        const key = String(value || '').toUpperCase();
+        const labels = {
+            RUNNING: 'ВИКОНУЄТЬСЯ',
+            HEALTHY: 'НОРМА',
+            STALE: 'НЕАКТИВНИЙ',
+            STALLED: 'ЗУПИНЕНО',
+            WAITING: 'ОЧІКУЄ',
+            TERMINAL: 'ЗАВЕРШЕНО',
+            COMPLETED: 'ЗАВЕРШЕНО',
+            CANCELLED: 'СКАСОВАНО',
+            FAILED: 'ПОМИЛКА',
+            NOT_REACHED: 'ЩЕ НЕ РОЗПОЧАТО',
+            ANALYSIS: 'АНАЛІЗ',
+            QA_PLANNING: 'ПЛАН ПЕРЕВІРКИ',
+            ARCHITECTURE_PENDING: 'АРХІТЕКТУРА',
+            DEVELOPMENT_RUNNING: 'РОЗРОБКА',
+            REVIEW_PENDING: 'РЕВ’Ю',
+            QA_PENDING: 'QA',
+            READY_FOR_HUMAN_APPROVAL: 'ОЧІКУЄ ПІДТВЕРДЖЕННЯ',
+            HUMAN_DECISION_REQUIRED: 'ПОТРІБНЕ РІШЕННЯ',
+            BLOCKED: 'ЗАБЛОКОВАНО',
+            ESCALATED: 'ЕСКАЛАЦІЯ',
+            DONE: 'ГОТОВО',
+        };
+        return labels[key] || String(value || '—');
+    }
+
+    localizeRole(value) {
+        const key = String(value || '').toUpperCase();
+        const labels = {
+            ENGINEERING_MANAGER: 'Менеджер розробки',
+            PRINCIPAL_ARCHITECT: 'Архітектор',
+            ARCHITECT: 'Архітектор',
+            DEVELOPER: 'Розробник',
+            REVIEWER: 'Рев’юер',
+            QA: 'QA',
+            AGENT: 'Агент',
+        };
+        return labels[key] || String(value || 'Агент');
+    }
+
+    localizeEventType(value) {
+        const key = String(value || '').toUpperCase();
+        const labels = {
+            REPOSITORY: 'РЕПОЗИТОРІЙ',
+            WATCHDOG: 'КОНТРОЛЬ',
+            RUNTIME: 'СИСТЕМА',
+            AGENT: 'АГЕНТ',
+            TOOL: 'ІНСТРУМЕНТ',
+            WORKFLOW: 'ПРОЦЕС',
+            LLM: 'LLM',
+            EVENT: 'ПОДІЯ',
+        };
+        return labels[key] || key;
     }
 
     setText(targets, value) {
