@@ -157,6 +157,32 @@ final readonly class EngineeringDomainController
         }
     }
 
+    public function dependencyGraph(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $tenant = $this->tenants->current();
+            $input = $this->input($request);
+            $dependencies = $input['dependencies'] ?? null;
+            if (!is_array($dependencies)) {
+                return $this->error('domain_dependencies_required', 'dependencies must be an array.', 422);
+            }
+            $domainId = EngineeringId::assert($id);
+            return new JsonResponse([
+                'ok' => true,
+                'data' => $this->runtime->updateDependencies(
+                    $domainId,
+                    $tenant->organizationId()->value(),
+                    $dependencies,
+                    'user:'.$tenant->userId()->value(),
+                    $this->correlationId($request, 'dependency-graph', $domainId),
+                ),
+            ]);
+        } catch (Throwable $error) {
+            return $this->exception($error);
+        }
+    }
+
     public function humanDecision(Request $request, string $id): JsonResponse
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
