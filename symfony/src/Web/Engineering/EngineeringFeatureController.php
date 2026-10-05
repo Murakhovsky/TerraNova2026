@@ -755,11 +755,11 @@ final readonly class EngineeringFeatureController
     private function stagePipeline(array $data, string $state, string $workflowStatus, string $runtimeHealth): array
     {
         $order = [
-            'ANALYSIS' => 'Analysis',
-            'QA_PLANNING' => 'QA Plan',
-            'ARCHITECTURE_PENDING' => 'Architecture',
-            'DEVELOPMENT_RUNNING' => 'Development',
-            'REVIEW_PENDING' => 'Review',
+            'ANALYSIS' => 'Аналіз',
+            'QA_PLANNING' => 'План перевірки',
+            'ARCHITECTURE_PENDING' => 'Архітектура',
+            'DEVELOPMENT_RUNNING' => 'Розробка',
+            'REVIEW_PENDING' => 'Рев’ю',
             'QA_PENDING' => 'QA',
         ];
         $keys = array_keys($order);
