@@ -69,6 +69,7 @@ framework:
     routing:
       'App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand': engineering
       'App\Application\Engineering\Command\RunEngineeringFeatureCommand': engineering_immediate
+      'App\Application\Engineering\Command\WatchEngineeringRuntimeCommand': engineering
       'App\Application\System\Command\SchedulerHeartbeatCommand': async
       'App\Application\Sales\Command\RunSalesAutomationCommand': async
       'App\Application\Growth\Command\RunGrowthSignalPollingCommand': async

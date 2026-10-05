@@ -88,6 +88,9 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             outputTokens: isset($usage['output_tokens']) ? (int) $usage['output_tokens'] : null,
             costAmount: null,
             costCurrency: null,
+            cachedInputTokens: isset($usage['input_tokens_details']['cached_tokens']) ? (int) $usage['input_tokens_details']['cached_tokens'] : null,
+            reasoningTokens: isset($usage['output_tokens_details']['reasoning_tokens']) ? (int) $usage['output_tokens_details']['reasoning_tokens'] : null,
+            providerRequestId: isset($decoded['id']) && is_string($decoded['id']) ? $decoded['id'] : null,
         );
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -26,6 +27,7 @@ final readonly class EngineeringFinalizeService
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringReportBuilder $reports,
         private EngineeringRepositoryGatewayInterface $repository,
+        private EngineeringExecutionJournal $journal,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -44,7 +46,21 @@ final readonly class EngineeringFinalizeService
         $pullRequestNumber = (int) ($development['content']['pull_request'] ?? 0);
         if ($pullRequestNumber <= 0) throw new RuntimeException('Engineering feature has no pull request.');
 
-        $pr = $this->repository->pullRequest($pullRequestNumber);
+        $pr = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'GIT',
+            'repository.pull_request_finalize',
+            'Verify human merge before finalizing workflow',
+            'engineering:finalize:'.$featureId,
+            fn (): array => $this->repository->pullRequest($pullRequestNumber),
+            details: static fn (array $state): array => [
+                'number' => $pullRequestNumber,
+                'state' => $state['state'] ?? null,
+                'merged' => $state['merged'] ?? null,
+                'merge_revision' => $state['merge_revision'] ?? null,
+            ],
+        );
         if (!$pr['merged'] || trim((string) ($pr['merge_revision'] ?? '')) === '') {
             throw new RuntimeException('Pull request must be merged by a human before Engineering workflow can become DONE.');
         }

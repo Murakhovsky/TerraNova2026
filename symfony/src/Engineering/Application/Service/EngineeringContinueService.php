@@ -35,6 +35,7 @@ final readonly class EngineeringContinueService
 
         $workflowId = $this->workflows->activeIdForFeature($featureId);
         if ($workflowId === null) throw new RuntimeException('Engineering feature has no active workflow.');
+        $this->workflows->touchRuntime($workflowId);
         $workflow = $this->workflows->get($workflowId);
         $this->features->updateStatus($featureId, $workflow->currentState()->value);
         $activeRole = $this->roleForState($workflow->currentState());
@@ -81,6 +82,7 @@ final readonly class EngineeringContinueService
             $next = $this->progression->continue($featureId, $workflowId, $next, $organizationId, $correlationId);
         }
 
+        $this->workflows->touchRuntime($workflowId);
         $current = $this->workflows->get($workflowId);
         return new EngineeringStartResult(
             featureId: $featureId,

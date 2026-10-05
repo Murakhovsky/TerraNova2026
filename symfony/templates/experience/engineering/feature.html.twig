@@ -9,161 +9,162 @@
     data-engineering-feature-id="{{ engineering.feature.id }}"
     data-cos-archetype="{{ page.archetypeId() }}"
     data-cos-page-state="{{ page.state }}"
-    data-cos-page-density="{{ page.density }}"
+    data-cos-page-density="compact"
 >
-    <twig:CosPageHeader
-        eyebrow="COS · Engineering"
-        title="{{ engineering.feature.title }}"
-        subtitle="{{ engineering.feature.business_goal ?: 'Autonomous engineering workflow status and evidence.' }}"
-        metaValue="{{ summary.state }}"
-        metaLabel="current stage"
-    >
-        <twig:CosButton label="До Engineering" href="/admin/engineering" variant="ghost" />
-        {% if summary.pull_request.url %}<twig:CosButton label="Open pull request" href="{{ summary.pull_request.url }}" variant="primary" />{% endif %}
-        {% if engineering.feature.external_issue_id %}<span class="cos-badge">GitHub Issue #{{ engineering.feature.external_issue_id }}</span>{% endif %}
-    </twig:CosPageHeader>
+    <style>
+        .engineering-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+        .engineering-head__title{margin:2px 0 6px}
+        .engineering-head__meta,.engineering-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .engineering-inline form{margin:0}
+        .engineering-summary{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px}
+        .engineering-summary__item{padding:10px 12px;border:1px solid var(--cos-border,#e1e5ea);border-radius:10px;background:var(--cos-surface,#fff)}
+        .engineering-summary__label{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);margin-bottom:4px}
+        .engineering-summary__value{font-size:.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+        .engineering-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:10px}
+        .engineering-panel{border:1px solid var(--cos-border,#e1e5ea);border-radius:12px;background:var(--cos-surface,#fff);overflow:hidden}
+        .engineering-panel__head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--cos-border,#e1e5ea)}
+        .engineering-panel__head h2,.engineering-panel__head h3{font-size:.95rem;margin:0}
+        .engineering-panel__body{padding:10px 12px}
+        .engineering-table-wrap{overflow:auto}
+        .engineering-table{width:100%;border-collapse:collapse;min-width:720px;font-size:.84rem}
+        .engineering-table th,.engineering-table td{padding:8px 9px;border-bottom:1px solid var(--cos-border,#edf0f3);text-align:left;vertical-align:top}
+        .engineering-table th{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);background:var(--cos-surface-subtle,#f8f9fb)}
+        .engineering-terminal{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.45;max-height:420px;overflow:auto;background:#111827;color:#e5e7eb;padding:10px 12px}
+        .engineering-terminal__row{display:grid;grid-template-columns:115px 105px minmax(0,1fr);gap:8px;padding:2px 0}
+        .engineering-terminal__muted{color:#94a3b8}
+        .engineering-muted{color:var(--cos-text-secondary,#667085)}
+        .engineering-warning{font-weight:700}
+        .engineering-danger{font-weight:700}
+        .engineering-details summary{cursor:pointer;font-weight:700}
+        .engineering-requirements{white-space:pre-wrap;margin-top:10px;max-height:420px;overflow:auto}
+        .engineering-agent-output{white-space:pre-wrap;max-height:240px;overflow:auto;font-size:.78rem}
+        .engineering-role-list{display:grid;gap:3px;margin-bottom:10px}
+        .engineering-role-row{display:grid;grid-template-columns:minmax(110px,1fr) 42px 58px minmax(90px,auto);gap:7px;align-items:center;padding:4px 0;border-bottom:1px solid var(--cos-border,#edf0f3);font-size:.76rem}
+        .engineering-role-row:last-child{border-bottom:0}
+        .engineering-stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+        .engineering-stage{padding:8px 10px;border:1px solid var(--cos-border,#e1e5ea);border-radius:9px;background:var(--cos-surface,#fff);min-width:0}
+        .engineering-stage strong{display:block;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .engineering-stage span{font-size:.7rem;color:var(--cos-text-secondary,#667085)}
+        @media(max-width:1350px){.engineering-summary{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:900px){.engineering-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}.engineering-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    </style>
 
-    {% if statusMessage %}
-        <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Engineering action failed' : 'Engineering updated' }}" copy="{{ statusMessage }}" tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
-    {% endif %}
-
-    <section class="cos-page__section" aria-labelledby="engineering-request">
-        <article class="cos-card">
-            <p class="cos-card__eyebrow">Original request</p>
-            <h2 id="engineering-request" class="cos-card__title">Description</h2>
-            <div class="cos-card__copy" style="white-space: pre-wrap;">{{ engineering.feature.description|default('Description is not available.') }}</div>
-        </article>
-    </section>
-
-    {% if engineering.workflow is null %}
-        <section class="cos-page__section cos-section-grid" aria-label="Engineering feature management">
-            <article class="cos-card">
-                <p class="cos-card__eyebrow">Draft feature</p>
-                <h2 class="cos-card__title">Редагувати запит</h2>
-                <p class="cos-card__copy">До першого запуску можна змінити назву, Description і priority. Після старту requirements стають частиною audit trail.</p>
-                <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/update" data-engineering-update>
+    <div class="engineering-head">
+        <div>
+            <p class="cos-card__eyebrow">COS · Engineering</p>
+            <h1 class="engineering-head__title">{{ engineering.feature.title }}</h1>
+            <div class="engineering-head__meta">
+                <span class="cos-badge">{{ engineering.feature.priority }}</span>
+                <span class="cos-badge">{{ summary.workflow_status }}</span>
+                <span class="cos-badge">{{ summary.state }}</span>
+                {% if summary.health in ['STALE','STALLED'] %}
+                    <span class="cos-badge engineering-warning">⚠ {{ summary.health }}</span>
+                {% else %}
+                    <span class="engineering-muted">{{ summary.health }}</span>
+                {% endif %}
+                {% if engineering.feature.external_issue_id %}<span class="cos-badge">GitHub #{{ engineering.feature.external_issue_id }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="engineering-inline">
+            <a class="cos-button cos-button--ghost" href="/admin/engineering">До списку</a>
+            {% if summary.pull_request.url %}<a class="cos-button cos-button--ghost" href="{{ summary.pull_request.url }}">Pull request</a>{% endif %}
+            {% set actions = summary.actions|default({}) %}
+            {% if actions.run|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <div class="cos-pattern-stack">
-                        <label class="cos-field">
-                            <span>Назва</span>
-                            <input class="cos-input" name="title" maxlength="255" value="{{ engineering.feature.title }}" required>
-                        </label>
-                        <label class="cos-field">
-                            <span>Description</span>
-                            <textarea class="cos-textarea" name="description" rows="12" required>{{ engineering.feature.description }}</textarea>
-                        </label>
-                        <label class="cos-field">
-                            <span>Priority</span>
-                            <select class="cos-select" name="priority">
-                                {% for priority in ['P0','P1','P2','P3'] %}
-                                    <option value="{{ priority }}" {{ engineering.feature.priority == priority ? 'selected' : '' }}>{{ priority }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                    </div>
-                    <button class="cos-button cos-button--primary" type="submit">Зберегти зміни</button>
+                    <button class="cos-button cos-button--primary" type="submit">Запустити</button>
                 </form>
-            </article>
-
-            <article class="cos-card">
-                <p class="cos-card__eyebrow">Danger zone</p>
-                <h2 class="cos-card__title">Видалити feature</h2>
-                <p class="cos-card__copy">Hard delete доступний тільки до першого запуску workflow. Після запуску історія агентів і artifacts не стирається.</p>
-                <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
+            {% elseif actions.resume|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <label class="cos-field">
-                        <span><input type="checkbox" name="confirm_delete" value="1" required> Підтверджую видалення цього draft feature</span>
-                    </label>
-                    <button class="cos-button cos-button--danger" type="submit">Видалити</button>
+                    <button class="cos-button cos-button--primary" type="submit">Відновити</button>
                 </form>
-            </article>
-        </section>
-    {% else %}
-        {% set terminalStates = ['DONE', 'CANCELLED', 'READY_FOR_HUMAN_APPROVAL'] %}
-        <section class="cos-page__section" aria-label="Engineering immutable request notice">
-            <twig:CosAlert
-                title="Requirements зафіксовані"
-                copy="Workflow уже запущений, тому початковий request показується read-only. Для зміни вимог створіть новий feature; активний workflow можна скасувати."
-                tone="info"
-            />
-            {% if engineering.workflow.state not in terminalStates %}
-                <article class="cos-card">
-                    <p class="cos-card__eyebrow">Workflow control</p>
-                    <h2 class="cos-card__title">Скасувати workflow</h2>
-                    <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/cancel" data-engineering-cancel>
+            {% elseif actions.continue|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Продовжити</button>
+                </form>
+            {% elseif actions.retry|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Повторити процес</button>
+                </form>
+            {% endif %}
+            {% if actions.finalize|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/finalize">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Перевірити merge та завершити</button>
+                </form>
+            {% endif %}
+            {% if actions.cancel|default(false) %}
+                <details class="engineering-details">
+                    <summary class="cos-button cos-button--danger">Скасувати</summary>
+                    <form class="cos-form cos-card" style="position:absolute;right:24px;z-index:5;min-width:360px;padding:12px" method="post" action="/admin/engineering/{{ engineering.feature.id }}/cancel">
                         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                         <label class="cos-field">
                             <span>Причина</span>
-                            <input class="cos-input" name="reason" value="Cancelled from Engineering UI.">
+                            <input class="cos-input" name="reason" value="Скасовано з Engineering UI." required>
                         </label>
-                        <button class="cos-button cos-button--danger" type="submit">Cancel workflow</button>
+                        <button class="cos-button cos-button--danger" type="submit">Підтвердити скасування</button>
                     </form>
-                </article>
-            {% elseif engineering.workflow.state in ['CANCELLED', 'FAILED'] %}
-                <article class="cos-card">
-                    <p class="cos-card__eyebrow">Danger zone</p>
-                    <h2 class="cos-card__title">Видалити завершений невдало workflow</h2>
-                    <p class="cos-card__copy">CANCELLED/FAILED workflow можна видалити, якщо він не створив pull request. DONE та workflow з PR зберігаються як audit history.</p>
-                    <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
-                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                        <label class="cos-field">
-                            <span><input type="checkbox" name="confirm_delete" value="1" required> Підтверджую hard delete цього workflow та його локальної історії</span>
-                        </label>
-                        <button class="cos-button cos-button--danger" type="submit">Видалити workflow</button>
-                    </form>
-                </article>
+                </details>
             {% endif %}
-        </section>
+        </div>
+    </div>
+
+    {% if statusMessage %}
+        <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Помилка Engineering' : 'Engineering оновлено' }}" copy="{{ statusMessage }}" tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
     {% endif %}
 
-    <section class="cos-page__section" aria-label="Engineering controls">
-        <article class="cos-card">
-            <p class="cos-card__eyebrow">Workflow control</p>
-            <h2 class="cos-card__title">Запустити або продовжити</h2>
-            <p class="cos-card__copy">Команда стартує новий workflow або продовжує активний із поточного state.</p>
-            <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run" data-engineering-run>
-                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                <button class="cos-button cos-button--primary" type="submit">Start / Continue</button>
-            </form>
-        </article>
-    </section>
-
-    <section class="cos-kpi-strip" aria-label="Engineering workflow metrics">
-        <article class="cos-card"><twig:CosMetric label="Tasks" value="{{ summary.tasks_completed }}/{{ summary.tasks_total }}" hint="completed" /></article>
-        <article class="cos-card"><twig:CosMetric label="Agent runs" value="{{ summary.agent_runs }}" hint="all roles" /></article>
-        <article class="cos-card"><twig:CosMetric label="Tokens" value="{{ summary.tokens|number_format(0, '.', ' ') }}" hint="input + output" /></article>
-        <article class="cos-card"><twig:CosMetric label="Estimated cost" value="${{ summary.cost|number_format(4, '.', '') }}" hint="provider metadata" /></article>
-    </section>
+    <details class="engineering-panel engineering-details">
+        <summary class="engineering-panel__head">
+            <span>Вимоги та опис</span>
+            <span class="engineering-muted">{{ engineering.workflow ? 'зафіксовано після старту workflow' : 'редагується до старту' }}</span>
+        </summary>
+        <div class="engineering-panel__body">
+            {% if engineering.workflow is null %}
+                <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/update" data-engineering-update>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <div class="cos-form__grid">
+                        <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" maxlength="255" value="{{ engineering.feature.title }}" required></label>
+                        <label class="cos-field"><span>Пріоритет</span>
+                            <select class="cos-select" name="priority">
+                                {% for priority in ['P0','P1','P2','P3'] %}<option value="{{ priority }}" {{ engineering.feature.priority == priority ? 'selected' : '' }}>{{ priority }}</option>{% endfor %}
+                            </select>
+                        </label>
+                        <label class="cos-field" style="grid-column:1/-1"><span>Опис</span><textarea class="cos-textarea" name="description" rows="10" required>{{ engineering.feature.description }}</textarea></label>
+                    </div>
+                    <button class="cos-button cos-button--primary" type="submit">Зберегти</button>
+                </form>
+            {% else %}
+                <div class="engineering-requirements">{{ engineering.feature.description|default('Опис відсутній.') }}</div>
+            {% endif %}
+        </div>
+    </details>
 
     {% if engineering.open_human_decisions is not empty %}
-        <section class="cos-page__section" aria-labelledby="engineering-human-decisions">
-            <div class="cos-card">
-                <p class="cos-card__eyebrow">Human gate</p>
-                <h2 id="engineering-human-decisions" class="cos-card__title">Потрібне рішення людини</h2>
-                <p class="cos-card__copy">Workflow не продовжиться мовчки. Оберіть один із запропонованих варіантів.</p>
+        <section class="engineering-panel" aria-labelledby="engineering-human-decisions">
+            <div class="engineering-panel__head">
+                <h2 id="engineering-human-decisions">⚠ Потрібне рішення людини</h2>
+                <span class="cos-badge">{{ engineering.open_human_decisions|length }}</span>
             </div>
-            <div class="cos-section-grid">
+            <div class="engineering-panel__body">
                 {% for decision in engineering.open_human_decisions %}
-                    <article class="cos-card" data-engineering-human-decision="{{ decision.id }}">
-                        <p class="cos-card__eyebrow">{{ decision.type|default('DECISION') }}</p>
-                        <h3 class="cos-card__title">{{ decision.question|default('Human decision required') }}</h3>
-                        <p class="cos-card__copy">{{ decision.reason|default('Workflow is waiting for human input.') }}</p>
-                        {% if decision.recommended_option %}<p><span class="cos-badge">Recommended: {{ decision.recommended_option }}</span></p>{% endif %}
+                    <article style="margin-bottom:12px">
+                        <strong>{{ decision.question|default('Потрібне рішення') }}</strong>
+                        <p class="engineering-muted">{{ decision.reason|default('Workflow очікує на рішення.') }}</p>
                         <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/human-decision">
                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                             <input type="hidden" name="request_id" value="{{ decision.id }}">
-                            <div class="cos-pattern-stack">
+                            <div class="engineering-inline">
                                 {% for option in decision.options|default([]) %}
                                     {% set optionValue = option is iterable ? option.value|default(option.id|default(option.option|default(''))) : option %}
                                     {% set optionLabel = option is iterable ? option.label|default(option.title|default(optionValue)) : option %}
-                                    {% if optionValue %}
-                                        <label class="cos-field"><span><input type="radio" name="option" value="{{ optionValue }}" required> {{ optionLabel }}</span></label>
-                                    {% endif %}
+                                    {% if optionValue %}<label><input type="radio" name="option" value="{{ optionValue }}" required> {{ optionLabel }}</label>{% endif %}
                                 {% else %}
-                                    <label class="cos-field"><span>Рішення</span><input class="cos-input" name="option" required></label>
+                                    <input class="cos-input" name="option" placeholder="Рішення" required>
                                 {% endfor %}
-                                <label class="cos-field"><span>Коментар</span><textarea class="cos-textarea" name="comment" rows="2"></textarea></label>
                             </div>
+                            <label class="cos-field"><span>Коментар</span><textarea class="cos-textarea" name="comment" rows="2"></textarea></label>
                             <button class="cos-button cos-button--primary" type="submit">Прийняти рішення</button>
                         </form>
                     </article>
@@ -172,66 +173,425 @@
         </section>
     {% endif %}
 
-    <section class="cos-page__section cos-section-grid" aria-label="Engineering status">
-        <article class="cos-card">
-            <p class="cos-card__eyebrow">Feature</p>
-            <h2 class="cos-card__title">{{ summary.state }}</h2>
-            <div class="cos-entity-list" role="list">
-                <twig:CosEntityListItem title="Priority" subtitle="{{ engineering.feature.priority }}" meta="{{ engineering.feature.complexity|default('n/a') }}" />
-                <twig:CosEntityListItem title="Repository revision" subtitle="{{ engineering.feature.repository_revision|default('not captured yet') }}" meta="{{ engineering.workflow.id|default('no workflow') }}" />
-                <twig:CosEntityListItem title="Last activity" subtitle="{{ engineering.workflow.last_activity_at|default('not started') }}" meta="{{ engineering.workflow.trace_id|default('') }}" />
-            </div>
-        </article>
-        <article class="cos-card">
-            <p class="cos-card__eyebrow">Quality gate</p>
-            <h2 class="cos-card__title">Open findings</h2>
-            {% if summary.open_findings is empty %}
-                <twig:CosEmptyState title="Немає відкритих findings" copy="Reviewer та QA не залишили невирішених зауважень." />
-            {% else %}
-                <div class="cos-entity-list" role="list">{% for finding in summary.open_findings %}<twig:CosEntityListItem title="{{ finding.severity }} · {{ finding.title }}" subtitle="{{ finding.description }}" meta="{{ finding.source_role }}" />{% endfor %}</div>
-            {% endif %}
-        </article>
+    <section class="engineering-summary" aria-label="Зведення execution">
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value">{{ summary.workflow_status }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value">{{ summary.state }}</span></div>
+        <div class="engineering-summary__item">
+            <span class="engineering-summary__label">Runtime</span>
+            <span class="engineering-summary__value">{{ summary.health }}</span>
+            <span class="engineering-table__meta">{{ engineering.workflow.heartbeat_at|default('heartbeat n/a') }}</span>
+        </div>
+        <div class="engineering-summary__item">
+            <span class="engineering-summary__label">Поточний агент</span>
+            <span class="engineering-summary__value">{{ summary.current_agent.role|default('—') }}</span>
+            {% if summary.current_agent %}<span class="engineering-table__meta">{{ summary.current_agent.run_id }}</span>{% endif %}
+        </div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Запуски агентів</span><span class="engineering-summary__value">{{ summary.agent_runs }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Задачі</span><span class="engineering-summary__value">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Тривалість</span><span class="engineering-summary__value">{{ summary.duration_label }}</span></div>
+        <div class="engineering-summary__item">
+            <span class="engineering-summary__label">Tokens</span>
+            <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'unavailable' }}</span>
+        </div>
+        <div class="engineering-summary__item">
+            <span class="engineering-summary__label">
+                Вартість
+                {% if summary.usage.cost_sources|default([]) is not empty %} · {{ summary.usage.cost_sources|join(', ') }}{% endif %}
+            </span>
+            <span class="engineering-summary__value">
+                {% if summary.cost is not null %}{{ summary.usage.cost_currency|default('USD') }} {{ summary.cost|number_format(4, '.', '') }}{% else %}unavailable{% endif %}
+            </span>
+        </div>
     </section>
 
-    <section class="cos-page__section" aria-labelledby="engineering-tasks">
-        <div class="cos-card"><p class="cos-card__eyebrow">Execution plan</p><h2 id="engineering-tasks" class="cos-card__title">Tasks</h2></div>
-        {% if engineering.tasks is empty %}
-            <twig:CosEmptyState title="Tasks ще не створені" copy="Engineering Manager ще не завершив декомпозицію." />
+    <section class="engineering-stages" aria-label="Етапи workflow">
+        {% for stage in summary.stages %}
+            <div class="engineering-stage">
+                <strong>{{ stage.label }}</strong>
+                <span>{{ stage.status }}</span>
+            </div>
+        {% endfor %}
+    </section>
+
+    {% if summary.tokens is null %}
+        <twig:CosAlert
+            title="Немає даних про токени"
+            copy="Provider usage не прив’язаний до цього workflow. COS не підміняє невідоме значення нулем; перевірте correlation у LLM ledger нижче."
+            tone="warning"
+        />
+    {% elseif summary.cost is null %}
+        <twig:CosAlert
+            title="Токени обліковані, вартість ще не визначена"
+            copy="Provider не повернув cost, а для цієї моделі немає налаштованої ставки в Platform Settings namespace llm_pricing. Токени показані фактично; $0.0000 більше не використовується як фальшиве значення."
+            tone="warning"
+        />
+    {% endif %}
+
+    <div class="engineering-grid">
+        <section class="engineering-panel">
+            <div class="engineering-panel__head">
+                <h2>Термінал виконання</h2>
+                <span class="engineering-muted">{{ engineering.timeline|length }} подій</span>
+            </div>
+            <div class="engineering-terminal">
+                {% if engineering.timeline is empty %}
+                    <div class="engineering-terminal__muted">Подій виконання ще немає.</div>
+                {% else %}
+                    {% for event in engineering.timeline %}
+                        <div class="engineering-terminal__row">
+                            <span class="engineering-terminal__muted">{{ event.time|default('') }}</span>
+                            <strong>{{ event.type|default('EVENT') }}</strong>
+                            <span>
+                                {{ event.title|default('') }}
+                                {% if event.status|default('') %} · {{ event.status }}{% endif %}
+                                {% if event.detail|default('') %} · {{ event.detail }}{% endif %}
+                            </span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="engineering-panel">
+            <div class="engineering-panel__head">
+                <h2>Контроль якості</h2>
+                <span class="cos-badge">{{ summary.quality_state }}</span>
+            </div>
+            <div class="engineering-panel__body">
+                {% if summary.roles is not empty %}
+                    <div class="engineering-role-list" aria-label="Участь агентів">
+                        {% for role, metrics in summary.roles %}
+                            <div class="engineering-role-row">
+                                <strong>{{ role }}</strong>
+                                <span>{{ metrics.runs }}×</span>
+                                <span>
+                                    {% if metrics.running > 0 %}● {{ metrics.running }}
+                                    {% elseif metrics.failed > 0 %}⚠ {{ metrics.failed }}
+                                    {% else %}✓ {{ metrics.completed }}{% endif %}
+                                </span>
+                                <span class="engineering-muted">
+                                    {% if metrics.tokens > 0 %}{{ metrics.tokens|number_format(0, '.', ' ') }} tok{% else %}—{% endif %}
+                                    {% if metrics.cost > 0 %} · USD {{ metrics.cost|number_format(3, '.', '') }}{% endif %}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if summary.quality_state == 'NOT_REACHED' %}
+                    <strong>Review/QA ще не були досягнуті.</strong>
+                    <p class="engineering-muted">Відсутність findings не означає PASS, якщо Reviewer або QA не запускалися.</p>
+                {% elseif summary.open_findings is empty %}
+                    <strong>Відкритих findings немає.</strong>
+                    <p class="engineering-muted">Reviewer: {{ summary.review_reached ? 'виконувався' : 'не виконувався' }} · QA: {{ summary.qa_reached ? 'виконувався' : 'не виконувався' }}</p>
+                {% else %}
+                    {% for finding in summary.open_findings %}
+                        <div style="margin-bottom:8px">
+                            <strong>{{ finding.severity|default('') }} · {{ finding.title|default('Finding') }}</strong>
+                            <div class="engineering-muted">{{ finding.description|default('') }}</div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    {% set engineeringTabs = [
+        {'key': 'agents', 'label': 'Агенти · ' ~ summary.agent_runs},
+        {'key': 'plan', 'label': 'План · ' ~ summary.tasks_total},
+        {'key': 'actions', 'label': 'Дії · ' ~ engineering.execution_events|length},
+        {'key': 'usage', 'label': 'LLM · ' ~ engineering.llm_invocations|length},
+        {'key': 'technical', 'label': 'Артефакти та аудит'}
+    ] %}
+
+    <twig:CosTabs id="engineering-details-tabs" label="Деталі workflow" :items="engineeringTabs" active="agents">
+        <section
+            id="engineering-details-tabs-panel-agents"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-agents"
+            data-tabs-target="panel"
+            data-tab-key="agents"
+        >
+    <section class="engineering-panel" aria-labelledby="engineering-runs">
+        <div class="engineering-panel__head">
+            <h2 id="engineering-runs">Запуски агентів</h2>
+            <span class="engineering-muted">{{ summary.agent_runs }} runs</span>
+        </div>
+        {% if engineering.agent_runs is empty %}
+            <div class="engineering-panel__body engineering-muted">Жоден агент ще не запускався.</div>
         {% else %}
-            <div class="cos-entity-list" role="list">{% for task in engineering.tasks %}<twig:CosEntityListItem title="{{ task.external_key }} · {{ task.assigned_role }}" subtitle="{{ task.status }}" meta="{{ task.id }}" />{% endfor %}</div>
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Роль</th><th>Статус</th><th>Модель</th><th>Tokens</th><th>Вартість</th><th>Повтори</th><th>Початок / кінець</th><th>Результат</th></tr></thead>
+                    <tbody>
+                    {% for run in engineering.agent_runs %}
+                        {% set ledgerUsage = run.ledger_usage|default(null) %}
+                        {% set runTokens = ledgerUsage and ledgerUsage.total_tokens is not null
+                            ? ledgerUsage.total_tokens
+                            : ((run.tokens_input is not null or run.tokens_output is not null) ? (run.tokens_input|default(0) + run.tokens_output|default(0)) : null) %}
+                        {% set runCost = ledgerUsage and ledgerUsage.cost_amount is not null ? ledgerUsage.cost_amount : run.cost %}
+                        <tr>
+                            <td><strong>{{ run.role }}</strong><div class="engineering-muted">{{ run.id }}</div></td>
+                            <td>{{ run.status }}{% if run.error_type %}<div class="engineering-danger">{{ run.error_type }}</div>{% endif %}</td>
+                            <td>{{ run.provider|default('unknown') }} / {{ run.model|default('unknown') }}</td>
+                            <td>{{ runTokens is not null ? runTokens|number_format(0, '.', ' ') : 'unavailable' }}</td>
+                            <td>
+                                {% if runCost is not null %}
+                                    USD {{ runCost|number_format(4, '.', '') }}
+                                    {% if ledgerUsage %}
+                                        <div class="engineering-muted">
+                                            {{ ledgerUsage.invocations }} LLM виклик(ів)
+                                            {% if ledgerUsage.cost_sources|default([]) is not empty %} · {{ ledgerUsage.cost_sources|join(', ') }}{% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="engineering-muted">вартість недоступна</span>
+                                    {% if run.ledger_usage_ambiguous|default(false) %}
+                                        <div class="engineering-muted">legacy trace спільний для кількох запусків; точна атрибуція неможлива</div>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>логічний {{ run.logical_attempt|default(1) }} · технічний {{ run.technical_retry|default(0) }}</td>
+                            <td>{{ run.started_at|default('') }}<div class="engineering-muted">{{ run.finished_at|default('running') }}</div></td>
+                            <td>
+                                <details class="engineering-details">
+                                    <summary>Деталі</summary>
+                                    {% if run.error_message %}<p class="engineering-danger">{{ run.error_message }}</p>{% endif %}
+                                    {% if run.input_snapshot|default([]) is not empty %}
+                                        <details class="engineering-details" style="margin:8px 0">
+                                            <summary>Вхідний контекст агента</summary>
+                                            <div class="engineering-agent-output">{{ run.input_snapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                        </details>
+                                    {% endif %}
+                                    {% if run.runtime_steps|default([]) is not empty %}
+                                        <div style="margin:8px 0">
+                                            <strong>Кроки runtime</strong>
+                                            {% for step in run.runtime_steps %}
+                                                <details class="engineering-details" style="margin-top:4px">
+                                                    <summary>#{{ step.sequence|default('?') }} · {{ step.type|default('step') }} · {{ step.status|default('UNKNOWN') }}</summary>
+                                                    {% if step.error|default('') %}<div class="engineering-danger">{{ step.error }}</div>{% endif %}
+                                                    {% if step.input|default([]) is not empty %}
+                                                        <div class="engineering-muted">Вхід</div>
+                                                        <div class="engineering-agent-output">{{ step.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                    {% endif %}
+                                                    {% if step.output|default([]) is not empty %}
+                                                        <div class="engineering-muted">Вихід</div>
+                                                        <div class="engineering-agent-output">{{ step.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                    {% endif %}
+                                                </details>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if run.output.decision|default('') %}<div><strong>Рішення:</strong> {{ run.output.decision }}</div>{% endif %}
+                                    {% if run.output.reason|default('') %}<div><strong>Причина:</strong> {{ run.output.reason }}</div>{% endif %}
+                                    {% if run.output.proposed_actions|default([]) is not empty %}
+                                        <div><strong>Запропоновані дії:</strong> {{ run.output.proposed_actions|length }}</div>
+                                    {% endif %}
+                                    <details class="engineering-details" style="margin-top:6px">
+                                        <summary>Структурований результат</summary>
+                                        <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
+                                    </details>
+                                    <div class="engineering-muted">trace: {{ run.trace_id|default('n/a') }}</div>
+                                </details>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         {% endif %}
     </section>
+        </section>
 
-    <section class="cos-page__section" aria-labelledby="engineering-runs">
-        <div class="cos-card"><p class="cos-card__eyebrow">Agent runtime</p><h2 id="engineering-runs" class="cos-card__title">AgentRuns</h2></div>
-        {% if engineering.agent_runs is empty %}
-            <twig:CosEmptyState title="Agent runs ще немає" copy="Workflow ще не виконав жодного agent stage." />
+        <section
+            id="engineering-details-tabs-panel-plan"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-plan"
+            data-tabs-target="panel"
+            data-tab-key="plan"
+            hidden
+        >
+    <section class="engineering-panel" aria-labelledby="engineering-tasks">
+        <div class="engineering-panel__head">
+            <h2 id="engineering-tasks">План виконання</h2>
+            <span class="engineering-muted">{{ summary.tasks_completed }}/{{ summary.tasks_total }} completed</span>
+        </div>
+        {% if engineering.tasks is empty %}
+            <div class="engineering-panel__body">
+                <strong>Execution plan не створено.</strong>
+                <p class="engineering-muted">Якщо workflow завершив analysis без persisted task decomposition, це слід вважати відсутністю plan, а не порожньою декоративною таблицею.</p>
+            </div>
         {% else %}
-            <div class="cos-entity-list" role="list">
-                {% for run in engineering.agent_runs %}
-                    <twig:CosEntityListItem title="{{ run.role }} · {{ run.status }}" subtitle="{{ run.model|default('model pending') }} · logical {{ run.logical_attempt|default(1) }} · technical retries {{ run.technical_retry|default(0) }}" meta="{{ run.cost is not null ? ('$' ~ run.cost|number_format(4, '.', '')) : 'cost n/a' }}" />
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Task</th><th>Назва</th><th>Роль</th><th>Статус</th><th>Attempt</th><th>Dependencies</th></tr></thead>
+                    <tbody>
+                    {% for task in engineering.tasks %}
+                        <tr>
+                            <td>{{ task.external_key }}</td>
+                            <td><strong>{{ task.title|default(task.description|default('')) }}</strong><div class="engineering-muted">{{ task.description|default('') }}</div></td>
+                            <td>{{ task.assigned_role }}</td>
+                            <td>{{ task.status }}</td>
+                            <td>{{ task.attempt|default(0) }}/{{ task.max_attempts|default(0) }}</td>
+                            <td>{{ task.dependencies|default([])|join(', ') ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+        </section>
+
+        <section
+            id="engineering-details-tabs-panel-actions"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-actions"
+            data-tabs-target="panel"
+            data-tab-key="actions"
+            hidden
+        >
+    <section class="engineering-panel" aria-labelledby="engineering-actions">
+        <div class="engineering-panel__head">
+            <h2 id="engineering-actions">Інструменти та дії</h2>
+            <span class="engineering-muted">{{ engineering.execution_events|length }} подій</span>
+        </div>
+        {% if engineering.execution_events is empty %}
+            <div class="engineering-panel__body engineering-muted">Окремий журнал tool/repository actions для цього workflow ще порожній.</div>
+        {% else %}
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Час</th><th>Категорія</th><th>Дія</th><th>Статус</th><th>Тривалість</th><th>Результат</th></tr></thead>
+                    <tbody>
+                    {% for event in engineering.execution_events %}
+                        <tr>
+                            <td>{{ event.occurred_at }}</td>
+                            <td>{{ event.category }}</td>
+                            <td><strong>{{ event.action }}</strong><div class="engineering-muted">{{ event.summary }}</div></td>
+                            <td>{{ event.status }}</td>
+                            <td>{{ event.duration_ms is not null ? (event.duration_ms ~ ' ms') : '—' }}</td>
+                            <td>
+                                {% if event.error %}<div class="engineering-danger">{{ event.error }}</div>{% endif %}
+                                {% if event.details is not empty %}
+                                    <details class="engineering-details">
+                                        <summary>Деталі</summary>
+                                        <div class="engineering-agent-output">{{ event.details|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                    </details>
+                                {% elseif not event.error %}
+                                    <span class="engineering-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+        </section>
+
+        <section
+            id="engineering-details-tabs-panel-usage"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-usage"
+            data-tabs-target="panel"
+            data-tab-key="usage"
+            hidden
+        >
+    <section class="engineering-panel">
+        <div class="engineering-panel__head">
+            <h2>Облік LLM</h2>
+            <span class="engineering-muted">{{ engineering.llm_invocations|length }} invocation(s) · source {{ summary.usage_source }}</span>
+        </div>
+        {% if engineering.llm_invocations is empty %}
+            <div class="engineering-panel__body">
+                <strong>Provider ledger для цього workflow не знайдено.</strong>
+                <p class="engineering-muted">Це не дорівнює 0 tokens / $0. Якщо OpenAI usage існує, але correlation не з'єднаний з AgentRun, accounting потребує виправлення.</p>
+            </div>
+        {% else %}
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Час</th><th>Provider / модель</th><th>Сценарій</th><th>Вхідні</th><th>Cached</th><th>Вихідні</th><th>Reasoning</th><th>Усього</th><th>Вартість</th><th>Джерело ціни</th><th>Затримка</th><th>Provider request</th><th>Correlation</th></tr></thead>
+                    <tbody>
+                    {% for inv in engineering.llm_invocations %}
+                        <tr>
+                            <td>{{ inv.created_at }}</td>
+                            <td>{{ inv.provider }} / {{ inv.model }}</td>
+                            <td>{{ inv.use_case|default('—') }}</td>
+                            <td>{{ inv.input_tokens is not null ? inv.input_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.cached_input_tokens is not null ? inv.cached_input_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.output_tokens is not null ? inv.output_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.reasoning_tokens is not null ? inv.reasoning_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.total_tokens is not null ? inv.total_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.cost_amount is not null ? ((inv.cost_currency|default('USD')) ~ ' ' ~ inv.cost_amount|number_format(6, '.', '')) : 'unavailable' }}</td>
+                            <td>{{ inv.cost_source|default('unavailable') }}{% if inv.pricing_version|default('') %}<div class="engineering-muted">{{ inv.pricing_version }}</div>{% endif %}</td>
+                            <td>{{ inv.latency_ms is not null ? (inv.latency_ms ~ ' ms') : 'n/a' }}</td>
+                            <td><code>{{ inv.provider_request_id|default('n/a') }}</code></td>
+                            <td><code>{{ inv.correlation_id }}</code></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+        </section>
+
+        <section
+            id="engineering-details-tabs-panel-technical"
+            role="tabpanel"
+            aria-labelledby="engineering-details-tabs-tab-technical"
+            data-tabs-target="panel"
+            data-tab-key="technical"
+            hidden
+        >
+    <div class="engineering-grid">
+        <section class="engineering-panel">
+            <div class="engineering-panel__head"><h2>Артефакти / репозиторій</h2><span class="engineering-muted">{{ engineering.artifacts|length }} artifacts</span></div>
+            <div class="engineering-panel__body">
+                <div><strong>Repository revision:</strong> {{ engineering.feature.repository_revision|default('not captured') }}</div>
+                {% if summary.pull_request.number %}<div><strong>Pull request:</strong> #{{ summary.pull_request.number }}</div>{% endif %}
+                {% for type, artifact in engineering.artifacts %}
+                    <details class="engineering-details" style="margin-top:8px">
+                        <summary>{{ type }} · v{{ artifact.version|default('?') }}</summary>
+                        <div class="engineering-agent-output">{{ artifact.content ? artifact.content|json_encode(constant('JSON_PRETTY_PRINT')) : 'No content' }}</div>
+                    </details>
+                {% else %}
+                    <p class="engineering-muted">Artifacts ще не створені.</p>
                 {% endfor %}
             </div>
-        {% endif %}
-    </section>
-
-    {% if summary.final_report %}
-        <section class="cos-page__section cos-section-grid" aria-label="Final report">
-            <article class="cos-card">
-                <p class="cos-card__eyebrow">Final Report</p>
-                <h2 class="cos-card__title">{{ summary.final_report.recommendation|default(summary.state) }}</h2>
-                <div class="cos-entity-list" role="list">
-                    <twig:CosEntityListItem title="Review" subtitle="{{ summary.final_report.review.status|default('n/a') }}" meta="{{ summary.final_report.review.cycles|default(0) }} cycles" />
-                    <twig:CosEntityListItem title="QA" subtitle="{{ summary.final_report.qa.status|default('n/a') }}" meta="{{ summary.final_report.qa.cycles|default(0) }} cycles" />
-                    <twig:CosEntityListItem title="CI" subtitle="{{ summary.final_report.ci.status|default('n/a') }}" meta="{{ summary.final_report.ci.passed|default(0) }}/{{ summary.final_report.ci.total|default(0) }} passed" />
-                </div>
-            </article>
-            <article class="cos-card">
-                <p class="cos-card__eyebrow">Evidence</p>
-                <h2 class="cos-card__title">Artifacts</h2>
-                <div class="cos-entity-list" role="list">{% for type, artifact in engineering.artifacts %}<twig:CosEntityListItem title="{{ type }}" subtitle="version {{ artifact.version|default('?') }}" meta="{{ artifact.created_by_agent|default('system') }}" />{% endfor %}</div>
-            </article>
         </section>
+
+        <section class="engineering-panel">
+            <div class="engineering-panel__head"><h2>Технічні дані / аудит</h2><span class="engineering-muted">raw identifiers</span></div>
+            <div class="engineering-panel__body">
+                <div><strong>Feature ID:</strong> <code>{{ engineering.feature.id }}</code></div>
+                <div><strong>Workflow ID:</strong> <code>{{ engineering.workflow.id|default('n/a') }}</code></div>
+                <div><strong>Trace:</strong> <code>{{ engineering.workflow.trace_id|default('n/a') }}</code></div>
+                <div><strong>Остання активність:</strong> {{ engineering.workflow.last_activity_at|default('не запускалось') }}</div>
+                <div><strong>Heartbeat:</strong> {{ engineering.workflow.heartbeat_at|default('немає') }}</div>
+                <div><strong>Runtime health:</strong> {{ engineering.workflow.health_status|default('UNKNOWN') }}</div>
+                {% if engineering.workflow.stalled_at|default('') %}<div><strong>Stalled at:</strong> {{ engineering.workflow.stalled_at }}</div>{% endif %}
+                {% if engineering.workflow.runtime_reason|default('') %}<div><strong>Причина:</strong> {{ engineering.workflow.runtime_reason }}</div>{% endif %}
+                <div><strong>Початок:</strong> {{ engineering.workflow.started_at|default('не запускалось') }}</div>
+                <div><strong>Завершення:</strong> {{ engineering.workflow.finished_at|default('не завершено') }}</div>
+            </div>
+        </section>
+    </div>
+        </section>
+    </twig:CosTabs>
+
+    {% if engineering.workflow is null or summary.can_retry %}
+        <details class="engineering-panel engineering-details">
+            <summary class="engineering-panel__head"><span>Danger zone</span><span class="engineering-muted">hard delete</span></summary>
+            <div class="engineering-panel__body">
+                <p class="engineering-muted">Hard delete доступний тільки для draft або CANCELLED/FAILED workflow без pull request.</p>
+                <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <label><input type="checkbox" name="confirm_delete" value="1" required> Підтверджую видалення локальної Engineering історії</label>
+                    <button class="cos-button cos-button--danger" type="submit">Видалити</button>
+                </form>
+            </div>
+        </details>
     {% endif %}
 </section>
 {% endblock %}

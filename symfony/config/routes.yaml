@@ -2168,6 +2168,12 @@ cos_web_engineering_human_decision:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_web_engineering_finalize:
+  path: /admin/engineering/{id}/finalize
+  controller: App\Web\Engineering\EngineeringFeatureController::finalize
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_update:
   path: /admin/engineering/{id}/update
   controller: App\Web\Engineering\EngineeringFeatureController::update

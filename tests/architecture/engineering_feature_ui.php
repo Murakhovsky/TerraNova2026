@@ -20,11 +20,13 @@ foreach ([
     '/admin/engineering/{id}/update',
     '/admin/engineering/{id}/delete',
     '/admin/engineering/{id}/cancel',
+    '/admin/engineering/{id}/finalize',
     '/admin/engineering/{id}/queue',
     'EngineeringFeatureController::queue',
     'EngineeringFeatureController::update',
     'EngineeringFeatureController::delete',
     'EngineeringFeatureController::cancel',
+    'EngineeringFeatureController::finalize',
 ] as $needle) {
     if (!str_contains($routes, $needle)) throw new RuntimeException('Engineering feature UI route missing '.$needle);
 }
@@ -37,48 +39,63 @@ foreach ([
     'SystemControlSurface',
     'EngineeringFeatureManagementService',
     'EngineeringCancelService',
+    'EngineeringFinalizeService',
+    'uiActions',
     'ContinueEngineeringWorkflowsCommand',
     'RunEngineeringFeatureCommand',
     'queueForOrganization',
     'activeForOrganization',
-    'activeExecutions',
+    'workspaceRows',
+    'workspaceStats',
     'workflow_state',
+    'workspaceFactsForFeatures',
+    'runtimeHealth',
+    'workspaceView',
+    'workspaceQuery',
     'queueImmediate',
 ] as $needle) {
     if (!str_contains($controller, $needle)) throw new RuntimeException('Engineering feature UI controller missing '.$needle);
 }
 
 foreach ([
-    'current stage',
-    'Open findings',
-    'Tasks',
-    'AgentRuns',
-    'Final Report',
-    'Open pull request',
-    'Description',
+    'Термінал виконання',
+    'План виконання',
+    'Запуски агентів',
+    'Облік LLM',
+    'Контроль якості',
+    'Немає даних про токени',
+    'Токени обліковані, вартість ще не визначена',
+    'Вимоги та опис',
+    'engineering.timeline',
+    'runtime_steps',
+    'Вхідний контекст агента',
+    'Кроки runtime',
+    'heartbeat_at',
+    'health_status',
+    'Інструменти та дії',
+    'engineering.execution_events',
+    'engineering-details-tabs',
+    'data-tabs-target="panel"',
     'data-engineering-update',
+    'Перевірити merge та завершити',
     'data-engineering-delete',
-    'data-engineering-cancel',
 ] as $needle) {
-    if (!str_contains($template, $needle)) throw new RuntimeException('Engineering feature UI missing '.$needle);
+    if (!str_contains($template, $needle)) throw new RuntimeException('Engineering workflow terminal UI missing '.$needle);
 }
 
-
-
 foreach ([
-    'data-engineering-queue',
-    'Priority queue',
-    'data-engineering-active-executions',
-    'Active executions',
-    'displayStatus',
+    'Агентська розробка',
+    'Процеси',
     'P0 → P1 → P2 → P3',
     'data-engineering-workspace-list',
-    'data-engineering-feature-actions',
     'execution_mode',
-    'Run now',
-    'Cancel',
+    'Фільтри Engineering',
+    'name="q"',
+    'облік недоступний',
+    'Потрібне рішення',
+    'Повторити',
 ] as $needle) {
-    if (!str_contains($indexTemplate, $needle)) throw new RuntimeException('Engineering Workspace queue UI missing '.$needle);
+    if (!str_contains($indexTemplate, $needle)) throw new RuntimeException('Engineering operational workspace UI missing '.$needle);
 }
 
 foreach (['latestIdForFeature', 'Started Engineering workflow is immutable', 'updateRequest', 'delete'] as $needle) {

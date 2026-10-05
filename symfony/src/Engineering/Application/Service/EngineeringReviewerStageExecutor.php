@@ -7,6 +7,7 @@ use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -39,6 +40,7 @@ final readonly class EngineeringReviewerStageExecutor
         private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringRepositoryGatewayInterface $repository,
+        private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
@@ -74,7 +76,21 @@ final readonly class EngineeringReviewerStageExecutor
             throw new RuntimeException('Reviewer requires Developer pull request and repository revision.');
         }
 
-        $pullRequestState = $this->repository->pullRequest($pullRequest);
+        $pullRequestState = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'GIT',
+            'repository.pull_request_state',
+            'Read pull request state for Reviewer',
+            $correlationId,
+            fn (): array => $this->repository->pullRequest($pullRequest),
+            details: static fn (array $state): array => [
+                'number' => $pullRequest,
+                'state' => $state['state'] ?? null,
+                'merged' => $state['merged'] ?? null,
+                'head_revision' => $state['head_revision'] ?? null,
+            ],
+        );
         if (($pullRequestState['merged'] ?? false) === true || ($pullRequestState['state'] ?? null) !== 'open') {
             throw new RuntimeException('Reviewer requires an open, unmerged pull request.');
         }
@@ -82,8 +98,40 @@ final readonly class EngineeringReviewerStageExecutor
             throw new RuntimeException('Reviewer refused stale implementation evidence because pull request head changed.');
         }
 
-        $diff = $this->repository->pullRequestFiles($pullRequest);
-        $ci = $this->repository->commitChecks($revision);
+        $diff = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'GIT',
+            'repository.pull_request_files',
+            'Read pull request diff for Reviewer',
+            $correlationId,
+            fn (): array => $this->repository->pullRequestFiles($pullRequest),
+            details: static fn (array $files): array => [
+                'pull_request' => $pullRequest,
+                'file_count' => count($files),
+                'files' => array_values(array_filter(array_map(
+                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                    $files,
+                ))),
+            ],
+        );
+        $ci = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'CI',
+            'repository.commit_checks',
+            'Read CI checks for Reviewer',
+            $correlationId,
+            fn (): array => $this->repository->commitChecks($revision),
+            details: static fn (array $ci): array => [
+                'revision' => $revision,
+                'state' => $ci['state'] ?? null,
+                'total' => $ci['total'] ?? null,
+                'passed' => $ci['passed'] ?? null,
+                'failed' => $ci['failed'] ?? null,
+                'pending' => $ci['pending'] ?? null,
+            ],
+        );
         $baseRevision = trim((string) ($architecture['content']['repository_revision'] ?? ''));
         if ($baseRevision === '') throw new RuntimeException('Reviewer requires Architecture Decision repository revision.');
 
@@ -160,7 +208,21 @@ final readonly class EngineeringReviewerStageExecutor
             if ($run->status !== 'completed') {
                 throw new RuntimeException('Reviewer Agent did not complete: '.($run->error ?? $run->status));
             }
-            $postReviewPullRequest = $this->repository->pullRequest($pullRequest);
+            $postReviewPullRequest = $this->journal->around(
+                $featureId,
+                $workflowId,
+                'GIT',
+                'repository.pull_request_revalidate',
+                'Revalidate pull request head after Reviewer run',
+                $correlationId,
+                fn (): array => $this->repository->pullRequest($pullRequest),
+                $engineeringRunId,
+                static fn (array $state): array => [
+                    'number' => $pullRequest,
+                    'head_revision' => $state['head_revision'] ?? null,
+                    'state' => $state['state'] ?? null,
+                ],
+            );
             if (($postReviewPullRequest['head_revision'] ?? null) !== $revision) {
                 throw new RuntimeException('Pull request head changed while Reviewer was running; review result is stale.');
             }

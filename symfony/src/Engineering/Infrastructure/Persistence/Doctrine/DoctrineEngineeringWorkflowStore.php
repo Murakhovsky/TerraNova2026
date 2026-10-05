@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface;
 use App\Engineering\Application\Workflow\EngineeringTransitionObserverInterface;
 use App\Engineering\Domain\Workflow\EngineeringWorkflowState;
 use App\Engineering\Domain\Workflow\WorkflowExecution;
@@ -18,6 +19,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
     public function __construct(
         private EntityManagerInterface $entityManager,
         private EngineeringTransitionObserverInterface $observer,
+        private EngineeringExecutionEventStoreInterface $events,
     ) {
     }
 
@@ -38,6 +40,8 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             version: 1,
             startedAt: $workflow->startedAt(),
             lastActivityAt: $workflow->lastActivityAt(),
+            heartbeatAt: $workflow->lastActivityAt(),
+            healthStatus: 'HEALTHY',
             resumeState: $workflow->resumeState()?->value,
             finishedAt: $workflow->finishedAt(),
         );
@@ -64,6 +68,34 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         return $record instanceof WorkflowExecutionRecord ? $record->id() : null;
     }
 
+    public function view(string $workflowId): array
+    {
+        $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
+        if (!$record instanceof WorkflowExecutionRecord) {
+            throw new RuntimeException('Engineering workflow not found: '.$workflowId);
+        }
+
+        return [
+            'id' => $record->id(),
+            'feature_id' => $record->featureId(),
+            'workflow_type' => $record->workflowType(),
+            'state' => $record->currentState(),
+            'status' => $record->status(),
+            'trace_id' => $record->traceId(),
+            'version' => $record->version(),
+            'current_task_id' => $record->currentTaskId(),
+            'current_agent_run_id' => $record->currentAgentRunId(),
+            'resume_state' => $record->resumeState(),
+            'started_at' => $record->startedAt()->format(DATE_ATOM),
+            'last_activity_at' => $record->lastActivityAt()->format(DATE_ATOM),
+            'heartbeat_at' => $record->heartbeatAt()?->format(DATE_ATOM),
+            'health_status' => $record->healthStatus(),
+            'stalled_at' => $record->stalledAt()?->format(DATE_ATOM),
+            'runtime_reason' => $record->runtimeReason(),
+            'finished_at' => $record->finishedAt()?->format(DATE_ATOM),
+        ];
+    }
+
     public function markImmediate(string $workflowId): void
     {
         $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
@@ -71,7 +103,166 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             throw new RuntimeException('Engineering workflow not found: '.$workflowId);
         }
         $record->markImmediate();
+        $record->touchRuntime();
         $this->entityManager->flush();
+    }
+
+    public function touchRuntime(string $workflowId, ?string $agentRunId = null, ?string $taskId = null): void
+    {
+        $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
+        if (!$record instanceof WorkflowExecutionRecord) {
+            throw new RuntimeException('Engineering workflow not found: '.$workflowId);
+        }
+        if (in_array($record->status(), ['COMPLETED','CANCELLED','FAILED'], true)) return;
+        $previousHealth = $record->healthStatus();
+        $previousReason = $record->runtimeReason();
+        $record->touchRuntime($agentRunId, $taskId);
+        $this->entityManager->flush();
+        if (in_array($previousHealth, ['STALE','STALLED'], true)) {
+            $this->events->append(
+                $record->featureId(),
+                $record->id(),
+                'WATCHDOG',
+                'workflow.heartbeat_recovered',
+                'HEALTHY',
+                'Workflow runtime heartbeat recovered',
+                [
+                    'previous_health' => $previousHealth,
+                    'previous_reason' => $previousReason,
+                    'current_task_id' => $taskId,
+                    'current_agent_run_id' => $agentRunId,
+                ],
+                $agentRunId,
+                $record->traceId(),
+            );
+        }
+    }
+
+    public function markRuntimeIssue(string $workflowId, string $health, string $reason, ?string $agentRunId = null, ?string $taskId = null): void
+    {
+        $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
+        if (!$record instanceof WorkflowExecutionRecord) {
+            throw new RuntimeException('Engineering workflow not found: '.$workflowId);
+        }
+        if (in_array($record->status(), ['COMPLETED','CANCELLED','FAILED'], true)) return;
+
+        $previousHealth = $record->healthStatus();
+        $record->markRuntimeIssue($health, $reason, $agentRunId, $taskId);
+        $this->entityManager->flush();
+        $this->events->append(
+            $record->featureId(),
+            $record->id(),
+            'RUNTIME',
+            'workflow.runtime_issue',
+            $record->healthStatus(),
+            'Workflow runtime issue detected',
+            [
+                'previous_health' => $previousHealth,
+                'health' => $record->healthStatus(),
+                'reason' => $record->runtimeReason(),
+                'current_task_id' => $taskId,
+                'current_agent_run_id' => $agentRunId,
+            ],
+            $agentRunId,
+            $record->traceId(),
+            error: $reason,
+        );
+    }
+
+    public function refreshRuntimeHealthForOrganization(string $organizationId, int $staleAfterSeconds = 600, int $stalledAfterSeconds = 1800): array
+    {
+        $staleAfterSeconds = max(60, $staleAfterSeconds);
+        $stalledAfterSeconds = max($staleAfterSeconds + 60, $stalledAfterSeconds);
+        $db = $this->entityManager->getConnection();
+
+        $rows = $db->fetchAllAssociative(
+            "SELECT w.id, w.feature_id, w.trace_id, w.current_state, w.status, w.health_status,
+                    TIMESTAMPDIFF(SECOND, COALESCE(w.heartbeat_at, w.last_activity_at), UTC_TIMESTAMP(6)) AS age_seconds
+             FROM cos_engineering_workflows w
+             INNER JOIN cos_engineering_features f ON f.id = w.feature_id
+             WHERE f.organization_id = :organization_id
+               AND w.status NOT IN ('COMPLETED','CANCELLED','FAILED')",
+            ['organization_id' => $organizationId],
+        );
+
+        $counts = ['healthy' => 0, 'stale' => 0, 'stalled' => 0, 'waiting' => 0];
+        foreach ($rows as $row) {
+            $state = (string) ($row['current_state'] ?? '');
+            $featureStatus = strtoupper((string) ($row['feature_status'] ?? ''));
+            $age = max(0, (int) ($row['age_seconds'] ?? 0));
+            if ($featureStatus === 'QUEUED') {
+                $health = 'WAITING';
+                ++$counts['waiting'];
+                $reason = 'Workflow is waiting in the priority queue.';
+            } elseif (in_array($state, ['HUMAN_DECISION_REQUIRED','READY_FOR_HUMAN_APPROVAL','BLOCKED','ESCALATED'], true)) {
+                $health = 'WAITING';
+                ++$counts['waiting'];
+                $reason = 'Workflow is waiting for explicit human action.';
+            } elseif ($age >= $stalledAfterSeconds) {
+                $health = 'STALLED';
+                ++$counts['stalled'];
+                $reason = sprintf('No runtime heartbeat for %d seconds.', $age);
+            } elseif ($age >= $staleAfterSeconds) {
+                $health = 'STALE';
+                ++$counts['stale'];
+                $reason = sprintf('Runtime heartbeat is delayed by %d seconds.', $age);
+            } else {
+                $health = 'HEALTHY';
+                ++$counts['healthy'];
+                $reason = null;
+            }
+
+            $previousHealth = strtoupper((string) ($row['previous_health'] ?? 'UNKNOWN'));
+            $db->executeStatement(
+                "UPDATE cos_engineering_workflows
+                 SET health_status = :health,
+                     stalled_at = CASE WHEN :health = 'STALLED' THEN COALESCE(stalled_at, UTC_TIMESTAMP(6)) ELSE NULL END,
+                     runtime_reason = :reason
+                 WHERE id = :id",
+                ['health' => $health, 'reason' => $reason, 'id' => (string) $row['id']],
+            );
+            if ($previousHealth !== $health) {
+                $this->events->append(
+                    (string) $row['feature_id'],
+                    (string) $row['id'],
+                    'WATCHDOG',
+                    'workflow.health_changed',
+                    $health,
+                    'Workflow runtime health changed from '.$previousHealth.' to '.$health,
+                    [
+                        'previous_health' => $previousHealth,
+                        'health' => $health,
+                        'age_seconds' => $age,
+                        'reason' => $reason,
+                    ],
+                    correlationId: (string) ($row['trace_id'] ?? ''),
+                );
+            }
+            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
+            if ($previousHealth !== $health) {
+                $this->events->append(
+                    (string) $row['feature_id'],
+                    (string) $row['id'],
+                    'WATCHDOG',
+                    'runtime.health_changed',
+                    $health,
+                    sprintf('Runtime health changed from %s to %s', $previousHealth, $health),
+                    [
+                        'previous_health' => $previousHealth,
+                        'health' => $health,
+                        'age_seconds' => $age,
+                        'stale_after_seconds' => $staleAfterSeconds,
+                        'stalled_after_seconds' => $stalledAfterSeconds,
+                        'reason' => $reason,
+                    ],
+                    correlationId: (string) ($row['trace_id'] ?? ''),
+                    error: $health === 'STALLED' ? $reason : null,
+                );
+            }
+        }
+
+        $this->entityManager->clear(WorkflowExecutionRecord::class);
+        return $counts;
     }
 
     public function resumable(int $limit = 20): array
@@ -141,6 +332,10 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                 'f.status AS feature_status',
                 'w.started_at',
                 'w.last_activity_at',
+                'w.heartbeat_at',
+                'w.health_status',
+                'w.stalled_at',
+                'w.runtime_reason',
             )
             ->from('cos_engineering_workflows', 'w')
             ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
@@ -163,6 +358,10 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             'feature_status' => (string) ($row['feature_status'] ?? ''),
             'started_at' => (string) ($row['started_at'] ?? ''),
             'last_activity_at' => (string) ($row['last_activity_at'] ?? ''),
+            'heartbeat_at' => (string) ($row['heartbeat_at'] ?? ''),
+            'health_status' => (string) ($row['health_status'] ?? 'UNKNOWN'),
+            'stalled_at' => (string) ($row['stalled_at'] ?? ''),
+            'runtime_reason' => $row['runtime_reason'] !== null ? (string) $row['runtime_reason'] : null,
         ], $rows);
     }
 
@@ -198,6 +397,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             $workflow->resumeState()?->value,
             $workflow->finishedAt(),
             $this->statusFor($workflow->currentState()),
+            $transition->context->reason,
         );
 
         $context = $transition->context;

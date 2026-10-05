@@ -66,6 +66,11 @@ class AgentRunRecord
     public function agentRole(): string { return $this->agentRole; }
     public function idempotencyKey(): string { return $this->idempotencyKey; }
     public function status(): string { return $this->status; }
+    public function agentId(): string { return $this->agentId; }
+    public function taskId(): ?string { return $this->taskId; }
+    public function parentRunId(): ?string { return $this->parentRunId; }
+    public function traceId(): string { return $this->traceId; }
+    public function inputSnapshot(): array { return $this->inputSnapshot; }
     public function output(): ?array { return $this->output; }
     public function modelProvider(): string { return $this->modelProvider; }
     public function model(): string { return $this->model; }

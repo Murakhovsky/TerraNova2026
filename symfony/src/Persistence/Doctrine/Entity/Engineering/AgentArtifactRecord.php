@@ -45,5 +45,10 @@ class AgentArtifactRecord
     public function status(): string { return $this->status; }
     public function content(): array { return $this->content; }
     public function contentHash(): string { return $this->contentHash; }
+    public function createdAt(): DateTimeImmutable { return $this->createdAt; }
+    public function taskId(): ?string { return $this->taskId; }
+    public function agentRunId(): ?string { return $this->agentRunId; }
+    public function createdByAgent(): ?string { return $this->createdByAgent; }
+    public function supersedesArtifactId(): ?string { return $this->supersedesArtifactId; }
     public function supersede(): void { $this->status = 'SUPERSEDED'; }
 }

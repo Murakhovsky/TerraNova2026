@@ -8,6 +8,7 @@ use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -37,6 +38,7 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringStandardsProvider $standards,
         private EngineeringRepositoryGatewayInterface $repository,
+        private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
@@ -82,7 +84,16 @@ final readonly class EngineeringDeveloperStageExecutor
         }
 
         if ($previousDevelopment === null) {
-            $currentBaseRevision = $this->repository->currentBaseRevision();
+            $currentBaseRevision = $this->journal->around(
+                $featureId,
+                $workflowId,
+                'REPOSITORY',
+                'repository.current_base_revision',
+                'Verify repository revision before development',
+                $correlationId,
+                fn (): string => $this->repository->currentBaseRevision(),
+                details: static fn (string $revision): array => ['revision' => $revision],
+            );
             if ($currentBaseRevision !== $baseRevision) {
                 return $this->requireArchitectureRevalidation(
                     $featureId,
@@ -141,7 +152,23 @@ final readonly class EngineeringDeveloperStageExecutor
             if (is_array($file) && isset($file['path']) && is_string($file['path'])) $contextPaths[] = $file['path'];
         }
         $contextPaths = array_slice(array_values(array_unique($contextPaths)), 0, 20);
-        $repositoryFiles = $this->repository->filesAtRevision($contextPaths, $workingRevision);
+        $repositoryFiles = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'REPOSITORY',
+            'repository.read_files',
+            'Read bounded developer repository context',
+            $correlationId,
+            fn (): array => $this->repository->filesAtRevision($contextPaths, $workingRevision),
+            details: static fn (array $files): array => [
+                'revision' => $workingRevision,
+                'requested_paths' => $contextPaths,
+                'returned_files' => array_values(array_filter(array_map(
+                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                    $files,
+                ))),
+            ],
+        );
 
         if (($documentationError = $this->architectureDocumentationEvidenceError($pendingArchitectureDocumentation, $repositoryFiles)) !== null) {
             return $this->requireArchitectureRevalidation($featureId, $workflowId, $documentationError);
@@ -249,23 +276,56 @@ final readonly class EngineeringDeveloperStageExecutor
                     $pendingArchitectureDocumentation,
                     $developerChanges,
                 );
-                $mutation = $this->repository->commitChanges(
-                    baseRevision: $workingRevision,
-                    branch: $branch,
-                    changes: $changes,
-                    message: trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
-                        ? (string) $run->structuredOutput['commit_message']
-                        : 'feat(engineering): implement '.$this->features->view($featureId)['title'],
+                $commitMessage = trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
+                    ? (string) $run->structuredOutput['commit_message']
+                    : 'feat(engineering): implement '.$this->features->view($featureId)['title'];
+                $mutation = $this->journal->around(
+                    $featureId,
+                    $workflowId,
+                    'GIT',
+                    'repository.commit_changes',
+                    'Commit Developer change set',
+                    $correlationId,
+                    fn (): array => $this->repository->commitChanges(
+                        baseRevision: $workingRevision,
+                        branch: $branch,
+                        changes: $changes,
+                        message: $commitMessage,
+                    ),
+                    $engineeringRunId,
+                    static fn (array $result): array => [
+                        'branch' => $result['branch'] ?? null,
+                        'revision' => $result['revision'] ?? null,
+                        'changed_files' => $result['changed_files'] ?? [],
+                        'change_count' => count($changes),
+                    ],
                 );
 
-                $pullRequest = $this->repository->openPullRequest(
-                    branch: $mutation['branch'],
-                    title: trim((string) ($run->structuredOutput['pull_request_title'] ?? '')) !== ''
-                        ? (string) $run->structuredOutput['pull_request_title']
-                        : 'Engineering: '.$this->features->view($featureId)['title'],
-                    body: trim((string) ($run->structuredOutput['pull_request_body'] ?? '')) !== ''
-                        ? (string) $run->structuredOutput['pull_request_body']
-                        : 'Autonomous COS Engineering implementation for feature '.$featureId.'. Human merge remains mandatory.',
+                $pullRequestTitle = trim((string) ($run->structuredOutput['pull_request_title'] ?? '')) !== ''
+                    ? (string) $run->structuredOutput['pull_request_title']
+                    : 'Engineering: '.$this->features->view($featureId)['title'];
+                $pullRequestBody = trim((string) ($run->structuredOutput['pull_request_body'] ?? '')) !== ''
+                    ? (string) $run->structuredOutput['pull_request_body']
+                    : 'Autonomous COS Engineering implementation for feature '.$featureId.'. Human merge remains mandatory.';
+                $pullRequest = $this->journal->around(
+                    $featureId,
+                    $workflowId,
+                    'GIT',
+                    'repository.open_pull_request',
+                    'Open or resolve Developer pull request',
+                    $correlationId,
+                    fn (): array => $this->repository->openPullRequest(
+                        branch: $mutation['branch'],
+                        title: $pullRequestTitle,
+                        body: $pullRequestBody,
+                    ),
+                    $engineeringRunId,
+                    static fn (array $result): array => [
+                        'number' => $result['number'] ?? null,
+                        'url' => $result['url'] ?? null,
+                        'title' => $result['title'] ?? null,
+                        'branch' => $mutation['branch'] ?? null,
+                    ],
                 );
 
                 $effectiveOutput = array_merge($run->structuredOutput, [
@@ -287,6 +347,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     usage: $run->usage,
                     error: $run->error,
                     technicalRetries: $run->technicalRetries,
+                    steps: $run->steps,
                 );
             }
         } catch (\Throwable $error) {
