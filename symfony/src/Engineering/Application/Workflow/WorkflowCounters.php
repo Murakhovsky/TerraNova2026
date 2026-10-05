@@ -9,6 +9,7 @@ final readonly class WorkflowCounters
         public int $developmentFixLoops = 0,
         public int $reviewCycles = 0,
         public int $qaCycles = 0,
+        public int $architectureCycles = 0,
     ) {
     }
 }
