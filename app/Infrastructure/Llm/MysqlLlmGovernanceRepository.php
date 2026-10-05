@@ -152,8 +152,8 @@ final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceReposi
     {
         $statement = $this->connection->prepare(
             'INSERT INTO cos_llm_usage '
-            . '(id, organization_id, correlation_id, use_case, provider, model, input_tokens, cached_input_tokens, output_tokens, reasoning_tokens, cost_amount, cost_currency, cost_source, pricing_version, latency_ms, fallback_count, created_at) '
-            . 'VALUES (:id, :organization_id, :correlation_id, :use_case, :provider, :model, :input_tokens, :cached_input_tokens, :output_tokens, :reasoning_tokens, :cost_amount, :cost_currency, :cost_source, :pricing_version, :latency_ms, :fallback_count, UTC_TIMESTAMP(6))'
+            . '(id, organization_id, correlation_id, use_case, provider, model, input_tokens, cached_input_tokens, output_tokens, reasoning_tokens, cost_amount, cost_currency, cost_source, pricing_version, provider_request_id, latency_ms, fallback_count, created_at) '
+            . 'VALUES (:id, :organization_id, :correlation_id, :use_case, :provider, :model, :input_tokens, :cached_input_tokens, :output_tokens, :reasoning_tokens, :cost_amount, :cost_currency, :cost_source, :pricing_version, :provider_request_id, :latency_ms, :fallback_count, UTC_TIMESTAMP(6))'
         );
         $statement->execute([
             'id' => $usage->id,
@@ -170,6 +170,7 @@ final readonly class MysqlLlmGovernanceRepository implements LlmGovernanceReposi
             'cost_currency' => $usage->costCurrency !== null ? strtoupper($usage->costCurrency) : null,
             'cost_source' => $usage->costSource,
             'pricing_version' => $usage->pricingVersion,
+            'provider_request_id' => $usage->providerRequestId,
             'latency_ms' => $usage->latencyMs,
             'fallback_count' => $usage->fallbackCount,
         ]);
