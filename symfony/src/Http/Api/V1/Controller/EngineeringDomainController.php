@@ -67,6 +67,11 @@ final readonly class EngineeringDomainController
                 maxParallelDevelopers: max(0, min(20, (int) ($input['max_parallel_developers'] ?? 0))),
                 maxParallelReviews: max(0, min(20, (int) ($input['max_parallel_reviews'] ?? 0))),
                 maxParallelQa: max(0, min(20, (int) ($input['max_parallel_qa'] ?? 0))),
+                maxFeatureRetries: max(-1, min(50, (int) ($input['max_feature_retries'] ?? -1))),
+                maxDomainIntegrationCycles: max(0, min(20, (int) ($input['max_domain_integration_cycles'] ?? 0))),
+                contextBudget: max(0, (int) ($input['context_budget'] ?? 0)),
+                tokenBudget: max(0, (int) ($input['token_budget'] ?? 0)),
+                costBudget: isset($input['cost_budget']) ? max(0.0, (float) $input['cost_budget']) : -1.0,
             );
 
             return new JsonResponse([
