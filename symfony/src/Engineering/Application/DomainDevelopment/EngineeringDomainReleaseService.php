@@ -312,6 +312,7 @@ final readonly class EngineeringDomainReleaseService
         $manifest = $this->releaseManifest(
             $domain,
             $features,
+            $featureEvidence,
             $architecture,
             $repositoryRevision,
             $ci,
@@ -382,9 +383,33 @@ final readonly class EngineeringDomainReleaseService
         return $this->view($domainId, ['approved' => true]);
     }
 
-    /** @param array<string,mixed> $domain @param list<array<string,mixed>> $features @param array<string,mixed> $architecture @param array<string,mixed> $ci @param array<string,mixed> $qa @param array<string,mixed> $integrationRelease @param array<string,mixed>|null $integrationPullRequest */
-    private function releaseManifest(array $domain, array $features, array $architecture, ?string $revision, array $ci, array $qa, array $integrationRelease, ?array $integrationPullRequest): array
+    /** @param array<string,mixed> $domain @param list<array<string,mixed>> $features @param list<array<string,mixed>> $featureEvidence @param array<string,mixed> $architecture @param array<string,mixed> $ci @param array<string,mixed> $qa @param array<string,mixed> $integrationRelease @param array<string,mixed>|null $integrationPullRequest */
+    private function releaseManifest(array $domain, array $features, array $featureEvidence, array $architecture, ?string $revision, array $ci, array $qa, array $integrationRelease, ?array $integrationPullRequest): array
     {
+        $migrationPlan = $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::MIGRATION_PLAN->value)['content'] ?? [];
+        $contracts = $this->domains->contracts((string) $domain['id']);
+        $events = $this->domains->events((string) $domain['id']);
+        $commits = [];
+        foreach ($featureEvidence as $evidence) {
+            if (!is_array($evidence)) continue;
+            $development = is_array($evidence['development'] ?? null) ? $evidence['development'] : [];
+            $revisionValue = trim((string) ($development['repository_revision'] ?? ''));
+            if ($revisionValue === '') continue;
+            $commits[] = [
+                'feature_key' => $evidence['feature_key'] ?? null,
+                'revision' => $revisionValue,
+                'branch' => $development['branch'] ?? null,
+                'pull_request' => $development['pull_request'] ?? null,
+            ];
+        }
+        $securityResult = null;
+        foreach (is_array($integrationRelease['release_checks'] ?? null) ? $integrationRelease['release_checks'] : [] as $check) {
+            if (is_array($check) && strtoupper((string) ($check['id'] ?? '')) === 'SECURITY_CHECKS') {
+                $securityResult = $check;
+                break;
+            }
+        }
+
         return [
             'domain' => [
                 'id' => $domain['id'],
@@ -392,7 +417,10 @@ final readonly class EngineeringDomainReleaseService
                 'name' => $domain['name'],
                 'version' => (int) $domain['version'],
             ],
+            'version' => (int) $domain['version'],
             'repository_revision' => $revision,
+            'commits' => $commits,
+            'migrations' => is_array($migrationPlan['migration_order'] ?? null) ? $migrationPlan['migration_order'] : [],
             'integration_branch' => $domain['target_branch'],
             'base_branch' => $this->repository->available() ? $this->repository->configuredBaseBranch() : null,
             'integration_pull_request' => $integrationPullRequest,
@@ -408,9 +436,16 @@ final readonly class EngineeringDomainReleaseService
                 'hash' => $architecture['content_hash'],
             ],
             'capabilities' => $this->domains->capabilities((string) $domain['id']),
-            'contracts' => $this->domains->contracts((string) $domain['id']),
-            'events' => $this->domains->events((string) $domain['id']),
-            'migration_plan' => $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::MIGRATION_PLAN->value)['content'] ?? [],
+            'contracts' => $contracts,
+            'new_events' => $events,
+            'events' => $events,
+            'deprecated_contracts' => array_values(array_filter(
+                $contracts,
+                static fn (array $contract): bool =>
+                    strtoupper((string) ($contract['compatibility'] ?? '')) === 'DEPRECATED'
+                    || strtoupper((string) ($contract['status'] ?? '')) === 'DEPRECATED',
+            )),
+            'migration_plan' => $migrationPlan,
             'feature_flags' => $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::DOMAIN_FEATURE_FLAGS->value)['content'] ?? [
                 'DOMAIN_ENABLED' => false,
                 'FEATURE_ENABLED' => [],
@@ -443,8 +478,9 @@ final readonly class EngineeringDomainReleaseService
                 'defects' => $qa['defects'] ?? [],
             ],
             'integration_release' => $integrationRelease,
+            'security_result' => $securityResult,
             'ci' => $ci,
-            'rollback_plan' => $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::MIGRATION_PLAN->value)['content']['rollback_strategy'] ?? null,
+            'rollback_plan' => $migrationPlan['rollback_strategy'] ?? null,
             'known_limitations' => $qa['known_limitations'] ?? [],
             'audit_trail' => [
                 'artifacts' => array_map(static fn (array $artifact): array => [
