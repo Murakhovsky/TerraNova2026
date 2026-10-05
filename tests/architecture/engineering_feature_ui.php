@@ -20,11 +20,13 @@ foreach ([
     '/admin/engineering/{id}/update',
     '/admin/engineering/{id}/delete',
     '/admin/engineering/{id}/cancel',
+    '/admin/engineering/{id}/finalize',
     '/admin/engineering/{id}/queue',
     'EngineeringFeatureController::queue',
     'EngineeringFeatureController::update',
     'EngineeringFeatureController::delete',
     'EngineeringFeatureController::cancel',
+    'EngineeringFeatureController::finalize',
 ] as $needle) {
     if (!str_contains($routes, $needle)) throw new RuntimeException('Engineering feature UI route missing '.$needle);
 }
@@ -37,6 +39,8 @@ foreach ([
     'SystemControlSurface',
     'EngineeringFeatureManagementService',
     'EngineeringCancelService',
+    'EngineeringFinalizeService',
+    'uiActions',
     'ContinueEngineeringWorkflowsCommand',
     'RunEngineeringFeatureCommand',
     'queueForOrganization',
@@ -73,6 +77,7 @@ foreach ([
     'engineering-details-tabs',
     'data-tabs-target="panel"',
     'data-engineering-update',
+    'Перевірити merge та завершити',
     'data-engineering-delete',
 ] as $needle) {
     if (!str_contains($template, $needle)) throw new RuntimeException('Engineering workflow terminal UI missing '.$needle);
