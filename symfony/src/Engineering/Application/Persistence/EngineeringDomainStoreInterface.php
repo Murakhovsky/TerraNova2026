@@ -42,6 +42,10 @@ interface EngineeringDomainStoreInterface
     /** @return list<array<string,mixed>> */
     public function artifacts(string $domainId): array;
 
+    /** @return list<array<string,mixed>> */
+    public function artifactHistory(string $domainId, ?string $type = null): array;
+
+
     /** @param list<array{source_artifact_id:string,target_artifact_id:string,relationship:string}> $edges */
     public function replaceArtifactDependencies(string $domainId, array $edges): void;
 
