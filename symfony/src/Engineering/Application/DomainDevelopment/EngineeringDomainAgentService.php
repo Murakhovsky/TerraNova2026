@@ -5,6 +5,7 @@ namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Agent\EngineeringAgentDefinitionFactory;
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
+use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use Kernel\Agent\Contract\AgentRuntimeInterface;
@@ -22,6 +23,7 @@ final readonly class EngineeringDomainAgentService
         private EngineeringDomainStoreInterface $domains,
         private EngineeringAgentDefinitionFactory $definitions,
         private EngineeringDomainAgentOutputValidator $validator,
+        private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
     ) {}
 
     /** @param array<string,mixed> $inputs @return array<string,mixed> */
@@ -57,17 +59,18 @@ final readonly class EngineeringDomainAgentService
         $context = new AgentContext(
             organizationId: $organization,
             correlationId: $runCorrelationId,
-            input: [
+            input: $this->secrets->sanitize([
                 'question' => $objective,
                 'inputs' => $inputs,
                 'constraints' => [
                     'Operate only inside Engineering Domain Development Runtime.',
                     'Do not perform business operations of the target domain.',
                     'Do not use production secrets.',
+                    'Only secret references such as env://, vault:// or secret:// may cross the Engineering Agent boundary.',
                     'Do not mutate repository content from a domain-planning run.',
                     'Return only the required structured result.',
                 ],
-            ],
+            ]),
             data: [
                 'engineering_domain_id' => $domainId,
                 'mode' => 'DOMAIN_DEVELOPMENT',
