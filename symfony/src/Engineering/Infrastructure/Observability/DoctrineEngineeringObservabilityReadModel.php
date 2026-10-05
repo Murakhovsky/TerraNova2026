@@ -16,6 +16,49 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
         return $this->usageForFeatures([$featureId])[$featureId] ?? $this->unknownUsage();
     }
 
+    public function usageForWorkflow(string $workflowId): array
+    {
+        try {
+            $rows = $this->ledgerRowsForWorkflow($workflowId);
+            if ($rows !== []) return $this->aggregate($rows, 'LLM_LEDGER');
+
+            $fallback = $this->entityManager->getConnection()->fetchAssociative(
+                "SELECT
+                    SUM(CASE WHEN tokens_input IS NOT NULL THEN tokens_input ELSE 0 END) AS input_tokens,
+                    SUM(CASE WHEN tokens_output IS NOT NULL THEN tokens_output ELSE 0 END) AS output_tokens,
+                    SUM(CASE WHEN estimated_cost IS NOT NULL THEN estimated_cost ELSE 0 END) AS cost_amount,
+                    SUM(tokens_input IS NOT NULL OR tokens_output IS NOT NULL) AS token_records,
+                    SUM(estimated_cost IS NOT NULL) AS cost_records,
+                    COUNT(*) AS run_count
+                 FROM cos_engineering_agent_runs
+                 WHERE workflow_execution_id = :workflow_id",
+                ['workflow_id' => $workflowId],
+            );
+            if (!is_array($fallback) || (int) ($fallback['run_count'] ?? 0) === 0) return $this->unknownUsage();
+
+            $tokenKnown = (int) ($fallback['token_records'] ?? 0) > 0;
+            $costKnown = (int) ($fallback['cost_records'] ?? 0) > 0
+                && (int) ($fallback['cost_records'] ?? 0) === (int) ($fallback['run_count'] ?? 0);
+            $input = $tokenKnown ? (int) ($fallback['input_tokens'] ?? 0) : null;
+            $output = $tokenKnown ? (int) ($fallback['output_tokens'] ?? 0) : null;
+
+            return [
+                'available' => $tokenKnown || $costKnown,
+                'source' => 'AGENT_RUN_FALLBACK',
+                'invocations' => 0,
+                'input_tokens' => $input,
+                'output_tokens' => $output,
+                'total_tokens' => $tokenKnown ? $input + $output : null,
+                'cost_amount' => $costKnown ? (float) ($fallback['cost_amount'] ?? 0) : null,
+                'cost_currency' => $costKnown ? 'USD' : null,
+                'cost_complete' => $costKnown,
+                'models' => [],
+            ];
+        } catch (Throwable) {
+            return $this->unknownUsage();
+        }
+    }
+
     public function usageForFeatures(array $featureIds): array
     {
         $featureIds = $this->ids($featureIds);
@@ -91,23 +134,16 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     public function invocationsForFeature(string $featureId): array
     {
         try {
-            return array_map(static fn (array $row): array => [
-                'id' => (string) ($row['id'] ?? ''),
-                'correlation_id' => (string) ($row['correlation_id'] ?? ''),
-                'use_case' => $row['use_case'] !== null ? (string) $row['use_case'] : null,
-                'provider' => (string) ($row['provider'] ?? ''),
-                'model' => (string) ($row['model'] ?? ''),
-                'input_tokens' => $row['input_tokens'] !== null ? (int) $row['input_tokens'] : null,
-                'output_tokens' => $row['output_tokens'] !== null ? (int) $row['output_tokens'] : null,
-                'total_tokens' => ($row['input_tokens'] !== null || $row['output_tokens'] !== null)
-                    ? (int) ($row['input_tokens'] ?? 0) + (int) ($row['output_tokens'] ?? 0)
-                    : null,
-                'cost_amount' => $row['cost_amount'] !== null ? (float) $row['cost_amount'] : null,
-                'cost_currency' => $row['cost_currency'] !== null ? (string) $row['cost_currency'] : null,
-                'latency_ms' => $row['latency_ms'] !== null ? (int) $row['latency_ms'] : null,
-                'fallback_count' => (int) ($row['fallback_count'] ?? 0),
-                'created_at' => (string) ($row['created_at'] ?? ''),
-            ], $this->ledgerRows($featureId));
+            return $this->normalizeInvocations($this->ledgerRows($featureId));
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    public function invocationsForWorkflow(string $workflowId): array
+    {
+        try {
+            return $this->normalizeInvocations($this->ledgerRowsForWorkflow($workflowId));
         } catch (Throwable) {
             return [];
         }
@@ -200,6 +236,45 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
              ORDER BY u.created_at ASC, u.id ASC",
             ['feature_id' => $featureId],
         );
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function ledgerRowsForWorkflow(string $workflowId): array
+    {
+        return $this->entityManager->getConnection()->fetchAllAssociative(
+            "SELECT u.id, u.correlation_id, u.use_case, u.provider, u.model,
+                    u.input_tokens, u.output_tokens, u.cost_amount, u.cost_currency,
+                    u.latency_ms, u.fallback_count, u.created_at
+             FROM cos_llm_usage u
+             WHERE u.correlation_id IN (
+                SELECT DISTINCT trace_id FROM cos_engineering_agent_runs
+                WHERE workflow_execution_id = :workflow_id AND trace_id <> ''
+             )
+             ORDER BY u.created_at ASC, u.id ASC",
+            ['workflow_id' => $workflowId],
+        );
+    }
+
+    /** @param list<array<string,mixed>> $rows @return list<array<string,mixed>> */
+    private function normalizeInvocations(array $rows): array
+    {
+        return array_map(static fn (array $row): array => [
+            'id' => (string) ($row['id'] ?? ''),
+            'correlation_id' => (string) ($row['correlation_id'] ?? ''),
+            'use_case' => $row['use_case'] !== null ? (string) $row['use_case'] : null,
+            'provider' => (string) ($row['provider'] ?? ''),
+            'model' => (string) ($row['model'] ?? ''),
+            'input_tokens' => $row['input_tokens'] !== null ? (int) $row['input_tokens'] : null,
+            'output_tokens' => $row['output_tokens'] !== null ? (int) $row['output_tokens'] : null,
+            'total_tokens' => ($row['input_tokens'] !== null || $row['output_tokens'] !== null)
+                ? (int) ($row['input_tokens'] ?? 0) + (int) ($row['output_tokens'] ?? 0)
+                : null,
+            'cost_amount' => $row['cost_amount'] !== null ? (float) $row['cost_amount'] : null,
+            'cost_currency' => $row['cost_currency'] !== null ? (string) $row['cost_currency'] : null,
+            'latency_ms' => $row['latency_ms'] !== null ? (int) $row['latency_ms'] : null,
+            'fallback_count' => (int) ($row['fallback_count'] ?? 0),
+            'created_at' => (string) ($row['created_at'] ?? ''),
+        ], $rows);
     }
 
     /** @param list<array<string,mixed>> $rows @return array<string,mixed> */
