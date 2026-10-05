@@ -364,6 +364,37 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         );
     }
 
+    public function replaceDependencies(string $domainId, array $dependencies): void
+    {
+        $domainId = EngineeringId::assert($domainId);
+        $db = $this->db();
+        $linked = (int) $db->fetchOne(
+            'SELECT COUNT(*) FROM cos_engineering_domain_features WHERE domain_id=:domain_id AND engineering_feature_id IS NOT NULL',
+            ['domain_id' => $domainId],
+        );
+        if ($linked > 0) throw new RuntimeException('Dependency graph cannot be edited after child Feature workflows have been linked.');
+
+        $db->beginTransaction();
+        try {
+            $db->delete('cos_engineering_domain_dependencies', ['domain_id' => $domainId]);
+            foreach ($dependencies as $dependency) {
+                if (!is_array($dependency)) continue;
+                $db->insert('cos_engineering_domain_dependencies', [
+                    'id' => EngineeringId::generate(),
+                    'domain_id' => $domainId,
+                    'feature_key' => $this->key((string) ($dependency['feature_key'] ?? '')),
+                    'depends_on_key' => $this->key((string) ($dependency['depends_on_key'] ?? '')),
+                    'dependency_type' => strtoupper((string) ($dependency['type'] ?? 'REQUIRES')),
+                    'created_at' => $this->now(),
+                ]);
+            }
+            $db->commit();
+        } catch (\Throwable $error) {
+            if ($db->isTransactionActive()) $db->rollBack();
+            throw $error;
+        }
+    }
+
     public function linkEngineeringFeature(
         string $domainId,
         string $featureKey,
