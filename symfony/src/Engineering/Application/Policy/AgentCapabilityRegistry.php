@@ -30,6 +30,7 @@ final class AgentCapabilityRegistry
             AgentRole::REVIEWER => $this->readOnly(['review' => true]),
             AgentRole::QA_EXECUTOR, AgentRole::QA => $this->readOnly(['test_write' => true, 'qa_execute' => true]),
             AgentRole::INTEGRATION_RELEASE => $this->readOnly(['integration_assess' => true, 'release_assess' => true]),
+            AgentRole::DOCUMENTATION => $this->readOnly(['documentation_translate' => true]),
         };
     }
 
