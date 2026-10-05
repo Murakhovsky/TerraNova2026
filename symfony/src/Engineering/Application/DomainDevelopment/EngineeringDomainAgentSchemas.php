@@ -279,7 +279,7 @@ final class EngineeringDomainAgentSchemas
                     'type' => 'array',
                     'items' => [
                         'type' => 'object',
-                        'required' => ['id','name','version','type','owner_domain','producer','consumers','schema','compatibility','status'],
+                        'required' => ['id','name','version','type','owner_domain','producer','consumers','schema','compatibility','status','test_suite'],
                         'properties' => [
                             'id' => ['type' => 'string', 'minLength' => 1],
                             'key' => ['type' => 'string'],
@@ -292,6 +292,7 @@ final class EngineeringDomainAgentSchemas
                             'schema' => ['type' => ['array','object']],
                             'compatibility' => ['type' => 'string', 'enum' => ['BACKWARD_COMPATIBLE','BREAKING','DEPRECATED']],
                             'status' => ['type' => 'string', 'enum' => ['ACTIVE','DEPRECATED']],
+                            'test_suite' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'string']],
                         ],
                         'additionalProperties' => true,
                     ],
