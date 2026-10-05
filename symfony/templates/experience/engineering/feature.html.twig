@@ -64,23 +64,29 @@
         <div class="engineering-inline">
             <a class="cos-button cos-button--ghost" href="/admin/engineering">До списку</a>
             {% if summary.pull_request.url %}<a class="cos-button cos-button--ghost" href="{{ summary.pull_request.url }}">Pull request</a>{% endif %}
-            {% if engineering.workflow is null %}
+            {% set actions = summary.actions|default({}) %}
+            {% if actions.run|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <button class="cos-button cos-button--primary" type="submit">Запустити</button>
                 </form>
-            {% elseif summary.can_run %}
+            {% elseif actions.resume|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <button class="cos-button cos-button--primary" type="submit">{{ summary.health == 'STALLED' ? 'Відновити workflow' : 'Продовжити' }}</button>
+                    <button class="cos-button cos-button--primary" type="submit">Відновити</button>
                 </form>
-            {% elseif summary.can_retry %}
+            {% elseif actions.continue|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <button class="cos-button cos-button--primary" type="submit">Повторити workflow</button>
+                    <button class="cos-button cos-button--primary" type="submit">Продовжити</button>
+                </form>
+            {% elseif actions.retry|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Повторити процес</button>
                 </form>
             {% endif %}
-            {% if summary.can_cancel %}
+            {% if actions.cancel|default(false) %}
                 <details class="engineering-details">
                     <summary class="cos-button cos-button--danger">Скасувати</summary>
                     <form class="cos-form cos-card" style="position:absolute;right:24px;z-index:5;min-width:360px;padding:12px" method="post" action="/admin/engineering/{{ engineering.feature.id }}/cancel">
