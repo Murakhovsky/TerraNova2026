@@ -92,14 +92,19 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
             "SELECT * FROM cos_engineering_domain_artifacts WHERE domain_id=:domain_id AND type=:type AND status='ACTIVE' ORDER BY version DESC LIMIT 1",
             ['domain_id' => $domainId, 'type' => $type],
         );
+
+        $normalized = $this->normalize($content);
+        $hash = hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        if (is_array($previous) && hash_equals((string) ($previous['content_hash'] ?? ''), $hash)) {
+            return $this->artifactView($previous);
+        }
+
         $version = is_array($previous) ? ((int) $previous['version'] + 1) : 1;
         if (is_array($previous)) {
             $db->update('cos_engineering_domain_artifacts', ['status' => 'SUPERSEDED'], ['id' => $previous['id']]);
         }
 
-        $normalized = $this->normalize($content);
         $id = EngineeringId::generate();
-        $hash = hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         $db->insert('cos_engineering_domain_artifacts', [
             'id' => $id,
             'domain_id' => $domainId,
