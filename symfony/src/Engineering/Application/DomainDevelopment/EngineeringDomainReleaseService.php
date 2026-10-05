@@ -23,6 +23,7 @@ final readonly class EngineeringDomainReleaseService
         private EngineeringDomainAgentOutputValidator $validator,
         private EngineeringDomainDriftDetector $drift,
         private EngineeringArtifactDependencyGraph $artifactGraph,
+        private EngineeringDomainHumanGateService $humanGates,
     ) {}
 
     /** @return array<string,mixed> */
@@ -38,6 +39,43 @@ final readonly class EngineeringDomainReleaseService
             EngineeringDomainStatus::BLOCKED->value,
         ], true)) {
             throw new RuntimeException('Domain QA can run only after implementation/integration; current status is '.$domain['status'].'.');
+        }
+
+        $completedCycles = 0;
+        foreach ($this->domains->runtimeEvents($domainId, 500) as $event) {
+            if (($event['event_type'] ?? null) === EngineeringDomainRuntimeEventType::DOMAIN_QA_COMPLETED->value) ++$completedCycles;
+        }
+        $authorizedCycles = $this->authorizedIntegrationCycles(
+            $domainId,
+            max(1, (int) ($domain['max_domain_integration_cycles'] ?? 3)),
+        );
+        if ($completedCycles >= $authorizedCycles) {
+            $decisionId = $this->humanGates->request(
+                $domainId,
+                $organizationId,
+                'DOMAIN_INTEGRATION_BUDGET',
+                EngineeringDomainStatus::INTEGRATION,
+                'Extend Domain integration and QA cycle budget?',
+                'Domain integration/QA exhausted its configured cycle budget.',
+                [
+                    'completed_cycles' => $completedCycles,
+                    'authorized_cycles' => $authorizedCycles,
+                    'base_cycle_limit' => (int) ($domain['max_domain_integration_cycles'] ?? 3),
+                ],
+                'DOMAIN_RELEASE_RUNTIME',
+                [
+                    ['id' => 'CONTINUE', 'description' => 'Authorize another integration/QA cycle window.'],
+                    ['id' => 'CANCEL', 'description' => 'Stop further Domain integration cycles.'],
+                ],
+            );
+            foreach ($this->domains->openHumanDecisions($domainId) as $decision) {
+                if (($decision['id'] ?? null) === $decisionId) {
+                    return $this->view($domainId, [
+                        'human_approval_required' => true,
+                        'open_human_decisions' => $this->domains->openHumanDecisions($domainId),
+                    ]);
+                }
+            }
         }
 
         $drift = $this->drift->refresh($domainId);
@@ -393,6 +431,18 @@ final readonly class EngineeringDomainReleaseService
             ],
             'generated_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ];
+    }
+
+    private function authorizedIntegrationCycles(string $domainId, int $baseLimit): int
+    {
+        $extensions = 0;
+        foreach ($this->domains->humanDecisionHistory($domainId) as $decision) {
+            if (($decision['gate_type'] ?? null) !== 'DOMAIN_INTEGRATION_BUDGET') continue;
+            if (($decision['status'] ?? null) !== 'ANSWERED') continue;
+            $selected = strtoupper(trim((string) ($decision['answer']['selected_option'] ?? '')));
+            if (in_array($selected, ['APPROVE','CONTINUE'], true)) ++$extensions;
+        }
+        return max(1, $baseLimit) * (1 + $extensions);
     }
 
     /** @param list<array<string,mixed>> $features @param array<string,mixed> $qaResult */
