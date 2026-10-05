@@ -388,6 +388,7 @@ final readonly class EngineeringArchitectStageExecutor
                 $workflow,
                 AgentRole::PRINCIPAL_ARCHITECT,
                 $run->structuredOutput,
+                $this->counters($featureId),
             );
             $this->persistTransitions($workflow, $next->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
@@ -421,6 +422,30 @@ final readonly class EngineeringArchitectStageExecutor
 
             return $next;
         });
+    }
+
+    private function counters(string $featureId): \App\Engineering\Application\Workflow\WorkflowCounters
+    {
+        $developer = 0;
+        $reviewer = 0;
+        $qa = 0;
+        $architect = 0;
+        foreach ($this->agentRuns->forFeature($featureId) as $run) {
+            match ($run['role'] ?? null) {
+                AgentRole::DEVELOPER->value => ++$developer,
+                AgentRole::REVIEWER->value => ++$reviewer,
+                AgentRole::QA_EXECUTOR->value,
+                AgentRole::QA->value => ++$qa,
+                AgentRole::PRINCIPAL_ARCHITECT->value => ++$architect,
+                default => null,
+            };
+        }
+        return new \App\Engineering\Application\Workflow\WorkflowCounters(
+            max(0, $developer - 1),
+            $reviewer,
+            $qa,
+            $architect,
+        );
     }
 
     private function requireRepositoryReadConfiguration(string $featureId, string $workflowId): WorkflowDirective
