@@ -11,7 +11,7 @@ $prompt = (string) file_get_contents($root.'/symfony/config/engineering/prompts/
 foreach (['pullRequestFiles','pullRequest(','head_revision','commitChecks','ArtifactType::REVIEW_REPORT','ArtifactType::IMPLEMENTATION_PLAN','ArtifactType::DEVELOPER_HANDOFF','\'implementation_plan\'','\'ci_results\'','\'coding_standards\'','\'security_standards\'','\'issues\'','\'human_decisions\'','REVIEW_PENDING','reviewed_revision','assertAcceptanceCriteriaCoverage','answeredHumanDecisions','humanDecisions->create','WorkflowCounters'] as $needle) {
     if (!str_contains($stage.$gateway, $needle)) throw new RuntimeException('Reviewer stage missing '.$needle);
 }
-foreach (['REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED','AgentRole::PRINCIPAL_ARCHITECT','AgentRole::DEVELOPER','AgentRole::QA'] as $needle) {
+foreach (['REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED','AgentRole::PRINCIPAL_ARCHITECT','AgentRole::DEVELOPER','AgentRole::QA_EXECUTOR'] as $needle) {
     if (!str_contains($coordinator, $needle)) throw new RuntimeException('Reviewer coordinator routing missing '.$needle);
 }
 if (!str_contains($workflow, "'REVIEW_PENDING' => [EngineeringWorkflowState::QA_PENDING, EngineeringWorkflowState::ARCHITECTURE_PENDING")) throw new RuntimeException('Reviewer architecture revalidation transition is missing.');
