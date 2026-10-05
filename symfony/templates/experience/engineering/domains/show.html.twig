@@ -149,6 +149,7 @@
         {'key':'artifacts','label':'Artifacts · ' ~ engineeringDomain.artifacts|length},
         {'key':'documentation','label':'Documentation'},
         {'key':'executions','label':'Executions · ' ~ engineeringDomain.agent_runs|length ~ ' / events ' ~ engineeringDomain.runtime_events|default([])|length},
+        {'key':'analytics','label':'Analytics'},
         {'key':'qa','label':'QA'},
         {'key':'release','label':'Release'}
     ] %}
@@ -362,6 +363,88 @@
                         </table>
                     </div>
                 {% endif %}
+            </section>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-analytics" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-analytics" data-tabs-target="panel" data-tab-key="analytics" hidden>
+            {% set analytics = engineeringDomain.analytics|default({}) %}
+            {% set usage = analytics.usage|default({}) %}
+            <div class="dw-summary" style="margin-bottom:10px">
+                <div class="dw-card"><small>Total tokens</small><strong>{{ usage.total_tokens|default(0)|number_format(0, '.', ' ') }}</strong></div>
+                <div class="dw-card"><small>Token budget</small><strong>{{ usage.token_budget|default(0)|number_format(0, '.', ' ') }}</strong></div>
+                <div class="dw-card"><small>Token use</small><strong>{{ ((usage.token_budget_utilization|default(0)) * 100)|number_format(1, '.', '') }}%</strong></div>
+                <div class="dw-card"><small>Total cost</small><strong>USD {{ usage.total_cost|default(0)|number_format(6, '.', '') }}</strong></div>
+                <div class="dw-card"><small>Cost budget</small><strong>USD {{ usage.cost_budget|default(0)|number_format(2, '.', '') }}</strong></div>
+                <div class="dw-card"><small>Cost use</small><strong>{{ usage.cost_budget_utilization is not null ? ((usage.cost_budget_utilization|default(0)) * 100)|number_format(1, '.', '') ~ '%' : 'n/a' }}</strong></div>
+            </div>
+
+            <div class="dw-grid">
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Cost / token usage by role</h2><span class="dw-muted">Domain agents</span></div>
+                    <div class="dw-table-wrap">
+                        <table class="dw-table">
+                            <thead><tr><th>Role</th><th>Runs</th><th>Failed</th><th>Tokens</th><th>Cost</th></tr></thead>
+                            <tbody>
+                            {% for role, row in analytics.by_role|default({}) %}
+                                <tr>
+                                    <td><strong>{{ role }}</strong></td>
+                                    <td>{{ row.runs }}</td>
+                                    <td>{{ row.failed }}</td>
+                                    <td>{{ row.tokens|number_format(0, '.', ' ') }}</td>
+                                    <td>USD {{ row.cost|number_format(6, '.', '') }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="dw-muted">Domain Agent usage ще не зафіксований.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Feature execution cost</h2><span class="dw-muted">child Engineering workflows</span></div>
+                    <div class="dw-table-wrap">
+                        <table class="dw-table">
+                            <thead><tr><th>Feature</th><th>Tokens</th><th>Cost</th><th>Runs</th><th>Review / QA</th></tr></thead>
+                            <tbody>
+                            {% for row in analytics.by_feature|default([]) %}
+                                <tr>
+                                    <td><strong>{{ row.feature_key }}</strong></td>
+                                    <td>{{ row.tokens|default(0)|number_format(0, '.', ' ') }}</td>
+                                    <td>USD {{ row.cost|default(0)|number_format(6, '.', '') }}</td>
+                                    <td>{{ row.agent_runs|default(0) }}</td>
+                                    <td>{{ row.review_cycles|default(0) }} / {{ row.qa_cycles|default(0) }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="dw-muted">Feature cost evidence ще не сформований.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <section class="dw-panel" style="margin-top:10px">
+                <div class="dw-panel__head"><h2>Architecture history</h2><span class="dw-muted">{{ analytics.architecture_history|default([])|length }} revisions</span></div>
+                <div class="dw-table-wrap">
+                    <table class="dw-table">
+                        <thead><tr><th>Version</th><th>Status</th><th>Hash</th><th>Repository revision</th><th>Created by</th><th>Created</th></tr></thead>
+                        <tbody>
+                        {% for row in analytics.architecture_history|default([]) %}
+                            <tr>
+                                <td><strong>v{{ row.version }}</strong></td>
+                                <td>{{ row.status }}</td>
+                                <td><code>{{ row.content_hash|default('')|slice(0, 12) }}</code></td>
+                                <td><code>{{ row.repository_revision|default('')|slice(0, 12) }}</code></td>
+                                <td>{{ row.created_by|default('—') }}</td>
+                                <td>{{ row.created_at|default('—') }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6" class="dw-muted">Architecture revisions ще не створені.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </section>
         </section>
 
