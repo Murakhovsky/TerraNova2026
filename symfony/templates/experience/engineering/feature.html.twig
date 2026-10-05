@@ -285,13 +285,176 @@
                     <thead><tr><th>Роль</th><th>Статус</th><th>Модель</th><th>Tokens</th><th>Вартість</th><th>Повтори</th><th>Початок / кінець</th><th>Результат</th></tr></thead>
                     <tbody>
                     {% for run in engineering.agent_runs %}
-                        {% set runTokens = (run.tokens_input is not null or run.tokens_output is not null) ? (run.tokens_input|default(0) + run.tokens_output|default(0)) : null %}
+                        {% set ledgerUsage = run.ledger_usage|default(null) %}
+                        {% set runTokens = ledgerUsage and ledgerUsage.total_tokens is not null
+                            ? ledgerUsage.total_tokens
+                            : ((run.tokens_input is not null or run.tokens_output is not null) ? (run.tokens_input|default(0) + run.tokens_output|default(0)) : null) %}
+                        {% set runCost = ledgerUsage and ledgerUsage.cost_amount is not null ? ledgerUsage.cost_amount : run.cost %}
                         <tr>
                             <td><strong>{{ run.role }}</strong><div class="engineering-muted">{{ run.id }}</div></td>
                             <td>{{ run.status }}{% if run.error_type %}<div class="engineering-danger">{{ run.error_type }}</div>{% endif %}</td>
                             <td>{{ run.provider|default('unknown') }} / {{ run.model|default('unknown') }}</td>
                             <td>{{ runTokens is not null ? runTokens|number_format(0, '.', ' ') : 'unavailable' }}</td>
-                            <td>{{ run.cost is not null ? ('$' ~ run.cost|number_format(4, '.', '')) : 'unavailable' }}</td>
+                            <td>
+                                {{ runCost is not null ? ('
+                            <td>logical {{ run.logical_attempt|default(1) }} · technical {{ run.technical_retry|default(0) }}</td>
+                            <td>{{ run.started_at|default('') }}<div class="engineering-muted">{{ run.finished_at|default('running') }}</div></td>
+                            <td>
+                                <details class="engineering-details">
+                                    <summary>Деталі</summary>
+                                    {% if run.error_message %}<p class="engineering-danger">{{ run.error_message }}</p>{% endif %}
+                                    {% if run.runtime_steps|default([]) is not empty %}
+                                        <div style="margin:8px 0">
+                                            <strong>Runtime steps</strong>
+                                            {% for step in run.runtime_steps %}
+                                                <div class="engineering-muted">
+                                                    #{{ step.sequence|default('?') }} · {{ step.type|default('step') }} · {{ step.status|default('UNKNOWN') }}
+                                                    {% if step.error|default('') %} · {{ step.error }}{% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
+                                    <div class="engineering-muted">trace: {{ run.trace_id|default('n/a') }}</div>
+                                </details>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="engineering-panel" aria-labelledby="engineering-actions">
+        <div class="engineering-panel__head">
+            <h2 id="engineering-actions">Інструменти та дії</h2>
+            <span class="engineering-muted">{{ engineering.execution_events|length }} подій</span>
+        </div>
+        {% if engineering.execution_events is empty %}
+            <div class="engineering-panel__body engineering-muted">Окремий журнал tool/repository actions для цього workflow ще порожній.</div>
+        {% else %}
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Час</th><th>Категорія</th><th>Дія</th><th>Статус</th><th>Тривалість</th><th>Результат</th></tr></thead>
+                    <tbody>
+                    {% for event in engineering.execution_events %}
+                        <tr>
+                            <td>{{ event.occurred_at }}</td>
+                            <td>{{ event.category }}</td>
+                            <td><strong>{{ event.action }}</strong><div class="engineering-muted">{{ event.summary }}</div></td>
+                            <td>{{ event.status }}</td>
+                            <td>{{ event.duration_ms is not null ? (event.duration_ms ~ ' ms') : '—' }}</td>
+                            <td>
+                                {% if event.error %}<div class="engineering-danger">{{ event.error }}</div>{% endif %}
+                                {% if event.details is not empty %}
+                                    <details class="engineering-details">
+                                        <summary>Деталі</summary>
+                                        <div class="engineering-agent-output">{{ event.details|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                    </details>
+                                {% elseif not event.error %}
+                                    <span class="engineering-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
+    <section class="engineering-panel">
+        <div class="engineering-panel__head">
+            <h2>Облік LLM</h2>
+            <span class="engineering-muted">{{ engineering.llm_invocations|length }} invocation(s) · source {{ summary.usage_source }}</span>
+        </div>
+        {% if engineering.llm_invocations is empty %}
+            <div class="engineering-panel__body">
+                <strong>Provider ledger для цього workflow не знайдено.</strong>
+                <p class="engineering-muted">Це не дорівнює 0 tokens / $0. Якщо OpenAI usage існує, але correlation не з'єднаний з AgentRun, accounting потребує виправлення.</p>
+            </div>
+        {% else %}
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Час</th><th>Provider / model</th><th>Use case</th><th>Input</th><th>Cached</th><th>Output</th><th>Reasoning</th><th>Total</th><th>Вартість</th><th>Джерело ціни</th><th>Latency</th><th>Correlation</th></tr></thead>
+                    <tbody>
+                    {% for inv in engineering.llm_invocations %}
+                        <tr>
+                            <td>{{ inv.created_at }}</td>
+                            <td>{{ inv.provider }} / {{ inv.model }}</td>
+                            <td>{{ inv.use_case|default('—') }}</td>
+                            <td>{{ inv.input_tokens is not null ? inv.input_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.cached_input_tokens is not null ? inv.cached_input_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.output_tokens is not null ? inv.output_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.reasoning_tokens is not null ? inv.reasoning_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.total_tokens is not null ? inv.total_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
+                            <td>{{ inv.cost_amount is not null ? ((inv.cost_currency|default('USD')) ~ ' ' ~ inv.cost_amount|number_format(6, '.', '')) : 'unavailable' }}</td>
+                            <td>{{ inv.cost_source|default('unavailable') }}{% if inv.pricing_version|default('') %}<div class="engineering-muted">{{ inv.pricing_version }}</div>{% endif %}</td>
+                            <td>{{ inv.latency_ms is not null ? (inv.latency_ms ~ ' ms') : 'n/a' }}</td>
+                            <td><code>{{ inv.correlation_id }}</code></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
+    <div class="engineering-grid">
+        <section class="engineering-panel">
+            <div class="engineering-panel__head"><h2>Артефакти / репозиторій</h2><span class="engineering-muted">{{ engineering.artifacts|length }} artifacts</span></div>
+            <div class="engineering-panel__body">
+                <div><strong>Repository revision:</strong> {{ engineering.feature.repository_revision|default('not captured') }}</div>
+                {% if summary.pull_request.number %}<div><strong>Pull request:</strong> #{{ summary.pull_request.number }}</div>{% endif %}
+                {% for type, artifact in engineering.artifacts %}
+                    <details class="engineering-details" style="margin-top:8px">
+                        <summary>{{ type }} · v{{ artifact.version|default('?') }}</summary>
+                        <div class="engineering-agent-output">{{ artifact.content ? artifact.content|json_encode(constant('JSON_PRETTY_PRINT')) : 'No content' }}</div>
+                    </details>
+                {% else %}
+                    <p class="engineering-muted">Artifacts ще не створені.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="engineering-panel">
+            <div class="engineering-panel__head"><h2>Технічні дані / аудит</h2><span class="engineering-muted">raw identifiers</span></div>
+            <div class="engineering-panel__body">
+                <div><strong>Feature ID:</strong> <code>{{ engineering.feature.id }}</code></div>
+                <div><strong>Workflow ID:</strong> <code>{{ engineering.workflow.id|default('n/a') }}</code></div>
+                <div><strong>Trace:</strong> <code>{{ engineering.workflow.trace_id|default('n/a') }}</code></div>
+                <div><strong>Остання активність:</strong> {{ engineering.workflow.last_activity_at|default('не запускалось') }}</div>
+                <div><strong>Heartbeat:</strong> {{ engineering.workflow.heartbeat_at|default('немає') }}</div>
+                <div><strong>Runtime health:</strong> {{ engineering.workflow.health_status|default('UNKNOWN') }}</div>
+                {% if engineering.workflow.stalled_at|default('') %}<div><strong>Stalled at:</strong> {{ engineering.workflow.stalled_at }}</div>{% endif %}
+                {% if engineering.workflow.runtime_reason|default('') %}<div><strong>Причина:</strong> {{ engineering.workflow.runtime_reason }}</div>{% endif %}
+                <div><strong>Початок:</strong> {{ engineering.workflow.started_at|default('не запускалось') }}</div>
+                <div><strong>Завершення:</strong> {{ engineering.workflow.finished_at|default('не завершено') }}</div>
+            </div>
+        </section>
+    </div>
+
+    {% if engineering.workflow is null or summary.can_retry %}
+        <details class="engineering-panel engineering-details">
+            <summary class="engineering-panel__head"><span>Danger zone</span><span class="engineering-muted">hard delete</span></summary>
+            <div class="engineering-panel__body">
+                <p class="engineering-muted">Hard delete доступний тільки для draft або CANCELLED/FAILED workflow без pull request.</p>
+                <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <label><input type="checkbox" name="confirm_delete" value="1" required> Підтверджую видалення локальної Engineering історії</label>
+                    <button class="cos-button cos-button--danger" type="submit">Видалити</button>
+                </form>
+            </div>
+        </details>
+    {% endif %}
+</section>
+{% endblock %}
+ ~ runCost|number_format(4, '.', '')) : 'unavailable' }}
+                                {% if ledgerUsage %}
+                                    <div class="engineering-muted">{{ ledgerUsage.invocations }} LLM call(s){% if ledgerUsage.cost_sources|default([]) is not empty %} · {{ ledgerUsage.cost_sources|join(', ') }}{% endif %}</div>
+                                {% endif %}
+                            </td>
                             <td>logical {{ run.logical_attempt|default(1) }} · technical {{ run.technical_retry|default(0) }}</td>
                             <td>{{ run.started_at|default('') }}<div class="engineering-muted">{{ run.finished_at|default('running') }}</div></td>
                             <td>
