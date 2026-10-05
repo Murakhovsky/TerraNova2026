@@ -275,7 +275,8 @@ final class EngineeringAgentSchemas
             'properties' => [
                 'status' => self::baseStatus([
                     'COMPLETED','COMPLETED_WITH_LIMITATIONS','BLOCKED',
-                    'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED','FAILED',
+                    'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED',
+                    'MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED','DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','FAILED',
                 ]),
                 'preflight' => [
                     'type' => 'object',
@@ -380,7 +381,11 @@ final class EngineeringAgentSchemas
             'type' => 'object',
             'required' => ['status','reviewed_revision','base_revision','pull_request','preflight','summary','issues','correctness','architecture','security','maintainability','database','api','tests','acceptance_criteria','ci','unresolved_blockers','unresolved_majors','recommendation'],
             'properties' => [
-                'status' => self::baseStatus(['APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED']),
+                'status' => self::baseStatus([
+                    'APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED',
+                    'SECURITY_REVIEW_REQUIRED','MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED',
+                    'DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED'
+                ]),
                 'reviewed_revision' => ['type' => 'string', 'minLength' => 1],
                 'base_revision' => ['type' => 'string', 'minLength' => 1],
                 'pull_request' => ['type' => ['integer','string']],
