@@ -300,6 +300,37 @@ foreach([
     $assert(in_array($eventType,$eventTypes,true),'Acceptance workflow missing event type: '.$eventType);
 }
 
+try{
+    $service->createInstrument(new CreateInstrument($org,$actor,'corr-duplicate-id',[
+        'id'=>'instrument:aapl',
+        'symbol'=>'AAPL2',
+        'canonical_symbol'=>'AAPL2',
+        'name'=>'Duplicate aggregate',
+        'family'=>'equity',
+        'status'=>'ACTIVE',
+    ]));
+    throw new RuntimeException('Duplicate instrument id was accepted.');
+}catch(DomainException $error){
+    $assert($error->getMessage()==='Instrument already exists.','Unexpected duplicate aggregate error.');
+}
+
+try{
+    $service->createInstrument(new CreateInstrument($org,$actor,'corr-duplicate-identifier',[
+        'id'=>'instrument:duplicate-isin',
+        'symbol'=>'DUPL',
+        'canonical_symbol'=>'DUPL',
+        'name'=>'Duplicate identifier',
+        'family'=>'equity',
+        'status'=>'ACTIVE',
+        'identifiers'=>[
+            ['type'=>'ISIN','value'=>'US0378331005'],
+        ],
+    ]));
+    throw new RuntimeException('Duplicate typed identifier was accepted.');
+}catch(DomainException $error){
+    $assert(str_contains($error->getMessage(),'already belongs to another instrument'),'Unexpected identifier uniqueness error.');
+}
+
 $assert($service->getInstrument(new GetInstrument('other-tenant','instrument:aaplx'))===null,'Tenant isolation failed in acceptance repository.');
 $assert(count($venues->instruments('other-tenant',VenueId::fromString('venue:tokenized-a')))===0,'Venue mapping leaked across tenant.');
 

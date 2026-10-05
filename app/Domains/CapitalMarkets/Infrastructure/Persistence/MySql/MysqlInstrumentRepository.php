@@ -23,31 +23,55 @@ final readonly class MysqlInstrumentRepository implements InstrumentRepository
     {
         $this->connection->beginTransaction();
         try{
-            $statement=$this->connection->prepare(
-                'INSERT INTO tn_capital_market_instruments
-                 (organization_id,instrument_id,symbol,canonical_symbol,name,family,status,currency,quote_asset,
-                  issuer_reference,jurisdiction,primary_venue_reference,metadata_json,created_at,updated_at)
-                 VALUES
-                 (:organization_id,:instrument_id,:symbol,:canonical_symbol,:name,:family,:status,:currency,:quote_asset,
-                  :issuer_reference,:jurisdiction,:primary_venue_reference,:metadata_json,:created_at,:updated_at)
-                 ON DUPLICATE KEY UPDATE
-                  symbol=VALUES(symbol),canonical_symbol=VALUES(canonical_symbol),name=VALUES(name),family=VALUES(family),
-                  status=VALUES(status),currency=VALUES(currency),quote_asset=VALUES(quote_asset),
-                  issuer_reference=VALUES(issuer_reference),jurisdiction=VALUES(jurisdiction),
-                  primary_venue_reference=VALUES(primary_venue_reference),metadata_json=VALUES(metadata_json),
-                  updated_at=VALUES(updated_at)'
+            $exists=$this->connection->prepare(
+                'SELECT 1 FROM tn_capital_market_instruments
+                 WHERE organization_id=:organization_id AND instrument_id=:instrument_id
+                 LIMIT 1 FOR UPDATE'
             );
-            $statement->execute([
-                'organization_id'=>$organizationId,'instrument_id'=>$instrument->id->value(),
-                'symbol'=>$instrument->symbol,'canonical_symbol'=>$instrument->canonicalSymbol,'name'=>$instrument->name,
-                'family'=>$instrument->family->value,'status'=>$instrument->status->value,
-                'currency'=>$instrument->currency?->value(),'quote_asset'=>$instrument->quoteAsset?->value(),
-                'issuer_reference'=>$instrument->issuerReference,'jurisdiction'=>$instrument->jurisdiction,
+            $exists->execute([
+                'organization_id'=>$organizationId,
+                'instrument_id'=>$instrument->id->value(),
+            ]);
+
+            $parameters=[
+                'organization_id'=>$organizationId,
+                'instrument_id'=>$instrument->id->value(),
+                'symbol'=>$instrument->symbol,
+                'canonical_symbol'=>$instrument->canonicalSymbol,
+                'name'=>$instrument->name,
+                'family'=>$instrument->family->value,
+                'status'=>$instrument->status->value,
+                'currency'=>$instrument->currency?->value(),
+                'quote_asset'=>$instrument->quoteAsset?->value(),
+                'issuer_reference'=>$instrument->issuerReference,
+                'jurisdiction'=>$instrument->jurisdiction,
                 'primary_venue_reference'=>$instrument->primaryVenueReference,
-                'metadata_json'=>json_encode($instrument->metadata,JSON_THROW_ON_ERROR),
+                'metadata_json'=>json_encode((object)$instrument->metadata,JSON_THROW_ON_ERROR),
                 'created_at'=>$instrument->createdAt->format('Y-m-d H:i:s.u'),
                 'updated_at'=>$instrument->updatedAt->format('Y-m-d H:i:s.u'),
-            ]);
+            ];
+
+            if($exists->fetchColumn()!==false){
+                $statement=$this->connection->prepare(
+                    'UPDATE tn_capital_market_instruments
+                     SET symbol=:symbol,canonical_symbol=:canonical_symbol,name=:name,family=:family,status=:status,
+                         currency=:currency,quote_asset=:quote_asset,issuer_reference=:issuer_reference,
+                         jurisdiction=:jurisdiction,primary_venue_reference=:primary_venue_reference,
+                         metadata_json=:metadata_json,updated_at=:updated_at
+                     WHERE organization_id=:organization_id AND instrument_id=:instrument_id'
+                );
+                unset($parameters['created_at']);
+            }else{
+                $statement=$this->connection->prepare(
+                    'INSERT INTO tn_capital_market_instruments
+                     (organization_id,instrument_id,symbol,canonical_symbol,name,family,status,currency,quote_asset,
+                      issuer_reference,jurisdiction,primary_venue_reference,metadata_json,created_at,updated_at)
+                     VALUES
+                     (:organization_id,:instrument_id,:symbol,:canonical_symbol,:name,:family,:status,:currency,:quote_asset,
+                      :issuer_reference,:jurisdiction,:primary_venue_reference,:metadata_json,:created_at,:updated_at)'
+                );
+            }
+            $statement->execute($parameters);
 
             $this->connection->prepare(
                 'DELETE FROM tn_capital_market_instrument_identifiers
@@ -62,8 +86,10 @@ final readonly class MysqlInstrumentRepository implements InstrumentRepository
             foreach($identifiers as $identifier){
                 if(!$identifier instanceof InstrumentIdentifier)throw new \InvalidArgumentException('Instrument identifiers must be typed values.');
                 $insert->execute([
-                    'organization_id'=>$organizationId,'instrument_id'=>$instrument->id->value(),
-                    'identifier_type'=>$identifier->type->value,'identifier_source'=>$identifier->source??'',
+                    'organization_id'=>$organizationId,
+                    'instrument_id'=>$instrument->id->value(),
+                    'identifier_type'=>$identifier->type->value,
+                    'identifier_source'=>$identifier->source??'',
                     'identifier_value'=>$identifier->value,
                 ]);
             }

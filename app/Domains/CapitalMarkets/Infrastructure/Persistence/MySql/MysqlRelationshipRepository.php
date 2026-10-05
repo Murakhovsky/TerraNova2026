@@ -25,9 +25,7 @@ final readonly class MysqlRelationshipRepository implements RelationshipReposito
               effective_from,effective_to,status,metadata_json)
              VALUES
              (:organization_id,:relationship_id,:source_instrument_id,:target_instrument_id,:relationship_type,:strength,
-              :effective_from,:effective_to,:status,:metadata_json)
-             ON DUPLICATE KEY UPDATE strength=VALUES(strength),effective_from=VALUES(effective_from),
-              effective_to=VALUES(effective_to),status=VALUES(status),metadata_json=VALUES(metadata_json)'
+              :effective_from,:effective_to,:status,:metadata_json)'
         );
         $statement->execute([
             'organization_id'=>$organizationId,'relationship_id'=>$relationship->id->value(),
@@ -37,7 +35,7 @@ final readonly class MysqlRelationshipRepository implements RelationshipReposito
             'effective_from'=>$relationship->effectiveFrom->format('Y-m-d H:i:s.u'),
             'effective_to'=>$relationship->effectiveTo?->format('Y-m-d H:i:s.u'),
             'status'=>$relationship->status->value,
-            'metadata_json'=>json_encode($relationship->metadata,JSON_THROW_ON_ERROR),
+            'metadata_json'=>json_encode((object)$relationship->metadata,JSON_THROW_ON_ERROR),
         ]);
     }
 
