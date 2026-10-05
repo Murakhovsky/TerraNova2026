@@ -168,7 +168,10 @@
             <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'unavailable' }}</span>
         </div>
         <div class="engineering-summary__item">
-            <span class="engineering-summary__label">Вартість</span>
+            <span class="engineering-summary__label">
+                Вартість
+                {% if summary.usage.cost_sources|default([]) is not empty %} · {{ summary.usage.cost_sources|join(', ') }}{% endif %}
+            </span>
             <span class="engineering-summary__value">
                 {% if summary.cost is not null %}{{ summary.usage.cost_currency|default('USD') }} {{ summary.cost|number_format(4, '.', '') }}{% else %}unavailable{% endif %}
             </span>
