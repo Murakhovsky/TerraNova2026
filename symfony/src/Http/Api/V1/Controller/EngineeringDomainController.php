@@ -63,7 +63,10 @@ final readonly class EngineeringDomainController
                 targetRepository: $repository,
                 targetBranch: trim((string) ($input['target_branch'] ?? '')),
                 createdBy: 'user:'.$tenant->userId()->value(),
-                maxParallelFeatures: max(1, min(20, (int) ($input['max_parallel_features'] ?? 3))),
+                maxParallelFeatures: max(0, min(20, (int) ($input['max_parallel_features'] ?? 0))),
+                maxParallelDevelopers: max(0, min(20, (int) ($input['max_parallel_developers'] ?? 0))),
+                maxParallelReviews: max(0, min(20, (int) ($input['max_parallel_reviews'] ?? 0))),
+                maxParallelQa: max(0, min(20, (int) ($input['max_parallel_qa'] ?? 0))),
             );
 
             return new JsonResponse([
