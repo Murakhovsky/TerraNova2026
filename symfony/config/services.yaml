@@ -1282,6 +1282,13 @@ services:
   Kernel\Llm\LlmRouteResolverInterface:
     alias: Infrastructure\Llm\PlatformSettingsLlmRouteResolver
 
+  Infrastructure\Llm\PlatformSettingsLlmPricingResolver:
+    arguments:
+      $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
+
+  Kernel\Llm\LlmPricingResolverInterface:
+    alias: Infrastructure\Llm\PlatformSettingsLlmPricingResolver
+
   Kernel\Llm\StructuredLlmClientInterface:
     alias: Kernel\Llm\GovernedStructuredLlmClient
 
@@ -1292,6 +1299,7 @@ services:
       $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
       $resilience: '@Kernel\Resilience\ExternalCallExecutor'
+      $pricing: '@Kernel\Llm\LlmPricingResolverInterface'
 
   Kernel\Agent\Service\StructuredAgentLlmClient:
     arguments:
