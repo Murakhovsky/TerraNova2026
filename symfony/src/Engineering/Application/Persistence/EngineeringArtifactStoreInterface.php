@@ -19,4 +19,7 @@ interface EngineeringArtifactStoreInterface
 
     /** @return array{id:string,type:string,version:int,status:string,content:array,content_hash:string}|null */
     public function latest(string $featureId, ArtifactType $type): ?array;
+
+    /** @param list<ArtifactType> $types */
+    public function invalidate(string $featureId, array $types): int;
 }
