@@ -12,9 +12,13 @@ final class EngineeringDomainAgentSchemas
     public static function forRole(AgentRole $role): array
     {
         return match ($role) {
-            AgentRole::ENGINEERING_MANAGER => self::manager(),
-            AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
+            AgentRole::ENGINEERING_MANAGER,
+            AgentRole::PRODUCT_REQUIREMENTS => self::manager(),
+            AgentRole::QA_PLANNER,
+            AgentRole::QA_EXECUTOR,
             AgentRole::QA => self::qa(),
+            AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
+            AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
             default => throw new InvalidArgumentException('Agent role does not support Domain Development mode: '.$role->value),
         };
     }
@@ -251,4 +255,35 @@ final class EngineeringDomainAgentSchemas
             'additionalProperties' => false,
         ];
     }
+
+    /** @return array<string,mixed> */
+    private static function integrationRelease(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','integration_summary','release_checks','known_limitations','required_human_decisions'],
+            'properties' => [
+                'status' => ['type' => 'string', 'enum' => ['RELEASE_READY','BLOCKED','HUMAN_DECISION_REQUIRED','FAILED']],
+                'integration_summary' => ['type' => ['string','object','array']],
+                'release_checks' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['id','status','blocking','evidence'],
+                        'properties' => [
+                            'id' => ['type' => 'string'],
+                            'status' => ['type' => 'string', 'enum' => ['PASS','FAIL','BLOCKED','NOT_APPLICABLE']],
+                            'blocking' => ['type' => 'boolean'],
+                            'evidence' => ['type' => ['array','object','string','number','boolean','null']],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'known_limitations' => ['type' => 'array'],
+                'required_human_decisions' => ['type' => 'array'],
+            ],
+            'additionalProperties' => false,
+        ];
+    }
+
 }
