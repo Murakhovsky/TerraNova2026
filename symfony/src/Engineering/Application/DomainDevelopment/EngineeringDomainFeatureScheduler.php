@@ -45,6 +45,8 @@ final readonly class EngineeringDomainFeatureScheduler
         $this->syncLinkedFeatures($domainId, $organizationId, $correlationId);
         $drift = $this->drift->refresh($domainId);
         $domainFeatures = $this->domains->features($domainId);
+        $domainArchitecture = $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ARCHITECTURE->value);
+        $domainArchitectureVersion = max(1, (int) ($domainArchitecture['version'] ?? 1));
         $dependencies = $this->domains->dependencies($domainId);
         $this->graph->assertValid(
             array_map(static fn (array $feature): array => ['key' => $feature['feature_key']], $domainFeatures),
@@ -74,12 +76,12 @@ final readonly class EngineeringDomainFeatureScheduler
                 EngineeringDomainRuntimeEventType::FEATURE_READY->value,
                 $featureKey,
                 [
-                    'architecture_version' => $feature['architecture_version'] ?? null,
+                    'architecture_version' => $domainArchitectureVersion,
                     'priority' => $feature['priority'] ?? null,
                     'kind' => $feature['kind'] ?? null,
                 ],
                 $correlationId,
-                'feature-ready:'.$featureKey.':v'.((string) ($domain['version'] ?? 1)),
+                'feature-ready:'.$featureKey.':architecture-v'.$domainArchitectureVersion,
             );
         }
         $byKey = [];
@@ -185,7 +187,7 @@ final readonly class EngineeringDomainFeatureScheduler
                 null,
                 ['features' => count($domainFeatures), 'required_features' => count($required)],
                 $correlationId,
-                'domain-integration-started:v'.((string) ($domain['version'] ?? 1)),
+                'domain-integration-started:architecture-v'.$domainArchitectureVersion,
             );
         }
 
