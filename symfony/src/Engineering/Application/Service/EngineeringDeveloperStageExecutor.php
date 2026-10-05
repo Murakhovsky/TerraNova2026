@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
+use App\Engineering\Application\Agent\EngineeringSpecialistReportCollector;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
@@ -41,6 +42,7 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
+        private EngineeringSpecialistReportCollector $specialistReports,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -209,6 +211,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'previous_review' => $previousReview['content'] ?? null,
                 'previous_qa' => $previousQa['content'] ?? null,
                 'human_decisions' => $humanDecisionHistory,
+                'specialist_reports' => $this->specialistReports->forFeature($featureId),
             ],
             contextRefs: [
                 'artifact:'.$featureSpec['id'],
