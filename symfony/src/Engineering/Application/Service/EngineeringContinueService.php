@@ -96,8 +96,8 @@ final readonly class EngineeringContinueService
     {
         return match ($state) {
             EngineeringWorkflowState::ANALYSIS => AgentRole::ENGINEERING_MANAGER,
-            EngineeringWorkflowState::QA_PLANNING,
-            EngineeringWorkflowState::QA_PENDING => AgentRole::QA,
+            EngineeringWorkflowState::QA_PLANNING => AgentRole::QA_PLANNER,
+            EngineeringWorkflowState::QA_PENDING => AgentRole::QA_EXECUTOR,
             EngineeringWorkflowState::ARCHITECTURE_PENDING => AgentRole::PRINCIPAL_ARCHITECT,
             EngineeringWorkflowState::DEVELOPMENT_RUNNING => AgentRole::DEVELOPER,
             EngineeringWorkflowState::REVIEW_PENDING => AgentRole::REVIEWER,
@@ -108,11 +108,11 @@ final readonly class EngineeringContinueService
     private function directiveFor(EngineeringWorkflowState $state): WorkflowDirective
     {
         return match ($state) {
-            EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Resume QA Test Plan stage.'),
+            EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA_PLANNER, 'Resume QA Test Plan stage.'),
             EngineeringWorkflowState::ARCHITECTURE_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT, 'Resume Architect stage.'),
             EngineeringWorkflowState::DEVELOPMENT_RUNNING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Resume Developer stage.'),
             EngineeringWorkflowState::REVIEW_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::REVIEWER, 'Resume Reviewer stage.'),
-            EngineeringWorkflowState::QA_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Resume QA stage and re-check CI.'),
+            EngineeringWorkflowState::QA_PENDING => new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA_EXECUTOR, 'Resume QA stage and re-check CI.'),
             EngineeringWorkflowState::HUMAN_DECISION_REQUIRED => new WorkflowDirective(WorkflowDirectiveType::STOP, null, 'Workflow is waiting for a human decision.'),
             EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL => new WorkflowDirective(WorkflowDirectiveType::READY_FOR_HUMAN_APPROVAL, null, 'Workflow is ready for human approval/merge.'),
             EngineeringWorkflowState::BLOCKED,
