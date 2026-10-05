@@ -129,6 +129,49 @@ final readonly class EngineeringDomainFeatureScheduler
                 );
                 continue;
             }
+            if ($this->policy->sharedKernelModificationRequiresHuman($feature)) {
+                $decisionId = $this->humanGates->request(
+                    $domainId,
+                    $organizationId,
+                    'SHARED_KERNEL_'.strtoupper($featureKey),
+                    EngineeringDomainStatus::IMPLEMENTATION,
+                    'Approve Shared Kernel modification for '.$featureKey.'?',
+                    'Shared Kernel expansion is exceptional. Reuse an existing canonical primitive or explicit cross-domain contract whenever possible.',
+                    [
+                        'feature_key' => $featureKey,
+                        'owned_paths' => $feature['owned_paths'] ?? [],
+                        'shared_paths' => $feature['shared_paths'] ?? [],
+                        'existing_code_awareness' => [
+                            'check_equivalent_class' => true,
+                            'check_shared_kernel_primitive' => true,
+                            'check_cross_domain_contract' => true,
+                        ],
+                    ],
+                    'ENGINEERING_POLICY_ENGINE',
+                    [
+                        ['id' => 'APPROVE', 'description' => 'Allow this explicitly reviewed Shared Kernel change.'],
+                        ['id' => 'CANCEL', 'description' => 'Keep the implementation inside its owning Domain or reuse an existing primitive.'],
+                    ],
+                );
+                $open = false;
+                foreach ($this->domains->openHumanDecisions($domainId) as $decision) {
+                    if (($decision['id'] ?? null) === $decisionId) {
+                        $open = true;
+                        break;
+                    }
+                }
+                if ($open) {
+                    $humanGateRequested = true;
+                    $this->domains->updateFeatureStatus(
+                        $domainId,
+                        $featureKey,
+                        EngineeringDomainFeatureStatus::WAITING->value,
+                        'Waiting for Shared Kernel modification approval.',
+                    );
+                    continue;
+                }
+            }
+
             if (($policy['human_approval_required'] ?? false) === true) {
                 $decisionId = $this->humanGates->request(
                     $domainId,
@@ -297,6 +340,8 @@ final readonly class EngineeringDomainFeatureScheduler
                             'Do not change public contracts without Principal Architect revalidation.',
                             'Respect owned/shared/forbidden path policy.',
                             'Do not perform business operations of the target domain.',
+                            'Reuse existing canonical primitives and cross-domain contracts before creating a new abstraction.',
+                            'Do not expand app/Kernel/Shared without an explicit Human Gate approval.',
                         ],
                         attachments: [],
                         previousContext: [[
