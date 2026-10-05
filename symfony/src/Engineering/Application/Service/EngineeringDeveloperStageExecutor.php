@@ -287,6 +287,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     usage: $run->usage,
                     error: $run->error,
                     technicalRetries: $run->technicalRetries,
+                    steps: $run->steps,
                 );
             }
         } catch (\Throwable $error) {
