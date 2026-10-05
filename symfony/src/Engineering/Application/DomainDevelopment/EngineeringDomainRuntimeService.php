@@ -5,6 +5,7 @@ namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
+use App\Engineering\Domain\DomainDevelopment\EngineeringDomainRuntimeEventType;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use InvalidArgumentException;
 use RuntimeException;
@@ -17,6 +18,10 @@ final readonly class EngineeringDomainRuntimeService
         private EngineeringDomainFeatureScheduler $scheduler,
         private EngineeringDomainReleaseService $release,
         private EngineeringRepositoryGatewayInterface $repository,
+        private int $defaultMaxParallelFeatures = 3,
+        private int $defaultMaxParallelDevelopers = 2,
+        private int $defaultMaxParallelReviews = 2,
+        private int $defaultMaxParallelQa = 2,
     ) {}
 
     public function create(
@@ -27,13 +32,21 @@ final readonly class EngineeringDomainRuntimeService
         string $targetRepository,
         string $targetBranch,
         string $createdBy,
-        int $maxParallelFeatures = 3,
+        int $maxParallelFeatures = 0,
+        int $maxParallelDevelopers = 0,
+        int $maxParallelReviews = 0,
+        int $maxParallelQa = 0,
     ): string {
         if (trim($organizationId) === '') throw new InvalidArgumentException('Organization id is required.');
         $targetRepository = trim($targetRepository);
         if ($targetRepository === '') {
             $targetRepository = $this->repository->configuredRepository();
         }
+        $maxParallelFeatures = $maxParallelFeatures > 0 ? $maxParallelFeatures : $this->defaultMaxParallelFeatures;
+        $maxParallelDevelopers = $maxParallelDevelopers > 0 ? $maxParallelDevelopers : $this->defaultMaxParallelDevelopers;
+        $maxParallelReviews = $maxParallelReviews > 0 ? $maxParallelReviews : $this->defaultMaxParallelReviews;
+        $maxParallelQa = $maxParallelQa > 0 ? $maxParallelQa : $this->defaultMaxParallelQa;
+
         $id = EngineeringId::generate();
         $targetBranch = trim($targetBranch);
         if ($targetBranch === '') {
@@ -51,6 +64,29 @@ final readonly class EngineeringDomainRuntimeService
             $targetBranch,
             $createdBy,
             $maxParallelFeatures,
+            $maxParallelDevelopers,
+            $maxParallelReviews,
+            $maxParallelQa,
+        );
+        $this->domains->recordRuntimeEvent(
+            $id,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_CREATED->value,
+            null,
+            [
+                'domain_key' => $domainKey,
+                'name' => $name,
+                'target_repository' => $targetRepository,
+                'target_branch' => $targetBranch,
+                'concurrency' => [
+                    'features' => $maxParallelFeatures,
+                    'developers' => $maxParallelDevelopers,
+                    'reviews' => $maxParallelReviews,
+                    'qa' => $maxParallelQa,
+                ],
+            ],
+            'engineering-domain:create:'.$id,
+            'domain-created:v1',
         );
         return $id;
     }
