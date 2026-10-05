@@ -2,6 +2,11 @@
   "schema_version": 1,
   "items": [
     {
+      "domain": "capital_markets",
+      "owner": "Capital Markets Architecture",
+      "reason": "V0.1 Architecture Foundation only; canonical Capital Markets process models begin with the Market Intelligence feature pack, while trading and execution runtime are intentionally absent."
+    },
+    {
       "domain": "construction",
       "owner": "COS Architecture",
       "reason": "V1 skeleton only; executable Construction process models are intentionally deferred until Construction runtime implementation."
