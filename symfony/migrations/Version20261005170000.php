@@ -140,7 +140,8 @@ CREATE TABLE cos_engineering_domain_contracts (
     status VARCHAR(24) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uniq_cos_eng_domain_contract (domain_id, contract_key)
+    UNIQUE KEY uniq_cos_eng_domain_contract_version (domain_id, contract_key, version),
+    KEY idx_cos_eng_domain_contract_active (domain_id, contract_key, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL);
 
@@ -157,9 +158,11 @@ CREATE TABLE cos_engineering_domain_events (
     delivery VARCHAR(32) NOT NULL,
     idempotency TEXT NOT NULL,
     ordering_rule TEXT NOT NULL,
+    status VARCHAR(24) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uniq_cos_eng_domain_event (domain_id, event_key)
+    UNIQUE KEY uniq_cos_eng_domain_event_version (domain_id, event_key, version),
+    KEY idx_cos_eng_domain_event_active (domain_id, event_key, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 SQL);
 
