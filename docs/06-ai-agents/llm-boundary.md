@@ -165,3 +165,5 @@ Source of this snapshot: user-provided OpenAI model/pricing data dated 2026-10-0
 Окремої cached-input ставки у наданих даних немає. Якщо provider повернув `cached_input_tokens`, а dedicated `cached_input_per_million` не налаштований, cost estimator консервативно використовує standard input rate та додає `STANDARD_INPUT_RATE_FOR_CACHE` до `cost_source`. Таким чином система не маскує припущення під provider-reported price.
 
 `reasoning_tokens` зберігаються окремо для observability, але не додаються вдруге до вартості: provider `output_tokens` є базою для output billing у current accounting model.
+
+Для історичних `cos_llm_usage` rows, де tokens уже були збережені, але `cost_amount` ще був `NULL`, Engineering observability read model застосовує той самий pricing resolver під час читання. Тому старі workflow можуть отримати estimated cost без переписування provider telemetry в БД. Persisted provider cost завжди має пріоритет над read-time estimate.
