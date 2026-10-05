@@ -9,7 +9,10 @@ use Platform\Settings\Contract\PlatformSettingsReaderInterface;
 
 final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingResolverInterface
 {
-    public function __construct(private PlatformSettingsReaderInterface $settings) {}
+    public function __construct(
+        private PlatformSettingsReaderInterface $settings,
+        private string $fallbackCatalogJson = '',
+    ) {}
 
     public function estimate(
         ?string $organizationId,
@@ -24,7 +27,10 @@ final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingRes
 
         $providerKey = $this->key($provider);
         $modelKey = $this->key($model);
-        $catalog = $this->settings->namespace($organizationId, 'llm_pricing');
+        $catalog = $this->fallbackCatalog();
+        foreach ($this->settings->namespace($organizationId, 'llm_pricing') as $key => $value) {
+            $catalog[(string) $key] = $value;
+        }
         $price = null;
         foreach ([$providerKey.'.'.$modelKey, $providerKey.'.default', 'default'] as $key) {
             if (is_array($catalog[$key] ?? null)) {
@@ -53,6 +59,19 @@ final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingRes
             source: 'CALCULATED_SETTINGS',
             pricingVersion: isset($price['version']) && is_scalar($price['version']) ? (string) $price['version'] : null,
         );
+    }
+
+    /** @return array<string,mixed> */
+    private function fallbackCatalog(): array
+    {
+        $raw = trim($this->fallbackCatalogJson);
+        if ($raw === '') return [];
+        try {
+            $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+            return is_array($decoded) ? $decoded : [];
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private function rate(mixed $value): ?float
