@@ -175,7 +175,7 @@ final readonly class EngineeringDomainWorkspaceController
                 ]),
                 'page' => $this->pages->create(
                     PageArchetype::EntityWorkspace,
-                    ['WorkspaceHeader','EntityHeader','Tabs','StatusTimeline','DataTable','ErrorState'],
+                    ['WorkspaceHeader','EntityHeader','KpiStrip','Timeline','ActionBar','ContextPanel','ErrorState'],
                     'normal',
                 ),
                 'engineeringDomain' => $data,
