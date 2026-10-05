@@ -41,6 +41,9 @@ foreach ([
 foreach ([
     'Create Domain',
     'Master Specification',
+    'Parallel developers',
+    'Parallel reviews',
+    'Parallel QA',
     'Domain Initiatives',
     'data-cos-engineering-domain="index"',
 ] as $needle) {
@@ -55,6 +58,11 @@ foreach ([
     'Public contracts',
     'Canonical Domain artifacts',
     'Domain agent executions',
+    'Orchestration events',
+    'Parallel features',
+    'Developers',
+    'Reviews',
+    'QA',
     'Domain QA Plan',
     'Domain QA Report',
     'Integration &amp; Release',
