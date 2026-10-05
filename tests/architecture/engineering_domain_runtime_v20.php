@@ -71,6 +71,11 @@ $humanGates = (string) file_get_contents($root.'/symfony/src/Engineering/Applica
 $policy = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php');
 $agentCapabilities = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/AgentCapabilityRegistry.php');
 $runtimeCapabilities = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/RuntimeCapabilityRegistry.php');
+$domainAgentService = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentService.php');
+$featureBudgetGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringFeatureBudgetGuard.php');
+$retryPolicy = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/Workflow/EngineeringRetryPolicy.php');
+$workflowCounters = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Workflow/WorkflowCounters.php');
+$structuredProvider = (string) file_get_contents($root.'/app/Infrastructure/AI/StructuredLlmAgentProvider.php');
 
 foreach ([
     'DOMAIN_SPECIFICATION',
@@ -254,6 +259,26 @@ foreach (['replaceDependencies','HUMAN_VISUAL_EDITOR','assertValid','Dependency 
 }
 foreach (['DOCUMENTATION','DOMAIN_DOCUMENTATION_TRANSLATIONS'] as $needle) {
     if (!str_contains($domainValidator.$artifactTypes, $needle)) throw new RuntimeException('Documentation release contract missing '.$needle);
+}
+
+
+foreach (['runtime_id','feature_id','state','started_at','finished_at','input_payload','output_payload','artifact_payload','repository_revision','cost_amount','token_usage','errors_payload'] as $needle) {
+    if (!str_contains($completionMigration, $needle)) throw new RuntimeException('Domain AgentRun observability envelope missing '.$needle);
+}
+foreach (['ExecutionFailureClassifier','AUTO_RETRY','RETURN_TO_AGENT','DOMAIN_AGENT_RETRY_','maxTechnicalRetries'] as $needle) {
+    if (!str_contains($domainAgentService, $needle)) throw new RuntimeException('Domain Agent failure recovery missing '.$needle);
+}
+foreach (['maxArchitectureCycles','mayRunArchitecture'] as $needle) {
+    if (!str_contains($retryPolicy, $needle)) throw new RuntimeException('Architecture loop protection missing '.$needle);
+}
+if (!str_contains($workflowCounters, 'architectureCycles')) {
+    throw new RuntimeException('Workflow counters do not track architecture cycles.');
+}
+foreach (['feature_token_budget','feature_cost_budget','domain_token_budget','domain_cost_budget','agent_run_token_budget','agent_run_cost_budget'] as $needle) {
+    if (!str_contains($featureBudgetGuard.$scheduler, $needle)) throw new RuntimeException('Three-level Engineering resource budget missing '.$needle);
+}
+foreach (['llm_max_output_tokens','llm_max_cost_amount'] as $needle) {
+    if (!str_contains($structuredProvider, $needle)) throw new RuntimeException('Agent Run provider budget ceiling missing '.$needle);
 }
 
 echo "Engineering Domain Runtime V2 architecture passed.\n";
