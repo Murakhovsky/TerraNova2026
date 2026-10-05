@@ -12,9 +12,10 @@ final class EngineeringDomainAgentSchemas
     public static function forRole(AgentRole $role): array
     {
         return match ($role) {
-            AgentRole::ENGINEERING_MANAGER => self::manager(),
+            AgentRole::ENGINEERING_MANAGER, AgentRole::PRODUCT_REQUIREMENTS => self::manager(),
+            AgentRole::QA_PLANNER, AgentRole::QA_EXECUTOR, AgentRole::QA => self::qa(),
             AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
-            AgentRole::QA => self::qa(),
+            AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
             default => throw new InvalidArgumentException('Agent role does not support Domain Development mode: '.$role->value),
         };
     }
@@ -144,6 +145,23 @@ final class EngineeringDomainAgentSchemas
                 'known_limitations' => ['type' => 'array'],
             ],
             'additionalProperties' => true,
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private static function integrationRelease(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','integration_summary','release_readiness','blocking_issues','required_human_decisions'],
+            'properties' => [
+                'status' => ['type' => 'string', 'enum' => ['RELEASE_READY','NOT_READY','HUMAN_APPROVAL_REQUIRED','BLOCKED']],
+                'integration_summary' => ['type' => ['object','array','string']],
+                'release_readiness' => ['type' => ['object','array']],
+                'blocking_issues' => ['type' => 'array'],
+                'required_human_decisions' => ['type' => 'array'],
+            ],
+            'additionalProperties' => false,
         ];
     }
 
