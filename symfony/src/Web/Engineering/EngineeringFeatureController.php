@@ -14,6 +14,7 @@ use App\Engineering\Application\Service\EngineeringFeatureManagementService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Application\Service\EngineeringStatusService;
+use App\Engineering\Application\Service\EngineeringUiActionResolver;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Security\SessionCsrfValidator;
 use App\Web\Experience\Archetype\PageArchetype;
@@ -44,6 +45,7 @@ final readonly class EngineeringFeatureController
         private EngineeringCancelService $cancel,
         private EngineeringFeatureManagementService $featureManagement,
         private EngineeringHumanDecisionService $decisions,
+        private EngineeringUiActionResolver $uiActions,
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private PagePresentationFactory $pages,
@@ -141,6 +143,12 @@ final readonly class EngineeringFeatureController
                 $displayStatus = (string) ($feature['status'] ?? 'NEW');
             }
 
+            $openDecisionCount = 0;
+            if (in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
+                $openDecisionCount = 1;
+            }
+            $rowActions = $this->uiActions->resolve($feature, is_array($workflow) ? $workflow : null, $health, $openDecisionCount);
+
             $workspaceRows[] = array_merge($feature, [
                 'workflow_id' => $workflow['workflow_id'] ?? $workflow['id'] ?? null,
                 'workflow_state' => $state,
@@ -158,6 +166,7 @@ final readonly class EngineeringFeatureController
                 'agent_runs' => (int) ($fact['agent_runs'] ?? 0),
                 'latest_agent_role' => $fact['latest_agent_role'] ?? null,
                 'latest_agent_status' => $fact['latest_agent_status'] ?? null,
+                'actions' => $rowActions,
                 'usage' => $fact['usage'] ?? [
                     'available' => false,
                     'total_tokens' => null,
@@ -613,23 +622,31 @@ final readonly class EngineeringFeatureController
         $terminal = in_array($state, ['DONE','CANCELLED','FAILED'], true)
             || in_array($workflowStatus, ['COMPLETED','CANCELLED','FAILED'], true);
         $waitsForHuman = in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true);
+        $resolvedHealth = in_array(strtoupper((string) ($data['workflow']['health_status'] ?? '')), ['HEALTHY','STALE','STALLED','WAITING','TERMINAL'], true)
+            ? strtoupper((string) $data['workflow']['health_status'])
+            : $this->runtimeHealth(
+                $workflowStatus,
+                $state,
+                is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null,
+            );
+        $actions = $this->uiActions->resolve(
+            is_array($data['feature'] ?? null) ? $data['feature'] : [],
+            is_array($data['workflow'] ?? null) ? $data['workflow'] : null,
+            $resolvedHealth,
+            count($data['open_human_decisions'] ?? []),
+        );
         $stages = $this->stagePipeline($data, $state, $workflowStatus);
 
         return [
             'state' => $state,
             'workflow_status' => $workflowStatus,
-            'health' => in_array(strtoupper((string) ($data['workflow']['health_status'] ?? '')), ['HEALTHY','STALE','STALLED','WAITING','TERMINAL'], true)
-                ? strtoupper((string) $data['workflow']['health_status'])
-                : $this->runtimeHealth(
-                    $workflowStatus,
-                    $state,
-                    is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null,
-                ),
+            'health' => $resolvedHealth,
             'terminal' => $terminal,
             'waits_for_human' => $waitsForHuman,
-            'can_cancel' => $data['workflow'] !== null && !$terminal,
-            'can_run' => !$terminal && !$waitsForHuman,
-            'can_retry' => in_array($state, ['CANCELLED','FAILED'], true) || in_array($workflowStatus, ['CANCELLED','FAILED'], true),
+            'actions' => $actions,
+            'can_cancel' => $actions['cancel'],
+            'can_run' => $actions['continue'] || $actions['resume'] || $actions['run'],
+            'can_retry' => $actions['retry'],
             'tasks_total' => count($data['tasks'] ?? []),
             'tasks_completed' => count(array_filter(
                 $data['tasks'] ?? [],
