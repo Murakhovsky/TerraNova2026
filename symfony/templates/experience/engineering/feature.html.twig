@@ -16,7 +16,7 @@
         .engineering-head__title{margin:2px 0 6px}
         .engineering-head__meta,.engineering-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
         .engineering-inline form{margin:0}
-        .engineering-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+        .engineering-summary{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
         .engineering-summary__item{padding:10px 12px;border:1px solid var(--cos-border,#e1e5ea);border-radius:10px;background:var(--cos-surface,#fff)}
         .engineering-summary__label{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);margin-bottom:4px}
         .engineering-summary__value{font-size:.95rem;font-weight:700;overflow:hidden;text-overflow:ellipsis}
@@ -161,6 +161,16 @@
     <section class="engineering-summary" aria-label="Зведення execution">
         <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value">{{ summary.workflow_status }}</span></div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value">{{ summary.state }}</span></div>
+        <div class="engineering-summary__item">
+            <span class="engineering-summary__label">Runtime</span>
+            <span class="engineering-summary__value">{{ summary.health }}</span>
+            <span class="engineering-table__meta">{{ engineering.workflow.heartbeat_at|default('heartbeat n/a') }}</span>
+        </div>
+        <div class="engineering-summary__item">
+            <span class="engineering-summary__label">Поточний агент</span>
+            <span class="engineering-summary__value">{{ summary.current_agent.role|default('—') }}</span>
+            {% if summary.current_agent %}<span class="engineering-table__meta">{{ summary.current_agent.run_id }}</span>{% endif %}
+        </div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">Запуски агентів</span><span class="engineering-summary__value">{{ summary.agent_runs }}</span></div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">Задачі</span><span class="engineering-summary__value">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
         <div class="engineering-summary__item">
