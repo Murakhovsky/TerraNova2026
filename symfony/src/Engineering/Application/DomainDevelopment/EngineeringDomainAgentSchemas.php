@@ -12,12 +12,37 @@ final class EngineeringDomainAgentSchemas
     public static function forRole(AgentRole $role): array
     {
         return match ($role) {
-            AgentRole::ENGINEERING_MANAGER, AgentRole::PRODUCT_REQUIREMENTS => self::manager(),
-            AgentRole::QA_PLANNER, AgentRole::QA_EXECUTOR, AgentRole::QA => self::qa(),
+            AgentRole::ENGINEERING_MANAGER => self::manager(),
+            AgentRole::PRODUCT_REQUIREMENTS => self::productRequirements(),
+            AgentRole::QA_PLANNER => self::qaPlanner(),
+            AgentRole::QA_EXECUTOR => self::qaExecutor(),
+            AgentRole::QA => self::qa(),
             AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
             AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
             default => throw new InvalidArgumentException('Agent role does not support Domain Development mode: '.$role->value),
         };
+    }
+
+    /** @return array<string,mixed> */
+    private static function productRequirements(): array
+    {
+        return self::manager();
+    }
+
+    /** @return array<string,mixed> */
+    private static function qaPlanner(): array
+    {
+        $schema = self::qa();
+        $schema['properties']['status']['enum'] = ['PLAN_READY','BLOCKED','HUMAN_TEST_REQUIRED'];
+        return $schema;
+    }
+
+    /** @return array<string,mixed> */
+    private static function qaExecutor(): array
+    {
+        $schema = self::qa();
+        $schema['properties']['status']['enum'] = ['PASS','FAIL','BLOCKED','HUMAN_TEST_REQUIRED'];
+        return $schema;
     }
 
     /** @return array<string,mixed> */
