@@ -10,8 +10,8 @@ final class EngineeringAgentOutputValidator
     public function validate(AgentRole $role, array $output): void
     {
         match ($role) {
-            AgentRole::ENGINEERING_MANAGER,
-            AgentRole::PRODUCT_REQUIREMENTS => $this->manager($output),
+            AgentRole::ENGINEERING_MANAGER => $this->manager($output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->productRequirements($output),
             AgentRole::QA_PLANNER,
             AgentRole::QA_EXECUTOR,
             AgentRole::QA => $this->qa($output),
@@ -20,6 +20,23 @@ final class EngineeringAgentOutputValidator
             AgentRole::REVIEWER => $this->reviewer($output),
             AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
         };
+    }
+
+
+
+    private function productRequirements(array $output): void
+    {
+        $this->manager($output);
+        foreach ($output['tasks'] as $index => $task) {
+            if (!is_array($task)) continue;
+            $role = strtoupper(trim((string) ($task['assigned_role'] ?? '')));
+            if ($role === AgentRole::QA->value) {
+                throw new EngineeringAgentOutputValidationException(sprintf(
+                    'Product task %d uses legacy QA role; use QA_PLANNER or QA_EXECUTOR explicitly.',
+                    $index,
+                ));
+            }
+        }
     }
 
     private function manager(array $output): void
