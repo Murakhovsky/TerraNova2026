@@ -21,7 +21,12 @@ final class Version20261005193000 extends AbstractMigration
         $this->addSql("ALTER TABLE cos_engineering_domains
             ADD max_parallel_developers INT NOT NULL DEFAULT 2 AFTER max_parallel_features,
             ADD max_parallel_reviews INT NOT NULL DEFAULT 2 AFTER max_parallel_developers,
-            ADD max_parallel_qa INT NOT NULL DEFAULT 2 AFTER max_parallel_reviews");
+            ADD max_parallel_qa INT NOT NULL DEFAULT 2 AFTER max_parallel_reviews,
+            ADD max_feature_retries INT NOT NULL DEFAULT 3 AFTER max_parallel_qa,
+            ADD max_domain_integration_cycles INT NOT NULL DEFAULT 3 AFTER max_feature_retries,
+            ADD context_budget INT NOT NULL DEFAULT 120000 AFTER max_domain_integration_cycles,
+            ADD token_budget BIGINT NOT NULL DEFAULT 1000000 AFTER context_budget,
+            ADD cost_budget DECIMAL(14,6) NOT NULL DEFAULT 25.000000 AFTER token_budget");
 
         $this->addSql("ALTER TABLE cos_engineering_domain_features
             ADD engineering_feature_history JSON NULL AFTER engineering_feature_id");
@@ -95,6 +100,6 @@ SQL);
         $this->addSql('DROP TABLE cos_engineering_domain_human_decisions');
         $this->addSql('DROP TABLE cos_engineering_domain_artifact_dependencies');
         $this->addSql('ALTER TABLE cos_engineering_domain_features DROP engineering_feature_history');
-        $this->addSql('ALTER TABLE cos_engineering_domains DROP max_parallel_qa, DROP max_parallel_reviews, DROP max_parallel_developers');
+        $this->addSql('ALTER TABLE cos_engineering_domains DROP cost_budget, DROP token_budget, DROP context_budget, DROP max_domain_integration_cycles, DROP max_feature_retries, DROP max_parallel_qa, DROP max_parallel_reviews, DROP max_parallel_developers');
     }
 }
