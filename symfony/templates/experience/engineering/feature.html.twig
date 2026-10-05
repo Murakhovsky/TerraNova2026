@@ -242,6 +242,25 @@
                 <span class="cos-badge">{{ summary.quality_state }}</span>
             </div>
             <div class="engineering-panel__body">
+                {% if summary.roles is not empty %}
+                    <div class="engineering-role-list" aria-label="Участь агентів">
+                        {% for role, metrics in summary.roles %}
+                            <div class="engineering-role-row">
+                                <strong>{{ role }}</strong>
+                                <span>{{ metrics.runs }}×</span>
+                                <span>
+                                    {% if metrics.running > 0 %}● {{ metrics.running }}
+                                    {% elseif metrics.failed > 0 %}⚠ {{ metrics.failed }}
+                                    {% else %}✓ {{ metrics.completed }}{% endif %}
+                                </span>
+                                <span class="engineering-muted">
+                                    {% if metrics.tokens > 0 %}{{ metrics.tokens|number_format(0, '.', ' ') }} tok{% else %}—{% endif %}
+                                    {% if metrics.cost > 0 %} · USD {{ metrics.cost|number_format(3, '.', '') }}{% endif %}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
                 {% if summary.quality_state == 'NOT_REACHED' %}
                     <strong>Review/QA ще не були досягнуті.</strong>
                     <p class="engineering-muted">Відсутність findings не означає PASS, якщо Reviewer або QA не запускалися.</p>
