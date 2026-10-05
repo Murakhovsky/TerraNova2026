@@ -47,7 +47,9 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                 'source' => 'AGENT_RUN_FALLBACK',
                 'invocations' => 0,
                 'input_tokens' => $input,
+                'cached_input_tokens' => null,
                 'output_tokens' => $output,
+                'reasoning_tokens' => null,
                 'total_tokens' => $tokenKnown ? $input + $output : null,
                 'cost_amount' => $costKnown ? (float) ($fallback['cost_amount'] ?? 0) : null,
                 'cost_currency' => $costKnown ? 'USD' : null,
@@ -70,7 +72,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             [$in, $params] = $this->inParams($featureIds, 'feature');
             $rows = $this->entityManager->getConnection()->fetchAllAssociative(
                 "SELECT traces.feature_id, u.id, u.correlation_id, u.use_case, u.provider, u.model,
-                        u.input_tokens, u.output_tokens, u.cost_amount, u.cost_currency,
+                        u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
+                        u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version,
                         u.latency_ms, u.fallback_count, u.created_at
                  FROM (
                     SELECT DISTINCT feature_id, trace_id
@@ -226,7 +229,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
             "SELECT u.id, u.correlation_id, u.use_case, u.provider, u.model,
-                    u.input_tokens, u.output_tokens, u.cost_amount, u.cost_currency,
+                    u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
+                    u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version,
                     u.latency_ms, u.fallback_count, u.created_at
              FROM cos_llm_usage u
              WHERE u.correlation_id IN (
@@ -243,7 +247,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
             "SELECT u.id, u.correlation_id, u.use_case, u.provider, u.model,
-                    u.input_tokens, u.output_tokens, u.cost_amount, u.cost_currency,
+                    u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
+                    u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version,
                     u.latency_ms, u.fallback_count, u.created_at
              FROM cos_llm_usage u
              WHERE u.correlation_id IN (
@@ -265,12 +270,16 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             'provider' => (string) ($row['provider'] ?? ''),
             'model' => (string) ($row['model'] ?? ''),
             'input_tokens' => $row['input_tokens'] !== null ? (int) $row['input_tokens'] : null,
+            'cached_input_tokens' => $row['cached_input_tokens'] !== null ? (int) $row['cached_input_tokens'] : null,
             'output_tokens' => $row['output_tokens'] !== null ? (int) $row['output_tokens'] : null,
+            'reasoning_tokens' => $row['reasoning_tokens'] !== null ? (int) $row['reasoning_tokens'] : null,
             'total_tokens' => ($row['input_tokens'] !== null || $row['output_tokens'] !== null)
                 ? (int) ($row['input_tokens'] ?? 0) + (int) ($row['output_tokens'] ?? 0)
                 : null,
             'cost_amount' => $row['cost_amount'] !== null ? (float) $row['cost_amount'] : null,
             'cost_currency' => $row['cost_currency'] !== null ? (string) $row['cost_currency'] : null,
+            'cost_source' => $row['cost_source'] !== null ? (string) $row['cost_source'] : null,
+            'pricing_version' => $row['pricing_version'] !== null ? (string) $row['pricing_version'] : null,
             'latency_ms' => $row['latency_ms'] !== null ? (int) $row['latency_ms'] : null,
             'fallback_count' => (int) ($row['fallback_count'] ?? 0),
             'created_at' => (string) ($row['created_at'] ?? ''),
@@ -281,7 +290,9 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     private function aggregate(array $rows, string $source): array
     {
         $input = 0;
+        $cached = 0;
         $output = 0;
+        $reasoning = 0;
         $tokenKnown = false;
         $cost = 0.0;
         $costComplete = $rows !== [];
@@ -293,9 +304,15 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                 $input += (int) $row['input_tokens'];
                 $tokenKnown = true;
             }
+            if ($row['cached_input_tokens'] !== null) {
+                $cached += (int) $row['cached_input_tokens'];
+            }
             if ($row['output_tokens'] !== null) {
                 $output += (int) $row['output_tokens'];
                 $tokenKnown = true;
+            }
+            if ($row['reasoning_tokens'] !== null) {
+                $reasoning += (int) $row['reasoning_tokens'];
             }
             if ($row['cost_amount'] === null) {
                 $costComplete = false;
@@ -312,7 +329,9 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             'source' => $source,
             'invocations' => count($rows),
             'input_tokens' => $tokenKnown ? $input : null,
+            'cached_input_tokens' => $tokenKnown ? $cached : null,
             'output_tokens' => $tokenKnown ? $output : null,
+            'reasoning_tokens' => $tokenKnown ? $reasoning : null,
             'total_tokens' => $tokenKnown ? $input + $output : null,
             'cost_amount' => $costComplete ? round($cost, 6) : null,
             'cost_currency' => $costComplete && count($currencies) === 1 ? array_key_first($currencies) : null,
@@ -329,7 +348,9 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             'source' => 'UNAVAILABLE',
             'invocations' => 0,
             'input_tokens' => null,
+            'cached_input_tokens' => null,
             'output_tokens' => null,
+            'reasoning_tokens' => null,
             'total_tokens' => null,
             'cost_amount' => null,
             'cost_currency' => null,
