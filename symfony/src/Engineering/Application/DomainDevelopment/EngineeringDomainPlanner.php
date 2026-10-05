@@ -18,6 +18,8 @@ final readonly class EngineeringDomainPlanner
         private EngineeringDomainStoreInterface $domains,
         private EngineeringDomainAgentService $agents,
         private EngineeringDomainContextBuilder $context,
+        private EngineeringRepositoryContextIndex $repositoryIndex,
+        private EngineeringDomainContextCompressor $compressor,
         private EngineeringArtifactDependencyGraph $artifactGraph,
         private EngineeringDomainHumanGateService $humanGates,
         private EngineeringPolicyEngine $policy = new EngineeringPolicyEngine(),
@@ -213,6 +215,23 @@ final readonly class EngineeringDomainPlanner
     
         }
 
+        $repositoryIndexArtifact = $this->domains->latestArtifact(
+            $domainId,
+            EngineeringDomainArtifactType::REPOSITORY_CONTEXT_INDEX->value,
+        );
+        if ($repositoryIndexArtifact === null) {
+            $repositoryIndexContent = $this->repositoryIndex->build();
+            $repositoryIndexArtifact = $this->domains->saveArtifact(
+                $domainId,
+                EngineeringDomainArtifactType::REPOSITORY_CONTEXT_INDEX->value,
+                $repositoryIndexContent,
+                'DOMAIN_RUNTIME',
+            );
+        }
+        $compressedRepositoryIndex = $this->compressor->repositoryIndex(
+            is_array($repositoryIndexArtifact['content'] ?? null) ? $repositoryIndexArtifact['content'] : [],
+        );
+
         $architect = $this->agents->run(
             $domainId,
             $organizationId,
@@ -227,6 +246,12 @@ final readonly class EngineeringDomainPlanner
                 'human_decision_history' => $this->domains->humanDecisionHistory($domainId),
                 'target_repository' => $domain['target_repository'],
                 'target_branch' => $domain['target_branch'],
+                'repository_context_index' => $compressedRepositoryIndex,
+                'existing_code_awareness' => [
+                    'check_equivalent_class' => true,
+                    'check_shared_primitive' => true,
+                    'check_existing_domain_contract' => true,
+                ],
             ],
             $correlationId.':architect',
         );
