@@ -334,8 +334,9 @@ final readonly class EngineeringFeatureController
         try {
             $featureId = EngineeringId::assert($id);
             $status = $this->ownedStatus($tenant, $featureId);
+            $runtimeHealth = strtoupper((string) ($status['workflow']['health_status'] ?? 'UNKNOWN'));
             foreach ($status['agent_runs'] ?? [] as $agentRun) {
-                if (($agentRun['status'] ?? null) === 'RUNNING') {
+                if (($agentRun['status'] ?? null) === 'RUNNING' && $runtimeHealth !== 'STALLED') {
                     throw new \LogicException('Engineering AgentRun already RUNNING; duplicate immediate execution is not allowed.');
                 }
             }
