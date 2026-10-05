@@ -108,6 +108,12 @@ final readonly class EngineeringDomainAgentOutputValidator
             if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['release_blocking_checks'] ?? []) === []) {
                 throw new RuntimeException('Domain QA Plan requires release-blocking checks.');
             }
+            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['cross_feature_workflows'] ?? []) === []) {
+                throw new RuntimeException('Domain QA Plan requires explicit cross-feature workflow coverage.');
+            }
+            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['regression'] ?? []) === []) {
+                throw new RuntimeException('Domain QA Plan requires explicit regression coverage.');
+            }
             return;
         }
 
