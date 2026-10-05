@@ -137,8 +137,13 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         $counts = ['healthy' => 0, 'stale' => 0, 'stalled' => 0, 'waiting' => 0];
         foreach ($rows as $row) {
             $state = (string) ($row['current_state'] ?? '');
+            $featureStatus = strtoupper((string) ($row['feature_status'] ?? ''));
             $age = max(0, (int) ($row['age_seconds'] ?? 0));
-            if (in_array($state, ['HUMAN_DECISION_REQUIRED','READY_FOR_HUMAN_APPROVAL','BLOCKED','ESCALATED'], true)) {
+            if ($featureStatus === 'QUEUED') {
+                $health = 'WAITING';
+                ++$counts['waiting'];
+                $reason = 'Workflow is waiting in the priority queue.';
+            } elseif (in_array($state, ['HUMAN_DECISION_REQUIRED','READY_FOR_HUMAN_APPROVAL','BLOCKED','ESCALATED'], true)) {
                 $health = 'WAITING';
                 ++$counts['waiting'];
                 $reason = 'Workflow is waiting for explicit human action.';
