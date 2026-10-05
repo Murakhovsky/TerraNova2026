@@ -14,4 +14,7 @@ interface RelationshipRepository
 
     /** @return list<EconomicRelationship> */
     public function forInstrument(string $organizationId,InstrumentId $instrumentId):array;
+
+    /** @return list<EconomicRelationship> */
+    public function list(string $organizationId,int $limit=200):array;
 }
