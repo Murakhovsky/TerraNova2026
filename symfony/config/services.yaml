@@ -1402,6 +1402,9 @@ services:
       $repositoryRoot: '%kernel.project_dir%/..'
       $maxFiles: 20
       $maxFileBytes: 131072
+      $maxScannedFiles: 4000
+      $maxTotalReadBytes: 33554432
+      $maxScanMilliseconds: 8000
 
   App\Engineering\Infrastructure\Repository\LocalRepositoryFileReader:
     arguments:
