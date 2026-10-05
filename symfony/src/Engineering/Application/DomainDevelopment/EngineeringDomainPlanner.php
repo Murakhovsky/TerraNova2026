@@ -16,6 +16,7 @@ final readonly class EngineeringDomainPlanner
     public function __construct(
         private EngineeringDomainStoreInterface $domains,
         private EngineeringDomainAgentService $agents,
+        private EngineeringDomainContextBuilder $context,
         private FeatureDependencyGraph $graph = new FeatureDependencyGraph(),
     ) {}
 
@@ -121,6 +122,7 @@ final readonly class EngineeringDomainPlanner
             $specArtifact = $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION->value, $domainSpec, AgentRole::PRODUCT_REQUIREMENTS->value);
             $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ACCEPTANCE_CRITERIA->value, ['criteria' => $domainAc], AgentRole::PRODUCT_REQUIREMENTS->value);
             $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::CAPABILITY_MAP->value, ['capabilities' => $capabilities], AgentRole::PRODUCT_REQUIREMENTS->value);
+            $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::CAPABILITY_SPECIFICATION->value, ['capabilities' => $capabilities], AgentRole::PRODUCT_REQUIREMENTS->value);
             $this->domains->updateStatus($domainId, EngineeringDomainStatus::DECOMPOSITION->value);
             $this->domains->recordRuntimeEvent(
                 $domainId,
@@ -226,14 +228,20 @@ final readonly class EngineeringDomainPlanner
             $correlationId,
             'architecture-changed:v'.$architectureArtifact['version'],
         );
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_DECOMPOSITION->value, [
+        $decomposition = [
             'capabilities' => $architectCapabilities,
             'features' => $features,
             'dependencies' => $dependencies,
             'parallelization_groups' => $architect['parallelization_groups'] ?? [],
             'critical_path' => $architect['critical_path'] ?? [],
+        ];
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_DECOMPOSITION->value, $decomposition, AgentRole::PRINCIPAL_ARCHITECT->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::FEATURE_DEPENDENCY_GRAPH->value, [
+            'dependencies' => $dependencies,
+            'parallelization_groups' => $architect['parallelization_groups'] ?? [],
+            'critical_path' => $architect['critical_path'] ?? [],
         ], AgentRole::PRINCIPAL_ARCHITECT->value);
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::MIGRATION_PLAN->value, is_array($architect['migration_plan'] ?? null) ? $architect['migration_plan'] : ['plan' => $architect['migration_plan'] ?? null], AgentRole::PRINCIPAL_ARCHITECT->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::MIGRATION_PLAN->value, $architect['migration_plan'], AgentRole::PRINCIPAL_ARCHITECT->value);
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::INTEGRATION_STRATEGY->value, [
             'integration_strategy' => $architect['integration_strategy'] ?? null,
             'release_strategy' => $architect['release_strategy'] ?? null,
@@ -281,7 +289,27 @@ final readonly class EngineeringDomainPlanner
                 'contract-changed:'.$key.':'.$version,
             );
         }
-        $this->domains->replaceEvents($domainId, is_array($architect['events'] ?? null) ? $architect['events'] : []);
+        $events = is_array($architect['events'] ?? null) ? $architect['events'] : [];
+        $this->domains->replaceEvents($domainId, $events);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::CONTRACT_REGISTRY->value, [
+            'contracts' => $this->domains->contracts($domainId),
+        ], AgentRole::PRINCIPAL_ARCHITECT->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_EVENT_REGISTRY->value, [
+            'events' => $this->domains->events($domainId),
+        ], AgentRole::PRINCIPAL_ARCHITECT->value);
+
+        $featureContexts = [];
+        foreach ($this->domains->features($domainId) as $domainFeature) {
+            $featureKey = (string) ($domainFeature['feature_key'] ?? '');
+            if ($featureKey === '') continue;
+            $featureContexts[$featureKey] = $this->context->forFeature($domainId, $featureKey);
+        }
+        ksort($featureContexts);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::FEATURE_CONTEXT_PACK->value, [
+            'architecture_version' => (int) $architectureArtifact['version'],
+            'features' => $featureContexts,
+        ], AgentRole::PRINCIPAL_ARCHITECT->value);
+
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::READY_FOR_IMPLEMENTATION->value);
 
         return $this->view($domainId);
