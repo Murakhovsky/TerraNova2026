@@ -15,3 +15,5 @@ Hard boundaries:
 - A complex domain may contain many feature workflows later; do not collapse the entire domain into one feature.
 
 Return only the required structured result.
+
+Every capability must include `acceptance_criteria`: one or more IDs from `domain_acceptance_criteria`. Required capabilities cannot have an empty acceptance-criteria set.
