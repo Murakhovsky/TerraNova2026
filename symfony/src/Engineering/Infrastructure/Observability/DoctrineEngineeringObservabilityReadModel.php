@@ -54,6 +54,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                 'cost_amount' => $costKnown ? (float) ($fallback['cost_amount'] ?? 0) : null,
                 'cost_currency' => $costKnown ? 'USD' : null,
                 'cost_complete' => $costKnown,
+                'cost_sources' => $costKnown ? ['AGENT_RUN_FALLBACK'] : [],
+                'pricing_versions' => [],
                 'models' => [],
             ];
         } catch (Throwable) {
@@ -300,6 +302,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
         $cost = 0.0;
         $costComplete = $rows !== [];
         $currencies = [];
+        $costSources = [];
+        $pricingVersions = [];
         $models = [];
 
         foreach ($rows as $row) {
@@ -322,6 +326,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             } else {
                 $cost += (float) $row['cost_amount'];
                 if ($row['cost_currency'] !== null) $currencies[(string) $row['cost_currency']] = true;
+                if (($row['cost_source'] ?? null) !== null) $costSources[(string) $row['cost_source']] = true;
+                if (($row['pricing_version'] ?? null) !== null) $pricingVersions[(string) $row['pricing_version']] = true;
             }
             $key = (string) ($row['provider'] ?? 'unknown').' / '.(string) ($row['model'] ?? 'unknown');
             $models[$key] = ($models[$key] ?? 0) + 1;
@@ -339,6 +345,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             'cost_amount' => $costComplete ? round($cost, 6) : null,
             'cost_currency' => $costComplete && count($currencies) === 1 ? array_key_first($currencies) : null,
             'cost_complete' => $costComplete,
+            'cost_sources' => array_keys($costSources),
+            'pricing_versions' => array_keys($pricingVersions),
             'models' => $models,
         ];
     }
@@ -358,6 +366,8 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             'cost_amount' => null,
             'cost_currency' => null,
             'cost_complete' => false,
+            'cost_sources' => [],
+            'pricing_versions' => [],
             'models' => [],
         ];
     }
