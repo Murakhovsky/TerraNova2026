@@ -65,6 +65,7 @@ foreach ([
     'formatStaticTimestamps(',
     "mysqlUtc[1] + 'T'",
     ".padEnd(3, '0')",
+    "health === 'STALLED' ? 'STALLED' : status",
     'без нових подій',
 ] as $needle) {
     if (!str_contains($controller, $needle)) {
@@ -83,6 +84,9 @@ foreach ([
     "'agent_runtime_label'",
     "'run_durations'",
     "'heartbeat_label'",
+    "'display_status'",
+    "\$resolvedHealth === 'STALLED' ? 'STALLED' : \$workflowStatus",
+    "\$runtimeHealth === 'STALLED' => 'STALLED'",
     'relativeTimeLabel(',
 ] as $needle) {
     if (!str_contains($page, $needle)) {
