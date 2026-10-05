@@ -9,6 +9,7 @@ use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
+use Infrastructure\Llm\OpenAiModelCatalog;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Platform\Settings\Contract\PlatformSettingsReaderInterface;
@@ -89,6 +90,8 @@ final readonly class PlatformSettingsController
             'qa_model' => (string) $this->settings->value($organizationId, 'engineering', 'qa.model', $this->fallbackQaModel),
             'api_key_configured' => is_string($secret) && trim($secret) !== '',
             'api_key_suffix' => is_string($secret) && strlen($secret) >= 4 ? substr($secret, -4) : '',
+            'model_catalog' => array_values(OpenAiModelCatalog::models()),
+            'pricing_catalog_version' => OpenAiModelCatalog::VERSION,
             'status_message' => trim((string) $request->query->get('status_message', '')),
             'status_error' => str_starts_with(trim((string) $request->query->get('status_message', '')), 'Помилка:'),
         ];
