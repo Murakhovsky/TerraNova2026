@@ -127,6 +127,17 @@ foreach([
     if(!str_contains($services,$service))throw new RuntimeException('Capital Markets service wiring missing: '.$service);
 }
 
+foreach([
+    $domainRoot.'/Infrastructure/Persistence/MySql/MysqlInstrumentRepository.php',
+    $domainRoot.'/Infrastructure/Persistence/MySql/MysqlRelationshipRepository.php',
+    $domainRoot.'/Infrastructure/Persistence/MySql/MysqlVenueRepository.php',
+] as $repositoryFile){
+    $repositorySource=(string)file_get_contents($repositoryFile);
+    if(str_contains($repositorySource,'ON DUPLICATE KEY UPDATE')){
+        throw new RuntimeException('Capital Markets registry repository must not mask aggregate identity conflicts with unsafe upsert: '.basename($repositoryFile));
+    }
+}
+
 $ownership=(string)file_get_contents($root.'/app/Infrastructure/Platform/Persistence/TableOwnership.php');
 foreach(['tn_capital_market_instruments','tn_capital_market_relationships','tn_capital_market_venues'] as $table){
     if(!str_contains($ownership,$table))throw new RuntimeException('Capital Markets table ownership missing: '.$table);

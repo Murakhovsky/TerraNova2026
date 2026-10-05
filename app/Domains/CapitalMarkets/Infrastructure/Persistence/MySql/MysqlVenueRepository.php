@@ -24,22 +24,48 @@ final readonly class MysqlVenueRepository implements VenueRepository
     {
         $this->connection->beginTransaction();
         try{
-            $statement=$this->connection->prepare(
-                'INSERT INTO tn_capital_market_venues
-                 (organization_id,venue_id,name,code,venue_type,status,jurisdiction,timezone,base_url_reference,metadata_json)
-                 VALUES (:organization_id,:venue_id,:name,:code,:venue_type,:status,:jurisdiction,:timezone,:base_url_reference,:metadata_json)
-                 ON DUPLICATE KEY UPDATE name=VALUES(name),code=VALUES(code),venue_type=VALUES(venue_type),status=VALUES(status),
-                  jurisdiction=VALUES(jurisdiction),timezone=VALUES(timezone),base_url_reference=VALUES(base_url_reference),
-                  metadata_json=VALUES(metadata_json)'
+            $exists=$this->connection->prepare(
+                'SELECT 1 FROM tn_capital_market_venues
+                 WHERE organization_id=:organization_id AND venue_id=:venue_id
+                 LIMIT 1 FOR UPDATE'
             );
-            $statement->execute([
-                'organization_id'=>$organizationId,'venue_id'=>$venue->id->value(),'name'=>$venue->name,'code'=>$venue->code,
-                'venue_type'=>$venue->type->value,'status'=>$venue->status->value,'jurisdiction'=>$venue->jurisdiction,
-                'timezone'=>$venue->timezone,'base_url_reference'=>$venue->baseUrlReference,
-                'metadata_json'=>json_encode($venue->metadata,JSON_THROW_ON_ERROR),
+            $exists->execute([
+                'organization_id'=>$organizationId,
+                'venue_id'=>$venue->id->value(),
             ]);
+
+            $parameters=[
+                'organization_id'=>$organizationId,
+                'venue_id'=>$venue->id->value(),
+                'name'=>$venue->name,
+                'code'=>$venue->code,
+                'venue_type'=>$venue->type->value,
+                'status'=>$venue->status->value,
+                'jurisdiction'=>$venue->jurisdiction,
+                'timezone'=>$venue->timezone,
+                'base_url_reference'=>$venue->baseUrlReference,
+                'metadata_json'=>json_encode((object)$venue->metadata,JSON_THROW_ON_ERROR),
+            ];
+
+            if($exists->fetchColumn()!==false){
+                $statement=$this->connection->prepare(
+                    'UPDATE tn_capital_market_venues
+                     SET name=:name,code=:code,venue_type=:venue_type,status=:status,jurisdiction=:jurisdiction,
+                         timezone=:timezone,base_url_reference=:base_url_reference,metadata_json=:metadata_json
+                     WHERE organization_id=:organization_id AND venue_id=:venue_id'
+                );
+            }else{
+                $statement=$this->connection->prepare(
+                    'INSERT INTO tn_capital_market_venues
+                     (organization_id,venue_id,name,code,venue_type,status,jurisdiction,timezone,base_url_reference,metadata_json)
+                     VALUES (:organization_id,:venue_id,:name,:code,:venue_type,:status,:jurisdiction,:timezone,:base_url_reference,:metadata_json)'
+                );
+            }
+            $statement->execute($parameters);
+
             $this->connection->prepare(
-                'DELETE FROM tn_capital_market_venue_capabilities WHERE organization_id=:organization_id AND venue_id=:venue_id'
+                'DELETE FROM tn_capital_market_venue_capabilities
+                 WHERE organization_id=:organization_id AND venue_id=:venue_id'
             )->execute(['organization_id'=>$organizationId,'venue_id'=>$venue->id->value()]);
             $insert=$this->connection->prepare(
                 'INSERT INTO tn_capital_market_venue_capabilities (organization_id,venue_id,capability)
@@ -47,7 +73,11 @@ final readonly class MysqlVenueRepository implements VenueRepository
             );
             foreach($capabilities as $capability){
                 if(!$capability instanceof VenueCapability)throw new \InvalidArgumentException('Venue capabilities must be typed values.');
-                $insert->execute(['organization_id'=>$organizationId,'venue_id'=>$venue->id->value(),'capability'=>$capability->value]);
+                $insert->execute([
+                    'organization_id'=>$organizationId,
+                    'venue_id'=>$venue->id->value(),
+                    'capability'=>$capability->value,
+                ]);
             }
             $this->connection->commit();
         }catch(\Throwable $error){
@@ -101,7 +131,7 @@ final readonly class MysqlVenueRepository implements VenueRepository
             'venue_symbol'=>$mapping->venueSymbol,'status'=>$mapping->status->value,'price_precision'=>$mapping->pricePrecision,
             'quantity_precision'=>$mapping->quantityPrecision,'minimum_quantity'=>$mapping->minimumQuantity?->value(),
             'minimum_notional'=>$mapping->minimumNotional?->value(),
-            'metadata_json'=>json_encode($mapping->metadata,JSON_THROW_ON_ERROR),
+            'metadata_json'=>json_encode((object)$mapping->metadata,JSON_THROW_ON_ERROR),
         ]);
     }
 

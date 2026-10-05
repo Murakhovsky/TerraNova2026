@@ -72,8 +72,12 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
     {
         $now=new DateTimeImmutable();
         $id=InstrumentId::fromString($this->id($command->input['id']??null,'instrument'));
+        if($this->instruments->get($command->organizationId,$id)!==null){
+            throw new DomainException('Instrument already exists.');
+        }
         $instrument=$this->instrument($id,null,$command->input,$now);
         $identifiers=$this->identifiers($command->input['identifiers']??null,$instrument->symbol);
+        $this->assertIdentifiersAvailable($command->organizationId,$id,$identifiers);
         $this->instruments->save($command->organizationId,$instrument,$identifiers);
         $next=$this->instrumentArray($instrument,$identifiers);
         $this->audit->record($command->organizationId,$command->actorId,CapitalMarketsAuditAction::InstrumentCreated,
@@ -99,6 +103,7 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
         if($instrument->status===InstrumentStatus::Active && $identifiers===[]){
             throw new DomainException('Active instrument requires at least one typed identifier.');
         }
+        $this->assertIdentifiersAvailable($command->organizationId,$id,$identifiers);
         $this->instruments->save($command->organizationId,$instrument,$identifiers);
         $next=$this->instrumentArray($instrument,$identifiers);
         $action=$existing->status===$instrument->status
@@ -140,6 +145,7 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
             if($existing->uniquenessKey()===$new->uniquenessKey())throw new DomainException('Instrument identifier already exists.');
         }
         $identifiers=[...$before,$new];
+        $this->assertIdentifiersAvailable($command->organizationId,$id,$identifiers);
         $this->instruments->save($command->organizationId,$instrument,$identifiers);
         $next=$this->instrumentArray($instrument,$identifiers);
         $this->audit->record($command->organizationId,$command->actorId,CapitalMarketsAuditAction::InstrumentUpdated,
@@ -161,8 +167,13 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
             throw new DomainException('Economic relationships can only be created between ACTIVE instruments.');
         }
 
+        $relationshipId=RelationshipId::fromString($this->id($command->input['id']??null,'relationship'));
+        if($this->relationships->get($command->organizationId,$relationshipId)!==null){
+            throw new DomainException('Economic relationship already exists.');
+        }
+
         $relationship=new EconomicRelationship(
-            RelationshipId::fromString($this->id($command->input['id']??null,'relationship')),
+            $relationshipId,
             $source,$target,
             EconomicRelationshipType::from(strtoupper($this->required($command->input,'type'))),
             EconomicRelationshipStrength::from(strtoupper((string)($command->input['strength']??'DIRECT'))),
@@ -184,8 +195,13 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
 
     public function createVenue(CreateVenue $command):array
     {
+        $venueId=VenueId::fromString($this->id($command->input['id']??null,'venue'));
+        if($this->venues->get($command->organizationId,$venueId)!==null){
+            throw new DomainException('Venue already exists.');
+        }
+
         $venue=new VenueDescriptor(
-            VenueId::fromString($this->id($command->input['id']??null,'venue')),
+            $venueId,
             $this->required($command->input,'name'),
             strtoupper($this->required($command->input,'code')),
             VenueType::from(strtolower($this->required($command->input,'type'))),
@@ -221,8 +237,18 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
         $instrument=$this->requireInstrument($command->organizationId,$instrumentId);
         if($instrument->status!==InstrumentStatus::Active)throw new DomainException('Cannot register an inactive instrument on a venue.');
 
+        $venueSymbol=$this->required($command->input,'venue_symbol');
+        foreach($this->venues->instruments($command->organizationId,$venueId) as $existingMapping){
+            if($existingMapping->instrumentId->equals($instrumentId)){
+                throw new DomainException('Instrument is already registered on this venue.');
+            }
+            if($existingMapping->venueSymbol===$venueSymbol){
+                throw new DomainException('Venue symbol is already registered.');
+            }
+        }
+
         $mapping=new VenueInstrument(
-            $venueId,$instrumentId,$this->required($command->input,'venue_symbol'),
+            $venueId,$instrumentId,$venueSymbol,
             VenueInstrumentStatus::from(strtoupper((string)($command->input['status']??'ACTIVE'))),
             (int)($command->input['price_precision']??2),(int)($command->input['quantity_precision']??8),
             $this->decimalOrNull($command->input['minimum_quantity']??null),
@@ -350,6 +376,17 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
             $this->required($row,'value'),
             $this->nullable($row['source']??null),
         );
+    }
+
+    /** @param list<InstrumentIdentifier> $identifiers */
+    private function assertIdentifiersAvailable(string $organizationId,InstrumentId $instrumentId,array $identifiers):void
+    {
+        foreach($identifiers as $identifier){
+            $existing=$this->instruments->findByIdentifier($organizationId,$identifier);
+            if($existing!==null&&!$existing->id->equals($instrumentId)){
+                throw new DomainException('Instrument identifier already belongs to another instrument: '.$identifier->uniquenessKey());
+            }
+        }
     }
 
     private function requireInstrument(string $organizationId,InstrumentId $id):InstrumentDescriptor
