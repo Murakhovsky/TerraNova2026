@@ -82,6 +82,12 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::REVIEWER => 'reviewer.model',
             AgentRole::QA_EXECUTOR => 'qa.model',
             AgentRole::INTEGRATION_RELEASE => 'manager.model',
+            AgentRole::SECURITY_SPECIALIST,
+            AgentRole::DATABASE_MIGRATION_SPECIALIST,
+            AgentRole::PERFORMANCE_SPECIALIST,
+            AgentRole::DEVOPS_SPECIALIST,
+            AgentRole::API_SPECIALIST => 'architect.model',
+            AgentRole::DOCUMENTATION_SPECIALIST => 'manager.model',
             AgentRole::QA => 'qa.model',
         };
 
@@ -94,6 +100,12 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::REVIEWER => $this->reviewerModel,
             AgentRole::QA_EXECUTOR => $this->qaModel,
             AgentRole::INTEGRATION_RELEASE => $this->managerModel,
+            AgentRole::SECURITY_SPECIALIST,
+            AgentRole::DATABASE_MIGRATION_SPECIALIST,
+            AgentRole::PERFORMANCE_SPECIALIST,
+            AgentRole::DEVOPS_SPECIALIST,
+            AgentRole::API_SPECIALIST => $this->architectModel,
+            AgentRole::DOCUMENTATION_SPECIALIST => $this->managerModel,
             AgentRole::QA => $this->qaModel,
         };
         if ($organizationId !== null && $this->settings !== null) {
@@ -150,6 +162,12 @@ final class EngineeringAgentDefinitionFactory
             AgentRole::REVIEWER => 'reviewer-v0.1.md',
             AgentRole::QA_EXECUTOR => 'qa-executor-v0.1.md',
             AgentRole::INTEGRATION_RELEASE => 'integration-release-v0.1.md',
+            AgentRole::SECURITY_SPECIALIST => 'security-specialist-v2.0.md',
+            AgentRole::DATABASE_MIGRATION_SPECIALIST => 'database-migration-specialist-v2.0.md',
+            AgentRole::PERFORMANCE_SPECIALIST => 'performance-specialist-v2.0.md',
+            AgentRole::DEVOPS_SPECIALIST => 'devops-specialist-v2.0.md',
+            AgentRole::DOCUMENTATION_SPECIALIST => 'documentation-specialist-v2.0.md',
+            AgentRole::API_SPECIALIST => 'api-specialist-v2.0.md',
             AgentRole::QA => 'qa-v0.1.md',
         };
 
