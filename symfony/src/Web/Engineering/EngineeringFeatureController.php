@@ -530,10 +530,17 @@ final readonly class EngineeringFeatureController
             if (in_array($runStatus, ['COMPLETED','APPROVED','PASS','PASSED','SUCCESS'], true)) ++$roles[$role]['completed'];
             if (in_array($runStatus, ['FAILED','ERROR','TIMED_OUT'], true)) ++$roles[$role]['failed'];
             if ($runStatus === 'RUNNING') ++$roles[$role]['running'];
-            if (($run['tokens_input'] ?? null) !== null || ($run['tokens_output'] ?? null) !== null) {
+            $ledgerUsage = is_array($run['ledger_usage'] ?? null) ? $run['ledger_usage'] : null;
+            if (($ledgerUsage['total_tokens'] ?? null) !== null) {
+                $roles[$role]['tokens'] += (int) $ledgerUsage['total_tokens'];
+            } elseif (($run['tokens_input'] ?? null) !== null || ($run['tokens_output'] ?? null) !== null) {
                 $roles[$role]['tokens'] += (int) ($run['tokens_input'] ?? 0) + (int) ($run['tokens_output'] ?? 0);
             }
-            if (($run['cost'] ?? null) !== null) $roles[$role]['cost'] += (float) $run['cost'];
+            if (($ledgerUsage['cost_amount'] ?? null) !== null) {
+                $roles[$role]['cost'] += (float) $ledgerUsage['cost_amount'];
+            } elseif (($run['cost'] ?? null) !== null) {
+                $roles[$role]['cost'] += (float) $run['cost'];
+            }
         }
 
         $reviewReached = isset($roles['REVIEWER']);
