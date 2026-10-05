@@ -23,6 +23,9 @@ final class Version20261005193000 extends AbstractMigration
             ADD max_parallel_reviews INT NOT NULL DEFAULT 2 AFTER max_parallel_developers,
             ADD max_parallel_qa INT NOT NULL DEFAULT 2 AFTER max_parallel_reviews");
 
+        $this->addSql("ALTER TABLE cos_engineering_domain_features
+            ADD engineering_feature_history JSON NULL AFTER engineering_feature_id");
+
         $this->addSql(<<<'SQL'
 CREATE TABLE cos_engineering_domain_runtime_events (
     id VARCHAR(36) NOT NULL,
@@ -52,6 +55,7 @@ SQL);
         $this->abortIf(!$this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform, 'This migration can only be executed safely on MySQL.');
 
         $this->addSql('DROP TABLE cos_engineering_domain_runtime_events');
+        $this->addSql('ALTER TABLE cos_engineering_domain_features DROP engineering_feature_history');
         $this->addSql('ALTER TABLE cos_engineering_domains DROP max_parallel_qa, DROP max_parallel_reviews, DROP max_parallel_developers');
     }
 }
