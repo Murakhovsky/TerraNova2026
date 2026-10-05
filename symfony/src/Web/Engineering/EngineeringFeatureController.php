@@ -26,6 +26,7 @@ use App\Web\Experience\Shell\WorkspaceShellFactory;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -355,6 +356,52 @@ final readonly class EngineeringFeatureController
         );
     }
 
+    public function live(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->workflows->refreshRuntimeHealthForOrganization($tenant->organizationId()->value());
+            $data = $this->ownedStatus($tenant, $featureId);
+            $summary = $this->summary($data);
+
+            return new JsonResponse([
+                'ok' => true,
+                'summary' => [
+                    'state' => $summary['state'],
+                    'workflow_status' => $summary['workflow_status'],
+                    'health' => $summary['health'],
+                    'current_agent' => $summary['current_agent'],
+                    'latest_agent' => $summary['latest_agent'],
+                    'active_operation' => $summary['active_operation'],
+                    'duration_label' => $summary['duration_label'],
+                    'agent_runs' => $summary['agent_runs'],
+                    'tasks_total' => $summary['tasks_total'],
+                    'tasks_completed' => $summary['tasks_completed'],
+                    'tokens' => $summary['tokens'],
+                    'cost' => $summary['cost'],
+                    'cost_currency' => $summary['usage']['cost_currency'] ?? null,
+                    'quality_state' => $summary['quality_state'],
+                    'stages' => $summary['stages'],
+                    'terminal' => $summary['terminal'],
+                ],
+                'heartbeat_at' => $data['workflow']['heartbeat_at'] ?? null,
+                'runtime_reason' => $data['workflow']['runtime_reason'] ?? null,
+                'timeline' => array_slice(is_array($data['timeline'] ?? null) ? $data['timeline'] : [], 0, 80),
+                'execution_event_count' => count(is_array($data['execution_events'] ?? null) ? $data['execution_events'] : []),
+                'server_time' => (new \DateTimeImmutable())->format(DATE_ATOM),
+            ], Response::HTTP_OK, ['Cache-Control' => 'no-store, private']);
+        } catch (Throwable $error) {
+            return new JsonResponse([
+                'ok' => false,
+                'error' => 'engineering_live_status_failed',
+                'message' => $error->getMessage(),
+            ], Response::HTTP_NOT_FOUND, ['Cache-Control' => 'no-store, private']);
+        }
+    }
+
     public function queue(Request $request, string $id): Response
     {
         $tenant = $this->manager();
@@ -388,9 +435,13 @@ final readonly class EngineeringFeatureController
             $status = $this->ownedStatus($tenant, $featureId);
             $runtimeHealth = strtoupper((string) ($status['workflow']['health_status'] ?? 'UNKNOWN'));
             foreach ($status['agent_runs'] ?? [] as $agentRun) {
-                if (($agentRun['status'] ?? null) === 'RUNNING' && $runtimeHealth !== 'STALLED') {
+                if (strtoupper((string) ($agentRun['status'] ?? '')) === 'RUNNING' && $runtimeHealth !== 'STALLED') {
                     throw new \LogicException('Engineering AgentRun already RUNNING; duplicate immediate execution is not allowed.');
                 }
+            }
+            $activeOperation = $this->activeOperation(is_array($status['execution_events'] ?? null) ? $status['execution_events'] : []);
+            if ($activeOperation !== null && !in_array($runtimeHealth, ['STALE','STALLED'], true)) {
+                throw new \LogicException('Engineering operation already in progress: '.($activeOperation['summary'] ?? $activeOperation['action'] ?? 'runtime operation').'.');
             }
 
             $activeWorkflowId = $this->workflows->activeIdForFeature($featureId);
@@ -623,17 +674,33 @@ final readonly class EngineeringFeatureController
         }
 
         $currentAgent = null;
+        $latestAgent = null;
         for ($i = count($runs) - 1; $i >= 0; --$i) {
             $candidate = $runs[$i] ?? null;
-            if (!is_array($candidate) || strtoupper((string) ($candidate['status'] ?? '')) !== 'RUNNING') continue;
+            if (!is_array($candidate)) continue;
+            if ($latestAgent === null) {
+                $latestAgent = [
+                    'role' => (string) ($candidate['role'] ?? 'AGENT'),
+                    'run_id' => (string) ($candidate['id'] ?? ''),
+                    'task_id' => $candidate['task_id'] ?? null,
+                    'status' => strtoupper((string) ($candidate['status'] ?? 'UNKNOWN')),
+                    'started_at' => $candidate['started_at'] ?? null,
+                    'finished_at' => $candidate['finished_at'] ?? null,
+                    'error_type' => $candidate['error_type'] ?? null,
+                    'error_message' => $candidate['error_message'] ?? null,
+                ];
+            }
+            if (strtoupper((string) ($candidate['status'] ?? '')) !== 'RUNNING') continue;
             $currentAgent = [
                 'role' => (string) ($candidate['role'] ?? 'AGENT'),
                 'run_id' => (string) ($candidate['id'] ?? ''),
                 'task_id' => $candidate['task_id'] ?? null,
+                'status' => 'RUNNING',
                 'started_at' => $candidate['started_at'] ?? null,
             ];
             break;
         }
+        $activeOperation = $this->activeOperation(is_array($data['execution_events'] ?? null) ? $data['execution_events'] : []);
 
         $reviewReached = isset($roles['REVIEWER']);
         $qaReached = isset($roles['QA']);
@@ -655,7 +722,7 @@ final readonly class EngineeringFeatureController
         $terminal = in_array($state, ['DONE','CANCELLED','FAILED'], true)
             || in_array($workflowStatus, ['COMPLETED','CANCELLED','FAILED'], true);
         $waitsForHuman = in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true);
-        $resolvedHealth = in_array(strtoupper((string) ($data['workflow']['health_status'] ?? '')), ['HEALTHY','STALE','STALLED','WAITING','TERMINAL'], true)
+        $resolvedHealth = in_array(strtoupper((string) ($data['workflow']['health_status'] ?? '')), ['HEALTHY','DEGRADED','STALE','STALLED','WAITING','TERMINAL'], true)
             ? strtoupper((string) $data['workflow']['health_status'])
             : $this->runtimeHealth(
                 $workflowStatus,
@@ -668,6 +735,14 @@ final readonly class EngineeringFeatureController
             $resolvedHealth,
             count($data['open_human_decisions'] ?? []),
         );
+        $executionActive = ($currentAgent !== null || $activeOperation !== null)
+            && !in_array($resolvedHealth, ['STALE','STALLED'], true);
+        if ($executionActive) {
+            $actions['run'] = false;
+            $actions['continue'] = false;
+            $actions['resume'] = false;
+            $actions['retry'] = false;
+        }
         $stages = $this->stagePipeline($data, $state, $workflowStatus);
         $durationSeconds = $this->durationSeconds(
             is_string($data['workflow']['started_at'] ?? null) ? $data['workflow']['started_at'] : null,
@@ -692,6 +767,9 @@ final readonly class EngineeringFeatureController
             'agent_runs' => count($runs),
             'roles' => $roles,
             'current_agent' => $currentAgent,
+            'latest_agent' => $latestAgent,
+            'active_operation' => $activeOperation,
+            'execution_active' => $executionActive,
             'duration_seconds' => $durationSeconds,
             'duration_label' => $this->durationLabel($durationSeconds),
             'stages' => $stages,
@@ -706,6 +784,36 @@ final readonly class EngineeringFeatureController
             'pull_request' => $pullRequest,
             'final_report' => is_array($finalReport) ? $finalReport : null,
         ];
+    }
+
+    /** @param list<array<string,mixed>> $events @return array<string,mixed>|null */
+    private function activeOperation(array $events): ?array
+    {
+        $resolved = [];
+        foreach ($events as $event) {
+            if (!is_array($event)) continue;
+            $status = strtoupper(trim((string) ($event['status'] ?? '')));
+            $action = trim((string) ($event['action'] ?? ''));
+            if ($action === '') continue;
+            $correlation = trim((string) ($event['correlation_id'] ?? ''));
+            $category = strtoupper(trim((string) ($event['category'] ?? 'RUNTIME')));
+            $key = $category.'|'.$action.'|'.$correlation;
+            if (in_array($status, ['COMPLETED','FAILED','ERROR','CANCELLED','TIMED_OUT'], true)) {
+                $resolved[$key] = true;
+                continue;
+            }
+            if ($status !== 'STARTED' || isset($resolved[$key])) continue;
+            return [
+                'category' => $category,
+                'action' => $action,
+                'summary' => (string) ($event['summary'] ?? $action),
+                'status' => 'STARTED',
+                'occurred_at' => $event['occurred_at'] ?? null,
+                'correlation_id' => $correlation !== '' ? $correlation : null,
+                'agent_run_id' => $event['agent_run_id'] ?? null,
+            ];
+        }
+        return null;
     }
 
     /** @return list<array{key:string,label:string,status:string}> */
