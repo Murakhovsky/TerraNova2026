@@ -91,6 +91,13 @@ final readonly class EngineeringManagerStageExecutor
                 $featureId,
                 fn () => $this->agentRuns->fail($engineeringRunId, 'TASK_ERROR', $error->getMessage(), $error instanceof \App\Engineering\Application\Agent\EngineeringAgentTechnicalFailureException ? $error->technicalRetries : 0),
             );
+            $this->workflows->markRuntimeIssue(
+                $workflowId,
+                'DEGRADED',
+                'Engineering Manager failed: '.mb_substr($error->getMessage(), 0, 500),
+                $engineeringRunId,
+                $plan->task->id,
+            );
             throw $error;
         }
 
