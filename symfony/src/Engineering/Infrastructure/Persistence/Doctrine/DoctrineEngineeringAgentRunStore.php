@@ -39,6 +39,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         }
 
         $runId = EngineeringId::generate();
+        $runTraceId = $this->runCorrelationId($traceId, $task->id);
         $this->entityManager->persist(new AgentRunRecord(
             id: $runId,
             featureId: $task->featureId,
@@ -52,7 +53,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             status: 'RUNNING',
             technicalRetry: 0,
             logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
-            traceId: $this->runCorrelationId($traceId, $task->id),
+            traceId: $runTraceId,
             startedAt: new DateTimeImmutable(),
             taskId: $task->id,
         ));
@@ -71,7 +72,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
                 'objective' => mb_substr($task->objective, 0, 500),
             ],
             $runId,
-            $traceId,
+            $runTraceId,
         );
         $this->workflows->touchRuntime($workflowId, $runId, $task->id);
         return $runId;
