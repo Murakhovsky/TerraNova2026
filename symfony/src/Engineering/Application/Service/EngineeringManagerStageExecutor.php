@@ -126,10 +126,6 @@ final readonly class EngineeringManagerStageExecutor
                         createdByAgent: 'DOMAIN_RUNTIME',
                     );
                 }
-                $this->tasks->createFromManager(
-                    $featureId,
-                    is_array($analysis->featureSpecification['tasks'] ?? null) ? $analysis->featureSpecification['tasks'] : [],
-                );
                 $this->features->applyManagerAnalysis(
                     $featureId,
                     $analysis->featureSpecification,
@@ -137,10 +133,12 @@ final readonly class EngineeringManagerStageExecutor
                     $analysis->contextMap->repositoryRevision,
                 );
 
+                $managerOutput = $analysis->run->structuredOutput;
+                $managerOutput['product_handoff_required'] = true;
                 $next = $this->coordinator->acceptAgentResult(
                     $workflow,
                     AgentRole::ENGINEERING_MANAGER,
-                    $analysis->run->structuredOutput,
+                    $managerOutput,
                 );
                 $this->persistTransitions($workflow, $next->transitions);
                 $this->features->updateStatus($featureId, $workflow->currentState()->value);
