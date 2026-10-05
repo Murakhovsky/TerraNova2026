@@ -17,6 +17,7 @@ final readonly class EngineeringDomainPlanner
         private EngineeringDomainStoreInterface $domains,
         private EngineeringDomainAgentService $agents,
         private EngineeringDomainContextBuilder $context,
+        private EngineeringArtifactDependencyGraph $artifactGraph,
         private FeatureDependencyGraph $graph = new FeatureDependencyGraph(),
     ) {}
 
@@ -320,6 +321,7 @@ final readonly class EngineeringDomainPlanner
         ], AgentRole::PRINCIPAL_ARCHITECT->value);
 
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::READY_FOR_IMPLEMENTATION->value);
+        $this->artifactGraph->rebuild($domainId);
 
         return $this->view($domainId);
     }
@@ -335,6 +337,7 @@ final readonly class EngineeringDomainPlanner
             'contracts' => $this->domains->contracts($domainId),
             'events' => $this->domains->events($domainId),
             'artifacts' => $this->domains->artifacts($domainId),
+            'artifact_dependencies' => $this->domains->artifactDependencies($domainId),
             'path_reservations' => $this->domains->pathReservations($domainId),
             'agent_runs' => $this->domains->agentRuns($domainId),
             'runtime_events' => $this->domains->runtimeEvents($domainId),
