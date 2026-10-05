@@ -56,6 +56,7 @@ final readonly class EngineeringStatusService
         $invocations = $workflowId !== null
             ? $this->observability->invocationsForWorkflow($workflowId)
             : $this->observability->invocationsForFeature($featureId);
+        $agentRuns = $this->attachLedgerUsage($agentRuns, $invocations);
         $executionEvents = $workflowId !== null ? $this->executionEvents->forWorkflow($workflowId) : [];
 
         return [
@@ -73,6 +74,69 @@ final readonly class EngineeringStatusService
             'timeline' => $this->timeline($transitions, $agentRuns, $invocations, $tasks, $artifactViews, $findings, $executionEvents),
         ];
     }
+    /**
+     * Attribute governed LLM ledger rows to Engineering AgentRuns by the
+     * per-run correlation id. This includes successful technical retries,
+     * so UI cost/tokens do not silently undercount the final logical run.
+     *
+     * @param list<array<string,mixed>> $agentRuns
+     * @param list<array<string,mixed>> $invocations
+     * @return list<array<string,mixed>>
+     */
+    private function attachLedgerUsage(array $agentRuns, array $invocations): array
+    {
+        $byCorrelation = [];
+        foreach ($invocations as $invocation) {
+            if (!is_array($invocation)) continue;
+            $correlationId = trim((string) ($invocation['correlation_id'] ?? ''));
+            if ($correlationId === '') continue;
+            $bucket = $byCorrelation[$correlationId] ?? [
+                'invocations' => 0,
+                'input_tokens' => 0,
+                'cached_input_tokens' => 0,
+                'output_tokens' => 0,
+                'reasoning_tokens' => 0,
+                'total_tokens' => 0,
+                'cost_amount' => 0.0,
+                'cost_complete' => true,
+                'cost_currency' => null,
+                'cost_sources' => [],
+                'pricing_versions' => [],
+            ];
+            ++$bucket['invocations'];
+            foreach (['input_tokens','cached_input_tokens','output_tokens','reasoning_tokens','total_tokens'] as $key) {
+                if (($invocation[$key] ?? null) !== null) $bucket[$key] += (int) $invocation[$key];
+            }
+            if (($invocation['cost_amount'] ?? null) === null) {
+                $bucket['cost_complete'] = false;
+            } else {
+                $bucket['cost_amount'] += (float) $invocation['cost_amount'];
+                $currency = trim((string) ($invocation['cost_currency'] ?? ''));
+                if ($currency !== '') {
+                    if ($bucket['cost_currency'] === null) $bucket['cost_currency'] = $currency;
+                    elseif ($bucket['cost_currency'] !== $currency) $bucket['cost_complete'] = false;
+                }
+            }
+            $source = trim((string) ($invocation['cost_source'] ?? ''));
+            if ($source !== '') $bucket['cost_sources'][$source] = true;
+            $version = trim((string) ($invocation['pricing_version'] ?? ''));
+            if ($version !== '') $bucket['pricing_versions'][$version] = true;
+            $byCorrelation[$correlationId] = $bucket;
+        }
+
+        return array_map(static function (array $run) use ($byCorrelation): array {
+            $traceId = trim((string) ($run['trace_id'] ?? ''));
+            $usage = $traceId !== '' ? ($byCorrelation[$traceId] ?? null) : null;
+            if (is_array($usage)) {
+                $usage['cost_amount'] = $usage['cost_complete'] ? round((float) $usage['cost_amount'], 8) : null;
+                $usage['cost_sources'] = array_keys($usage['cost_sources']);
+                $usage['pricing_versions'] = array_keys($usage['pricing_versions']);
+            }
+            $run['ledger_usage'] = $usage;
+            return $run;
+        }, $agentRuns);
+    }
+
     /**
      * Build one operational event stream from persisted Engineering truth.
      *
