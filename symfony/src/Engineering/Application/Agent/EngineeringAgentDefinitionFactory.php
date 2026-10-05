@@ -46,7 +46,7 @@ final class EngineeringAgentDefinitionFactory
 
     public function createDomainMode(AgentRole $role, ?string $organizationId = null): AgentDefinition
     {
-        if (!in_array($role, [AgentRole::ENGINEERING_MANAGER, AgentRole::PRINCIPAL_ARCHITECT, AgentRole::QA], true)) {
+        if (!in_array($role, [AgentRole::ENGINEERING_MANAGER, AgentRole::PRODUCT_REQUIREMENTS, AgentRole::QA_PLANNER, AgentRole::PRINCIPAL_ARCHITECT, AgentRole::QA_EXECUTOR, AgentRole::INTEGRATION_RELEASE, AgentRole::QA], true)) {
             throw new RuntimeException('Engineering role does not support Domain Development mode: '.$role->value);
         }
 
@@ -75,17 +75,25 @@ final class EngineeringAgentDefinitionFactory
     {
         $key = match ($role) {
             AgentRole::ENGINEERING_MANAGER => 'manager.model',
+            AgentRole::PRODUCT_REQUIREMENTS => 'manager.model',
+            AgentRole::QA_PLANNER => 'qa.model',
             AgentRole::PRINCIPAL_ARCHITECT => 'architect.model',
             AgentRole::DEVELOPER => 'developer.model',
             AgentRole::REVIEWER => 'reviewer.model',
+            AgentRole::QA_EXECUTOR => 'qa.model',
+            AgentRole::INTEGRATION_RELEASE => 'manager.model',
             AgentRole::QA => 'qa.model',
         };
 
         $model = match ($role) {
             AgentRole::ENGINEERING_MANAGER => $this->managerModel,
+            AgentRole::PRODUCT_REQUIREMENTS => $this->managerModel,
+            AgentRole::QA_PLANNER => $this->qaModel,
             AgentRole::PRINCIPAL_ARCHITECT => $this->architectModel,
             AgentRole::DEVELOPER => $this->developerModel,
             AgentRole::REVIEWER => $this->reviewerModel,
+            AgentRole::QA_EXECUTOR => $this->qaModel,
+            AgentRole::INTEGRATION_RELEASE => $this->managerModel,
             AgentRole::QA => $this->qaModel,
         };
         if ($organizationId !== null && $this->settings !== null) {
@@ -113,7 +121,11 @@ final class EngineeringAgentDefinitionFactory
     {
         $name = match ($role) {
             AgentRole::ENGINEERING_MANAGER => 'engineering-domain-manager-v2.0.md',
+            AgentRole::PRODUCT_REQUIREMENTS => 'engineering-domain-product-v2.0.md',
+            AgentRole::QA_PLANNER => 'engineering-domain-qa-planner-v2.0.md',
             AgentRole::PRINCIPAL_ARCHITECT => 'engineering-domain-architect-v2.0.md',
+            AgentRole::QA_EXECUTOR => 'engineering-domain-qa-executor-v2.0.md',
+            AgentRole::INTEGRATION_RELEASE => 'engineering-domain-integration-release-v2.0.md',
             AgentRole::QA => 'engineering-domain-qa-v2.0.md',
             default => throw new RuntimeException('Engineering role does not support Domain Development mode: '.$role->value),
         };
@@ -131,9 +143,13 @@ final class EngineeringAgentDefinitionFactory
     {
         $name = match ($role) {
             AgentRole::ENGINEERING_MANAGER => 'engineering-manager-v0.1.md',
+            AgentRole::PRODUCT_REQUIREMENTS => 'product-requirements-v0.1.md',
+            AgentRole::QA_PLANNER => 'qa-planner-v0.1.md',
             AgentRole::PRINCIPAL_ARCHITECT => 'principal-architect-v0.1.md',
             AgentRole::DEVELOPER => 'developer-v0.1.md',
             AgentRole::REVIEWER => 'reviewer-v0.1.md',
+            AgentRole::QA_EXECUTOR => 'qa-executor-v0.1.md',
+            AgentRole::INTEGRATION_RELEASE => 'integration-release-v0.1.md',
             AgentRole::QA => 'qa-v0.1.md',
         };
 
