@@ -54,8 +54,20 @@
                                 <input class="cos-input" name="target_branch" placeholder="domain/capital-markets">
                             </label>
                             <label class="cos-field">
-                                <span>Max parallel features</span>
-                                <input class="cos-input" type="number" name="max_parallel_features" min="1" max="20" value="3">
+                                <span>Parallel features</span>
+                                <input class="cos-input" type="number" name="max_parallel_features" min="0" max="20" value="0" title="0 = configured default">
+                            </label>
+                            <label class="cos-field">
+                                <span>Parallel developers</span>
+                                <input class="cos-input" type="number" name="max_parallel_developers" min="0" max="20" value="0" title="0 = configured default">
+                            </label>
+                            <label class="cos-field">
+                                <span>Parallel reviews</span>
+                                <input class="cos-input" type="number" name="max_parallel_reviews" min="0" max="20" value="0" title="0 = configured default">
+                            </label>
+                            <label class="cos-field">
+                                <span>Parallel QA</span>
+                                <input class="cos-input" type="number" name="max_parallel_qa" min="0" max="20" value="0" title="0 = configured default">
                             </label>
                             <label class="cos-field">
                                 <span>Запуск</span>
