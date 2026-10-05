@@ -230,10 +230,33 @@ final readonly class EngineeringDomainAgentOutputValidator
         }
         if ($status !== 'RELEASE_READY') return;
 
+        $requiredChecks = [
+            'DOMAIN_ARCHITECTURE',
+            'DOMAIN_ACCEPTANCE_CRITERIA',
+            'DOMAIN_QA',
+            'ARCHITECTURE_TESTS',
+            'CONTRACT_TESTS',
+            'MIGRATION_PLAN',
+            'SECURITY_CHECKS',
+            'CRITICAL_SMOKE',
+            'CI',
+        ];
+        $checksById = [];
         foreach ($output['release_checks'] as $check) {
             if (!is_array($check)) throw new RuntimeException('Domain release check must be an object.');
+            $id = strtoupper(trim((string) ($check['id'] ?? '')));
+            if ($id === '') throw new RuntimeException('Domain release check requires id.');
+            if (isset($checksById[$id])) throw new RuntimeException('Duplicate Domain release check '.$id.'.');
+            $checksById[$id] = $check;
             if (($check['blocking'] ?? false) === true && ($check['status'] ?? null) !== 'PASS') {
                 throw new RuntimeException('Domain RELEASE_READY requires all blocking release checks to PASS.');
+            }
+        }
+        foreach ($requiredChecks as $id) {
+            $check = $checksById[$id] ?? null;
+            if (!is_array($check)) throw new RuntimeException('Domain RELEASE_READY missing required check '.$id.'.');
+            if (($check['blocking'] ?? null) !== true || ($check['status'] ?? null) !== 'PASS' || !$this->evidence($check['evidence'] ?? null)) {
+                throw new RuntimeException('Domain RELEASE_READY requires blocking PASS evidence for '.$id.'.');
             }
         }
         if (($output['required_human_decisions'] ?? []) !== []) {
