@@ -137,8 +137,11 @@
                             <td>
                                 {% if feature.health in ['STALLED','STALE'] %}
                                     <span class="cos-badge engineering-warning">⚠ {{ feature.health }}</span>
+                                    {% if feature.runtime_reason %}<span class="engineering-table__meta">{{ feature.runtime_reason }}</span>{% endif %}
+                                    {% if feature.stalled_at %}<span class="engineering-table__meta">since {{ feature.stalled_at }}</span>{% endif %}
                                 {% else %}
                                     <span class="engineering-muted">{{ feature.health }}</span>
+                                    {% if feature.runtime_reason %}<span class="engineering-table__meta">{{ feature.runtime_reason }}</span>{% endif %}
                                 {% endif %}
                             </td>
                             <td>{{ feature.workflow_state|default('—') }}</td>
