@@ -11,6 +11,9 @@ interface EngineeringRepositoryGatewayInterface
     public function configuredBaseBranch(): string;
     public function ensureBranch(string $branch, string $baseRevision): string;
 
+    /** @return list<array{path:string,type:string,size:?int,sha:string}> */
+    public function repositoryTree(string $revision): array;
+
     /**
      * Read exact repository files at a specific revision.
      *
