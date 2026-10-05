@@ -179,6 +179,24 @@ final readonly class EngineeringDomainRuntimeService
         return $this->release->approve($domainId, $approvedBy);
     }
 
+    /** @param list<array<string,mixed>> $dependencies @return array<string,mixed> */
+    public function updateDependencies(
+        string $domainId,
+        string $organizationId,
+        array $dependencies,
+        string $editedBy,
+        string $correlationId,
+    ): array {
+        $this->assertTenant($domainId, $organizationId);
+        return $this->dependencyEditor->replace(
+            $domainId,
+            $organizationId,
+            $dependencies,
+            $editedBy,
+            $correlationId,
+        );
+    }
+
     /** @return array<string,mixed> */
     public function answerHumanDecision(
         string $domainId,
