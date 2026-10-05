@@ -7,6 +7,7 @@ use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
+use App\Engineering\Domain\DomainDevelopment\EngineeringDomainRuntimeEventType;
 use App\Engineering\Domain\DomainDevelopment\FeatureDependencyGraph;
 use RuntimeException;
 
@@ -96,10 +97,19 @@ final readonly class EngineeringDomainPlanner
         $capabilities = is_array($requirements['capabilities'] ?? null) ? $requirements['capabilities'] : [];
         if ($domainAc === [] || $capabilities === []) throw new RuntimeException('Domain Product / Requirements produced an incomplete specification.');
 
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION->value, $domainSpec, AgentRole::PRODUCT_REQUIREMENTS->value);
+        $specArtifact = $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION->value, $domainSpec, AgentRole::PRODUCT_REQUIREMENTS->value);
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ACCEPTANCE_CRITERIA->value, ['criteria' => $domainAc], AgentRole::PRODUCT_REQUIREMENTS->value);
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::CAPABILITY_MAP->value, ['capabilities' => $capabilities], AgentRole::PRODUCT_REQUIREMENTS->value);
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::DECOMPOSITION->value);
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_SPECIFICATION_READY->value,
+            null,
+            ['artifact_id' => $specArtifact['id'], 'version' => $specArtifact['version'], 'acceptance_criteria' => count($domainAc), 'capabilities' => count($capabilities)],
+            $correlationId,
+            'domain-specification-ready:v'.$specArtifact['version'],
+        );
 
         $qa = $this->agents->run(
             $domainId,
@@ -164,8 +174,26 @@ final readonly class EngineeringDomainPlanner
             throw new RuntimeException('Domain Architect produced an incomplete architecture/decomposition.');
         }
 
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ARCHITECTURE->value, $architecture, AgentRole::PRINCIPAL_ARCHITECT->value);
+        $architectureArtifact = $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ARCHITECTURE->value, $architecture, AgentRole::PRINCIPAL_ARCHITECT->value);
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ARCHITECTURE_CONSTITUTION->value, $constitution, AgentRole::PRINCIPAL_ARCHITECT->value);
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_ARCHITECTURE_APPROVED->value,
+            null,
+            ['artifact_id' => $architectureArtifact['id'], 'version' => $architectureArtifact['version'], 'status' => $architectStatus],
+            $correlationId,
+            'domain-architecture-approved:v'.$architectureArtifact['version'],
+        );
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::ARCHITECTURE_CHANGED->value,
+            null,
+            ['artifact_id' => $architectureArtifact['id'], 'version' => $architectureArtifact['version'], 'content_hash' => $architectureArtifact['content_hash']],
+            $correlationId,
+            'architecture-changed:v'.$architectureArtifact['version'],
+        );
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_DECOMPOSITION->value, [
             'capabilities' => $architectCapabilities,
             'features' => $features,
@@ -181,7 +209,46 @@ final readonly class EngineeringDomainPlanner
         ], AgentRole::PRINCIPAL_ARCHITECT->value);
 
         $this->domains->replacePlan($domainId, $architectCapabilities, $features, $dependencies);
-        $this->domains->replaceContracts($domainId, is_array($architect['contracts'] ?? null) ? $architect['contracts'] : []);
+        $this->domains->recordRuntimeEvent(
+            $domainId,
+            $organizationId,
+            EngineeringDomainRuntimeEventType::DOMAIN_DECOMPOSITION_READY->value,
+            null,
+            ['architecture_version' => $architectureArtifact['version'], 'features' => count($features), 'dependencies' => count($dependencies)],
+            $correlationId,
+            'domain-decomposition-ready:v'.$architectureArtifact['version'],
+        );
+        foreach ($architectCapabilities as $capability) {
+            $key = trim((string) ($capability['key'] ?? ''));
+            if ($key === '') continue;
+            $this->domains->recordRuntimeEvent(
+                $domainId,
+                $organizationId,
+                EngineeringDomainRuntimeEventType::CAPABILITY_READY->value,
+                null,
+                ['capability_key' => $key, 'architecture_version' => $architectureArtifact['version']],
+                $correlationId,
+                'capability-ready:'.$key.':v'.$architectureArtifact['version'],
+            );
+        }
+
+        $contracts = is_array($architect['contracts'] ?? null) ? $architect['contracts'] : [];
+        $this->domains->replaceContracts($domainId, $contracts);
+        foreach ($contracts as $contract) {
+            if (!is_array($contract)) continue;
+            $key = trim((string) ($contract['key'] ?? $contract['name'] ?? ''));
+            if ($key === '') continue;
+            $version = trim((string) ($contract['version'] ?? 'v1'));
+            $this->domains->recordRuntimeEvent(
+                $domainId,
+                $organizationId,
+                EngineeringDomainRuntimeEventType::CONTRACT_CHANGED->value,
+                null,
+                ['contract_key' => $key, 'version' => $version, 'compatibility' => $contract['compatibility'] ?? null],
+                $correlationId,
+                'contract-changed:'.$key.':'.$version,
+            );
+        }
         $this->domains->replaceEvents($domainId, is_array($architect['events'] ?? null) ? $architect['events'] : []);
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::READY_FOR_IMPLEMENTATION->value);
 
@@ -201,6 +268,7 @@ final readonly class EngineeringDomainPlanner
             'artifacts' => $this->domains->artifacts($domainId),
             'path_reservations' => $this->domains->pathReservations($domainId),
             'agent_runs' => $this->domains->agentRuns($domainId),
+            'runtime_events' => $this->domains->runtimeEvents($domainId),
         ];
     }
 
