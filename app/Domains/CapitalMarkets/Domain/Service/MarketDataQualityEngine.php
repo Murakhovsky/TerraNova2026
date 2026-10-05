@@ -11,6 +11,7 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityPolicy;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQualityFlag;
+use Domains\CapitalMarkets\Domain\MarketData\MarketSequencePolicy;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQuote;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceHealth;
 use Domains\CapitalMarkets\Domain\MarketData\MarketState;
@@ -115,13 +116,16 @@ final readonly class MarketDataQualityEngine
         if($event->sequence===null||$previous->lastSequence===null)return;
         if(!ctype_digit($event->sequence)||!ctype_digit($previous->lastSequence))return;
 
-        $next=(int)$event->sequence;
-        $last=(int)$previous->lastSequence;
-        if($next<=$last){
+        $sequencePolicy=$policy->sequencePolicyFor($event->eventType());
+        if($sequencePolicy===MarketSequencePolicy::None)return;
+
+        $cmp=$this->compareUnsigned($event->sequence,$previous->lastSequence);
+        if($cmp<=0){
             $flags[MarketQualityFlag::OutOfOrder->value]=MarketQualityFlag::OutOfOrder;
             return;
         }
-        if($policy->consecutiveSequenceRequired&&$next>$last+1){
+        if($sequencePolicy===MarketSequencePolicy::Contiguous
+            &&$event->sequence!==$this->incrementUnsigned($previous->lastSequence)){
             $flags[MarketQualityFlag::SequenceGap->value]=MarketQualityFlag::SequenceGap;
             if($event->eventType()===MarketEventType::OrderBookDelta){
                 $flags[MarketQualityFlag::OrderBookInvalid->value]=MarketQualityFlag::OrderBookInvalid;
@@ -174,6 +178,26 @@ final readonly class MarketDataQualityEngine
         ];
         foreach($flags as $flag)$score-=($penalties[$flag->value]??5);
         return max(0,min(100,$score));
+    }
+
+    private function compareUnsigned(string $left,string $right):int
+    {
+        $left=ltrim($left,'0')?:'0';
+        $right=ltrim($right,'0')?:'0';
+        $length=strlen($left)<=>strlen($right);
+        return $length!==0?$length:(strcmp($left,$right)<=>0);
+    }
+
+    private function incrementUnsigned(string $value):string
+    {
+        $digits=str_split($value);$carry=1;
+        for($i=count($digits)-1;$i>=0&&$carry===1;$i--){
+            $next=(ord($digits[$i])-48)+1;
+            $digits[$i]=chr(48+($next%10));
+            $carry=$next>=10?1:0;
+        }
+        if($carry===1)array_unshift($digits,'1');
+        return ltrim(implode('',$digits),'0')?:'0';
     }
 
     private function eventPrice(CanonicalMarketEvent $event):?Decimal

@@ -28,6 +28,7 @@ final readonly class RawMarketEvent extends ValueObject
         public ?string $sequence,
         public array $rawPayload,
         public array $transportMetadata=[],
+        public MarketDataMode $mode=MarketDataMode::Live,
     ){
         if($this->eventId===''||trim($this->eventId)!==$this->eventId||mb_strlen($this->eventId)>190){
             throw new InvalidArgumentException('Raw market event id is invalid.');

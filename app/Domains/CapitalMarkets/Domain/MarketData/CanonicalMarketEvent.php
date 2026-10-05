@@ -23,6 +23,8 @@ final readonly class CanonicalMarketEvent extends ValueObject
         public MarketObservation $observation,
         public array $qualityFlags=[],
         public int $schemaVersion=1,
+        public MarketDataMode $mode=MarketDataMode::Live,
+        public MarketStatus $marketStatus=MarketStatus::Unknown,
     ){
         if($this->eventId===''||trim($this->eventId)!==$this->eventId||mb_strlen($this->eventId)>190){
             throw new InvalidArgumentException('Canonical market event id is invalid.');
@@ -60,7 +62,7 @@ final readonly class CanonicalMarketEvent extends ValueObject
     {
         return new self(
             $this->eventId,$this->sourceId,$this->venueId,$this->instrumentId,$this->timestamps,
-            $this->sequence,$this->observation,$flags,$this->schemaVersion
+            $this->sequence,$this->observation,$flags,$this->schemaVersion,$this->mode,$this->marketStatus
         );
     }
 
@@ -79,6 +81,8 @@ final readonly class CanonicalMarketEvent extends ValueObject
             'sequence'=>$this->sequence,
             'quality_flags'=>array_map(static fn(MarketQualityFlag $flag):string=>$flag->value,$this->qualityFlags),
             'schema_version'=>$this->schemaVersion,
+            'mode'=>$this->mode->value,
+            'market_status'=>$this->marketStatus->value,
             'payload'=>$this->observation->toArray(),
             'fingerprint'=>$this->fingerprint(),
         ];
