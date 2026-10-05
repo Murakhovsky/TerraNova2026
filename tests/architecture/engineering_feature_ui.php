@@ -64,6 +64,8 @@ foreach ([
     'Вимоги та опис',
     'engineering.timeline',
     'runtime_steps',
+    'Вхідний контекст агента',
+    'Кроки runtime',
     'heartbeat_at',
     'health_status',
     'Інструменти та дії',
