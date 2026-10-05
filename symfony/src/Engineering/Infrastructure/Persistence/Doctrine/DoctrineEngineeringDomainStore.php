@@ -636,18 +636,49 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         ?string $model,
         array $usage,
         ?string $error,
+        ?string $runtimeId = null,
+        ?string $featureId = null,
+        ?string $state = null,
+        ?string $startedAt = null,
+        ?string $finishedAt = null,
+        array $inputs = [],
+        array $outputs = [],
+        array $artifacts = [],
+        ?string $repositoryRevision = null,
+        array $errors = [],
     ): void {
+        $runtimeId = $runtimeId !== null && trim($runtimeId) !== '' ? EngineeringId::assert($runtimeId) : null;
+        $tokens = [];
+        foreach (['input_tokens','cached_input_tokens','output_tokens','reasoning_tokens'] as $field) {
+            if (isset($usage[$field]) && is_numeric($usage[$field])) $tokens[$field] = max(0, (int) $usage[$field]);
+        }
+        $cost = isset($usage['cost_amount']) && is_numeric($usage['cost_amount'])
+            ? max(0.0, (float) $usage['cost_amount'])
+            : null;
+
         $this->db()->insert('cos_engineering_domain_agent_runs', [
-            'id' => EngineeringId::generate(),
+            'id' => $runtimeId ?? EngineeringId::generate(),
+            'runtime_id' => $runtimeId,
             'domain_id' => EngineeringId::assert($domainId),
+            'feature_id' => $featureId !== null && trim($featureId) !== '' ? EngineeringId::assert($featureId) : null,
             'agent_role' => $role,
             'status' => $status,
+            'state' => $state !== null ? mb_substr(trim($state), 0, 48) : null,
+            'started_at' => $startedAt,
+            'finished_at' => $finishedAt,
+            'input_payload' => json_encode($inputs, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'output_payload' => json_encode($outputs, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'artifact_payload' => json_encode($artifacts, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'repository_revision' => $repositoryRevision !== null && trim($repositoryRevision) !== '' ? mb_substr(trim($repositoryRevision), 0, 128) : null,
+            'cost_amount' => $cost,
+            'token_usage' => json_encode($tokens, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'errors_payload' => json_encode($errors, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'correlation_id' => mb_substr($correlationId, 0, 128),
             'provider' => $provider,
             'model' => $model,
             'usage_payload' => json_encode($usage, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'error_message' => $error,
-            'created_at' => $this->now(),
+            'created_at' => $finishedAt ?? $this->now(),
         ]);
     }
 
@@ -659,7 +690,13 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         );
         return array_map(function (array $row): array {
             $row['usage'] = $this->json($row['usage_payload'] ?? null);
-            unset($row['usage_payload']);
+            $row['inputs'] = $this->json($row['input_payload'] ?? null);
+            $row['outputs'] = $this->json($row['output_payload'] ?? null);
+            $row['artifacts'] = $this->json($row['artifact_payload'] ?? null);
+            $row['token_usage'] = $this->json($row['token_usage'] ?? null);
+            $row['errors'] = $this->json($row['errors_payload'] ?? null);
+            $row['cost_amount'] = $row['cost_amount'] !== null ? (float) $row['cost_amount'] : null;
+            unset($row['usage_payload'], $row['input_payload'], $row['output_payload'], $row['artifact_payload'], $row['errors_payload']);
             return $row;
         }, $rows);
     }
