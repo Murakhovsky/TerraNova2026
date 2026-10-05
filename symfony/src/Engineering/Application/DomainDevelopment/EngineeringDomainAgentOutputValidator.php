@@ -189,6 +189,32 @@ final readonly class EngineeringDomainAgentOutputValidator
             if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['regression'] ?? []) === []) {
                 throw new RuntimeException('Domain QA Plan requires explicit regression coverage.');
             }
+            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['architecture_tests'] ?? []) === []) {
+                throw new RuntimeException('Domain QA Plan requires explicit architecture-test coverage.');
+            }
+            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['contract_cases'] ?? []) === []) {
+                throw new RuntimeException('Domain QA Plan requires explicit contract-test coverage or an evidence-backed N/A contract case.');
+            }
+            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['migration_cases'] ?? []) === []) {
+                throw new RuntimeException('Domain QA Plan requires migration validation coverage.');
+            }
+            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['security'] ?? []) === []) {
+                throw new RuntimeException('Domain QA Plan requires security-check coverage.');
+            }
+            if ($status === 'PLAN_READY' && ($output['domain_qa_plan']['smoke'] ?? []) === []) {
+                throw new RuntimeException('Domain QA Plan requires a curated critical smoke suite.');
+            }
+            $isolation = $output['domain_qa_plan']['domain_isolation'] ?? null;
+            if ($status === 'PLAN_READY') {
+                if (!is_array($isolation) || array_is_list($isolation)) {
+                    throw new RuntimeException('Domain QA Plan requires structured Domain isolation validation.');
+                }
+                foreach (['namespace_boundaries','database_boundaries','infrastructure_imports','cross_domain_access','module_ownership','public_private_services'] as $check) {
+                    if (!array_key_exists($check, $isolation) || !is_array($isolation[$check])) {
+                        throw new RuntimeException('Domain isolation plan missing '.$check.'.');
+                    }
+                }
+            }
             return;
         }
 
