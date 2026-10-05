@@ -231,6 +231,7 @@ final readonly class EngineeringArchitectStageExecutor
                 usage: $run->usage,
                 error: $run->error,
                 technicalRetries: $run->technicalRetries,
+                steps: $run->steps,
             );
             $this->validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput);
         } catch (\Throwable $error) {
