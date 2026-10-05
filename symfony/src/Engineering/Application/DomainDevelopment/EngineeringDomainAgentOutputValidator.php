@@ -82,6 +82,44 @@ final readonly class EngineeringDomainAgentOutputValidator
             }
         }
 
+        $migrationPlan = $output['migration_plan'] ?? null;
+        if (!is_array($migrationPlan) || array_is_list($migrationPlan)) {
+            throw new RuntimeException('Approved Domain Architecture requires structured MigrationPlan.');
+        }
+        foreach (['migration_order','dependencies','forward_validation','rollback_strategy','data_migration','compatibility_window'] as $field) {
+            if (!array_key_exists($field, $migrationPlan)) throw new RuntimeException('MigrationPlan missing '.$field.'.');
+        }
+        if (!is_array($migrationPlan['migration_order'])) throw new RuntimeException('MigrationPlan migration_order must be an array.');
+
+        foreach (is_array($output['contracts'] ?? null) ? $output['contracts'] : [] as $contract) {
+            if (!is_array($contract)) throw new RuntimeException('Domain contract must be an object.');
+            foreach (['id','name','version','type','owner_domain','producer','consumers','schema','compatibility','status'] as $field) {
+                if (!array_key_exists($field, $contract)) throw new RuntimeException('Domain contract missing '.$field.'.');
+            }
+            if (!in_array(strtoupper((string) $contract['type']), [
+                'DOMAIN_INTERFACE','APPLICATION_INTERFACE','API_CONTRACT','EVENT_CONTRACT','DATABASE_CONTRACT','INTEGRATION_CONTRACT','PERMISSION_CONTRACT',
+            ], true)) throw new RuntimeException('Domain contract type is invalid.');
+            if (!in_array(strtoupper((string) $contract['compatibility']), ['BACKWARD_COMPATIBLE','BREAKING','DEPRECATED'], true)) {
+                throw new RuntimeException('Domain contract compatibility is invalid.');
+            }
+            if (!is_array($contract['consumers']) || !is_array($contract['schema'])) {
+                throw new RuntimeException('Domain contract consumers/schema must be structured.');
+            }
+        }
+
+        foreach (is_array($output['events'] ?? null) ? $output['events'] : [] as $event) {
+            if (!is_array($event)) throw new RuntimeException('Domain event must be an object.');
+            foreach (['name','version','producer','consumers','payload_schema','delivery','idempotency','ordering'] as $field) {
+                if (!array_key_exists($field, $event)) throw new RuntimeException('Domain event missing '.$field.'.');
+            }
+            if (trim((string) $event['producer']) === '' || trim((string) $event['idempotency']) === '' || trim((string) $event['ordering']) === '') {
+                throw new RuntimeException('Domain event requires producer, idempotency and ordering contracts.');
+            }
+            if (!is_array($event['consumers']) || !is_array($event['payload_schema'])) {
+                throw new RuntimeException('Domain event consumers/payload_schema must be structured.');
+            }
+        }
+
         $owners = [];
         foreach ($output['features'] as $feature) {
             foreach (is_array($feature['owned_paths'] ?? null) ? $feature['owned_paths'] : [] as $path) {
