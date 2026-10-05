@@ -43,6 +43,10 @@ $developer = (string) file_get_contents($root.'/symfony/src/Engineering/Applicat
 $reviewer = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringReviewerStageExecutor.php');
 $qa = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringQaStageExecutor.php');
 $gateway = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Repository/EngineeringRepositoryGatewayInterface.php');
+$artifactTypes = (string) file_get_contents($root.'/symfony/src/Engineering/Domain/DomainDevelopment/EngineeringDomainArtifactType.php');
+$drift = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDriftDetector.php');
+$secretGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Security/EngineeringSecretIsolationGuard.php');
+$domainValidator = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentOutputValidator.php');
 
 foreach ([
     'DOMAIN_SPECIFICATION',
@@ -55,6 +59,20 @@ foreach ([
     'INTEGRATION_STRATEGY',
 ] as $needle) {
     if (!str_contains($planner, $needle)) throw new RuntimeException('Domain planning is missing '.$needle);
+}
+
+foreach ([
+    'DOMAIN_SPECIFICATION','CAPABILITY_SPECIFICATION','FEATURE_CONTEXT_PACK','FEATURE_DEPENDENCY_GRAPH',
+    'DOMAIN_ARCHITECTURE','DOMAIN_ARCHITECTURE_CONSTITUTION','CONTRACT_REGISTRY','DOMAIN_EVENT_REGISTRY',
+    'DOMAIN_QA_PLAN','DOMAIN_QA_REPORT','DOMAIN_RELEASE_MANIFEST',
+] as $artifact) {
+    if (!str_contains($artifactTypes, $artifact)) throw new RuntimeException('Canonical Domain artifact type missing '.$artifact);
+}
+foreach (['REVALIDATION_REQUIRED','STALE','contract_snapshot','architecture_version'] as $needle) {
+    if (!str_contains($drift, $needle)) throw new RuntimeException('Domain drift detector missing '.$needle);
+}
+foreach (['EngineeringCancelService','revalidation_of','REVALIDATION_REQUIRED','STALE','linkEngineeringFeature'] as $needle) {
+    if (!str_contains($scheduler, $needle)) throw new RuntimeException('Automatic Domain revalidation missing '.$needle);
 }
 
 foreach ([
@@ -77,6 +95,13 @@ foreach ([
     'openPullRequest',
 ] as $needle) {
     if (!str_contains($release, $needle)) throw new RuntimeException('Domain release gate is missing '.$needle);
+}
+
+foreach (['completeCapabilities','assertMandatoryCapabilitiesComplete','assertDomainAcceptanceCoverage'] as $needle) {
+    if (!str_contains($release, $needle)) throw new RuntimeException('Domain Definition of Done release gate missing '.$needle);
+}
+foreach (['DOMAIN_ARCHITECTURE','ARCHITECTURE_TESTS','CONTRACT_TESTS','MIGRATION_PLAN','SECURITY_CHECKS','CRITICAL_SMOKE'] as $needle) {
+    if (!str_contains($domainValidator, $needle)) throw new RuntimeException('Domain mandatory release check missing '.$needle);
 }
 
 foreach ([
@@ -123,6 +148,14 @@ foreach ([
 }
 foreach (['recordRuntimeEvent','runtimeEvents'] as $needle) {
     if (!str_contains($store, $needle)) throw new RuntimeException('Domain runtime event ledger missing '.$needle);
+}
+
+
+foreach (['password','api_key','Bearer','vault','secret','REDACTED'] as $needle) {
+    if (!str_contains($secretGuard, $needle)) throw new RuntimeException('Engineering secret isolation guard missing '.$needle);
+}
+if (!str_contains($completionMigration, 'engineering_feature_history')) {
+    throw new RuntimeException('Domain child workflow supersession history is not persisted.');
 }
 
 if (!str_contains($services, 'EngineeringDomainStoreInterface')) throw new RuntimeException('Domain store DI alias is missing.');
