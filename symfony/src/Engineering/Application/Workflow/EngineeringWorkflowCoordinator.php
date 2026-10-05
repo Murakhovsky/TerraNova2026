@@ -182,10 +182,11 @@ final readonly class EngineeringWorkflowCoordinator
             AgentRole::QA_PLANNER,
             AgentRole::QA_EXECUTOR,
             AgentRole::QA => $this->afterQa($workflow, $output, $counters, $readyEvidence),
-            AgentRole::PRINCIPAL_ARCHITECT => $this->afterArchitect($workflow, $output),
+            AgentRole::PRINCIPAL_ARCHITECT => $this->afterArchitect($workflow, $output, $counters),
             AgentRole::DEVELOPER => $this->afterDeveloper($workflow, $output),
             AgentRole::REVIEWER => $this->afterReviewer($workflow, $output, $counters),
-            AgentRole::INTEGRATION_RELEASE => throw new LogicException('Integration & Release is a Domain-level role, not a Feature workflow stage.'),
+            AgentRole::INTEGRATION_RELEASE,
+            AgentRole::DOCUMENTATION => throw new LogicException($role->value.' is a Domain-level role, not a Feature workflow stage.'),
         };
     }
 
@@ -231,8 +232,13 @@ final readonly class EngineeringWorkflowCoordinator
         );
     }
 
-    private function afterArchitect(WorkflowExecution $workflow, array $output): WorkflowDirective
+    private function afterArchitect(WorkflowExecution $workflow, array $output, WorkflowCounters $counters): WorkflowDirective
     {
+        if (!$this->retries->mayRunArchitecture(max(0, $counters->architectureCycles - 1))) {
+            $escalated = $this->transition($workflow, EngineeringWorkflowState::ESCALATED, 'ARCHITECTURE_LOOP_LIMIT');
+            return $this->human($workflow, 'Architecture cycle limit exceeded.', [$escalated]);
+        }
+
         $status = (string) ($output['status'] ?? '');
         if ($status === 'NEEDS_HUMAN_DECISION') return $this->human($workflow, 'Architect requires a human architecture/product decision.');
         if ($status === 'REJECTED') return $this->block($workflow, 'Architecture gate rejected the feature for development.');
