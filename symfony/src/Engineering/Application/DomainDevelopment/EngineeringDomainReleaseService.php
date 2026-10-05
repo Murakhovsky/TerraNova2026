@@ -105,7 +105,7 @@ final readonly class EngineeringDomainReleaseService
         $result = $this->agents->run(
             $domainId,
             $organizationId,
-            AgentRole::QA,
+            AgentRole::QA_EXECUTOR,
             'Verify the integrated Domain against Domain Acceptance Criteria and the independent Domain QA Plan using only supplied evidence.',
             [
                 'phase' => 'EXECUTION',
@@ -123,7 +123,7 @@ final readonly class EngineeringDomainReleaseService
             ],
             $correlationId.':domain-qa',
         );
-        $this->validator->validate(AgentRole::QA, $result, 'EXECUTION');
+        $this->validator->validate(AgentRole::QA_EXECUTOR, $result, 'EXECUTION');
 
         $report = array_merge($result, [
             'tested_revision' => $repositoryRevision,
@@ -132,13 +132,44 @@ final readonly class EngineeringDomainReleaseService
             'architecture_version' => (int) $architecture['version'],
             'architecture_hash' => $architecture['content_hash'],
         ]);
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA_EXECUTOR->value);
 
         $qaStatus = (string) ($result['status'] ?? '');
         if ($qaStatus !== 'PASS') {
             $state = $qaStatus === 'FAIL' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value;
             $this->domains->updateStatus($domainId, $state, 'Domain QA returned '.$qaStatus.'.');
             return $this->view($domainId, ['qa_status' => $qaStatus]);
+        }
+
+        $integrationRelease = $this->agents->run(
+            $domainId,
+            $organizationId,
+            AgentRole::INTEGRATION_RELEASE,
+            'Assess integrated Domain release readiness after Domain QA and before the human release gate.',
+            [
+                'domain' => $domain,
+                'features' => $featureEvidence,
+                'domain_architecture' => $architecture['content'],
+                'architecture_constitution' => $constitution['content'],
+                'migration_plan' => $migration['content'],
+                'contracts' => $this->domains->contracts($domainId),
+                'events' => $this->domains->events($domainId),
+                'domain_qa_report' => $report,
+                'repository_revision' => $repositoryRevision,
+                'repository_ci' => $ci,
+                'integration_strategy' => $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::INTEGRATION_STRATEGY->value)['content'] ?? [],
+            ],
+            $correlationId.':integration-release',
+        );
+        $this->domains->saveArtifact($domainId, 'DOMAIN_INTEGRATION_RELEASE_REPORT', $integrationRelease, AgentRole::INTEGRATION_RELEASE->value);
+
+        $integrationStatus = (string) ($integrationRelease['status'] ?? '');
+        if ($integrationStatus !== 'RELEASE_READY') {
+            $state = $integrationStatus === 'FAILED'
+                ? EngineeringDomainStatus::FAILED->value
+                : EngineeringDomainStatus::BLOCKED->value;
+            $this->domains->updateStatus($domainId, $state, 'Integration & Release Agent returned '.$integrationStatus.'.');
+            return $this->view($domainId, ['integration_release' => $integrationRelease]);
         }
 
         $integrationPullRequest = null;
@@ -161,6 +192,7 @@ final readonly class EngineeringDomainReleaseService
             $repositoryRevision,
             $ci,
             $report,
+            $integrationRelease,
             $integrationPullRequest,
         );
         $this->domains->saveArtifact(
@@ -206,8 +238,8 @@ final readonly class EngineeringDomainReleaseService
         return $this->view($domainId, ['approved' => true]);
     }
 
-    /** @param array<string,mixed> $domain @param list<array<string,mixed>> $features @param array<string,mixed> $architecture @param array<string,mixed> $ci @param array<string,mixed> $qa @param array<string,mixed>|null $integrationPullRequest */
-    private function releaseManifest(array $domain, array $features, array $architecture, ?string $revision, array $ci, array $qa, ?array $integrationPullRequest): array
+    /** @param array<string,mixed> $domain @param list<array<string,mixed>> $features @param array<string,mixed> $architecture @param array<string,mixed> $ci @param array<string,mixed> $qa @param array<string,mixed> $integrationRelease @param array<string,mixed>|null $integrationPullRequest */
+    private function releaseManifest(array $domain, array $features, array $architecture, ?string $revision, array $ci, array $qa, array $integrationRelease, ?array $integrationPullRequest): array
     {
         return [
             'domain' => [
@@ -241,6 +273,7 @@ final readonly class EngineeringDomainReleaseService
                 'acceptance_criteria' => $qa['acceptance_criteria'] ?? [],
                 'defects' => $qa['defects'] ?? [],
             ],
+            'integration_release' => $integrationRelease,
             'ci' => $ci,
             'rollback_plan' => $architecture['content']['migration_strategy'] ?? null,
             'known_limitations' => $qa['known_limitations'] ?? [],
