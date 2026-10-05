@@ -546,6 +546,19 @@ final readonly class EngineeringFeatureController
             }
         }
 
+        $currentAgent = null;
+        for ($i = count($runs) - 1; $i >= 0; --$i) {
+            $candidate = $runs[$i] ?? null;
+            if (!is_array($candidate) || strtoupper((string) ($candidate['status'] ?? '')) !== 'RUNNING') continue;
+            $currentAgent = [
+                'role' => (string) ($candidate['role'] ?? 'AGENT'),
+                'run_id' => (string) ($candidate['id'] ?? ''),
+                'task_id' => $candidate['task_id'] ?? null,
+                'started_at' => $candidate['started_at'] ?? null,
+            ];
+            break;
+        }
+
         $reviewReached = isset($roles['REVIEWER']);
         $qaReached = isset($roles['QA']);
         $qualityState = (!$reviewReached && !$qaReached)
@@ -590,6 +603,7 @@ final readonly class EngineeringFeatureController
             )),
             'agent_runs' => count($runs),
             'roles' => $roles,
+            'current_agent' => $currentAgent,
             'stages' => $stages,
             'usage' => $usage,
             'tokens' => $usage['total_tokens'] ?? null,
