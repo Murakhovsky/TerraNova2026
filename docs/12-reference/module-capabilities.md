@@ -20,6 +20,7 @@ generated: true
 
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `capital_markets` | Capital Markets | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
@@ -30,6 +31,31 @@ generated: true
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
 | `service` | Service | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Service/module.php` |
+
+## Capital Markets (`capital_markets`)
+
+**Опис із manifest:** Autonomous capital-markets research and decision domain for instruments, venues, economic relationships, risk-aware strategies and execution evolution.
+
+- runtime service модуля: —;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+- `capital_markets.audit.view`;
+- `capital_markets.instrument.manage`;
+- `capital_markets.instrument.read`;
+- `capital_markets.live.execute`;
+- `capital_markets.paper.execute`;
+- `capital_markets.research.manage`;
+- `capital_markets.research.read`;
+- `capital_markets.risk.manage`;
+- `capital_markets.risk.view`;
+- `capital_markets.venue.manage`;
+- `capital_markets.venue.read`;
+- `capital_markets.workspace.view`;
 
 ## Construction (`construction`)
 
