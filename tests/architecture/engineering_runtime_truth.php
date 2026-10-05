@@ -39,10 +39,10 @@ foreach ([
 ] as $needle) {
     if (!str_contains($services, $needle)) throw new RuntimeException('Engineering runtime services missing '.$needle);
 }
-foreach (['STARTED','COMPLETED','FAILED','durationMs','correlationId'] as $needle) {
+foreach (['STARTED','COMPLETED','FAILED','hrtime(true)','correlationId'] as $needle) {
     if (!str_contains($journal, $needle)) throw new RuntimeException('Engineering execution journal missing '.$needle);
 }
-foreach (['cos_engineering_execution_events','forWorkflow','category','action','details'] as $needle) {
+foreach (['cos_engineering_execution_events','forWorkflow','category','action','details','duration_ms'] as $needle) {
     if (!str_contains($eventStore.$eventMigration, $needle)) throw new RuntimeException('Engineering execution event persistence missing '.$needle);
 }
 foreach (['execution_events','timeline','usageForWorkflow','forWorkflow($workflowId)'] as $needle) {
