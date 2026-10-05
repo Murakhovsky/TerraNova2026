@@ -25,7 +25,7 @@ final readonly class EngineeringWorkflowCoordinator
     public function startAnalysis(WorkflowExecution $workflow): WorkflowDirective
     {
         $transition = $this->transition($workflow, EngineeringWorkflowState::ANALYSIS, 'START_ANALYSIS');
-        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::ENGINEERING_MANAGER, 'Engineering request requires formal analysis.', [$transition]);
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRODUCT_REQUIREMENTS, 'Engineering request requires Product / Requirements analysis.', [$transition]);
     }
 
     public function resumeAfterHumanDecision(
@@ -56,13 +56,13 @@ final readonly class EngineeringWorkflowCoordinator
         return match ($resume) {
             EngineeringWorkflowState::ANALYSIS => new WorkflowDirective(
                 WorkflowDirectiveType::RUN_AGENT,
-                AgentRole::ENGINEERING_MANAGER,
-                'Human decision supplied; rerun Manager analysis with the decision in context.',
+                AgentRole::PRODUCT_REQUIREMENTS,
+                'Human decision supplied; rerun Product / Requirements analysis with the decision in context.',
                 [$transition],
             ),
             EngineeringWorkflowState::QA_PLANNING => new WorkflowDirective(
                 WorkflowDirectiveType::RUN_AGENT,
-                AgentRole::QA,
+                AgentRole::QA_PLANNER,
                 'Human decision supplied; resume QA Test Plan.',
                 [$transition],
             ),
@@ -88,8 +88,8 @@ final readonly class EngineeringWorkflowCoordinator
             ),
             EngineeringWorkflowState::QA_PENDING => new WorkflowDirective(
                 WorkflowDirectiveType::RUN_AGENT,
-                AgentRole::QA,
-                'Human decision supplied; resume QA.',
+                AgentRole::QA_EXECUTOR,
+                'Human decision supplied; resume QA execution.',
                 [$transition],
             ),
             default => new WorkflowDirective(
@@ -177,26 +177,28 @@ final readonly class EngineeringWorkflowCoordinator
         ?ReadyForHumanApprovalEvidence $readyEvidence = null,
     ): WorkflowDirective {
         return match ($role) {
-            AgentRole::ENGINEERING_MANAGER => $this->afterManager($workflow, $output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->afterProduct($workflow, $output),
+            AgentRole::QA_PLANNER => $this->afterQaPlanner($workflow, $output),
             AgentRole::PRINCIPAL_ARCHITECT => $this->afterArchitect($workflow, $output),
             AgentRole::DEVELOPER => $this->afterDeveloper($workflow, $output),
             AgentRole::REVIEWER => $this->afterReviewer($workflow, $output, $counters),
-            AgentRole::QA => $this->afterQa($workflow, $output, $counters, $readyEvidence),
+            AgentRole::QA_EXECUTOR => $this->afterQaExecutor($workflow, $output, $counters, $readyEvidence),
+            default => throw new LogicException('Agent role is not part of the Feature execution path: '.$role->value),
         };
     }
 
-    private function afterManager(WorkflowExecution $workflow, array $output): WorkflowDirective
+    private function afterProduct(WorkflowExecution $workflow, array $output): WorkflowDirective
     {
         $status = (string) ($output['status'] ?? '');
-        if ($status === 'HUMAN_DECISION_REQUIRED') return $this->human($workflow, 'Manager found a blocking product decision.');
-        if (in_array($status, ['BLOCKED','FAILED'], true)) return $this->block($workflow, 'Manager analysis could not complete.');
-        if ($status !== 'SPECIFICATION_READY') throw new LogicException('Unexpected Engineering Manager status: '.$status);
+        if ($status === 'HUMAN_DECISION_REQUIRED') return $this->human($workflow, 'Product Agent requires a blocking product decision.');
+        if (in_array($status, ['BLOCKED','FAILED'], true)) return $this->block($workflow, 'Product requirements analysis could not complete.');
+        if ($status !== 'SPECIFICATION_READY') throw new LogicException('Unexpected Product / Requirements status: '.$status);
 
         $transitions = [
-            $this->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, 'MANAGER_SPECIFICATION_READY'),
+            $this->transition($workflow, EngineeringWorkflowState::SPECIFICATION_READY, 'PRODUCT_SPECIFICATION_READY'),
             $this->transition($workflow, EngineeringWorkflowState::QA_PLANNING, 'SCHEDULE_QA_TEST_PLAN'),
         ];
-        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Acceptance criteria require an independent QA Test Plan before architecture and implementation.', $transitions);
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA_PLANNER, 'Acceptance criteria require an independent QA Test Plan before architecture and implementation.', $transitions);
     }
 
     private function afterArchitect(WorkflowExecution $workflow, array $output): WorkflowDirective
@@ -245,7 +247,13 @@ final readonly class EngineeringWorkflowCoordinator
             );
         }
         if ($status === 'SPECIFICATION_REVIEW_REQUIRED') {
-            return $this->human($workflow, 'Developer found a specification/acceptance-criteria conflict that requires product clarification.');
+            $transition = $this->transition($workflow, EngineeringWorkflowState::ANALYSIS, 'DEVELOPER_SPECIFICATION_REVIEW_REQUIRED');
+            return new WorkflowDirective(
+                WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::PRODUCT_REQUIREMENTS,
+                'Developer found a specification/acceptance-criteria conflict; Product must revalidate requirements.',
+                [$transition],
+            );
         }
         if ($status === 'SECURITY_REVIEW_REQUIRED') {
             return $this->human($workflow, 'Developer found a security decision outside the approved implementation contract.');
@@ -272,7 +280,7 @@ final readonly class EngineeringWorkflowCoordinator
         $status = (string) ($output['status'] ?? '');
         if ($status === 'APPROVED') {
             $transition = $this->transition($workflow, EngineeringWorkflowState::QA_PENDING, 'REVIEW_APPROVED');
-            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA, 'Independent review approved the implementation; final QA is required.', [$transition]);
+            return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::QA_EXECUTOR, 'Independent review approved the implementation; final QA execution is required.', [$transition]);
         }
         if ($status === 'ARCHITECTURE_REVIEW_REQUIRED') {
             $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'REVIEW_ARCHITECTURE_REVIEW_REQUIRED');
@@ -291,27 +299,32 @@ final readonly class EngineeringWorkflowCoordinator
         return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER, 'Reviewer requested bounded implementation changes.', $transitions);
     }
 
-    private function afterQa(
+    private function afterQaPlanner(WorkflowExecution $workflow, array $output): WorkflowDirective
+    {
+        $status = (string) ($output['status'] ?? '');
+        if ($workflow->currentState() !== EngineeringWorkflowState::QA_PLANNING) {
+            throw new LogicException('QA Planner result received outside QA_PLANNING.');
+        }
+        if ($status === 'BLOCKED') return $this->block($workflow, 'QA Planner could not produce a reliable Test Plan.');
+        if ($status === 'HUMAN_TEST_REQUIRED') return $this->human($workflow, 'QA planning requires a human testing decision.');
+        if ($status !== 'PLAN_READY') throw new LogicException('Unexpected QA Planner status: '.$status);
+
+        $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'QA_TEST_PLAN_READY');
+        return new WorkflowDirective(
+            WorkflowDirectiveType::RUN_AGENT,
+            AgentRole::PRINCIPAL_ARCHITECT,
+            'QA Test Plan is ready; architecture must account for testability and required verification.',
+            [$transition],
+        );
+    }
+
+    private function afterQaExecutor(
         WorkflowExecution $workflow,
         array $output,
         WorkflowCounters $counters,
         ?ReadyForHumanApprovalEvidence $readyEvidence,
     ): WorkflowDirective {
         $status = (string) ($output['status'] ?? '');
-
-        if ($workflow->currentState() === EngineeringWorkflowState::QA_PLANNING) {
-            if ($status === 'BLOCKED') return $this->block($workflow, 'QA could not produce a reliable Test Plan.');
-            if ($status === 'HUMAN_TEST_REQUIRED') return $this->human($workflow, 'QA planning requires a human testing decision.');
-            if ($status !== 'PLAN_READY') throw new LogicException('Unexpected QA planning status: '.$status);
-
-            $transition = $this->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING, 'QA_TEST_PLAN_READY');
-            return new WorkflowDirective(
-                WorkflowDirectiveType::RUN_AGENT,
-                AgentRole::PRINCIPAL_ARCHITECT,
-                'QA Test Plan is ready; architecture must account for testability and required verification.',
-                [$transition],
-            );
-        }
 
         if ($status === 'TESTS_UPDATED') {
             $transition = $this->transition($workflow, EngineeringWorkflowState::REVIEW_PENDING, 'QA_TESTS_UPDATED_REVIEW_REQUIRED');
