@@ -125,8 +125,23 @@ final class EngineeringDomainAgentSchemas
                 ],
                 'blockers' => ['type' => 'array'],
                 'human_tests_required' => ['type' => 'array'],
+                'acceptance_criteria' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['id','status','evidence'],
+                        'properties' => [
+                            'id' => ['type' => 'string'],
+                            'status' => ['type' => 'string', 'enum' => ['PASS','FAIL']],
+                            'evidence' => ['type' => ['array','object','string','number','boolean']],
+                        ],
+                        'additionalProperties' => true,
+                    ],
+                ],
+                'system_checks' => ['type' => ['array','object']],
                 'evidence' => ['type' => 'array'],
                 'defects' => ['type' => 'array'],
+                'known_limitations' => ['type' => 'array'],
             ],
             'additionalProperties' => true,
         ];
