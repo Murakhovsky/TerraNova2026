@@ -8,7 +8,7 @@ Verify:
 - required features are complete;
 - integration wiring and dependency ordering are coherent;
 - architecture and contracts are current;
-- migrations and rollback are release-safe;
+- MigrationPlan is internally coherent and migrations/forward validation/rollback/data migration/compatibility window are release-safe;
 - Domain QA passed;
 - required CI and smoke evidence passed;
 - no unresolved blocking findings or decisions remain.
