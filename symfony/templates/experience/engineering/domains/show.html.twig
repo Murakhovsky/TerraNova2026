@@ -70,7 +70,7 @@
             {% if actions.approve %}
                 <form method="post" action="/admin/engineering/domains/{{ domain.id }}/approve">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                    <button class="cos-button cos-button--primary" type="submit">Approve release</button>
+                    <button class="cos-button cos-button--primary" type="submit">Confirm merge &amp; approve</button>
                 </form>
             {% endif %}
         </div>
