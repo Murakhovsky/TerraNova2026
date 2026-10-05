@@ -89,10 +89,16 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
         $this->entityManager->flush();
     }
 
-    public function applyManagerAnalysis(string $featureId, array $specification, array $contextMap, ?string $repositoryRevision): void
+    public function applyProductSpecification(string $featureId, array $specification, array $contextMap, ?string $repositoryRevision): void
     {
         $this->record($featureId)->applyAnalysis($specification, $contextMap, $repositoryRevision);
         $this->entityManager->flush();
+    }
+
+    /** @deprecated V1 compatibility alias. */
+    public function applyManagerAnalysis(string $featureId, array $specification, array $contextMap, ?string $repositoryRevision): void
+    {
+        $this->applyProductSpecification($featureId, $specification, $contextMap, $repositoryRevision);
     }
 
     public function view(string $featureId): array
