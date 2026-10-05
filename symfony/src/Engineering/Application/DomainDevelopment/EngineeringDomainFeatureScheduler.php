@@ -6,6 +6,7 @@ namespace App\Engineering\Application\DomainDevelopment;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
+use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainFeatureStatus;
@@ -20,6 +21,7 @@ final readonly class EngineeringDomainFeatureScheduler
         private EngineeringDomainStoreInterface $domains,
         private EngineeringFeatureStoreInterface $features,
         private EngineeringOrchestrator $engineering,
+        private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringDomainContextBuilder $context,
         private EngineeringDomainDriftDetector $drift,
         private FeatureDependencyGraph $graph = new FeatureDependencyGraph(),
@@ -38,6 +40,7 @@ final readonly class EngineeringDomainFeatureScheduler
             throw new RuntimeException('Domain scheduler cannot run from status '.$domain['status'].'.');
         }
 
+        $this->ensureIntegrationBranch($domain);
         $this->syncLinkedFeatures($domainId);
         $drift = $this->drift->refresh($domainId);
         $domainFeatures = $this->domains->features($domainId);
@@ -146,6 +149,25 @@ final readonly class EngineeringDomainFeatureScheduler
         ];
     }
 
+    /** @param array<string,mixed> $domain */
+    private function ensureIntegrationBranch(array $domain): void
+    {
+        if (!$this->repository->available()) {
+            throw new RuntimeException('Domain scheduler requires configured Engineering repository access.');
+        }
+        $target = trim((string) ($domain['target_branch'] ?? ''));
+        if ($target === '') throw new RuntimeException('Domain target branch is required.');
+        $base = $this->repository->configuredBaseBranch();
+        if ($target === $base) return;
+
+        try {
+            $this->repository->currentBaseRevision($target);
+            return;
+        } catch (\Throwable) {
+            $this->repository->ensureBranch($target, $this->repository->currentBaseRevision());
+        }
+    }
+
     private function syncLinkedFeatures(string $domainId): void
     {
         foreach ($this->domains->features($domainId) as $domainFeature) {
@@ -166,7 +188,11 @@ final readonly class EngineeringDomainFeatureScheduler
             } elseif ($status === 'CANCELLED') {
                 $this->domains->updateFeatureStatus($domainId, (string) $domainFeature['feature_key'], EngineeringDomainFeatureStatus::CANCELLED->value, 'Child Engineering workflow cancelled.');
                 $this->domains->releasePaths($domainId, (string) $domainFeature['feature_key']);
-            } elseif (!in_array($domainFeature['status'], [EngineeringDomainFeatureStatus::STALE->value, EngineeringDomainFeatureStatus::REVALIDATION_REQUIRED->value], true)) {
+            } elseif (!in_array($domainFeature['status'], [
+                EngineeringDomainFeatureStatus::BLOCKED->value,
+                EngineeringDomainFeatureStatus::STALE->value,
+                EngineeringDomainFeatureStatus::REVALIDATION_REQUIRED->value,
+            ], true)) {
                 $this->domains->updateFeatureStatus($domainId, (string) $domainFeature['feature_key'], EngineeringDomainFeatureStatus::RUNNING->value);
             }
         }
