@@ -24,8 +24,8 @@ $running = $resolver->resolve(
     ['state' => 'DEVELOPMENT_RUNNING', 'status' => 'RUNNING'],
     'HEALTHY',
 );
-if (!$running['continue'] || !$running['cancel'] || $running['retry']) {
-    throw new RuntimeException('Running Engineering UI actions are inconsistent.');
+if ($running['continue'] || !$running['cancel'] || $running['retry'] || $running['resume']) {
+    throw new RuntimeException('Active healthy Engineering workflow must not expose a manual continue/resume action.');
 }
 
 $stalled = $resolver->resolve(
