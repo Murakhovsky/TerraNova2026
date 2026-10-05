@@ -108,7 +108,7 @@ final class EngineeringDomainAgentSchemas
                 'domain_qa_plan' => [
                     'type' => 'object',
                     'required' => [
-                        'domain_acceptance_criteria','cross_feature_workflows','cross_domain_workflows','contract_cases','migration_cases',
+                        'domain_acceptance_criteria','cross_feature_workflows','cross_domain_workflows','contract_cases','architecture_tests','domain_isolation','migration_cases',
                         'permissions','tenant_isolation','security','performance','resilience','regression','smoke','release_blocking_checks',
                     ],
                     'properties' => [
@@ -116,6 +116,20 @@ final class EngineeringDomainAgentSchemas
                         'cross_feature_workflows' => ['type' => 'array'],
                         'cross_domain_workflows' => ['type' => 'array'],
                         'contract_cases' => ['type' => 'array'],
+                        'architecture_tests' => ['type' => 'array'],
+                        'domain_isolation' => [
+                            'type' => 'object',
+                            'required' => ['namespace_boundaries','database_boundaries','infrastructure_imports','cross_domain_access','module_ownership','public_private_services'],
+                            'properties' => [
+                                'namespace_boundaries' => ['type' => 'array'],
+                                'database_boundaries' => ['type' => 'array'],
+                                'infrastructure_imports' => ['type' => 'array'],
+                                'cross_domain_access' => ['type' => 'array'],
+                                'module_ownership' => ['type' => 'array'],
+                                'public_private_services' => ['type' => 'array'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
                         'migration_cases' => ['type' => 'array'],
                         'permissions' => ['type' => 'array'],
                         'tenant_isolation' => ['type' => 'array'],
@@ -123,7 +137,7 @@ final class EngineeringDomainAgentSchemas
                         'performance' => ['type' => 'array'],
                         'resilience' => ['type' => 'array'],
                         'regression' => ['type' => 'array'],
-                        'smoke' => ['type' => 'array'],
+                        'smoke' => ['type' => 'array', 'maxItems' => 30],
                         'release_blocking_checks' => ['type' => 'array'],
                     ],
                     'additionalProperties' => true,
