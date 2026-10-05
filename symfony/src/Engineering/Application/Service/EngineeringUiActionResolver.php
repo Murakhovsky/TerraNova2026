@@ -28,8 +28,9 @@ final readonly class EngineeringUiActionResolver
             || in_array($workflowStatus, ['COMPLETED','CANCELLED','FAILED'], true);
         $cancelledOrFailed = in_array($state, ['CANCELLED','FAILED'], true)
             || in_array($workflowStatus, ['CANCELLED','FAILED'], true);
+        $readyForHumanApproval = $state === 'READY_FOR_HUMAN_APPROVAL';
         $waitingHuman = $openHumanDecisions > 0
-            || in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true);
+            || in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true);
         $draft = !$hasWorkflow && $featureStatus === 'NEW';
         $stalled = in_array($health, ['STALE','STALLED'], true);
 
@@ -42,6 +43,7 @@ final readonly class EngineeringUiActionResolver
             'resume' => $hasWorkflow && !$terminal && !$waitingHuman && $stalled,
             'cancel' => $hasWorkflow && !$terminal,
             'resolve_human' => $waitingHuman,
+            'finalize' => $hasWorkflow && $readyForHumanApproval && !$terminal,
             'retry' => $hasWorkflow && $cancelledOrFailed,
             'delete' => $draft || $cancelledOrFailed,
         ];
