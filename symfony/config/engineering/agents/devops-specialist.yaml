@@ -1,0 +1,14 @@
+id: devops-specialist
+version: 2.0.0
+role: DEVOPS_SPECIALIST
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model: { tier: strong, reasoning: high }
+permissions:
+  repository: { read: true, write: false }
+  workflow: { read: true, propose_transition: true }
+  merge: false
+  deploy: false
+  production: { access: false }
+tools: [repository.search, repository.read, artifact.read, artifact.create, workflow.read]
