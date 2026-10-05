@@ -35,6 +35,7 @@ final readonly class EngineeringDomainAgentService
         private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
         private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
         private int $maxTechnicalRetries = 2,
+        private int $maxSemanticRetries = 2,
     ) {}
 
     /** @param array<string,mixed> $inputs @return array<string,mixed> */
@@ -108,12 +109,14 @@ final readonly class EngineeringDomainAgentService
         $artifacts = $this->artifactRefs($inputs);
         $repositoryRevision = $this->repositoryRevision($inputs);
 
+        $semanticRetry = 0;
         for ($technicalRetry = 0; ; ++$technicalRetry) {
             $runId = EngineeringId::generate();
             $instance = new AgentInstance($runId, $organization, $agent, [
                 'engineering_domain_id' => $domainId,
                 'engineering_mode' => 'DOMAIN_DEVELOPMENT',
                 'technical_retry' => $technicalRetry,
+                'semantic_retry' => $semanticRetry,
             ]);
             $runCorrelationId = mb_substr(
                 rtrim($correlationId, ':').':domain-agent:'.$runId.':attempt-'.($technicalRetry + 1),
@@ -128,6 +131,7 @@ final readonly class EngineeringDomainAgentService
                     'engineering_domain_id' => $domainId,
                     'mode' => 'DOMAIN_DEVELOPMENT',
                     'technical_retry' => $technicalRetry,
+                    'semantic_retry' => $semanticRetry,
                 ],
                 metadata: [
                     'engineering_domain_id' => $domainId,
@@ -212,9 +216,22 @@ final readonly class EngineeringDomainAgentService
                         'failure_kind' => $kind->value,
                         'retry_policy' => $retryPolicy,
                         'technical_retry' => $technicalRetry,
+                        'semantic_retry' => $semanticRetry,
                         'message' => $error->getMessage(),
                     ]],
                 );
+
+                if ($phase === 'VALIDATION' && $semanticRetry < $this->maxSemanticRetries) {
+                    ++$semanticRetry;
+                    $auditInput['inputs']['semantic_retry_feedback'] = [
+                        'attempt' => $semanticRetry,
+                        'validation_error' => $error->getMessage(),
+                        'instruction' => 'Return a corrected structured result that satisfies the same canonical schema and objective. Do not change scope or invent missing facts.',
+                    ];
+                    unset($run, $output);
+                    --$technicalRetry;
+                    continue;
+                }
 
                 if ($kind->retryable() && $technicalRetry < $this->maxTechnicalRetries) {
                     unset($run, $output);
