@@ -7,6 +7,9 @@
     class="cos-page__stack"
     data-cos-engineering="feature"
     data-engineering-feature-id="{{ engineering.feature.id }}"
+    data-engineering-live-url="/admin/engineering/{{ engineering.feature.id }}/live"
+    data-engineering-state="{{ summary.state }}"
+    data-engineering-terminal="{{ summary.terminal ? '1' : '0' }}"
     data-cos-archetype="{{ page.archetypeId() }}"
     data-cos-page-state="{{ page.state }}"
     data-cos-page-density="compact"
@@ -45,6 +48,11 @@
         .engineering-stage{padding:8px 10px;border:1px solid var(--cos-border,#e1e5ea);border-radius:9px;background:var(--cos-surface,#fff);min-width:0}
         .engineering-stage strong{display:block;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .engineering-stage span{font-size:.7rem;color:var(--cos-text-secondary,#667085)}
+        .engineering-live{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px}
+        .engineering-live__activity{display:flex;gap:8px;align-items:center;min-width:0}
+        .engineering-live__dot{font-size:.8rem}
+        .engineering-live__title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .engineering-live__meta{font-size:.76rem;color:var(--cos-text-secondary,#667085)}
         @media(max-width:1350px){.engineering-summary{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:900px){.engineering-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}.engineering-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
     </style>
 
@@ -56,7 +64,7 @@
                 <span class="cos-badge">{{ engineering.feature.priority }}</span>
                 <span class="cos-badge">{{ summary.workflow_status }}</span>
                 <span class="cos-badge">{{ summary.state }}</span>
-                {% if summary.health in ['STALE','STALLED'] %}
+                {% if summary.health in ['DEGRADED','STALE','STALLED'] %}
                     <span class="cos-badge engineering-warning">⚠ {{ summary.health }}</span>
                 {% else %}
                     <span class="engineering-muted">{{ summary.health }}</span>
@@ -114,6 +122,40 @@
     {% if statusMessage %}
         <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Помилка Engineering' : 'Engineering оновлено' }}" copy="{{ statusMessage }}" tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
     {% endif %}
+
+    <section class="engineering-panel engineering-live" aria-label="Живий стан виконання" data-engineering-live-strip>
+        <div class="engineering-live__activity">
+            <span class="engineering-live__dot" data-live-activity-dot>●</span>
+            <div>
+                <div class="engineering-live__title" data-live-activity-title>
+                    {% if summary.active_operation %}
+                        {{ summary.active_operation.category }} · {{ summary.active_operation.summary }}
+                    {% elseif summary.current_agent %}
+                        {{ summary.current_agent.role }} · AgentRun виконується
+                    {% elseif summary.latest_agent and summary.latest_agent.status in ['FAILED','ERROR','TIMED_OUT'] %}
+                        {{ summary.latest_agent.role }} · {{ summary.latest_agent.status }}
+                    {% elseif summary.terminal %}
+                        Workflow завершено · {{ summary.workflow_status }}
+                    {% else %}
+                        Workflow активний · очікування наступної runtime-події
+                    {% endif %}
+                </div>
+                <div class="engineering-live__meta" data-live-activity-meta>
+                    {% if summary.active_operation %}
+                        з {{ summary.active_operation.occurred_at|default('') }}
+                    {% elseif summary.latest_agent %}
+                        останній AgentRun {{ summary.latest_agent.run_id }} · {{ summary.latest_agent.status }}
+                        {% if summary.latest_agent.error_message %} · {{ summary.latest_agent.error_message }}{% endif %}
+                    {% elseif engineering.workflow.runtime_reason|default('') %}
+                        {{ engineering.workflow.runtime_reason }}
+                    {% else %}
+                        heartbeat {{ engineering.workflow.heartbeat_at|default('n/a') }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="engineering-live__meta" data-live-sync>Live · автооновлення 2с</div>
+    </section>
 
     <details class="engineering-panel engineering-details">
         <summary class="engineering-panel__head">
@@ -173,32 +215,33 @@
         </section>
     {% endif %}
 
+    {% set displayedAgent = summary.current_agent ? summary.current_agent : summary.latest_agent %}
     <section class="engineering-summary" aria-label="Зведення execution">
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value">{{ summary.workflow_status }}</span></div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value">{{ summary.state }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Стан</span><span class="engineering-summary__value" data-live-field="workflow_status">{{ summary.workflow_status }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Етап</span><span class="engineering-summary__value" data-live-field="state">{{ summary.state }}</span></div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">Runtime</span>
-            <span class="engineering-summary__value">{{ summary.health }}</span>
-            <span class="engineering-table__meta">{{ engineering.workflow.heartbeat_at|default('heartbeat n/a') }}</span>
+            <span class="engineering-summary__value" data-live-field="health">{{ summary.health }}</span>
+            <span class="engineering-table__meta" data-live-field="heartbeat">{{ engineering.workflow.heartbeat_at|default('heartbeat n/a') }}</span>
         </div>
         <div class="engineering-summary__item">
-            <span class="engineering-summary__label">Поточний агент</span>
-            <span class="engineering-summary__value">{{ summary.current_agent.role|default('—') }}</span>
-            {% if summary.current_agent %}<span class="engineering-table__meta">{{ summary.current_agent.run_id }}</span>{% endif %}
+            <span class="engineering-summary__label" data-live-agent-label>{{ summary.current_agent ? 'Поточний агент' : 'Останній агент' }}</span>
+            <span class="engineering-summary__value" data-live-field="agent_role">{{ displayedAgent.role|default('—') }}</span>
+            <span class="engineering-table__meta" data-live-field="agent_meta">{% if displayedAgent %}{{ displayedAgent.status|default('RUNNING') }} · {{ displayedAgent.run_id }}{% else %}—{% endif %}</span>
         </div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Запуски агентів</span><span class="engineering-summary__value">{{ summary.agent_runs }}</span></div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Задачі</span><span class="engineering-summary__value">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">Тривалість</span><span class="engineering-summary__value">{{ summary.duration_label }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Запуски агентів</span><span class="engineering-summary__value" data-live-field="agent_runs">{{ summary.agent_runs }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Задачі</span><span class="engineering-summary__value" data-live-field="tasks">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">Тривалість</span><span class="engineering-summary__value" data-live-field="duration">{{ summary.duration_label }}</span></div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">Tokens</span>
-            <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'unavailable' }}</span>
+            <span class="engineering-summary__value" data-live-field="tokens">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'unavailable' }}</span>
         </div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">
                 Вартість
                 {% if summary.usage.cost_sources|default([]) is not empty %} · {{ summary.usage.cost_sources|join(', ') }}{% endif %}
             </span>
-            <span class="engineering-summary__value">
+            <span class="engineering-summary__value" data-live-field="cost">
                 {% if summary.cost is not null %}{{ summary.usage.cost_currency|default('USD') }} {{ summary.cost|number_format(4, '.', '') }}{% else %}unavailable{% endif %}
             </span>
         </div>
@@ -206,9 +249,9 @@
 
     <section class="engineering-stages" aria-label="Етапи workflow">
         {% for stage in summary.stages %}
-            <div class="engineering-stage">
+            <div class="engineering-stage" data-live-stage="{{ stage.key }}">
                 <strong>{{ stage.label }}</strong>
-                <span>{{ stage.status }}</span>
+                <span data-live-stage-status>{{ stage.status }}</span>
             </div>
         {% endfor %}
     </section>
@@ -231,9 +274,9 @@
         <section class="engineering-panel">
             <div class="engineering-panel__head">
                 <h2>Термінал виконання</h2>
-                <span class="engineering-muted">{{ engineering.timeline|length }} подій</span>
+                <span class="engineering-muted" data-live-terminal-count>{{ engineering.timeline|length }} подій</span>
             </div>
-            <div class="engineering-terminal">
+            <div class="engineering-terminal" data-engineering-live-terminal>
                 {% if engineering.timeline is empty %}
                     <div class="engineering-terminal__muted">Подій виконання ще немає.</div>
                 {% else %}
@@ -255,7 +298,7 @@
         <section class="engineering-panel">
             <div class="engineering-panel__head">
                 <h2>Контроль якості</h2>
-                <span class="cos-badge">{{ summary.quality_state }}</span>
+                <span class="cos-badge" data-live-field="quality_state">{{ summary.quality_state }}</span>
             </div>
             <div class="engineering-panel__body">
                 {% if summary.roles is not empty %}
@@ -593,5 +636,116 @@
             </div>
         </details>
     {% endif %}
+
+    <script>
+    (() => {
+        const root = document.querySelector('[data-cos-engineering="feature"]');
+        if (!root || root.dataset.engineeringTerminal === '1') return;
+        const endpoint = root.dataset.engineeringLiveUrl;
+        const terminal = root.querySelector('[data-engineering-live-terminal]');
+        const sync = root.querySelector('[data-live-sync]');
+        let stopped = false;
+
+        const setField = (name, value) => {
+            const node = root.querySelector('[data-live-field="' + name + '"]');
+            if (node) node.textContent = value ?? '—';
+        };
+        const number = (value) => value === null || value === undefined ? 'unavailable' : new Intl.NumberFormat('uk-UA').format(value);
+        const money = (value, currency) => value === null || value === undefined ? 'unavailable' : (currency || 'USD') + ' ' + Number(value).toFixed(4);
+
+        const renderTimeline = (items) => {
+            if (!terminal) return;
+            terminal.replaceChildren();
+            if (!Array.isArray(items) || items.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'engineering-terminal__muted';
+                empty.textContent = 'Подій виконання ще немає.';
+                terminal.append(empty);
+                return;
+            }
+            for (const event of items) {
+                const row = document.createElement('div');
+                row.className = 'engineering-terminal__row';
+                const time = document.createElement('span');
+                time.className = 'engineering-terminal__muted';
+                time.textContent = event.time || '';
+                const type = document.createElement('strong');
+                type.textContent = event.type || 'EVENT';
+                const description = document.createElement('span');
+                description.textContent = [event.title, event.status, event.detail].filter(Boolean).join(' · ');
+                row.append(time, type, description);
+                terminal.append(row);
+            }
+        };
+
+        const renderActivity = (summary, runtimeReason) => {
+            const title = root.querySelector('[data-live-activity-title]');
+            const meta = root.querySelector('[data-live-activity-meta]');
+            const label = root.querySelector('[data-live-agent-label]');
+            const agent = summary.current_agent || summary.latest_agent || null;
+            if (label) label.textContent = summary.current_agent ? 'Поточний агент' : 'Останній агент';
+            setField('agent_role', agent?.role || '—');
+            setField('agent_meta', agent ? ((agent.status || 'RUNNING') + ' · ' + (agent.run_id || '')) : '—');
+
+            if (summary.active_operation) {
+                if (title) title.textContent = summary.active_operation.category + ' · ' + summary.active_operation.summary;
+                if (meta) meta.textContent = 'з ' + (summary.active_operation.occurred_at || '') + (runtimeReason ? ' · ' + runtimeReason : '');
+            } else if (summary.current_agent) {
+                if (title) title.textContent = summary.current_agent.role + ' · AgentRun виконується';
+                if (meta) meta.textContent = summary.current_agent.run_id || '';
+            } else if (summary.latest_agent && ['FAILED','ERROR','TIMED_OUT'].includes(summary.latest_agent.status)) {
+                if (title) title.textContent = '⚠ ' + summary.latest_agent.role + ' · ' + summary.latest_agent.status;
+                if (meta) meta.textContent = summary.latest_agent.error_message || runtimeReason || 'Агент завершився помилкою.';
+            } else if (summary.terminal) {
+                if (title) title.textContent = 'Workflow завершено · ' + summary.workflow_status;
+                if (meta) meta.textContent = runtimeReason || '';
+            } else {
+                if (title) title.textContent = 'Workflow активний · очікування наступної runtime-події';
+                if (meta) meta.textContent = runtimeReason || 'heartbeat оновлюється автоматично';
+            }
+        };
+
+        const poll = async () => {
+            if (stopped || document.hidden) return;
+            try {
+                const response = await fetch(endpoint, {headers: {'Accept': 'application/json'}, cache: 'no-store'});
+                const payload = await response.json();
+                if (!response.ok || !payload.ok) throw new Error(payload.message || 'Live status unavailable');
+                const s = payload.summary;
+                if (root.dataset.engineeringState && root.dataset.engineeringState !== s.state) {
+                    window.location.reload();
+                    return;
+                }
+                setField('workflow_status', s.workflow_status);
+                setField('state', s.state);
+                setField('health', s.health);
+                setField('heartbeat', payload.heartbeat_at || 'heartbeat n/a');
+                setField('agent_runs', String(s.agent_runs));
+                setField('tasks', s.tasks_completed + '/' + s.tasks_total);
+                setField('duration', s.duration_label);
+                setField('tokens', number(s.tokens));
+                setField('cost', money(s.cost, s.cost_currency));
+                setField('quality_state', s.quality_state);
+                for (const stage of s.stages || []) {
+                    const node = root.querySelector('[data-live-stage="' + stage.key + '"] [data-live-stage-status]');
+                    if (node) node.textContent = stage.status;
+                }
+                const count = root.querySelector('[data-live-terminal-count]');
+                if (count) count.textContent = (payload.timeline?.length || 0) + ' подій';
+                renderTimeline(payload.timeline || []);
+                renderActivity(s, payload.runtime_reason || '');
+                if (sync) sync.textContent = 'Live · ' + new Date().toLocaleTimeString('uk-UA');
+                if (s.terminal) stopped = true;
+            } catch (error) {
+                if (sync) sync.textContent = 'Live недоступний · ' + error.message;
+            }
+        };
+
+        poll();
+        const timer = window.setInterval(poll, 2000);
+        window.addEventListener('pagehide', () => { stopped = true; window.clearInterval(timer); }, {once: true});
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+    })();
+    </script>
 </section>
 {% endblock %}
