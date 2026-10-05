@@ -9,6 +9,7 @@ use App\Engineering\Application\Policy\AgentCapabilityRegistry;
 use App\Engineering\Application\Policy\RuntimeCapabilityRegistry;
 use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
 use App\Engineering\Domain\Agent\AgentRole;
+use App\Engineering\Domain\DomainDevelopment\EngineeringDomainStatus;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use Kernel\Agent\Contract\AgentRuntimeInterface;
 use Kernel\Agent\Model\Agent;
