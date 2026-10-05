@@ -43,6 +43,9 @@ interface EngineeringDomainStoreInterface
     /** @return list<array<string,mixed>> */
     public function capabilities(string $domainId): array;
 
+    public function updateCapabilityStatus(string $domainId, string $capabilityKey, string $status, ?string $reason = null): void;
+
+
     /** @return list<array<string,mixed>> */
     public function features(string $domainId): array;
 
