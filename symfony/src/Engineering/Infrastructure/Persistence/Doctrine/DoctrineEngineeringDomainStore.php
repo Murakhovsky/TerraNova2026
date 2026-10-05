@@ -297,32 +297,51 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
     {
         $domainId = EngineeringId::assert($domainId);
         $db = $this->db();
-        $db->delete('cos_engineering_domain_contracts', ['domain_id' => $domainId]);
+        $db->executeStatement(
+            "UPDATE cos_engineering_domain_contracts SET status='SUPERSEDED', updated_at=:updated_at WHERE domain_id=:domain_id AND status='ACTIVE'",
+            ['domain_id' => $domainId, 'updated_at' => $this->now()],
+        );
+        $ownerDomain = (string) $this->domain($domainId)['domain_key'];
+
         foreach ($contracts as $contract) {
             $name = trim((string) ($contract['name'] ?? ''));
             if ($name === '') throw new \InvalidArgumentException('Domain contract name is required.');
-            $db->insert('cos_engineering_domain_contracts', [
-                'id' => EngineeringId::generate(),
-                'domain_id' => $domainId,
-                'contract_key' => $this->key((string) ($contract['key'] ?? $name)),
+            $key = $this->key((string) ($contract['key'] ?? $name));
+            $version = trim((string) ($contract['version'] ?? 'v1'));
+            if ($version === '') throw new \InvalidArgumentException('Domain contract version is required.');
+
+            $values = [
                 'name' => $name,
                 'type' => strtoupper((string) ($contract['type'] ?? 'DOMAIN_INTERFACE')),
-                'version' => trim((string) ($contract['version'] ?? 'v1')),
-                'owner_domain' => trim((string) ($contract['owner_domain'] ?? $this->domain($domainId)['domain_key'])),
+                'owner_domain' => trim((string) ($contract['owner_domain'] ?? $ownerDomain)),
                 'producer' => trim((string) ($contract['producer'] ?? '')),
                 'consumers' => json_encode($this->stringList($contract['consumers'] ?? []), JSON_THROW_ON_ERROR),
                 'schema_payload' => json_encode(is_array($contract['schema'] ?? null) ? $contract['schema'] : [], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'compatibility' => strtoupper((string) ($contract['compatibility'] ?? 'BACKWARD_COMPATIBLE')),
-                'status' => strtoupper((string) ($contract['status'] ?? 'ACTIVE')),
+                'status' => 'ACTIVE',
                 'updated_at' => $this->now(),
-            ]);
+            ];
+            $existing = $db->fetchOne(
+                'SELECT id FROM cos_engineering_domain_contracts WHERE domain_id=:domain_id AND contract_key=:contract_key AND version=:version',
+                ['domain_id' => $domainId, 'contract_key' => $key, 'version' => $version],
+            );
+            if (is_string($existing) && $existing !== '') {
+                $db->update('cos_engineering_domain_contracts', $values, ['id' => $existing]);
+                continue;
+            }
+            $db->insert('cos_engineering_domain_contracts', array_merge([
+                'id' => EngineeringId::generate(),
+                'domain_id' => $domainId,
+                'contract_key' => $key,
+                'version' => $version,
+            ], $values));
         }
     }
 
     public function contracts(string $domainId): array
     {
         $rows = $this->db()->fetchAllAssociative(
-            'SELECT * FROM cos_engineering_domain_contracts WHERE domain_id=:domain_id ORDER BY contract_key',
+            "SELECT * FROM cos_engineering_domain_contracts WHERE domain_id=:domain_id AND status='ACTIVE' ORDER BY contract_key",
             ['domain_id' => EngineeringId::assert($domainId)],
         );
         return array_map(function (array $row): array {
@@ -337,31 +356,49 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
     {
         $domainId = EngineeringId::assert($domainId);
         $db = $this->db();
-        $db->delete('cos_engineering_domain_events', ['domain_id' => $domainId]);
+        $db->executeStatement(
+            "UPDATE cos_engineering_domain_events SET status='SUPERSEDED', updated_at=:updated_at WHERE domain_id=:domain_id AND status='ACTIVE'",
+            ['domain_id' => $domainId, 'updated_at' => $this->now()],
+        );
+
         foreach ($events as $event) {
             $name = trim((string) ($event['name'] ?? ''));
             if ($name === '') throw new \InvalidArgumentException('Domain event name is required.');
-            $db->insert('cos_engineering_domain_events', [
-                'id' => EngineeringId::generate(),
-                'domain_id' => $domainId,
-                'event_key' => $this->key((string) ($event['key'] ?? $name)),
+            $key = $this->key((string) ($event['key'] ?? $name));
+            $version = trim((string) ($event['version'] ?? 'v1'));
+            if ($version === '') throw new \InvalidArgumentException('Domain event version is required.');
+            $values = [
                 'name' => $name,
-                'version' => trim((string) ($event['version'] ?? 'v1')),
                 'producer' => trim((string) ($event['producer'] ?? '')),
                 'consumers' => json_encode($this->stringList($event['consumers'] ?? []), JSON_THROW_ON_ERROR),
                 'payload_schema' => json_encode(is_array($event['payload_schema'] ?? null) ? $event['payload_schema'] : [], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'delivery' => strtoupper((string) ($event['delivery'] ?? 'AT_LEAST_ONCE')),
                 'idempotency' => (string) ($event['idempotency'] ?? ''),
                 'ordering_rule' => (string) ($event['ordering'] ?? ''),
+                'status' => 'ACTIVE',
                 'updated_at' => $this->now(),
-            ]);
+            ];
+            $existing = $db->fetchOne(
+                'SELECT id FROM cos_engineering_domain_events WHERE domain_id=:domain_id AND event_key=:event_key AND version=:version',
+                ['domain_id' => $domainId, 'event_key' => $key, 'version' => $version],
+            );
+            if (is_string($existing) && $existing !== '') {
+                $db->update('cos_engineering_domain_events', $values, ['id' => $existing]);
+                continue;
+            }
+            $db->insert('cos_engineering_domain_events', array_merge([
+                'id' => EngineeringId::generate(),
+                'domain_id' => $domainId,
+                'event_key' => $key,
+                'version' => $version,
+            ], $values));
         }
     }
 
     public function events(string $domainId): array
     {
         $rows = $this->db()->fetchAllAssociative(
-            'SELECT * FROM cos_engineering_domain_events WHERE domain_id=:domain_id ORDER BY event_key',
+            "SELECT * FROM cos_engineering_domain_events WHERE domain_id=:domain_id AND status='ACTIVE' ORDER BY event_key",
             ['domain_id' => EngineeringId::assert($domainId)],
         );
         return array_map(function (array $row): array {
