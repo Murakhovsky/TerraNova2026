@@ -5,11 +5,15 @@ namespace App\Engineering\Infrastructure\Observability;
 
 use App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Kernel\Llm\LlmPricingResolverInterface;
 use Throwable;
 
 final readonly class DoctrineEngineeringObservabilityReadModel implements EngineeringObservabilityReadModelInterface
 {
-    public function __construct(private EntityManagerInterface $entityManager) {}
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private LlmPricingResolverInterface $pricing,
+    ) {}
 
     public function usageForFeature(string $featureId): array
     {
@@ -19,7 +23,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     public function usageForWorkflow(string $workflowId): array
     {
         try {
-            $rows = $this->ledgerRowsForWorkflow($workflowId);
+            $rows = $this->withEstimatedCosts($this->ledgerRowsForWorkflow($workflowId));
             if ($rows !== []) return $this->aggregate($rows, 'LLM_LEDGER');
 
             $fallback = $this->entityManager->getConnection()->fetchAssociative(
@@ -73,7 +77,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
         try {
             [$in, $params] = $this->inParams($featureIds, 'feature');
             $rows = $this->entityManager->getConnection()->fetchAllAssociative(
-                "SELECT traces.feature_id, u.id, u.correlation_id, u.use_case, u.provider, u.model,
+                "SELECT traces.feature_id, u.organization_id, u.id, u.correlation_id, u.use_case, u.provider, u.model,
                         u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
                         u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version, u.provider_request_id,
                         u.latency_ms, u.fallback_count, u.created_at
@@ -87,6 +91,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                 $params,
             );
 
+            $rows = $this->withEstimatedCosts($rows);
             $byFeature = [];
             foreach ($rows as $row) {
                 $featureId = (string) ($row['feature_id'] ?? '');
@@ -143,7 +148,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     public function invocationsForFeature(string $featureId): array
     {
         try {
-            return $this->normalizeInvocations($this->ledgerRows($featureId));
+            return $this->normalizeInvocations($this->withEstimatedCosts($this->ledgerRows($featureId)));
         } catch (Throwable) {
             return [];
         }
@@ -152,7 +157,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     public function invocationsForWorkflow(string $workflowId): array
     {
         try {
-            return $this->normalizeInvocations($this->ledgerRowsForWorkflow($workflowId));
+            return $this->normalizeInvocations($this->withEstimatedCosts($this->ledgerRowsForWorkflow($workflowId)));
         } catch (Throwable) {
             return [];
         }
@@ -234,7 +239,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     private function ledgerRows(string $featureId): array
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
-            "SELECT u.id, u.correlation_id, u.use_case, u.provider, u.model,
+            "SELECT u.organization_id, u.id, u.correlation_id, u.use_case, u.provider, u.model,
                     u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
                     u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version, u.provider_request_id,
                     u.latency_ms, u.fallback_count, u.created_at
@@ -252,7 +257,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
     private function ledgerRowsForWorkflow(string $workflowId): array
     {
         return $this->entityManager->getConnection()->fetchAllAssociative(
-            "SELECT u.id, u.correlation_id, u.use_case, u.provider, u.model,
+            "SELECT u.organization_id, u.id, u.correlation_id, u.use_case, u.provider, u.model,
                     u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
                     u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version, u.provider_request_id,
                     u.latency_ms, u.fallback_count, u.created_at
@@ -264,6 +269,39 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
              ORDER BY u.created_at ASC, u.id ASC",
             ['workflow_id' => $workflowId],
         );
+    }
+
+    /**
+     * Backfill cost at read time for historical ledger rows created before a pricing
+     * snapshot existed. Persisted provider cost always wins.
+     *
+     * @param list<array<string,mixed>> $rows
+     * @return list<array<string,mixed>>
+     */
+    private function withEstimatedCosts(array $rows): array
+    {
+        foreach ($rows as &$row) {
+            if (($row['cost_amount'] ?? null) !== null) continue;
+
+            $estimate = $this->pricing->estimate(
+                isset($row['organization_id']) ? (string) $row['organization_id'] : null,
+                (string) ($row['provider'] ?? ''),
+                (string) ($row['model'] ?? ''),
+                $row['input_tokens'] !== null ? (int) $row['input_tokens'] : null,
+                $row['output_tokens'] !== null ? (int) $row['output_tokens'] : null,
+                $row['cached_input_tokens'] !== null ? (int) $row['cached_input_tokens'] : null,
+                $row['reasoning_tokens'] !== null ? (int) $row['reasoning_tokens'] : null,
+            );
+            if ($estimate === null) continue;
+
+            $row['cost_amount'] = $estimate->amount;
+            $row['cost_currency'] = $estimate->currency;
+            $row['cost_source'] = 'READ_MODEL_'.$estimate->source;
+            $row['pricing_version'] = $estimate->pricingVersion;
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /** @param list<array<string,mixed>> $rows @return list<array<string,mixed>> */
