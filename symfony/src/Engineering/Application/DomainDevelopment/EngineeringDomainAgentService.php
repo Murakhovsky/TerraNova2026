@@ -49,6 +49,7 @@ final readonly class EngineeringDomainAgentService
             AgentRole::PRINCIPAL_ARCHITECT,
             AgentRole::QA_EXECUTOR,
             AgentRole::INTEGRATION_RELEASE,
+            AgentRole::DOCUMENTATION,
             AgentRole::QA,
         ], true)) {
             throw new RuntimeException('Unsupported Domain Development agent role: '.$role->value);
