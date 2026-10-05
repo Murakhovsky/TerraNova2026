@@ -77,7 +77,7 @@ final class EngineeringDomainAgentSchemas
                     'minItems' => 1,
                     'items' => [
                         'type' => 'object',
-                        'required' => ['key','name','description','kind','required','depends_on'],
+                        'required' => ['key','name','description','kind','required','depends_on','acceptance_criteria'],
                         'properties' => [
                             'key' => ['type' => 'string'],
                             'name' => ['type' => 'string'],
@@ -85,6 +85,7 @@ final class EngineeringDomainAgentSchemas
                             'kind' => ['type' => 'string', 'enum' => ['FOUNDATION','CORE','INTEGRATION','APPLICATION','UI','INFRASTRUCTURE']],
                             'required' => ['type' => 'boolean'],
                             'depends_on' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'acceptance_criteria' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'string']],
                         ],
                         'additionalProperties' => false,
                     ],
