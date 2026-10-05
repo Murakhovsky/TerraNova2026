@@ -1,0 +1,318 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Engineering Domain · {{ domain.name }} | COS{% endblock %}
+
+{% block workspace_content %}
+<section class="cos-page__stack"
+         data-cos-engineering-domain="show"
+         data-engineering-domain-id="{{ domain.id }}"
+         data-cos-archetype="{{ page.archetypeId() }}">
+    <style>
+        .dw-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+        .dw-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+        .dw-inline form{margin:0}
+        .dw-summary{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+        .dw-card,.dw-panel{border:1px solid var(--cos-border,#dfe3ea);border-radius:12px;background:var(--cos-surface,#fff)}
+        .dw-card{padding:10px 12px}
+        .dw-card small{display:block;color:var(--cos-text-secondary,#667085);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}
+        .dw-card strong{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis}
+        .dw-panel{overflow:hidden}
+        .dw-panel__head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--cos-border,#e7e9ee)}
+        .dw-panel__head h2,.dw-panel__head h3{margin:0;font-size:.95rem}
+        .dw-panel__body{padding:10px 12px}
+        .dw-muted{color:var(--cos-text-secondary,#667085)}
+        .dw-danger{color:var(--cos-danger,#b42318);font-weight:700}
+        .dw-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .dw-table-wrap{overflow:auto}
+        .dw-table{width:100%;border-collapse:collapse;min-width:760px;font-size:.83rem}
+        .dw-table th,.dw-table td{padding:8px 9px;border-bottom:1px solid var(--cos-border,#edf0f3);text-align:left;vertical-align:top}
+        .dw-table th{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--cos-text-secondary,#667085)}
+        .dw-json{white-space:pre-wrap;word-break:break-word;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--cos-surface-subtle,#f7f8fa);padding:10px;border-radius:8px;max-height:440px;overflow:auto}
+        .dw-chain{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        .dw-dependency{padding:7px 9px;border:1px solid var(--cos-border,#e7e9ee);border-radius:8px;background:var(--cos-surface-subtle,#f7f8fa)}
+        @media(max-width:1050px){.dw-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.dw-grid{grid-template-columns:1fr}}
+        @media(max-width:650px){.dw-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    </style>
+
+    <div class="dw-head">
+        <div>
+            <p class="cos-card__eyebrow">Engineering · Domain Development Runtime</p>
+            <h1 class="cos-page-title" style="margin:2px 0 4px">{{ domain.name }}</h1>
+            <div class="dw-inline">
+                <span class="cos-badge">{{ domain.status }}</span>
+                <span>{{ domain.domain_key }}</span>
+                <span class="dw-muted">v{{ domain.version }} · {{ domain.target_branch }}</span>
+            </div>
+            {% if domain.status_reason %}<p class="dw-danger" style="margin:8px 0 0">{{ domain.status_reason }}</p>{% endif %}
+        </div>
+
+        <div class="dw-inline">
+            <a class="cos-button cos-button--ghost" href="/admin/engineering/domains">Domains</a>
+            <a class="cos-button cos-button--ghost" href="/admin/engineering">Feature workflows</a>
+            {% if actions.plan %}
+                <form method="post" action="/admin/engineering/domains/{{ domain.id }}/plan">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Plan Domain</button>
+                </form>
+            {% endif %}
+            {% if actions.tick %}
+                <form method="post" action="/admin/engineering/domains/{{ domain.id }}/tick">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Continue Runtime</button>
+                </form>
+            {% endif %}
+            {% if actions.verify %}
+                <form method="post" action="/admin/engineering/domains/{{ domain.id }}/verify">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Run Domain QA</button>
+                </form>
+            {% endif %}
+            {% if actions.approve %}
+                <form method="post" action="/admin/engineering/domains/{{ domain.id }}/approve">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Approve release</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if statusMessage %}
+        <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Помилка Domain Runtime' : 'Domain Runtime оновлено' }}"
+                       copy="{{ statusMessage }}"
+                       tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
+    {% endif %}
+
+    <div class="dw-summary">
+        <div class="dw-card"><small>Capabilities</small><strong>{{ engineeringDomain.capabilities|length }}</strong></div>
+        <div class="dw-card"><small>Features</small><strong>{{ featureStats.total }}</strong></div>
+        <div class="dw-card"><small>Completed</small><strong>{{ featureStats.completed }}</strong></div>
+        <div class="dw-card"><small>Running</small><strong>{{ featureStats.running }}</strong></div>
+        <div class="dw-card"><small>Waiting</small><strong>{{ featureStats.waiting }}</strong></div>
+        <div class="dw-card"><small>Attention</small><strong>{{ featureStats.blocked }}</strong></div>
+        <div class="dw-card"><small>Parallel limit</small><strong>{{ domain.max_parallel_features }}</strong></div>
+    </div>
+
+    {% set tabs = [
+        {'key':'overview','label':'Overview'},
+        {'key':'features','label':'Features · ' ~ featureStats.total},
+        {'key':'graph','label':'Dependency graph · ' ~ engineeringDomain.dependencies|length},
+        {'key':'contracts','label':'Contracts · ' ~ engineeringDomain.contracts|length},
+        {'key':'artifacts','label':'Artifacts · ' ~ engineeringDomain.artifacts|length},
+        {'key':'executions','label':'Executions · ' ~ engineeringDomain.agent_runs|length},
+        {'key':'qa','label':'QA'},
+        {'key':'release','label':'Release'}
+    ] %}
+
+    <twig:CosTabs id="engineering-domain-tabs" label="Engineering Domain Workspace" :items="tabs" active="overview">
+        <section id="engineering-domain-tabs-panel-overview" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-overview" data-tabs-target="panel" data-tab-key="overview">
+            <div class="dw-grid">
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Domain overview</h2><span class="cos-badge">{{ domain.status }}</span></div>
+                    <div class="dw-panel__body">
+                        <p><strong>Repository:</strong> {{ domain.target_repository }}</p>
+                        <p><strong>Integration branch:</strong> {{ domain.target_branch }}</p>
+                        <p><strong>Created:</strong> {{ domain.created_at }} · <strong>Updated:</strong> {{ domain.updated_at }}</p>
+                        <details>
+                            <summary><strong>Master Specification</strong></summary>
+                            <div class="dw-json" style="margin-top:8px">{{ domain.master_specification }}</div>
+                        </details>
+                    </div>
+                </section>
+
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Capabilities</h2><span class="dw-muted">{{ engineeringDomain.capabilities|length }}</span></div>
+                    <div class="dw-panel__body">
+                        {% if engineeringDomain.capabilities is empty %}
+                            <span class="dw-muted">Decomposition ще не сформована.</span>
+                        {% else %}
+                            {% for capability in engineeringDomain.capabilities %}
+                                <div style="padding:7px 0;border-bottom:1px solid var(--cos-border,#edf0f3)">
+                                    <strong>{{ capability.name|default(capability.capability_key) }}</strong>
+                                    <span class="cos-badge">{{ capability.kind|default('CORE') }}</span>
+                                    <span class="cos-badge">{{ capability.status|default('NOT_STARTED') }}</span>
+                                    {% if capability.description %}<div class="dw-muted">{{ capability.description }}</div>{% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-features" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-features" data-tabs-target="panel" data-tab-key="features" hidden>
+            <section class="dw-panel">
+                <div class="dw-panel__head"><h2>Feature execution map</h2><span class="dw-muted">leaf workflows створюються Runtime автоматично</span></div>
+                {% if engineeringDomain.features is empty %}
+                    <div class="dw-panel__body dw-muted">Feature decomposition ще не створена.</div>
+                {% else %}
+                    <div class="dw-table-wrap">
+                        <table class="dw-table">
+                            <thead><tr><th>Feature</th><th>Capability</th><th>Kind / priority</th><th>Risk</th><th>Status</th><th>Architecture</th><th>Child workflow</th><th>Reason</th></tr></thead>
+                            <tbody>
+                            {% for feature in engineeringDomain.features %}
+                                <tr>
+                                    <td><strong>{{ feature.title }}</strong><div class="dw-muted">{{ feature.feature_key }}</div></td>
+                                    <td>{{ feature.capability_key }}</td>
+                                    <td>{{ feature.kind }} · {{ feature.priority }}</td>
+                                    <td>{{ feature.risk }}</td>
+                                    <td><span class="cos-badge">{{ feature.status }}</span></td>
+                                    <td>{{ feature.architecture_version ? ('v' ~ feature.architecture_version) : '—' }}</td>
+                                    <td>
+                                        {% if feature.engineering_feature_id %}
+                                            <a href="/admin/engineering/{{ feature.engineering_feature_id }}">{{ feature.engineering_feature_id }}</a>
+                                        {% else %}<span class="dw-muted">not scheduled</span>{% endif %}
+                                    </td>
+                                    <td>{{ feature.status_reason|default('') }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </section>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-graph" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-graph" data-tabs-target="panel" data-tab-key="graph" hidden>
+            <section class="dw-panel">
+                <div class="dw-panel__head"><h2>Dependency graph</h2><span class="dw-muted">dependency gating</span></div>
+                <div class="dw-panel__body">
+                    {% if engineeringDomain.dependencies is empty %}
+                        <span class="dw-muted">Залежностей немає або Domain ще не декомпозований.</span>
+                    {% else %}
+                        <div class="dw-chain">
+                            {% for dep in engineeringDomain.dependencies %}
+                                <div class="dw-dependency"><strong>{{ dep.feature_key }}</strong> ← {{ dep.type }} ← <strong>{{ dep.depends_on_key }}</strong></div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if engineeringDomain.path_reservations is not empty %}
+                        <h3 style="margin-top:16px">Active path reservations</h3>
+                        <div class="dw-chain">
+                            {% for reservation in engineeringDomain.path_reservations %}
+                                <div class="dw-dependency">{{ reservation.path }} · <strong>{{ reservation.feature_key }}</strong></div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-contracts" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-contracts" data-tabs-target="panel" data-tab-key="contracts" hidden>
+            <div class="dw-grid">
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Public contracts</h2><span class="dw-muted">{{ engineeringDomain.contracts|length }}</span></div>
+                    <div class="dw-panel__body">
+                        {% if engineeringDomain.contracts is empty %}<span class="dw-muted">Contracts ще не зареєстровані.</span>{% endif %}
+                        {% for contract in engineeringDomain.contracts %}
+                            <details style="margin-bottom:8px">
+                                <summary><strong>{{ contract.name|default(contract.contract_key) }}</strong> · {{ contract.version }} · {{ contract.compatibility|default('') }}</summary>
+                                <div class="dw-json" style="margin-top:6px">{{ contract|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                            </details>
+                        {% endfor %}
+                    </div>
+                </section>
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Domain events</h2><span class="dw-muted">{{ engineeringDomain.events|length }}</span></div>
+                    <div class="dw-panel__body">
+                        {% if engineeringDomain.events is empty %}<span class="dw-muted">Events ще не зареєстровані.</span>{% endif %}
+                        {% for event in engineeringDomain.events %}
+                            <details style="margin-bottom:8px">
+                                <summary><strong>{{ event.name|default(event.event_key) }}</strong> · {{ event.version }}</summary>
+                                <div class="dw-json" style="margin-top:6px">{{ event|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                            </details>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-artifacts" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-artifacts" data-tabs-target="panel" data-tab-key="artifacts" hidden>
+            <section class="dw-panel">
+                <div class="dw-panel__head"><h2>Canonical Domain artifacts</h2><span class="dw-muted">{{ engineeringDomain.artifacts|length }}</span></div>
+                <div class="dw-panel__body">
+                    {% if engineeringDomain.artifacts is empty %}<span class="dw-muted">Artifacts ще не сформовані.</span>{% endif %}
+                    {% for artifact in engineeringDomain.artifacts %}
+                        <details style="margin-bottom:8px">
+                            <summary><strong>{{ artifact.type }}</strong> · v{{ artifact.version }} · {{ artifact.created_by }}</summary>
+                            <div class="dw-json" style="margin-top:6px">{{ artifact.content|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                        </details>
+                    {% endfor %}
+                </div>
+            </section>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-executions" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-executions" data-tabs-target="panel" data-tab-key="executions" hidden>
+            <section class="dw-panel">
+                <div class="dw-panel__head"><h2>Domain agent executions</h2><span class="dw-muted">{{ engineeringDomain.agent_runs|length }} runs</span></div>
+                {% if engineeringDomain.agent_runs is empty %}
+                    <div class="dw-panel__body dw-muted">Domain agents ще не запускалися.</div>
+                {% else %}
+                    <div class="dw-table-wrap">
+                        <table class="dw-table">
+                            <thead><tr><th>Role</th><th>Status</th><th>Provider / model</th><th>Correlation</th><th>Created</th><th>Error</th></tr></thead>
+                            <tbody>
+                            {% for run in engineeringDomain.agent_runs %}
+                                <tr>
+                                    <td><strong>{{ run.agent_role|default(run.role|default('UNKNOWN')) }}</strong></td>
+                                    <td>{{ run.status }}</td>
+                                    <td>{{ run.provider|default('—') }} / {{ run.model|default('—') }}</td>
+                                    <td>{{ run.correlation_id }}</td>
+                                    <td>{{ run.created_at }}</td>
+                                    <td>{{ run.error_message|default(run.error|default('')) }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </section>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-qa" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-qa" data-tabs-target="panel" data-tab-key="qa" hidden>
+            <div class="dw-grid">
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Domain QA Plan</h2></div>
+                    <div class="dw-panel__body">
+                        {% set qaPlan = artifactByType.DOMAIN_QA_PLAN|default(null) %}
+                        {% if qaPlan %}
+                            <div class="dw-json">{{ qaPlan.content|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                        {% else %}<span class="dw-muted">QA Plan ще не сформований.</span>{% endif %}
+                    </div>
+                </section>
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Domain QA Report</h2></div>
+                    <div class="dw-panel__body">
+                        {% set qaReport = artifactByType.DOMAIN_QA_REPORT|default(null) %}
+                        {% if qaReport %}
+                            <div class="dw-json">{{ qaReport.content|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                        {% else %}<span class="dw-muted">Domain QA ще не виконаний.</span>{% endif %}
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-release" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-release" data-tabs-target="panel" data-tab-key="release" hidden>
+            <div class="dw-grid">
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Integration &amp; Release</h2></div>
+                    <div class="dw-panel__body">
+                        {% set integration = artifactByType.DOMAIN_INTEGRATION_RELEASE_REPORT|default(null) %}
+                        {% if integration %}
+                            <div class="dw-json">{{ integration.content|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                        {% else %}<span class="dw-muted">Integration &amp; Release gate ще не досягнутий.</span>{% endif %}
+                    </div>
+                </section>
+                <section class="dw-panel">
+                    <div class="dw-panel__head"><h2>Domain Release Manifest</h2></div>
+                    <div class="dw-panel__body">
+                        {% set manifest = artifactByType.DOMAIN_RELEASE_MANIFEST|default(null) %}
+                        {% if manifest %}
+                            <div class="dw-json">{{ manifest.content|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                        {% else %}<span class="dw-muted">Release manifest ще не сформований.</span>{% endif %}
+                    </div>
+                </section>
+            </div>
+        </section>
+    </twig:CosTabs>
+</section>
+{% endblock %}
