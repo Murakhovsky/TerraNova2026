@@ -29,6 +29,11 @@
         .engineering-create__body{margin-top:12px}
         .engineering-warning{font-weight:700}
         .engineering-muted{color:var(--cos-text-secondary,#667085)}
+        .engineering-views{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        .engineering-view{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border:1px solid var(--cos-border,#dfe3ea);border-radius:8px;text-decoration:none;color:inherit;background:var(--cos-surface,#fff);font-size:.8rem}
+        .engineering-view[aria-current="page"]{font-weight:700;border-color:currentColor}
+        .engineering-search{display:flex;gap:6px;align-items:center}
+        .engineering-search .cos-input{min-width:220px;height:34px;padding:6px 9px}
     </style>
 
     <div class="engineering-toolbar">
@@ -102,8 +107,39 @@
             </div>
         </div>
 
+        <div class="engineering-toolbar" style="margin-bottom:10px">
+            <nav class="engineering-views" aria-label="Фільтри Engineering">
+                {% set views = {
+                    'all': ['Усі', workspaceStats.total],
+                    'running': ['Активні', workspaceStats.running],
+                    'queued': ['Черга', workspaceStats.queued],
+                    'attention': ['Потребують уваги', workspaceStats.attention],
+                    'completed': ['Завершені', workspaceStats.completed],
+                    'cancelled': ['Скасовані', null]
+                } %}
+                {% for key, item in views %}
+                    <a
+                        class="engineering-view"
+                        href="/admin/engineering?view={{ key }}{% if workspaceQuery %}&q={{ workspaceQuery|url_encode }}{% endif %}"
+                        {% if workspaceView == key %}aria-current="page"{% endif %}
+                    >{{ item[0] }}{% if item[1] is not null %} <span class="engineering-muted">{{ item[1] }}</span>{% endif %}</a>
+                {% endfor %}
+            </nav>
+            <form class="engineering-search" method="get" action="/admin/engineering">
+                <input type="hidden" name="view" value="{{ workspaceView }}">
+                <input class="cos-input" type="search" name="q" value="{{ workspaceQuery }}" placeholder="Пошук за назвою, етапом, агентом">
+                <button class="cos-button cos-button--ghost" type="submit">Знайти</button>
+                {% if workspaceQuery %}
+                    <a class="cos-button cos-button--ghost" href="/admin/engineering?view={{ workspaceView }}">Очистити</a>
+                {% endif %}
+            </form>
+        </div>
+
         {% if workspaceRows is empty %}
-            <twig:CosEmptyState title="Engineering завдань ще немає" copy="Створіть перше завдання кнопкою у верхній частині сторінки." />
+            <twig:CosEmptyState
+                title="{{ workspaceView == 'all' and not workspaceQuery ? 'Engineering завдань ще немає' : 'Нічого не знайдено' }}"
+                copy="{{ workspaceView == 'all' and not workspaceQuery ? 'Створіть перше завдання кнопкою у верхній частині сторінки.' : 'Змініть фільтр або пошуковий запит.' }}"
+            />
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
