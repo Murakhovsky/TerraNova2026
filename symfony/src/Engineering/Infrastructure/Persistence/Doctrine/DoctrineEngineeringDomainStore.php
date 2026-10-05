@@ -25,6 +25,9 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         string $targetBranch,
         string $createdBy,
         int $maxParallelFeatures = 3,
+        int $maxParallelDevelopers = 2,
+        int $maxParallelReviews = 2,
+        int $maxParallelQa = 2,
     ): void {
         $id = EngineeringId::assert($id);
         $domainKey = $this->key($domainKey);
@@ -41,6 +44,9 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
             'target_repository' => trim($targetRepository),
             'target_branch' => trim($targetBranch) !== '' ? trim($targetBranch) : 'main',
             'max_parallel_features' => max(1, min(20, $maxParallelFeatures)),
+            'max_parallel_developers' => max(1, min(20, $maxParallelDevelopers)),
+            'max_parallel_reviews' => max(1, min(20, $maxParallelReviews)),
+            'max_parallel_qa' => max(1, min(20, $maxParallelQa)),
             'status_reason' => null,
             'created_by' => $createdBy,
             'created_at' => $this->now(),
@@ -493,10 +499,56 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         }, $rows);
     }
 
+    public function recordRuntimeEvent(
+        string $domainId,
+        string $organizationId,
+        string $eventType,
+        ?string $featureKey,
+        array $payload,
+        string $correlationId,
+        string $dedupeKey,
+    ): void {
+        $eventType = trim($eventType);
+        $dedupeKey = trim($dedupeKey);
+        if ($eventType === '' || $dedupeKey === '') throw new \InvalidArgumentException('Domain runtime event type and dedupe key are required.');
+
+        $this->db()->executeStatement(
+            'INSERT IGNORE INTO cos_engineering_domain_runtime_events '
+            .'(id, domain_id, organization_id, event_type, feature_key, payload, correlation_id, dedupe_key, created_at) '
+            .'VALUES (:id, :domain_id, :organization_id, :event_type, :feature_key, :payload, :correlation_id, :dedupe_key, :created_at)',
+            [
+                'id' => EngineeringId::generate(),
+                'domain_id' => EngineeringId::assert($domainId),
+                'organization_id' => $organizationId,
+                'event_type' => $eventType,
+                'feature_key' => $featureKey !== null && trim($featureKey) !== '' ? $this->key($featureKey) : null,
+                'payload' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'correlation_id' => mb_substr(trim($correlationId), 0, 128),
+                'dedupe_key' => mb_substr($dedupeKey, 0, 191),
+                'created_at' => $this->now(),
+            ],
+        );
+    }
+
+    public function runtimeEvents(string $domainId, int $limit = 200): array
+    {
+        $rows = $this->db()->fetchAllAssociative(
+            'SELECT * FROM cos_engineering_domain_runtime_events WHERE domain_id=:domain_id ORDER BY created_at DESC, id DESC LIMIT '.max(1, min(500, $limit)),
+            ['domain_id' => EngineeringId::assert($domainId)],
+        );
+        return array_map(function (array $row): array {
+            $row['payload'] = $this->json($row['payload'] ?? null);
+            return $row;
+        }, $rows);
+    }
+
     private function domainView(array $row): array
     {
         $row['version'] = (int) $row['version'];
         $row['max_parallel_features'] = (int) $row['max_parallel_features'];
+        $row['max_parallel_developers'] = (int) ($row['max_parallel_developers'] ?? 2);
+        $row['max_parallel_reviews'] = (int) ($row['max_parallel_reviews'] ?? 2);
+        $row['max_parallel_qa'] = (int) ($row['max_parallel_qa'] ?? 2);
         return $row;
     }
 
