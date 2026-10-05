@@ -232,10 +232,72 @@
                     {% else %}
                         <div class="dw-chain">
                             {% for dep in engineeringDomain.dependencies %}
-                                <div class="dw-dependency"><strong>{{ dep.feature_key }}</strong> ← {{ dep.type }} ← <strong>{{ dep.depends_on_key }}</strong></div>
+                                <div class="dw-dependency">
+                                    <strong>{{ dep.feature_key }}</strong>
+                                    <span>← {{ dep.type }} ←</span>
+                                    <strong>{{ dep.depends_on_key }}</strong>
+                                    {% if dependencyGraphEditable %}
+                                        <form method="post" action="/admin/engineering/domains/{{ domain.id }}/dependency-graph" style="margin-left:auto">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <input type="hidden" name="mode" value="remove">
+                                            <input type="hidden" name="feature_key" value="{{ dep.feature_key }}">
+                                            <input type="hidden" name="depends_on_key" value="{{ dep.depends_on_key }}">
+                                            <input type="hidden" name="type" value="{{ dep.type }}">
+                                            <button class="cos-button cos-button--ghost" type="submit">Remove</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
                             {% endfor %}
                         </div>
                     {% endif %}
+
+                    {% if dependencyGraphEditable %}
+                        <section class="dw-panel" style="margin-top:14px">
+                            <div class="dw-panel__head">
+                                <h3>Visual dependency editor</h3>
+                                <span class="dw-muted">editable until the first child workflow is linked</span>
+                            </div>
+                            <div class="dw-panel__body">
+                                <form method="post" action="/admin/engineering/domains/{{ domain.id }}/dependency-graph">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <input type="hidden" name="mode" value="add">
+                                    <div class="dw-inline">
+                                        <label>
+                                            <span class="dw-muted">Feature</span>
+                                            <select class="cos-select" name="feature_key" required>
+                                                <option value="">Select feature</option>
+                                                {% for feature in engineeringDomain.features %}
+                                                    <option value="{{ feature.feature_key }}">{{ feature.feature_key }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span class="dw-muted">Dependency type</span>
+                                            <select class="cos-select" name="type" required>
+                                                {% for type in ['REQUIRES','BLOCKS','EXTENDS','IMPLEMENTS','USES','MIGRATES','INTEGRATES_WITH'] %}
+                                                    <option value="{{ type }}">{{ type }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label>
+                                            <span class="dw-muted">Depends on</span>
+                                            <select class="cos-select" name="depends_on_key" required>
+                                                <option value="">Select dependency</option>
+                                                {% for feature in engineeringDomain.features %}
+                                                    <option value="{{ feature.feature_key }}">{{ feature.feature_key }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <button class="cos-button cos-button--primary" type="submit">Add edge</button>
+                                    </div>
+                                </form>
+                                <p class="dw-muted" style="margin:10px 0 0">Runtime validates unknown nodes, self-dependencies and cycles before saving a new graph revision.</p>
+                            </div>
+                        </section>
+                    {% elseif engineeringDomain.features is not empty %}
+                        <p class="dw-muted" style="margin-top:12px">Dependency graph is locked because feature execution has started or the Domain is outside the architecture-editing phase.</p>
+                    {% endif %}
+
                     {% if engineeringDomain.path_reservations is not empty %}
                         <h3 style="margin-top:16px">Active path reservations</h3>
                         <div class="dw-chain">
