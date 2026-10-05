@@ -331,7 +331,7 @@ active stage
 Merge та production deploy у V0.1 залишаються human-only.
 
 
-## Engineering Domain Development Runtime V2.0
+## Середовище розробки складних доменів Engineering Runtime V2.0
 
 Для великих bounded context користувач не створює вручну десятки Feature workflows. У `/admin/engineering/domains` він створює Domain Initiative, задає goal через Master Specification і за потреби змінює integration branch та concurrency limits. Якщо repository override порожній, Runtime використовує canonical Engineering repository із конфігурації.
 
@@ -356,7 +356,7 @@ Create Domain
 
 Human Control Plane залишається на рівні goal, scope, architecture exceptions, risk і release. Scheduler сам визначає готові Feature за dependency graph, резервує repository paths, створює child Engineering workflows та продовжує їх до Domain integration.
 
-### Concurrency
+### Паралельність виконання
 
 Domain має чотири незалежні межі:
 
@@ -369,7 +369,7 @@ max_parallel_qa
 
 Default значення приходять із `COS_ENGINEERING_DOMAIN_MAX_PARALLEL_*`. `max_parallel_features` обмежує кількість одночасно активних child workflows, а stage limits застосовуються безпосередньо перед Developer, Reviewer і QA AgentRun. Очікування через concurrency gate не змінює deterministic workflow state і може бути безпечно продовжене scheduler-ом.
 
-### Orchestration event ledger
+### Журнал подій оркестрації
 
 Domain Runtime зберігає idempotent orchestration events із correlation id, optional feature key та evidence payload. Канонічний lifecycle включає `DomainCreated`, `DomainSpecificationReady`, `DomainDecompositionReady`, `DomainArchitectureApproved`, `CapabilityReady`, `FeatureReady`, `FeatureStarted`, `FeatureCompleted`, `FeatureBlocked`, `ContractChanged`, `ArchitectureChanged`, `DomainIntegrationStarted`, `DomainIntegrationCompleted`, `DomainQaStarted`, `DomainQaCompleted`, `DomainReleaseReady`.
 
