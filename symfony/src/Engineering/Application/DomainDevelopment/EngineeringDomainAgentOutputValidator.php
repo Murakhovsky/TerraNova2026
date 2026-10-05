@@ -22,6 +22,7 @@ final readonly class EngineeringDomainAgentOutputValidator
             AgentRole::QA => $this->qa($output, $phase),
             AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
             AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
+            AgentRole::DOCUMENTATION => $this->documentation($output),
             default => throw new RuntimeException('Unsupported Domain Development validation role: '.$role->value),
         };
     }
@@ -294,6 +295,42 @@ final readonly class EngineeringDomainAgentOutputValidator
         if (is_string($value)) return trim($value) !== '';
         if (is_array($value)) return $value !== [];
         return is_scalar($value) && $value !== null;
+    }
+
+    /** @param array<string,mixed> $output */
+    private function documentation(array $output): void
+    {
+        $this->required($output, ['status','target_locale','documents','notes']);
+        $status = strtoupper(trim((string) ($output['status'] ?? '')));
+        if (!in_array($status, ['TRANSLATED','BLOCKED','FAILED'], true)) {
+            throw new RuntimeException('Domain Documentation status is invalid.');
+        }
+        if ($status !== 'TRANSLATED') return;
+
+        $locale = trim((string) ($output['target_locale'] ?? ''));
+        if ($locale === '') throw new RuntimeException('Domain Documentation translation requires target_locale.');
+        if (!is_array($output['documents'] ?? null)) throw new RuntimeException('Domain Documentation translation requires documents.');
+
+        $audiences = [];
+        foreach ($output['documents'] as $document) {
+            if (!is_array($document)) throw new RuntimeException('Domain Documentation item must be an object.');
+            foreach (['audience','title','content_markdown'] as $field) {
+                if (!array_key_exists($field, $document)) throw new RuntimeException('Domain Documentation item missing '.$field.'.');
+            }
+            $audience = strtoupper(trim((string) $document['audience']));
+            if (!in_array($audience, ['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER'], true)) {
+                throw new RuntimeException('Domain Documentation audience is invalid.');
+            }
+            if (isset($audiences[$audience])) throw new RuntimeException('Duplicate Domain Documentation audience '.$audience.'.');
+            if (trim((string) $document['title']) === '' || trim((string) $document['content_markdown']) === '') {
+                throw new RuntimeException('Domain Documentation translated title/content cannot be empty.');
+            }
+            $audiences[$audience] = true;
+        }
+
+        foreach (['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER'] as $audience) {
+            if (!isset($audiences[$audience])) throw new RuntimeException('Domain Documentation translation missing '.$audience.'.');
+        }
     }
 
     /** @param array<string,mixed> $output */
