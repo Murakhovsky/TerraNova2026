@@ -925,6 +925,50 @@ pages:
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
 
+  - id: engineering.domains
+    route: { name: cos_web_engineering_domains, path: "/admin/engineering/domains", methods: [GET, HEAD] }
+    surface: system
+    domain: Engineering
+    capability: engineering.domain.view
+    owner: Engineering
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator, engineering_manager]
+    product:
+      primary_goal: "Create and monitor autonomous Domain Development initiatives from one Master Specification."
+      page_purpose: "Engineering Runtime V2 Domain control surface."
+    archetype: system_control_surface
+    patterns:
+      required: [PageHeader, Toolbar, EntityList]
+      optional: [EmptyState, ErrorState]
+    primary_action: engineering.domain.create
+    states: [normal, empty, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: engineering.domain
+    route: { name: cos_web_engineering_domain, path: "/admin/engineering/domains/{id}", methods: [GET, HEAD] }
+    surface: system
+    domain: Engineering
+    capability: engineering.domain.view
+    owner: Engineering
+    priority: P1
+    status: CONTRACTED
+    personas: [administrator, engineering_manager]
+    product:
+      primary_goal: "Observe and control Domain decomposition, execution, QA and release from one workspace."
+      page_purpose: "Canonical Engineering Domain entity workspace."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader, Tabs, DataTable]
+      optional: [StatusTimeline, ErrorState]
+    primary_action: engineering.domain.continue
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
   - id: engineering.feature
     route: { name: cos_web_engineering_feature, path: "/admin/engineering/{id}", methods: [GET, HEAD] }
     surface: system
