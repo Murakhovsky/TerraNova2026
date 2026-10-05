@@ -4,10 +4,14 @@ declare(strict_types=1);
 namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
+use App\Engineering\Application\Service\EngineeringStatusService;
 
 final readonly class EngineeringDomainBudgetGuard
 {
-    public function __construct(private EngineeringDomainStoreInterface $domains) {}
+    public function __construct(
+        private EngineeringDomainStoreInterface $domains,
+        private EngineeringStatusService $engineering,
+    ) {}
 
     /** @param array<string,mixed> $context @return array{allowed:bool,reasons:list<string>,evidence:array<string,mixed>} */
     public function agentRunDecision(string $domainId, array $context): array
@@ -55,13 +59,32 @@ final readonly class EngineeringDomainBudgetGuard
         $cost = 0.0;
         foreach ($this->domains->agentRuns($domainId) as $run) {
             $usage = is_array($run['usage'] ?? null) ? $run['usage'] : [];
-            foreach (['input_tokens','cached_input_tokens','output_tokens','reasoning_tokens'] as $field) {
-                if (isset($usage[$field]) && is_numeric($usage[$field])) $tokens += max(0, (int) $usage[$field]);
+            $runTokens = isset($usage['total_tokens']) && is_numeric($usage['total_tokens'])
+                ? max(0, (int) $usage['total_tokens'])
+                : max(0, (int) ($usage['input_tokens'] ?? 0)) + max(0, (int) ($usage['output_tokens'] ?? 0));
+            $tokens += $runTokens;
+            if (isset($usage['cost_amount']) && is_numeric($usage['cost_amount'])) {
+                $cost += max(0.0, (float) $usage['cost_amount']);
+            }
+        }
+
+        foreach ($this->domains->features($domainId) as $feature) {
+            $featureId = $feature['engineering_feature_id'] ?? null;
+            if (!is_string($featureId) || trim($featureId) === '') continue;
+            try {
+                $status = $this->engineering->status($featureId);
+            } catch (\Throwable) {
+                continue;
+            }
+            $usage = is_array($status['usage'] ?? null) ? $status['usage'] : [];
+            if (isset($usage['total_tokens']) && is_numeric($usage['total_tokens'])) {
+                $tokens += max(0, (int) $usage['total_tokens']);
             }
             if (isset($usage['cost_amount']) && is_numeric($usage['cost_amount'])) {
                 $cost += max(0.0, (float) $usage['cost_amount']);
             }
         }
+
         return ['tokens' => $tokens, 'cost' => $cost];
     }
 
