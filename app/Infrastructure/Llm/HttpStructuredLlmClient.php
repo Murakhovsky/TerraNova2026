@@ -94,6 +94,10 @@ final class HttpStructuredLlmClient implements LlmClientInterface, StructuredLlm
             isset($decoded['usage']['output_tokens']) ? (int) $decoded['usage']['output_tokens'] : null,
             isset($decoded['cost']['amount']) ? (float) $decoded['cost']['amount'] : null,
             isset($decoded['cost']['currency']) ? (string) $decoded['cost']['currency'] : null,
+            isset($decoded['usage']['cached_input_tokens']) ? (int) $decoded['usage']['cached_input_tokens'] : null,
+            isset($decoded['usage']['reasoning_tokens']) ? (int) $decoded['usage']['reasoning_tokens'] : null,
+            isset($decoded['cost']['source']) ? (string) $decoded['cost']['source'] : null,
+            isset($decoded['cost']['pricing_version']) ? (string) $decoded['cost']['pricing_version'] : null,
         );
     }
 
