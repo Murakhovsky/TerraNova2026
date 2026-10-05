@@ -396,7 +396,21 @@ final readonly class EngineeringDomainPlanner
             'path_reservations' => $this->domains->pathReservations($domainId),
             'agent_runs' => $this->domains->agentRuns($domainId),
             'runtime_events' => $this->domains->runtimeEvents($domainId),
+            'open_human_decisions' => $this->domains->openHumanDecisions($domainId),
+            'human_decision_history' => $this->domains->humanDecisionHistory($domainId),
         ];
+    }
+
+    /** @param array<string,mixed> $output */
+    private function firstQuestion(array $output, string $fallback): string
+    {
+        foreach (is_array($output['open_questions'] ?? null) ? $output['open_questions'] : [] as $question) {
+            if (is_string($question) && trim($question) !== '') return trim($question);
+            if (is_array($question) && trim((string) ($question['question'] ?? '')) !== '') {
+                return trim((string) $question['question']);
+            }
+        }
+        return $fallback;
     }
 
     /** @param list<array<string,mixed>> $architectCapabilities @param list<array<string,mixed>> $requirementsCapabilities @return list<array<string,mixed>> */
