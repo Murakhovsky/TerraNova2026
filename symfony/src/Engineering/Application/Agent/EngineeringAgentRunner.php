@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Agent;
 
+use App\Engineering\Application\DomainDevelopment\EngineeringFeatureBudgetGuard;
 use App\Engineering\Application\Policy\AgentCapabilityRegistry;
 use App\Engineering\Application\Policy\RuntimeCapabilityRegistry;
 use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
@@ -23,6 +24,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
         private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
         private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
+        private ?EngineeringFeatureBudgetGuard $resourceBudgets = null,
         private int $maxTechnicalRetries = 2,
     ) {
     }
@@ -85,28 +87,67 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             'idempotency_key' => $task->idempotencyKey,
             'technical_retry' => $technicalRetry,
         ]);
+        $input = $this->secrets->sanitize([
+            'question' => $task->objective,
+            'inputs' => $task->inputs,
+            'constraints' => $task->constraints,
+            'completion_criteria' => $task->completionCriteria,
+            'expected_output_schema' => $task->expectedOutputSchema,
+        ]);
+        $data = $this->secrets->sanitize([
+            'context_refs' => $task->contextRefs,
+            'input_snapshot' => $task->inputSnapshot,
+            'agent_capabilities' => $this->agentCapabilities->forRole($task->role),
+            'runtime_capabilities' => $this->runtimeCapabilities->forRuntime('EngineeringRuntime'),
+        ]);
+
+        $budgetEvidence = [];
+        if ($this->resourceBudgets !== null) {
+            $decision = $this->resourceBudgets->decision($task->featureId);
+            if (($decision['allowed'] ?? false) !== true) {
+                throw new \RuntimeException('Engineering Feature resource budget exhausted: '.implode('; ', $decision['reasons'] ?? []));
+            }
+            $budgetEvidence = is_array($decision['evidence'] ?? null) ? $decision['evidence'] : [];
+            $contextBytes = strlen(json_encode(
+                ['input' => $input, 'data' => $data],
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            ));
+            $contextBudget = max(1000, (int) ($budgetEvidence['context_budget'] ?? 120000));
+            if ($contextBytes > $contextBudget) {
+                throw new \RuntimeException(sprintf('Engineering Agent context budget exceeded: %d > %d bytes.', $contextBytes, $contextBudget));
+            }
+            $estimatedInputTokens = max(1, (int) ceil($contextBytes / 4));
+            $runTokenBudget = max(1, (int) ($budgetEvidence['agent_run_token_budget'] ?? 4000));
+            if ($estimatedInputTokens >= $runTokenBudget) {
+                throw new \RuntimeException(sprintf(
+                    'Engineering Agent estimated input token budget exhausted before provider call: %d >= %d.',
+                    $estimatedInputTokens,
+                    $runTokenBudget,
+                ));
+            }
+            $budgetEvidence['context_bytes'] = $contextBytes;
+            $budgetEvidence['estimated_input_tokens'] = $estimatedInputTokens;
+            $budgetEvidence['max_output_tokens'] = $runTokenBudget - $estimatedInputTokens;
+        }
+
         $context = new AgentContext(
             organizationId: $organization,
             correlationId: $correlationId,
-            input: $this->secrets->sanitize([
-                'question' => $task->objective,
-                'inputs' => $task->inputs,
-                'constraints' => $task->constraints,
-                'completion_criteria' => $task->completionCriteria,
-                'expected_output_schema' => $task->expectedOutputSchema,
-            ]),
-            data: $this->secrets->sanitize([
-                'context_refs' => $task->contextRefs,
-                'input_snapshot' => $task->inputSnapshot,
-                'agent_capabilities' => $this->agentCapabilities->forRole($task->role),
-                'runtime_capabilities' => $this->runtimeCapabilities->forRuntime('EngineeringRuntime'),
-            ]),
+            input: $input,
+            data: $data,
             metadata: [
                 'engineering_feature_id' => $task->featureId,
                 'engineering_task_id' => $task->id,
                 'engineering_role' => $task->role->value,
                 'idempotency_key' => $task->idempotencyKey,
                 'technical_retry' => $technicalRetry,
+                'resource_budget' => $budgetEvidence,
+                'llm_max_output_tokens' => isset($budgetEvidence['max_output_tokens'])
+                    ? max(1, (int) $budgetEvidence['max_output_tokens'])
+                    : null,
+                'llm_max_cost_amount' => isset($budgetEvidence['agent_run_cost_budget'])
+                    ? max(0.000001, (float) $budgetEvidence['agent_run_cost_budget'])
+                    : null,
             ],
         );
 
