@@ -182,6 +182,8 @@ final class EngineeringDomainAgentSchemas
                     'required' => [
                         'bounded_context','module_structure','namespace_structure','domain_layers','aggregate_boundaries','database_boundaries',
                         'api_boundaries','event_contracts','integration_contracts','dependency_rules','security_boundaries','permissions_model',
+                        'module_ownership','service_visibility','forbidden_namespace_dependencies','forbidden_database_dependencies',
+                        'forbidden_infrastructure_imports','cross_domain_access',
                         'audit_model','feature_flags','observability','failure_model','migration_strategy','testing_strategy',
                     ],
                     'properties' => [
@@ -197,6 +199,12 @@ final class EngineeringDomainAgentSchemas
                         'dependency_rules' => ['type' => 'array'],
                         'security_boundaries' => ['type' => ['array','object']],
                         'permissions_model' => ['type' => ['array','object']],
+                        'module_ownership' => ['type' => ['array','object']],
+                        'service_visibility' => ['type' => ['array','object']],
+                        'forbidden_namespace_dependencies' => ['type' => 'array'],
+                        'forbidden_database_dependencies' => ['type' => 'array'],
+                        'forbidden_infrastructure_imports' => ['type' => 'array'],
+                        'cross_domain_access' => ['type' => ['array','object']],
                         'audit_model' => ['type' => ['array','object']],
                         'feature_flags' => [
                             'type' => 'object',
