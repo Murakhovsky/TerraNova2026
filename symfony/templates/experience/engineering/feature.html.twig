@@ -89,6 +89,12 @@
                     <button class="cos-button cos-button--primary" type="submit">Повторити процес</button>
                 </form>
             {% endif %}
+            {% if actions.finalize|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/finalize">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Перевірити merge та завершити</button>
+                </form>
+            {% endif %}
             {% if actions.cancel|default(false) %}
                 <details class="engineering-details">
                     <summary class="cos-button cos-button--danger">Скасувати</summary>
