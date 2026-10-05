@@ -14,6 +14,15 @@ $requiredFiles = [
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentSchemas.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentOutputValidator.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainConcurrencyGate.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainBudgetGuard.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainContextCompressor.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainHumanGateService.php',
+    'symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php',
+    'symfony/src/Engineering/Application/Policy/AgentCapabilityRegistry.php',
+    'symfony/src/Engineering/Application/Policy/RuntimeCapabilityRegistry.php',
     'symfony/src/Engineering/Domain/DomainDevelopment/EngineeringDomainRuntimeEventType.php',
     'symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringDomainStore.php',
     'symfony/src/Http/Api/V1/Controller/EngineeringDomainController.php',
@@ -47,6 +56,15 @@ $artifactTypes = (string) file_get_contents($root.'/symfony/src/Engineering/Doma
 $drift = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDriftDetector.php');
 $secretGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Security/EngineeringSecretIsolationGuard.php');
 $domainValidator = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAgentOutputValidator.php');
+$budgetGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainBudgetGuard.php');
+$compressor = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainContextCompressor.php');
+$repositoryIndex = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php');
+$documentation = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php');
+$artifactGraph = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php');
+$humanGates = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainHumanGateService.php');
+$policy = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php');
+$agentCapabilities = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/AgentCapabilityRegistry.php');
+$runtimeCapabilities = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/RuntimeCapabilityRegistry.php');
 
 foreach ([
     'DOMAIN_SPECIFICATION',
@@ -176,6 +194,44 @@ foreach (['assertDomainPathPolicy', 'owned_paths', 'shared_paths', 'forbidden_pa
 }
 foreach (['configuredRepository()', 'currentBaseRevision(?string $branch = null)', 'configuredBaseBranch', 'ensureBranch', '?string $baseBranch = null'] as $needle) {
     if (!str_contains($gateway, $needle)) throw new RuntimeException('Repository gateway lacks integration branch contract '.$needle);
+}
+
+
+foreach (['max_feature_retries','max_domain_integration_cycles','context_budget','token_budget','cost_budget'] as $needle) {
+    if (!str_contains($completionMigration, $needle)) throw new RuntimeException('Domain safety budget persistence missing '.$needle);
+}
+foreach (['DOMAIN_RESOURCE_BUDGET','tokens_used','token_budget','cost_used','cost_budget','context_bytes','context_budget'] as $needle) {
+    if (!str_contains($budgetGuard, $needle)) throw new RuntimeException('Domain resource budget guard missing '.$needle);
+}
+foreach (['full_artifact','canonical_summary','hash','relevant_sections'] as $needle) {
+    if (!str_contains($compressor, $needle)) throw new RuntimeException('Domain context compression missing '.$needle);
+}
+foreach (['classes','interfaces','services','entities','routes','migrations','tests','modules','dependencies'] as $needle) {
+    if (!str_contains($repositoryIndex, "'".$needle."'")) throw new RuntimeException('Repository Context Index missing '.$needle);
+}
+foreach (['DOMAIN_DOCUMENTATION_PUBLIC','DOMAIN_DOCUMENTATION_INTEGRATOR','DOMAIN_DOCUMENTATION_DEVELOPER','DOMAIN_DOCUMENTATION_TRANSLATIONS'] as $needle) {
+    if (!str_contains($documentation.$artifactTypes, $needle)) throw new RuntimeException('Domain documentation generation missing '.$needle);
+}
+foreach (['replaceArtifactDependencies','artifactDependencies'] as $needle) {
+    if (!str_contains($artifactGraph.$store, $needle)) throw new RuntimeException('Domain artifact dependency graph missing '.$needle);
+}
+foreach (['createHumanDecision','answerHumanDecision','openHumanDecisions','humanDecisionHistory'] as $needle) {
+    if (!str_contains($humanGates.$store, $needle)) throw new RuntimeException('Domain Human Control Plane missing '.$needle);
+}
+foreach (['sharedKernelModificationRequiresHuman','contractChangeRequiresHuman','migrationRequiresHuman','domainReleaseRequiresHuman'] as $needle) {
+    if (!str_contains($policy, $needle)) throw new RuntimeException('Engineering Policy Engine missing '.$needle);
+}
+foreach (['repository_write','merge','production'] as $needle) {
+    if (!str_contains($agentCapabilities, $needle)) throw new RuntimeException('Agent Capability Registry missing '.$needle);
+}
+foreach (['GitHub','CI','Repository','TestRunner','ProductionExecution'] as $needle) {
+    if (!str_contains($runtimeCapabilities, $needle)) throw new RuntimeException('Runtime Capability Registry missing '.$needle);
+}
+foreach (['architecture_tests','domain_isolation','contract_cases','migration_cases','security','smoke'] as $needle) {
+    if (!str_contains($domainValidator, $needle)) throw new RuntimeException('Domain QA formal test contract missing '.$needle);
+}
+foreach (['/human-decision','/feature-flags'] as $needle) {
+    if (!str_contains($routes, $needle)) throw new RuntimeException('Domain Human/activation control route missing '.$needle);
 }
 
 echo "Engineering Domain Runtime V2 architecture passed.\n";
