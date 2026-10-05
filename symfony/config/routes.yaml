@@ -2155,6 +2155,46 @@ cos_web_engineering_create:
   controller: App\Web\Engineering\EngineeringFeatureController::create
   methods: [POST]
 
+cos_web_engineering_domains:
+  path: /admin/engineering/domains
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::index
+  methods: [GET, HEAD]
+
+cos_web_engineering_domain_create:
+  path: /admin/engineering/domains/create
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::create
+  methods: [POST]
+
+cos_web_engineering_domain_plan:
+  path: /admin/engineering/domains/{id}/plan
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::plan
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_tick:
+  path: /admin/engineering/domains/{id}/tick
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::tick
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_verify:
+  path: /admin/engineering/domains/{id}/verify
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::verify
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain_approve:
+  path: /admin/engineering/domains/{id}/approve
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::approve
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_web_engineering_domain:
+  path: /admin/engineering/domains/{id}
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::show
+  methods: [GET, HEAD]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_run:
   path: /admin/engineering/{id}/run
   controller: App\Web\Engineering\EngineeringFeatureController::run
