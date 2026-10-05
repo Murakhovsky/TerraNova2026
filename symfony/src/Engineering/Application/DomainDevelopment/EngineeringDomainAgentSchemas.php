@@ -310,7 +310,21 @@ final class EngineeringDomainAgentSchemas
                 ],
                 'integration_strategy' => ['type' => ['object','array','string']],
                 'release_strategy' => ['type' => ['object','array','string']],
-                'required_human_decisions' => ['type' => 'array'],
+                'required_human_decisions' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['type','question','reason'],
+                        'properties' => [
+                            'type' => ['type' => 'string', 'enum' => ['DOMAIN_ARCHITECTURE','BREAKING_CONTRACT','SECURITY_BOUNDARY','MIGRATION_RISK','EXTERNAL_PRODUCTION_INTEGRATION']],
+                            'question' => ['type' => 'string', 'minLength' => 1],
+                            'reason' => ['type' => 'string', 'minLength' => 1],
+                            'options' => ['type' => 'array'],
+                            'evidence' => ['type' => ['array','object','string']],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
                 'conditions' => ['type' => 'array'],
             ],
             'additionalProperties' => false,
