@@ -105,7 +105,56 @@ final readonly class EngineeringDomainFeatureScheduler
         foreach ($readyKeys as $featureKey) {
             if ($capacity <= 0) break;
             $feature = $byKey[$featureKey] ?? null;
-            if (!is_array($feature) || ($feature['engineering_feature_id'] ?? null) !== null) continue;
+            if (!is_array($feature)) continue;
+
+            $isRevalidation = in_array((string) ($feature['status'] ?? ''), [
+                EngineeringDomainFeatureStatus::STALE->value,
+                EngineeringDomainFeatureStatus::REVALIDATION_REQUIRED->value,
+            ], true);
+            $previousEngineeringFeatureId = is_string($feature['engineering_feature_id'] ?? null)
+                ? trim((string) $feature['engineering_feature_id'])
+                : '';
+            if (!$isRevalidation && $previousEngineeringFeatureId !== '') continue;
+
+            if ($isRevalidation) {
+                $this->domains->releasePaths($domainId, $featureKey);
+                if ($previousEngineeringFeatureId !== '') {
+                    try {
+                        $previous = $this->features->view($previousEngineeringFeatureId);
+                        $previousStatus = strtoupper((string) ($previous['status'] ?? ''));
+                        if (!in_array($previousStatus, ['DONE','FAILED','CANCELLED'], true)) {
+                            $this->cancel->cancel(
+                                $previousEngineeringFeatureId,
+                                'domain-runtime:'.$domainId,
+                                'Superseded by Domain architecture or contract revalidation for '.$featureKey.'.',
+                            );
+                        }
+                    } catch (\Throwable $error) {
+                        $reason = 'Cannot supersede stale child workflow: '.$error->getMessage();
+                        $this->domains->updateFeatureStatus(
+                            $domainId,
+                            $featureKey,
+                            EngineeringDomainFeatureStatus::BLOCKED->value,
+                            $reason,
+                        );
+                        $this->domains->recordRuntimeEvent(
+                            $domainId,
+                            $organizationId,
+                            EngineeringDomainRuntimeEventType::FEATURE_BLOCKED->value,
+                            $featureKey,
+                            [
+                                'engineering_feature_id' => $previousEngineeringFeatureId,
+                                'reason' => $reason,
+                                'phase' => 'REVALIDATION_SUPERSESSION',
+                            ],
+                            $correlationId,
+                            'feature-blocked:'.$featureKey.':revalidation:'.hash('sha256', $reason),
+                        );
+                        continue;
+                    }
+                }
+            }
+
             $paths = array_values(array_unique(array_merge(
                 is_array($feature['owned_paths'] ?? null) ? $feature['owned_paths'] : [],
                 is_array($feature['shared_paths'] ?? null) ? $feature['shared_paths'] : [],
