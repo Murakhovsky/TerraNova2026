@@ -32,7 +32,7 @@ final class SessionAuthenticator extends AbstractAuthenticator implements Authen
             return true;
         }
 
-        return str_starts_with($path,'/api/v1') || self::isWebPath($path);
+        return str_starts_with($path,'/api/v1') || str_starts_with($path,'/api/engineering') || self::isWebPath($path);
     }
 
     public function authenticate(Request $request): Passport
