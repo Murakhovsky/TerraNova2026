@@ -32,6 +32,7 @@ final readonly class EngineeringProductRequirementsStageExecutor
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringProductRequirementsAnalysisService $product,
+        private EngineeringArtifactInvalidationService $invalidation,
         private EngineeringExecutionJournal $journal,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -112,13 +113,17 @@ final readonly class EngineeringProductRequirementsStageExecutor
                 }
 
                 $this->agentRuns->complete($engineeringRunId, $analysis->run);
-                $this->artifacts->createVersion(
+                $previousSpec = $this->artifacts->latest($featureId, ArtifactType::FEATURE_SPEC);
+                $newSpec = $this->artifacts->createVersion(
                     $featureId,
                     ArtifactType::FEATURE_SPEC,
                     $analysis->featureSpecification['feature'],
                     agentRunId: $engineeringRunId,
                     createdByAgent: AgentRole::PRODUCT_REQUIREMENTS->value,
                 );
+                if ($previousSpec !== null && ($previousSpec['content_hash'] ?? null) !== ($newSpec['content_hash'] ?? null)) {
+                    $this->invalidation->afterProductRevision($featureId);
+                }
                 $this->artifacts->createVersion(
                     $featureId,
                     ArtifactType::CONTEXT_MAP,
