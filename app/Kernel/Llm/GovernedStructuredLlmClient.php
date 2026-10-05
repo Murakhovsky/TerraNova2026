@@ -24,6 +24,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
         private int $circuitFailureThreshold = 5,
         private int $circuitOpenSeconds = 60,
         private ?ExternalCallExecutor $resilience = null,
+        private ?LlmPricingResolverInterface $pricing = null,
     ) {
         // Backward compatibility for tests/legacy composition roots. Production composition
         // injects the generic resilience executor and does not couple circuits to governance.
@@ -102,6 +103,7 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
                 }
 
                 $latencyMs = $this->duration($started);
+                $response = $this->withResolvedCost($request, $response);
                 $this->recordSuccess($request, $response, $correlationId, $latencyMs, $fallbackCount, $reservation);
                 return $response;
             } catch (LlmProviderException $error) {
@@ -187,6 +189,10 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             $costCurrency,
             $latencyMs,
             $fallbackCount,
+            $response->cachedInputTokens,
+            $response->reasoningTokens,
+            $response->costSource ?? ($response->costAmount !== null ? 'PROVIDER' : null),
+            $response->pricingVersion,
         );
 
         if ($reservation !== null) {
@@ -213,6 +219,36 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
                 'currency' => $costCurrency ?? $this->budgetCurrency,
             ]);
         }
+    }
+
+    private function withResolvedCost(StructuredLlmRequest $request, StructuredLlmResponse $response): StructuredLlmResponse
+    {
+        if ($response->costAmount !== null || $this->pricing === null) return $response;
+
+        $estimate = $this->pricing->estimate(
+            $request->organizationId,
+            $response->provider,
+            $response->model,
+            $response->inputTokens,
+            $response->outputTokens,
+            $response->cachedInputTokens,
+            $response->reasoningTokens,
+        );
+        if ($estimate === null) return $response;
+
+        return new StructuredLlmResponse(
+            output: $response->output,
+            provider: $response->provider,
+            model: $response->model,
+            inputTokens: $response->inputTokens,
+            outputTokens: $response->outputTokens,
+            costAmount: $estimate->amount,
+            costCurrency: $estimate->currency,
+            cachedInputTokens: $response->cachedInputTokens,
+            reasoningTokens: $response->reasoningTokens,
+            costSource: $estimate->source,
+            pricingVersion: $estimate->pricingVersion,
+        );
     }
 
     private function duration(int $started): int
