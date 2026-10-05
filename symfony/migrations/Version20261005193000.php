@@ -27,6 +27,29 @@ final class Version20261005193000 extends AbstractMigration
             ADD engineering_feature_history JSON NULL AFTER engineering_feature_id");
 
         $this->addSql(<<<'SQL'
+CREATE TABLE cos_engineering_domain_human_decisions (
+    id VARCHAR(36) NOT NULL,
+    domain_id VARCHAR(36) NOT NULL,
+    organization_id VARCHAR(64) NOT NULL,
+    gate_type VARCHAR(64) NOT NULL,
+    status VARCHAR(24) NOT NULL,
+    resume_status VARCHAR(48) NOT NULL,
+    question TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    options_payload JSON NOT NULL,
+    evidence_payload JSON NOT NULL,
+    answer_payload JSON NULL,
+    requested_by VARCHAR(128) NOT NULL,
+    answered_by VARCHAR(128) NULL,
+    created_at DATETIME(6) NOT NULL,
+    answered_at DATETIME(6) NULL,
+    PRIMARY KEY (id),
+    KEY idx_cos_eng_domain_decision_open (domain_id, status, created_at),
+    KEY idx_cos_eng_domain_decision_gate (domain_id, gate_type, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SQL);
+
+        $this->addSql(<<<'SQL'
 CREATE TABLE cos_engineering_domain_artifact_dependencies (
     id VARCHAR(36) NOT NULL,
     domain_id VARCHAR(36) NOT NULL,
@@ -69,6 +92,7 @@ SQL);
         $this->abortIf(!$this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform, 'This migration can only be executed safely on MySQL.');
 
         $this->addSql('DROP TABLE cos_engineering_domain_runtime_events');
+        $this->addSql('DROP TABLE cos_engineering_domain_human_decisions');
         $this->addSql('DROP TABLE cos_engineering_domain_artifact_dependencies');
         $this->addSql('ALTER TABLE cos_engineering_domain_features DROP engineering_feature_history');
         $this->addSql('ALTER TABLE cos_engineering_domains DROP max_parallel_qa, DROP max_parallel_reviews, DROP max_parallel_developers');
