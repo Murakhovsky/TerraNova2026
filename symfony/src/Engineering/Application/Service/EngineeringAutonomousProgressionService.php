@@ -24,6 +24,7 @@ final readonly class EngineeringAutonomousProgressionService
         private EngineeringReviewerStageExecutor $reviewer,
         private EngineeringQaExecutorStageExecutor $qaExecutor,
         private EngineeringAgentAssignmentService $assignments,
+        private EngineeringSpecialistStageExecutor $specialists,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringFeatureStoreInterface $features,
@@ -46,6 +47,33 @@ final readonly class EngineeringAutonomousProgressionService
             if ($role === null) return $directive;
 
             $this->assignments->assertAssignable($featureId, $role, 'FEATURE', 'MEDIUM');
+
+            if ($role === AgentRole::DEVELOPER) {
+                $specialistDirective = $this->specialists->executeRequired(
+                    $featureId,
+                    $workflowId,
+                    $organizationId,
+                    $correlationId,
+                    'PRE_DEVELOPMENT',
+                );
+                if ($specialistDirective !== null) {
+                    $directive = $specialistDirective;
+                    continue;
+                }
+            }
+            if ($role === AgentRole::REVIEWER) {
+                $specialistDirective = $this->specialists->executeRequired(
+                    $featureId,
+                    $workflowId,
+                    $organizationId,
+                    $correlationId,
+                    'POST_DEVELOPMENT',
+                );
+                if ($specialistDirective !== null) {
+                    $directive = $specialistDirective;
+                    continue;
+                }
+            }
 
             if (!$this->experienceAutonomyAllows($featureId, $workflowId, $role)) {
                 $level = $this->experienceAutonomyLevel($featureId) ?? 'L0';
