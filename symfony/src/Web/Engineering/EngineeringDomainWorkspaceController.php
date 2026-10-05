@@ -182,6 +182,9 @@ final readonly class EngineeringDomainWorkspaceController
                 'domain' => $domain,
                 'featureStats' => $featureStats,
                 'artifactByType' => $artifactByType,
+                'featureFlags' => is_array($artifactByType['DOMAIN_FEATURE_FLAGS']['content'] ?? null)
+                    ? $artifactByType['DOMAIN_FEATURE_FLAGS']['content']
+                    : ['DOMAIN_ENABLED' => false, 'FEATURE_ENABLED' => [], 'INTEGRATION_ENABLED' => false, 'PRODUCTION_EXECUTION_ENABLED' => false],
                 'actions' => $actions,
                 'csrfToken' => $this->csrf->token($request),
                 'statusMessage' => trim((string) $request->query->get('status_message', '')),
@@ -209,6 +212,36 @@ final readonly class EngineeringDomainWorkspaceController
     public function approve(Request $request, string $id): Response
     {
         return $this->mutate($request, $id, 'approve');
+    }
+
+    public function featureFlags(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $domainId = EngineeringId::assert($id);
+            $enabledFeatures = [];
+            foreach ($request->request->all('feature_enabled') as $featureKey => $value) {
+                $featureKey = trim((string) $featureKey);
+                if ($featureKey !== '') $enabledFeatures[$featureKey] = true;
+            }
+            $this->runtime->updateFeatureFlags(
+                $domainId,
+                $tenant->organizationId()->value(),
+                [
+                    'DOMAIN_ENABLED' => $request->request->getBoolean('domain_enabled'),
+                    'FEATURE_ENABLED' => $enabledFeatures,
+                    'INTEGRATION_ENABLED' => $request->request->getBoolean('integration_enabled'),
+                    'PRODUCTION_EXECUTION_ENABLED' => $request->request->getBoolean('production_execution_enabled'),
+                ],
+                'user:'.$tenant->userId()->value(),
+            );
+            return $this->redirectStatus('/admin/engineering/domains/'.$domainId, 'Domain feature flags оновлено.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/domains/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
+        }
     }
 
     private function mutate(Request $request, string $id, string $action): Response
