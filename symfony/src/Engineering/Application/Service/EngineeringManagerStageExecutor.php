@@ -5,6 +5,7 @@ namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Manager\EngineeringManagerAnalysisService;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
@@ -31,6 +32,7 @@ final readonly class EngineeringManagerStageExecutor
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringManagerAnalysisService $manager,
+        private EngineeringExecutionJournal $journal,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -43,7 +45,23 @@ final readonly class EngineeringManagerStageExecutor
         string $correlationId,
         int $logicalAttempt,
     ): WorkflowDirective {
-        $plan = $this->manager->prepare($featureId, $request, $logicalAttempt);
+        $plan = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'REPOSITORY',
+            'repository.discover_context',
+            'Discover repository context for Engineering Manager',
+            $correlationId,
+            fn () => $this->manager->prepare($featureId, $request, $logicalAttempt),
+            details: static fn ($plan): array => [
+                'repository_revision' => $plan->contextMap->repositoryRevision,
+                'files' => array_values(array_filter(array_map(
+                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                    $plan->contextMap->files,
+                ))),
+                'agent_role' => $plan->task->role->value,
+            ],
+        );
 
         $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $plan, $correlationId): string {
             $workflow = $this->workflows->get($workflowId);
