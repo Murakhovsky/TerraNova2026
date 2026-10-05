@@ -45,6 +45,7 @@ final readonly class EngineeringManagerStageExecutor
         string $correlationId,
         int $logicalAttempt,
     ): WorkflowDirective {
+        $domainContext = $this->domainContext($request);
         $plan = $this->journal->around(
             $featureId,
             $workflowId,
@@ -83,7 +84,7 @@ final readonly class EngineeringManagerStageExecutor
 
         return $this->lock->synchronized(
             $featureId,
-            function () use ($featureId, $workflowId, $analysis, $engineeringRunId): WorkflowDirective {
+            function () use ($featureId, $workflowId, $analysis, $engineeringRunId, $domainContext): WorkflowDirective {
                 $workflow = $this->workflows->get($workflowId);
                 if ($workflow->currentState() !== EngineeringWorkflowState::ANALYSIS) {
                     throw new WorkflowAlreadyRunningException('Engineering workflow changed while Manager analysis was running.');
@@ -104,6 +105,15 @@ final readonly class EngineeringManagerStageExecutor
                     agentRunId: $engineeringRunId,
                     createdByAgent: AgentRole::ENGINEERING_MANAGER->value,
                 );
+                if ($domainContext !== null) {
+                    $this->artifacts->createVersion(
+                        $featureId,
+                        ArtifactType::DOMAIN_CONTEXT_PACK,
+                        $domainContext,
+                        agentRunId: $engineeringRunId,
+                        createdByAgent: 'DOMAIN_RUNTIME',
+                    );
+                }
                 $this->tasks->createFromManager(
                     $featureId,
                     is_array($analysis->featureSpecification['tasks'] ?? null) ? $analysis->featureSpecification['tasks'] : [],
@@ -151,6 +161,18 @@ final readonly class EngineeringManagerStageExecutor
                 return $next;
             },
         );
+    }
+
+    /** @return array<string,mixed>|null */
+    private function domainContext(EngineeringRequest $request): ?array
+    {
+        foreach (array_reverse($request->previousContext) as $entry) {
+            if (!is_array($entry)) continue;
+            $context = $entry['domain_development'] ?? null;
+            if (!is_array($context) || trim((string) ($context['domain_id'] ?? '')) === '') continue;
+            return $context;
+        }
+        return null;
     }
 
     private function persistTransitions(WorkflowExecution $workflow, array $transitions): void
