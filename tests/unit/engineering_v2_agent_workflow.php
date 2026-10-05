@@ -55,4 +55,18 @@ if ($d->agent !== AgentRole::QA_EXECUTOR || $workflow->currentState() !== Engine
     throw new RuntimeException('Reviewer approval must route to QA Executor.');
 }
 
-echo "Engineering V2 agent workflow passed.\n";
+
+
+// ER2-AC-025: persisted/legacy Feature Engineering workflows remain executable.
+$legacy = new WorkflowExecution(EngineeringId::generate(), EngineeringId::generate(), EngineeringWorkflowState::NEW, 'feature-v01-regression');
+$coordinator->startAnalysis($legacy);
+$legacyDirective = $coordinator->acceptAgentResult($legacy, AgentRole::ENGINEERING_MANAGER, ['status' => 'SPECIFICATION_READY']);
+if ($legacyDirective->agent !== AgentRole::QA || $legacy->currentState() !== EngineeringWorkflowState::QA_PLANNING) {
+    throw new RuntimeException('ER2-AC-025 regression: legacy Manager → QA planning route no longer works.');
+}
+$legacyDirective = $coordinator->acceptAgentResult($legacy, AgentRole::QA, ['status' => 'PLAN_READY']);
+if ($legacyDirective->agent !== AgentRole::PRINCIPAL_ARCHITECT || $legacy->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
+    throw new RuntimeException('ER2-AC-025 regression: legacy QA planning route no longer reaches Architect.');
+}
+
+echo "Engineering V2 agent workflow and Feature Runtime regression passed.\n";
