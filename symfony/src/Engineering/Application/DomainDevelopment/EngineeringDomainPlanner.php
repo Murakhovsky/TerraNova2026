@@ -78,11 +78,24 @@ final readonly class EngineeringDomainPlanner
             $managerStatus = (string) ($manager['status'] ?? '');
             if ($managerStatus !== 'SPECIFICATION_READY') {
                 $this->domains->saveArtifact($domainId, 'DOMAIN_MANAGER_RESULT', $manager, AgentRole::ENGINEERING_MANAGER->value);
-                $this->domains->updateStatus(
-                    $domainId,
-                    $managerStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
-                    'Domain Manager returned '.$managerStatus.'.',
-                );
+                if ($managerStatus === 'HUMAN_DECISION_REQUIRED') {
+                    $this->humanGates->request(
+                        $domainId,
+                        $organizationId,
+                        'DOMAIN_SPECIFICATION',
+                        EngineeringDomainStatus::ANALYSIS,
+                        $this->firstQuestion($manager, 'Domain Manager requires a human product decision.'),
+                        'Domain Manager identified ambiguity that can materially change Domain scope or semantics.',
+                        ['agent_output' => $manager],
+                        AgentRole::ENGINEERING_MANAGER->value,
+                    );
+                } else {
+                    $this->domains->updateStatus(
+                        $domainId,
+                        $managerStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
+                        'Domain Manager returned '.$managerStatus.'.',
+                    );
+                }
                 return $this->view($domainId);
             }
     
@@ -108,11 +121,24 @@ final readonly class EngineeringDomainPlanner
             $requirementsStatus = (string) ($requirements['status'] ?? '');
             if ($requirementsStatus !== 'SPECIFICATION_READY') {
                 $this->domains->saveArtifact($domainId, 'DOMAIN_PRODUCT_REQUIREMENTS_RESULT', $requirements, AgentRole::PRODUCT_REQUIREMENTS->value);
-                $this->domains->updateStatus(
-                    $domainId,
-                    $requirementsStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
-                    'Domain Product / Requirements returned '.$requirementsStatus.'.',
-                );
+                if ($requirementsStatus === 'HUMAN_DECISION_REQUIRED') {
+                    $this->humanGates->request(
+                        $domainId,
+                        $organizationId,
+                        'DOMAIN_SPECIFICATION',
+                        EngineeringDomainStatus::ANALYSIS,
+                        $this->firstQuestion($requirements, 'Product / Requirements requires a human decision.'),
+                        'Authoritative Domain requirements contain material ambiguity.',
+                        ['agent_output' => $requirements],
+                        AgentRole::PRODUCT_REQUIREMENTS->value,
+                    );
+                } else {
+                    $this->domains->updateStatus(
+                        $domainId,
+                        $requirementsStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
+                        'Domain Product / Requirements returned '.$requirementsStatus.'.',
+                    );
+                }
                 return $this->view($domainId);
             }
     
@@ -161,7 +187,20 @@ final readonly class EngineeringDomainPlanner
             );
             if (($qa['status'] ?? null) !== 'PLAN_READY') {
                 $this->domains->saveArtifact($domainId, 'DOMAIN_QA_PLANNING_RESULT', $qa, AgentRole::QA_PLANNER->value);
-                $this->domains->updateStatus($domainId, EngineeringDomainStatus::BLOCKED->value, 'Domain QA planning did not reach PLAN_READY.');
+                if (($qa['status'] ?? null) === 'HUMAN_TEST_REQUIRED') {
+                    $this->humanGates->request(
+                        $domainId,
+                        $organizationId,
+                        'DOMAIN_SPECIFICATION',
+                        EngineeringDomainStatus::DECOMPOSITION,
+                        'QA Planner requires human input before the Domain test contract can be finalized.',
+                        'At least one Domain verification requirement cannot be safely resolved automatically.',
+                        ['human_tests_required' => $qa['human_tests_required'] ?? [], 'blockers' => $qa['blockers'] ?? []],
+                        AgentRole::QA_PLANNER->value,
+                    );
+                } else {
+                    $this->domains->updateStatus($domainId, EngineeringDomainStatus::BLOCKED->value, 'Domain QA planning did not reach PLAN_READY.');
+                }
                 return $this->view($domainId);
             }
             $qaPlan = is_array($qa['domain_qa_plan'] ?? null) ? $qa['domain_qa_plan'] : [];
@@ -191,11 +230,24 @@ final readonly class EngineeringDomainPlanner
         $architectStatus = (string) ($architect['status'] ?? '');
         if (!in_array($architectStatus, ['APPROVED','APPROVED_WITH_CONDITIONS'], true)) {
             $this->domains->saveArtifact($domainId, 'DOMAIN_ARCHITECT_RESULT', $architect, AgentRole::PRINCIPAL_ARCHITECT->value);
-            $this->domains->updateStatus(
-                $domainId,
-                $architectStatus === 'REJECTED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
-                'Domain Architect returned '.$architectStatus.'.',
-            );
+            if ($architectStatus === 'NEEDS_HUMAN_DECISION') {
+                $this->humanGates->request(
+                    $domainId,
+                    $organizationId,
+                    'DOMAIN_ARCHITECTURE',
+                    EngineeringDomainStatus::ARCHITECTURE,
+                    'Principal Architect requires a human architecture decision.',
+                    'The Domain Architecture contains a material choice outside autonomous policy.',
+                    ['agent_output' => $architect],
+                    AgentRole::PRINCIPAL_ARCHITECT->value,
+                );
+            } else {
+                $this->domains->updateStatus(
+                    $domainId,
+                    $architectStatus === 'REJECTED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
+                    'Domain Architect returned '.$architectStatus.'.',
+                );
+            }
             return $this->view($domainId);
         }
 
