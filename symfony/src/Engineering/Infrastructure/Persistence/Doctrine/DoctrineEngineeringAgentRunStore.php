@@ -135,6 +135,15 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         return array_map(fn (AgentRunRecord $record): array => $this->view($record), $records);
     }
 
+    public function forWorkflow(string $workflowId): array
+    {
+        $records = $this->entityManager->getRepository(AgentRunRecord::class)->findBy(
+            ['workflowExecutionId' => $workflowId],
+            ['startedAt' => 'ASC'],
+        );
+        return array_map(fn (AgentRunRecord $record): array => $this->view($record), $records);
+    }
+
     private function recordByIdempotencyKey(string $key): ?AgentRunRecord
     {
         $record = $this->entityManager->getRepository(AgentRunRecord::class)->findOneBy(['idempotencyKey' => $key]);
