@@ -25,7 +25,9 @@ final class Version20261005124000 extends AbstractMigration
             ADD cached_input_tokens INT NULL AFTER input_tokens,
             ADD reasoning_tokens INT NULL AFTER output_tokens,
             ADD cost_source VARCHAR(32) NULL AFTER cost_currency,
-            ADD pricing_version VARCHAR(80) NULL AFTER cost_source");
+            ADD pricing_version VARCHAR(80) NULL AFTER cost_source,
+            ADD provider_request_id VARCHAR(191) NULL AFTER pricing_version,
+            ADD INDEX idx_cos_llm_usage_provider_request (provider_request_id)");
     }
 
     public function down(Schema $schema): void
@@ -35,6 +37,6 @@ final class Version20261005124000 extends AbstractMigration
             'This migration can only be executed safely on MySQL.',
         );
 
-        $this->addSql('ALTER TABLE cos_llm_usage DROP cached_input_tokens, DROP reasoning_tokens, DROP cost_source, DROP pricing_version');
+        $this->addSql('ALTER TABLE cos_llm_usage DROP INDEX idx_cos_llm_usage_provider_request, DROP cached_input_tokens, DROP reasoning_tokens, DROP cost_source, DROP pricing_version, DROP provider_request_id');
     }
 }
