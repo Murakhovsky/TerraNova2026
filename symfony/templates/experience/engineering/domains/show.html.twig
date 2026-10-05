@@ -82,6 +82,49 @@
                        tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
     {% endif %}
 
+    {% if engineeringDomain.open_human_decisions|default([]) is not empty %}
+        <section class="dw-panel" aria-labelledby="domain-human-gates">
+            <div class="dw-panel__head">
+                <h2 id="domain-human-gates">Human Control Plane</h2>
+                <span class="cos-badge">{{ engineeringDomain.open_human_decisions|length }} open</span>
+            </div>
+            <div class="dw-panel__body">
+                {% for decision in engineeringDomain.open_human_decisions %}
+                    <article style="padding:10px 0;border-bottom:1px solid var(--cos-border,#edf0f3)">
+                        <div class="dw-inline">
+                            <strong>{{ decision.gate_type }}</strong>
+                            <span class="cos-badge">{{ decision.status }}</span>
+                            <span class="dw-muted">resume → {{ decision.resume_status }}</span>
+                        </div>
+                        <p style="margin:7px 0 4px">{{ decision.question }}</p>
+                        <p class="dw-muted" style="margin:0 0 8px">{{ decision.reason }}</p>
+                        {% if decision.evidence|default([]) is not empty %}
+                            <details style="margin-bottom:8px">
+                                <summary>Evidence</summary>
+                                <div class="dw-json" style="margin-top:6px">{{ decision.evidence|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                            </details>
+                        {% endif %}
+                        <form method="post" action="/admin/engineering/domains/{{ domain.id }}/human-decision">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <input type="hidden" name="decision_id" value="{{ decision.id }}">
+                            <div class="dw-inline">
+                                {% for option in decision.options %}
+                                    <button class="cos-button {{ option.id in ['APPROVE','CONTINUE'] ? 'cos-button--primary' : 'cos-button--ghost' }}"
+                                            type="submit"
+                                            name="selected_option"
+                                            value="{{ option.id }}">
+                                        {{ option.id }}
+                                    </button>
+                                {% endfor %}
+                                <input class="cos-input" name="notes" placeholder="Optional decision notes" style="min-width:260px">
+                            </div>
+                        </form>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
     <div class="dw-summary">
         <div class="dw-card"><small>Capabilities</small><strong>{{ engineeringDomain.capabilities|length }}</strong></div>
         <div class="dw-card"><small>Features</small><strong>{{ featureStats.total }}</strong></div>
