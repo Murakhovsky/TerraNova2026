@@ -62,6 +62,9 @@ final readonly class EngineeringDomainReleaseService
             ['required_features_complete' => true],
             $correlationId,
             'domain-integration-completed:v'.((string) ($domain['version'] ?? 1)),
+            actor: AgentRole::INTEGRATION_RELEASE->value,
+            reason: 'All required Feature workflows completed and Domain integration prerequisites were satisfied.',
+            result: 'COMPLETED',
         );
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::DOMAIN_QA->value);
         $this->domains->recordRuntimeEvent(
@@ -72,6 +75,9 @@ final readonly class EngineeringDomainReleaseService
             ['domain_version' => (int) ($domain['version'] ?? 1)],
             $correlationId,
             'domain-qa-started:v'.((string) ($domain['version'] ?? 1)),
+            actor: AgentRole::QA_EXECUTOR->value,
+            reason: 'Integrated Domain entered independent Domain QA.',
+            result: EngineeringDomainStatus::DOMAIN_QA->value,
         );
         $featureEvidence = [];
         foreach ($features as $feature) {
@@ -177,6 +183,10 @@ final readonly class EngineeringDomainReleaseService
             ['status' => $qaStatus, 'tested_revision' => $repositoryRevision],
             $correlationId,
             'domain-qa-completed:v'.((string) ($domain['version'] ?? 1)).':'.$qaStatus.':'.($repositoryRevision ?? 'none'),
+            actor: AgentRole::QA_EXECUTOR->value,
+            reason: 'Domain QA completed against the integrated repository revision.',
+            repositoryRevision: $repositoryRevision,
+            result: $qaStatus,
         );
         if ($qaStatus !== 'PASS') {
             $state = $qaStatus === 'FAIL' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value;
@@ -257,6 +267,10 @@ final readonly class EngineeringDomainReleaseService
             ],
             $correlationId,
             'domain-release-ready:v'.((string) ($domain['version'] ?? 1)).':'.($repositoryRevision ?? 'none'),
+            actor: AgentRole::INTEGRATION_RELEASE->value,
+            reason: 'Domain passed QA, integration and release-readiness gates and is awaiting human approval.',
+            repositoryRevision: $repositoryRevision,
+            result: EngineeringDomainStatus::RELEASE_READY->value,
         );
 
         return $this->view($domainId, ['release_manifest' => $manifest]);
@@ -333,6 +347,25 @@ final readonly class EngineeringDomainReleaseService
             'ci' => $ci,
             'rollback_plan' => $architecture['content']['migration_strategy'] ?? null,
             'known_limitations' => $qa['known_limitations'] ?? [],
+            'audit_trail' => [
+                'artifacts' => array_map(static fn (array $artifact): array => [
+                    'id' => $artifact['id'] ?? null,
+                    'type' => $artifact['type'] ?? null,
+                    'version' => $artifact['version'] ?? null,
+                    'content_hash' => $artifact['content_hash'] ?? null,
+                    'created_by' => $artifact['created_by'] ?? null,
+                ], $this->domains->artifacts((string) $domain['id'])),
+                'agent_runs' => array_map(static fn (array $run): array => [
+                    'id' => $run['id'] ?? null,
+                    'agent_role' => $run['agent_role'] ?? null,
+                    'status' => $run['status'] ?? null,
+                    'correlation_id' => $run['correlation_id'] ?? null,
+                    'provider' => $run['provider'] ?? null,
+                    'model' => $run['model'] ?? null,
+                    'created_at' => $run['created_at'] ?? null,
+                ], $this->domains->agentRuns((string) $domain['id'])),
+                'runtime_events' => $this->domains->runtimeEvents((string) $domain['id'], 500),
+            ],
             'generated_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ];
     }
