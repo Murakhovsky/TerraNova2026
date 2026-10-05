@@ -184,7 +184,17 @@ final class EngineeringDomainAgentSchemas
                         'security_boundaries' => ['type' => ['array','object']],
                         'permissions_model' => ['type' => ['array','object']],
                         'audit_model' => ['type' => ['array','object']],
-                        'feature_flags' => ['type' => ['array','object']],
+                        'feature_flags' => [
+                            'type' => 'object',
+                            'required' => ['DOMAIN_ENABLED','FEATURE_ENABLED','INTEGRATION_ENABLED','PRODUCTION_EXECUTION_ENABLED'],
+                            'properties' => [
+                                'DOMAIN_ENABLED' => ['type' => 'boolean'],
+                                'FEATURE_ENABLED' => ['type' => 'object', 'additionalProperties' => ['type' => 'boolean']],
+                                'INTEGRATION_ENABLED' => ['type' => 'boolean'],
+                                'PRODUCTION_EXECUTION_ENABLED' => ['type' => 'boolean'],
+                            ],
+                            'additionalProperties' => false,
+                        ],
                         'observability' => ['type' => ['array','object']],
                         'failure_model' => ['type' => ['array','object']],
                         'migration_strategy' => ['type' => ['array','object','string']],
