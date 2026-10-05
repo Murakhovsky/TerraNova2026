@@ -16,7 +16,7 @@ $status = (string) file_get_contents($root.'/symfony/src/Engineering/Application
 $migration = (string) file_get_contents($root.'/symfony/migrations/Version20261005103000.php');
 $eventMigration = (string) file_get_contents($root.'/symfony/migrations/Version20261005111500.php');
 $repositoryDiscovery = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Repository/LocalRepositoryDiscovery.php');
-$managerStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringManagerStageExecutor.php');
+$productStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringProductRequirementsStageExecutor.php');
 
 foreach (['heartbeatAt','healthStatus','stalledAt','runtimeReason','touchRuntime'] as $needle) {
     if (!str_contains($workflowEntity, $needle)) throw new RuntimeException('Workflow runtime entity missing '.$needle);
@@ -60,7 +60,7 @@ foreach (['maxScannedFiles', 'maxTotalReadBytes', 'maxScanMilliseconds', 'elapse
     if (!str_contains($repositoryDiscovery, $needle)) throw new RuntimeException('Repository discovery runtime budget missing '.$needle);
 }
 foreach (['touchRuntime($workflowId)', 'markRuntimeIssue(', 'Repository discovery failed before AgentRun start'] as $needle) {
-    if (!str_contains($managerStage, $needle)) throw new RuntimeException('Manager pre-agent runtime observability missing '.$needle);
+    if (!str_contains($productStage, $needle)) throw new RuntimeException('Product pre-agent runtime observability missing '.$needle);
 }
 
 echo "Engineering runtime truth and observability contract passed.\n";
