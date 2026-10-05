@@ -29,6 +29,12 @@ final readonly class EngineeringDomainRuntimeService
     ): string {
         if (trim($organizationId) === '') throw new InvalidArgumentException('Organization id is required.');
         $id = EngineeringId::generate();
+        $targetBranch = trim($targetBranch);
+        if ($targetBranch === '') {
+            $slug = strtolower(trim($domainKey));
+            $slug = preg_replace('/[^a-z0-9._-]+/', '-', $slug) ?: 'domain';
+            $targetBranch = 'domain/'.trim($slug, '.-_');
+        }
         $this->domains->create(
             $id,
             $organizationId,
