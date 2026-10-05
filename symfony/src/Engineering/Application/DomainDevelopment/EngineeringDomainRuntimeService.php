@@ -20,6 +20,7 @@ final readonly class EngineeringDomainRuntimeService
         private EngineeringDomainFeatureScheduler $scheduler,
         private EngineeringDomainReleaseService $release,
         private EngineeringDomainHumanGateService $humanGates,
+        private EngineeringDomainBudgetGuard $budgets,
         private EngineeringRepositoryGatewayInterface $repository,
         private int $defaultMaxParallelFeatures = 3,
         private int $defaultMaxParallelDevelopers = 2,
@@ -139,7 +140,9 @@ final readonly class EngineeringDomainRuntimeService
     public function view(string $domainId, string $organizationId): array
     {
         $this->assertTenant($domainId, $organizationId);
-        return $this->planner->view($domainId);
+        $view = $this->planner->view($domainId);
+        $view['budget_usage'] = $this->budgets->usage($domainId);
+        return $view;
     }
 
     /** @return list<array<string,mixed>> */
