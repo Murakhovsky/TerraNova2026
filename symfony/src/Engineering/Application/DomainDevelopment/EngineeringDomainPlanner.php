@@ -37,7 +37,7 @@ final readonly class EngineeringDomainPlanner
             $domainId,
             $organizationId,
             AgentRole::ENGINEERING_MANAGER,
-            'Formalize the Master Domain Specification into a canonical Domain Specification, Domain Acceptance Criteria and capability map.',
+            'Coordinate preliminary Domain analysis from the Master Specification, identify ambiguity, scope and decomposition signals for Product / Requirements.',
             [
                 'domain_id' => $domainId,
                 'domain_key' => $domain['domain_key'],
