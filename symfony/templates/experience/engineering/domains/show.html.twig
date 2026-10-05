@@ -319,6 +319,38 @@
         </section>
 
         <section id="engineering-domain-tabs-panel-release" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-release" data-tabs-target="panel" data-tab-key="release" hidden>
+            <section class="dw-panel" style="margin-bottom:10px">
+                <div class="dw-panel__head"><h2>Domain Feature Flags</h2><span class="dw-muted">human-controlled activation layer</span></div>
+                <div class="dw-panel__body">
+                    <form method="post" action="/admin/engineering/domains/{{ domain.id }}/feature-flags">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <div class="dw-grid">
+                            <label><input type="checkbox" name="domain_enabled" value="1" {{ featureFlags.DOMAIN_ENABLED ? 'checked' : '' }}> DOMAIN_ENABLED</label>
+                            <label><input type="checkbox" name="integration_enabled" value="1" {{ featureFlags.INTEGRATION_ENABLED ? 'checked' : '' }}> INTEGRATION_ENABLED</label>
+                            <label>
+                                <input type="checkbox" name="production_execution_enabled" value="1"
+                                       {{ featureFlags.PRODUCTION_EXECUTION_ENABLED ? 'checked' : '' }}
+                                       {{ domain.status != 'COMPLETED' ? 'disabled' : '' }}>
+                                PRODUCTION_EXECUTION_ENABLED
+                            </label>
+                        </div>
+                        <h3 style="margin-top:14px">FEATURE_ENABLED</h3>
+                        <div class="dw-chain">
+                            {% for feature in engineeringDomain.features %}
+                                <label class="dw-dependency">
+                                    <input type="checkbox" name="feature_enabled[{{ feature.feature_key }}]" value="1"
+                                           {{ featureFlags.FEATURE_ENABLED[feature.feature_key]|default(false) ? 'checked' : '' }}>
+                                    {{ feature.feature_key }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                        <button class="cos-button cos-button--primary" type="submit" style="margin-top:12px">Save feature flags</button>
+                    </form>
+                    {% if domain.status != 'COMPLETED' %}
+                        <p class="dw-muted" style="margin:10px 0 0">Production execution remains disabled until the Domain passes Human Release Gate.</p>
+                    {% endif %}
+                </div>
+            </section>
             <div class="dw-grid">
                 <section class="dw-panel">
                     <div class="dw-panel__head"><h2>Integration &amp; Release</h2></div>
