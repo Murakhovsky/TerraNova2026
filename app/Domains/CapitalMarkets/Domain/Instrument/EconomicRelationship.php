@@ -3,30 +3,42 @@ declare(strict_types=1);
 
 namespace Domains\CapitalMarkets\Domain\Instrument;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 use Kernel\Shared\Domain\ValueObject;
 
 final readonly class EconomicRelationship extends ValueObject
 {
+    /** @param array<string,mixed> $metadata */
     public function __construct(
-        public InstrumentId $from,
-        public InstrumentId $to,
+        public RelationshipId $id,
+        public InstrumentId $sourceInstrument,
+        public InstrumentId $targetInstrument,
         public EconomicRelationshipType $type,
-        public ?string $evidenceReference = null,
+        public EconomicRelationshipStrength $strength,
+        public DateTimeImmutable $effectiveFrom,
+        public ?DateTimeImmutable $effectiveTo,
+        public EconomicRelationshipStatus $status,
+        public array $metadata = [],
     ) {
-        if ($this->from->equals($this->to)) {
+        if ($this->sourceInstrument->equals($this->targetInstrument)) {
             throw new InvalidArgumentException('Economic relationship must connect two different instruments.');
         }
-        if (
-            $this->evidenceReference !== null
-            && ($this->evidenceReference === '' || trim($this->evidenceReference) !== $this->evidenceReference)
-        ) {
-            throw new InvalidArgumentException('Economic relationship evidence reference must be null or a trimmed non-empty value.');
+        if ($this->effectiveTo!==null && $this->effectiveTo <= $this->effectiveFrom) {
+            throw new InvalidArgumentException('Economic relationship effective_to must be later than effective_from.');
         }
+        InstrumentDescriptor::assertMetadata($this->metadata);
     }
 
     public function key(): string
     {
-        return $this->from->value() . '|' . $this->type->value . '|' . $this->to->value();
+        return $this->sourceInstrument->value().'|'.$this->type->value.'|'.$this->targetInstrument->value();
+    }
+
+    public function activeAt(DateTimeImmutable $at): bool
+    {
+        return $this->status===EconomicRelationshipStatus::Active
+            && $at >= $this->effectiveFrom
+            && ($this->effectiveTo===null || $at < $this->effectiveTo);
     }
 }
