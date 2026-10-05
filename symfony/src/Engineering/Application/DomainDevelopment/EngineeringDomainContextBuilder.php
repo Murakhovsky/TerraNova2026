@@ -8,7 +8,10 @@ use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
 
 final readonly class EngineeringDomainContextBuilder
 {
-    public function __construct(private EngineeringDomainStoreInterface $domains) {}
+    public function __construct(
+        private EngineeringDomainStoreInterface $domains,
+        private EngineeringDomainContextCompressor $compressor,
+    ) {}
 
     /** @return array<string,mixed> */
     public function forFeature(string $domainId, string $featureKey): array
@@ -43,6 +46,20 @@ final readonly class EngineeringDomainContextBuilder
             'architecture_hash' => $architecture['content_hash'] ?? null,
             'architecture_constitution' => $constitution['content'] ?? [],
             'domain_qa_plan' => $qaPlan['content'] ?? [],
+            'compressed_artifacts' => [
+                'domain_specification' => $specification !== null
+                    ? $this->compressor->artifact($specification, ['purpose','business_context','scope','actors','capabilities','constraints'])
+                    : null,
+                'domain_architecture' => $architecture !== null
+                    ? $this->compressor->artifact($architecture, ['bounded_context','module_structure','aggregates','services','persistence','security','feature_flags'])
+                    : null,
+                'architecture_constitution' => $constitution !== null
+                    ? $this->compressor->artifact($constitution, ['rules','forbidden_dependencies','shared_kernel_rules','database_rules'])
+                    : null,
+                'domain_qa_plan' => $qaPlan !== null
+                    ? $this->compressor->artifact($qaPlan, ['release_blocking_checks','cross_feature_workflows','regression'])
+                    : null,
+            ],
             'feature' => $feature,
             'dependencies' => $dependencies,
             'dependency_features' => $dependencyFeatures,
