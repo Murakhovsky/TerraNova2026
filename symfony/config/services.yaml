@@ -42,6 +42,10 @@ parameters:
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '3'
+  env(COS_ENGINEERING_DOMAIN_MAX_PARALLEL_FEATURES): '3'
+  env(COS_ENGINEERING_DOMAIN_MAX_PARALLEL_DEVELOPERS): '2'
+  env(COS_ENGINEERING_DOMAIN_MAX_PARALLEL_REVIEWS): '2'
+  env(COS_ENGINEERING_DOMAIN_MAX_PARALLEL_QA): '2'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED): '1'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_RUNTIME_STALE_SECONDS): '600'
@@ -1345,6 +1349,13 @@ services:
       $developerModel: '%env(COS_ENGINEERING_DEVELOPER_MODEL)%'
       $reviewerModel: '%env(COS_ENGINEERING_REVIEWER_MODEL)%'
       $qaModel: '%env(COS_ENGINEERING_QA_MODEL)%'
+
+  App\Engineering\Application\DomainDevelopment\EngineeringDomainRuntimeService:
+    arguments:
+      $defaultMaxParallelFeatures: '%env(int:COS_ENGINEERING_DOMAIN_MAX_PARALLEL_FEATURES)%'
+      $defaultMaxParallelDevelopers: '%env(int:COS_ENGINEERING_DOMAIN_MAX_PARALLEL_DEVELOPERS)%'
+      $defaultMaxParallelReviews: '%env(int:COS_ENGINEERING_DOMAIN_MAX_PARALLEL_REVIEWS)%'
+      $defaultMaxParallelQa: '%env(int:COS_ENGINEERING_DOMAIN_MAX_PARALLEL_QA)%'
 
   App\Engineering\Application\Context\RepositoryDiscoveryInterface:
     alias: App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery
