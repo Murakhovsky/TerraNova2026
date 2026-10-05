@@ -149,10 +149,11 @@ foreach([
     $domainRoot.'/Infrastructure/Persistence/MySql/MysqlVenueRepository.php',
 ] as $repositoryFile){
     $repositorySource=(string)file_get_contents($repositoryFile);
-    foreach(['$ownsTransaction=!$this->connection->inTransaction()','if($ownsTransaction)$this->connection->commit()'] as $needle){
-        if(!str_contains($repositorySource,$needle)){
-            throw new RuntimeException('Capital Markets repository must cooperate with outer transaction: '.basename($repositoryFile).' -> '.$needle);
-        }
+    if(!str_contains($repositorySource,'$ownsTransaction=!$this->connection->inTransaction()')){
+        throw new RuntimeException('Capital Markets repository must detect ownership of the database transaction: '.basename($repositoryFile));
+    }
+    if(preg_match('/if\s*\(\s*\$ownsTransaction\s*\)\s*\$this->connection->commit\s*\(\s*\)\s*;/', $repositorySource)!==1){
+        throw new RuntimeException('Capital Markets repository must commit only the transaction it owns: '.basename($repositoryFile));
     }
 }
 

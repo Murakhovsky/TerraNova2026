@@ -14,6 +14,7 @@ generated: true
 
 | Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
+| `capital_markets` | `0.2.0` | — | 9 |
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `1.0.0` | — | 5 |
 | `finance` | `0.1.0` | — | 0 |
@@ -24,6 +25,12 @@ generated: true
 | `real_estate` | `1.0.0` | — | 6 |
 | `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 10 |
 | `service` | `1.0.0` | — | 7 |
+
+## `capital_markets`
+
+- manifest: `app/Domains/CapitalMarkets/module.php`;
+- configuration provisioners: —;
+- capabilities: `capital_markets.view`, `capital_markets.manage`, `capital_markets.instrument.view`, `capital_markets.instrument.manage`, `capital_markets.relationship.view`, `capital_markets.relationship.manage`, `capital_markets.venue.view`, `capital_markets.venue.manage`, `capital_markets.audit.view`.
 
 ## `construction`
 
