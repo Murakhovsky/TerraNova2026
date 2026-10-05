@@ -115,6 +115,25 @@ final readonly class EngineeringStatusService
                 'correlation_id' => (string) ($run['trace_id'] ?? ''),
                 'reference_id' => (string) ($run['id'] ?? ''),
             ];
+            foreach (is_array($run['runtime_steps'] ?? null) ? $run['runtime_steps'] : [] as $step) {
+                if (!is_array($step)) continue;
+                $stepOutput = is_array($step['output'] ?? null) ? $step['output'] : [];
+                $events[] = [
+                    'time' => (string) ($run['finished_at'] ?? $run['started_at'] ?? ''),
+                    'type' => 'STEP',
+                    'status' => strtoupper((string) ($step['status'] ?? 'UNKNOWN')),
+                    'title' => $role.' · step '.(string) ($step['sequence'] ?? '?').' · '.(string) ($step['type'] ?? 'runtime'),
+                    'detail' => trim(implode(' · ', array_values(array_filter([
+                        isset($stepOutput['provider']) ? (string) $stepOutput['provider'] : null,
+                        isset($stepOutput['model']) ? (string) $stepOutput['model'] : null,
+                        ($step['error'] ?? null) !== null ? 'ERROR: '.(string) $step['error'] : null,
+                    ], static fn (mixed $value): bool => $value !== null && $value !== ''),))),
+                    'actor' => $role,
+                    'correlation_id' => (string) ($run['trace_id'] ?? ''),
+                    'reference_id' => (string) ($step['id'] ?? ''),
+                ];
+            }
+
             if (($run['finished_at'] ?? null) !== null) {
                 $tokens = (($run['tokens_input'] ?? null) !== null || ($run['tokens_output'] ?? null) !== null)
                     ? (int) ($run['tokens_input'] ?? 0) + (int) ($run['tokens_output'] ?? 0)
