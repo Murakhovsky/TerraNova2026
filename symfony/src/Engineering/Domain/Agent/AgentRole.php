@@ -13,6 +13,7 @@ enum AgentRole: string
     case REVIEWER = 'REVIEWER';
     case QA_EXECUTOR = 'QA_EXECUTOR';
     case INTEGRATION_RELEASE = 'INTEGRATION_RELEASE';
+    case DOCUMENTATION = 'DOCUMENTATION';
 
     /** @deprecated V0.1 compatibility for persisted runs and historical eval fixtures. */
     case QA = 'QA';
