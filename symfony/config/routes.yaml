@@ -2197,6 +2197,12 @@ cos_web_engineering_cancel:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_web_engineering_live:
+  path: /admin/engineering/{id}/live
+  controller: App\Web\Engineering\EngineeringFeatureController::live
+  methods: [GET]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_feature:
   path: /admin/engineering/{id}
   controller: App\Web\Engineering\EngineeringFeatureController::show
