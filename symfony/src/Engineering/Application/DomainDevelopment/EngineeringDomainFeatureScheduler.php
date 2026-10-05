@@ -72,6 +72,10 @@ final readonly class EngineeringDomainFeatureScheduler
                     break;
                 }
             }
+            $contractFingerprint = hash('sha256', json_encode(
+                $this->context->contractSnapshot($domainId, $featureKey),
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+            ));
             $this->domains->recordRuntimeEvent(
                 $domainId,
                 $organizationId,
@@ -81,9 +85,11 @@ final readonly class EngineeringDomainFeatureScheduler
                     'architecture_version' => $domainArchitectureVersion,
                     'priority' => $feature['priority'] ?? null,
                     'kind' => $feature['kind'] ?? null,
+                    'domain_feature_status' => $feature['status'] ?? null,
+                    'contract_fingerprint' => $contractFingerprint,
                 ],
                 $correlationId,
-                'feature-ready:'.$featureKey.':architecture-v'.$domainArchitectureVersion,
+                'feature-ready:'.$featureKey.':architecture-v'.$domainArchitectureVersion.':contracts-'.$contractFingerprint,
             );
         }
         $byKey = [];
