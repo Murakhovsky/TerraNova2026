@@ -225,6 +225,9 @@ final readonly class EngineeringDomainReleaseService
             return $this->view($domainId, ['integration_release' => $integrationRelease]);
         }
 
+        $this->completeCapabilities($domainId, $features, $result);
+        $this->assertMandatoryCapabilitiesComplete($domainId);
+
         $integrationPullRequest = null;
         if (
             $this->repository->available()
@@ -288,6 +291,7 @@ final readonly class EngineeringDomainReleaseService
         if ($manifest === null || $qa === null || ($qa['content']['status'] ?? null) !== 'PASS') {
             throw new RuntimeException('Domain release approval requires Release Manifest and Domain QA PASS.');
         }
+        $this->assertMandatoryCapabilitiesComplete($domainId);
 
         $integrationPullRequest = $manifest['content']['integration_pull_request'] ?? null;
         if (is_array($integrationPullRequest) && (int) ($integrationPullRequest['number'] ?? 0) > 0) {
@@ -333,6 +337,7 @@ final readonly class EngineeringDomainReleaseService
                 'version' => (int) $architecture['version'],
                 'hash' => $architecture['content_hash'],
             ],
+            'capabilities' => $this->domains->capabilities((string) $domain['id']),
             'contracts' => $this->domains->contracts((string) $domain['id']),
             'events' => $this->domains->events((string) $domain['id']),
             'migration_plan' => $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::MIGRATION_PLAN->value)['content'] ?? [],
@@ -368,6 +373,66 @@ final readonly class EngineeringDomainReleaseService
             ],
             'generated_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ];
+    }
+
+    /** @param list<array<string,mixed>> $features @param array<string,mixed> $qaResult */
+    private function completeCapabilities(string $domainId, array $features, array $qaResult): void
+    {
+        $qaById = [];
+        foreach (is_array($qaResult['acceptance_criteria'] ?? null) ? $qaResult['acceptance_criteria'] : [] as $criterion) {
+            if (!is_array($criterion)) continue;
+            $id = strtoupper(trim((string) ($criterion['id'] ?? '')));
+            if ($id !== '') $qaById[$id] = $criterion;
+        }
+
+        foreach ($this->domains->capabilities($domainId) as $capability) {
+            $capabilityKey = (string) ($capability['capability_key'] ?? '');
+            if ($capabilityKey === '') continue;
+            $requiredMembers = array_values(array_filter(
+                $features,
+                static fn (array $feature): bool =>
+                    ($feature['capability_key'] ?? null) === $capabilityKey
+                    && (bool) ($feature['required'] ?? true),
+            ));
+            if ($requiredMembers === [] && (bool) ($capability['required'] ?? false)) {
+                throw new RuntimeException('Required capability '.$capabilityKey.' has no required implementation features.');
+            }
+            foreach ($requiredMembers as $feature) {
+                if (($feature['status'] ?? null) !== EngineeringDomainFeatureStatus::COMPLETED->value) {
+                    throw new RuntimeException('Capability '.$capabilityKey.' cannot complete before feature '.$feature['feature_key'].' is complete.');
+                }
+            }
+
+            $metadata = is_array($capability['metadata'] ?? null) ? $capability['metadata'] : [];
+            $criterionIds = is_array($metadata['acceptance_criteria'] ?? null) ? $metadata['acceptance_criteria'] : [];
+            if ((bool) ($capability['required'] ?? false) && $criterionIds === []) {
+                throw new RuntimeException('Required capability '.$capabilityKey.' has no acceptance criteria.');
+            }
+            foreach ($criterionIds as $criterionId) {
+                $criterionId = strtoupper(trim((string) $criterionId));
+                $evidence = $qaById[$criterionId] ?? null;
+                if (!is_array($evidence) || ($evidence['status'] ?? null) !== 'PASS' || !$this->meaningfulEvidence($evidence['evidence'] ?? null)) {
+                    throw new RuntimeException('Capability '.$capabilityKey.' acceptance criterion '.$criterionId.' did not PASS with evidence.');
+                }
+            }
+
+            $this->domains->updateCapabilityStatus(
+                $domainId,
+                $capabilityKey,
+                'COMPLETE',
+                'Required features complete; integration/release checks clean; capability acceptance criteria passed in Domain QA.',
+            );
+        }
+    }
+
+    private function assertMandatoryCapabilitiesComplete(string $domainId): void
+    {
+        foreach ($this->domains->capabilities($domainId) as $capability) {
+            if (!(bool) ($capability['required'] ?? false)) continue;
+            if (($capability['status'] ?? null) !== 'COMPLETE') {
+                throw new RuntimeException('Domain release requires mandatory capability COMPLETE: '.$capability['capability_key']);
+            }
+        }
     }
 
     /** @param list<array<string,mixed>> $expected @param list<array<string,mixed>> $actual */
