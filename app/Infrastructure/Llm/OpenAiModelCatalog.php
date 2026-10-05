@@ -3,18 +3,20 @@ declare(strict_types=1);
 
 namespace Infrastructure\Llm;
 
+use Kernel\Llm\LlmModelCatalogInterface;
+
 /**
  * Canonical built-in metadata for OpenAI models used by COS.
  *
  * Source snapshot: user-provided OpenAI model/pricing table, 2026-10-05.
  * Tenant Platform Settings and COS_LLM_PRICING_JSON may override pricing.
  */
-final class OpenAiModelCatalog
+final readonly class OpenAiModelCatalog implements LlmModelCatalogInterface
 {
     public const VERSION = '2026-10-05';
 
     /** @return array<string,array<string,mixed>> keyed by provider.model */
-    public static function models(): array
+    public function models(): array
     {
         return [
             'openai.gpt-6-astra' => [
@@ -66,7 +68,7 @@ final class OpenAiModelCatalog
     }
 
     /** @return array<string,array<string,mixed>> */
-    public static function pricingCatalog(): array
+    public function pricingCatalog(): array
     {
         return array_map(static fn (array $model): array => [
             'input_per_million' => $model['input_per_million'],
@@ -74,6 +76,11 @@ final class OpenAiModelCatalog
             'currency' => $model['currency'],
             'version' => $model['version'],
             'source' => $model['source'],
-        ], self::models());
+        ], $this->models());
+    }
+
+    public function version(): string
+    {
+        return self::VERSION;
     }
 }
