@@ -149,6 +149,45 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         return array_map(fn (array $row): array => $this->artifactView($row), $rows);
     }
 
+    public function replaceArtifactDependencies(string $domainId, array $edges): void
+    {
+        $domainId = EngineeringId::assert($domainId);
+        $db = $this->db();
+        $db->beginTransaction();
+        try {
+            $db->delete('cos_engineering_domain_artifact_dependencies', ['domain_id' => $domainId]);
+            foreach ($edges as $edge) {
+                if (!is_array($edge)) continue;
+                $source = EngineeringId::assert((string) ($edge['source_artifact_id'] ?? ''));
+                $target = EngineeringId::assert((string) ($edge['target_artifact_id'] ?? ''));
+                $relationship = strtoupper(trim((string) ($edge['relationship'] ?? 'DERIVES')));
+                if ($source === $target) continue;
+                $db->insert('cos_engineering_domain_artifact_dependencies', [
+                    'id' => EngineeringId::generate(),
+                    'domain_id' => $domainId,
+                    'source_artifact_id' => $source,
+                    'target_artifact_id' => $target,
+                    'relationship' => mb_substr($relationship !== '' ? $relationship : 'DERIVES', 0, 64),
+                    'created_at' => $this->now(),
+                ]);
+            }
+            $db->commit();
+        } catch (\Throwable $error) {
+            if ($db->isTransactionActive()) $db->rollBack();
+            throw $error;
+        }
+    }
+
+    public function artifactDependencies(string $domainId): array
+    {
+        return $this->db()->fetchAllAssociative(
+            'SELECT source_artifact_id, target_artifact_id, relationship, created_at '
+            .'FROM cos_engineering_domain_artifact_dependencies WHERE domain_id=:domain_id '
+            .'ORDER BY relationship, source_artifact_id, target_artifact_id',
+            ['domain_id' => EngineeringId::assert($domainId)],
+        );
+    }
+
     public function replacePlan(string $domainId, array $capabilities, array $features, array $dependencies): void
     {
         $domainId = EngineeringId::assert($domainId);
