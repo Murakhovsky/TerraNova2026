@@ -152,6 +152,26 @@ final readonly class EngineeringDomainController
         }
     }
 
+    public function featureFlags(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $tenant = $this->tenants->current();
+            $input = $this->input($request);
+            return new JsonResponse([
+                'ok' => true,
+                'data' => $this->runtime->updateFeatureFlags(
+                    EngineeringId::assert($id),
+                    $tenant->organizationId()->value(),
+                    $input,
+                    'user:'.$tenant->userId()->value(),
+                ),
+            ]);
+        } catch (Throwable $error) {
+            return $this->exception($error);
+        }
+    }
+
     public function approve(Request $request, string $id): JsonResponse
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
