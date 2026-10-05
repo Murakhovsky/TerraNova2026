@@ -14,7 +14,6 @@ $files = [
     'repo_index' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php',
     'documentation' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php',
     'artifact_graph' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php',
-    'documentation' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php',
     'planner' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainPlanner.php',
     'scheduler' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainFeatureScheduler.php',
     'release' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainReleaseService.php',
