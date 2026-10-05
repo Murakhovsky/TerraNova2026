@@ -136,7 +136,7 @@ final readonly class EngineeringDomainAgentOutputValidator
     private function integrationRelease(array $output): void
     {
         $this->required($output, ['status','integration_summary','release_readiness','blocking_issues','required_human_decisions']);
-        if (!in_array((string) $output['status'], ['RELEASE_READY','NOT_READY','HUMAN_APPROVAL_REQUIRED','BLOCKED'], true)) {
+        if (!in_array((string) $output['status'], ['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS','REWORK_REQUIRED','ARCHITECTURE_REVIEW_REQUIRED','RELEASE_READY','NOT_READY','HUMAN_APPROVAL_REQUIRED','BLOCKED'], true)) {
             throw new RuntimeException('Integration & Release status is invalid.');
         }
         if (($output['status'] ?? null) === 'RELEASE_READY' && ($output['blocking_issues'] ?? []) !== []) {
