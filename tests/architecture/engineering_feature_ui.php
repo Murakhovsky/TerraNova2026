@@ -52,13 +52,17 @@ foreach ([
 }
 
 foreach ([
-    'Execution terminal',
-    'Execution plan',
-    'Agent runs',
-    'LLM usage ledger',
-    'Quality gate',
-    'Usage accounting неповний',
+    'Термінал виконання',
+    'План виконання',
+    'Запуски агентів',
+    'Облік LLM',
+    'Контроль якості',
+    'Облік використання неповний',
     'Вимоги та опис',
+    'engineering.timeline',
+    'runtime_steps',
+    'heartbeat_at',
+    'health_status',
     'data-engineering-update',
     'data-engineering-delete',
 ] as $needle) {
