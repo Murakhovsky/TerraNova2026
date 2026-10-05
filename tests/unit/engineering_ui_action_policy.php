@@ -47,6 +47,15 @@ if (!$waiting['resolve_human'] || $waiting['continue'] || !$waiting['cancel']) {
     throw new RuntimeException('Human-decision Engineering UI actions are inconsistent.');
 }
 
+$ready = $resolver->resolve(
+    ['status' => 'READY_FOR_HUMAN_APPROVAL'],
+    ['state' => 'READY_FOR_HUMAN_APPROVAL', 'status' => 'WAITING'],
+    'WAITING',
+);
+if (!$ready['finalize'] || $ready['resolve_human'] || $ready['continue'] || $ready['retry']) {
+    throw new RuntimeException('READY_FOR_HUMAN_APPROVAL Engineering UI actions are inconsistent.');
+}
+
 $cancelled = $resolver->resolve(
     ['status' => 'CANCELLED'],
     ['state' => 'CANCELLED', 'status' => 'CANCELLED'],
