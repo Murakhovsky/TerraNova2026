@@ -152,7 +152,7 @@ foreach([
     if(!str_contains($repositorySource,'$ownsTransaction=!$this->connection->inTransaction()')){
         throw new RuntimeException('Capital Markets repository must detect ownership of the database transaction: '.basename($repositoryFile));
     }
-    if(preg_match('/if\s*\(\s*\$ownsTransaction\s*\)\s*\$this->connection->commit\s*\(\s*\)\s*;/', $repositorySource)!==1){
+    if(!str_contains($repositorySource,'if($ownsTransaction)')||!str_contains($repositorySource,'$this->connection->commit();')){
         throw new RuntimeException('Capital Markets repository must commit only the transaction it owns: '.basename($repositoryFile));
     }
 }
