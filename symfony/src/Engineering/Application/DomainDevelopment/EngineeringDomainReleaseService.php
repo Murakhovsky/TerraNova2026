@@ -22,6 +22,7 @@ final readonly class EngineeringDomainReleaseService
         private EngineeringDomainAgentService $agents,
         private EngineeringDomainAgentOutputValidator $validator,
         private EngineeringDomainDriftDetector $drift,
+        private EngineeringArtifactDependencyGraph $artifactGraph,
     ) {}
 
     /** @return array<string,mixed> */
@@ -173,6 +174,7 @@ final readonly class EngineeringDomainReleaseService
             'architecture_hash' => $architecture['content_hash'],
         ]);
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA_EXECUTOR->value);
+        $this->artifactGraph->rebuild($domainId);
 
         $qaStatus = (string) ($result['status'] ?? '');
         $this->domains->recordRuntimeEvent(
@@ -215,6 +217,7 @@ final readonly class EngineeringDomainReleaseService
             $correlationId.':integration-release',
         );
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_INTEGRATION_RELEASE_REPORT->value, $integrationRelease, AgentRole::INTEGRATION_RELEASE->value);
+        $this->artifactGraph->rebuild($domainId);
 
         $integrationStatus = (string) ($integrationRelease['status'] ?? '');
         if ($integrationStatus !== 'RELEASE_READY') {
@@ -257,6 +260,7 @@ final readonly class EngineeringDomainReleaseService
             $manifest,
             'DOMAIN_RUNTIME',
         );
+        $this->artifactGraph->rebuild($domainId);
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::RELEASE_READY->value);
         $this->domains->recordRuntimeEvent(
             $domainId,
@@ -307,6 +311,7 @@ final readonly class EngineeringDomainReleaseService
             'approved_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ];
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_RELEASE_MANIFEST->value, $approvedManifest, $approvedBy);
+        $this->artifactGraph->rebuild($domainId);
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::COMPLETED->value);
 
         return $this->view($domainId, ['approved' => true]);
@@ -376,6 +381,7 @@ final readonly class EngineeringDomainReleaseService
                     'created_at' => $run['created_at'] ?? null,
                 ], $this->domains->agentRuns((string) $domain['id'])),
                 'runtime_events' => $this->domains->runtimeEvents((string) $domain['id'], 500),
+                'artifact_dependencies' => $this->domains->artifactDependencies((string) $domain['id']),
             ],
             'generated_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
         ];
