@@ -27,6 +27,20 @@ final class Version20261005193000 extends AbstractMigration
             ADD engineering_feature_history JSON NULL AFTER engineering_feature_id");
 
         $this->addSql(<<<'SQL'
+CREATE TABLE cos_engineering_domain_artifact_dependencies (
+    id VARCHAR(36) NOT NULL,
+    domain_id VARCHAR(36) NOT NULL,
+    source_artifact_id VARCHAR(36) NOT NULL,
+    target_artifact_id VARCHAR(36) NOT NULL,
+    relationship VARCHAR(64) NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_cos_eng_domain_artifact_dependency (domain_id, source_artifact_id, target_artifact_id, relationship),
+    KEY idx_cos_eng_domain_artifact_dependency_target (domain_id, target_artifact_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+SQL);
+
+        $this->addSql(<<<'SQL'
 CREATE TABLE cos_engineering_domain_runtime_events (
     id VARCHAR(36) NOT NULL,
     domain_id VARCHAR(36) NOT NULL,
@@ -55,6 +69,7 @@ SQL);
         $this->abortIf(!$this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform, 'This migration can only be executed safely on MySQL.');
 
         $this->addSql('DROP TABLE cos_engineering_domain_runtime_events');
+        $this->addSql('DROP TABLE cos_engineering_domain_artifact_dependencies');
         $this->addSql('ALTER TABLE cos_engineering_domain_features DROP engineering_feature_history');
         $this->addSql('ALTER TABLE cos_engineering_domains DROP max_parallel_qa, DROP max_parallel_reviews, DROP max_parallel_developers');
     }
