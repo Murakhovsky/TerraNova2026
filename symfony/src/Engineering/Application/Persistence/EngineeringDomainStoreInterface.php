@@ -124,4 +124,32 @@ interface EngineeringDomainStoreInterface
     /** @return list<array<string,mixed>> */
     public function runtimeEvents(string $domainId, int $limit = 200): array;
 
+    public function createHumanDecision(
+        string $domainId,
+        string $organizationId,
+        string $gateType,
+        string $resumeStatus,
+        string $question,
+        string $reason,
+        array $options,
+        array $evidence,
+        string $requestedBy,
+    ): string;
+
+    /** @return list<array<string,mixed>> */
+    public function openHumanDecisions(string $domainId): array;
+
+    /** @return list<array<string,mixed>> */
+    public function humanDecisionHistory(string $domainId): array;
+
+    /** @return array<string,mixed> */
+    public function answerHumanDecision(
+        string $domainId,
+        string $decisionId,
+        string $selectedOption,
+        string $answeredBy,
+        ?string $notes = null,
+    ): array;
+
+
 }
