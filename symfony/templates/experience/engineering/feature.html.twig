@@ -38,7 +38,11 @@
         .engineering-details summary{cursor:pointer;font-weight:700}
         .engineering-requirements{white-space:pre-wrap;margin-top:10px;max-height:420px;overflow:auto}
         .engineering-agent-output{white-space:pre-wrap;max-height:240px;overflow:auto;font-size:.78rem}
-        @media(max-width:1100px){.engineering-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}}
+        .engineering-stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+        .engineering-stage{padding:8px 10px;border:1px solid var(--cos-border,#e1e5ea);border-radius:9px;background:var(--cos-surface,#fff);min-width:0}
+        .engineering-stage strong{display:block;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .engineering-stage span{font-size:.7rem;color:var(--cos-text-secondary,#667085)}
+        @media(max-width:1100px){.engineering-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}.engineering-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
     </style>
 
     <div class="engineering-head">
@@ -171,10 +175,19 @@
         </div>
     </section>
 
+    <section class="engineering-stages" aria-label="Етапи workflow">
+        {% for stage in summary.stages %}
+            <div class="engineering-stage">
+                <strong>{{ stage.label }}</strong>
+                <span>{{ stage.status }}</span>
+            </div>
+        {% endfor %}
+    </section>
+
     {% if summary.tokens is null or summary.cost is null %}
         <twig:CosAlert
-            title="Usage accounting неповний"
-            copy="COS не має повних provider usage/cost даних для цього workflow. Нуль не підставляється: невідоме значення показується як unavailable."
+            title="Облік використання неповний"
+            copy="COS не має повних даних provider usage/cost для цього workflow. Невідоме значення не підміняється нулем."
             tone="warning"
         />
     {% endif %}
@@ -182,25 +195,22 @@
     <div class="engineering-grid">
         <section class="engineering-panel">
             <div class="engineering-panel__head">
-                <h2>Execution terminal</h2>
-                <span class="engineering-muted">audit + agent runs</span>
+                <h2>Термінал виконання</h2>
+                <span class="engineering-muted">{{ engineering.timeline|length }} подій</span>
             </div>
             <div class="engineering-terminal">
-                {% if engineering.transitions is empty and engineering.agent_runs is empty %}
-                    <div class="engineering-terminal__muted">Execution events ще відсутні.</div>
+                {% if engineering.timeline is empty %}
+                    <div class="engineering-terminal__muted">Подій виконання ще немає.</div>
                 {% else %}
-                    {% for event in engineering.transitions %}
+                    {% for event in engineering.timeline %}
                         <div class="engineering-terminal__row">
-                            <span class="engineering-terminal__muted">{{ event.created_at|default('') }}</span>
-                            <strong>WORKFLOW</strong>
-                            <span>{{ event.from_state|default('?') }} → {{ event.to_state|default('?') }} · {{ event.trigger|default('transition') }}{% if event.reason|default('') %} · {{ event.reason }}{% endif %}</span>
-                        </div>
-                    {% endfor %}
-                    {% for run in engineering.agent_runs %}
-                        <div class="engineering-terminal__row">
-                            <span class="engineering-terminal__muted">{{ run.started_at|default('') }}</span>
-                            <strong>{{ run.role|default('AGENT') }}</strong>
-                            <span>{{ run.status|default('UNKNOWN') }} · {{ run.provider|default('unknown') }}/{{ run.model|default('unknown') }}{% if run.error_message|default('') %} · ERROR: {{ run.error_message }}{% endif %}</span>
+                            <span class="engineering-terminal__muted">{{ event.time|default('') }}</span>
+                            <strong>{{ event.type|default('EVENT') }}</strong>
+                            <span>
+                                {{ event.title|default('') }}
+                                {% if event.status|default('') %} · {{ event.status }}{% endif %}
+                                {% if event.detail|default('') %} · {{ event.detail }}{% endif %}
+                            </span>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -209,7 +219,7 @@
 
         <section class="engineering-panel">
             <div class="engineering-panel__head">
-                <h2>Quality gate</h2>
+                <h2>Контроль якості</h2>
                 <span class="cos-badge">{{ summary.quality_state }}</span>
             </div>
             <div class="engineering-panel__body">
@@ -233,7 +243,7 @@
 
     <section class="engineering-panel" aria-labelledby="engineering-tasks">
         <div class="engineering-panel__head">
-            <h2 id="engineering-tasks">Execution plan</h2>
+            <h2 id="engineering-tasks">План виконання</h2>
             <span class="engineering-muted">{{ summary.tasks_completed }}/{{ summary.tasks_total }} completed</span>
         </div>
         {% if engineering.tasks is empty %}
@@ -264,7 +274,7 @@
 
     <section class="engineering-panel" aria-labelledby="engineering-runs">
         <div class="engineering-panel__head">
-            <h2 id="engineering-runs">Agent runs</h2>
+            <h2 id="engineering-runs">Запуски агентів</h2>
             <span class="engineering-muted">{{ summary.agent_runs }} runs</span>
         </div>
         {% if engineering.agent_runs is empty %}
@@ -272,7 +282,7 @@
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
-                    <thead><tr><th>Роль</th><th>Статус</th><th>Модель</th><th>Tokens</th><th>Cost</th><th>Retries</th><th>Початок / кінець</th><th>Результат</th></tr></thead>
+                    <thead><tr><th>Роль</th><th>Статус</th><th>Модель</th><th>Tokens</th><th>Вартість</th><th>Повтори</th><th>Початок / кінець</th><th>Результат</th></tr></thead>
                     <tbody>
                     {% for run in engineering.agent_runs %}
                         {% set runTokens = (run.tokens_input is not null or run.tokens_output is not null) ? (run.tokens_input|default(0) + run.tokens_output|default(0)) : null %}
@@ -288,6 +298,17 @@
                                 <details class="engineering-details">
                                     <summary>Деталі</summary>
                                     {% if run.error_message %}<p class="engineering-danger">{{ run.error_message }}</p>{% endif %}
+                                    {% if run.runtime_steps|default([]) is not empty %}
+                                        <div style="margin:8px 0">
+                                            <strong>Runtime steps</strong>
+                                            {% for step in run.runtime_steps %}
+                                                <div class="engineering-muted">
+                                                    #{{ step.sequence|default('?') }} · {{ step.type|default('step') }} · {{ step.status|default('UNKNOWN') }}
+                                                    {% if step.error|default('') %} · {{ step.error }}{% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                     <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
                                     <div class="engineering-muted">trace: {{ run.trace_id|default('n/a') }}</div>
                                 </details>
@@ -302,7 +323,7 @@
 
     <section class="engineering-panel">
         <div class="engineering-panel__head">
-            <h2>LLM usage ledger</h2>
+            <h2>Облік LLM</h2>
             <span class="engineering-muted">{{ engineering.llm_invocations|length }} invocation(s) · source {{ summary.usage_source }}</span>
         </div>
         {% if engineering.llm_invocations is empty %}
@@ -336,7 +357,7 @@
 
     <div class="engineering-grid">
         <section class="engineering-panel">
-            <div class="engineering-panel__head"><h2>Artifacts / repository</h2><span class="engineering-muted">{{ engineering.artifacts|length }} artifacts</span></div>
+            <div class="engineering-panel__head"><h2>Артефакти / репозиторій</h2><span class="engineering-muted">{{ engineering.artifacts|length }} artifacts</span></div>
             <div class="engineering-panel__body">
                 <div><strong>Repository revision:</strong> {{ engineering.feature.repository_revision|default('not captured') }}</div>
                 {% if summary.pull_request.number %}<div><strong>Pull request:</strong> #{{ summary.pull_request.number }}</div>{% endif %}
@@ -352,14 +373,18 @@
         </section>
 
         <section class="engineering-panel">
-            <div class="engineering-panel__head"><h2>Technical / audit</h2><span class="engineering-muted">raw identifiers</span></div>
+            <div class="engineering-panel__head"><h2>Технічні дані / аудит</h2><span class="engineering-muted">raw identifiers</span></div>
             <div class="engineering-panel__body">
                 <div><strong>Feature ID:</strong> <code>{{ engineering.feature.id }}</code></div>
                 <div><strong>Workflow ID:</strong> <code>{{ engineering.workflow.id|default('n/a') }}</code></div>
                 <div><strong>Trace:</strong> <code>{{ engineering.workflow.trace_id|default('n/a') }}</code></div>
-                <div><strong>Last activity:</strong> {{ engineering.workflow.last_activity_at|default('not started') }}</div>
-                <div><strong>Started:</strong> {{ engineering.workflow.started_at|default('not started') }}</div>
-                <div><strong>Finished:</strong> {{ engineering.workflow.finished_at|default('not finished') }}</div>
+                <div><strong>Остання активність:</strong> {{ engineering.workflow.last_activity_at|default('не запускалось') }}</div>
+                <div><strong>Heartbeat:</strong> {{ engineering.workflow.heartbeat_at|default('немає') }}</div>
+                <div><strong>Runtime health:</strong> {{ engineering.workflow.health_status|default('UNKNOWN') }}</div>
+                {% if engineering.workflow.stalled_at|default('') %}<div><strong>Stalled at:</strong> {{ engineering.workflow.stalled_at }}</div>{% endif %}
+                {% if engineering.workflow.runtime_reason|default('') %}<div><strong>Причина:</strong> {{ engineering.workflow.runtime_reason }}</div>{% endif %}
+                <div><strong>Початок:</strong> {{ engineering.workflow.started_at|default('не запускалось') }}</div>
+                <div><strong>Завершення:</strong> {{ engineering.workflow.finished_at|default('не завершено') }}</div>
             </div>
         </section>
     </div>
