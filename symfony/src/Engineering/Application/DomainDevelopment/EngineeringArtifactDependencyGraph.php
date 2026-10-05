@@ -45,6 +45,10 @@ final readonly class EngineeringArtifactDependencyGraph
             [EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, EngineeringDomainArtifactType::DOMAIN_INTEGRATION_RELEASE_REPORT->value, 'RELEASE_INPUT'],
             [EngineeringDomainArtifactType::DOMAIN_INTEGRATION_RELEASE_REPORT->value, EngineeringDomainArtifactType::DOMAIN_RELEASE_MANIFEST->value, 'RELEASE_INPUT'],
             [EngineeringDomainArtifactType::DOMAIN_FEATURE_FLAGS->value, EngineeringDomainArtifactType::DOMAIN_RELEASE_MANIFEST->value, 'RELEASE_CONFIG'],
+            [EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_PUBLIC->value, EngineeringDomainArtifactType::DOMAIN_RELEASE_MANIFEST->value, 'RELEASE_EVIDENCE'],
+            [EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_INTEGRATOR->value, EngineeringDomainArtifactType::DOMAIN_RELEASE_MANIFEST->value, 'RELEASE_EVIDENCE'],
+            [EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_DEVELOPER->value, EngineeringDomainArtifactType::DOMAIN_RELEASE_MANIFEST->value, 'RELEASE_EVIDENCE'],
+            [EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_TRANSLATIONS->value, EngineeringDomainArtifactType::DOMAIN_RELEASE_MANIFEST->value, 'RELEASE_EVIDENCE'],
         ];
 
         $edges = [];
