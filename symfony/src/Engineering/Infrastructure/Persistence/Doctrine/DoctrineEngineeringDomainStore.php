@@ -276,16 +276,50 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         int $architectureVersion,
         array $contractSnapshot,
     ): void {
-        $updated = $this->db()->update('cos_engineering_domain_features', [
-            'engineering_feature_id' => EngineeringId::assert($engineeringFeatureId),
+        $domainId = EngineeringId::assert($domainId);
+        $featureKey = $this->key($featureKey);
+        $engineeringFeatureId = EngineeringId::assert($engineeringFeatureId);
+        $db = $this->db();
+
+        $current = $db->fetchAssociative(
+            'SELECT engineering_feature_id, engineering_feature_history, architecture_version, contract_snapshot, status '
+            .'FROM cos_engineering_domain_features WHERE domain_id=:domain_id AND feature_key=:feature_key',
+            ['domain_id' => $domainId, 'feature_key' => $featureKey],
+        );
+        if (!is_array($current)) throw new RuntimeException('Domain feature not found: '.$featureKey);
+
+        $history = $this->json($current['engineering_feature_history'] ?? null);
+        $previousId = is_string($current['engineering_feature_id'] ?? null) ? trim((string) $current['engineering_feature_id']) : '';
+        if ($previousId !== '' && $previousId !== $engineeringFeatureId) {
+            $alreadyArchived = false;
+            foreach ($history as $item) {
+                if (is_array($item) && ($item['engineering_feature_id'] ?? null) === $previousId) {
+                    $alreadyArchived = true;
+                    break;
+                }
+            }
+            if (!$alreadyArchived) {
+                $history[] = [
+                    'engineering_feature_id' => $previousId,
+                    'architecture_version' => $current['architecture_version'] !== null ? (int) $current['architecture_version'] : null,
+                    'contract_snapshot' => $this->json($current['contract_snapshot'] ?? null),
+                    'status' => (string) ($current['status'] ?? ''),
+                    'superseded_at' => $this->now(),
+                ];
+            }
+        }
+
+        $updated = $db->update('cos_engineering_domain_features', [
+            'engineering_feature_id' => $engineeringFeatureId,
+            'engineering_feature_history' => json_encode($history, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'architecture_version' => max(1, $architectureVersion),
             'contract_snapshot' => json_encode($contractSnapshot, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'status' => EngineeringDomainFeatureStatus::RUNNING->value,
             'status_reason' => null,
             'updated_at' => $this->now(),
         ], [
-            'domain_id' => EngineeringId::assert($domainId),
-            'feature_key' => $this->key($featureKey),
+            'domain_id' => $domainId,
+            'feature_key' => $featureKey,
         ]);
         if ($updated === 0) throw new RuntimeException('Domain feature not found: '.$featureKey);
     }
@@ -569,7 +603,7 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
 
     private function featureView(array $row): array
     {
-        foreach (['acceptance_criteria','owned_paths','shared_paths','forbidden_paths','contracts_consumed','contracts_produced','contract_snapshot','metadata'] as $key) {
+        foreach (['acceptance_criteria','owned_paths','shared_paths','forbidden_paths','contracts_consumed','contracts_produced','contract_snapshot','engineering_feature_history','metadata'] as $key) {
             $row[$key] = $this->json($row[$key] ?? null);
         }
         $row['required'] = (bool) $row['required'];
