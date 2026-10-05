@@ -26,6 +26,18 @@ final readonly class EngineeringPolicyEngine
         return ['allowed' => $reasons === [], 'human_approval_required' => $human, 'reasons' => $reasons];
     }
 
+    /** @param array<string,mixed> $feature */
+    public function sharedKernelModificationRequiresHuman(array $feature): bool
+    {
+        foreach (['owned_paths','shared_paths'] as $field) {
+            foreach (is_array($feature[$field] ?? null) ? $feature[$field] : [] as $path) {
+                $normalized = ltrim(str_replace('\\', '/', trim((string) $path)), '/');
+                if (str_starts_with($normalized, 'app/Kernel/Shared/')) return true;
+            }
+        }
+        return false;
+    }
+
     public function canModifyPath(AgentRole $role): bool
     {
         return $this->agents->allows($role, 'repository_write');
