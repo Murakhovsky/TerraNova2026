@@ -4,6 +4,12 @@ declare(strict_types=1);
 $root = dirname(__DIR__, 2);
 require $root.'/vendor/autoload.php';
 
+spl_autoload_register(static function (string $class) use ($root): void {
+    if (!str_starts_with($class, 'App\\Engineering\\')) return;
+    $path = $root.'/symfony/src/'.str_replace('\\', '/', substr($class, 4)).'.php';
+    if (is_file($path)) require $path;
+});
+
 use App\Engineering\Application\Service\EngineeringUiActionResolver;
 
 $resolver = new EngineeringUiActionResolver();
