@@ -141,7 +141,15 @@ final readonly class EngineeringSpecialistStageExecutor
         ]));
         $idempotencyKey = $featureId.':specialist:'.strtolower($role->value).':'.strtolower($phase).':'.$inputHash;
 
-        if ($this->agentRuns->existsByIdempotencyKey($idempotencyKey)) return null;
+        if ($this->agentRuns->existsByIdempotencyKey($idempotencyKey)) {
+            $existing = $this->agentRuns->byIdempotencyKey($idempotencyKey);
+            $existingOutput = is_array($existing['output'] ?? null) ? $existing['output'] : [];
+            $existingStatus = strtoupper((string) ($existingOutput['status'] ?? ''));
+            if (in_array($existingStatus, ['APPROVED','APPROVED_WITH_CONDITIONS','COMPLETED'], true)) return null;
+            throw new RuntimeException(
+                'Existing specialist execution '.$role->value.' for this exact input is not approved: '.($existingStatus !== '' ? $existingStatus : 'UNKNOWN').'.'
+            );
+        }
 
         $task = new EngineeringAgentTask(
             id: EngineeringId::generate(),
