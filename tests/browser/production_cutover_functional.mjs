@@ -183,6 +183,10 @@ try {
   await engineeringUpdate.locator('select[name="priority"]').selectOption('P1');
   await submitAndWait(page, engineeringUpdate, (url) => url.pathname === engineeringPath && url.searchParams.has('status_message'));
   assert((await page.locator('body').innerText()).includes(engineeringUpdatedTitle), 'Engineering feature title edit did not persist.');
+  const updatedRequirements = page.locator('details:has(form[data-engineering-update])');
+  if (!(await updatedRequirements.evaluate((node) => node.open))) {
+    await updatedRequirements.locator(':scope > summary').click();
+  }
   assert((await page.locator('body').innerText()).includes(engineeringUpdatedDescription), 'Engineering feature Description edit did not persist.');
   assert(await page.locator('form[data-engineering-update] select[name="priority"]').inputValue() === 'P1', 'Engineering feature priority edit did not persist.');
 
