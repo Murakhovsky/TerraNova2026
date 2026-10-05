@@ -55,6 +55,8 @@ final readonly class EngineeringFeatureController
         $tenant = $this->manager();
         if ($tenant instanceof Response) return $tenant;
 
+        $this->workflows->refreshRuntimeHealthForOrganization($tenant->organizationId()->value());
+
         $context = new WebExtensionContext(
             organizationId: $tenant->organizationId()->value(),
             role: $tenant->role()->value(),
@@ -112,7 +114,10 @@ final readonly class EngineeringFeatureController
             $state = (string) ($workflow['state'] ?? $feature['status'] ?? 'NEW');
             $status = (string) ($workflow['workflow_status'] ?? $workflow['status'] ?? $feature['status'] ?? 'NEW');
             $lastActivity = $workflow['last_activity_at'] ?? $feature['updated_at'] ?? null;
-            $health = $this->runtimeHealth($status, $state, is_string($lastActivity) ? $lastActivity : null);
+            $persistedHealth = strtoupper((string) ($workflow['health_status'] ?? ''));
+            $health = in_array($persistedHealth, ['HEALTHY','STALE','STALLED','WAITING','TERMINAL'], true)
+                ? $persistedHealth
+                : $this->runtimeHealth($status, $state, is_string($lastActivity) ? $lastActivity : null);
             $fact = $facts[$featureId] ?? [];
 
             if (isset($queuePositionByFeature[$featureId])) {
@@ -123,7 +128,10 @@ final readonly class EngineeringFeatureController
             } elseif (in_array($status, ['CANCELLED','FAILED'], true) || in_array($state, ['CANCELLED','FAILED'], true)) {
                 $displayStatus = $status !== '' ? $status : $state;
                 ++$stats['attention'];
-            } elseif (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true) || in_array($health, ['STALE','STALLED'], true)) {
+            } elseif (in_array($health, ['STALE','STALLED'], true)) {
+                $displayStatus = $health;
+                ++$stats['attention'];
+            } elseif (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
                 $displayStatus = $state;
                 ++$stats['attention'];
             } elseif ($workflow !== null) {
@@ -249,6 +257,7 @@ final readonly class EngineeringFeatureController
 
         try {
             $featureId = EngineeringId::assert($id);
+            $this->workflows->refreshRuntimeHealthForOrganization($tenant->organizationId()->value());
             $data = $this->engineering->status($featureId);
             if (($data['feature']['organization_id'] ?? null) !== $tenant->organizationId()->value()) {
                 return new Response('Not found', Response::HTTP_NOT_FOUND);
@@ -550,11 +559,13 @@ final readonly class EngineeringFeatureController
         return [
             'state' => $state,
             'workflow_status' => $workflowStatus,
-            'health' => $this->runtimeHealth(
-                $workflowStatus,
-                $state,
-                is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null,
-            ),
+            'health' => in_array(strtoupper((string) ($data['workflow']['health_status'] ?? '')), ['HEALTHY','STALE','STALLED','WAITING','TERMINAL'], true)
+                ? strtoupper((string) $data['workflow']['health_status'])
+                : $this->runtimeHealth(
+                    $workflowStatus,
+                    $state,
+                    is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null,
+                ),
             'terminal' => $terminal,
             'waits_for_human' => $waitsForHuman,
             'can_cancel' => $data['workflow'] !== null && !$terminal,
