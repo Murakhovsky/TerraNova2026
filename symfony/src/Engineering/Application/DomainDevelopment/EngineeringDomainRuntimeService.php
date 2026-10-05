@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
+use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use InvalidArgumentException;
 use RuntimeException;
@@ -15,6 +16,7 @@ final readonly class EngineeringDomainRuntimeService
         private EngineeringDomainPlanner $planner,
         private EngineeringDomainFeatureScheduler $scheduler,
         private EngineeringDomainReleaseService $release,
+        private EngineeringRepositoryGatewayInterface $repository,
     ) {}
 
     public function create(
@@ -28,6 +30,10 @@ final readonly class EngineeringDomainRuntimeService
         int $maxParallelFeatures = 3,
     ): string {
         if (trim($organizationId) === '') throw new InvalidArgumentException('Organization id is required.');
+        $targetRepository = trim($targetRepository);
+        if ($targetRepository === '') {
+            $targetRepository = $this->repository->configuredRepository();
+        }
         $id = EngineeringId::generate();
         $targetBranch = trim($targetBranch);
         if ($targetBranch === '') {
