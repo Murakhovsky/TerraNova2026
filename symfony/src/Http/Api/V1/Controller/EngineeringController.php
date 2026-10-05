@@ -83,6 +83,68 @@ final readonly class EngineeringController
         }
     }
 
+    public function live(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, false)) !== null) return $denied;
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $status = $this->status->status($featureId);
+            $tenant = $this->tenants->current();
+            if (($status['feature']['organization_id'] ?? null) !== $tenant?->organizationId()->value()) {
+                throw new \RuntimeException('Engineering feature does not belong to the current organization.');
+            }
+
+            $tasks = array_map(
+                static fn (array $task): array => [
+                    'id' => (string) ($task['id'] ?? ''),
+                    'status' => (string) ($task['status'] ?? ''),
+                ],
+                array_values(array_filter($status['tasks'] ?? [], 'is_array')),
+            );
+            $runs = array_map(
+                static fn (array $run): array => [
+                    'id' => (string) ($run['id'] ?? ''),
+                    'role' => (string) ($run['role'] ?? 'AGENT'),
+                    'status' => (string) ($run['status'] ?? 'UNKNOWN'),
+                    'task_id' => $run['task_id'] ?? null,
+                    'started_at' => $run['started_at'] ?? null,
+                    'finished_at' => $run['finished_at'] ?? null,
+                ],
+                array_values(array_filter($status['agent_runs'] ?? [], 'is_array')),
+            );
+            $timeline = array_map(
+                static fn (array $event): array => [
+                    'time' => (string) ($event['time'] ?? ''),
+                    'type' => (string) ($event['type'] ?? 'EVENT'),
+                    'status' => (string) ($event['status'] ?? ''),
+                    'title' => (string) ($event['title'] ?? ''),
+                    'detail' => (string) ($event['detail'] ?? ''),
+                    'reference_id' => (string) ($event['reference_id'] ?? ''),
+                ],
+                array_slice(
+                    array_values(array_filter($status['timeline'] ?? [], 'is_array')),
+                    0,
+                    150,
+                ),
+            );
+
+            return new JsonResponse([
+                'ok' => true,
+                'data' => [
+                    'server_time' => (new \DateTimeImmutable())->format(DATE_ATOM),
+                    'workflow' => $status['workflow'] ?? null,
+                    'tasks' => $tasks,
+                    'agent_runs' => $runs,
+                    'timeline_count' => count(is_array($status['timeline'] ?? null) ? $status['timeline'] : []),
+                    'timeline' => $timeline,
+                ],
+            ]);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
     public function run(Request $request, string $id): JsonResponse
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
