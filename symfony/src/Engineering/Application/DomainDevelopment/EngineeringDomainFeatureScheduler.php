@@ -241,6 +241,7 @@ final readonly class EngineeringDomainFeatureScheduler
 
         $this->syncLinkedFeatures($domainId, $organizationId, $correlationId);
         $domainFeatures = $this->domains->features($domainId);
+        $this->syncCapabilityStatuses($domainId, $domainFeatures);
         $required = array_filter($domainFeatures, static fn (array $feature): bool => (bool) $feature['required']);
         $allRequiredComplete = $required !== [] && array_reduce(
             $required,
@@ -269,6 +270,60 @@ final readonly class EngineeringDomainFeatureScheduler
             'required_complete' => $allRequiredComplete,
             'features' => $domainFeatures,
         ];
+    }
+
+    /** @param list<array<string,mixed>> $features */
+    private function syncCapabilityStatuses(string $domainId, array $features): void
+    {
+        $byCapability = [];
+        foreach ($features as $feature) {
+            if (!is_array($feature)) continue;
+            $key = (string) ($feature['capability_key'] ?? '');
+            if ($key === '') continue;
+            $byCapability[$key][] = $feature;
+        }
+
+        foreach ($this->domains->capabilities($domainId) as $capability) {
+            $key = (string) ($capability['capability_key'] ?? '');
+            if ($key === '') continue;
+            $members = $byCapability[$key] ?? [];
+            $required = array_values(array_filter(
+                $members,
+                static fn (array $feature): bool => (bool) ($feature['required'] ?? true),
+            ));
+
+            $status = 'NOT_STARTED';
+            $reason = null;
+            if ($required !== []) {
+                $statuses = array_map(static fn (array $feature): string => (string) ($feature['status'] ?? ''), $required);
+                if (array_intersect($statuses, [
+                    EngineeringDomainFeatureStatus::BLOCKED->value,
+                    EngineeringDomainFeatureStatus::FAILED->value,
+                    EngineeringDomainFeatureStatus::CANCELLED->value,
+                ]) !== []) {
+                    $status = 'BLOCKED';
+                    $reason = 'One or more required features are blocked, failed or cancelled.';
+                } elseif (array_intersect($statuses, [
+                    EngineeringDomainFeatureStatus::STALE->value,
+                    EngineeringDomainFeatureStatus::REVALIDATION_REQUIRED->value,
+                ]) !== []) {
+                    $status = 'REVALIDATION_REQUIRED';
+                    $reason = 'One or more required features require Domain architecture/contract revalidation.';
+                } elseif (count(array_filter(
+                    $statuses,
+                    static fn (string $value): bool => $value === EngineeringDomainFeatureStatus::COMPLETED->value,
+                )) === count($statuses)) {
+                    $status = 'IMPLEMENTED';
+                    $reason = 'All required features are complete; capability awaits integrated Domain QA.';
+                } elseif (in_array(EngineeringDomainFeatureStatus::RUNNING->value, $statuses, true)) {
+                    $status = 'RUNNING';
+                } else {
+                    $status = 'WAITING';
+                }
+            }
+
+            $this->domains->updateCapabilityStatus($domainId, $key, $status, $reason);
+        }
     }
 
     /** @param array<string,mixed> $domain */
