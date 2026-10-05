@@ -225,6 +225,56 @@ final readonly class EngineeringDomainWorkspaceController
         return $this->mutate($request, $id, 'approve');
     }
 
+    public function dependencyGraph(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $domainId = EngineeringId::assert($id);
+            $data = $this->runtime->view($domainId, $tenant->organizationId()->value());
+            $dependencies = is_array($data['dependencies'] ?? null) ? $data['dependencies'] : [];
+            $mode = strtolower(trim((string) $request->request->get('mode', 'add')));
+            $featureKey = trim((string) $request->request->get('feature_key', ''));
+            $dependsOnKey = trim((string) $request->request->get('depends_on_key', ''));
+            $type = strtoupper(trim((string) $request->request->get('type', 'REQUIRES')));
+
+            if ($featureKey === '' || $dependsOnKey === '') {
+                throw new \InvalidArgumentException('Dependency edge requires feature and dependency.');
+            }
+
+            if ($mode === 'remove') {
+                $dependencies = array_values(array_filter(
+                    $dependencies,
+                    static fn (array $edge): bool => !(
+                        ($edge['feature_key'] ?? null) === $featureKey
+                        && ($edge['depends_on_key'] ?? null) === $dependsOnKey
+                        && strtoupper((string) ($edge['type'] ?? 'REQUIRES')) === $type
+                    ),
+                ));
+            } else {
+                $dependencies[] = [
+                    'feature_key' => $featureKey,
+                    'depends_on_key' => $dependsOnKey,
+                    'type' => $type,
+                ];
+            }
+
+            $this->runtime->updateDependencies(
+                $domainId,
+                $tenant->organizationId()->value(),
+                $dependencies,
+                'user:'.$tenant->userId()->value(),
+                $this->correlation('dependency-graph', $domainId),
+            );
+
+            return $this->redirectStatus('/admin/engineering/domains/'.$domainId, 'Dependency graph оновлено.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/domains/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
+        }
+    }
+
     public function humanDecision(Request $request, string $id): Response
     {
         $tenant = $this->manager();
