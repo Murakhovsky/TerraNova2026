@@ -17,8 +17,8 @@ interface AdministrationServiceInterface
     public function activeProperties(int $limit = 6): array;
     public function recentManagerActivities(int $limit = 8): array;
     public function userFilters(array $query): array;
-    public function users(array $filters): array;
-    public function userStats(): array;
-    public function createUser(array $input): array;
-    public function updateUser(int $id, array $input, ?array $actor = null): array;
+    public function users(array $filters, string $organizationId): array;
+    public function userStats(string $organizationId): array;
+    public function createUser(array $input, string $organizationId): array;
+    public function updateUser(int $id, array $input, string $organizationId, ?array $actor = null): array;
 }
