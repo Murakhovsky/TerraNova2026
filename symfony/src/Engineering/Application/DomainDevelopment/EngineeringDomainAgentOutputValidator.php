@@ -149,7 +149,7 @@ final readonly class EngineeringDomainAgentOutputValidator
 
         foreach (is_array($output['contracts'] ?? null) ? $output['contracts'] : [] as $contract) {
             if (!is_array($contract)) throw new RuntimeException('Domain contract must be an object.');
-            foreach (['id','name','version','type','owner_domain','producer','consumers','schema','compatibility','status'] as $field) {
+            foreach (['id','name','version','type','owner_domain','producer','consumers','schema','compatibility','status','test_suite'] as $field) {
                 if (!array_key_exists($field, $contract)) throw new RuntimeException('Domain contract missing '.$field.'.');
             }
             if (!in_array(strtoupper((string) $contract['type']), [
@@ -160,6 +160,12 @@ final readonly class EngineeringDomainAgentOutputValidator
             }
             if (!is_array($contract['consumers']) || !is_array($contract['schema'])) {
                 throw new RuntimeException('Domain contract consumers/schema must be structured.');
+            }
+            if (!is_array($contract['test_suite']) || $contract['test_suite'] === []) {
+                throw new RuntimeException('Every Domain contract requires a shared ContractTest suite.');
+            }
+            foreach ($contract['test_suite'] as $test) {
+                if (!is_string($test) || trim($test) === '') throw new RuntimeException('Domain contract test_suite entries must be non-empty test identifiers.');
             }
         }
 
