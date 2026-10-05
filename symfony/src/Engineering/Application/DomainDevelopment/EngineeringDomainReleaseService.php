@@ -444,7 +444,7 @@ final readonly class EngineeringDomainReleaseService
             ],
             'integration_release' => $integrationRelease,
             'ci' => $ci,
-            'rollback_plan' => $architecture['content']['migration_strategy'] ?? null,
+            'rollback_plan' => $this->domains->latestArtifact((string) $domain['id'], EngineeringDomainArtifactType::MIGRATION_PLAN->value)['content']['rollback_strategy'] ?? null,
             'known_limitations' => $qa['known_limitations'] ?? [],
             'audit_trail' => [
                 'artifacts' => array_map(static fn (array $artifact): array => [
