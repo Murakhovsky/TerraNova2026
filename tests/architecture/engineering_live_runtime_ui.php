@@ -19,7 +19,7 @@ $uiActions = $read('symfony/src/Engineering/Application/Service/EngineeringUiAct
 $page = $read('symfony/src/Web/Engineering/EngineeringFeatureController.php');
 $security = $read('symfony/config/packages/security.yaml');
 $authenticator = $read('symfony/src/Security/SessionAuthenticator.php');
-$managerStage = $read('symfony/src/Engineering/Application/Service/EngineeringManagerStageExecutor.php');
+$productStage = $read('symfony/src/Engineering/Application/Service/EngineeringProductRequirementsStageExecutor.php');
 
 foreach ([
     'cos_engineering_feature_live:',
@@ -122,8 +122,8 @@ foreach ([
 if (!str_contains($authenticator, "str_starts_with(\$path,'/api/engineering')")) {
     throw new RuntimeException('SessionAuthenticator does not authenticate Engineering live API requests.');
 }
-if (!str_contains($managerStage, 'AgentRun start failed after repository discovery:')) {
-    throw new RuntimeException('Engineering Manager does not surface pre-AgentRun start failures.');
+if (!str_contains($productStage, 'AgentRun start failed after repository discovery:')) {
+    throw new RuntimeException('Engineering Product stage does not surface pre-AgentRun start failures.');
 }
 
 echo "Engineering live runtime UI contract passed.\n";
