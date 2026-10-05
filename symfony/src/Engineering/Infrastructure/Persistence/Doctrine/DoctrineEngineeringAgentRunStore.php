@@ -52,7 +52,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             status: 'RUNNING',
             technicalRetry: 0,
             logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
-            traceId: $traceId,
+            traceId: $this->runCorrelationId($traceId, $task->id),
             startedAt: new DateTimeImmutable(),
             taskId: $task->id,
         ));
@@ -253,4 +253,9 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             'logical_attempt' => $record->logicalAttempt(),
         ];
     }
+    private function runCorrelationId(string $parentCorrelationId, string $taskId): string
+    {
+        return mb_substr(rtrim($parentCorrelationId, ':').':agent:'.$taskId, 0, 128);
+    }
+
 }
