@@ -186,7 +186,7 @@
                                     {% elseif not terminal %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                            <button class="cos-button cos-button--primary" type="submit">Продовжити</button>
+                                            <button class="cos-button cos-button--primary" type="submit">{{ feature.health == 'STALLED' ? 'Відновити' : 'Продовжити' }}</button>
                                         </form>
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/cancel">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
