@@ -18,6 +18,7 @@ generated: true
 
 | Модуль | Commands |
 | --- | ---: |
+| `capital_markets` | 0 |
 | `construction` | 0 |
 | `diagnostic` | 1 |
 | `finance` | 0 |
@@ -28,6 +29,10 @@ generated: true
 | `real_estate` | 0 |
 | `sales` | 7 |
 | `service` | 0 |
+
+## Capital Markets (`capital_markets`)
+
+Явних `*Command` DTO contracts не знайдено.
 
 ## Construction (`construction`)
 
