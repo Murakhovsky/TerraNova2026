@@ -63,6 +63,17 @@ final class EngineeringAgentOutputValidator
         if (!is_array($output['findings']) || !is_array($output['required_actions']) || !is_array($output['required_human_decisions']) || !is_array($output['evidence'])) {
             throw new EngineeringAgentOutputValidationException('Specialist result collections are invalid.');
         }
+
+        $approved = in_array((string) ($output['status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS','COMPLETED'], true);
+        if ($approved) {
+            foreach ($output['findings'] as $finding) {
+                if (!is_array($finding)) continue;
+                $severity = strtoupper((string) ($finding['severity'] ?? ''));
+                if (in_array($severity, ['MAJOR','BLOCKER','HIGH','CRITICAL'], true)) {
+                    throw new EngineeringAgentOutputValidationException('Specialist approval cannot contain unresolved MAJOR/BLOCKER findings.');
+                }
+            }
+        }
     }
 
     private function manager(array $output): void
