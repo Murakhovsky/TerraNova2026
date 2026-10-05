@@ -73,7 +73,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             $rows = $this->entityManager->getConnection()->fetchAllAssociative(
                 "SELECT traces.feature_id, u.id, u.correlation_id, u.use_case, u.provider, u.model,
                         u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
-                        u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version,
+                        u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version, u.provider_request_id,
                         u.latency_ms, u.fallback_count, u.created_at
                  FROM (
                     SELECT DISTINCT feature_id, trace_id
@@ -120,7 +120,9 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                     'source' => 'AGENT_RUN_FALLBACK',
                     'invocations' => 0,
                     'input_tokens' => $input,
+                    'cached_input_tokens' => null,
                     'output_tokens' => $output,
+                    'reasoning_tokens' => null,
                     'total_tokens' => $tokenKnown ? $input + $output : null,
                     'cost_amount' => $costKnown ? (float) ($row['cost_amount'] ?? 0) : null,
                     'cost_currency' => $costKnown ? 'USD' : null,
@@ -230,7 +232,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
         return $this->entityManager->getConnection()->fetchAllAssociative(
             "SELECT u.id, u.correlation_id, u.use_case, u.provider, u.model,
                     u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
-                    u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version,
+                    u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version, u.provider_request_id,
                     u.latency_ms, u.fallback_count, u.created_at
              FROM cos_llm_usage u
              WHERE u.correlation_id IN (
@@ -248,7 +250,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
         return $this->entityManager->getConnection()->fetchAllAssociative(
             "SELECT u.id, u.correlation_id, u.use_case, u.provider, u.model,
                     u.input_tokens, u.cached_input_tokens, u.output_tokens, u.reasoning_tokens,
-                    u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version,
+                    u.cost_amount, u.cost_currency, u.cost_source, u.pricing_version, u.provider_request_id,
                     u.latency_ms, u.fallback_count, u.created_at
              FROM cos_llm_usage u
              WHERE u.correlation_id IN (
@@ -280,6 +282,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
             'cost_currency' => $row['cost_currency'] !== null ? (string) $row['cost_currency'] : null,
             'cost_source' => $row['cost_source'] !== null ? (string) $row['cost_source'] : null,
             'pricing_version' => $row['pricing_version'] !== null ? (string) $row['pricing_version'] : null,
+            'provider_request_id' => $row['provider_request_id'] !== null ? (string) $row['provider_request_id'] : null,
             'latency_ms' => $row['latency_ms'] !== null ? (int) $row['latency_ms'] : null,
             'fallback_count' => (int) ($row['fallback_count'] ?? 0),
             'created_at' => (string) ($row['created_at'] ?? ''),
