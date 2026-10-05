@@ -138,6 +138,37 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         }
     }
 
+    public function markRuntimeIssue(string $workflowId, string $health, string $reason, ?string $agentRunId = null, ?string $taskId = null): void
+    {
+        $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
+        if (!$record instanceof WorkflowExecutionRecord) {
+            throw new RuntimeException('Engineering workflow not found: '.$workflowId);
+        }
+        if (in_array($record->status(), ['COMPLETED','CANCELLED','FAILED'], true)) return;
+
+        $previousHealth = $record->healthStatus();
+        $record->markRuntimeIssue($health, $reason, $agentRunId, $taskId);
+        $this->entityManager->flush();
+        $this->events->append(
+            $record->featureId(),
+            $record->id(),
+            'RUNTIME',
+            'workflow.runtime_issue',
+            $record->healthStatus(),
+            'Workflow runtime issue detected',
+            [
+                'previous_health' => $previousHealth,
+                'health' => $record->healthStatus(),
+                'reason' => $record->runtimeReason(),
+                'current_task_id' => $taskId,
+                'current_agent_run_id' => $agentRunId,
+            ],
+            $agentRunId,
+            $record->traceId(),
+            error: $reason,
+        );
+    }
+
     public function refreshRuntimeHealthForOrganization(string $organizationId, int $staleAfterSeconds = 600, int $stalledAfterSeconds = 1800): array
     {
         $staleAfterSeconds = max(60, $staleAfterSeconds);
