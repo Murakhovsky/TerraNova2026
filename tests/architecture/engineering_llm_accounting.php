@@ -23,7 +23,7 @@ foreach (['input_tokens_details','cached_tokens','output_tokens_details','reason
 foreach (['withResolvedCost','LlmPricingResolverInterface','cachedInputTokens','reasoningTokens','providerRequestId','costSource','pricingVersion'] as $needle) {
     if (!str_contains($governed, $needle)) throw new RuntimeException('Governed LLM accounting missing '.$needle);
 }
-foreach (['llm_pricing','input_per_million','cached_input_per_million','output_per_million','CALCULATED_','OpenAiModelCatalog::pricingCatalog'] as $needle) {
+foreach (['llm_pricing','input_per_million','cached_input_per_million','output_per_million','CALCULATED_','LlmModelCatalogInterface','$this->modelCatalog->pricingCatalog()'] as $needle) {
     if (!str_contains($pricing, $needle)) throw new RuntimeException('Tenant LLM pricing resolver missing '.$needle);
 }
 foreach (['gpt-6-astra','gpt-6.1-sol','gpt-6-luna','10.0','50.0','2.0','0.1','0.5','1_050_000','128_000'] as $needle) {
