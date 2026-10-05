@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Infrastructure\Llm;
 
+use Kernel\Llm\LlmModelCatalogInterface;
 use Kernel\Llm\LlmPriceEstimate;
 use Kernel\Llm\LlmPricingResolverInterface;
 use Platform\Settings\Contract\PlatformSettingsReaderInterface;
@@ -11,6 +12,7 @@ final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingRes
 {
     public function __construct(
         private PlatformSettingsReaderInterface $settings,
+        private LlmModelCatalogInterface $modelCatalog,
         private string $fallbackCatalogJson = '',
     ) {}
 
@@ -27,7 +29,7 @@ final readonly class PlatformSettingsLlmPricingResolver implements LlmPricingRes
 
         $providerKey = $this->key($provider);
         $modelKey = $this->key($model);
-        $catalog = OpenAiModelCatalog::pricingCatalog();
+        $catalog = $this->modelCatalog->pricingCatalog();
         foreach ($this->fallbackCatalog() as $key => $value) {
             if (is_array($value)) {
                 $value['source'] = 'ENV_FALLBACK';
