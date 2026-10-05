@@ -5,6 +5,7 @@ namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Persistence\Doctrine\Entity\Engineering\AgentRunRecord;
@@ -14,7 +15,10 @@ use RuntimeException;
 
 final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgentRunStoreInterface
 {
-    public function __construct(private EntityManagerInterface $entityManager) {}
+    public function __construct(
+        private EntityManagerInterface $entityManager,
+        private EngineeringWorkflowStoreInterface $workflows,
+    ) {}
 
     public function start(string $workflowId, EngineeringAgentTask $task, string $traceId): string
     {
@@ -48,8 +52,10 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
             traceId: $traceId,
             startedAt: new DateTimeImmutable(),
+            taskId: $task->id,
         ));
         $this->entityManager->flush();
+        $this->workflows->touchRuntime($workflowId, $runId, $task->id);
         return $runId;
     }
 
@@ -72,6 +78,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             technicalRetry: $result->technicalRetries,
         );
         $this->entityManager->flush();
+        $this->workflows->touchRuntime($record->workflowExecutionId(), $record->id(), $record->taskId());
     }
 
     public function fail(string $engineeringRunId, string $errorType, string $errorMessage, int $technicalRetry = 0): void
@@ -80,6 +87,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         if (!$record instanceof AgentRunRecord) throw new RuntimeException('Engineering AgentRun not found: '.$engineeringRunId);
         $record->fail($errorType, $errorMessage, $technicalRetry);
         $this->entityManager->flush();
+        $this->workflows->touchRuntime($record->workflowExecutionId(), $record->id(), $record->taskId());
     }
 
     public function existsByIdempotencyKey(string $idempotencyKey): bool
