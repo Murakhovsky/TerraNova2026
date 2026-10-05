@@ -7,6 +7,7 @@ use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
+use App\Engineering\Application\Policy\EngineeringPolicyEngine;
 use App\Engineering\Application\Service\EngineeringCancelService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Domain\DomainDevelopment\EngineeringDomainArtifactType;
@@ -27,6 +28,8 @@ final readonly class EngineeringDomainFeatureScheduler
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringDomainContextBuilder $context,
         private EngineeringDomainDriftDetector $drift,
+        private EngineeringDomainHumanGateService $humanGates,
+        private EngineeringPolicyEngine $policy = new EngineeringPolicyEngine(),
         private FeatureDependencyGraph $graph = new FeatureDependencyGraph(),
     ) {}
 
@@ -102,10 +105,65 @@ final readonly class EngineeringDomainFeatureScheduler
         });
 
         $scheduled = [];
+        $humanGateRequested = false;
         foreach ($readyKeys as $featureKey) {
             if ($capacity <= 0) break;
             $feature = $byKey[$featureKey] ?? null;
             if (!is_array($feature)) continue;
+
+            $policy = $this->policy->featureStart($feature);
+            if (($policy['allowed'] ?? false) !== true) {
+                $reason = 'Engineering policy denied feature start: '.implode('; ', $policy['reasons'] ?? []);
+                $this->domains->updateFeatureStatus($domainId, $featureKey, EngineeringDomainFeatureStatus::BLOCKED->value, $reason);
+                $this->domains->recordRuntimeEvent(
+                    $domainId,
+                    $organizationId,
+                    EngineeringDomainRuntimeEventType::FEATURE_BLOCKED->value,
+                    $featureKey,
+                    ['phase' => 'POLICY', 'reason' => $reason],
+                    $correlationId,
+                    'feature-blocked:'.$featureKey.':policy:'.hash('sha256', $reason),
+                    actor: 'ENGINEERING_POLICY_ENGINE',
+                    reason: $reason,
+                    result: EngineeringDomainFeatureStatus::BLOCKED->value,
+                );
+                continue;
+            }
+            if (($policy['human_approval_required'] ?? false) === true) {
+                $decisionId = $this->humanGates->request(
+                    $domainId,
+                    $organizationId,
+                    'FEATURE_RISK_'.$featureKey,
+                    EngineeringDomainStatus::IMPLEMENTATION,
+                    'Approve governed execution of '.$featureKey.' with risk '.($feature['risk'] ?? 'UNKNOWN').'?',
+                    'Engineering Policy requires human approval for this feature risk level.',
+                    [
+                        'feature_key' => $featureKey,
+                        'risk' => $feature['risk'] ?? null,
+                        'kind' => $feature['kind'] ?? null,
+                        'owned_paths' => $feature['owned_paths'] ?? [],
+                        'shared_paths' => $feature['shared_paths'] ?? [],
+                    ],
+                    'ENGINEERING_POLICY_ENGINE',
+                );
+                $open = false;
+                foreach ($this->domains->openHumanDecisions($domainId) as $decision) {
+                    if (($decision['id'] ?? null) === $decisionId) {
+                        $open = true;
+                        break;
+                    }
+                }
+                if ($open) {
+                    $humanGateRequested = true;
+                    $this->domains->updateFeatureStatus(
+                        $domainId,
+                        $featureKey,
+                        EngineeringDomainFeatureStatus::WAITING->value,
+                        'Waiting for risk-policy human approval.',
+                    );
+                    continue;
+                }
+            }
 
             $isRevalidation = in_array((string) ($feature['status'] ?? ''), [
                 EngineeringDomainFeatureStatus::STALE->value,
@@ -242,6 +300,18 @@ final readonly class EngineeringDomainFeatureScheduler
         $this->syncLinkedFeatures($domainId, $organizationId, $correlationId);
         $domainFeatures = $this->domains->features($domainId);
         $this->syncCapabilityStatuses($domainId, $domainFeatures);
+        if ($humanGateRequested || $this->domains->openHumanDecisions($domainId) !== []) {
+            return [
+                'domain_id' => $domainId,
+                'scheduled' => $scheduled,
+                'drift' => $drift,
+                'running' => count(array_filter($domainFeatures, static fn (array $feature): bool => $feature['status'] === EngineeringDomainFeatureStatus::RUNNING->value)),
+                'required_complete' => false,
+                'human_approval_required' => true,
+                'open_human_decisions' => $this->domains->openHumanDecisions($domainId),
+                'features' => $domainFeatures,
+            ];
+        }
         $required = array_filter($domainFeatures, static fn (array $feature): bool => (bool) $feature['required']);
         $allRequiredComplete = $required !== [] && array_reduce(
             $required,
