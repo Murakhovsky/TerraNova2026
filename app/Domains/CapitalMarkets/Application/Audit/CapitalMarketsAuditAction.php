@@ -3,14 +3,17 @@ declare(strict_types=1);
 
 namespace Domains\CapitalMarkets\Application\Audit;
 
-enum CapitalMarketsAuditAction: string
+enum CapitalMarketsAuditAction:string
 {
-    case InstrumentRegistered = 'capital_markets.instrument.registered';
-    case InstrumentUpdated = 'capital_markets.instrument.updated';
-    case RelationshipDefined = 'capital_markets.relationship.defined';
-    case VenueRegistered = 'capital_markets.venue.registered';
-    case ResearchHypothesisCreated = 'capital_markets.research.hypothesis_created';
-    case PaperExecutionRequested = 'capital_markets.paper.execution_requested';
-    case LiveExecutionRequested = 'capital_markets.live.execution_requested';
-    case RiskDecisionRecorded = 'capital_markets.risk.decision_recorded';
+    case InstrumentCreated='capital_markets.instrument.created';
+    case InstrumentUpdated='capital_markets.instrument.updated';
+    case InstrumentStatusChanged='capital_markets.instrument.status_changed';
+    case RelationshipCreated='capital_markets.relationship.created';
+    case RelationshipUpdated='capital_markets.relationship.updated';
+    case VenueCreated='capital_markets.venue.created';
+    case VenueUpdated='capital_markets.venue.updated';
+    case VenueStatusChanged='capital_markets.venue.status_changed';
+    case VenueInstrumentRegistered='capital_markets.venue_instrument.registered';
+    case PermissionChanged='capital_markets.permission.changed';
+    case FeatureFlagChanged='capital_markets.feature_flag.changed';
 }
