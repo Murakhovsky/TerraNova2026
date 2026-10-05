@@ -555,6 +555,7 @@ final readonly class EngineeringFeatureController
         $terminal = in_array($state, ['DONE','CANCELLED','FAILED'], true)
             || in_array($workflowStatus, ['COMPLETED','CANCELLED','FAILED'], true);
         $waitsForHuman = in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true);
+        $stages = $this->stagePipeline($data, $state, $workflowStatus);
 
         return [
             'state' => $state,
@@ -578,6 +579,7 @@ final readonly class EngineeringFeatureController
             )),
             'agent_runs' => count($runs),
             'roles' => $roles,
+            'stages' => $stages,
             'usage' => $usage,
             'tokens' => $usage['total_tokens'] ?? null,
             'cost' => $usage['cost_amount'] ?? null,
@@ -589,6 +591,59 @@ final readonly class EngineeringFeatureController
             'pull_request' => $pullRequest,
             'final_report' => is_array($finalReport) ? $finalReport : null,
         ];
+    }
+
+    /** @return list<array{key:string,label:string,status:string}> */
+    private function stagePipeline(array $data, string $state, string $workflowStatus): array
+    {
+        $order = [
+            'ANALYSIS' => 'Analysis',
+            'QA_PLANNING' => 'QA Plan',
+            'ARCHITECTURE_PENDING' => 'Architecture',
+            'DEVELOPMENT_RUNNING' => 'Development',
+            'REVIEW_PENDING' => 'Review',
+            'QA_PENDING' => 'QA',
+        ];
+        $keys = array_keys($order);
+
+        if ($state === 'DONE' || $workflowStatus === 'COMPLETED' || $state === 'READY_FOR_HUMAN_APPROVAL') {
+            return array_map(
+                static fn (string $key, string $label): array => ['key' => $key, 'label' => $label, 'status' => 'COMPLETED'],
+                $keys,
+                array_values($order),
+            );
+        }
+
+        $effectiveState = $state;
+        if (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
+            $resume = trim((string) ($data['workflow']['resume_state'] ?? ''));
+            if ($resume !== '') $effectiveState = $resume;
+        }
+        if (in_array($state, ['CANCELLED','FAILED'], true) || in_array($workflowStatus, ['CANCELLED','FAILED'], true)) {
+            $transitions = is_array($data['transitions'] ?? null) ? $data['transitions'] : [];
+            $last = $transitions !== [] ? $transitions[array_key_last($transitions)] : null;
+            $from = is_array($last) ? trim((string) ($last['from'] ?? '')) : '';
+            if (array_key_exists($from, $order)) $effectiveState = $from;
+        }
+
+        $currentIndex = array_search($effectiveState, $keys, true);
+        if ($currentIndex === false) $currentIndex = -1;
+
+        $result = [];
+        foreach ($keys as $index => $key) {
+            $status = 'NOT_REACHED';
+            if ($currentIndex >= 0 && $index < $currentIndex) $status = 'COMPLETED';
+            if ($index === $currentIndex) {
+                $status = match (true) {
+                    in_array($state, ['CANCELLED'], true) || $workflowStatus === 'CANCELLED' => 'CANCELLED',
+                    in_array($state, ['FAILED'], true) || $workflowStatus === 'FAILED' => 'FAILED',
+                    in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true) => 'WAITING',
+                    default => 'RUNNING',
+                };
+            }
+            $result[] = ['key' => $key, 'label' => $order[$key], 'status' => $status];
+        }
+        return $result;
     }
 
     private function runtimeHealth(string $status, string $state, ?string $lastActivityAt): string
