@@ -19,6 +19,7 @@ final class EngineeringDomainAgentSchemas
             AgentRole::QA => self::qa(),
             AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
             AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
+            AgentRole::DOCUMENTATION => self::documentation(),
             default => throw new InvalidArgumentException('Agent role does not support Domain Development mode: '.$role->value),
         };
     }
@@ -356,6 +357,35 @@ final class EngineeringDomainAgentSchemas
             'additionalProperties' => false,
         ];
     }
+
+    /** @return array<string,mixed> */
+    private static function documentation(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','target_locale','documents','notes'],
+            'properties' => [
+                'status' => ['type' => 'string', 'enum' => ['TRANSLATED','BLOCKED','FAILED']],
+                'target_locale' => ['type' => 'string', 'minLength' => 2],
+                'documents' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['audience','title','content_markdown'],
+                        'properties' => [
+                            'audience' => ['type' => 'string', 'enum' => ['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER']],
+                            'title' => ['type' => 'string', 'minLength' => 1],
+                            'content_markdown' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 200000],
+                        ],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'notes' => ['type' => 'array', 'items' => ['type' => 'string']],
+            ],
+            'additionalProperties' => false,
+        ];
+    }
+
 
     /** @return array<string,mixed> */
     private static function integrationRelease(): array
