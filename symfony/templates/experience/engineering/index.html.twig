@@ -111,11 +111,11 @@
                     <tr>
                         <th>Завдання</th>
                         <th>Стан</th>
-                        <th>Health</th>
+                        <th>Стан runtime</th>
                         <th>Етап</th>
                         <th>Агент</th>
-                        <th>Tasks</th>
-                        <th>Runs</th>
+                        <th>Задачі</th>
+                        <th>Запуски</th>
                         <th>Використання</th>
                         <th>Активність</th>
                         <th>Черга</th>
@@ -131,7 +131,7 @@
                         <tr data-engineering-feature-row="{{ feature.id }}">
                             <td class="engineering-table__title">
                                 <a href="/admin/engineering/{{ feature.id }}"><strong>{{ feature.title }}</strong></a>
-                                <span class="engineering-table__meta">{{ feature.priority }}{% if feature.workflow_type %} · {{ feature.workflow_type == 'ENGINEERING_IMMEDIATE' ? 'поза чергою' : 'черга' }}{% endif %}</span>
+                                <span class="engineering-table__meta">{{ feature.priority }}{% if feature.workflow_type %} · {{ feature.workflow_type == 'ENGINEERING_IMMEDIATE' ? 'негайний запуск' : 'черга' }}{% endif %}</span>
                             </td>
                             <td><span class="cos-badge">{{ feature.display_status }}</span></td>
                             <td>
@@ -155,11 +155,11 @@
                                         {% if usage.cost_amount is not null %}
                                             {{ usage.cost_currency|default('USD') }} {{ usage.cost_amount|number_format(4, '.', '') }}
                                         {% else %}
-                                            cost unavailable
+                                            вартість невідома
                                         {% endif %}
                                     </span>
                                 {% else %}
-                                    <span class="engineering-muted">usage unavailable</span>
+                                    <span class="engineering-muted">облік недоступний</span>
                                 {% endif %}
                             </td>
                             <td>{{ feature.workflow_last_activity_at|default(feature.updated_at|default('—')) }}</td>
