@@ -21,6 +21,7 @@ final readonly class EngineeringDomainAgentService
         private AgentRuntimeInterface $runtime,
         private EngineeringDomainStoreInterface $domains,
         private EngineeringAgentDefinitionFactory $definitions,
+        private EngineeringDomainAgentOutputValidator $validator,
     ) {}
 
     /** @param array<string,mixed> $inputs @return array<string,mixed> */
@@ -78,6 +79,8 @@ final readonly class EngineeringDomainAgentService
                 $this->domains->recordAgentRun($domainId, $role->value, 'FAILED', $runCorrelationId, $output?->provider, $output?->model, $output?->usage ?? [], $error);
                 throw new RuntimeException($error);
             }
+
+            $this->validator->validate($role, $output->structured, isset($inputs['phase']) && is_string($inputs['phase']) ? $inputs['phase'] : null);
 
             $this->domains->recordAgentRun(
                 $domainId,
