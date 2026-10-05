@@ -19,6 +19,7 @@ final readonly class MarketDataQualityPolicy extends ValueObject
         public int $maximumJumpBps,
         public int $maximumReferenceDeviationBps,
         public bool $consecutiveSequenceRequired=false,
+        public array $sequencePolicyByType=[],
     ){
         if($this->maximumProcessingLatencyMilliseconds<0||$this->maximumClockDriftMilliseconds<0){
             throw new InvalidArgumentException('Latency/clock thresholds cannot be negative.');
@@ -30,6 +31,10 @@ final readonly class MarketDataQualityPolicy extends ValueObject
             MarketEventType::from($type);
             if($value<1)throw new InvalidArgumentException('Maximum market-data age must be positive.');
         }
+        foreach($this->sequencePolicyByType as $type=>$policy){
+            MarketEventType::from($type);
+            if(!$policy instanceof MarketSequencePolicy)throw new InvalidArgumentException('Sequence policy must be typed.');
+        }
     }
 
     public function maximumAgeFor(MarketEventType $type):int
@@ -37,5 +42,15 @@ final readonly class MarketDataQualityPolicy extends ValueObject
         $value=$this->maximumAgeMillisecondsByType[$type->value]??null;
         if(!is_int($value)||$value<1)throw new InvalidArgumentException('No freshness threshold configured for '.$type->value.'.');
         return $value;
+    }
+
+    public function sequencePolicyFor(MarketEventType $type):MarketSequencePolicy
+    {
+        $policy=$this->sequencePolicyByType[$type->value]??null;
+        if($policy instanceof MarketSequencePolicy)return $policy;
+        if($this->consecutiveSequenceRequired&&in_array($type,[MarketEventType::OrderBookSnapshot,MarketEventType::OrderBookDelta],true)){
+            return MarketSequencePolicy::Contiguous;
+        }
+        return MarketSequencePolicy::Monotonic;
     }
 }

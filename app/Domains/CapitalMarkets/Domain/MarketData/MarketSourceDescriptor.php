@@ -26,6 +26,7 @@ final readonly class MarketSourceDescriptor extends ValueObject
         public ReconnectPolicy $reconnectPolicy,
         public MarketHealthPolicy $healthPolicy,
         public array $metadata=[],
+        public string $licenseProfile='UNSPECIFIED',
     ){
         if($this->adapterType===''||trim($this->adapterType)!==$this->adapterType||mb_strlen($this->adapterType)>120){
             throw new InvalidArgumentException('Market source adapter type is invalid.');
@@ -40,6 +41,9 @@ final readonly class MarketSourceDescriptor extends ValueObject
         }
         if($this->credentialsReference!==null&&($this->credentialsReference===''||trim($this->credentialsReference)!==$this->credentialsReference||mb_strlen($this->credentialsReference)>190)){
             throw new InvalidArgumentException('Market source credentials reference is invalid.');
+        }
+        if($this->licenseProfile===''||trim($this->licenseProfile)!==$this->licenseProfile||mb_strlen($this->licenseProfile)>120){
+            throw new InvalidArgumentException('Market source license profile is invalid.');
         }
         InstrumentDescriptor::assertMetadata($this->metadata);
     }
