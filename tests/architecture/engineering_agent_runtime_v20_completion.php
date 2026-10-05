@@ -14,6 +14,8 @@ $qaExecutor = (string) file_get_contents($root.'/symfony/src/Engineering/Applica
 $runner = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/EngineeringAgentRunner.php');
 $capabilities = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/AgentCapabilityRegistry.php');
 $assignment = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/EngineeringAgentAssignmentService.php');
+$policy = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/EngineeringPolicyEngine.php');
+$toolPolicy = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/EngineeringAgentToolPermissionPolicy.php');
 $specialists = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringSpecialistStageExecutor.php');
 $invalidation = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArtifactInvalidationService.php');
 $domainRelease = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainReleaseService.php');
@@ -46,8 +48,11 @@ foreach (['ArtifactType::FEATURE_SPEC','AgentRole::PRODUCT_REQUIREMENTS','create
 if (!str_contains($qaPlanner, 'executePlanning') || !str_contains($qaExecutor, 'executeVerification')) {
     throw new RuntimeException('QA Planner and QA Executor are not physically separated entrypoints.');
 }
-foreach (['AgentCapabilityRegistry','Legacy QA role cannot be assigned'] as $needle) {
-    if (!str_contains($capabilities.$assignment, $needle)) throw new RuntimeException('Agent assignment policy missing '.$needle);
+foreach (['AgentCapabilityRegistry','EngineeringPolicyEngine','Legacy QA role is forbidden'] as $needle) {
+    if (!str_contains($capabilities.$assignment.$policy, $needle)) throw new RuntimeException('Agent assignment policy missing '.$needle);
+}
+foreach (['assertRepositoryMutationAllowed','QA Executor','docs_only'] as $needle) {
+    if (!str_contains($toolPolicy, $needle)) throw new RuntimeException('Agent tool permission policy missing '.$needle);
 }
 foreach ([
     'SECURITY_REVIEW_REPORT','MIGRATION_REVIEW_REPORT','PERFORMANCE_REVIEW_REPORT',
