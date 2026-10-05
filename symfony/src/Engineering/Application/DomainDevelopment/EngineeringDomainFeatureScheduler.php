@@ -104,6 +104,16 @@ final readonly class EngineeringDomainFeatureScheduler
             return $kind !== 0 ? $kind : strcmp((string) $fa['priority'], (string) $fb['priority']);
         });
 
+        $requiredBudgetFeatures = array_values(array_filter(
+            $domainFeatures,
+            static fn (array $item): bool => (bool) ($item['required'] ?? true),
+        ));
+        $budgetDivisor = max(1, count($requiredBudgetFeatures) > 0 ? count($requiredBudgetFeatures) : count($domainFeatures));
+        $featureTokenBudget = max(1000, (int) floor(((int) ($domain['token_budget'] ?? 1000000)) / $budgetDivisor));
+        $featureCostBudget = max(0.0, ((float) ($domain['cost_budget'] ?? 25.0)) / $budgetDivisor);
+        $agentRunTokenBudget = max(500, (int) floor($featureTokenBudget / 16));
+        $agentRunCostBudget = max(0.000001, $featureCostBudget / 16);
+
         $scheduled = [];
         $humanGateRequested = false;
         foreach ($readyKeys as $featureKey) {
@@ -334,6 +344,14 @@ final readonly class EngineeringDomainFeatureScheduler
                             'architecture_version' => $architectureVersion,
                             'revalidation_of' => $isRevalidation && $previousEngineeringFeatureId !== '' ? $previousEngineeringFeatureId : null,
                             'revalidation_reason' => $isRevalidation ? ($feature['status_reason'] ?? 'Domain architecture/contract drift.') : null,
+                            'resource_budget' => [
+                                'domain_id' => $domainId,
+                                'feature_token_budget' => $featureTokenBudget,
+                                'feature_cost_budget' => round($featureCostBudget, 6),
+                                'agent_run_token_budget' => $agentRunTokenBudget,
+                                'agent_run_cost_budget' => round($agentRunCostBudget, 6),
+                                'context_budget' => (int) ($domain['context_budget'] ?? 120000),
+                            ],
                         ],
                         constraints: [
                             'Follow DOMAIN_CONTEXT_PACK Architecture Constitution.',
