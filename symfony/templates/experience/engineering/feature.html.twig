@@ -38,11 +38,14 @@
         .engineering-details summary{cursor:pointer;font-weight:700}
         .engineering-requirements{white-space:pre-wrap;margin-top:10px;max-height:420px;overflow:auto}
         .engineering-agent-output{white-space:pre-wrap;max-height:240px;overflow:auto;font-size:.78rem}
+        .engineering-role-list{display:grid;gap:3px;margin-bottom:10px}
+        .engineering-role-row{display:grid;grid-template-columns:minmax(110px,1fr) 42px 58px minmax(90px,auto);gap:7px;align-items:center;padding:4px 0;border-bottom:1px solid var(--cos-border,#edf0f3);font-size:.76rem}
+        .engineering-role-row:last-child{border-bottom:0}
         .engineering-stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
         .engineering-stage{padding:8px 10px;border:1px solid var(--cos-border,#e1e5ea);border-radius:9px;background:var(--cos-surface,#fff);min-width:0}
         .engineering-stage strong{display:block;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .engineering-stage span{font-size:.7rem;color:var(--cos-text-secondary,#667085)}
-        @media(max-width:1100px){.engineering-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}.engineering-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
+        @media(max-width:1350px){.engineering-summary{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:900px){.engineering-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.engineering-grid{grid-template-columns:1fr}.engineering-stages{grid-template-columns:repeat(3,minmax(0,1fr))}}
     </style>
 
     <div class="engineering-head">
