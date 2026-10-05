@@ -64,6 +64,30 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         return $record instanceof WorkflowExecutionRecord ? $record->id() : null;
     }
 
+    public function view(string $workflowId): array
+    {
+        $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);
+        if (!$record instanceof WorkflowExecutionRecord) {
+            throw new RuntimeException('Engineering workflow not found: '.$workflowId);
+        }
+
+        return [
+            'id' => $record->id(),
+            'feature_id' => $record->featureId(),
+            'workflow_type' => $record->workflowType(),
+            'state' => $record->currentState(),
+            'status' => $record->status(),
+            'trace_id' => $record->traceId(),
+            'version' => $record->version(),
+            'current_task_id' => $record->currentTaskId(),
+            'current_agent_run_id' => $record->currentAgentRunId(),
+            'resume_state' => $record->resumeState(),
+            'started_at' => $record->startedAt()->format(DATE_ATOM),
+            'last_activity_at' => $record->lastActivityAt()->format(DATE_ATOM),
+            'finished_at' => $record->finishedAt()?->format(DATE_ATOM),
+        ];
+    }
+
     public function markImmediate(string $workflowId): void
     {
         $record = $this->entityManager->find(WorkflowExecutionRecord::class, $workflowId);

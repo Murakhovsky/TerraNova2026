@@ -91,8 +91,18 @@ final readonly class DoctrineEngineeringTaskStore implements EngineeringTaskStor
             static fn (EngineeringTaskRecord $record): array => [
                 'id' => $record->id(),
                 'external_key' => $record->externalKey(),
+                'type' => $record->type(),
+                'title' => $record->title(),
+                'description' => $record->description(),
                 'status' => $record->status(),
                 'assigned_role' => $record->assignedRole(),
+                'dependencies' => $record->dependencies(),
+                'acceptance_criteria' => $record->acceptanceCriteria(),
+                'attempt' => $record->attempt(),
+                'max_attempts' => $record->maxAttempts(),
+                'result' => $record->result(),
+                'created_at' => $record->createdAt()->format(DATE_ATOM),
+                'updated_at' => $record->updatedAt()->format(DATE_ATOM),
             ],
             $records,
         );

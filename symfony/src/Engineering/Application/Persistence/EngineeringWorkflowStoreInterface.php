@@ -11,6 +11,10 @@ interface EngineeringWorkflowStoreInterface
     public function create(WorkflowExecution $workflow, string $workflowType = 'ENGINEERING'): void;
     public function activeIdForFeature(string $featureId): ?string;
     public function latestIdForFeature(string $featureId): ?string;
+
+    /** @return array<string,mixed> */
+    public function view(string $workflowId): array;
+
     public function markImmediate(string $workflowId): void;
 
     /** @return list<array{feature_id:string,workflow_id:string,state:string,priority:string,title:string,feature_status:string,started_at:string}> */

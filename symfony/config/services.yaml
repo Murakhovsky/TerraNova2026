@@ -1355,6 +1355,9 @@ services:
   App\Engineering\Application\Audit\EngineeringAuditQueryInterface:
     alias: App\Engineering\Infrastructure\Audit\DoctrineEngineeringAuditQuery
 
+  App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface:
+    alias: App\Engineering\Infrastructure\Observability\DoctrineEngineeringObservabilityReadModel
+
   App\Engineering\Application\Lock\EngineeringWorkflowLockInterface:
     alias: App\Engineering\Infrastructure\Lock\MySqlEngineeringWorkflowLock
 

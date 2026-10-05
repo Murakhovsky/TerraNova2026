@@ -3,11 +3,13 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Service;
 
+use App\Engineering\Application\Audit\EngineeringAuditQueryInterface;
+use App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
-use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFindingStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringTaskStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Artifact\ArtifactType;
@@ -22,26 +24,15 @@ final readonly class EngineeringStatusService
         private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringFindingStoreInterface $findings,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
+        private EngineeringAuditQueryInterface $audit,
+        private EngineeringObservabilityReadModelInterface $observability,
     ) {}
 
     public function status(string $featureId): array
     {
         $feature = $this->features->view($featureId);
         $workflowId = $this->workflows->latestIdForFeature($featureId);
-        $workflow = null;
-        if ($workflowId !== null) {
-            $current = $this->workflows->get($workflowId);
-            $workflow = [
-                'id' => $current->id(),
-                'state' => $current->currentState()->value,
-                'resume_state' => $current->resumeState()?->value,
-                'trace_id' => $current->traceId(),
-                'version' => $current->version(),
-                'started_at' => $current->startedAt()->format(DATE_ATOM),
-                'last_activity_at' => $current->lastActivityAt()->format(DATE_ATOM),
-                'finished_at' => $current->finishedAt()?->format(DATE_ATOM),
-            ];
-        }
+        $workflow = $workflowId !== null ? $this->workflows->view($workflowId) : null;
 
         $artifactViews = [];
         foreach (ArtifactType::cases() as $type) {
@@ -58,6 +49,9 @@ final readonly class EngineeringStatusService
             'artifacts' => $artifactViews,
             'findings' => $this->findings->forFeature($featureId),
             'open_human_decisions' => $this->humanDecisions->openForFeature($featureId),
+            'transitions' => $this->audit->forFeature($featureId),
+            'usage' => $this->observability->usageForFeature($featureId),
+            'llm_invocations' => $this->observability->invocationsForFeature($featureId),
         ];
     }
 }

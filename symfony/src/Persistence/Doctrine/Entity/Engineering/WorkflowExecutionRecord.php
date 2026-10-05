@@ -55,6 +55,8 @@ class WorkflowExecutionRecord
     public function lastActivityAt(): DateTimeImmutable { return $this->lastActivityAt; }
     public function finishedAt(): ?DateTimeImmutable { return $this->finishedAt; }
     public function resumeState(): ?string { return $this->resumeState; }
+    public function currentTaskId(): ?string { return $this->currentTaskId; }
+    public function currentAgentRunId(): ?string { return $this->currentAgentRunId; }
 
     public function syncState(string $currentState, ?string $resumeState, ?DateTimeImmutable $finishedAt, string $status): void
     {
