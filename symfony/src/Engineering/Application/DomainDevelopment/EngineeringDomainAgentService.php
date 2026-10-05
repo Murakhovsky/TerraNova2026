@@ -5,6 +5,8 @@ namespace App\Engineering\Application\DomainDevelopment;
 
 use App\Engineering\Application\Agent\EngineeringAgentDefinitionFactory;
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
+use App\Engineering\Application\Policy\AgentCapabilityRegistry;
+use App\Engineering\Application\Policy\RuntimeCapabilityRegistry;
 use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Workflow\EngineeringId;
@@ -24,6 +26,8 @@ final readonly class EngineeringDomainAgentService
         private EngineeringAgentDefinitionFactory $definitions,
         private EngineeringDomainAgentOutputValidator $validator,
         private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
+        private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
+        private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
     ) {}
 
     /** @param array<string,mixed> $inputs @return array<string,mixed> */
@@ -62,6 +66,8 @@ final readonly class EngineeringDomainAgentService
             input: $this->secrets->sanitize([
                 'question' => $objective,
                 'inputs' => $inputs,
+                'agent_capabilities' => $this->agentCapabilities->forRole($role),
+                'runtime_capabilities' => $this->runtimeCapabilities->forRuntime('EngineeringRuntime'),
                 'constraints' => [
                     'Operate only inside Engineering Domain Development Runtime.',
                     'Do not perform business operations of the target domain.',
