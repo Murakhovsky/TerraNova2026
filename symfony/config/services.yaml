@@ -40,6 +40,10 @@ parameters:
   env(COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD): '3'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
+  env(COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED): '1'
+  env(COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES): '2'
+  env(COS_ENGINEERING_RUNTIME_STALE_SECONDS): '600'
+  env(COS_ENGINEERING_RUNTIME_STALLED_SECONDS): '1800'
   env(MESSENGER_ENGINEERING_IMMEDIATE_TRANSPORT_DSN): 'redis://redis:6379/cos_engineering_immediate'
   env(COS_ENGINEERING_MANAGER_MODEL): ''
   env(COS_ENGINEERING_ARCHITECT_MODEL): ''
@@ -299,6 +303,8 @@ services:
       $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
       $engineeringAutonomyEnabled: '%env(bool:COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED)%'
       $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $engineeringRuntimeWatchdogEnabled: '%env(bool:COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED)%'
+      $engineeringRuntimeWatchdogIntervalMinutes: '%env(int:COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -1408,6 +1414,12 @@ services:
   App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommandHandler:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Application\Engineering\Command\WatchEngineeringRuntimeCommandHandler:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+      $staleAfterSeconds: '%env(int:COS_ENGINEERING_RUNTIME_STALE_SECONDS)%'
+      $stalledAfterSeconds: '%env(int:COS_ENGINEERING_RUNTIME_STALLED_SECONDS)%'
 
   App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
     arguments:
