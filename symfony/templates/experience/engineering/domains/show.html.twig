@@ -136,6 +136,9 @@
         <div class="dw-card"><small>Developers</small><strong>{{ domain.max_parallel_developers }}</strong></div>
         <div class="dw-card"><small>Reviews</small><strong>{{ domain.max_parallel_reviews }}</strong></div>
         <div class="dw-card"><small>QA</small><strong>{{ domain.max_parallel_qa }}</strong></div>
+        <div class="dw-card"><small>Tokens</small><strong>{{ engineeringDomain.budget_usage.total_tokens|default(engineeringDomain.budget_usage.tokens|default(0)) }} / {{ domain.token_budget }}</strong></div>
+        <div class="dw-card"><small>Cost</small><strong>$ {{ engineeringDomain.budget_usage.cost|default(0)|number_format(4, '.', ',') }} / {{ domain.cost_budget }}</strong></div>
+        <div class="dw-card"><small>Retries / cycles</small><strong>{{ domain.max_feature_retries }} / {{ domain.max_domain_integration_cycles }}</strong></div>
     </div>
 
     {% set tabs = [
@@ -144,6 +147,7 @@
         {'key':'graph','label':'Dependency graph · ' ~ engineeringDomain.dependencies|length},
         {'key':'contracts','label':'Contracts · ' ~ engineeringDomain.contracts|length},
         {'key':'artifacts','label':'Artifacts · ' ~ engineeringDomain.artifacts|length},
+        {'key':'documentation','label':'Documentation'},
         {'key':'executions','label':'Executions · ' ~ engineeringDomain.agent_runs|length ~ ' / events ' ~ engineeringDomain.runtime_events|default([])|length},
         {'key':'qa','label':'QA'},
         {'key':'release','label':'Release'}
@@ -285,6 +289,29 @@
                     {% endfor %}
                 </div>
             </section>
+        </section>
+
+        <section id="engineering-domain-tabs-panel-documentation" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-documentation" data-tabs-target="panel" data-tab-key="documentation" hidden>
+            <div class="dw-grid">
+                {% for title, artifactType in {
+                    'Public / Business':'DOMAIN_DOCUMENTATION_PUBLIC',
+                    'Integrator':'DOMAIN_DOCUMENTATION_INTEGRATOR',
+                    'Developer':'DOMAIN_DOCUMENTATION_DEVELOPER',
+                    'Translations':'DOMAIN_DOCUMENTATION_TRANSLATIONS'
+                } %}
+                    <section class="dw-panel">
+                        <div class="dw-panel__head"><h2>{{ title }}</h2><span class="dw-muted">{{ artifactType }}</span></div>
+                        <div class="dw-panel__body">
+                            {% set docArtifact = artifactByType[artifactType]|default(null) %}
+                            {% if docArtifact %}
+                                <div class="dw-json">{{ docArtifact.content|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                            {% else %}
+                                <span class="dw-muted">Генерується перед Integration &amp; Release gate.</span>
+                            {% endif %}
+                        </div>
+                    </section>
+                {% endfor %}
+            </div>
         </section>
 
         <section id="engineering-domain-tabs-panel-executions" role="tabpanel" aria-labelledby="engineering-domain-tabs-tab-executions" data-tabs-target="panel" data-tab-key="executions" hidden>
