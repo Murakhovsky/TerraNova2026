@@ -206,7 +206,7 @@ Retryable помилка LLM provider може привести до configured 
 
 Інженерна автоматизація використовує той самий Kernel Agent runtime, а не окремий паралельний фреймворк для агентів.
 
-Обов’язковий шлях V0.1:
+Feature-level шлях V2.0:
 
 ```text
 Engineering Manager
@@ -329,3 +329,48 @@ active stage
 `READY_FOR_HUMAN_APPROVAL` вимагає approved Architecture Gate, завершеної Development, Reviewer approval, QA PASS, CI SUCCESS, перевірених blocking Acceptance Criteria, відсутності open critical findings, blocking human decisions і незавершених engineering tasks.
 
 Merge та production deploy у V0.1 залишаються human-only.
+
+
+## Engineering Domain Development Runtime V2.0
+
+Для великих bounded context користувач не створює вручну десятки Feature workflows. У `/admin/engineering/domains` він створює Domain Initiative, задає goal через Master Specification і за потреби змінює integration branch та concurrency limits. Якщо repository override порожній, Runtime використовує canonical Engineering repository із конфігурації.
+
+Керований шлях:
+
+~~~text
+Create Domain
+→ Engineering Manager
+→ Product / Requirements
+→ Domain Specification + Domain Acceptance Criteria
+→ QA Planner
+→ Principal Architect
+→ Domain Architecture + Architecture Constitution
+→ Capability / Feature decomposition
+→ dependency-driven Feature workflows
+→ integration
+→ QA Executor
+→ Integration & Release
+→ Domain Release Manifest
+→ human merge / release approval
+~~~
+
+Human Control Plane залишається на рівні goal, scope, architecture exceptions, risk і release. Scheduler сам визначає готові Feature за dependency graph, резервує repository paths, створює child Engineering workflows та продовжує їх до Domain integration.
+
+### Concurrency
+
+Domain має чотири незалежні межі:
+
+~~~text
+max_parallel_features
+max_parallel_developers
+max_parallel_reviews
+max_parallel_qa
+~~~
+
+Default значення приходять із `COS_ENGINEERING_DOMAIN_MAX_PARALLEL_*`. `max_parallel_features` обмежує кількість одночасно активних child workflows, а stage limits застосовуються безпосередньо перед Developer, Reviewer і QA AgentRun. Очікування через concurrency gate не змінює deterministic workflow state і може бути безпечно продовжене scheduler-ом.
+
+### Orchestration event ledger
+
+Domain Runtime зберігає idempotent orchestration events із correlation id, optional feature key та evidence payload. Канонічний lifecycle включає `DomainCreated`, `DomainSpecificationReady`, `DomainDecompositionReady`, `DomainArchitectureApproved`, `CapabilityReady`, `FeatureReady`, `FeatureStarted`, `FeatureCompleted`, `FeatureBlocked`, `ContractChanged`, `ArchitectureChanged`, `DomainIntegrationStarted`, `DomainIntegrationCompleted`, `DomainQaStarted`, `DomainQaCompleted`, `DomainReleaseReady`.
+
+Workspace показує event ledger поряд з Domain Agent executions, тому стан Domain можна відновити не з декоративного status badge, а з persisted runtime evidence.
