@@ -175,6 +175,52 @@ final readonly class EngineeringDomainFeatureScheduler
             if (!$isRevalidation && $previousEngineeringFeatureId !== '') continue;
 
             if ($isRevalidation) {
+                $history = is_array($feature['engineering_feature_history'] ?? null) ? $feature['engineering_feature_history'] : [];
+                $retryLimit = $this->authorizedFeatureRetries(
+                    $domainId,
+                    $featureKey,
+                    max(0, (int) ($domain['max_feature_retries'] ?? 3)),
+                );
+                if (count($history) >= $retryLimit) {
+                    $decisionId = $this->humanGates->request(
+                        $domainId,
+                        $organizationId,
+                        'FEATURE_RETRY_'.strtoupper($featureKey),
+                        EngineeringDomainStatus::IMPLEMENTATION,
+                        'Extend retry budget for '.$featureKey.'?',
+                        'Domain feature revalidation exhausted its configured retry budget.',
+                        [
+                            'feature_key' => $featureKey,
+                            'retry_count' => count($history),
+                            'authorized_retry_limit' => $retryLimit,
+                            'base_retry_limit' => (int) ($domain['max_feature_retries'] ?? 3),
+                            'status_reason' => $feature['status_reason'] ?? null,
+                        ],
+                        'DOMAIN_SCHEDULER',
+                        [
+                            ['id' => 'CONTINUE', 'description' => 'Authorize another retry window for this Domain feature.'],
+                            ['id' => 'CANCEL', 'description' => 'Do not retry this feature again.'],
+                        ],
+                    );
+                    $open = false;
+                    foreach ($this->domains->openHumanDecisions($domainId) as $decision) {
+                        if (($decision['id'] ?? null) === $decisionId) {
+                            $open = true;
+                            break;
+                        }
+                    }
+                    if ($open) {
+                        $humanGateRequested = true;
+                        $this->domains->updateFeatureStatus(
+                            $domainId,
+                            $featureKey,
+                            EngineeringDomainFeatureStatus::WAITING->value,
+                            'Waiting for feature retry budget approval.',
+                        );
+                        continue;
+                    }
+                }
+
                 $this->domains->releasePaths($domainId, $featureKey);
                 if ($previousEngineeringFeatureId !== '') {
                     try {
@@ -340,6 +386,20 @@ final readonly class EngineeringDomainFeatureScheduler
             'required_complete' => $allRequiredComplete,
             'features' => $domainFeatures,
         ];
+    }
+
+    private function authorizedFeatureRetries(string $domainId, string $featureKey, int $baseLimit): int
+    {
+        if ($baseLimit <= 0) return 0;
+        $extensions = 0;
+        $gateType = 'FEATURE_RETRY_'.strtoupper($featureKey);
+        foreach ($this->domains->humanDecisionHistory($domainId) as $decision) {
+            if (($decision['gate_type'] ?? null) !== $gateType) continue;
+            if (($decision['status'] ?? null) !== 'ANSWERED') continue;
+            $selected = strtoupper(trim((string) ($decision['answer']['selected_option'] ?? '')));
+            if (in_array($selected, ['APPROVE','CONTINUE'], true)) ++$extensions;
+        }
+        return $baseLimit * (1 + $extensions);
     }
 
     /** @param list<array<string,mixed>> $features */
