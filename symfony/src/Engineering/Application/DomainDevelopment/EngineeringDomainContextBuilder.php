@@ -32,6 +32,7 @@ final readonly class EngineeringDomainContextBuilder
         $constitution = $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ARCHITECTURE_CONSTITUTION->value);
         $specification = $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION->value);
         $qaPlan = $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_PLAN->value);
+        $repositoryIndex = $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::REPOSITORY_CONTEXT_INDEX->value);
 
         return [
             'domain_id' => $domainId,
@@ -58,6 +59,9 @@ final readonly class EngineeringDomainContextBuilder
                     : null,
                 'domain_qa_plan' => $qaPlan !== null
                     ? $this->compressor->artifact($qaPlan, ['release_blocking_checks','cross_feature_workflows','regression'])
+                    : null,
+                'repository_context_index' => $repositoryIndex !== null
+                    ? $this->compressor->repositoryIndex(is_array($repositoryIndex['content'] ?? null) ? $repositoryIndex['content'] : [])
                     : null,
             ],
             'feature' => $feature,
