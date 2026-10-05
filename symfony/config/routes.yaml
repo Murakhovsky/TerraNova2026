@@ -2201,6 +2201,12 @@ cos_web_engineering_domain_feature_flags:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_web_engineering_domain_human_decision:
+  path: /admin/engineering/domains/{id}/human-decision
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_domain:
   path: /admin/engineering/domains/{id}
   controller: App\Web\Engineering\EngineeringDomainWorkspaceController::show
@@ -2684,5 +2690,12 @@ cos_api_engineering_domain_approve:
 cos_api_engineering_domain_feature_flags:
   path: /api/engineering/domains/{id}/feature-flags
   controller: App\Http\Api\V1\Controller\EngineeringDomainController::featureFlags
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+
+cos_api_engineering_domain_human_decision:
+  path: /api/engineering/domains/{id}/human-decision
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::humanDecision
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
