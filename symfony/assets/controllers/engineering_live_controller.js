@@ -236,7 +236,7 @@ export default class extends Controller {
                 const message = document.createElement('span');
                 const parts = [
                     event?.title || '',
-                    event?.status || '',
+                    event?.status ? this.localizeStatus(event.status) : '',
                     event?.detail || '',
                 ].filter((value) => String(value).trim() !== '');
                 message.textContent = parts.join(' · ');
@@ -373,6 +373,13 @@ export default class extends Controller {
             COMPLETED: 'ЗАВЕРШЕНО',
             CANCELLED: 'СКАСОВАНО',
             FAILED: 'ПОМИЛКА',
+            ERROR: 'ПОМИЛКА',
+            STARTED: 'РОЗПОЧАТО',
+            APPROVED: 'СХВАЛЕНО',
+            PASS: 'ПРОЙДЕНО',
+            PASSED: 'ПРОЙДЕНО',
+            SUCCESS: 'УСПІШНО',
+            TIMED_OUT: 'ТАЙМАУТ',
             NOT_REACHED: 'ЩЕ НЕ РОЗПОЧАТО',
             ANALYSIS: 'АНАЛІЗ',
             QA_PLANNING: 'ПЛАН ПЕРЕВІРКИ',
