@@ -102,6 +102,7 @@ final readonly class EngineeringController
                     'workflow' => $status['workflow'] ?? null,
                     'tasks' => $status['tasks'] ?? [],
                     'agent_runs' => $status['agent_runs'] ?? [],
+                    'timeline_count' => count(is_array($status['timeline'] ?? null) ? $status['timeline'] : []),
                     'timeline' => array_slice(is_array($status['timeline'] ?? null) ? $status['timeline'] : [], 0, 150),
                     'execution_events' => array_slice(is_array($status['execution_events'] ?? null) ? $status['execution_events'] : [], 0, 150),
                 ],
