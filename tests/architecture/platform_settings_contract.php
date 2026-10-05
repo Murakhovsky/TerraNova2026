@@ -13,6 +13,7 @@ $controller = $read('symfony/src/Web/Administration/PlatformSettingsController.p
 $services = $read('symfony/config/services.yaml');
 $openai = $read('app/Infrastructure/Llm/OpenAiResponsesStructuredLlmClient.php');
 $factory = $read('symfony/src/Engineering/Application/Agent/EngineeringAgentDefinitionFactory.php');
+$modelCatalog = $read('app/Infrastructure/Llm/OpenAiModelCatalog.php');
 
 foreach (['cos_platform_settings','cos_platform_secrets','organization_id','namespace','setting_key','secret_key','ciphertext','nonce','encryption_version','key_id','updated_by'] as $needle) {
     if (!str_contains($migration, $needle)) throw new RuntimeException('Platform Settings migration missing '.$needle);
@@ -45,6 +46,11 @@ foreach ([
 }
 foreach (['<twig:CosToolbar', '<twig:CosFormSection', '<twig:CosStickyActions'] as $needle) {
     if (!str_contains($settingsIndex.$settingsLlm, $needle)) throw new RuntimeException('Platform Settings template pattern missing '.$needle);
+}
+foreach (['data-llm-model-catalog','gpt-6-astra','gpt-6.1-sol','gpt-6-luna','model_catalog','pricing_catalog_version'] as $needle) {
+    if (!str_contains($settingsLlm.$settingsController.$modelCatalog, $needle)) {
+        throw new RuntimeException('Platform Settings LLM catalog contract missing '.$needle);
+    }
 }
 
 echo "Platform Settings architecture contract passed.\n";

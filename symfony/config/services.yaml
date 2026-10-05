@@ -1283,9 +1283,15 @@ services:
   Kernel\Llm\LlmRouteResolverInterface:
     alias: Infrastructure\Llm\PlatformSettingsLlmRouteResolver
 
+  Infrastructure\Llm\OpenAiModelCatalog: ~
+
+  Kernel\Llm\LlmModelCatalogInterface:
+    alias: Infrastructure\Llm\OpenAiModelCatalog
+
   Infrastructure\Llm\PlatformSettingsLlmPricingResolver:
     arguments:
       $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
+      $modelCatalog: '@Kernel\Llm\LlmModelCatalogInterface'
       $fallbackCatalogJson: '%env(COS_LLM_PRICING_JSON)%'
 
   Kernel\Llm\LlmPricingResolverInterface:
