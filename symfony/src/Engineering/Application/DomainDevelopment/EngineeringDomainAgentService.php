@@ -119,7 +119,7 @@ final readonly class EngineeringDomainAgentService
                 'semantic_retry' => $semanticRetry,
             ]);
             $runCorrelationId = mb_substr(
-                rtrim($correlationId, ':').':domain-agent:'.$runId.':attempt-'.($technicalRetry + 1),
+                rtrim($correlationId, ':').':domain-agent:'.$runId.':technical-'.($technicalRetry + 1).':semantic-'.($semanticRetry + 1),
                 0,
                 128,
             );
@@ -138,6 +138,7 @@ final readonly class EngineeringDomainAgentService
                     'engineering_role' => $role->value,
                     'engineering_mode' => 'DOMAIN_DEVELOPMENT',
                     'technical_retry' => $technicalRetry,
+                    'semantic_retry' => $semanticRetry,
                 ],
             );
 
