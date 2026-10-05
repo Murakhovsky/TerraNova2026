@@ -104,6 +104,11 @@ interface EngineeringDomainStoreInterface
         array $payload,
         string $correlationId,
         string $dedupeKey,
+        string $actor = 'SYSTEM',
+        ?string $reason = null,
+        ?string $artifactId = null,
+        ?string $repositoryRevision = null,
+        ?string $result = null,
     ): void;
 
     /** @return list<array<string,mixed>> */
