@@ -200,6 +200,7 @@ final readonly class EngineeringDomainPlanner
         $architectCapabilities = is_array($architect['capabilities'] ?? null) && $architect['capabilities'] !== []
             ? $architect['capabilities']
             : $capabilities;
+        $architectCapabilities = $this->mergeCapabilityRequirements($architectCapabilities, $capabilities);
         $this->graph->assertValid($features, $dependencies);
 
         $architecture = is_array($architect['domain_architecture'] ?? null) ? $architect['domain_architecture'] : [];
@@ -338,6 +339,37 @@ final readonly class EngineeringDomainPlanner
             'agent_runs' => $this->domains->agentRuns($domainId),
             'runtime_events' => $this->domains->runtimeEvents($domainId),
         ];
+    }
+
+    /** @param list<array<string,mixed>> $architectCapabilities @param list<array<string,mixed>> $requirementsCapabilities @return list<array<string,mixed>> */
+    private function mergeCapabilityRequirements(array $architectCapabilities, array $requirementsCapabilities): array
+    {
+        $requirements = [];
+        foreach ($requirementsCapabilities as $capability) {
+            if (!is_array($capability)) continue;
+            $key = trim((string) ($capability['key'] ?? ''));
+            if ($key !== '') $requirements[$key] = $capability;
+        }
+
+        $merged = [];
+        foreach ($architectCapabilities as $capability) {
+            if (!is_array($capability)) continue;
+            $key = trim((string) ($capability['key'] ?? ''));
+            if ($key === '') continue;
+            $source = $requirements[$key] ?? [];
+            $capability['acceptance_criteria'] = is_array($source['acceptance_criteria'] ?? null)
+                ? array_values($source['acceptance_criteria'])
+                : [];
+            $capability['required'] = array_key_exists('required', $source)
+                ? (bool) $source['required']
+                : (bool) ($capability['required'] ?? true);
+            $capability['depends_on'] = is_array($source['depends_on'] ?? null)
+                ? array_values($source['depends_on'])
+                : (is_array($capability['depends_on'] ?? null) ? array_values($capability['depends_on']) : []);
+            $merged[] = $capability;
+        }
+
+        return $merged;
     }
 
     private function requiredArtifact(string $domainId, EngineeringDomainArtifactType $type): array
