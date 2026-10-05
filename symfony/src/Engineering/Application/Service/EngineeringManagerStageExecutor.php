@@ -46,23 +46,35 @@ final readonly class EngineeringManagerStageExecutor
         int $logicalAttempt,
     ): WorkflowDirective {
         $domainContext = $this->domainContext($request);
-        $plan = $this->journal->around(
-            $featureId,
-            $workflowId,
-            'REPOSITORY',
-            'repository.discover_context',
-            'Discover repository context for Engineering Manager',
-            $correlationId,
-            fn () => $this->manager->prepare($featureId, $request, $logicalAttempt),
-            details: static fn ($plan): array => [
-                'repository_revision' => $plan->contextMap->repositoryRevision,
-                'files' => array_values(array_filter(array_map(
-                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
-                    $plan->contextMap->files,
-                ))),
-                'agent_role' => $plan->task->role->value,
-            ],
-        );
+        $this->workflows->touchRuntime($workflowId);
+
+        try {
+            $plan = $this->journal->around(
+                $featureId,
+                $workflowId,
+                'REPOSITORY',
+                'repository.discover_context',
+                'Discover repository context for Engineering Manager',
+                $correlationId,
+                fn () => $this->manager->prepare($featureId, $request, $logicalAttempt),
+                details: static fn ($plan): array => [
+                    'repository_revision' => $plan->contextMap->repositoryRevision,
+                    'files' => array_values(array_filter(array_map(
+                        static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                        $plan->contextMap->files,
+                    ))),
+                    'agent_role' => $plan->task->role->value,
+                ],
+            );
+            $this->workflows->touchRuntime($workflowId);
+        } catch (\Throwable $error) {
+            $this->workflows->markRuntimeIssue(
+                $workflowId,
+                'STALLED',
+                'Repository discovery failed before AgentRun start: '.mb_substr($error->getMessage(), 0, 500),
+            );
+            throw $error;
+        }
 
         $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $plan, $correlationId): string {
             $workflow = $this->workflows->get($workflowId);
