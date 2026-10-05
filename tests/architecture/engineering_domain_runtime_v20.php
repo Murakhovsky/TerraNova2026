@@ -18,6 +18,9 @@ $requiredFiles = [
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainContextCompressor.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationTranslationService.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAnalyticsService.php',
+    'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDependencyEditor.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php',
     'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainHumanGateService.php',
     'symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php',
@@ -60,6 +63,9 @@ $budgetGuard = (string) file_get_contents($root.'/symfony/src/Engineering/Applic
 $compressor = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainContextCompressor.php');
 $repositoryIndex = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php');
 $documentation = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php');
+$documentationTranslation = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationTranslationService.php');
+$analytics = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainAnalyticsService.php');
+$dependencyEditor = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDependencyEditor.php');
 $artifactGraph = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php');
 $humanGates = (string) file_get_contents($root.'/symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainHumanGateService.php');
 $policy = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php');
@@ -232,6 +238,22 @@ foreach (['architecture_tests','domain_isolation','contract_cases','migration_ca
 }
 foreach (['/human-decision','/feature-flags'] as $needle) {
     if (!str_contains($routes, $needle)) throw new RuntimeException('Domain Human/activation control route missing '.$needle);
+}
+
+
+foreach (['AgentRole::DOCUMENTATION','target_locale','documents'] as $needle) {
+    if (!str_contains($documentationTranslation.$domainValidator, $needle)) {
+        throw new RuntimeException('Automatic documentation translation missing '.$needle);
+    }
+}
+foreach (['artifactHistory','architecture_history','total_tokens','total_cost','token_budget_utilization','cost_budget_utilization'] as $needle) {
+    if (!str_contains($analytics.$store, $needle)) throw new RuntimeException('Domain P2 analytics missing '.$needle);
+}
+foreach (['replaceDependencies','HUMAN_VISUAL_EDITOR','assertValid','Dependency graph is immutable'] as $needle) {
+    if (!str_contains($dependencyEditor.$store, $needle)) throw new RuntimeException('Visual dependency editor missing '.$needle);
+}
+foreach (['DOCUMENTATION','DOMAIN_DOCUMENTATION_TRANSLATIONS'] as $needle) {
+    if (!str_contains($domainValidator.$artifactTypes, $needle)) throw new RuntimeException('Documentation release contract missing '.$needle);
 }
 
 echo "Engineering Domain Runtime V2 architecture passed.\n";
