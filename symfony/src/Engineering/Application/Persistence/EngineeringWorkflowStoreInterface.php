@@ -16,6 +16,9 @@ interface EngineeringWorkflowStoreInterface
     public function view(string $workflowId): array;
 
     public function markImmediate(string $workflowId): void;
+    public function touchRuntime(string $workflowId, ?string $agentRunId = null, ?string $taskId = null): void;
+    /** @return array{healthy:int,stale:int,stalled:int,waiting:int} */
+    public function refreshRuntimeHealthForOrganization(string $organizationId, int $staleAfterSeconds = 600, int $stalledAfterSeconds = 1800): array;
 
     /** @return list<array{feature_id:string,workflow_id:string,state:string,priority:string,title:string,feature_status:string,started_at:string}> */
     public function resumable(int $limit = 20): array;
