@@ -85,6 +85,13 @@ final readonly class EngineeringStatusService
      */
     private function attachLedgerUsage(array $agentRuns, array $invocations): array
     {
+        $traceOwners = [];
+        foreach ($agentRuns as $run) {
+            if (!is_array($run)) continue;
+            $traceId = trim((string) ($run['trace_id'] ?? ''));
+            if ($traceId !== '') $traceOwners[$traceId] = ($traceOwners[$traceId] ?? 0) + 1;
+        }
+
         $byCorrelation = [];
         foreach ($invocations as $invocation) {
             if (!is_array($invocation)) continue;
@@ -124,15 +131,17 @@ final readonly class EngineeringStatusService
             $byCorrelation[$correlationId] = $bucket;
         }
 
-        return array_map(static function (array $run) use ($byCorrelation): array {
+        return array_map(static function (array $run) use ($byCorrelation, $traceOwners): array {
             $traceId = trim((string) ($run['trace_id'] ?? ''));
-            $usage = $traceId !== '' ? ($byCorrelation[$traceId] ?? null) : null;
+            $ambiguous = $traceId !== '' && (($traceOwners[$traceId] ?? 0) > 1);
+            $usage = (!$ambiguous && $traceId !== '') ? ($byCorrelation[$traceId] ?? null) : null;
             if (is_array($usage)) {
                 $usage['cost_amount'] = $usage['cost_complete'] ? round((float) $usage['cost_amount'], 8) : null;
                 $usage['cost_sources'] = array_keys($usage['cost_sources']);
                 $usage['pricing_versions'] = array_keys($usage['pricing_versions']);
             }
             $run['ledger_usage'] = $usage;
+            $run['ledger_usage_ambiguous'] = $ambiguous;
             return $run;
         }, $agentRuns);
     }
