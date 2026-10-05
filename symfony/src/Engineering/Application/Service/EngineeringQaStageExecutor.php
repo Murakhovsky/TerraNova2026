@@ -88,7 +88,7 @@ final readonly class EngineeringQaStageExecutor
         $task = new EngineeringAgentTask(
             id: EngineeringId::generate(),
             featureId: $featureId,
-            role: AgentRole::QA,
+            role: AgentRole::QA_PLANNER,
             objective: 'Create an independent QA Test Plan from the Feature Specification before architecture and implementation.',
             inputs: [
                 'phase' => 'PLAN',
@@ -137,14 +137,14 @@ final readonly class EngineeringQaStageExecutor
             if ($workflow->currentState() !== EngineeringWorkflowState::QA_PLANNING) {
                 throw new WorkflowAlreadyRunningException('QA Test Plan stage can run only from QA_PLANNING.');
             }
-            $this->tasks->markRole($featureId, AgentRole::QA, 'RUNNING');
+            $this->tasks->markRole($featureId, AgentRole::QA_PLANNER, 'RUNNING');
             return $this->agentRuns->start($workflowId, $task, $correlationId);
         });
 
         try {
             $run = $this->agents->run($task, $organizationId, $correlationId);
             if ($run->status !== 'completed') throw new RuntimeException('QA planning Agent did not complete: '.($run->error ?? $run->status));
-            $this->validator->validate(AgentRole::QA, $run->structuredOutput);
+            $this->validator->validate(AgentRole::QA_PLANNER, $run->structuredOutput);
             if (($run->structuredOutput['phase'] ?? null) !== 'PLAN') {
                 throw new RuntimeException('QA planning must return PLAN phase.');
             }
@@ -152,7 +152,7 @@ final readonly class EngineeringQaStageExecutor
                 throw new RuntimeException('QA Test Plan feature id does not match workflow feature.');
             }
         } catch (\Throwable $error) {
-            $this->failRun($featureId, $engineeringRunId, $error);
+            $this->failRun($featureId, $engineeringRunId, $error, AgentRole::QA_PLANNER);
             throw $error;
         }
 
@@ -166,7 +166,7 @@ final readonly class EngineeringQaStageExecutor
             $planningStatus = (string) ($run->structuredOutput['status'] ?? '');
             $this->tasks->markRole(
                 $featureId,
-                AgentRole::QA,
+                AgentRole::QA_PLANNER,
                 $planningStatus === 'BLOCKED' ? 'BLOCKED' : ($planningStatus === 'HUMAN_TEST_REQUIRED' ? 'BLOCKED' : 'COMPLETED'),
                 ['status' => $planningStatus, 'phase' => 'PLAN'],
             );
@@ -176,13 +176,13 @@ final readonly class EngineeringQaStageExecutor
                     ArtifactType::TEST_PLAN,
                     $run->structuredOutput['test_plan'],
                     agentRunId: $engineeringRunId,
-                    createdByAgent: AgentRole::QA->value,
+                    createdByAgent: AgentRole::QA_PLANNER->value,
                 );
             }
 
             $next = $this->coordinator->acceptAgentResult(
                 $workflow,
-                AgentRole::QA,
+                AgentRole::QA_PLANNER,
                 $run->structuredOutput,
                 $this->counters($featureId),
             );
@@ -285,7 +285,7 @@ final readonly class EngineeringQaStageExecutor
         $task = new EngineeringAgentTask(
             id: EngineeringId::generate(),
             featureId: $featureId,
-            role: AgentRole::QA,
+            role: AgentRole::QA_EXECUTOR,
             objective: 'Verify observable system behavior against the approved QA Test Plan and every Acceptance Criterion on the exact reviewed revision.',
             inputs: [
                 'phase' => 'EXECUTION',
@@ -356,14 +356,14 @@ final readonly class EngineeringQaStageExecutor
             if ($workflow->currentState() !== EngineeringWorkflowState::QA_PENDING) {
                 throw new WorkflowAlreadyRunningException('QA execution can run only from QA_PENDING.');
             }
-            $this->tasks->markRole($featureId, AgentRole::QA, 'RUNNING');
+            $this->tasks->markRole($featureId, AgentRole::QA_EXECUTOR, 'RUNNING');
             return $this->agentRuns->start($workflowId, $task, $correlationId);
         });
 
         try {
             $run = $this->agents->run($task, $organizationId, $correlationId);
             if ($run->status !== 'completed') throw new RuntimeException('QA Agent did not complete: '.($run->error ?? $run->status));
-            $this->validator->validate(AgentRole::QA, $run->structuredOutput);
+            $this->validator->validate(AgentRole::QA_EXECUTOR, $run->structuredOutput);
             if (($run->structuredOutput['phase'] ?? null) !== 'EXECUTION') throw new RuntimeException('QA execution must return EXECUTION phase.');
             if (($run->structuredOutput['feature_id'] ?? null) !== $featureId) throw new RuntimeException('QA output feature id does not match workflow feature.');
             if (($run->structuredOutput['tested_revision'] ?? null) !== $revision) throw new RuntimeException('QA output revision does not match reviewed revision.');
@@ -415,7 +415,7 @@ final readonly class EngineeringQaStageExecutor
                 ];
             }
 
-            $this->validator->validate(AgentRole::QA, $effective);
+            $this->validator->validate(AgentRole::QA_EXECUTOR, $effective);
             $this->assertFeatureCoverage($featureSpec['content'], $effective);
 
             $run = new EngineeringAgentRunResult(
@@ -431,7 +431,7 @@ final readonly class EngineeringQaStageExecutor
                 steps: $run->steps,
             );
         } catch (\Throwable $error) {
-            $this->failRun($featureId, $engineeringRunId, $error);
+            $this->failRun($featureId, $engineeringRunId, $error, AgentRole::QA_EXECUTOR);
             throw $error;
         }
 
@@ -445,19 +445,19 @@ final readonly class EngineeringQaStageExecutor
             $qaStatus = (string) ($run->structuredOutput['status'] ?? '');
             $this->tasks->markRole(
                 $featureId,
-                AgentRole::QA,
+                AgentRole::QA_EXECUTOR,
                 $qaStatus === 'BLOCKED' ? 'BLOCKED' : 'COMPLETED',
                 ['status' => $qaStatus, 'phase' => 'EXECUTION'],
             );
 
-            if ($qaStatus === 'PASS') $this->findings->resolveOpenForSource($featureId, AgentRole::QA, $engineeringRunId);
+            if ($qaStatus === 'PASS') $this->findings->resolveOpenForSource($featureId, AgentRole::QA_EXECUTOR, $engineeringRunId);
             $findings = array_merge(
                 is_array($run->structuredOutput['defects'] ?? null) ? $run->structuredOutput['defects'] : [],
                 is_array($run->structuredOutput['security_findings'] ?? null) ? $run->structuredOutput['security_findings'] : [],
             );
             $this->findings->recordFindings(
                 featureId: $featureId,
-                sourceRole: AgentRole::QA,
+                sourceRole: AgentRole::QA_EXECUTOR,
                 findings: $findings,
                 agentRunId: $engineeringRunId,
             );
@@ -466,7 +466,7 @@ final readonly class EngineeringQaStageExecutor
                 ArtifactType::QA_REPORT,
                 $run->structuredOutput,
                 agentRunId: $engineeringRunId,
-                createdByAgent: AgentRole::QA->value,
+                createdByAgent: AgentRole::QA_EXECUTOR->value,
             );
 
             $prState = $this->journal->around(
@@ -512,7 +512,7 @@ final readonly class EngineeringQaStageExecutor
 
             $next = $this->coordinator->acceptAgentResult(
                 $workflow,
-                AgentRole::QA,
+                AgentRole::QA_EXECUTOR,
                 $run->structuredOutput,
                 $this->counters($featureId),
                 $ready,
@@ -536,7 +536,7 @@ final readonly class EngineeringQaStageExecutor
                     ArtifactType::FINAL_REPORT,
                     $finalReport,
                     agentRunId: $engineeringRunId,
-                    createdByAgent: AgentRole::QA->value,
+                    createdByAgent: AgentRole::QA_EXECUTOR->value,
                 );
                 $this->commentReadySummary($featureId, $finalReport);
             }
@@ -580,7 +580,7 @@ final readonly class EngineeringQaStageExecutor
             $this->humanDecisions->historyForFeature($featureId),
             static fn (array $decision): bool =>
                 ($decision['status'] ?? null) === 'ANSWERED'
-                && ($decision['evidence']['requested_by_agent'] ?? null) === AgentRole::QA->value,
+                && in_array(($decision['evidence']['requested_by_agent'] ?? null), [AgentRole::QA_PLANNER->value, AgentRole::QA_EXECUTOR->value, AgentRole::QA->value], true),
         )), -20);
     }
 
@@ -609,7 +609,7 @@ final readonly class EngineeringQaStageExecutor
             reason: 'QA returned HUMAN_TEST_REQUIRED.',
             options: $options,
             evidence: [
-                'requested_by_agent' => AgentRole::QA->value,
+                'requested_by_agent' => $phase === 'QA_EXECUTION' ? AgentRole::QA_EXECUTOR->value : AgentRole::QA_PLANNER->value,
                 'resume_state' => $workflow->resumeState()?->value,
                 'phase' => $phase,
                 'human_tests_required' => $manual,
@@ -832,25 +832,26 @@ final readonly class EngineeringQaStageExecutor
             match ($run['role'] ?? null) {
                 AgentRole::DEVELOPER->value => ++$developer,
                 AgentRole::REVIEWER->value => ++$reviewer,
-                AgentRole::QA->value => ++$qa,
+                AgentRole::QA_EXECUTOR->value => ++$qa,
+                AgentRole::QA->value => (($run['output']['phase'] ?? null) === 'EXECUTION') ? ++$qa : null,
                 default => null,
             };
         }
         return new WorkflowCounters(max(0, $developer - 1), $reviewer, max(0, $qa - 1));
     }
 
-    private function failRun(string $featureId, string $engineeringRunId, \Throwable $error): void
+    private function failRun(string $featureId, string $engineeringRunId, \Throwable $error, AgentRole $role): void
     {
         $this->lock->synchronized(
             $featureId,
-            function () use ($featureId, $engineeringRunId, $error): void {
+            function () use ($featureId, $engineeringRunId, $error, $role): void {
                 $this->agentRuns->fail(
                     $engineeringRunId,
                     'TASK_ERROR',
                     $error->getMessage(),
                     $error instanceof \App\Engineering\Application\Agent\EngineeringAgentTechnicalFailureException ? $error->technicalRetries : 0,
                 );
-                $this->tasks->markRole($featureId, AgentRole::QA, 'FAILED', ['error' => $error->getMessage()]);
+                $this->tasks->markRole($featureId, $role, 'FAILED', ['error' => $error->getMessage()]);
             },
         );
     }
