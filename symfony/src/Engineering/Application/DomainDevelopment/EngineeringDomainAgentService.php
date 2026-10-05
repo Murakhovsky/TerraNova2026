@@ -28,6 +28,8 @@ final readonly class EngineeringDomainAgentService
         private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
         private AgentCapabilityRegistry $agentCapabilities = new AgentCapabilityRegistry(),
         private RuntimeCapabilityRegistry $runtimeCapabilities = new RuntimeCapabilityRegistry(),
+        private EngineeringDomainBudgetGuard $budgets,
+        private EngineeringDomainHumanGateService $humanGates,
     ) {}
 
     /** @param array<string,mixed> $inputs @return array<string,mixed> */
@@ -49,6 +51,34 @@ final readonly class EngineeringDomainAgentService
             AgentRole::QA,
         ], true)) {
             throw new RuntimeException('Unsupported Domain Development agent role: '.$role->value);
+        }
+
+        $budget = $this->budgets->agentRunDecision($domainId, [
+            'role' => $role->value,
+            'objective' => $objective,
+            'inputs' => $inputs,
+        ]);
+        if (($budget['allowed'] ?? false) !== true) {
+            $domain = $this->domains->domain($domainId);
+            $resume = EngineeringDomainStatus::from((string) ($domain['status'] ?? EngineeringDomainStatus::BLOCKED->value));
+            $this->humanGates->request(
+                $domainId,
+                $organizationId,
+                'DOMAIN_RESOURCE_BUDGET',
+                $resume,
+                'Extend Domain Engineering resource budget?',
+                implode(' ', $budget['reasons'] ?? ['Domain resource budget exhausted.']),
+                [
+                    'role' => $role->value,
+                    'budget' => $budget['evidence'] ?? [],
+                ],
+                'DOMAIN_BUDGET_GUARD',
+                [
+                    ['id' => 'CONTINUE', 'description' => 'Authorize one additional Domain resource-budget window and resume.'],
+                    ['id' => 'CANCEL', 'description' => 'Do not extend the Domain resource budget.'],
+                ],
+            );
+            throw new RuntimeException('Domain resource budget requires a human decision before '.$role->value.'.');
         }
 
         $runId = EngineeringId::generate();
