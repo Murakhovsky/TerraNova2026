@@ -11,6 +11,8 @@ use App\Application\Growth\Command\RunGrowthAutonomousContentCommand;
 use App\Application\Growth\Command\RunGrowthOutreachSequencesCommand;
 use App\Application\Growth\Command\RunGrowthMarketDiscoveryCommand;
 use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
+use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
+use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -44,6 +46,10 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly int $growthMarketDiscoveryActorId = 0,
         private readonly bool $engineeringAutonomyEnabled = false,
         private readonly int $engineeringAutonomyIntervalMinutes = 2,
+        private readonly bool $engineeringDomainAutonomyEnabled = false,
+        private readonly int $engineeringDomainAutonomyIntervalMinutes = 3,
+        private readonly bool $engineeringRuntimeWatchdogEnabled = true,
+        private readonly int $engineeringRuntimeWatchdogIntervalMinutes = 2,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
@@ -77,6 +83,12 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if($this->engineeringAutonomyIntervalMinutes<1||$this->engineeringAutonomyIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering autonomy interval must be between 1 and 60 minutes.');
+        }
+        if($this->engineeringDomainAutonomyIntervalMinutes<1||$this->engineeringDomainAutonomyIntervalMinutes>60){
+            throw new InvalidArgumentException('Engineering Domain autonomy interval must be between 1 and 60 minutes.');
+        }
+        if($this->engineeringRuntimeWatchdogIntervalMinutes<1||$this->engineeringRuntimeWatchdogIntervalMinutes>60){
+            throw new InvalidArgumentException('Engineering runtime watchdog interval must be between 1 and 60 minutes.');
         }
     }
 
@@ -136,10 +148,24 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             );
         }
 
+        if($this->engineeringRuntimeWatchdogEnabled){
+            $messages[] = RecurringMessage::every(
+                $this->engineeringRuntimeWatchdogIntervalMinutes.' minutes',
+                new RedispatchMessage(new WatchEngineeringRuntimeCommand('scheduler'), 'engineering'),
+            );
+        }
+
         if($this->engineeringAutonomyEnabled){
             $messages[] = RecurringMessage::every(
                 $this->engineeringAutonomyIntervalMinutes.' minutes',
                 new RedispatchMessage(new ContinueEngineeringWorkflowsCommand('scheduler'), 'engineering'),
+            );
+        }
+
+        if($this->engineeringDomainAutonomyEnabled){
+            $messages[] = RecurringMessage::every(
+                $this->engineeringDomainAutonomyIntervalMinutes.' minutes',
+                new RedispatchMessage(new ContinueEngineeringDomainsCommand('scheduler'), 'engineering'),
             );
         }
 

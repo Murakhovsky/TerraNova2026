@@ -26,8 +26,23 @@ final class EngineeringAgentOutputValidator
             'title','type','business_goal','expected_behavior','scope','out_of_scope',
             'functional_requirements','acceptance_criteria','risks','assumptions','open_questions','priority','complexity',
         ]);
+        $status = (string) ($output['status'] ?? '');
+        if (!in_array($status, ['SPECIFICATION_READY','HUMAN_DECISION_REQUIRED','BLOCKED','FAILED'], true)) {
+            throw new EngineeringAgentOutputValidationException('Manager status is invalid.');
+        }
+        if (!in_array((string) ($output['feature']['type'] ?? ''), ['FEATURE','BUG','REFACTOR','MIGRATION','MAINTENANCE'], true)) {
+            throw new EngineeringAgentOutputValidationException('Manager feature type is invalid.');
+        }
+        if (!in_array((string) ($output['feature']['priority'] ?? ''), ['P0','P1','P2','P3'], true)) {
+            throw new EngineeringAgentOutputValidationException('Manager priority is invalid.');
+        }
+        if (!in_array((string) ($output['feature']['complexity'] ?? ''), ['XS','S','M','L','XL'], true)) {
+            throw new EngineeringAgentOutputValidationException('Manager complexity is invalid.');
+        }
         if (trim((string) $output['feature']['business_goal']) === '') throw new EngineeringAgentOutputValidationException('Manager business goal cannot be empty.');
+        if (trim((string) ($output['feature']['expected_behavior'] ?? '')) === '') throw new EngineeringAgentOutputValidationException('Manager expected behavior cannot be empty.');
         if (!is_array($output['feature']['scope']) || $output['feature']['scope'] === []) throw new EngineeringAgentOutputValidationException('Manager scope cannot be empty.');
+        if (!is_array($output['feature']['functional_requirements']) || $output['feature']['functional_requirements'] === []) throw new EngineeringAgentOutputValidationException('Manager functional requirements cannot be empty.');
         if (!is_array($output['feature']['acceptance_criteria']) || $output['feature']['acceptance_criteria'] === []) throw new EngineeringAgentOutputValidationException('Manager acceptance criteria cannot be empty.');
         if (!is_array($output['tasks']) || $output['tasks'] === []) throw new EngineeringAgentOutputValidationException('Manager must create at least one engineering task.');
 
@@ -52,6 +67,42 @@ final class EngineeringAgentOutputValidator
 
         if (($output['feature']['complexity'] ?? null) === 'XL' && (!is_array($output['tasks']) || count($output['tasks']) < 2)) {
             throw new EngineeringAgentOutputValidationException('XL feature must be decomposed into multiple tasks.');
+        }
+
+        if ($status === 'HUMAN_DECISION_REQUIRED') {
+            $questions = is_array($output['open_questions'] ?? null) ? $output['open_questions'] : [];
+            if (count($questions) !== 1 || !is_array($questions[0])) {
+                throw new EngineeringAgentOutputValidationException('Manager HUMAN_DECISION_REQUIRED requires exactly one answerable open question.');
+            }
+            $question = $questions[0];
+            $this->required($question, ['id','question','options']);
+            if (trim((string) $question['id']) === '' || trim((string) $question['question']) === '') {
+                throw new EngineeringAgentOutputValidationException('Manager human decision requires stable id and question.');
+            }
+            if (!is_array($question['options']) || $question['options'] === []) {
+                throw new EngineeringAgentOutputValidationException('Manager human decision requires explicit options.');
+            }
+            $optionIds = [];
+            foreach ($question['options'] as $option) {
+                $id = '';
+                if (is_scalar($option)) $id = trim((string) $option);
+                elseif (is_array($option)) {
+                    foreach (['id','value','option'] as $key) {
+                        if (isset($option[$key]) && is_scalar($option[$key])) {
+                            $id = trim((string) $option[$key]);
+                            if ($id !== '') break;
+                        }
+                    }
+                }
+                if ($id === '') throw new EngineeringAgentOutputValidationException('Manager human decision options require stable ids.');
+                $normalized = strtoupper($id);
+                if (isset($optionIds[$normalized])) throw new EngineeringAgentOutputValidationException('Manager human decision option ids must be unique.');
+                $optionIds[$normalized] = true;
+            }
+            $recommended = trim((string) ($question['recommended_option'] ?? ''));
+            if ($recommended !== '' && !isset($optionIds[strtoupper($recommended)])) {
+                throw new EngineeringAgentOutputValidationException('Manager recommended option must be one of the offered options.');
+            }
         }
     }
 
@@ -370,12 +421,26 @@ final class EngineeringAgentOutputValidator
         $this->required($output['test_plan'], ['feature_id','version','scenarios','permissions','tenant_cases','api_cases','database_cases','ui_cases','regression_cases','performance_cases','required_suites','prerequisites','test_data','environment_requirements','blocking_checks']);
 
         if ($phase === 'PLAN') {
-            if ($status !== 'PLAN_READY') throw new EngineeringAgentOutputValidationException('QA planning phase must return PLAN_READY.');
+            if (!in_array($status, ['PLAN_READY','BLOCKED','HUMAN_TEST_REQUIRED'], true)) {
+                throw new EngineeringAgentOutputValidationException('QA planning phase status is invalid.');
+            }
             if (($output['tested_revision'] ?? null) !== null || ($output['test_changes'] ?? []) !== []) {
                 throw new EngineeringAgentOutputValidationException('QA planning cannot claim a tested revision or mutate tests.');
             }
             if ((string) ($output['test_plan']['feature_id'] ?? '') !== (string) $output['feature_id']) {
                 throw new EngineeringAgentOutputValidationException('QA Test Plan feature id must match output feature id.');
+            }
+            if ($status === 'BLOCKED') {
+                $this->required($output, ['blockers']);
+                if (!is_array($output['blockers']) || $output['blockers'] === []) {
+                    throw new EngineeringAgentOutputValidationException('QA planning BLOCKED requires concrete blockers.');
+                }
+            }
+            if ($status === 'HUMAN_TEST_REQUIRED') {
+                $this->required($output, ['human_tests_required']);
+                if (!is_array($output['human_tests_required']) || $output['human_tests_required'] === []) {
+                    throw new EngineeringAgentOutputValidationException('QA planning HUMAN_TEST_REQUIRED requires explicit manual scenarios.');
+                }
             }
             return;
         }
@@ -408,7 +473,9 @@ final class EngineeringAgentOutputValidator
             if (!is_array($criterion)) throw new EngineeringAgentOutputValidationException('QA acceptance criterion must be an object.');
             $this->required($criterion, ['id','status','evidence']);
             if (!in_array((string) $criterion['status'], ['PASS','FAIL'], true)) throw new EngineeringAgentOutputValidationException('QA acceptance criterion status is invalid.');
-            if (($criterion['status'] ?? null) === 'PASS' && ($criterion['evidence'] ?? null) === []) throw new EngineeringAgentOutputValidationException('QA PASS criterion requires evidence.');
+            if (($criterion['status'] ?? null) === 'PASS' && !$this->hasMeaningfulEvidence($criterion['evidence'] ?? null)) {
+                throw new EngineeringAgentOutputValidationException('QA PASS criterion requires meaningful evidence.');
+            }
         }
 
         foreach ($output['system_invariants'] as $name => $invariant) {
@@ -416,7 +483,9 @@ final class EngineeringAgentOutputValidator
             $this->required($invariant, ['applicable','status','evidence','reason']);
             if (($invariant['applicable'] ?? false) === true) {
                 if (!in_array((string) $invariant['status'], ['PASS','FAIL'], true)) throw new EngineeringAgentOutputValidationException('Applicable QA invariant must PASS or FAIL.');
-                if (($invariant['status'] ?? null) === 'PASS' && ($invariant['evidence'] ?? null) === null) throw new EngineeringAgentOutputValidationException('Applicable QA invariant PASS requires evidence.');
+                if (($invariant['status'] ?? null) === 'PASS' && !$this->hasMeaningfulEvidence($invariant['evidence'] ?? null)) {
+                    throw new EngineeringAgentOutputValidationException('Applicable QA invariant PASS requires meaningful evidence.');
+                }
             } else {
                 if (($invariant['status'] ?? null) !== 'NOT_APPLICABLE' || trim((string) ($invariant['reason'] ?? '')) === '') throw new EngineeringAgentOutputValidationException('Non-applicable QA invariant requires NOT_APPLICABLE and reason.');
             }
@@ -427,6 +496,13 @@ final class EngineeringAgentOutputValidator
             if (($output['test_changes'] ?? []) !== []) throw new EngineeringAgentOutputValidationException('QA PASS cannot contain unreviewed test mutations.');
             foreach ($output['acceptance_criteria'] as $criterion) if (($criterion['status'] ?? null) !== 'PASS') throw new EngineeringAgentOutputValidationException('QA PASS requires every acceptance criterion to PASS.');
             foreach ($output['system_invariants'] as $invariant) if (($invariant['applicable'] ?? false) === true && ($invariant['status'] ?? null) !== 'PASS') throw new EngineeringAgentOutputValidationException('QA PASS requires every applicable COS invariant to PASS.');
+            $requiredSuites = is_array($output['test_plan']['required_suites'] ?? null) ? $output['test_plan']['required_suites'] : [];
+            $suiteResults = is_array($output['tests']['suites'] ?? null) ? $output['tests']['suites'] : [];
+            foreach ($requiredSuites as $suite => $required) {
+                if ($required === true && strtoupper((string) ($suiteResults[$suite] ?? '')) !== 'PASS') {
+                    throw new EngineeringAgentOutputValidationException('QA PASS requires every required test suite to PASS: '.$suite);
+                }
+            }
             foreach (array_merge($output['defects'], $output['security_findings']) as $finding) {
                 if (is_array($finding) && in_array(strtoupper((string) ($finding['severity'] ?? '')), ['BLOCKER','MAJOR','CRITICAL','HIGH'], true)) throw new EngineeringAgentOutputValidationException('QA cannot PASS with blocking defect/security finding.');
             }
@@ -440,6 +516,14 @@ final class EngineeringAgentOutputValidator
         if ($status === 'BLOCKED' && ($output['blockers'] ?? []) === []) throw new EngineeringAgentOutputValidationException('QA BLOCKED requires concrete blockers.');
         if ($status === 'HUMAN_TEST_REQUIRED' && ($output['human_tests_required'] ?? []) === []) throw new EngineeringAgentOutputValidationException('HUMAN_TEST_REQUIRED requires explicit manual scenarios.');
         if ($status === 'TESTS_UPDATED' && ($output['test_changes'] ?? []) === []) throw new EngineeringAgentOutputValidationException('TESTS_UPDATED requires bounded test changes.');
+    }
+
+    private function hasMeaningfulEvidence(mixed $evidence): bool
+    {
+        if (is_string($evidence)) return trim($evidence) !== '';
+        if (is_array($evidence)) return $evidence !== [];
+        if (is_object($evidence)) return true;
+        return is_int($evidence) || is_float($evidence) || is_bool($evidence);
     }
 
     /** @return list<string> */

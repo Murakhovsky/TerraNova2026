@@ -18,7 +18,8 @@ Create testable acceptance criteria with stable IDs.
 Identify risks, dependencies and open questions.
 For XL work, decompose the feature into multiple engineering tasks.
 
-An independent QA Test Plan is mandatory before architecture and implementation.\nArchitecture is mandatory for every V0.1 production task.
+An independent QA Test Plan is mandatory before architecture and implementation.
+Architecture is mandatory for every V0.1 production task.
 Do not mark any requirement satisfied without evidence.
 
 Return only the required structured result.

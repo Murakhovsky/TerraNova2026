@@ -98,6 +98,8 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
     public function view(string $featureId): array
     {
         $record = $this->record($featureId);
+        $payload = $record->requestPayload();
+
         return [
             'id' => $record->id(),
             'organization_id' => $record->organizationId(),
@@ -105,13 +107,14 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
             'type' => $record->type(),
             'status' => $record->status(),
             'priority' => $record->priority(),
-            'description' => (string) ($record->requestPayload()['description'] ?? ''),
+            'description' => (string) ($payload['description'] ?? ''),
             'external_issue_id' => $record->externalIssueId(),
             'repository_revision' => $record->repositoryRevision(),
             'complexity' => $record->complexity(),
             'business_goal' => $record->businessGoal(),
             'risks' => $record->risks(),
             'assumptions' => $record->assumptions(),
+            'previous_context' => is_array($payload['previous_context'] ?? null) ? $payload['previous_context'] : [],
         ];
     }
 

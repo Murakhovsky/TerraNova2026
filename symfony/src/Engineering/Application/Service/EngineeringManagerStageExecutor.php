@@ -5,6 +5,7 @@ namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Manager\EngineeringManagerAnalysisService;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
@@ -31,6 +32,7 @@ final readonly class EngineeringManagerStageExecutor
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringManagerAnalysisService $manager,
+        private EngineeringExecutionJournal $journal,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -43,7 +45,24 @@ final readonly class EngineeringManagerStageExecutor
         string $correlationId,
         int $logicalAttempt,
     ): WorkflowDirective {
-        $plan = $this->manager->prepare($featureId, $request, $logicalAttempt);
+        $domainContext = $this->domainContext($request);
+        $plan = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'REPOSITORY',
+            'repository.discover_context',
+            'Discover repository context for Engineering Manager',
+            $correlationId,
+            fn () => $this->manager->prepare($featureId, $request, $logicalAttempt),
+            details: static fn ($plan): array => [
+                'repository_revision' => $plan->contextMap->repositoryRevision,
+                'files' => array_values(array_filter(array_map(
+                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                    $plan->contextMap->files,
+                ))),
+                'agent_role' => $plan->task->role->value,
+            ],
+        );
 
         $engineeringRunId = $this->lock->synchronized($featureId, function () use ($workflowId, $plan, $correlationId): string {
             $workflow = $this->workflows->get($workflowId);
@@ -65,7 +84,7 @@ final readonly class EngineeringManagerStageExecutor
 
         return $this->lock->synchronized(
             $featureId,
-            function () use ($featureId, $workflowId, $analysis, $engineeringRunId): WorkflowDirective {
+            function () use ($featureId, $workflowId, $analysis, $engineeringRunId, $domainContext): WorkflowDirective {
                 $workflow = $this->workflows->get($workflowId);
                 if ($workflow->currentState() !== EngineeringWorkflowState::ANALYSIS) {
                     throw new WorkflowAlreadyRunningException('Engineering workflow changed while Manager analysis was running.');
@@ -86,6 +105,15 @@ final readonly class EngineeringManagerStageExecutor
                     agentRunId: $engineeringRunId,
                     createdByAgent: AgentRole::ENGINEERING_MANAGER->value,
                 );
+                if ($domainContext !== null) {
+                    $this->artifacts->createVersion(
+                        $featureId,
+                        ArtifactType::DOMAIN_CONTEXT_PACK,
+                        $domainContext,
+                        agentRunId: $engineeringRunId,
+                        createdByAgent: 'DOMAIN_RUNTIME',
+                    );
+                }
                 $this->tasks->createFromManager(
                     $featureId,
                     is_array($analysis->featureSpecification['tasks'] ?? null) ? $analysis->featureSpecification['tasks'] : [],
@@ -109,24 +137,42 @@ final readonly class EngineeringManagerStageExecutor
                     $questions = is_array($analysis->featureSpecification['open_questions'] ?? null)
                         ? $analysis->featureSpecification['open_questions']
                         : [];
+                    $question = $questions[0] ?? null;
+                    if (!is_array($question)) throw new \RuntimeException('Manager human decision requires one validated open question.');
                     $this->humanDecisions->create(
                         featureId: $featureId,
                         workflowId: $workflow->id(),
                         type: 'PRODUCT_AMBIGUITY',
-                        question: 'Engineering Manager requires a human decision before workflow continuation.',
+                        question: (string) ($question['question'] ?? ''),
                         reason: $next->reason,
-                        options: $questions,
+                        options: is_array($question['options'] ?? null) ? $question['options'] : [],
                         evidence: [
+                            'requested_by_agent' => AgentRole::ENGINEERING_MANAGER->value,
+                            'resume_state' => $workflow->resumeState()?->value,
+                            'question_id' => $question['id'] ?? null,
                             'manager_decision' => $analysis->featureSpecification['decision'] ?? [],
                             'risks' => $analysis->featureSpecification['risks'] ?? [],
                         ],
                         blocking: true,
+                        recommendedOption: isset($question['recommended_option']) && is_string($question['recommended_option']) ? $question['recommended_option'] : null,
                     );
                 }
 
                 return $next;
             },
         );
+    }
+
+    /** @return array<string,mixed>|null */
+    private function domainContext(EngineeringRequest $request): ?array
+    {
+        foreach (array_reverse($request->previousContext) as $entry) {
+            if (!is_array($entry)) continue;
+            $context = $entry['domain_development'] ?? null;
+            if (!is_array($context) || trim((string) ($context['domain_id'] ?? '')) === '') continue;
+            return $context;
+        }
+        return null;
     }
 
     private function persistTransitions(WorkflowExecution $workflow, array $transitions): void

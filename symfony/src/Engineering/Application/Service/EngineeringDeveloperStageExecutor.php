@@ -6,7 +6,9 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
+use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -34,7 +36,9 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringTaskStoreInterface $tasks,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
+        private EngineeringStandardsProvider $standards,
         private EngineeringRepositoryGatewayInterface $repository,
+        private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
@@ -59,6 +63,8 @@ final readonly class EngineeringDeveloperStageExecutor
         $developerHandoff = $this->artifacts->latest($featureId, ArtifactType::DEVELOPER_HANDOFF);
         $architectureDocumentation = $this->artifacts->latest($featureId, ArtifactType::ARCHITECTURE_DOCUMENTATION);
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
+        $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
+        $targetBranch = trim((string) ($domainContext['content']['target_branch'] ?? ''));
 
         if ($developerHandoff === null || $architectureDocumentation === null) {
             return $this->requireArchitectureRevalidation(
@@ -70,6 +76,7 @@ final readonly class EngineeringDeveloperStageExecutor
         $previousReview = $this->artifacts->latest($featureId, ArtifactType::REVIEW_REPORT);
         $previousQa = $this->artifacts->latest($featureId, ArtifactType::QA_REPORT);
         $previousDevelopment = $this->artifacts->latest($featureId, ArtifactType::DEVELOPMENT_RESULT);
+        $humanDecisionHistory = $this->answeredHumanDecisions($featureId);
 
         $this->assertArchitectureGate($architecture, $developerHandoff);
 
@@ -79,7 +86,16 @@ final readonly class EngineeringDeveloperStageExecutor
         }
 
         if ($previousDevelopment === null) {
-            $currentBaseRevision = $this->repository->currentBaseRevision();
+            $currentBaseRevision = $this->journal->around(
+                $featureId,
+                $workflowId,
+                'REPOSITORY',
+                'repository.current_base_revision',
+                'Verify repository revision before development',
+                $correlationId,
+                fn (): string => $this->repository->currentBaseRevision($targetBranch !== '' ? $targetBranch : null),
+                details: static fn (string $revision): array => ['revision' => $revision],
+            );
             if ($currentBaseRevision !== $baseRevision) {
                 return $this->requireArchitectureRevalidation(
                     $featureId,
@@ -138,7 +154,23 @@ final readonly class EngineeringDeveloperStageExecutor
             if (is_array($file) && isset($file['path']) && is_string($file['path'])) $contextPaths[] = $file['path'];
         }
         $contextPaths = array_slice(array_values(array_unique($contextPaths)), 0, 20);
-        $repositoryFiles = $this->repository->filesAtRevision($contextPaths, $workingRevision);
+        $repositoryFiles = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'REPOSITORY',
+            'repository.read_files',
+            'Read bounded developer repository context',
+            $correlationId,
+            fn (): array => $this->repository->filesAtRevision($contextPaths, $workingRevision),
+            details: static fn (array $files): array => [
+                'revision' => $workingRevision,
+                'requested_paths' => $contextPaths,
+                'returned_files' => array_values(array_filter(array_map(
+                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                    $files,
+                ))),
+            ],
+        );
 
         if (($documentationError = $this->architectureDocumentationEvidenceError($pendingArchitectureDocumentation, $repositoryFiles)) !== null) {
             return $this->requireArchitectureRevalidation($featureId, $workflowId, $documentationError);
@@ -162,10 +194,12 @@ final readonly class EngineeringDeveloperStageExecutor
                 'architecture_decision' => $architecture['content'],
                 'implementation_plan' => $implementation['content'],
                 'qa_test_plan' => $testPlan['content'],
+                'engineering_standards' => $this->standards->all(),
                 'developer_handoff' => $developerHandoff['content'],
                 'architecture_documentation' => $architectureDocumentation['content'],
                 'pending_architecture_documentation' => $pendingArchitectureDocumentation,
                 'context_map' => $contextMap['content'],
+                'domain_context_pack' => $domainContext['content'] ?? null,
                 'repository_state' => [
                     'architecture_base_revision' => $baseRevision,
                     'working_revision' => $workingRevision,
@@ -174,6 +208,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'tasks' => $this->tasks->forFeature($featureId),
                 'previous_review' => $previousReview['content'] ?? null,
                 'previous_qa' => $previousQa['content'] ?? null,
+                'human_decisions' => $humanDecisionHistory,
             ],
             contextRefs: [
                 'artifact:'.$featureSpec['id'],
@@ -183,6 +218,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'artifact:'.$developerHandoff['id'],
                 'artifact:'.$architectureDocumentation['id'],
                 'artifact:'.$contextMap['id'],
+                ...($domainContext !== null ? ['artifact:'.$domainContext['id']] : []),
             ],
             constraints: array_values(array_merge(
                 [
@@ -195,6 +231,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     'Do not overwrite architecture documentation authored by Principal Architect.',
                     'Do not claim tests were executed by the runtime; CI is authoritative.',
                     'Do not merge or deploy.',
+                    'When DOMAIN_CONTEXT_PACK is present, obey its Architecture Constitution, contract snapshot and path policy exactly.',
                 ],
                 is_array($developerHandoff['content']['mandatory_constraints'] ?? null) ? $developerHandoff['content']['mandatory_constraints'] : [],
                 is_array($developerHandoff['content']['forbidden_changes'] ?? null)
@@ -216,6 +253,8 @@ final readonly class EngineeringDeveloperStageExecutor
                 'feature_spec_artifact_id' => $featureSpec['id'],
                 'architecture_artifact_id' => $architecture['id'],
                 'implementation_plan_artifact_id' => $implementation['id'],
+                'domain_context_pack_hash' => $domainContext['content_hash'] ?? null,
+                'domain_architecture_version' => $domainContext['content']['architecture_version'] ?? null,
                 'logical_attempt' => $logicalAttempt,
             ],
         );
@@ -237,30 +276,66 @@ final readonly class EngineeringDeveloperStageExecutor
             $this->validator->validate(AgentRole::DEVELOPER, $run->structuredOutput);
 
             if (in_array((string) ($run->structuredOutput['status'] ?? ''), ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true)) {
-                $branch = 'engineering/'.$featureId;
+                $domainKey = trim((string) ($domainContext['content']['domain_key'] ?? ''));
+                $branch = $domainKey !== '' ? 'engineering/'.$domainKey.'/'.$featureId : 'engineering/'.$featureId;
                 $developerChanges = is_array($run->structuredOutput['changes'] ?? null) ? $run->structuredOutput['changes'] : [];
+                $this->assertDomainPathPolicy($developerChanges, $domainContext['content'] ?? null);
                 $this->assertDeveloperChangeEvidence($developerChanges, $implementation['content'], $repositoryFiles);
                 $changes = $this->mergeChanges(
                     $pendingArchitectureDocumentation,
                     $developerChanges,
                 );
-                $mutation = $this->repository->commitChanges(
-                    baseRevision: $workingRevision,
-                    branch: $branch,
-                    changes: $changes,
-                    message: trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
-                        ? (string) $run->structuredOutput['commit_message']
-                        : 'feat(engineering): implement '.$this->features->view($featureId)['title'],
+                $commitMessage = trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
+                    ? (string) $run->structuredOutput['commit_message']
+                    : 'feat(engineering): implement '.$this->features->view($featureId)['title'];
+                $mutation = $this->journal->around(
+                    $featureId,
+                    $workflowId,
+                    'GIT',
+                    'repository.commit_changes',
+                    'Commit Developer change set',
+                    $correlationId,
+                    fn (): array => $this->repository->commitChanges(
+                        baseRevision: $workingRevision,
+                        branch: $branch,
+                        changes: $changes,
+                        message: $commitMessage,
+                    ),
+                    $engineeringRunId,
+                    static fn (array $result): array => [
+                        'branch' => $result['branch'] ?? null,
+                        'revision' => $result['revision'] ?? null,
+                        'changed_files' => $result['changed_files'] ?? [],
+                        'change_count' => count($changes),
+                    ],
                 );
 
-                $pullRequest = $this->repository->openPullRequest(
-                    branch: $mutation['branch'],
-                    title: trim((string) ($run->structuredOutput['pull_request_title'] ?? '')) !== ''
-                        ? (string) $run->structuredOutput['pull_request_title']
-                        : 'Engineering: '.$this->features->view($featureId)['title'],
-                    body: trim((string) ($run->structuredOutput['pull_request_body'] ?? '')) !== ''
-                        ? (string) $run->structuredOutput['pull_request_body']
-                        : 'Autonomous COS Engineering implementation for feature '.$featureId.'. Human merge remains mandatory.',
+                $pullRequestTitle = trim((string) ($run->structuredOutput['pull_request_title'] ?? '')) !== ''
+                    ? (string) $run->structuredOutput['pull_request_title']
+                    : 'Engineering: '.$this->features->view($featureId)['title'];
+                $pullRequestBody = trim((string) ($run->structuredOutput['pull_request_body'] ?? '')) !== ''
+                    ? (string) $run->structuredOutput['pull_request_body']
+                    : 'Autonomous COS Engineering implementation for feature '.$featureId.'. Human merge remains mandatory.';
+                $pullRequest = $this->journal->around(
+                    $featureId,
+                    $workflowId,
+                    'GIT',
+                    'repository.open_pull_request',
+                    'Open or resolve Developer pull request',
+                    $correlationId,
+                    fn (): array => $this->repository->openPullRequest(
+                        branch: $mutation['branch'],
+                        title: $pullRequestTitle,
+                        body: $pullRequestBody,
+                        baseBranch: $targetBranch !== '' ? $targetBranch : null,
+                    ),
+                    $engineeringRunId,
+                    static fn (array $result): array => [
+                        'number' => $result['number'] ?? null,
+                        'url' => $result['url'] ?? null,
+                        'title' => $result['title'] ?? null,
+                        'branch' => $mutation['branch'] ?? null,
+                    ],
                 );
 
                 $effectiveOutput = array_merge($run->structuredOutput, [
@@ -282,6 +357,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     usage: $run->usage,
                     error: $run->error,
                     technicalRetries: $run->technicalRetries,
+                    steps: $run->steps,
                 );
             }
         } catch (\Throwable $error) {
@@ -324,8 +400,46 @@ final readonly class EngineeringDeveloperStageExecutor
             );
             $this->persistTransitions($workflow, $next->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
+
+            if ($next->type === \App\Engineering\Application\Workflow\WorkflowDirectiveType::REQUEST_HUMAN_DECISION) {
+                $developerStatus = (string) ($run->structuredOutput['status'] ?? '');
+                $this->humanDecisions->create(
+                    featureId: $featureId,
+                    workflowId: $workflow->id(),
+                    type: $developerStatus === 'SECURITY_REVIEW_REQUIRED' ? 'SECURITY_DECISION' : 'SPECIFICATION_DECISION',
+                    question: $developerStatus === 'SECURITY_REVIEW_REQUIRED'
+                        ? 'Developer requires a human security decision before implementation can continue.'
+                        : 'Developer requires a human specification decision before implementation can continue.',
+                    reason: $next->reason,
+                    options: [
+                        ['id' => 'CONTINUE', 'description' => 'Decision/evidence is supplied; rerun Developer.'],
+                        ['id' => 'CANCEL', 'description' => 'Cancel this engineering workflow.'],
+                    ],
+                    evidence: [
+                        'requested_by_agent' => AgentRole::DEVELOPER->value,
+                        'resume_state' => $workflow->resumeState()?->value,
+                        'developer_status' => $developerStatus,
+                        'preflight' => $run->structuredOutput['preflight'] ?? [],
+                        'findings' => $run->structuredOutput['findings'] ?? [],
+                        'follow_up_required' => $run->structuredOutput['follow_up_required'] ?? [],
+                    ],
+                    blocking: true,
+                    recommendedOption: 'CONTINUE',
+                );
+            }
             return $next;
         });
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function answeredHumanDecisions(string $featureId): array
+    {
+        return array_slice(array_values(array_filter(
+            $this->humanDecisions->historyForFeature($featureId),
+            static fn (array $decision): bool =>
+                ($decision['status'] ?? null) === 'ANSWERED'
+                && ($decision['evidence']['requested_by_agent'] ?? null) === AgentRole::DEVELOPER->value,
+        )), -20);
     }
 
     private function assertArchitectureGate(array $architecture, array $developerHandoff): void
@@ -384,6 +498,55 @@ final readonly class EngineeringDeveloperStageExecutor
         }
 
         return null;
+    }
+
+    /** @param list<array<string,mixed>> $changes @param array<string,mixed>|null $domainContext */
+    private function assertDomainPathPolicy(array $changes, ?array $domainContext): void
+    {
+        if ($domainContext === null) return;
+        $policy = is_array($domainContext['path_policy'] ?? null) ? $domainContext['path_policy'] : [];
+        $owned = $this->normalizedPolicyPaths($policy['owned_paths'] ?? []);
+        $shared = $this->normalizedPolicyPaths($policy['shared_paths'] ?? []);
+        $forbidden = $this->normalizedPolicyPaths($policy['forbidden_paths'] ?? []);
+        $allowed = array_values(array_unique(array_merge($owned, $shared)));
+
+        foreach ($changes as $change) {
+            if (!is_array($change)) continue;
+            $path = str_replace('\\', '/', trim((string) ($change['path'] ?? '')));
+            foreach ($forbidden as $prefix) {
+                if ($this->pathMatchesPolicy($path, $prefix)) {
+                    throw new RuntimeException('Developer change violates Domain forbidden path policy: '.$path);
+                }
+            }
+            if ($allowed === []) {
+                throw new RuntimeException('Domain feature has no owned/shared path policy; repository mutation is blocked.');
+            }
+            $matched = false;
+            foreach ($allowed as $prefix) {
+                if ($this->pathMatchesPolicy($path, $prefix)) { $matched = true; break; }
+            }
+            if (!$matched) {
+                throw new RuntimeException('Developer change is outside Domain owned/shared paths: '.$path);
+            }
+        }
+    }
+
+    /** @return list<string> */
+    private function normalizedPolicyPaths(mixed $paths): array
+    {
+        if (!is_array($paths)) return [];
+        $out = [];
+        foreach ($paths as $path) {
+            if (!is_scalar($path)) continue;
+            $value = rtrim(str_replace('\\', '/', trim((string) $path)), '/');
+            if ($value !== '') $out[$value] = true;
+        }
+        return array_keys($out);
+    }
+
+    private function pathMatchesPolicy(string $path, string $policyPath): bool
+    {
+        return $path === $policyPath || str_starts_with($path, rtrim($policyPath, '/').'/');
     }
 
     /**
@@ -487,7 +650,11 @@ final readonly class EngineeringDeveloperStageExecutor
                     ['id' => 'CONFIGURED', 'description' => 'Credentials have been configured; resume Developer.'],
                     ['id' => 'CANCEL', 'description' => 'Do not continue this engineering workflow.'],
                 ],
-                evidence: ['required_environment' => ['COS_ENGINEERING_GITHUB_REPOSITORY','COS_ENGINEERING_GITHUB_TOKEN']],
+                evidence: [
+                    'requested_by_agent' => AgentRole::DEVELOPER->value,
+                    'resume_state' => $workflow->resumeState()?->value,
+                    'required_environment' => ['COS_ENGINEERING_GITHUB_REPOSITORY','COS_ENGINEERING_GITHUB_TOKEN'],
+                ],
                 blocking: true,
                 recommendedOption: 'CONFIGURED',
             );

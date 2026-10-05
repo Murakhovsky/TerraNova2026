@@ -8,11 +8,14 @@ use App\Application\Engineering\Command\RunEngineeringFeatureCommand;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface;
 use App\Engineering\Application\Service\EngineeringCancelService;
 use App\Engineering\Application\Service\EngineeringFeatureManagementService;
+use App\Engineering\Application\Service\EngineeringFinalizeService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Application\Service\EngineeringStatusService;
+use App\Engineering\Application\Service\EngineeringUiActionResolver;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Security\SessionCsrfValidator;
 use App\Web\Experience\Archetype\PageArchetype;
@@ -38,10 +41,13 @@ final readonly class EngineeringFeatureController
         private EngineeringStatusService $engineering,
         private EngineeringFeatureStoreInterface $features,
         private EngineeringWorkflowStoreInterface $workflows,
+        private EngineeringObservabilityReadModelInterface $observability,
         private EngineeringOrchestrator $orchestrator,
         private EngineeringCancelService $cancel,
         private EngineeringFeatureManagementService $featureManagement,
+        private EngineeringFinalizeService $finalize,
         private EngineeringHumanDecisionService $decisions,
+        private EngineeringUiActionResolver $uiActions,
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private PagePresentationFactory $pages,
@@ -52,6 +58,8 @@ final readonly class EngineeringFeatureController
     {
         $tenant = $this->manager();
         if ($tenant instanceof Response) return $tenant;
+
+        $this->workflows->refreshRuntimeHealthForOrganization($tenant->organizationId()->value());
 
         $context = new WebExtensionContext(
             organizationId: $tenant->organizationId()->value(),
@@ -67,37 +75,144 @@ final readonly class EngineeringFeatureController
 
         $features = $this->features->recentForOrganization($tenant->organizationId()->value(), 50);
         $queue = $this->workflows->queueForOrganization($tenant->organizationId()->value(), 100);
+        $queuePositionByFeature = [];
         foreach ($queue as $index => &$row) {
             $row['position'] = $index + 1;
+            $queuePositionByFeature[(string) $row['feature_id']] = $index + 1;
         }
         unset($row);
 
         $active = $this->workflows->activeForOrganization($tenant->organizationId()->value(), 100);
         $activeByFeature = [];
         foreach ($active as $row) {
-            $activeByFeature[$row['feature_id']] = $row;
+            $activeByFeature[(string) $row['feature_id']] = $row;
         }
 
-        $queuedFeatureIds = array_fill_keys(
-            array_map(static fn (array $row): string => (string) $row['feature_id'], $queue),
-            true,
-        );
-        $activeExecutions = array_values(array_filter(
-            $active,
-            static fn (array $row): bool =>
-                ($row['workflow_type'] ?? null) === 'ENGINEERING_IMMEDIATE'
-                || !isset($queuedFeatureIds[(string) ($row['feature_id'] ?? '')]),
+        $featureIds = array_values(array_map(
+            static fn (array $feature): string => (string) $feature['id'],
+            $features,
         ));
+        $facts = $this->observability->workspaceFactsForFeatures($featureIds);
 
-        foreach ($features as &$feature) {
-            $workflow = $activeByFeature[$feature['id']] ?? null;
-            $feature['workflow_id'] = $workflow['workflow_id'] ?? null;
-            $feature['workflow_state'] = $workflow['state'] ?? null;
-            $feature['workflow_status'] = $workflow['workflow_status'] ?? null;
-            $feature['workflow_type'] = $workflow['workflow_type'] ?? null;
-            $feature['workflow_last_activity_at'] = $workflow['last_activity_at'] ?? null;
+        $workspaceRows = [];
+        $stats = [
+            'running' => 0,
+            'queued' => count($queue),
+            'attention' => 0,
+            'completed' => 0,
+            'cancelled' => 0,
+            'total' => count($features),
+        ];
+
+        foreach ($features as $feature) {
+            $featureId = (string) $feature['id'];
+            $workflow = $activeByFeature[$featureId] ?? null;
+            if ($workflow === null) {
+                $workflowId = $this->workflows->latestIdForFeature($featureId);
+                $workflow = $workflowId !== null ? $this->workflows->view($workflowId) : null;
+                if (is_array($workflow)) {
+                    $workflow['workflow_id'] = $workflow['id'] ?? $workflowId;
+                    $workflow['workflow_status'] = $workflow['status'] ?? null;
+                }
+            }
+
+            $state = (string) ($workflow['state'] ?? $feature['status'] ?? 'NEW');
+            $status = (string) ($workflow['workflow_status'] ?? $workflow['status'] ?? $feature['status'] ?? 'NEW');
+            $lastActivity = $workflow['last_activity_at'] ?? $feature['updated_at'] ?? null;
+            $persistedHealth = strtoupper((string) ($workflow['health_status'] ?? ''));
+            $health = in_array($persistedHealth, ['HEALTHY','STALE','STALLED','WAITING','TERMINAL'], true)
+                ? $persistedHealth
+                : $this->runtimeHealth($status, $state, is_string($lastActivity) ? $lastActivity : null);
+            $fact = $facts[$featureId] ?? [];
+
+            if (isset($queuePositionByFeature[$featureId])) {
+                $displayStatus = 'QUEUED';
+            } elseif (in_array($status, ['COMPLETED'], true) || $state === 'DONE') {
+                $displayStatus = 'COMPLETED';
+                ++$stats['completed'];
+            } elseif ($status === 'CANCELLED' || $state === 'CANCELLED') {
+                $displayStatus = 'CANCELLED';
+                ++$stats['cancelled'];
+            } elseif ($status === 'FAILED' || $state === 'FAILED') {
+                $displayStatus = 'FAILED';
+                ++$stats['attention'];
+            } elseif (in_array($health, ['STALE','STALLED'], true)) {
+                $displayStatus = $health;
+                ++$stats['attention'];
+            } elseif (in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
+                $displayStatus = $state;
+                ++$stats['attention'];
+            } elseif ($workflow !== null) {
+                $displayStatus = 'RUNNING';
+                ++$stats['running'];
+            } else {
+                $displayStatus = (string) ($feature['status'] ?? 'NEW');
+            }
+
+            $openDecisionCount = 0;
+            if (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
+                $openDecisionCount = 1;
+            }
+            $rowActions = $this->uiActions->resolve($feature, is_array($workflow) ? $workflow : null, $health, $openDecisionCount);
+
+            $workspaceRows[] = array_merge($feature, [
+                'workflow_id' => $workflow['workflow_id'] ?? $workflow['id'] ?? null,
+                'workflow_state' => $state,
+                'workflow_status' => $status,
+                'workflow_type' => $workflow['workflow_type'] ?? null,
+                'workflow_last_activity_at' => $lastActivity,
+                'display_status' => $displayStatus,
+                'health' => $health,
+                'runtime_reason' => $workflow['runtime_reason'] ?? null,
+                'stalled_at' => $workflow['stalled_at'] ?? null,
+                'heartbeat_at' => $workflow['heartbeat_at'] ?? null,
+                'queue_position' => $queuePositionByFeature[$featureId] ?? null,
+                'tasks_total' => (int) ($fact['tasks_total'] ?? 0),
+                'tasks_completed' => (int) ($fact['tasks_completed'] ?? 0),
+                'agent_runs' => (int) ($fact['agent_runs'] ?? 0),
+                'latest_agent_role' => $fact['latest_agent_role'] ?? null,
+                'latest_agent_status' => $fact['latest_agent_status'] ?? null,
+                'actions' => $rowActions,
+                'usage' => $fact['usage'] ?? [
+                    'available' => false,
+                    'total_tokens' => null,
+                    'cost_amount' => null,
+                    'cost_currency' => null,
+                ],
+            ]);
         }
-        unset($feature);
+
+        $view = strtolower(trim((string) $request->query->get('view', 'all')));
+        if (!in_array($view, ['all','running','queued','attention','completed','cancelled'], true)) $view = 'all';
+        $query = mb_strtolower(trim((string) $request->query->get('q', '')));
+
+        if ($view !== 'all' || $query !== '') {
+            $workspaceRows = array_values(array_filter(
+                $workspaceRows,
+                static function (array $row) use ($view, $query): bool {
+                    $displayStatus = strtoupper((string) ($row['display_status'] ?? ''));
+                    $health = strtoupper((string) ($row['health'] ?? ''));
+                    $matchesView = match ($view) {
+                        'running' => $displayStatus === 'RUNNING',
+                        'queued' => $displayStatus === 'QUEUED',
+                        'attention' => in_array($displayStatus, ['FAILED','STALE','STALLED','READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)
+                            || in_array($health, ['STALE','STALLED'], true),
+                        'completed' => $displayStatus === 'COMPLETED',
+                        'cancelled' => $displayStatus === 'CANCELLED',
+                        default => true,
+                    };
+                    if (!$matchesView) return false;
+                    if ($query === '') return true;
+                    $haystack = mb_strtolower(trim(
+                        (string) ($row['title'] ?? '').' '.
+                        (string) ($row['description'] ?? '').' '.
+                        (string) ($row['workflow_state'] ?? '').' '.
+                        (string) ($row['latest_agent_role'] ?? '')
+                    ));
+                    return str_contains($haystack, $query);
+                },
+            ));
+        }
 
         return new Response(
             $this->twig->render('experience/engineering/index.html.twig', [
@@ -108,8 +223,12 @@ final readonly class EngineeringFeatureController
                     'normal',
                 ),
                 'features' => $features,
+                'workspaceRows' => $workspaceRows,
+                'workspaceStats' => $stats,
+                'workspaceView' => $view,
+                'workspaceQuery' => $query,
                 'queue' => $queue,
-                'activeExecutions' => $activeExecutions,
+                'activeExecutions' => $active,
                 'csrfToken' => $this->csrf->token($request),
                 'statusMessage' => trim((string) $request->query->get('status_message', '')),
             ]),
@@ -190,6 +309,7 @@ final readonly class EngineeringFeatureController
 
         try {
             $featureId = EngineeringId::assert($id);
+            $this->workflows->refreshRuntimeHealthForOrganization($tenant->organizationId()->value());
             $data = $this->engineering->status($featureId);
             if (($data['feature']['organization_id'] ?? null) !== $tenant->organizationId()->value()) {
                 return new Response('Not found', Response::HTTP_NOT_FOUND);
@@ -266,8 +386,9 @@ final readonly class EngineeringFeatureController
         try {
             $featureId = EngineeringId::assert($id);
             $status = $this->ownedStatus($tenant, $featureId);
+            $runtimeHealth = strtoupper((string) ($status['workflow']['health_status'] ?? 'UNKNOWN'));
             foreach ($status['agent_runs'] ?? [] as $agentRun) {
-                if (($agentRun['status'] ?? null) === 'RUNNING') {
+                if (($agentRun['status'] ?? null) === 'RUNNING' && $runtimeHealth !== 'STALLED') {
                     throw new \LogicException('Engineering AgentRun already RUNNING; duplicate immediate execution is not allowed.');
                 }
             }
@@ -290,6 +411,33 @@ final readonly class EngineeringFeatureController
             ));
 
             return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow передано immediate worker.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
+        }
+    }
+
+    public function finalize(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $status = $this->ownedStatus($tenant, $featureId);
+            if (($status['workflow']['state'] ?? null) !== 'READY_FOR_HUMAN_APPROVAL') {
+                throw new \LogicException('Workflow ще не готовий до підтвердження human merge.');
+            }
+
+            $result = $this->finalize->finalize(
+                $featureId,
+                'user:' . $tenant->userId()->value(),
+            );
+
+            return $this->redirectStatus(
+                '/admin/engineering/' . $featureId,
+                'Human merge перевірено · workflow завершено · ' . ($result['pull_request']['merge_revision'] ?? 'DONE') . '.',
+            );
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
         }
@@ -444,18 +592,54 @@ final readonly class EngineeringFeatureController
 
     private function summary(array $data): array
     {
-        $tokens = 0;
-        $cost = 0.0;
-        foreach ($data['agent_runs'] ?? [] as $run) {
-            if (!is_array($run)) continue;
-            $tokens += (int) ($run['tokens_input'] ?? 0) + (int) ($run['tokens_output'] ?? 0);
-            $cost += (float) ($run['cost'] ?? 0);
-        }
-
+        $usage = is_array($data['usage'] ?? null) ? $data['usage'] : [];
         $openFindings = array_values(array_filter(
             is_array($data['findings'] ?? null) ? $data['findings'] : [],
             static fn (mixed $finding): bool => is_array($finding) && ($finding['status'] ?? null) === 'OPEN',
         ));
+
+        $runs = is_array($data['agent_runs'] ?? null) ? $data['agent_runs'] : [];
+        $roles = [];
+        foreach ($runs as $run) {
+            if (!is_array($run)) continue;
+            $role = (string) ($run['role'] ?? 'UNKNOWN');
+            $roles[$role] ??= ['runs' => 0, 'completed' => 0, 'failed' => 0, 'running' => 0, 'tokens' => 0, 'cost' => 0.0];
+            ++$roles[$role]['runs'];
+            $runStatus = strtoupper((string) ($run['status'] ?? 'UNKNOWN'));
+            if (in_array($runStatus, ['COMPLETED','APPROVED','PASS','PASSED','SUCCESS'], true)) ++$roles[$role]['completed'];
+            if (in_array($runStatus, ['FAILED','ERROR','TIMED_OUT'], true)) ++$roles[$role]['failed'];
+            if ($runStatus === 'RUNNING') ++$roles[$role]['running'];
+            $ledgerUsage = is_array($run['ledger_usage'] ?? null) ? $run['ledger_usage'] : null;
+            if (($ledgerUsage['total_tokens'] ?? null) !== null) {
+                $roles[$role]['tokens'] += (int) $ledgerUsage['total_tokens'];
+            } elseif (($run['tokens_input'] ?? null) !== null || ($run['tokens_output'] ?? null) !== null) {
+                $roles[$role]['tokens'] += (int) ($run['tokens_input'] ?? 0) + (int) ($run['tokens_output'] ?? 0);
+            }
+            if (($ledgerUsage['cost_amount'] ?? null) !== null) {
+                $roles[$role]['cost'] += (float) $ledgerUsage['cost_amount'];
+            } elseif (($run['cost'] ?? null) !== null) {
+                $roles[$role]['cost'] += (float) $run['cost'];
+            }
+        }
+
+        $currentAgent = null;
+        for ($i = count($runs) - 1; $i >= 0; --$i) {
+            $candidate = $runs[$i] ?? null;
+            if (!is_array($candidate) || strtoupper((string) ($candidate['status'] ?? '')) !== 'RUNNING') continue;
+            $currentAgent = [
+                'role' => (string) ($candidate['role'] ?? 'AGENT'),
+                'run_id' => (string) ($candidate['id'] ?? ''),
+                'task_id' => $candidate['task_id'] ?? null,
+                'started_at' => $candidate['started_at'] ?? null,
+            ];
+            break;
+        }
+
+        $reviewReached = isset($roles['REVIEWER']);
+        $qaReached = isset($roles['QA']);
+        $qualityState = (!$reviewReached && !$qaReached)
+            ? 'NOT_REACHED'
+            : ($openFindings !== [] ? 'FINDINGS' : (($reviewReached && $qaReached) ? 'PASSED' : 'IN_PROGRESS'));
 
         $finalReport = $data['artifacts']['FINAL_REPORT']['content'] ?? null;
         $development = $data['artifacts']['DEVELOPMENT_RESULT']['content'] ?? null;
@@ -466,19 +650,162 @@ final readonly class EngineeringFeatureController
                 'url' => is_array($development) ? ($development['pull_request_url'] ?? null) : null,
             ];
 
+        $state = (string) ($data['workflow']['state'] ?? ($data['feature']['status'] ?? 'NEW'));
+        $workflowStatus = (string) ($data['workflow']['status'] ?? ($data['feature']['status'] ?? 'NEW'));
+        $terminal = in_array($state, ['DONE','CANCELLED','FAILED'], true)
+            || in_array($workflowStatus, ['COMPLETED','CANCELLED','FAILED'], true);
+        $waitsForHuman = in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true);
+        $resolvedHealth = in_array(strtoupper((string) ($data['workflow']['health_status'] ?? '')), ['HEALTHY','STALE','STALLED','WAITING','TERMINAL'], true)
+            ? strtoupper((string) $data['workflow']['health_status'])
+            : $this->runtimeHealth(
+                $workflowStatus,
+                $state,
+                is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null,
+            );
+        $actions = $this->uiActions->resolve(
+            is_array($data['feature'] ?? null) ? $data['feature'] : [],
+            is_array($data['workflow'] ?? null) ? $data['workflow'] : null,
+            $resolvedHealth,
+            count($data['open_human_decisions'] ?? []),
+        );
+        $stages = $this->stagePipeline($data, $state, $workflowStatus);
+        $durationSeconds = $this->durationSeconds(
+            is_string($data['workflow']['started_at'] ?? null) ? $data['workflow']['started_at'] : null,
+            is_string($data['workflow']['finished_at'] ?? null) ? $data['workflow']['finished_at'] : null,
+        );
+
         return [
-            'state' => $data['workflow']['state'] ?? ($data['feature']['status'] ?? 'NEW'),
+            'state' => $state,
+            'workflow_status' => $workflowStatus,
+            'health' => $resolvedHealth,
+            'terminal' => $terminal,
+            'waits_for_human' => $waitsForHuman,
+            'actions' => $actions,
+            'can_cancel' => $actions['cancel'],
+            'can_run' => $actions['continue'] || $actions['resume'] || $actions['run'],
+            'can_retry' => $actions['retry'],
             'tasks_total' => count($data['tasks'] ?? []),
             'tasks_completed' => count(array_filter(
                 $data['tasks'] ?? [],
                 static fn (mixed $task): bool => is_array($task) && ($task['status'] ?? null) === 'COMPLETED',
             )),
-            'agent_runs' => count($data['agent_runs'] ?? []),
-            'tokens' => $tokens,
-            'cost' => round($cost, 6),
+            'agent_runs' => count($runs),
+            'roles' => $roles,
+            'current_agent' => $currentAgent,
+            'duration_seconds' => $durationSeconds,
+            'duration_label' => $this->durationLabel($durationSeconds),
+            'stages' => $stages,
+            'usage' => $usage,
+            'tokens' => $usage['total_tokens'] ?? null,
+            'cost' => $usage['cost_amount'] ?? null,
+            'usage_source' => $usage['source'] ?? 'UNAVAILABLE',
+            'quality_state' => $qualityState,
+            'review_reached' => $reviewReached,
+            'qa_reached' => $qaReached,
             'open_findings' => $openFindings,
             'pull_request' => $pullRequest,
             'final_report' => is_array($finalReport) ? $finalReport : null,
         ];
     }
+
+    /** @return list<array{key:string,label:string,status:string}> */
+    private function stagePipeline(array $data, string $state, string $workflowStatus): array
+    {
+        $order = [
+            'ANALYSIS' => 'Analysis',
+            'QA_PLANNING' => 'QA Plan',
+            'ARCHITECTURE_PENDING' => 'Architecture',
+            'DEVELOPMENT_RUNNING' => 'Development',
+            'REVIEW_PENDING' => 'Review',
+            'QA_PENDING' => 'QA',
+        ];
+        $keys = array_keys($order);
+
+        if ($state === 'DONE' || $workflowStatus === 'COMPLETED' || $state === 'READY_FOR_HUMAN_APPROVAL') {
+            return array_map(
+                static fn (string $key, string $label): array => ['key' => $key, 'label' => $label, 'status' => 'COMPLETED'],
+                $keys,
+                array_values($order),
+            );
+        }
+
+        $effectiveState = $state;
+        if (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
+            $resume = trim((string) ($data['workflow']['resume_state'] ?? ''));
+            if ($resume !== '') $effectiveState = $resume;
+        }
+        if (in_array($state, ['CANCELLED','FAILED'], true) || in_array($workflowStatus, ['CANCELLED','FAILED'], true)) {
+            $transitions = is_array($data['transitions'] ?? null) ? $data['transitions'] : [];
+            $last = $transitions !== [] ? $transitions[array_key_last($transitions)] : null;
+            $from = is_array($last) ? trim((string) ($last['from'] ?? '')) : '';
+            if (array_key_exists($from, $order)) $effectiveState = $from;
+        }
+
+        $currentIndex = array_search($effectiveState, $keys, true);
+        if ($currentIndex === false) $currentIndex = -1;
+
+        $result = [];
+        foreach ($keys as $index => $key) {
+            $status = 'NOT_REACHED';
+            if ($currentIndex >= 0 && $index < $currentIndex) $status = 'COMPLETED';
+            if ($index === $currentIndex) {
+                $status = match (true) {
+                    in_array($state, ['CANCELLED'], true) || $workflowStatus === 'CANCELLED' => 'CANCELLED',
+                    in_array($state, ['FAILED'], true) || $workflowStatus === 'FAILED' => 'FAILED',
+                    in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true) => 'WAITING',
+                    default => 'RUNNING',
+                };
+            }
+            $result[] = ['key' => $key, 'label' => $order[$key], 'status' => $status];
+        }
+        return $result;
+    }
+
+    private function durationSeconds(?string $startedAt, ?string $finishedAt): ?int
+    {
+        if ($startedAt === null || trim($startedAt) === '') return null;
+        try {
+            $start = new \DateTimeImmutable($startedAt);
+            $end = ($finishedAt !== null && trim($finishedAt) !== '')
+                ? new \DateTimeImmutable($finishedAt)
+                : new \DateTimeImmutable();
+            return max(0, $end->getTimestamp() - $start->getTimestamp());
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function durationLabel(?int $seconds): string
+    {
+        if ($seconds === null) return '—';
+        if ($seconds < 60) return $seconds.'с';
+        if ($seconds < 3600) return intdiv($seconds, 60).'хв '.($seconds % 60).'с';
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        if ($hours < 24) return $hours.'г '.str_pad((string) $minutes, 2, '0', STR_PAD_LEFT).'хв';
+        $days = intdiv($hours, 24);
+        return $days.'д '.($hours % 24).'г';
+    }
+
+    private function runtimeHealth(string $status, string $state, ?string $lastActivityAt): string
+    {
+        if (in_array($status, ['COMPLETED','CANCELLED','FAILED'], true) || in_array($state, ['DONE','CANCELLED','FAILED'], true)) {
+            return 'TERMINAL';
+        }
+        if (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED','READY_FOR_HUMAN_APPROVAL'], true)) {
+            return 'WAITING';
+        }
+        if ($lastActivityAt === null || trim($lastActivityAt) === '') return 'UNKNOWN';
+
+        try {
+            $last = new \DateTimeImmutable($lastActivityAt);
+            $age = time() - $last->getTimestamp();
+            if ($age >= 1800) return 'STALLED';
+            if ($age >= 600) return 'STALE';
+            return 'HEALTHY';
+        } catch (\Throwable) {
+            return 'UNKNOWN';
+        }
+    }
+
 }

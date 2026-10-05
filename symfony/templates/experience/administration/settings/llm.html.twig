@@ -4,6 +4,14 @@
 
 {% block workspace_content %}
 <section class="cos-page__stack" data-cos-archetype="{{ page.archetypeId() }}" data-cos-page-state="{{ page.state }}">
+    <style>
+        .llm-catalog-wrap{overflow:auto;border:1px solid var(--cos-border,#e2e8f0);border-radius:12px}
+        .llm-catalog{width:100%;border-collapse:collapse;min-width:980px;font-size:.82rem}
+        .llm-catalog th,.llm-catalog td{padding:8px 10px;border-bottom:1px solid var(--cos-border,#edf0f3);text-align:left;vertical-align:top}
+        .llm-catalog th{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);background:var(--cos-surface-subtle,#f8f9fb)}
+        .llm-catalog tr:last-child td{border-bottom:0}
+        .llm-catalog__muted{display:block;color:var(--cos-text-secondary,#667085);font-size:.72rem;margin-top:2px}
+    </style>
     <twig:CosPageHeader
         eyebrow="Platform Settings · AI"
         title="LLM runtime"
@@ -37,7 +45,7 @@
 
                 <label class="cos-field">
                     <span>Default model</span>
-                    <input class="cos-input" name="default_model" type="text" value="{{ settings.default_model }}" placeholder="model id">
+                    <input class="cos-input" name="default_model" type="text" value="{{ settings.default_model }}" placeholder="model id" list="openai-model-catalog">
                 </label>
 
                 <label class="cos-field">
@@ -83,11 +91,59 @@
             </div>
 
             <div class="cos-section-grid">
-                <label class="cos-field"><span>Manager</span><input class="cos-input" name="manager_model" value="{{ settings.manager_model }}"></label>
-                <label class="cos-field"><span>Architect</span><input class="cos-input" name="architect_model" value="{{ settings.architect_model }}"></label>
-                <label class="cos-field"><span>Developer</span><input class="cos-input" name="developer_model" value="{{ settings.developer_model }}"></label>
-                <label class="cos-field"><span>Reviewer</span><input class="cos-input" name="reviewer_model" value="{{ settings.reviewer_model }}"></label>
-                <label class="cos-field"><span>QA</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}"></label>
+                <label class="cos-field"><span>Manager</span><input class="cos-input" name="manager_model" value="{{ settings.manager_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>Architect</span><input class="cos-input" name="architect_model" value="{{ settings.architect_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>Developer</span><input class="cos-input" name="developer_model" value="{{ settings.developer_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>Reviewer</span><input class="cos-input" name="reviewer_model" value="{{ settings.reviewer_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>QA</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}" list="openai-model-catalog"></label>
+            </div>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection title="Каталог моделей і тарифи" description="Вбудовані ставки використовуються для cost accounting, якщо tenant override відсутній.">
+            <datalist id="openai-model-catalog">
+                {% for model in settings.model_catalog %}
+                    <option value="{{ model.model }}">{{ model.name }}</option>
+                {% endfor %}
+            </datalist>
+
+            <div class="cos-pattern-stack">
+                <p class="cos-card__eyebrow">Pricing snapshot · {{ settings.pricing_catalog_version }}</p>
+                <h2 class="cos-card__title">OpenAI GPT-6 catalog</h2>
+                <p class="cos-card__copy">
+                    Input/output ціни зберігаються за 1M tokens. Окрему ставку cached input у наданих даних не вказано, тому до появи override cached tokens оцінюються за стандартною input-ставкою і це фіксується в cost source.
+                </p>
+            </div>
+
+            <div class="llm-catalog-wrap">
+                <table class="llm-catalog" data-llm-model-catalog>
+                    <thead>
+                    <tr>
+                        <th>Модель</th>
+                        <th>Input / 1M</th>
+                        <th>Output / 1M</th>
+                        <th>Context</th>
+                        <th>Max output</th>
+                        <th>Reasoning</th>
+                        <th>Knowledge cutoff</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for model in settings.model_catalog %}
+                        <tr>
+                            <td>
+                                <strong>{{ model.name }}</strong>
+                                <span class="llm-catalog__muted"><code>{{ model.model }}</code></span>
+                            </td>
+                            <td>{{ model.currency }} {{ model.input_per_million|number_format(model.input_per_million < 1 ? 1 : 0, '.', '') }}</td>
+                            <td>{{ model.currency }} {{ model.output_per_million|number_format(model.output_per_million < 1 ? 1 : 0, '.', '') }}</td>
+                            <td>{{ (model.context_window_tokens / 1000000)|number_format(2, '.', '') }}M</td>
+                            <td>{{ (model.max_output_tokens / 1000)|number_format(0, '.', '') }}K</td>
+                            <td>{{ model.reasoning|join(', ') }}</td>
+                            <td>{{ model.knowledge_cutoff }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </twig:CosFormSection>
 

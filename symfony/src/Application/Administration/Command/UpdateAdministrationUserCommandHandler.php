@@ -19,6 +19,7 @@ final readonly class UpdateAdministrationUserCommandHandler implements CommandHa
         return $this->administration->updateUser(
             $command->userId,
             $command->input,
+            $command->organizationId,
             $command->actor,
         );
     }

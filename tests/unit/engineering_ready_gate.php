@@ -12,18 +12,63 @@ spl_autoload_register(static function (string $class): void {
 use App\Engineering\Domain\Workflow\ReadyForHumanApprovalEvidence;
 use App\Engineering\Domain\Workflow\ReadyForHumanApprovalGuard;
 
-$guard = new ReadyForHumanApprovalGuard();
-$guard->assert(new ReadyForHumanApprovalEvidence(true, true, true, true, true, true, false, false, false));
+$ready = static fn (array $override = []): ReadyForHumanApprovalEvidence => new ReadyForHumanApprovalEvidence(
+    architectureApproved: $override['architectureApproved'] ?? true,
+    developmentCompleted: $override['developmentCompleted'] ?? true,
+    reviewApproved: $override['reviewApproved'] ?? true,
+    qaPassed: $override['qaPassed'] ?? true,
+    ciPassed: $override['ciPassed'] ?? true,
+    allBlockingAcceptanceCriteriaVerified: $override['allBlockingAcceptanceCriteriaVerified'] ?? true,
+    hasOpenCriticalFinding: $override['hasOpenCriticalFinding'] ?? false,
+    hasBlockingHumanDecision: $override['hasBlockingHumanDecision'] ?? false,
+    hasRunningTask: $override['hasRunningTask'] ?? false,
+    tenantIsolationVerified: $override['tenantIsolationVerified'] ?? true,
+    authorizationVerified: $override['authorizationVerified'] ?? true,
+    authenticationVerifiedOrNotApplicable: $override['authenticationVerifiedOrNotApplicable'] ?? true,
+    migrationVerifiedOrNotApplicable: $override['migrationVerifiedOrNotApplicable'] ?? true,
+    rollbackVerifiedOrNotApplicable: $override['rollbackVerifiedOrNotApplicable'] ?? true,
+    apiCompatibilityVerifiedOrNotApplicable: $override['apiCompatibilityVerifiedOrNotApplicable'] ?? true,
+    staticAnalysisPassed: $override['staticAnalysisPassed'] ?? true,
+    requiredTestsPassed: $override['requiredTestsPassed'] ?? true,
+    smokePassed: $override['smokePassed'] ?? true,
+    documentationImpactChecked: $override['documentationImpactChecked'] ?? true,
+    hasOpenMajorOrHigherFinding: $override['hasOpenMajorOrHigherFinding'] ?? false,
+    revisionConsistent: $override['revisionConsistent'] ?? true,
+);
 
-try {
-    $guard->assert(new ReadyForHumanApprovalEvidence(true, true, true, true, false, true, false, false, false));
-    throw new RuntimeException('READY gate accepted failed CI.');
-} catch (LogicException) {
+$guard = new ReadyForHumanApprovalGuard();
+$guard->assert($ready());
+
+$failures = [
+    'ciPassed' => 'ci_not_passed',
+    'tenantIsolationVerified' => 'tenant_isolation_unverified',
+    'authorizationVerified' => 'authorization_unverified',
+    'authenticationVerifiedOrNotApplicable' => 'authentication_unverified',
+    'migrationVerifiedOrNotApplicable' => 'migration_unverified',
+    'rollbackVerifiedOrNotApplicable' => 'rollback_unverified',
+    'apiCompatibilityVerifiedOrNotApplicable' => 'api_compatibility_unverified',
+    'staticAnalysisPassed' => 'static_analysis_failed_or_missing',
+    'requiredTestsPassed' => 'required_tests_failed_or_missing',
+    'smokePassed' => 'smoke_failed_or_missing',
+    'documentationImpactChecked' => 'documentation_impact_unchecked',
+    'revisionConsistent' => 'revision_mismatch',
+];
+
+foreach ($failures as $field => $expected) {
+    try {
+        $guard->assert($ready([$field => false]));
+        throw new RuntimeException('READY gate accepted failed '.$field.'.');
+    } catch (LogicException $error) {
+        if (!str_contains($error->getMessage(), $expected)) throw $error;
+    }
 }
-try {
-    $guard->assert(new ReadyForHumanApprovalEvidence(true, true, true, true, true, true, true, false, false));
-    throw new RuntimeException('READY gate accepted open critical finding.');
-} catch (LogicException) {
+
+foreach (['hasOpenCriticalFinding','hasOpenMajorOrHigherFinding','hasBlockingHumanDecision','hasRunningTask'] as $field) {
+    try {
+        $guard->assert($ready([$field => true]));
+        throw new RuntimeException('READY gate accepted blocking '.$field.'.');
+    } catch (LogicException) {
+    }
 }
 
 echo "Engineering READY gate passed.\n";

@@ -1184,6 +1184,2778 @@
         "blockers": [],
         "repository_revision_after_tests": null
       }
+    },
+    {
+      "id": "manager-empty-business-goal-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
+    },
+    {
+      "id": "manager-empty-scope-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
+    },
+    {
+      "id": "manager-empty-functional-requirements-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
+    },
+    {
+      "id": "manager-invalid-priority-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "SPECIFICATION_READY",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P9",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
+    },
+    {
+      "id": "architect-missing-tenant-strategy-rejected",
+      "role": "PRINCIPAL_ARCHITECT",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "architecture_decision": {
+          "affected_domains": [
+            "engineering"
+          ],
+          "primary_owner_domain": "engineering",
+          "bounded_context": "Engineering",
+          "current_architecture": "Existing orchestration runtime.",
+          "proposed_solution": "Extend existing runtime.",
+          "components": [],
+          "interfaces": [],
+          "data_flow": [],
+          "dependencies": [],
+          "database_changes": [],
+          "api_changes": [],
+          "events": [],
+          "identity": {
+            "authentication_required": true
+          },
+          "permissions": [
+            "repository.read"
+          ],
+          "tenant_isolation": {},
+          "security": [
+            "repository content remains untrusted and writes stay policy-gated"
+          ],
+          "migration_strategy": null,
+          "backward_compatibility": {
+            "classification": "NON_BREAKING"
+          },
+          "observability": [
+            "agent run, gate status and repository revision are persisted"
+          ],
+          "testing_strategy": [
+            "unit",
+            "architecture"
+          ],
+          "risks": [],
+          "alternatives_considered": [],
+          "decision": "Extend existing runtime."
+        },
+        "implementation_plan": {
+          "steps": [
+            {
+              "id": "ARCH-1"
+            }
+          ],
+          "files_to_create": [],
+          "files_to_modify": [],
+          "services": [],
+          "controllers": [],
+          "commands": [],
+          "entities": [],
+          "repositories": [],
+          "frontend_components": [],
+          "migrations": [],
+          "tests_required": [
+            "unit"
+          ],
+          "documentation_updates": [],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "developer_handoff": {
+          "mandatory_constraints": [
+            "Preserve existing runtime."
+          ],
+          "forbidden_changes": [
+            "No merge/deploy."
+          ],
+          "interfaces_to_respect": [],
+          "tests_required": [
+            "unit"
+          ],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "documentation_changes": [],
+        "conditions": [],
+        "risks": [],
+        "unresolved_questions": [],
+        "required_human_decisions": []
+      }
+    },
+    {
+      "id": "architect-missing-handoff-tests-rejected",
+      "role": "PRINCIPAL_ARCHITECT",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "architecture_decision": {
+          "affected_domains": [
+            "engineering"
+          ],
+          "primary_owner_domain": "engineering",
+          "bounded_context": "Engineering",
+          "current_architecture": "Existing orchestration runtime.",
+          "proposed_solution": "Extend existing runtime.",
+          "components": [],
+          "interfaces": [],
+          "data_flow": [],
+          "dependencies": [],
+          "database_changes": [],
+          "api_changes": [],
+          "events": [],
+          "identity": {
+            "authentication_required": true
+          },
+          "permissions": [
+            "repository.read"
+          ],
+          "tenant_isolation": {
+            "scope": "SYSTEM"
+          },
+          "security": [
+            "repository content remains untrusted and writes stay policy-gated"
+          ],
+          "migration_strategy": null,
+          "backward_compatibility": {
+            "classification": "NON_BREAKING"
+          },
+          "observability": [
+            "agent run, gate status and repository revision are persisted"
+          ],
+          "testing_strategy": [
+            "unit",
+            "architecture"
+          ],
+          "risks": [],
+          "alternatives_considered": [],
+          "decision": "Extend existing runtime."
+        },
+        "implementation_plan": {
+          "steps": [
+            {
+              "id": "ARCH-1"
+            }
+          ],
+          "files_to_create": [],
+          "files_to_modify": [],
+          "services": [],
+          "controllers": [],
+          "commands": [],
+          "entities": [],
+          "repositories": [],
+          "frontend_components": [],
+          "migrations": [],
+          "tests_required": [
+            "unit"
+          ],
+          "documentation_updates": [],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "developer_handoff": {
+          "mandatory_constraints": [
+            "Preserve existing runtime."
+          ],
+          "forbidden_changes": [
+            "No merge/deploy."
+          ],
+          "interfaces_to_respect": [],
+          "tests_required": [],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "documentation_changes": [],
+        "conditions": [],
+        "risks": [],
+        "unresolved_questions": [],
+        "required_human_decisions": []
+      }
+    },
+    {
+      "id": "architect-create-modify-overlap-rejected",
+      "role": "PRINCIPAL_ARCHITECT",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "architecture_decision": {
+          "affected_domains": [
+            "engineering"
+          ],
+          "primary_owner_domain": "engineering",
+          "bounded_context": "Engineering",
+          "current_architecture": "Existing orchestration runtime.",
+          "proposed_solution": "Extend existing runtime.",
+          "components": [],
+          "interfaces": [],
+          "data_flow": [],
+          "dependencies": [],
+          "database_changes": [],
+          "api_changes": [],
+          "events": [],
+          "identity": {
+            "authentication_required": true
+          },
+          "permissions": [
+            "repository.read"
+          ],
+          "tenant_isolation": {
+            "scope": "SYSTEM"
+          },
+          "security": [
+            "repository content remains untrusted and writes stay policy-gated"
+          ],
+          "migration_strategy": null,
+          "backward_compatibility": {
+            "classification": "NON_BREAKING"
+          },
+          "observability": [
+            "agent run, gate status and repository revision are persisted"
+          ],
+          "testing_strategy": [
+            "unit",
+            "architecture"
+          ],
+          "risks": [],
+          "alternatives_considered": [],
+          "decision": "Extend existing runtime."
+        },
+        "implementation_plan": {
+          "steps": [
+            {
+              "id": "ARCH-1"
+            }
+          ],
+          "files_to_create": [
+            "symfony/src/Shared.php"
+          ],
+          "files_to_modify": [
+            "symfony/src/Shared.php"
+          ],
+          "services": [],
+          "controllers": [],
+          "commands": [],
+          "entities": [],
+          "repositories": [],
+          "frontend_components": [],
+          "migrations": [],
+          "tests_required": [
+            "unit"
+          ],
+          "documentation_updates": [],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "developer_handoff": {
+          "mandatory_constraints": [
+            "Preserve existing runtime."
+          ],
+          "forbidden_changes": [
+            "No merge/deploy."
+          ],
+          "interfaces_to_respect": [],
+          "tests_required": [
+            "unit"
+          ],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "documentation_changes": [],
+        "conditions": [],
+        "risks": [],
+        "unresolved_questions": [],
+        "required_human_decisions": []
+      }
+    },
+    {
+      "id": "architect-production-doc-mutation-rejected",
+      "role": "PRINCIPAL_ARCHITECT",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "architecture_decision": {
+          "affected_domains": [
+            "engineering"
+          ],
+          "primary_owner_domain": "engineering",
+          "bounded_context": "Engineering",
+          "current_architecture": "Existing orchestration runtime.",
+          "proposed_solution": "Extend existing runtime.",
+          "components": [],
+          "interfaces": [],
+          "data_flow": [],
+          "dependencies": [],
+          "database_changes": [],
+          "api_changes": [],
+          "events": [],
+          "identity": {
+            "authentication_required": true
+          },
+          "permissions": [
+            "repository.read"
+          ],
+          "tenant_isolation": {
+            "scope": "SYSTEM"
+          },
+          "security": [
+            "repository content remains untrusted and writes stay policy-gated"
+          ],
+          "migration_strategy": null,
+          "backward_compatibility": {
+            "classification": "NON_BREAKING"
+          },
+          "observability": [
+            "agent run, gate status and repository revision are persisted"
+          ],
+          "testing_strategy": [
+            "unit",
+            "architecture"
+          ],
+          "risks": [],
+          "alternatives_considered": [],
+          "decision": "Extend existing runtime."
+        },
+        "implementation_plan": {
+          "steps": [
+            {
+              "id": "ARCH-1"
+            }
+          ],
+          "files_to_create": [],
+          "files_to_modify": [],
+          "services": [],
+          "controllers": [],
+          "commands": [],
+          "entities": [],
+          "repositories": [],
+          "frontend_components": [],
+          "migrations": [],
+          "tests_required": [
+            "unit"
+          ],
+          "documentation_updates": [],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "developer_handoff": {
+          "mandatory_constraints": [
+            "Preserve existing runtime."
+          ],
+          "forbidden_changes": [
+            "No merge/deploy."
+          ],
+          "interfaces_to_respect": [],
+          "tests_required": [
+            "unit"
+          ],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "documentation_changes": [
+          {
+            "path": "symfony/src/Backdoor.php",
+            "operation": "CREATE",
+            "content": "<?php"
+          }
+        ],
+        "conditions": [],
+        "risks": [],
+        "unresolved_questions": [],
+        "required_human_decisions": []
+      }
+    },
+    {
+      "id": "architect-conditional-without-conditions-rejected",
+      "role": "PRINCIPAL_ARCHITECT",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED_WITH_CONDITIONS",
+        "architecture_decision": {
+          "affected_domains": [
+            "engineering"
+          ],
+          "primary_owner_domain": "engineering",
+          "bounded_context": "Engineering",
+          "current_architecture": "Existing orchestration runtime.",
+          "proposed_solution": "Extend existing runtime.",
+          "components": [],
+          "interfaces": [],
+          "data_flow": [],
+          "dependencies": [],
+          "database_changes": [],
+          "api_changes": [],
+          "events": [],
+          "identity": {
+            "authentication_required": true
+          },
+          "permissions": [
+            "repository.read"
+          ],
+          "tenant_isolation": {
+            "scope": "SYSTEM"
+          },
+          "security": [
+            "repository content remains untrusted and writes stay policy-gated"
+          ],
+          "migration_strategy": null,
+          "backward_compatibility": {
+            "classification": "NON_BREAKING"
+          },
+          "observability": [
+            "agent run, gate status and repository revision are persisted"
+          ],
+          "testing_strategy": [
+            "unit",
+            "architecture"
+          ],
+          "risks": [],
+          "alternatives_considered": [],
+          "decision": "Extend existing runtime."
+        },
+        "implementation_plan": {
+          "steps": [
+            {
+              "id": "ARCH-1"
+            }
+          ],
+          "files_to_create": [],
+          "files_to_modify": [],
+          "services": [],
+          "controllers": [],
+          "commands": [],
+          "entities": [],
+          "repositories": [],
+          "frontend_components": [],
+          "migrations": [],
+          "tests_required": [
+            "unit"
+          ],
+          "documentation_updates": [],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "developer_handoff": {
+          "mandatory_constraints": [
+            "Preserve existing runtime."
+          ],
+          "forbidden_changes": [
+            "No merge/deploy."
+          ],
+          "interfaces_to_respect": [],
+          "tests_required": [
+            "unit"
+          ],
+          "completion_conditions": [
+            "Architecture gate passes."
+          ]
+        },
+        "documentation_changes": [],
+        "conditions": [],
+        "risks": [],
+        "unresolved_questions": [],
+        "required_human_decisions": []
+      }
+    },
+    {
+      "id": "developer-failed-validation-completed-rejected",
+      "role": "DEVELOPER",
+      "expected_valid": false,
+      "output": {
+        "status": "COMPLETED",
+        "changed_files": [
+          "symfony/src/Example.php"
+        ],
+        "implementation_summary": "Implemented bounded change.",
+        "tests_added": [
+          "tests/unit/example.php"
+        ],
+        "tests_run": [],
+        "known_limitations": [],
+        "findings": [],
+        "changes": [
+          {
+            "path": "symfony/src/Example.php",
+            "operation": "UPDATE",
+            "content": "<?php\\n"
+          }
+        ],
+        "preflight": {
+          "status": "PASS",
+          "blockers": [],
+          "architecture_conflicts": []
+        },
+        "scope": {
+          "requested": [
+            "fixture-change"
+          ],
+          "implemented": [
+            "fixture-change"
+          ],
+          "not_implemented": []
+        },
+        "repository_revision": null,
+        "database_changes": [],
+        "api_changes": [],
+        "acceptance_criteria_evidence": [],
+        "validation": {
+          "commands_required": [],
+          "passed": [],
+          "failed": [
+            "phpstan"
+          ],
+          "skipped": []
+        },
+        "architecture_compliance": {
+          "adr_followed": true,
+          "deviations": []
+        },
+        "security": {
+          "checks_performed": [],
+          "findings": []
+        },
+        "deviations_from_plan": [],
+        "risks": [],
+        "follow_up_required": []
+      }
+    },
+    {
+      "id": "developer-silent-adr-deviation-rejected",
+      "role": "DEVELOPER",
+      "expected_valid": false,
+      "output": {
+        "status": "COMPLETED",
+        "changed_files": [
+          "symfony/src/Example.php"
+        ],
+        "implementation_summary": "Implemented bounded change.",
+        "tests_added": [
+          "tests/unit/example.php"
+        ],
+        "tests_run": [],
+        "known_limitations": [],
+        "findings": [],
+        "changes": [
+          {
+            "path": "symfony/src/Example.php",
+            "operation": "UPDATE",
+            "content": "<?php\\n"
+          }
+        ],
+        "preflight": {
+          "status": "PASS",
+          "blockers": [],
+          "architecture_conflicts": []
+        },
+        "scope": {
+          "requested": [
+            "fixture-change"
+          ],
+          "implemented": [
+            "fixture-change"
+          ],
+          "not_implemented": []
+        },
+        "repository_revision": null,
+        "database_changes": [],
+        "api_changes": [],
+        "acceptance_criteria_evidence": [],
+        "validation": {
+          "commands_required": [],
+          "passed": [],
+          "failed": [],
+          "skipped": []
+        },
+        "architecture_compliance": {
+          "adr_followed": false,
+          "deviations": []
+        },
+        "security": {
+          "checks_performed": [],
+          "findings": []
+        },
+        "deviations_from_plan": [],
+        "risks": [],
+        "follow_up_required": []
+      }
+    },
+    {
+      "id": "developer-limitations-status-without-limitations-rejected",
+      "role": "DEVELOPER",
+      "expected_valid": false,
+      "output": {
+        "status": "COMPLETED_WITH_LIMITATIONS",
+        "changed_files": [
+          "symfony/src/Example.php"
+        ],
+        "implementation_summary": "Implemented bounded change.",
+        "tests_added": [
+          "tests/unit/example.php"
+        ],
+        "tests_run": [],
+        "known_limitations": [],
+        "findings": [],
+        "changes": [
+          {
+            "path": "symfony/src/Example.php",
+            "operation": "UPDATE",
+            "content": "<?php\\n"
+          }
+        ],
+        "preflight": {
+          "status": "PASS",
+          "blockers": [],
+          "architecture_conflicts": []
+        },
+        "scope": {
+          "requested": [
+            "fixture-change"
+          ],
+          "implemented": [
+            "fixture-change"
+          ],
+          "not_implemented": []
+        },
+        "repository_revision": null,
+        "database_changes": [],
+        "api_changes": [],
+        "acceptance_criteria_evidence": [],
+        "validation": {
+          "commands_required": [],
+          "passed": [],
+          "failed": [],
+          "skipped": []
+        },
+        "architecture_compliance": {
+          "adr_followed": true,
+          "deviations": []
+        },
+        "security": {
+          "checks_performed": [],
+          "findings": []
+        },
+        "deviations_from_plan": [],
+        "risks": [],
+        "follow_up_required": []
+      }
+    },
+    {
+      "id": "reviewer-approved-failed-ci-rejected",
+      "role": "REVIEWER",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "reviewed_revision": "abc123",
+        "base_revision": "base123",
+        "pull_request": 42,
+        "preflight": {
+          "status": "PASS",
+          "reviewed_revision": "abc123",
+          "diff_complete": true,
+          "required_artifacts_present": true,
+          "ci_evidence_available": true,
+          "blockers": []
+        },
+        "summary": "Review requires a bounded fix.",
+        "issues": [],
+        "correctness": {
+          "status": "PASS",
+          "findings": []
+        },
+        "architecture": {
+          "compliant": true,
+          "findings": []
+        },
+        "security": {
+          "status": "PASS",
+          "findings": []
+        },
+        "maintainability": {
+          "status": "PASS",
+          "findings": []
+        },
+        "database": {
+          "status": "NOT_APPLICABLE",
+          "findings": []
+        },
+        "api": {
+          "status": "PASS",
+          "findings": []
+        },
+        "tests": {
+          "status": "PASS",
+          "findings": []
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "result": "PASS",
+            "evidence": "ok"
+          }
+        ],
+        "ci": {
+          "state": "FAILED",
+          "total": 1,
+          "passed": 1,
+          "failed": 1,
+          "pending": 0,
+          "checks": []
+        },
+        "unresolved_blockers": [],
+        "unresolved_majors": [],
+        "recommendation": "Return to Developer."
+      }
+    },
+    {
+      "id": "reviewer-approved-architecture-drift-rejected",
+      "role": "REVIEWER",
+      "expected_valid": false,
+      "output": {
+        "status": "APPROVED",
+        "reviewed_revision": "abc123",
+        "base_revision": "base123",
+        "pull_request": 42,
+        "preflight": {
+          "status": "PASS",
+          "reviewed_revision": "abc123",
+          "diff_complete": true,
+          "required_artifacts_present": true,
+          "ci_evidence_available": true,
+          "blockers": []
+        },
+        "summary": "Review requires a bounded fix.",
+        "issues": [],
+        "correctness": {
+          "status": "PASS",
+          "findings": []
+        },
+        "architecture": {
+          "compliant": false,
+          "findings": []
+        },
+        "security": {
+          "status": "PASS",
+          "findings": []
+        },
+        "maintainability": {
+          "status": "PASS",
+          "findings": []
+        },
+        "database": {
+          "status": "NOT_APPLICABLE",
+          "findings": []
+        },
+        "api": {
+          "status": "PASS",
+          "findings": []
+        },
+        "tests": {
+          "status": "PASS",
+          "findings": []
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "result": "PASS",
+            "evidence": "ok"
+          }
+        ],
+        "ci": {
+          "state": "PASSED",
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "pending": 0,
+          "checks": []
+        },
+        "unresolved_blockers": [],
+        "unresolved_majors": [],
+        "recommendation": "Return to Developer."
+      }
+    },
+    {
+      "id": "reviewer-request-changes-without-blocker-rejected",
+      "role": "REVIEWER",
+      "expected_valid": false,
+      "output": {
+        "status": "REQUEST_CHANGES",
+        "reviewed_revision": "abc123",
+        "base_revision": "base123",
+        "pull_request": 42,
+        "preflight": {
+          "status": "PASS",
+          "reviewed_revision": "abc123",
+          "diff_complete": true,
+          "required_artifacts_present": true,
+          "ci_evidence_available": true,
+          "blockers": []
+        },
+        "summary": "Review requires a bounded fix.",
+        "issues": [],
+        "correctness": {
+          "status": "FINDINGS",
+          "findings": [
+            "REV-002"
+          ]
+        },
+        "architecture": {
+          "compliant": true,
+          "findings": []
+        },
+        "security": {
+          "status": "PASS",
+          "findings": []
+        },
+        "maintainability": {
+          "status": "PASS",
+          "findings": []
+        },
+        "database": {
+          "status": "NOT_APPLICABLE",
+          "findings": []
+        },
+        "api": {
+          "status": "PASS",
+          "findings": []
+        },
+        "tests": {
+          "status": "FINDINGS",
+          "findings": [
+            "REV-002"
+          ]
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "result": "FAIL",
+            "evidence": "Negative scenario fails."
+          }
+        ],
+        "ci": {
+          "state": "PASSED",
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "pending": 0,
+          "checks": []
+        },
+        "unresolved_blockers": [],
+        "unresolved_majors": [],
+        "recommendation": "Return to Developer."
+      }
+    },
+    {
+      "id": "reviewer-human-review-without-decision-rejected",
+      "role": "REVIEWER",
+      "expected_valid": false,
+      "output": {
+        "status": "HUMAN_REVIEW_REQUIRED",
+        "reviewed_revision": "abc123",
+        "base_revision": "base123",
+        "pull_request": 42,
+        "preflight": {
+          "status": "PASS",
+          "reviewed_revision": "abc123",
+          "diff_complete": true,
+          "required_artifacts_present": true,
+          "ci_evidence_available": true,
+          "blockers": []
+        },
+        "summary": "Review requires a bounded fix.",
+        "issues": [],
+        "correctness": {
+          "status": "FINDINGS",
+          "findings": [
+            "REV-002"
+          ]
+        },
+        "architecture": {
+          "compliant": true,
+          "findings": []
+        },
+        "security": {
+          "status": "PASS",
+          "findings": []
+        },
+        "maintainability": {
+          "status": "PASS",
+          "findings": []
+        },
+        "database": {
+          "status": "NOT_APPLICABLE",
+          "findings": []
+        },
+        "api": {
+          "status": "PASS",
+          "findings": []
+        },
+        "tests": {
+          "status": "FINDINGS",
+          "findings": [
+            "REV-002"
+          ]
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "result": "FAIL",
+            "evidence": "Negative scenario fails."
+          }
+        ],
+        "ci": {
+          "state": "PASSED",
+          "total": 1,
+          "passed": 1,
+          "failed": 0,
+          "pending": 0,
+          "checks": []
+        },
+        "unresolved_blockers": [],
+        "unresolved_majors": [],
+        "recommendation": "Return to Developer."
+      }
+    },
+    {
+      "id": "qa-plan-cannot-pass-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "PLAN",
+        "status": "PASS",
+        "feature_id": "feature-1",
+        "tested_revision": null,
+        "pull_request": null,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": []
+      }
+    },
+    {
+      "id": "qa-empty-evidence-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "PASS",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": ""
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-missing-required-smoke-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "PASS",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "ok"
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-pass-with-failed-authorization-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "PASS",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "ok"
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "FAIL",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-unjustified-not-applicable-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "PASS",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "ok"
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": ""
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-blocked-without-blocker-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "BLOCKED",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "ok"
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-human-test-without-scenario-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "HUMAN_TEST_REQUIRED",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "ok"
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-tests-updated-without-change-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "TESTS_UPDATED",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "ok"
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "qa-test-path-traversal-rejected",
+      "role": "QA",
+      "expected_valid": false,
+      "output": {
+        "phase": "EXECUTION",
+        "status": "TESTS_UPDATED",
+        "feature_id": "feature-1",
+        "tested_revision": "abc123",
+        "pull_request": 42,
+        "test_plan": {
+          "feature_id": "feature-1",
+          "version": "1",
+          "scenarios": {
+            "positive": [
+              "happy path"
+            ],
+            "negative": [
+              "invalid input"
+            ],
+            "edge_cases": [
+              "empty state"
+            ]
+          },
+          "permissions": [
+            "unauthorized denied"
+          ],
+          "tenant_cases": [
+            "tenant isolation"
+          ],
+          "api_cases": [
+            "API contract"
+          ],
+          "database_cases": [],
+          "ui_cases": [],
+          "regression_cases": [
+            "critical smoke"
+          ],
+          "performance_cases": [],
+          "required_suites": {
+            "unit": true,
+            "integration": true,
+            "functional": true,
+            "e2e": false,
+            "smoke": true
+          },
+          "prerequisites": [],
+          "test_data": [],
+          "environment_requirements": [],
+          "blocking_checks": [
+            "AC-001"
+          ]
+        },
+        "test_changes": [
+          {
+            "path": "tests/../symfony/src/Escape.php",
+            "operation": "CREATE",
+            "content": "<?php"
+          }
+        ],
+        "tests": {
+          "total": 4,
+          "passed": 4,
+          "failed": 0,
+          "skipped": 0,
+          "suites": {
+            "unit": "PASS",
+            "integration": "PASS",
+            "functional": "PASS",
+            "smoke": "PASS"
+          }
+        },
+        "acceptance_criteria": [
+          {
+            "id": "AC-001",
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "ok"
+            }
+          }
+        ],
+        "system_invariants": {
+          "tenant_isolation": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "tenant"
+            },
+            "reason": null
+          },
+          "authorization": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "authentication": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "invalid_input": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "empty_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "loading_state": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "error_state": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "api_error_handling": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          },
+          "migration": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "rollback": {
+            "applicable": false,
+            "status": "NOT_APPLICABLE",
+            "evidence": null,
+            "reason": "Not part of this feature surface."
+          },
+          "backward_compatibility": {
+            "applicable": true,
+            "status": "PASS",
+            "evidence": {
+              "type": "TEST_RESULT",
+              "reference": "qa-1"
+            },
+            "reason": null
+          }
+        },
+        "regressions": [],
+        "defects": [],
+        "security_findings": [],
+        "known_limitations": [],
+        "human_tests_required": [],
+        "blockers": [],
+        "repository_revision_after_tests": null
+      }
+    },
+    {
+      "id": "manager-human-decision-valid",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": true,
+      "output": {
+        "status": "HUMAN_DECISION_REQUIRED",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [
+          {
+            "id": "Q-001",
+            "question": "Which behavior?",
+            "options": [
+              {
+                "id": "A"
+              },
+              {
+                "id": "B"
+              }
+            ],
+            "recommended_option": "A"
+          }
+        ],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
+    },
+    {
+      "id": "manager-human-decision-missing-options-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "HUMAN_DECISION_REQUIRED",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [
+          {
+            "id": "Q-001",
+            "question": "Which behavior?",
+            "options": [],
+            "recommended_option": "A"
+          }
+        ],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
+    },
+    {
+      "id": "manager-human-decision-bad-recommendation-rejected",
+      "role": "ENGINEERING_MANAGER",
+      "expected_valid": false,
+      "output": {
+        "status": "HUMAN_DECISION_REQUIRED",
+        "feature": {
+          "title": "Add activity filters",
+          "type": "FEATURE",
+          "business_goal": "Managers can narrow activity results.",
+          "expected_behavior": "Actor and date filters are applied.",
+          "scope": [
+            "Activity Center filters"
+          ],
+          "out_of_scope": [],
+          "functional_requirements": [
+            {
+              "id": "FR-001"
+            }
+          ],
+          "acceptance_criteria": [
+            {
+              "id": "AC-001",
+              "description": "Actor filter returns selected actor only.",
+              "verification_type": "integration"
+            }
+          ],
+          "risks": [],
+          "assumptions": [],
+          "open_questions": [],
+          "priority": "P2",
+          "complexity": "S"
+        },
+        "context_map": {
+          "repository_revision": "abc123"
+        },
+        "tasks": [
+          {
+            "id": "TASK-001",
+            "assigned_role": "DEVELOPER"
+          }
+        ],
+        "risks": [],
+        "assumptions": [],
+        "open_questions": [
+          {
+            "id": "Q-001",
+            "question": "Which behavior?",
+            "options": [
+              {
+                "id": "A"
+              },
+              {
+                "id": "B"
+              }
+            ],
+            "recommended_option": "C"
+          }
+        ],
+        "decision": {
+          "type": "RUN_AGENT",
+          "agent": "PRINCIPAL_ARCHITECT",
+          "reason": "Specification ready."
+        }
+      }
     }
   ]
 }

@@ -24,9 +24,10 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
     public function run(EngineeringAgentTask $task, string $organizationId, string $correlationId): EngineeringAgentRunResult
     {
         $lastError = null;
+        $runCorrelationId = $this->runCorrelationId($correlationId, $task->id);
 
         for ($technicalRetry = 0; $technicalRetry <= $this->maxTechnicalRetries; ++$technicalRetry) {
-            $result = $this->executeOnce($task, $organizationId, $correlationId, $technicalRetry);
+            $result = $this->executeOnce($task, $organizationId, $runCorrelationId, $technicalRetry);
 
             if ($result->status !== AgentRunStatus::COMPLETED->value) {
                 $lastError = new EngineeringAgentTechnicalFailureException(
@@ -57,6 +58,11 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             $this->maxTechnicalRetries,
             $lastError,
         );
+    }
+
+    private function runCorrelationId(string $parentCorrelationId, string $taskId): string
+    {
+        return mb_substr(rtrim($parentCorrelationId, ':').':agent:'.$taskId, 0, 128);
     }
 
     private function executeOnce(
@@ -109,6 +115,18 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             usage: $output?->usage ?? [],
             error: $run->status() === AgentRunStatus::FAILED ? $run->error() : null,
             technicalRetries: $technicalRetry,
+            steps: array_map(
+                static fn (\Kernel\Agent\Model\AgentStep $step): array => [
+                    'id' => $step->id,
+                    'sequence' => $step->sequence,
+                    'type' => $step->type,
+                    'status' => $step->status()->value,
+                    'input' => $step->input,
+                    'output' => $step->output(),
+                    'error' => $step->error(),
+                ],
+                $run->steps(),
+            ),
         );
     }
 }

@@ -15,6 +15,18 @@ final readonly class ReadyForHumanApprovalEvidence
         public bool $hasOpenCriticalFinding,
         public bool $hasBlockingHumanDecision,
         public bool $hasRunningTask,
+        public bool $tenantIsolationVerified,
+        public bool $authorizationVerified,
+        public bool $authenticationVerifiedOrNotApplicable,
+        public bool $migrationVerifiedOrNotApplicable,
+        public bool $rollbackVerifiedOrNotApplicable,
+        public bool $apiCompatibilityVerifiedOrNotApplicable,
+        public bool $staticAnalysisPassed,
+        public bool $requiredTestsPassed,
+        public bool $smokePassed,
+        public bool $documentationImpactChecked,
+        public bool $hasOpenMajorOrHigherFinding,
+        public bool $revisionConsistent,
     ) {
     }
 }

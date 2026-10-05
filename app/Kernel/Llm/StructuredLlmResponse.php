@@ -13,5 +13,10 @@ final readonly class StructuredLlmResponse
         public ?int $outputTokens = null,
         public ?float $costAmount = null,
         public ?string $costCurrency = null,
+        public ?int $cachedInputTokens = null,
+        public ?int $reasoningTokens = null,
+        public ?string $costSource = null,
+        public ?string $pricingVersion = null,
+        public ?string $providerRequestId = null,
     ) {}
 }

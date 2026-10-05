@@ -20,7 +20,7 @@ $dataset = json_decode(
 
 $result = (new EngineeringEvaluationRunner())->run($dataset);
 
-if ($result['cases'] < 10) throw new RuntimeException('Engineering evaluation set is too small.');
+if ($result['cases'] < 30) throw new RuntimeException('Engineering evaluation set must contain at least 30 V0.1 regression cases.');
 if ($result['failed'] !== 0) {
     throw new RuntimeException('Engineering evaluation regression: '.json_encode($result['results'], JSON_THROW_ON_ERROR));
 }

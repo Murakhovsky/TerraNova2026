@@ -3,6 +3,8 @@ import { chromium } from 'playwright-core';
 const baseUrl = process.env.COS_WEB_SMOKE_BASE_URL || 'http://127.0.0.1:8081';
 const adminEmail = process.env.COS_WEB_SMOKE_EMAIL || '';
 const adminPassword = process.env.COS_WEB_SMOKE_PASSWORD || '';
+const foreignUserEmail = process.env.COS_WEB_FOREIGN_USER_EMAIL || '';
+const foreignUserId = process.env.COS_WEB_FOREIGN_USER_ID || '';
 const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome';
 const runId = (process.env.GITHUB_RUN_ID || Date.now().toString()).replace(/[^0-9A-Za-z_-]/g, '');
 const suffix = runId.slice(-12);
@@ -107,8 +109,46 @@ try {
   const page = await login(adminContext, adminEmail, adminPassword);
   page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
 
-  // 1. Administration Users: create -> filter -> update -> new-user login.
+  // 1. Administration Users: tenant isolation -> create -> filter -> update -> new-user login.
   await goto200(page, '/admin/users', '[data-cos-archetype]');
+
+  if (foreignUserEmail) {
+    const usersBody = await page.locator('body').innerText();
+    assert(!usersBody.includes(foreignUserEmail), 'Tenant isolation failure: foreign tenant user is visible.');
+  }
+
+  if (foreignUserId) {
+    const token = await csrfToken(page);
+    const attemptedName = `Cross Tenant Mutation ${suffix}`;
+    const mutation = await page.evaluate(async ({ foreignUserId, token, attemptedName }) => {
+      const body = new URLSearchParams({
+        csrf_token: token,
+        full_name: attemptedName,
+        phone: '',
+        role: 'manager',
+        status: 'active',
+        password: '',
+      });
+      const response = await fetch('/admin/updateUser/' + encodeURIComponent(foreignUserId), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: body.toString(),
+        redirect: 'follow',
+      });
+      return { status: response.status, url: response.url, text: await response.text() };
+    }, { foreignUserId, token, attemptedName });
+
+    assert(mutation.status === 200, 'Cross-tenant update rejection must resolve to the admin users page.');
+    const mutationUrl = new URL(mutation.url);
+    assert(
+      mutationUrl.pathname === '/admin/users'
+        && mutationUrl.searchParams.get('status_message') === 'Користувача не знайдено.',
+      'Cross-tenant update did not fail closed: ' + mutation.url,
+    );
+    assert(!mutation.text.includes(attemptedName), 'Cross-tenant update leaked the attempted mutation into the rendered page.');
+  }
+
   const managerEmail = `functional-manager-${suffix}@example.test`;
   const managerPassword = `Functional-${suffix}-Ab9!`;
   const managerName = `Functional Manager ${suffix}`;
@@ -157,10 +197,14 @@ try {
 
   // 1c. Engineering draft feature can be created, inspected, edited and deleted from the browser.
   await goto200(page, '/admin/engineering', '[data-cos-engineering="index"]');
-  assert(await page.locator('[data-engineering-queue]').count() === 1, 'Engineering Workspace priority queue is missing.');
+  assert(await page.locator('[data-engineering-workspace-list]').count() === 1, 'Engineering operational process grid is missing.');
+  assert((await page.locator('body').innerText()).includes('Процеси'), 'Engineering unified process workspace heading is missing.');
   assert(await page.locator('select[name="execution_mode"] option[value="queue"]').count() === 1, 'Engineering create form is missing queue execution mode.');
   const engineeringTitle = `UI acceptance ${suffix}`;
   const engineeringDescription = 'Browser-created Engineering feature for production cutover acceptance.';
+  const engineeringCreate = page.locator('details.engineering-create');
+  assert(await engineeringCreate.count() === 1, 'Engineering compact create control is missing.');
+  await engineeringCreate.locator(':scope > summary').click();
   const engineeringForm = page.locator('form[data-engineering-create]');
   await engineeringForm.locator('input[name="title"]').fill(engineeringTitle);
   await engineeringForm.locator('textarea[name="description"]').fill(engineeringDescription);
@@ -169,7 +213,10 @@ try {
   await submitAndWait(page, engineeringForm, (url) => /^\/admin\/engineering\/[0-9a-fA-F-]{36}$/.test(url.pathname) && url.searchParams.has('status_message'));
   const engineeringPath = new URL(page.url()).pathname;
   assert((await page.locator('body').innerText()).includes(engineeringTitle), 'Browser-created Engineering feature did not render in its workspace.');
-  assert((await page.locator('body').innerText()).includes(engineeringDescription), 'Engineering Description is missing from feature workspace.');
+  const engineeringRequirements = page.locator('details:has(form[data-engineering-update])');
+  assert(await engineeringRequirements.count() === 1, 'Engineering draft requirements editor is missing.');
+  await engineeringRequirements.locator(':scope > summary').click();
+  assert(await page.locator('form[data-engineering-update] textarea[name="description"]').inputValue() === engineeringDescription, 'Engineering Description is missing from expanded requirements.');
 
   const engineeringUpdatedTitle = engineeringTitle + ' Updated';
   const engineeringUpdatedDescription = engineeringDescription + ' Updated.';
@@ -179,10 +226,18 @@ try {
   await engineeringUpdate.locator('select[name="priority"]').selectOption('P1');
   await submitAndWait(page, engineeringUpdate, (url) => url.pathname === engineeringPath && url.searchParams.has('status_message'));
   assert((await page.locator('body').innerText()).includes(engineeringUpdatedTitle), 'Engineering feature title edit did not persist.');
-  assert((await page.locator('body').innerText()).includes(engineeringUpdatedDescription), 'Engineering feature Description edit did not persist.');
+  const updatedRequirements = page.locator('details:has(form[data-engineering-update])');
+  if (!(await updatedRequirements.evaluate((node) => node.open))) {
+    await updatedRequirements.locator(':scope > summary').click();
+  }
+  assert(await page.locator('form[data-engineering-update] textarea[name="description"]').inputValue() === engineeringUpdatedDescription, 'Engineering feature Description edit did not persist.');
   assert(await page.locator('form[data-engineering-update] select[name="priority"]').inputValue() === 'P1', 'Engineering feature priority edit did not persist.');
 
   const engineeringDelete = page.locator('form[data-engineering-delete]');
+  const engineeringDeleteDetails = page.locator('details:has(form[data-engineering-delete])');
+  if (await engineeringDeleteDetails.count() === 1 && !(await engineeringDeleteDetails.evaluate((node) => node.open))) {
+    await engineeringDeleteDetails.locator(':scope > summary').click();
+  }
   await engineeringDelete.locator('input[name="confirm_delete"]').check();
   await submitAndWait(page, engineeringDelete, (url) => url.pathname === '/admin/engineering' && url.searchParams.has('status_message'));
   assert(!(await page.locator('body').innerText()).includes(engineeringUpdatedTitle), 'Deleted Engineering draft still appears in the collection.');
@@ -519,7 +574,7 @@ try {
     ok: true,
     suite: 'Production Cutover functional acceptance',
     covered: [
-      'admin users create/filter/update/login/duplicate validation',
+      'admin users tenant isolation/create/filter/update/login/duplicate validation',
       'client case create/edit/activity/search/quick-update/dynamic deal route',
       'sales lead validation/create/qualify/convert/deal/pipeline/message',
       'property public submission/moderation/dynamic detail',

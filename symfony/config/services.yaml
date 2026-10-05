@@ -40,12 +40,19 @@ parameters:
   env(COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD): '3'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
+  env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED): '0'
+  env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '3'
+  env(COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED): '1'
+  env(COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES): '2'
+  env(COS_ENGINEERING_RUNTIME_STALE_SECONDS): '600'
+  env(COS_ENGINEERING_RUNTIME_STALLED_SECONDS): '1800'
   env(MESSENGER_ENGINEERING_IMMEDIATE_TRANSPORT_DSN): 'redis://redis:6379/cos_engineering_immediate'
   env(COS_ENGINEERING_MANAGER_MODEL): ''
   env(COS_ENGINEERING_ARCHITECT_MODEL): ''
   env(COS_ENGINEERING_DEVELOPER_MODEL): ''
   env(COS_ENGINEERING_REVIEWER_MODEL): ''
   env(COS_ENGINEERING_QA_MODEL): ''
+  env(COS_LLM_PRICING_JSON): ''
   env(COS_SECRET_MASTER_KEY): ''
   env(COS_SECRET_MASTER_KEY_ID): 'env-v1'
 
@@ -303,6 +310,10 @@ services:
       $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
       $engineeringAutonomyEnabled: '%env(bool:COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED)%'
       $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $engineeringDomainAutonomyEnabled: '%env(bool:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED)%'
+      $engineeringDomainAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $engineeringRuntimeWatchdogEnabled: '%env(bool:COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED)%'
+      $engineeringRuntimeWatchdogIntervalMinutes: '%env(int:COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES)%'
 
   App\Infrastructure\Runtime\FileRuntimeHeartbeatSink:
     arguments:
@@ -1280,6 +1291,20 @@ services:
   Kernel\Llm\LlmRouteResolverInterface:
     alias: Infrastructure\Llm\PlatformSettingsLlmRouteResolver
 
+  Infrastructure\Llm\OpenAiModelCatalog: ~
+
+  Kernel\Llm\LlmModelCatalogInterface:
+    alias: Infrastructure\Llm\OpenAiModelCatalog
+
+  Infrastructure\Llm\PlatformSettingsLlmPricingResolver:
+    arguments:
+      $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
+      $modelCatalog: '@Kernel\Llm\LlmModelCatalogInterface'
+      $fallbackCatalogJson: '%env(COS_LLM_PRICING_JSON)%'
+
+  Kernel\Llm\LlmPricingResolverInterface:
+    alias: Infrastructure\Llm\PlatformSettingsLlmPricingResolver
+
   Kernel\Llm\StructuredLlmClientInterface:
     alias: Kernel\Llm\GovernedStructuredLlmClient
 
@@ -1290,6 +1315,7 @@ services:
       $governance: '@Infrastructure\Llm\MysqlLlmGovernanceRepository'
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
       $resilience: '@Kernel\Resilience\ExternalCallExecutor'
+      $pricing: '@Kernel\Llm\LlmPricingResolverInterface'
 
   Kernel\Agent\Service\StructuredAgentLlmClient:
     arguments:
@@ -1332,6 +1358,9 @@ services:
   App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringFeatureStore
 
+  App\Engineering\Application\Persistence\EngineeringDomainStoreInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringDomainStore
+
   App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\DoctrineEngineeringWorkflowStore
 
@@ -1358,6 +1387,12 @@ services:
 
   App\Engineering\Application\Audit\EngineeringAuditQueryInterface:
     alias: App\Engineering\Infrastructure\Audit\DoctrineEngineeringAuditQuery
+
+  App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface:
+    alias: App\Engineering\Infrastructure\Observability\DoctrineEngineeringObservabilityReadModel
+
+  App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface:
+    alias: App\Engineering\Infrastructure\Observability\DoctrineEngineeringExecutionEventStore
 
   App\Engineering\Application\Lock\EngineeringWorkflowLockInterface:
     alias: App\Engineering\Infrastructure\Lock\MySqlEngineeringWorkflowLock
@@ -1409,6 +1444,16 @@ services:
   App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommandHandler:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Application\Engineering\Command\ContinueEngineeringDomainsCommandHandler:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Application\Engineering\Command\WatchEngineeringRuntimeCommandHandler:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+      $staleAfterSeconds: '%env(int:COS_ENGINEERING_RUNTIME_STALE_SECONDS)%'
+      $stalledAfterSeconds: '%env(int:COS_ENGINEERING_RUNTIME_STALLED_SECONDS)%'
 
   App\Infrastructure\AI\EnvironmentSalesAgentLlmClient:
     arguments:

@@ -20,6 +20,8 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
         $failedWorkflows = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_workflows w JOIN cos_engineering_features f ON f.id=w.feature_id WHERE f.organization_id=:organization_id AND w.status='FAILED'", $params);
         $featuresEscalated = (int) $db->fetchOne("SELECT COUNT(DISTINCT t.feature_id) FROM cos_engineering_transitions t JOIN cos_engineering_features f ON f.id=t.feature_id WHERE f.organization_id=:organization_id AND t.to_state='ESCALATED'", $params);
         $humanInterventions = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_human_decisions d JOIN cos_engineering_human_decision_requests r ON r.id=d.request_id JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params);
+        $reviewRejections = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_transitions t JOIN cos_engineering_features f ON f.id=t.feature_id WHERE f.organization_id=:organization_id AND t.to_state='CHANGES_REQUESTED'", $params);
+        $qaRejections = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_transitions t JOIN cos_engineering_features f ON f.id=t.feature_id WHERE f.organization_id=:organization_id AND t.to_state='QA_FAILED'", $params);
 
         $agentRuns = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params);
         $reviewRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='REVIEWER'", $params);
@@ -33,6 +35,16 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
         $architectureHumanDecisions = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_human_decision_requests r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND JSON_UNQUOTE(JSON_EXTRACT(r.evidence, '$.requested_by_agent'))='PRINCIPAL_ARCHITECT'", $params);
 
         $totalCost = (float) ($db->fetchOne('SELECT COALESCE(SUM(r.estimated_cost),0) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params) ?: 0);
+        $firstPassCompleted = (int) $db->fetchOne("
+            SELECT COUNT(*)
+            FROM cos_engineering_features f
+            WHERE f.organization_id=:organization_id
+              AND f.status='DONE'
+              AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='DEVELOPER')=1
+              AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='REVIEWER')=1
+              AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA')=2
+              AND (SELECT COUNT(*) FROM cos_engineering_human_decision_requests h WHERE h.feature_id=f.id)=0
+        ", $params);
         $avgTimeToReady = $db->fetchOne("
             SELECT AVG(TIMESTAMPDIFF(SECOND, w.started_at, t.created_at))
             FROM cos_engineering_workflows w
@@ -45,6 +57,8 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
             'features_started' => $featuresStarted,
             'features_completed' => $featuresCompleted,
             'features_escalated' => $featuresEscalated,
+            'task_success_rate' => $featuresStarted > 0 ? round($featuresCompleted / $featuresStarted, 4) : null,
+            'first_pass_success_rate' => $featuresCompleted > 0 ? round($firstPassCompleted / $featuresCompleted, 4) : null,
             'manager_analysis_success_rate' => $managerTotal > 0 ? round($managerCompleted / $managerTotal, 4) : null,
             'architect_runs' => $architectRuns,
             'architecture_revalidations' => $architectureRevalidations,
@@ -52,8 +66,12 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
             'average_agent_runs_per_feature' => $featuresStarted > 0 ? round($agentRuns / $featuresStarted, 2) : 0.0,
             'average_review_cycles' => $featuresStarted > 0 ? round($reviewRuns / $featuresStarted, 2) : 0.0,
             'average_qa_cycles' => $featuresStarted > 0 ? round($qaRuns / $featuresStarted, 2) : 0.0,
+            'review_rejection_rate' => $reviewRuns > 0 ? round($reviewRejections / $reviewRuns, 4) : null,
+            'qa_rejection_rate' => max(0, $qaRuns - $featuresStarted) > 0 ? round($qaRejections / max(1, $qaRuns - $featuresStarted), 4) : null,
             'human_interventions' => $humanInterventions,
+            'human_interventions_per_task' => $featuresStarted > 0 ? round($humanInterventions / $featuresStarted, 4) : 0.0,
             'cost_per_feature' => $featuresStarted > 0 ? round($totalCost / $featuresStarted, 6) : 0.0,
+            'cost_per_completed_feature' => $featuresCompleted > 0 ? round($totalCost / $featuresCompleted, 6) : null,
             'time_to_ready_seconds' => $avgTimeToReady !== false && $avgTimeToReady !== null ? round((float) $avgTimeToReady, 2) : null,
             'failed_workflows' => $failedWorkflows,
         ];

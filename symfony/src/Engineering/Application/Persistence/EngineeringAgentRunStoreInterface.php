@@ -12,10 +12,14 @@ interface EngineeringAgentRunStoreInterface
     public function complete(string $engineeringRunId, EngineeringAgentRunResult $result): void;
     public function fail(string $engineeringRunId, string $errorType, string $errorMessage, int $technicalRetry = 0): void;
     public function existsByIdempotencyKey(string $idempotencyKey): bool;
+    public function failStaleRunning(string $featureId, \App\Engineering\Domain\Agent\AgentRole $role, int $staleAfterSeconds): int;
 
     /** @return array<string,mixed>|null */
     public function byIdempotencyKey(string $idempotencyKey): ?array;
 
     /** @return list<array<string,mixed>> */
     public function forFeature(string $featureId): array;
+
+    /** @return list<array<string,mixed>> */
+    public function forWorkflow(string $workflowId): array;
 }

@@ -20,8 +20,8 @@ final readonly class GetAdministrationUsersQueryHandler implements QueryHandlerI
 
         return [
             'filters' => $filters,
-            'users' => $this->administration->users($filters),
-            'stats' => $this->administration->userStats(),
+            'users' => $this->administration->users($filters, $query->organizationId),
+            'stats' => $this->administration->userStats($query->organizationId),
         ];
     }
 }

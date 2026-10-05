@@ -49,6 +49,16 @@ class EngineeringTaskRecord
     public function externalKey(): string { return $this->externalKey; }
     public function status(): string { return $this->status; }
     public function assignedRole(): string { return $this->assignedRole; }
+    public function type(): string { return $this->type; }
+    public function title(): string { return $this->title; }
+    public function description(): string { return $this->description; }
+    public function dependencies(): array { return $this->dependencies; }
+    public function acceptanceCriteria(): array { return $this->acceptanceCriteria; }
+    public function attempt(): int { return $this->attempt; }
+    public function maxAttempts(): int { return $this->maxAttempts; }
+    public function result(): ?array { return $this->result; }
+    public function createdAt(): DateTimeImmutable { return $this->createdAt; }
+    public function updatedAt(): DateTimeImmutable { return $this->updatedAt; }
 
     public function setStatus(string $status, ?array $result = null): void
     {

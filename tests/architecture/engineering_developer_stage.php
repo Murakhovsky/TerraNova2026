@@ -25,6 +25,9 @@ foreach ([
     'DEVELOPMENT_RUNNING',
     'tests_run',
     'requireRepositoryConfiguration',
+    "'human_decisions'",
+    'answeredHumanDecisions',
+    'humanDecisions->create',
 ] as $needle) {
     if (!str_contains($stage, $needle)) throw new RuntimeException('Developer stage missing '.$needle);
 }

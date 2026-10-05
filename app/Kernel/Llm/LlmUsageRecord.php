@@ -18,6 +18,11 @@ final readonly class LlmUsageRecord
         public ?string $costCurrency,
         public int $latencyMs,
         public int $fallbackCount,
+        public ?int $cachedInputTokens = null,
+        public ?int $reasoningTokens = null,
+        public ?string $costSource = null,
+        public ?string $pricingVersion = null,
+        public ?string $providerRequestId = null,
     ) {
     }
 }

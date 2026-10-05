@@ -20,6 +20,7 @@ final readonly class EngineeringContinueService
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringManagerStageExecutor $managerStage,
         private EngineeringAutonomousProgressionService $progression,
+        private int $staleRunSeconds = 1800,
     ) {}
 
     public function continueFeature(
@@ -34,32 +35,54 @@ final readonly class EngineeringContinueService
 
         $workflowId = $this->workflows->activeIdForFeature($featureId);
         if ($workflowId === null) throw new RuntimeException('Engineering feature has no active workflow.');
+        $this->workflows->touchRuntime($workflowId);
         $workflow = $this->workflows->get($workflowId);
-
-        if ($workflow->currentState() === EngineeringWorkflowState::ANALYSIS) {
-            $this->features->updateStatus($featureId, EngineeringWorkflowState::ANALYSIS->value);
-            if ($this->hasRunningRole($featureId, AgentRole::ENGINEERING_MANAGER)) {
+        $this->features->updateStatus($featureId, $workflow->currentState()->value);
+        $activeRole = $this->roleForState($workflow->currentState());
+        if ($activeRole !== null) {
+            $recoveredStaleRuns = $this->agentRuns->failStaleRunning($featureId, $activeRole, $this->staleRunSeconds);
+            if ($recoveredStaleRuns > 0) {
+                $this->features->appendPreviousContext($featureId, [
+                    'engineering_recovery' => [
+                        'workflow_id' => $workflowId,
+                        'state' => $workflow->currentState()->value,
+                        'correlation_id' => $correlationId,
+                        'attempted_at' => (new \DateTimeImmutable())->format(DATE_ATOM),
+                        'recovered_stale_runs' => $recoveredStaleRuns,
+                    ],
+                ]);
+            }
+            if ($this->hasRunningRole($featureId, $activeRole)) {
                 $next = new WorkflowDirective(
                     WorkflowDirectiveType::STOP,
                     null,
-                    'Manager AgentRun is still RUNNING; recovery must not create a duplicate logical attempt.',
+                    $activeRole->value.' AgentRun is still RUNNING; recovery must not create a duplicate logical attempt.',
                 );
-            } else {
-                $next = $this->managerStage->execute(
+                return new EngineeringStartResult(
                     featureId: $featureId,
                     workflowId: $workflowId,
-                    request: $this->features->request($featureId),
-                    organizationId: $organizationId,
-                    correlationId: $correlationId,
-                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::ENGINEERING_MANAGER),
+                    state: $workflow->currentState()->value,
+                    next: $next,
                 );
-                $next = $this->progression->continue($featureId, $workflowId, $next, $organizationId, $correlationId);
             }
+        }
+
+        if ($workflow->currentState() === EngineeringWorkflowState::ANALYSIS) {
+            $next = $this->managerStage->execute(
+                featureId: $featureId,
+                workflowId: $workflowId,
+                request: $this->features->request($featureId),
+                organizationId: $organizationId,
+                correlationId: $correlationId,
+                logicalAttempt: $this->nextAttempt($featureId, AgentRole::ENGINEERING_MANAGER),
+            );
+            $next = $this->progression->continue($featureId, $workflowId, $next, $organizationId, $correlationId);
         } else {
             $next = $this->directiveFor($workflow->currentState());
             $next = $this->progression->continue($featureId, $workflowId, $next, $organizationId, $correlationId);
         }
 
+        $this->workflows->touchRuntime($workflowId);
         $current = $this->workflows->get($workflowId);
         return new EngineeringStartResult(
             featureId: $featureId,
@@ -67,6 +90,19 @@ final readonly class EngineeringContinueService
             state: $current->currentState()->value,
             next: $next,
         );
+    }
+
+    private function roleForState(EngineeringWorkflowState $state): ?AgentRole
+    {
+        return match ($state) {
+            EngineeringWorkflowState::ANALYSIS => AgentRole::ENGINEERING_MANAGER,
+            EngineeringWorkflowState::QA_PLANNING,
+            EngineeringWorkflowState::QA_PENDING => AgentRole::QA,
+            EngineeringWorkflowState::ARCHITECTURE_PENDING => AgentRole::PRINCIPAL_ARCHITECT,
+            EngineeringWorkflowState::DEVELOPMENT_RUNNING => AgentRole::DEVELOPER,
+            EngineeringWorkflowState::REVIEW_PENDING => AgentRole::REVIEWER,
+            default => null,
+        };
     }
 
     private function directiveFor(EngineeringWorkflowState $state): WorkflowDirective

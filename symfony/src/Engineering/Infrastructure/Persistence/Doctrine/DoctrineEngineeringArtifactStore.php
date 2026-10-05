@@ -74,6 +74,11 @@ final readonly class DoctrineEngineeringArtifactStore implements EngineeringArti
             'status' => $record->status(),
             'content' => $record->content(),
             'content_hash' => $record->contentHash(),
+            'created_at' => $record->createdAt()->format(DATE_ATOM),
+            'task_id' => $record->taskId(),
+            'agent_run_id' => $record->agentRunId(),
+            'created_by_agent' => $record->createdByAgent(),
+            'supersedes_artifact_id' => $record->supersedesArtifactId(),
         ];
     }
 
