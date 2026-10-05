@@ -19,9 +19,51 @@ final class EngineeringAgentOutputValidator
             AgentRole::DEVELOPER => $this->developer($output),
             AgentRole::REVIEWER => $this->reviewer($output),
             AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
+            AgentRole::DOCUMENTATION => $this->documentation($output),
         };
     }
 
+
+
+    private function documentation(array $output): void
+    {
+        $this->required($output, ['status','target_locale','documents','notes']);
+        $status = strtoupper(trim((string) ($output['status'] ?? '')));
+        if (!in_array($status, ['TRANSLATED','BLOCKED','FAILED'], true)) {
+            throw new EngineeringAgentOutputValidationException('Documentation status is invalid.');
+        }
+        if ($status !== 'TRANSLATED') return;
+
+        if (trim((string) ($output['target_locale'] ?? '')) === '') {
+            throw new EngineeringAgentOutputValidationException('Documentation translation requires target_locale.');
+        }
+        if (!is_array($output['documents'] ?? null)) {
+            throw new EngineeringAgentOutputValidationException('Documentation translation requires documents.');
+        }
+
+        $audiences = [];
+        foreach ($output['documents'] as $document) {
+            if (!is_array($document)) throw new EngineeringAgentOutputValidationException('Documentation item must be an object.');
+            $this->required($document, ['audience','title','content_markdown']);
+            $audience = strtoupper(trim((string) $document['audience']));
+            if (!in_array($audience, ['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER'], true)) {
+                throw new EngineeringAgentOutputValidationException('Documentation audience is invalid.');
+            }
+            if (isset($audiences[$audience])) {
+                throw new EngineeringAgentOutputValidationException('Documentation audience must be unique: '.$audience);
+            }
+            if (trim((string) $document['title']) === '' || trim((string) $document['content_markdown']) === '') {
+                throw new EngineeringAgentOutputValidationException('Translated documentation title/content cannot be empty.');
+            }
+            $audiences[$audience] = true;
+        }
+
+        foreach (['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER'] as $audience) {
+            if (!isset($audiences[$audience])) {
+                throw new EngineeringAgentOutputValidationException('Translated documentation missing '.$audience.'.');
+            }
+        }
+    }
 
 
     private function productRequirements(array $output): void
