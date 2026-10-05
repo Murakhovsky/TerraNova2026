@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Service;
 
+use App\Engineering\Application\DomainDevelopment\EngineeringDomainConcurrencyGate;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -26,6 +27,7 @@ final readonly class EngineeringAutonomousProgressionService
         private EngineeringFeatureStoreInterface $features,
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringWorkflowLockInterface $lock,
+        private EngineeringDomainConcurrencyGate $domainConcurrency,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
         private int $maxStepsPerProgression = 16,
         private int $maxLogicalAgentRunsPerFeature = 16,
@@ -56,6 +58,21 @@ final readonly class EngineeringAutonomousProgressionService
                     $featureId,
                     $workflowId,
                     'Persistent autonomous agent-run budget exhausted before scheduling '.$role->value.'.',
+                );
+            }
+
+            $concurrency = $this->domainConcurrency->decision($featureId, $role);
+            if (!$concurrency['allowed']) {
+                return new WorkflowDirective(
+                    WorkflowDirectiveType::STOP,
+                    null,
+                    sprintf(
+                        'Domain %s concurrency limit reached before %s: %d contender(s), limit %d.',
+                        $concurrency['scope'],
+                        $role->value,
+                        $concurrency['active'],
+                        $concurrency['limit'],
+                    ),
                 );
             }
 
