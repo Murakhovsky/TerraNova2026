@@ -41,9 +41,9 @@ foreach ([
 }
 
 foreach ([
-    "email = :email AND organization_id = :organization_id",
-    "parent::createUser($input, $organizationId)",
-    "parent::updateUser($id, $input, $organizationId, $actor)",
+    'email = :email AND organization_id = :organization_id',
+    'parent::createUser($input, $organizationId)',
+    'parent::updateUser($id, $input, $organizationId, $actor)',
 ] as $needle) {
     if (!str_contains($membership, $needle)) {
         throw new RuntimeException('Membership synchronization is missing tenant context: '.$needle);
