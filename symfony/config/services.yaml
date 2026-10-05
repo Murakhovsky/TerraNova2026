@@ -1787,6 +1787,12 @@ services:
   growthNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\GrowthWebProvider
 
+  capitalMarketsDomainModule:
+    alias: Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule
+
+  capitalMarketsNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\CapitalMarketsWebProvider
+
   App\Infrastructure\Module\PdoModuleStateRepository:
     arguments:
       $connection: '@cos.database.pdo'

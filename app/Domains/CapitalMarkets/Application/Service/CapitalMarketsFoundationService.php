@@ -457,7 +457,7 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
     /** @return array<string,mixed> */
     private function metadata(mixed $value):array
     {
-        if(!is_array($value)||array_is_list($value))throw new InvalidArgumentException('Metadata must be a JSON object.');
+        if(!is_array($value)||($value!==[]&&array_is_list($value)))throw new InvalidArgumentException('Metadata must be a JSON object.');
         InstrumentDescriptor::assertMetadata($value);
         return $value;
     }
