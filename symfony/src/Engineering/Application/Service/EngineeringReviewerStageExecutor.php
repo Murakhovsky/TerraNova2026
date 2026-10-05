@@ -369,6 +369,7 @@ final readonly class EngineeringReviewerStageExecutor
             match ($run['role'] ?? null) {
                 AgentRole::DEVELOPER->value => ++$developer,
                 AgentRole::REVIEWER->value => ++$reviewer,
+                AgentRole::QA_EXECUTOR->value,
                 AgentRole::QA->value => ++$qa,
                 default => null,
             };
