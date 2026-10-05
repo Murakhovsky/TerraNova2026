@@ -12,11 +12,13 @@ final readonly class EngineeringDomainDocumentationService
     public function __construct(
         private EngineeringDomainStoreInterface $domains,
         private EngineeringArtifactDependencyGraph $artifactGraph,
+        private EngineeringDomainDocumentationTranslationService $translator,
         private string $canonicalLocale = 'uk',
+        private string $translationLocales = 'en',
     ) {}
 
     /** @return array<string,array<string,mixed>> */
-    public function generate(string $domainId): array
+    public function generate(string $domainId, ?string $correlationId = null): array
     {
         $domain = $this->domains->domain($domainId);
         $spec = $this->required($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION);
@@ -127,21 +129,95 @@ final readonly class EngineeringDomainDocumentationService
             ),
         ];
 
+        $contentRefs = array_map(static fn (array $artifact): array => [
+            'artifact_id' => $artifact['id'],
+            'type' => $artifact['type'],
+            'version' => $artifact['version'],
+            'hash' => $artifact['content_hash'],
+        ], $artifacts);
+
         $translations = [
             'canonical_locale' => $this->canonicalLocale,
             'translation_layer' => 'SEPARATE_ARTIFACT',
             'translations' => [],
+            'translation_failures' => [],
             'locale_contract' => [
                 'key_format' => '<locale>',
-                'content_refs' => array_map(static fn (array $artifact): array => [
-                    'artifact_id' => $artifact['id'],
-                    'type' => $artifact['type'],
-                    'version' => $artifact['version'],
-                    'hash' => $artifact['content_hash'],
-                ], $artifacts),
+                'content_refs' => $contentRefs,
                 'future_locales_supported' => true,
             ],
         ];
+
+        $sourceDocuments = [
+            [
+                'audience' => 'PUBLIC_BUSINESS',
+                'title' => (string) $domain['name'].' — Business',
+                'content' => $public,
+            ],
+            [
+                'audience' => 'INTEGRATOR',
+                'title' => (string) $domain['name'].' — Integrator',
+                'content' => $integrator,
+            ],
+            [
+                'audience' => 'DEVELOPER',
+                'title' => (string) $domain['name'].' — Developer',
+                'content' => $developer,
+            ],
+        ];
+
+        foreach ($this->targetLocales() as $locale) {
+            if ($locale === $this->canonicalLocale) continue;
+            try {
+                $translated = $this->translator->translate(
+                    $domainId,
+                    (string) $domain['organization_id'],
+                    $this->canonicalLocale,
+                    $locale,
+                    $sourceDocuments,
+                    mb_substr(($correlationId ?? 'domain-documentation').':'.$locale, 0, 128),
+                );
+                if (($translated['status'] ?? null) !== 'TRANSLATED') {
+                    $translations['translation_failures'][$locale] = [
+                        'status' => $translated['status'] ?? 'FAILED',
+                        'notes' => $translated['notes'] ?? [],
+                    ];
+                    continue;
+                }
+                if (strtolower(trim((string) ($translated['target_locale'] ?? ''))) !== $locale) {
+                    throw new RuntimeException('Documentation agent returned mismatched target locale.');
+                }
+
+                $byAudience = [];
+                foreach (is_array($translated['documents'] ?? null) ? $translated['documents'] : [] as $document) {
+                    if (!is_array($document)) continue;
+                    $audience = strtoupper(trim((string) ($document['audience'] ?? '')));
+                    if ($audience !== '') $byAudience[$audience] = $document;
+                }
+                foreach (['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER'] as $audience) {
+                    if (!isset($byAudience[$audience])) {
+                        throw new RuntimeException('Documentation translation missing audience '.$audience.'.');
+                    }
+                }
+
+                $translations['translations'][$locale] = [
+                    'status' => 'TRANSLATED',
+                    'documents' => [
+                        'public' => $byAudience['PUBLIC_BUSINESS'],
+                        'integrator' => $byAudience['INTEGRATOR'],
+                        'developer' => $byAudience['DEVELOPER'],
+                    ],
+                    'source_refs' => $contentRefs,
+                    'notes' => $translated['notes'] ?? [],
+                ];
+            } catch (\Throwable $error) {
+                $translations['translation_failures'][$locale] = [
+                    'status' => 'FAILED',
+                    'error' => $error->getMessage(),
+                ];
+            }
+        }
+
         $artifacts['translations'] = $this->domains->saveArtifact(
             $domainId,
             EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_TRANSLATIONS->value,
@@ -151,6 +227,18 @@ final readonly class EngineeringDomainDocumentationService
 
         $this->artifactGraph->rebuild($domainId);
         return $artifacts;
+    }
+
+    /** @return list<string> */
+    private function targetLocales(): array
+    {
+        $locales = [];
+        foreach (preg_split('/[,;\s]+/', strtolower(trim($this->translationLocales))) ?: [] as $locale) {
+            $locale = trim($locale);
+            if ($locale === '' || !preg_match('/^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/', $locale)) continue;
+            $locales[$locale] = true;
+        }
+        return array_keys($locales);
     }
 
     /** @return array<string,mixed> */
