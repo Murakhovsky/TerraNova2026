@@ -185,6 +185,8 @@ final readonly class EngineeringDomainFeatureScheduler
                             'domain_feature_kind' => $feature['kind'],
                             'risk' => $feature['risk'],
                             'architecture_version' => $architectureVersion,
+                            'revalidation_of' => $isRevalidation && $previousEngineeringFeatureId !== '' ? $previousEngineeringFeatureId : null,
+                            'revalidation_reason' => $isRevalidation ? ($feature['status_reason'] ?? 'Domain architecture/contract drift.') : null,
                         ],
                         constraints: [
                             'Follow DOMAIN_CONTEXT_PACK Architecture Constitution.',
@@ -193,7 +195,13 @@ final readonly class EngineeringDomainFeatureScheduler
                             'Do not perform business operations of the target domain.',
                         ],
                         attachments: [],
-                        previousContext: [['domain_development' => $context]],
+                        previousContext: [[
+                            'domain_development' => $context,
+                            'revalidation' => $isRevalidation ? [
+                                'previous_engineering_feature_id' => $previousEngineeringFeatureId !== '' ? $previousEngineeringFeatureId : null,
+                                'reason' => $feature['status_reason'] ?? 'Domain architecture/contract drift.',
+                            ] : null,
+                        ]],
                     ),
                     $organizationId,
                     'domain-runtime:'.$domainId,
@@ -205,7 +213,12 @@ final readonly class EngineeringDomainFeatureScheduler
                     $organizationId,
                     EngineeringDomainRuntimeEventType::FEATURE_STARTED->value,
                     $featureKey,
-                    ['engineering_feature_id' => $engineeringFeatureId, 'architecture_version' => $architectureVersion],
+                    [
+                        'engineering_feature_id' => $engineeringFeatureId,
+                        'architecture_version' => $architectureVersion,
+                        'revalidation' => $isRevalidation,
+                        'revalidation_of' => $previousEngineeringFeatureId !== '' ? $previousEngineeringFeatureId : null,
+                    ],
                     $correlationId,
                     'feature-started:'.$featureKey.':'.$engineeringFeatureId,
                 );
