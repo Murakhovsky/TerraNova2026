@@ -25,7 +25,7 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
 
         $agentRuns = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params);
         $reviewRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='REVIEWER'", $params);
-        $qaRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='QA'", $params);
+        $qaRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role IN ('QA_EXECUTOR','QA')", $params);
 
         $managerTotal = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status <> 'RUNNING'", $params);
         $managerCompleted = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status='COMPLETED'", $params);
@@ -42,7 +42,13 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
               AND f.status='DONE'
               AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='DEVELOPER')=1
               AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='REVIEWER')=1
-              AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA')=2
+              AND (
+                    (
+                        (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA_PLANNER')=1
+                        AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA_EXECUTOR')=1
+                    )
+                    OR (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA')=2
+              )
               AND (SELECT COUNT(*) FROM cos_engineering_human_decision_requests h WHERE h.feature_id=f.id)=0
         ", $params);
         $avgTimeToReady = $db->fetchOne("
