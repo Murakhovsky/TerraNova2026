@@ -162,6 +162,13 @@ final readonly class EngineeringDomainWorkspaceController
             }
 
             $status = strtoupper((string) ($domain['status'] ?? ''));
+            $dependencyGraphEditable = $features !== []
+                && in_array($status, ['DECOMPOSITION','ARCHITECTURE','READY_FOR_IMPLEMENTATION','BLOCKED'], true)
+                && array_reduce(
+                    $features,
+                    static fn (bool $editable, array $feature): bool => $editable && ($feature['engineering_feature_id'] ?? null) === null,
+                    true,
+                );
             $actions = [
                 'plan' => $status === EngineeringDomainStatus::DRAFT->value
                     || (in_array($status, [EngineeringDomainStatus::BLOCKED->value, EngineeringDomainStatus::FAILED->value], true) && $features === []),
@@ -196,6 +203,7 @@ final readonly class EngineeringDomainWorkspaceController
                 'featureFlags' => is_array($artifactByType['DOMAIN_FEATURE_FLAGS']['content'] ?? null)
                     ? $artifactByType['DOMAIN_FEATURE_FLAGS']['content']
                     : ['DOMAIN_ENABLED' => false, 'FEATURE_ENABLED' => [], 'INTEGRATION_ENABLED' => false, 'PRODUCTION_EXECUTION_ENABLED' => false],
+                'dependencyGraphEditable' => $dependencyGraphEditable,
                 'actions' => $actions,
                 'csrfToken' => $this->csrf->token($request),
                 'statusMessage' => trim((string) $request->query->get('status_message', '')),
