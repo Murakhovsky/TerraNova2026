@@ -28,6 +28,7 @@ For RELEASE_READY, `release_checks` must contain these exact blocking check IDs,
 - MIGRATION_PLAN
 - SECURITY_CHECKS
 - CRITICAL_SMOKE
+- DOCUMENTATION
 - CI
 
 Do not replace, omit or rename these mandatory release checks. Additional checks are allowed.
