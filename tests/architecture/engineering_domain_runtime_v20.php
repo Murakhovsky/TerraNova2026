@@ -111,7 +111,7 @@ foreach ([$manager, $architect, $developer, $reviewer, $qa] as $stage) {
 foreach (['assertDomainPathPolicy', 'owned_paths', 'shared_paths', 'forbidden_paths'] as $needle) {
     if (!str_contains($developer, $needle)) throw new RuntimeException('Developer Domain path enforcement missing '.$needle);
 }
-foreach (['currentBaseRevision(?string $branch = null)', 'configuredBaseBranch', 'ensureBranch', '?string $baseBranch = null'] as $needle) {
+foreach (['configuredRepository()', 'currentBaseRevision(?string $branch = null)', 'configuredBaseBranch', 'ensureBranch', '?string $baseBranch = null'] as $needle) {
     if (!str_contains($gateway, $needle)) throw new RuntimeException('Repository gateway lacks integration branch contract '.$needle);
 }
 
