@@ -4,7 +4,7 @@
     {
       "domain": "capital_markets",
       "owner": "Capital Markets Architecture",
-      "reason": "V0.1 Architecture Foundation only; canonical Capital Markets process models begin with the Market Intelligence feature pack, while trading and execution runtime are intentionally absent."
+      "reason": "CM-FOUNDATION owns structural registries and supporting CRUD only; the first canonical Capital Markets business process begins with the Market Intelligence feature pack, while trading and execution remain intentionally absent."
     },
     {
       "domain": "construction",

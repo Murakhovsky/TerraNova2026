@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_pairs (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_cm_pair_relationship FOREIGN KEY (organization_id,relationship_id)
         REFERENCES tn_capital_market_relationships (organization_id,relationship_id)
-        ON UPDATE CASCADE ON DELETE SET NULL,
+        ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT chk_cm_pair_distinct CHECK (instrument_a_id <> instrument_b_id),
     CONSTRAINT chk_cm_pair_status CHECK (status IN ('ACTIVE','INACTIVE'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

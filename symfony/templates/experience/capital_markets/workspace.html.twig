@@ -1,0 +1,393 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ pageTitle }} | Terra Nova COS{% endblock %}
+
+{% block workspace_content %}
+{% set w = workspace|default({}) %}
+<div class="cos-page__stack cos-capital-markets" data-csrf="{{ csrfToken }}">
+  <header class="cos-growth-header">
+    <div>
+      <small>Capital Markets · Foundation</small>
+      <h1>{{ pageTitle }}</h1>
+      <p>Instrument identity, economic relationships and venue registry. No market data or trading execution is connected.</p>
+    </div>
+    <nav class="cos-growth-actions" aria-label="Capital Markets navigation">
+      <a class="btn btn-outline-secondary" href="/capital-markets">Overview</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/instruments">Instruments</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/relationships">Relationships</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/venues">Venues</a>
+    </nav>
+  </header>
+
+  {% if query.saved|default(false) %}
+    <div class="alert alert-success">Changes saved and written to COS Audit.</div>
+  {% endif %}
+  {% if query.error|default('') %}
+    <div class="alert alert-danger">{{ query.error }}</div>
+  {% endif %}
+
+  {% if cmView == 'failure' %}
+    <section class="cos-panel">
+      <strong>{{ failureCode|default(500) }}</strong>
+      <h2>{{ failureTitle|default('Capital Markets unavailable') }}</h2>
+      <p>{{ failureMessage|default('The Foundation workspace could not be loaded.') }}</p>
+      <a href="/capital-markets" class="btn btn-primary">Back to Capital Markets</a>
+    </section>
+
+  {% elseif cmView == 'overview' %}
+    <section class="cos-kpi-strip" aria-label="Capital Markets foundation state">
+      <twig:CosMetric label="Instruments" value="{{ w.instrument_count|default(0) }}" hint="canonical identities" />
+      <twig:CosMetric label="Relationships" value="{{ w.relationship_count|default(0) }}" hint="directed economic links" />
+      <twig:CosMetric label="Venues" value="{{ w.venue_count|default(0) }}" hint="registered venues" />
+      <twig:CosMetric label="Stage" value="Foundation" hint="structural model only" />
+    </section>
+
+    <section class="cos-panel">
+      <h2>System status</h2>
+      <p><strong>Foundation ready.</strong> The domain understands instruments, relationships and venues structurally.</p>
+      <p>Market data is not connected yet. The domain foundation is ready for Market Intelligence integration.</p>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Recently registered instruments</h2>
+      {% if w.recent_instruments|default([]) is empty %}
+        <p>No instruments yet. Create the first canonical instrument in the Instrument Registry.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Symbol</th><th>Name</th><th>Family</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for item in w.recent_instruments %}
+              <tr>
+                <td><a href="/capital-markets/instruments/{{ item.id|url_encode }}">{{ item.symbol }}</a></td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.family }}</td>
+                <td>{{ item.status }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+  {% elseif cmView == 'instruments' %}
+    <section class="cos-panel">
+      <form method="get" action="/capital-markets/instruments" class="row g-2">
+        <div class="col-md-5"><input class="form-control" name="q" value="{{ query.q|default('') }}" placeholder="Search symbol or name"></div>
+        <div class="col-md-3">
+          <select class="form-select" name="family">
+            <option value="">All families</option>
+            {% for family in ['equity','tokenized_security','crypto_asset','stablecoin','spot_market','future','perpetual','option','fixed_income','tokenized_fixed_income','fund','rwa','fx','commodity','index'] %}
+              <option value="{{ family }}" {% if query.family|default('') == family %}selected{% endif %}>{{ family|upper }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select" name="status">
+            <option value="">All statuses</option>
+            {% for status in ['DRAFT','ACTIVE','SUSPENDED','DELISTED','UNKNOWN'] %}
+              <option value="{{ status }}" {% if query.status|default('') == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+      </form>
+    </section>
+
+    {% if canManageInstruments %}
+      <section class="cos-panel">
+        <h2>Create instrument</h2>
+        <form method="post" action="/capital-markets/instruments" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+          <div class="col-md-2"><input class="form-control" name="symbol" placeholder="AAPL" required></div>
+          <div class="col-md-2"><input class="form-control" name="canonical_symbol" placeholder="AAPL"></div>
+          <div class="col-md-4"><input class="form-control" name="name" placeholder="Apple Inc." required></div>
+          <div class="col-md-2">
+            <select class="form-select" name="family" required>
+              {% for family in ['equity','tokenized_security','crypto_asset','stablecoin','spot_market','future','perpetual','option','fixed_income','tokenized_fixed_income','fund','rwa','fx','commodity','index'] %}
+                <option value="{{ family }}">{{ family|upper }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" name="status">
+              {% for status in ['DRAFT','ACTIVE','SUSPENDED','UNKNOWN'] %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2"><input class="form-control" name="currency" placeholder="USD"></div>
+          <div class="col-md-2"><input class="form-control" name="quote_asset" placeholder="USD / USDT"></div>
+          <div class="col-md-3"><input class="form-control" name="issuer_reference" placeholder="Issuer reference"></div>
+          <div class="col-md-2"><input class="form-control" name="jurisdiction" placeholder="Jurisdiction"></div>
+          <div class="col-md-3"><input class="form-control" name="primary_venue_reference" placeholder="Primary venue reference"></div>
+          <div class="col-md-12"><button class="btn btn-primary">Create instrument</button></div>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="cos-panel">
+      <h2>Instrument Registry</h2>
+      {% if w.instruments|default([]) is empty %}
+        <p>No instruments match the current filters.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Symbol</th><th>Name</th><th>Family</th><th>Status</th><th>Identifiers</th><th>Updated</th></tr></thead>
+            <tbody>
+            {% for item in w.instruments %}
+              <tr>
+                <td><a href="/capital-markets/instruments/{{ item.id|url_encode }}"><strong>{{ item.symbol }}</strong></a></td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.family }}</td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.identifiers|length }}</td>
+                <td>{{ item.updated_at }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+  {% elseif cmView == 'instrument' %}
+    {% set i = w.instrument %}
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-start gap-3">
+        <div>
+          <small>{{ i.family|upper }}</small>
+          <h2>{{ i.symbol }} · {{ i.name }}</h2>
+          <p>Canonical symbol: <strong>{{ i.canonical_symbol }}</strong> · Status: <strong>{{ i.status }}</strong></p>
+        </div>
+        <a class="btn btn-outline-secondary" href="/capital-markets/instruments">Back to registry</a>
+      </div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Identity</h2>
+      <dl class="row">
+        <dt class="col-sm-3">Internal ID</dt><dd class="col-sm-9">{{ i.id }}</dd>
+        <dt class="col-sm-3">Currency</dt><dd class="col-sm-9">{{ i.currency|default('—') }}</dd>
+        <dt class="col-sm-3">Quote asset</dt><dd class="col-sm-9">{{ i.quote_asset|default('—') }}</dd>
+        <dt class="col-sm-3">Issuer</dt><dd class="col-sm-9">{{ i.issuer_reference|default('—') }}</dd>
+        <dt class="col-sm-3">Jurisdiction</dt><dd class="col-sm-9">{{ i.jurisdiction|default('—') }}</dd>
+        <dt class="col-sm-3">Primary venue</dt><dd class="col-sm-9">{{ i.primary_venue_reference|default('—') }}</dd>
+      </dl>
+      <h3>Identifiers</h3>
+      {% if i.identifiers is empty %}<p>No external identifiers.</p>{% endif %}
+      <ul>
+        {% for identifier in i.identifiers %}
+          <li><strong>{{ identifier.type }}</strong>: {{ identifier.value }}{% if identifier.source %} · {{ identifier.source }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    {% if canManageInstruments %}
+      <section class="cos-panel">
+        <h2>Edit instrument</h2>
+        <form method="post" action="/capital-markets/instruments/{{ i.id|url_encode }}" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+          <div class="col-md-2"><input class="form-control" name="symbol" value="{{ i.symbol }}" required></div>
+          <div class="col-md-2"><input class="form-control" name="canonical_symbol" value="{{ i.canonical_symbol }}" required></div>
+          <div class="col-md-4"><input class="form-control" name="name" value="{{ i.name }}" required></div>
+          <div class="col-md-2">
+            <select class="form-select" name="family">
+              {% for family in ['equity','tokenized_security','crypto_asset','stablecoin','spot_market','future','perpetual','option','fixed_income','tokenized_fixed_income','fund','rwa','fx','commodity','index'] %}
+                <option value="{{ family }}" {% if i.family == family %}selected{% endif %}>{{ family|upper }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" name="status">
+              {% for status in ['DRAFT','ACTIVE','SUSPENDED','DELISTED','UNKNOWN'] %}
+                <option value="{{ status }}" {% if i.status == status %}selected{% endif %}>{{ status }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2"><input class="form-control" name="currency" value="{{ i.currency|default('') }}" placeholder="USD"></div>
+          <div class="col-md-2"><input class="form-control" name="quote_asset" value="{{ i.quote_asset|default('') }}" placeholder="USDT"></div>
+          <div class="col-md-3"><input class="form-control" name="issuer_reference" value="{{ i.issuer_reference|default('') }}" placeholder="Issuer"></div>
+          <div class="col-md-2"><input class="form-control" name="jurisdiction" value="{{ i.jurisdiction|default('') }}" placeholder="Jurisdiction"></div>
+          <div class="col-md-3"><input class="form-control" name="primary_venue_reference" value="{{ i.primary_venue_reference|default('') }}" placeholder="Primary venue"></div>
+          <div class="col-md-12"><button class="btn btn-primary">Save instrument</button></div>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="cos-panel">
+      <h2>Related financial exposures</h2>
+      {% if i.relationships is empty %}
+        <p>No economic relationships registered.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Source</th><th>Relationship</th><th>Target</th><th>Strength</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for rel in i.relationships %}
+            <tr>
+              <td>{{ rel.source_instrument.symbol|default(rel.source_instrument.id) }}</td>
+              <td><strong>{{ rel.type }}</strong></td>
+              <td>{{ rel.target_instrument.symbol|default(rel.target_instrument.id) }}</td>
+              <td>{{ rel.strength }}</td>
+              <td>{{ rel.status }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Venue availability</h2>
+      {% if i.venues is empty %}
+        <p>This instrument is not registered on a venue yet.</p>
+      {% else %}
+        <ul>
+          {% for mapping in i.venues %}
+            <li><strong>{{ mapping.venue.name|default(mapping.venue.id) }}</strong> · {{ mapping.venue_symbol }} · {{ mapping.status }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Audit history</h2>
+      {% if w.audit|default([]) is empty %}
+        <p>No Capital Markets audit entries for this instrument yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Time</th><th>Actor</th><th>Correlation</th><th>Category</th></tr></thead>
+          <tbody>
+          {% for row in w.audit %}
+            <tr><td>{{ row.created_at|default('—') }}</td><td>{{ row.actor_id|default('—') }}</td><td>{{ row.correlation_id|default('—') }}</td><td>{{ row.category|default('platform_activity') }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+  {% elseif cmView == 'relationships' %}
+    {% if canManageRelationships %}
+      <section class="cos-panel">
+        <h2>Create relationship</h2>
+        <form method="post" action="/capital-markets/relationships" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+          <div class="col-md-3">
+            <select class="form-select" name="source_instrument" required>
+              <option value="">Source instrument</option>
+              {% for item in w.instruments|default([]) %}<option value="{{ item.id }}">{{ item.symbol }} · {{ item.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" name="type" required>
+              {% for type in ['UNDERLYING_OF','REPRESENTS','REFERENCES','DERIVES_VALUE_FROM','SYNTHETIC_EXPOSURE_TO','HEDGES','REDEEMABLE_INTO','COLLATERALIZED_BY','SETTLED_IN','QUOTED_IN','CORRELATED_WITH'] %}
+                <option value="{{ type }}">{{ type }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" name="target_instrument" required>
+              <option value="">Target instrument</option>
+              {% for item in w.instruments|default([]) %}<option value="{{ item.id }}">{{ item.symbol }} · {{ item.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" name="strength">
+              {% for strength in ['EXACT','DIRECT','DERIVED','STATISTICAL'] %}<option value="{{ strength }}">{{ strength }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-1"><button class="btn btn-primary w-100">Add</button></div>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="cos-panel">
+      <h2>Economic Relationship Graph</h2>
+      {% if w.relationships|default([]) is empty %}
+        <p>No directed relationships have been registered.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Source</th><th>Type</th><th>Target</th><th>Strength</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for rel in w.relationships %}
+            <tr>
+              <td><a href="/capital-markets/instruments/{{ rel.source_instrument.id|url_encode }}">{{ rel.source_instrument.symbol|default(rel.source_instrument.id) }}</a></td>
+              <td><strong>{{ rel.type }}</strong></td>
+              <td><a href="/capital-markets/instruments/{{ rel.target_instrument.id|url_encode }}">{{ rel.target_instrument.symbol|default(rel.target_instrument.id) }}</a></td>
+              <td>{{ rel.strength }}</td>
+              <td>{{ rel.status }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+  {% elseif cmView == 'venues' %}
+    {% if canManageVenues %}
+      <section class="cos-panel">
+        <h2>Create venue</h2>
+        <form method="post" action="/capital-markets/venues" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+          <div class="col-md-3"><input class="form-control" name="name" placeholder="Tokenized Venue A" required></div>
+          <div class="col-md-2"><input class="form-control" name="code" placeholder="VENUE_A" required></div>
+          <div class="col-md-3">
+            <select class="form-select" name="type">
+              {% for type in ['broker','stock_exchange','cex','dex','amm','perpetual_dex','tokenized_securities_venue','rwa_platform','data_provider'] %}
+                <option value="{{ type }}">{{ type|upper }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2"><input class="form-control" name="jurisdiction" placeholder="Jurisdiction"></div>
+          <div class="col-md-2"><input class="form-control" name="timezone" value="UTC" placeholder="Timezone"></div>
+          <div class="col-md-12">
+            {% for cap in ['MARKET_DATA','ORDER_BOOK','TRADING','HISTORICAL_DATA','STREAMING','FUNDING_DATA','MARGIN','DEPOSIT','WITHDRAWAL','SETTLEMENT'] %}
+              <label class="me-3"><input type="checkbox" name="capabilities[]" value="{{ cap }}"> {{ cap }}</label>
+            {% endfor %}
+          </div>
+          <div class="col-md-12"><button class="btn btn-primary">Create venue</button></div>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="cos-page__stack">
+      {% if w.venues|default([]) is empty %}
+        <section class="cos-panel"><p>No venues registered.</p></section>
+      {% endif %}
+      {% for venue in w.venues|default([]) %}
+        <section class="cos-panel">
+          <div class="d-flex justify-content-between gap-3">
+            <div>
+              <small>{{ venue.type|upper }}</small>
+              <h2>{{ venue.name }} · {{ venue.code }}</h2>
+              <p>{{ venue.status }} · {{ venue.jurisdiction|default('No jurisdiction') }} · {{ venue.timezone }}</p>
+              <p>
+                {% if venue.capabilities is empty %}<em>No capabilities declared.</em>{% endif %}
+                {% for cap in venue.capabilities %}<span class="badge text-bg-secondary me-1">{{ cap }}</span>{% endfor %}
+              </p>
+              <p>Supported instruments: <strong>{{ venue.supported_instrument_count }}</strong></p>
+            </div>
+          </div>
+
+          {% if canManageVenues %}
+            <details>
+              <summary>Register instrument on this venue</summary>
+              <form method="post" action="/capital-markets/venues/{{ venue.id|url_encode }}/instruments" class="row g-2 mt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <div class="col-md-4">
+                  <select class="form-select" name="instrument_id" required>
+                    <option value="">Instrument</option>
+                    {% for item in w.instruments|default([]) %}<option value="{{ item.id }}">{{ item.symbol }} · {{ item.name }}</option>{% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-3"><input class="form-control" name="venue_symbol" placeholder="AAPLx" required></div>
+                <div class="col-md-2"><input class="form-control" type="number" min="0" max="30" name="price_precision" value="2"></div>
+                <div class="col-md-2"><input class="form-control" type="number" min="0" max="30" name="quantity_precision" value="8"></div>
+                <div class="col-md-1"><button class="btn btn-primary w-100">Add</button></div>
+              </form>
+            </details>
+          {% endif %}
+        </section>
+      {% endfor %}
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -47,10 +47,10 @@ final readonly class Decimal extends ValueObject
         [$ai,$af] = $this->parts();
         [$bi,$bf] = $other->parts();
         $cmp = strlen($ai) <=> strlen($bi);
-        if ($cmp === 0) $cmp = $ai <=> $bi;
+        if ($cmp === 0) $cmp = strcmp($ai,$bi) <=> 0;
         if ($cmp === 0) {
             $length = max(strlen($af), strlen($bf));
-            $cmp = str_pad($af,$length,'0') <=> str_pad($bf,$length,'0');
+            $cmp = strcmp(str_pad($af,$length,'0'),str_pad($bf,$length,'0')) <=> 0;
         }
         return $negative ? -$cmp : $cmp;
     }

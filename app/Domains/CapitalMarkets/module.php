@@ -12,11 +12,16 @@ return [
     'dependencies'=>[],
     'enabled_by_default'=>false,
     'contributions'=>[
-        'runtime_module_service'=>'Domains\\CapitalMarkets\\Bootstrap\\CapitalMarketsDomainModule',
+        'runtime_module_service'=>'capitalMarketsDomainModule',
         'job_handler_services'=>[],
         'api_route_contributor_services'=>[],
         'configuration_provisioner_services'=>[],
-        'extension_services'=>[],
+        'extension_services'=>[
+            'web.navigation'=>['capitalMarketsNavigationContributor'],
+            'web.search'=>['capitalMarketsNavigationContributor'],
+            'web.commands'=>['capitalMarketsNavigationContributor'],
+            'web.workspace'=>['capitalMarketsNavigationContributor'],
+        ],
         'cross_domain_contracts'=>[],
         'migration_files'=>[
             'app/migrations/20261005_000124_capital_markets_foundation.sql',
