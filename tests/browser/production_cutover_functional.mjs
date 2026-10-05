@@ -3,6 +3,8 @@ import { chromium } from 'playwright-core';
 const baseUrl = process.env.COS_WEB_SMOKE_BASE_URL || 'http://127.0.0.1:8081';
 const adminEmail = process.env.COS_WEB_SMOKE_EMAIL || '';
 const adminPassword = process.env.COS_WEB_SMOKE_PASSWORD || '';
+const foreignUserEmail = process.env.COS_WEB_FOREIGN_USER_EMAIL || '';
+const foreignUserId = process.env.COS_WEB_FOREIGN_USER_ID || '';
 const executablePath = process.env.CHROME_PATH || '/usr/bin/google-chrome';
 const runId = (process.env.GITHUB_RUN_ID || Date.now().toString()).replace(/[^0-9A-Za-z_-]/g, '');
 const suffix = runId.slice(-12);
@@ -107,8 +109,46 @@ try {
   const page = await login(adminContext, adminEmail, adminPassword);
   page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
 
-  // 1. Administration Users: create -> filter -> update -> new-user login.
+  // 1. Administration Users: tenant isolation -> create -> filter -> update -> new-user login.
   await goto200(page, '/admin/users', '[data-cos-archetype]');
+
+  if (foreignUserEmail) {
+    const usersBody = await page.locator('body').innerText();
+    assert(!usersBody.includes(foreignUserEmail), 'Tenant isolation failure: foreign tenant user is visible.');
+  }
+
+  if (foreignUserId) {
+    const token = await csrfToken(page);
+    const attemptedName = `Cross Tenant Mutation ${suffix}`;
+    const mutation = await page.evaluate(async ({ foreignUserId, token, attemptedName }) => {
+      const body = new URLSearchParams({
+        csrf_token: token,
+        full_name: attemptedName,
+        phone: '',
+        role: 'manager',
+        status: 'active',
+        password: '',
+      });
+      const response = await fetch('/admin/updateUser/' + encodeURIComponent(foreignUserId), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: body.toString(),
+        redirect: 'follow',
+      });
+      return { status: response.status, url: response.url, text: await response.text() };
+    }, { foreignUserId, token, attemptedName });
+
+    assert(mutation.status === 200, 'Cross-tenant update rejection must resolve to the admin users page.');
+    const mutationUrl = new URL(mutation.url);
+    assert(
+      mutationUrl.pathname === '/admin/users'
+        && mutationUrl.searchParams.get('status_message') === 'Користувача не знайдено.',
+      'Cross-tenant update did not fail closed: ' + mutation.url,
+    );
+    assert(!mutation.text.includes(attemptedName), 'Cross-tenant update leaked the attempted mutation into the rendered page.');
+  }
+
   const managerEmail = `functional-manager-${suffix}@example.test`;
   const managerPassword = `Functional-${suffix}-Ab9!`;
   const managerName = `Functional Manager ${suffix}`;
@@ -534,7 +574,7 @@ try {
     ok: true,
     suite: 'Production Cutover functional acceptance',
     covered: [
-      'admin users create/filter/update/login/duplicate validation',
+      'admin users tenant isolation/create/filter/update/login/duplicate validation',
       'client case create/edit/activity/search/quick-update/dynamic deal route',
       'sales lead validation/create/qualify/convert/deal/pipeline/message',
       'property public submission/moderation/dynamic detail',
