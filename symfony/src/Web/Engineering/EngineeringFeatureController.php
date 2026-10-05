@@ -139,7 +139,7 @@ final readonly class EngineeringFeatureController
             } elseif (in_array($health, ['STALE','STALLED'], true)) {
                 $displayStatus = $health;
                 ++$stats['attention'];
-            } elseif (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
+            } elseif (in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
                 $displayStatus = $state;
                 ++$stats['attention'];
             } elseif ($workflow !== null) {
@@ -195,7 +195,7 @@ final readonly class EngineeringFeatureController
                     $matchesView = match ($view) {
                         'running' => $displayStatus === 'RUNNING',
                         'queued' => $displayStatus === 'QUEUED',
-                        'attention' => in_array($displayStatus, ['FAILED','STALE','STALLED','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)
+                        'attention' => in_array($displayStatus, ['FAILED','STALE','STALLED','READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)
                             || in_array($health, ['STALE','STALLED'], true),
                         'completed' => $displayStatus === 'COMPLETED',
                         'cancelled' => $displayStatus === 'CANCELLED',
