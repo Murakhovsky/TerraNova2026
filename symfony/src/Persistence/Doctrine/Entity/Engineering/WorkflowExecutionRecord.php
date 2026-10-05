@@ -32,6 +32,14 @@ class WorkflowExecutionRecord
         private DateTimeImmutable $startedAt,
         #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
         private DateTimeImmutable $lastActivityAt,
+        #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+        private ?DateTimeImmutable $heartbeatAt = null,
+        #[ORM\Column(type: Types::STRING, length: 16, options: ['default' => 'UNKNOWN'])]
+        private string $healthStatus = 'UNKNOWN',
+        #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+        private ?DateTimeImmutable $stalledAt = null,
+        #[ORM\Column(type: Types::TEXT, nullable: true)]
+        private ?string $runtimeReason = null,
         #[ORM\Column(type: Types::STRING, length: 36, nullable: true)]
         private ?string $currentTaskId = null,
         #[ORM\Column(type: Types::STRING, length: 36, nullable: true)]
@@ -53,17 +61,39 @@ class WorkflowExecutionRecord
     public function version(): int { return $this->version; }
     public function startedAt(): DateTimeImmutable { return $this->startedAt; }
     public function lastActivityAt(): DateTimeImmutable { return $this->lastActivityAt; }
+    public function heartbeatAt(): ?DateTimeImmutable { return $this->heartbeatAt; }
+    public function healthStatus(): string { return $this->healthStatus; }
+    public function stalledAt(): ?DateTimeImmutable { return $this->stalledAt; }
+    public function runtimeReason(): ?string { return $this->runtimeReason; }
     public function finishedAt(): ?DateTimeImmutable { return $this->finishedAt; }
     public function resumeState(): ?string { return $this->resumeState; }
     public function currentTaskId(): ?string { return $this->currentTaskId; }
     public function currentAgentRunId(): ?string { return $this->currentAgentRunId; }
 
-    public function syncState(string $currentState, ?string $resumeState, ?DateTimeImmutable $finishedAt, string $status): void
+    public function touchRuntime(?string $currentAgentRunId = null, ?string $currentTaskId = null): void
+    {
+        $now = new DateTimeImmutable();
+        $this->heartbeatAt = $now;
+        $this->lastActivityAt = $now;
+        $this->healthStatus = 'HEALTHY';
+        $this->stalledAt = null;
+        $this->runtimeReason = null;
+        if ($currentAgentRunId !== null) $this->currentAgentRunId = $currentAgentRunId;
+        if ($currentTaskId !== null) $this->currentTaskId = $currentTaskId;
+    }
+
+    public function syncState(string $currentState, ?string $resumeState, ?DateTimeImmutable $finishedAt, string $status, ?string $reason = null): void
     {
         $this->currentState = $currentState;
         $this->resumeState = $resumeState;
         $this->finishedAt = $finishedAt;
         $this->status = $status;
         $this->lastActivityAt = new DateTimeImmutable();
+        $this->heartbeatAt = $this->lastActivityAt;
+        $this->healthStatus = in_array($status, ['COMPLETED','CANCELLED','FAILED'], true)
+            ? 'TERMINAL'
+            : (in_array($status, ['WAITING','BLOCKED'], true) ? 'WAITING' : 'HEALTHY');
+        $this->stalledAt = null;
+        $this->runtimeReason = $reason;
     }
 }
