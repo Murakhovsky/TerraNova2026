@@ -19,7 +19,7 @@ final readonly class EngineeringOrchestrator
         private EngineeringFeatureStoreInterface $features,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringWorkflowLockInterface $lock,
-        private EngineeringManagerStageExecutor $managerStage,
+        private EngineeringProductRequirementsStageExecutor $productStage,
         private EngineeringAutonomousProgressionService $progression,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {
@@ -68,7 +68,7 @@ final readonly class EngineeringOrchestrator
             'QUEUED',
             new \App\Engineering\Application\Workflow\WorkflowDirective(
                 \App\Engineering\Application\Workflow\WorkflowDirectiveType::RUN_AGENT,
-                \App\Engineering\Domain\Agent\AgentRole::ENGINEERING_MANAGER,
+                \App\Engineering\Domain\Agent\AgentRole::PRODUCT_REQUIREMENTS,
                 'Queued for Engineering worker.',
             ),
         );
@@ -107,7 +107,7 @@ final readonly class EngineeringOrchestrator
             'IMMEDIATE',
             new \App\Engineering\Application\Workflow\WorkflowDirective(
                 \App\Engineering\Application\Workflow\WorkflowDirectiveType::RUN_AGENT,
-                \App\Engineering\Domain\Agent\AgentRole::ENGINEERING_MANAGER,
+                \App\Engineering\Domain\Agent\AgentRole::PRODUCT_REQUIREMENTS,
                 'Scheduled for immediate Engineering worker.',
             ),
         );
@@ -140,7 +140,7 @@ final readonly class EngineeringOrchestrator
             return $workflow;
         });
 
-        $next = $this->managerStage->execute(
+        $next = $this->productStage->execute(
             featureId: $featureId,
             workflowId: $workflow->id(),
             request: $this->features->request($featureId),
