@@ -15,9 +15,13 @@ final readonly class EngineeringDomainAgentOutputValidator
     public function validate(AgentRole $role, array $output, ?string $phase = null): void
     {
         match ($role) {
-            AgentRole::ENGINEERING_MANAGER => $this->manager($output),
-            AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
+            AgentRole::ENGINEERING_MANAGER,
+            AgentRole::PRODUCT_REQUIREMENTS => $this->manager($output),
+            AgentRole::QA_PLANNER,
+            AgentRole::QA_EXECUTOR,
             AgentRole::QA => $this->qa($output, $phase),
+            AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
+            AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
             default => throw new RuntimeException('Unsupported Domain Development validation role: '.$role->value),
         };
     }
@@ -151,4 +155,29 @@ final readonly class EngineeringDomainAgentOutputValidator
         if (is_array($value)) return $value !== [];
         return is_scalar($value) && $value !== null;
     }
+
+    /** @param array<string,mixed> $output */
+    private function integrationRelease(array $output): void
+    {
+        $this->required($output, ['status','integration_summary','release_checks','known_limitations','required_human_decisions']);
+        $status = (string) ($output['status'] ?? '');
+        if (!in_array($status, ['RELEASE_READY','BLOCKED','HUMAN_DECISION_REQUIRED','FAILED'], true)) {
+            throw new RuntimeException('Domain Integration & Release status is invalid.');
+        }
+        if (!is_array($output['release_checks'] ?? null)) {
+            throw new RuntimeException('Domain Integration & Release checks must be an array.');
+        }
+        if ($status !== 'RELEASE_READY') return;
+
+        foreach ($output['release_checks'] as $check) {
+            if (!is_array($check)) throw new RuntimeException('Domain release check must be an object.');
+            if (($check['blocking'] ?? false) === true && ($check['status'] ?? null) !== 'PASS') {
+                throw new RuntimeException('Domain RELEASE_READY requires all blocking release checks to PASS.');
+            }
+        }
+        if (($output['required_human_decisions'] ?? []) !== []) {
+            throw new RuntimeException('Domain RELEASE_READY cannot contain unresolved human decisions.');
+        }
+    }
+
 }
