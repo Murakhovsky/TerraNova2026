@@ -122,7 +122,7 @@ foreach([
     'MysqlVenueRepository',
     'CapitalMarketsAuditTrail',
     'CapitalMarketsFeatureGate',
-    'OutboxCapitalMarketsEventPublisher',
+    'KernelCapitalMarketsEventPublisher',
 ] as $service){
     if(!str_contains($services,$service))throw new RuntimeException('Capital Markets service wiring missing: '.$service);
 }
@@ -136,6 +136,16 @@ foreach([
     if(str_contains($repositorySource,'ON DUPLICATE KEY UPDATE')){
         throw new RuntimeException('Capital Markets registry repository must not mask aggregate identity conflicts with unsafe upsert: '.basename($repositoryFile));
     }
+}
+
+$eventPublisher=(string)file_get_contents($domainRoot.'/Infrastructure/Event/KernelCapitalMarketsEventPublisher.php');
+foreach(['Kernel\\Event\\EventBus','Kernel\\Event\\DomainEvent','Kernel\\Event\\EventMetadata'] as $needle){
+    if(!str_contains($eventPublisher,$needle)){
+        throw new RuntimeException('Capital Markets event adapter must use canonical Kernel event runtime: '.$needle);
+    }
+}
+if(str_contains($eventPublisher,'IntegrationOutboxInterface')){
+    throw new RuntimeException('Capital Markets domain events must not use the external integration outbox.');
 }
 
 $ownership=(string)file_get_contents($root.'/app/Infrastructure/Platform/Persistence/TableOwnership.php');
