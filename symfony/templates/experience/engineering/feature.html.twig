@@ -325,8 +325,22 @@
                             <td>{{ run.provider|default('unknown') }} / {{ run.model|default('unknown') }}</td>
                             <td>{{ runTokens is not null ? runTokens|number_format(0, '.', ' ') : 'unavailable' }}</td>
                             <td>
-                                {{ runCost is not null ? ('
-                            <td>logical {{ run.logical_attempt|default(1) }} · technical {{ run.technical_retry|default(0) }}</td>
+                                {% if runCost is not null %}
+                                    USD {{ runCost|number_format(4, '.', '') }}
+                                    {% if ledgerUsage %}
+                                        <div class="engineering-muted">
+                                            {{ ledgerUsage.invocations }} LLM виклик(ів)
+                                            {% if ledgerUsage.cost_sources|default([]) is not empty %} · {{ ledgerUsage.cost_sources|join(', ') }}{% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="engineering-muted">вартість недоступна</span>
+                                    {% if run.ledger_usage_ambiguous|default(false) %}
+                                        <div class="engineering-muted">legacy trace спільний для кількох запусків; точна атрибуція неможлива</div>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>логічний {{ run.logical_attempt|default(1) }} · технічний {{ run.technical_retry|default(0) }}</td>
                             <td>{{ run.started_at|default('') }}<div class="engineering-muted">{{ run.finished_at|default('running') }}</div></td>
                             <td>
                                 <details class="engineering-details">
