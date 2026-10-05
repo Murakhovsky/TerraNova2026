@@ -23,6 +23,7 @@ final readonly class EngineeringDomainPlanner
         private EngineeringDomainContextCompressor $compressor,
         private EngineeringArtifactDependencyGraph $artifactGraph,
         private EngineeringDomainHumanGateService $humanGates,
+        private EngineeringDomainAnalyticsService $analytics,
         private EngineeringSharedKernelRegistry $sharedKernel = new EngineeringSharedKernelRegistry(),
         private EngineeringPolicyEngine $policy = new EngineeringPolicyEngine(),
         private FeatureDependencyGraph $graph = new FeatureDependencyGraph(),
@@ -497,6 +498,7 @@ final readonly class EngineeringDomainPlanner
             'runtime_events' => $this->domains->runtimeEvents($domainId),
             'open_human_decisions' => $this->domains->openHumanDecisions($domainId),
             'human_decision_history' => $this->domains->humanDecisionHistory($domainId),
+            'analytics' => $this->analytics->snapshot($domainId),
         ];
     }
 
