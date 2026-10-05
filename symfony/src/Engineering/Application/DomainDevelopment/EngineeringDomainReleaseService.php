@@ -105,7 +105,7 @@ final readonly class EngineeringDomainReleaseService
         $result = $this->agents->run(
             $domainId,
             $organizationId,
-            AgentRole::QA,
+            AgentRole::QA_EXECUTOR,
             'Verify the integrated Domain against Domain Acceptance Criteria and the independent Domain QA Plan using only supplied evidence.',
             [
                 'phase' => 'EXECUTION',
@@ -123,7 +123,7 @@ final readonly class EngineeringDomainReleaseService
             ],
             $correlationId.':domain-qa',
         );
-        $this->validator->validate(AgentRole::QA, $result, 'EXECUTION');
+        $this->validator->validate(AgentRole::QA_EXECUTOR, $result, 'EXECUTION');
 
         $report = array_merge($result, [
             'tested_revision' => $repositoryRevision,
@@ -132,7 +132,7 @@ final readonly class EngineeringDomainReleaseService
             'architecture_version' => (int) $architecture['version'],
             'architecture_hash' => $architecture['content_hash'],
         ]);
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA_EXECUTOR->value);
 
         $qaStatus = (string) ($result['status'] ?? '');
         if ($qaStatus !== 'PASS') {
