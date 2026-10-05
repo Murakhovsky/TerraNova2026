@@ -31,8 +31,8 @@ foreach ([
 foreach ([
     'public function live(',
     "'timeline_count'",
-    "'agent_runs' => $runs",
-    "'timeline' => $timeline",
+    "'agent_runs' => \$runs",
+    "'timeline' => \$timeline",
 ] as $needle) {
     if (!str_contains($api, $needle)) {
         throw new RuntimeException('Engineering compact live API missing '.$needle);
@@ -66,10 +66,10 @@ foreach ([
     }
 }
 
-if (!str_contains($uiActions, "$activeExecution = $hasWorkflow && $workflowStatus === 'RUNNING'")) {
+if (!str_contains($uiActions, "\$activeExecution = \$hasWorkflow && \$workflowStatus === 'RUNNING'")) {
     throw new RuntimeException('Engineering UI still lacks active-execution action suppression.');
 }
-if (!str_contains($uiActions, "&& !$activeExecution")) {
+if (!str_contains($uiActions, "&& !\$activeExecution")) {
     throw new RuntimeException('Engineering continue action is still exposed during active execution.');
 }
 
