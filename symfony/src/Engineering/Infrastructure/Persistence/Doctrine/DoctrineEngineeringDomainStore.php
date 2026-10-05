@@ -236,10 +236,42 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
 
     public function capabilities(string $domainId): array
     {
-        return $this->db()->fetchAllAssociative(
+        $rows = $this->db()->fetchAllAssociative(
             'SELECT * FROM cos_engineering_domain_capabilities WHERE domain_id=:domain_id ORDER BY sort_order ASC, capability_key ASC',
             ['domain_id' => EngineeringId::assert($domainId)],
         );
+        return array_map(function (array $row): array {
+            $row['required'] = (bool) ($row['required'] ?? false);
+            $row['metadata'] = $this->json($row['metadata'] ?? null);
+            return $row;
+        }, $rows);
+    }
+
+    public function updateCapabilityStatus(string $domainId, string $capabilityKey, string $status, ?string $reason = null): void
+    {
+        $status = strtoupper(trim($status));
+        if (!in_array($status, ['NOT_STARTED','WAITING','RUNNING','IMPLEMENTED','REVALIDATION_REQUIRED','BLOCKED','COMPLETE'], true)) {
+            throw new \InvalidArgumentException('Invalid Domain capability status: '.$status);
+        }
+
+        $metadata = $this->db()->fetchOne(
+            'SELECT metadata FROM cos_engineering_domain_capabilities WHERE domain_id=:domain_id AND capability_key=:capability_key',
+            ['domain_id' => EngineeringId::assert($domainId), 'capability_key' => $this->key($capabilityKey)],
+        );
+        if ($metadata === false) throw new RuntimeException('Domain capability not found: '.$capabilityKey);
+        $payload = $this->json($metadata);
+        if ($reason !== null && trim($reason) !== '') $payload['status_reason'] = trim($reason);
+        else unset($payload['status_reason']);
+
+        $updated = $this->db()->update('cos_engineering_domain_capabilities', [
+            'status' => $status,
+            'metadata' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'updated_at' => $this->now(),
+        ], [
+            'domain_id' => EngineeringId::assert($domainId),
+            'capability_key' => $this->key($capabilityKey),
+        ]);
+        if ($updated === 0) throw new RuntimeException('Domain capability not found: '.$capabilityKey);
     }
 
     public function features(string $domainId): array
