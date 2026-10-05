@@ -1364,6 +1364,9 @@ services:
   App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface:
     alias: App\Engineering\Infrastructure\Observability\DoctrineEngineeringObservabilityReadModel
 
+  App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface:
+    alias: App\Engineering\Infrastructure\Observability\DoctrineEngineeringExecutionEventStore
+
   App\Engineering\Application\Lock\EngineeringWorkflowLockInterface:
     alias: App\Engineering\Infrastructure\Lock\MySqlEngineeringWorkflowLock
 
