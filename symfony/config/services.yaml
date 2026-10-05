@@ -46,6 +46,11 @@ parameters:
   env(COS_ENGINEERING_DOMAIN_MAX_PARALLEL_DEVELOPERS): '2'
   env(COS_ENGINEERING_DOMAIN_MAX_PARALLEL_REVIEWS): '2'
   env(COS_ENGINEERING_DOMAIN_MAX_PARALLEL_QA): '2'
+  env(COS_ENGINEERING_DOMAIN_MAX_FEATURE_RETRIES): '3'
+  env(COS_ENGINEERING_DOMAIN_MAX_INTEGRATION_CYCLES): '3'
+  env(COS_ENGINEERING_DOMAIN_CONTEXT_BUDGET): '120000'
+  env(COS_ENGINEERING_DOMAIN_TOKEN_BUDGET): '1000000'
+  env(COS_ENGINEERING_DOMAIN_COST_BUDGET): '25.0'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED): '1'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_RUNTIME_STALE_SECONDS): '600'
@@ -1356,6 +1361,11 @@ services:
       $defaultMaxParallelDevelopers: '%env(int:COS_ENGINEERING_DOMAIN_MAX_PARALLEL_DEVELOPERS)%'
       $defaultMaxParallelReviews: '%env(int:COS_ENGINEERING_DOMAIN_MAX_PARALLEL_REVIEWS)%'
       $defaultMaxParallelQa: '%env(int:COS_ENGINEERING_DOMAIN_MAX_PARALLEL_QA)%'
+      $defaultMaxFeatureRetries: '%env(int:COS_ENGINEERING_DOMAIN_MAX_FEATURE_RETRIES)%'
+      $defaultMaxDomainIntegrationCycles: '%env(int:COS_ENGINEERING_DOMAIN_MAX_INTEGRATION_CYCLES)%'
+      $defaultContextBudget: '%env(int:COS_ENGINEERING_DOMAIN_CONTEXT_BUDGET)%'
+      $defaultTokenBudget: '%env(int:COS_ENGINEERING_DOMAIN_TOKEN_BUDGET)%'
+      $defaultCostBudget: '%env(float:COS_ENGINEERING_DOMAIN_COST_BUDGET)%'
 
   App\Engineering\Application\Context\RepositoryDiscoveryInterface:
     alias: App\Engineering\Infrastructure\Repository\LocalRepositoryDiscovery
