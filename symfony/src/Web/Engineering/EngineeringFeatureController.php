@@ -11,6 +11,7 @@ use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface;
 use App\Engineering\Application\Service\EngineeringCancelService;
 use App\Engineering\Application\Service\EngineeringFeatureManagementService;
+use App\Engineering\Application\Service\EngineeringFinalizeService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Application\Service\EngineeringStatusService;
@@ -44,6 +45,7 @@ final readonly class EngineeringFeatureController
         private EngineeringOrchestrator $orchestrator,
         private EngineeringCancelService $cancel,
         private EngineeringFeatureManagementService $featureManagement,
+        private EngineeringFinalizeService $finalize,
         private EngineeringHumanDecisionService $decisions,
         private EngineeringUiActionResolver $uiActions,
         private SessionCsrfValidator $csrf,
@@ -148,7 +150,7 @@ final readonly class EngineeringFeatureController
             }
 
             $openDecisionCount = 0;
-            if (in_array($state, ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
+            if (in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true)) {
                 $openDecisionCount = 1;
             }
             $rowActions = $this->uiActions->resolve($feature, is_array($workflow) ? $workflow : null, $health, $openDecisionCount);
@@ -409,6 +411,33 @@ final readonly class EngineeringFeatureController
             ));
 
             return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow передано immediate worker.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
+        }
+    }
+
+    public function finalize(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $status = $this->ownedStatus($tenant, $featureId);
+            if (($status['workflow']['state'] ?? null) !== 'READY_FOR_HUMAN_APPROVAL') {
+                throw new \LogicException('Workflow ще не готовий до підтвердження human merge.');
+            }
+
+            $result = $this->finalize->finalize(
+                $featureId,
+                'user:' . $tenant->userId()->value(),
+            );
+
+            return $this->redirectStatus(
+                '/admin/engineering/' . $featureId,
+                'Human merge перевірено · workflow завершено · ' . ($result['pull_request']['merge_revision'] ?? 'DONE') . '.',
+            );
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
         }
