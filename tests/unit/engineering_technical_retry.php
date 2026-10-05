@@ -110,4 +110,72 @@ try {
     if ($alwaysFail->calls !== 3) throw new RuntimeException('Technical retries must be initial attempt plus 2 retries.');
 }
 
+
+$semanticRetry = new class implements AgentRuntimeInterface {
+    public int $calls = 0;
+    public ?AgentContext $lastContext = null;
+
+    public function execute(AgentInstance $instance, AgentContext $context): AgentRun
+    {
+        ++$this->calls;
+        $this->lastContext = $context;
+        $run = new AgentRun('semantic-run-'.$this->calls, $instance, $context);
+        $run->queue();
+        $run->start();
+
+        if ($this->calls === 1) {
+            $run->complete(new AgentOutput(
+                structured: ['status' => 'APPROVED'],
+                provider: 'fixture',
+                model: 'fixture-reviewer',
+            ));
+            return $run;
+        }
+
+        $run->complete(new AgentOutput(
+            structured: [
+                'status' => 'APPROVED',
+                'reviewed_revision' => 'abc123',
+                'base_revision' => 'base123',
+                'pull_request' => 42,
+                'preflight' => [
+                    'status' => 'PASS',
+                    'reviewed_revision' => 'abc123',
+                    'diff_complete' => true,
+                    'required_artifacts_present' => true,
+                    'ci_evidence_available' => true,
+                    'blockers' => [],
+                ],
+                'summary' => 'Corrected independent review passed.',
+                'issues' => [],
+                'correctness' => ['status' => 'PASS', 'findings' => []],
+                'architecture' => ['compliant' => true, 'findings' => []],
+                'security' => ['status' => 'PASS', 'findings' => []],
+                'maintainability' => ['status' => 'PASS', 'findings' => []],
+                'database' => ['status' => 'NOT_APPLICABLE', 'findings' => []],
+                'api' => ['status' => 'NOT_APPLICABLE', 'findings' => []],
+                'tests' => ['status' => 'PASS', 'findings' => []],
+                'acceptance_criteria' => [['id' => 'AC-001', 'result' => 'PASS', 'evidence' => 'fixture']],
+                'ci' => ['state' => 'PASSED', 'total' => 1, 'passed' => 1, 'failed' => 0, 'pending' => 0, 'checks' => []],
+                'unresolved_blockers' => [],
+                'unresolved_majors' => [],
+                'recommendation' => 'continue',
+            ],
+            provider: 'fixture',
+            model: 'fixture-reviewer',
+        ));
+        return $run;
+    }
+};
+
+$semanticResult = (new EngineeringAgentRunner($semanticRetry))->run($task, 'platform', 'semantic-retry-trace');
+if ($semanticRetry->calls !== 2) throw new RuntimeException('Semantic validation failure did not return to the agent exactly once.');
+if ($semanticResult->technicalRetries !== 0) throw new RuntimeException('Semantic retry incorrectly consumed technical retry budget.');
+if (($semanticRetry->lastContext?->metadata['semantic_retry'] ?? null) !== 1) {
+    throw new RuntimeException('Semantic retry counter was not propagated.');
+}
+if (!is_array($semanticRetry->lastContext?->input['semantic_retry_feedback'] ?? null)) {
+    throw new RuntimeException('Semantic retry validation feedback was not propagated.');
+}
+
 echo "Engineering technical retry policy passed.\n";
