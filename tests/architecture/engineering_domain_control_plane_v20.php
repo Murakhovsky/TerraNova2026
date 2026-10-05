@@ -7,10 +7,12 @@ $files = [
     'policy' => 'symfony/src/Engineering/Application/Policy/EngineeringPolicyEngine.php',
     'agent_caps' => 'symfony/src/Engineering/Application/Policy/AgentCapabilityRegistry.php',
     'runtime_caps' => 'symfony/src/Engineering/Application/Policy/RuntimeCapabilityRegistry.php',
+    'shared_kernel' => 'symfony/src/Engineering/Application/Policy/EngineeringSharedKernelRegistry.php',
     'human_gate' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainHumanGateService.php',
     'budget' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainBudgetGuard.php',
     'compressor' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainContextCompressor.php',
     'repo_index' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringRepositoryContextIndex.php',
+    'documentation' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php',
     'artifact_graph' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringArtifactDependencyGraph.php',
     'documentation' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainDocumentationService.php',
     'planner' => 'symfony/src/Engineering/Application/DomainDevelopment/EngineeringDomainPlanner.php',
@@ -36,6 +38,10 @@ foreach (['repository_write','commit','pull_request','merge','production'] as $n
 }
 foreach (['GitHub','CI','Repository','FeatureRuntime','DomainScheduler','ProductionExecution'] as $needle) {
     if (!str_contains($src['runtime_caps'], $needle)) throw new RuntimeException('Runtime Capability Registry missing '.$needle);
+}
+
+foreach (['Money','Currency','Identifier','Clock','TenantId','UserId','DomainEvent','OrganizationId'] as $needle) {
+    if (!str_contains($src['shared_kernel'], $needle)) throw new RuntimeException('Shared Kernel registry missing '.$needle);
 }
 foreach (['createHumanDecision','answerHumanDecision','HUMAN_APPROVAL','resume_status'] as $needle) {
     if (!str_contains($src['human_gate'].$src['runtime'], $needle)) throw new RuntimeException('Human Control Plane missing '.$needle);
@@ -72,6 +78,10 @@ foreach ([
 }
 foreach (['PUBLIC_BUSINESS','INTEGRATOR','DEVELOPER','canonical_locale','future_locales_supported'] as $needle) {
     if (!str_contains($src['documentation'], $needle)) throw new RuntimeException('Documentation audience/locale contract missing '.$needle);
+}
+
+foreach (['commits','migrations','new_events','deprecated_contracts','feature_flags','known_limitations','qa_result','security_result','rollback_plan'] as $needle) {
+    if (!str_contains($src['release'], "'".$needle."'")) throw new RuntimeException('Release Manifest V2 contract missing '.$needle);
 }
 
 foreach (['replaceArtifactDependencies','SUPERSEDES','RELEASE_EVIDENCE','TRANSLATION_SOURCE'] as $needle) {
