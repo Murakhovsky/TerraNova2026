@@ -17,6 +17,7 @@ interface EngineeringWorkflowStoreInterface
 
     public function markImmediate(string $workflowId): void;
     public function touchRuntime(string $workflowId, ?string $agentRunId = null, ?string $taskId = null): void;
+    public function markRuntimeIssue(string $workflowId, string $health, string $reason, ?string $agentRunId = null, ?string $taskId = null): void;
     /** @return array{healthy:int,stale:int,stalled:int,waiting:int} */
     public function refreshRuntimeHealthForOrganization(string $organizationId, int $staleAfterSeconds = 600, int $stalledAfterSeconds = 1800): array;
 
