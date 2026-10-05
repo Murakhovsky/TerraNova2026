@@ -10,6 +10,7 @@ use App\Engineering\Application\Context\EngineeringDatabaseSchemaProviderInterfa
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Context\RepositoryFileReaderInterface;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -53,6 +54,7 @@ final readonly class EngineeringArchitectStageExecutor
         private EngineeringStandardsProvider $standards,
         private EngineeringDatabaseSchemaProviderInterface $databaseSchema,
         private EngineeringRepositoryGatewayInterface $repository,
+        private EngineeringExecutionJournal $journal,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -81,9 +83,32 @@ final readonly class EngineeringArchitectStageExecutor
         $repositoryDiff = null;
 
         if ($this->repository->available()) {
-            $repositoryRevision = $this->repository->currentBaseRevision();
+            $repositoryRevision = $this->journal->around(
+                $featureId,
+                $workflowId,
+                'REPOSITORY',
+                'repository.current_base_revision',
+                'Read current repository base revision',
+                $correlationId,
+                fn (): string => $this->repository->currentBaseRevision(),
+                details: static fn (string $revision): array => ['revision' => $revision],
+            );
             if ($contextRevision !== '' && $contextRevision !== 'unknown' && $contextRevision !== $repositoryRevision) {
-                $repositoryDiff = $this->repository->compareRevisions($contextRevision, $repositoryRevision);
+                $repositoryDiff = $this->journal->around(
+                    $featureId,
+                    $workflowId,
+                    'REPOSITORY',
+                    'repository.compare_revisions',
+                    'Compare architecture context revision with current repository',
+                    $correlationId,
+                    fn (): array => $this->repository->compareRevisions($contextRevision, $repositoryRevision),
+                    details: static fn (array $diff): array => [
+                        'base_revision' => $diff['base_revision'] ?? null,
+                        'head_revision' => $diff['head_revision'] ?? null,
+                        'status' => $diff['status'] ?? null,
+                        'files' => count(is_array($diff['files'] ?? null) ? $diff['files'] : []),
+                    ],
+                );
             }
         }
 
@@ -104,9 +129,25 @@ final readonly class EngineeringArchitectStageExecutor
         }
         $contextPaths = array_slice(array_values(array_unique($contextPaths)), 0, 20);
 
-        $repositoryFiles = $this->repository->available()
-            ? $this->repository->filesAtRevision($contextPaths, $repositoryRevision)
-            : $this->repositoryFiles->readMany($contextPaths);
+        $repositoryFiles = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'REPOSITORY',
+            'repository.read_files',
+            'Read bounded architecture repository context',
+            $correlationId,
+            fn (): array => $this->repository->available()
+                ? $this->repository->filesAtRevision($contextPaths, $repositoryRevision)
+                : $this->repositoryFiles->readMany($contextPaths),
+            details: static fn (array $files): array => [
+                'revision' => $repositoryRevision,
+                'requested_paths' => $contextPaths,
+                'returned_files' => array_values(array_filter(array_map(
+                    static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+                    $files,
+                ))),
+            ],
+        );
 
         $schemaHints = [];
         foreach (is_array($contextMap['content']['domains'] ?? null) ? $contextMap['content']['domains'] : [] as $hint) {
@@ -115,7 +156,20 @@ final readonly class EngineeringArchitectStageExecutor
         foreach (is_array($featureSpec['content']['affected_areas'] ?? null) ? $featureSpec['content']['affected_areas'] : [] as $hint) {
             if (is_scalar($hint)) $schemaHints[] = (string) $hint;
         }
-        $databaseSchema = $this->databaseSchema->snapshot(array_slice(array_values(array_unique($schemaHints)), 0, 12));
+        $schemaSelection = array_slice(array_values(array_unique($schemaHints)), 0, 12);
+        $databaseSchema = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'DATABASE',
+            'database.schema_snapshot',
+            'Read database schema evidence for architecture',
+            $correlationId,
+            fn (): array => $this->databaseSchema->snapshot($schemaSelection),
+            details: static fn (array $snapshot): array => [
+                'hints' => $schemaSelection,
+                'sections' => array_keys($snapshot),
+            ],
+        );
 
         $humanDecisionHistory = array_slice(array_values(array_filter(
             $this->humanDecisions->historyForFeature($featureId),
