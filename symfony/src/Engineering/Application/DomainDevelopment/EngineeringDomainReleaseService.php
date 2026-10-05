@@ -161,7 +161,7 @@ final readonly class EngineeringDomainReleaseService
             ],
             $correlationId.':integration-release',
         );
-        $this->domains->saveArtifact($domainId, 'DOMAIN_INTEGRATION_RELEASE_REPORT', $integrationRelease, AgentRole::INTEGRATION_RELEASE->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_INTEGRATION_RELEASE_REPORT->value, $integrationRelease, AgentRole::INTEGRATION_RELEASE->value);
 
         $integrationStatus = (string) ($integrationRelease['status'] ?? '');
         if ($integrationStatus !== 'RELEASE_READY') {
