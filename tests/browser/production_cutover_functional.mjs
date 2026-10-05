@@ -157,7 +157,8 @@ try {
 
   // 1c. Engineering draft feature can be created, inspected, edited and deleted from the browser.
   await goto200(page, '/admin/engineering', '[data-cos-engineering="index"]');
-  assert(await page.locator('[data-engineering-queue]').count() === 1, 'Engineering Workspace priority queue is missing.');
+  assert(await page.locator('[data-engineering-workspace-list]').count() === 1, 'Engineering operational process grid is missing.');
+  assert((await page.locator('body').innerText()).includes('Процеси'), 'Engineering unified process workspace heading is missing.');
   assert(await page.locator('select[name="execution_mode"] option[value="queue"]').count() === 1, 'Engineering create form is missing queue execution mode.');
   const engineeringTitle = `UI acceptance ${suffix}`;
   const engineeringDescription = 'Browser-created Engineering feature for production cutover acceptance.';
@@ -169,7 +170,10 @@ try {
   await submitAndWait(page, engineeringForm, (url) => /^\/admin\/engineering\/[0-9a-fA-F-]{36}$/.test(url.pathname) && url.searchParams.has('status_message'));
   const engineeringPath = new URL(page.url()).pathname;
   assert((await page.locator('body').innerText()).includes(engineeringTitle), 'Browser-created Engineering feature did not render in its workspace.');
-  assert((await page.locator('body').innerText()).includes(engineeringDescription), 'Engineering Description is missing from feature workspace.');
+  const engineeringRequirements = page.locator('details:has(form[data-engineering-update])');
+  assert(await engineeringRequirements.count() === 1, 'Engineering draft requirements editor is missing.');
+  await engineeringRequirements.locator(':scope > summary').click();
+  assert((await page.locator('body').innerText()).includes(engineeringDescription), 'Engineering Description is missing from expanded requirements.');
 
   const engineeringUpdatedTitle = engineeringTitle + ' Updated';
   const engineeringUpdatedDescription = engineeringDescription + ' Updated.';
@@ -183,6 +187,10 @@ try {
   assert(await page.locator('form[data-engineering-update] select[name="priority"]').inputValue() === 'P1', 'Engineering feature priority edit did not persist.');
 
   const engineeringDelete = page.locator('form[data-engineering-delete]');
+  const engineeringDeleteDetails = page.locator('details:has(form[data-engineering-delete])');
+  if (await engineeringDeleteDetails.count() === 1 && !(await engineeringDeleteDetails.evaluate((node) => node.open))) {
+    await engineeringDeleteDetails.locator(':scope > summary').click();
+  }
   await engineeringDelete.locator('input[name="confirm_delete"]').check();
   await submitAndWait(page, engineeringDelete, (url) => url.pathname === '/admin/engineering' && url.searchParams.has('status_message'));
   assert(!(await page.locator('body').innerText()).includes(engineeringUpdatedTitle), 'Deleted Engineering draft still appears in the collection.');
