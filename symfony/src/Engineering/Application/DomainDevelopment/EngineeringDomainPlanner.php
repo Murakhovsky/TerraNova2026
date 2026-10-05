@@ -71,6 +71,7 @@ final readonly class EngineeringDomainPlanner
                     'master_specification' => $domain['master_specification'],
                     'target_repository' => $domain['target_repository'],
                     'target_branch' => $domain['target_branch'],
+                    'human_decision_history' => $this->domains->humanDecisionHistory($domainId),
                 ],
                 $correlationId.':manager',
             );
@@ -112,6 +113,7 @@ final readonly class EngineeringDomainPlanner
                     'domain_name' => $domain['name'],
                     'master_specification' => $domain['master_specification'],
                     'manager_analysis' => $manager,
+                    'human_decision_history' => $this->domains->humanDecisionHistory($domainId),
                     'target_repository' => $domain['target_repository'],
                     'target_branch' => $domain['target_branch'],
                 ],
@@ -182,6 +184,7 @@ final readonly class EngineeringDomainPlanner
                     'domain_specification' => $domainSpec,
                     'domain_acceptance_criteria' => $domainAc,
                     'capabilities' => $capabilities,
+                    'human_decision_history' => $this->domains->humanDecisionHistory($domainId),
                 ],
                 $correlationId.':qa-plan',
             );
@@ -221,6 +224,7 @@ final readonly class EngineeringDomainPlanner
                 'requirements_capabilities' => $capabilities,
                 'manager_capabilities' => $capabilities,
                 'domain_qa_plan' => $qaPlan,
+                'human_decision_history' => $this->domains->humanDecisionHistory($domainId),
                 'target_repository' => $domain['target_repository'],
                 'target_branch' => $domain['target_branch'],
             ],
