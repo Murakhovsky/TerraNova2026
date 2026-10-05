@@ -321,6 +321,44 @@
         {% endif %}
     </section>
 
+    <section class="engineering-panel" aria-labelledby="engineering-actions">
+        <div class="engineering-panel__head">
+            <h2 id="engineering-actions">Інструменти та дії</h2>
+            <span class="engineering-muted">{{ engineering.execution_events|length }} подій</span>
+        </div>
+        {% if engineering.execution_events is empty %}
+            <div class="engineering-panel__body engineering-muted">Окремий журнал tool/repository actions для цього workflow ще порожній.</div>
+        {% else %}
+            <div class="engineering-table-wrap">
+                <table class="engineering-table">
+                    <thead><tr><th>Час</th><th>Категорія</th><th>Дія</th><th>Статус</th><th>Тривалість</th><th>Результат</th></tr></thead>
+                    <tbody>
+                    {% for event in engineering.execution_events %}
+                        <tr>
+                            <td>{{ event.occurred_at }}</td>
+                            <td>{{ event.category }}</td>
+                            <td><strong>{{ event.action }}</strong><div class="engineering-muted">{{ event.summary }}</div></td>
+                            <td>{{ event.status }}</td>
+                            <td>{{ event.duration_ms is not null ? (event.duration_ms ~ ' ms') : '—' }}</td>
+                            <td>
+                                {% if event.error %}<div class="engineering-danger">{{ event.error }}</div>{% endif %}
+                                {% if event.details is not empty %}
+                                    <details class="engineering-details">
+                                        <summary>Деталі</summary>
+                                        <div class="engineering-agent-output">{{ event.details|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                    </details>
+                                {% elseif not event.error %}
+                                    <span class="engineering-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+
     <section class="engineering-panel">
         <div class="engineering-panel__head">
             <h2>Облік LLM</h2>
