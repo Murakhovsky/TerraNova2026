@@ -29,6 +29,33 @@ final readonly class EngineeringDomainHumanGateService
                 ['id' => 'REJECT', 'description' => 'Reject the exception and keep the Domain blocked for rework.'],
             ];
         }
+
+        $gateHash = hash('sha256', json_encode([
+            'gate_type' => strtoupper(trim($gateType)),
+            'resume_status' => $resumeStatus->value,
+            'question' => trim($question),
+            'reason' => trim($reason),
+            'evidence' => $evidence,
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        $evidence['_gate_hash'] = $gateHash;
+
+        foreach ($this->domains->humanDecisionHistory($domainId) as $previous) {
+            if (($previous['gate_type'] ?? null) !== strtoupper(trim($gateType))) continue;
+            if (($previous['evidence']['_gate_hash'] ?? null) !== $gateHash) continue;
+            $selected = strtoupper((string) ($previous['answer']['selected_option'] ?? ''));
+            if (($previous['status'] ?? null) === 'ANSWERED' && in_array($selected, ['APPROVE','CONTINUE'], true)) {
+                return (string) $previous['id'];
+            }
+            if (($previous['status'] ?? null) === 'OPEN') {
+                $this->domains->updateStatus(
+                    $domainId,
+                    EngineeringDomainStatus::HUMAN_APPROVAL->value,
+                    $gateType.': '.$reason,
+                );
+                return (string) $previous['id'];
+            }
+        }
+
         $id = $this->domains->createHumanDecision(
             $domainId,
             $organizationId,
