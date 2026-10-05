@@ -99,6 +99,11 @@ final readonly class EngineeringDomainWorkspaceController
                 maxParallelDevelopers: max(0, min(20, (int) $request->request->get('max_parallel_developers', 0))),
                 maxParallelReviews: max(0, min(20, (int) $request->request->get('max_parallel_reviews', 0))),
                 maxParallelQa: max(0, min(20, (int) $request->request->get('max_parallel_qa', 0))),
+                maxFeatureRetries: max(-1, min(50, (int) $request->request->get('max_feature_retries', -1))),
+                maxDomainIntegrationCycles: max(0, min(20, (int) $request->request->get('max_domain_integration_cycles', 0))),
+                contextBudget: max(0, (int) $request->request->get('context_budget', 0)),
+                tokenBudget: max(0, (int) $request->request->get('token_budget', 0)),
+                costBudget: max(-1.0, (float) $request->request->get('cost_budget', -1)),
             );
 
             if ($request->request->getBoolean('start_now', true)) {
