@@ -281,4 +281,12 @@ foreach (['llm_max_output_tokens','llm_max_cost_amount'] as $needle) {
     if (!str_contains($structuredProvider, $needle)) throw new RuntimeException('Agent Run provider budget ceiling missing '.$needle);
 }
 
+
+foreach (['maxSemanticRetries','semantic_retry_feedback','RETURN_TO_AGENT'] as $needle) {
+    if (!str_contains($domainAgentService, $needle)) throw new RuntimeException('Domain semantic retry contract missing '.$needle);
+}
+foreach (['completeCapabilities','Required features complete; integration/release checks clean; capability acceptance criteria passed in Domain QA.'] as $needle) {
+    if (!str_contains($release, $needle)) throw new RuntimeException('Capability Definition of Done missing '.$needle);
+}
+
 echo "Engineering Domain Runtime V2 architecture passed.\n";
