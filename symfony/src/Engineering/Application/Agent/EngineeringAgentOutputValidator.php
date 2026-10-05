@@ -10,12 +10,59 @@ final class EngineeringAgentOutputValidator
     public function validate(AgentRole $role, array $output): void
     {
         match ($role) {
-            AgentRole::ENGINEERING_MANAGER, AgentRole::PRODUCT_REQUIREMENTS, AgentRole::INTEGRATION_RELEASE => $this->manager($output),
-            AgentRole::QA_PLANNER, AgentRole::QA_EXECUTOR, AgentRole::QA => $this->qa($output),
+            AgentRole::ENGINEERING_MANAGER => $this->manager($output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->productRequirements($output),
+            AgentRole::QA_PLANNER => $this->qaPlanner($output),
             AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
             AgentRole::DEVELOPER => $this->developer($output),
             AgentRole::REVIEWER => $this->reviewer($output),
+            AgentRole::QA_EXECUTOR => $this->qaExecutor($output),
+            AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
+            AgentRole::SECURITY_SPECIALIST,
+            AgentRole::DATABASE_MIGRATION_SPECIALIST,
+            AgentRole::PERFORMANCE_SPECIALIST,
+            AgentRole::DEVOPS_SPECIALIST,
+            AgentRole::DOCUMENTATION_SPECIALIST,
+            AgentRole::API_SPECIALIST => $this->specialist($output),
+            AgentRole::QA => $this->qa($output),
         };
+    }
+
+    private function productRequirements(array $output): void
+    {
+        $this->manager($output);
+    }
+
+    private function qaPlanner(array $output): void
+    {
+        $this->qa($output);
+        if (($output['phase'] ?? null) !== 'PLAN') {
+            throw new EngineeringAgentOutputValidationException('QA Planner must return PLAN phase.');
+        }
+    }
+
+    private function qaExecutor(array $output): void
+    {
+        $this->qa($output);
+        if (($output['phase'] ?? null) !== 'EXECUTION') {
+            throw new EngineeringAgentOutputValidationException('QA Executor must return EXECUTION phase.');
+        }
+    }
+
+    private function integrationRelease(array $output): void
+    {
+        $this->required($output, ['status','summary','findings','required_actions','required_human_decisions','evidence']);
+        if (!in_array((string) $output['status'], ['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS','REWORK_REQUIRED','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_DECISION_REQUIRED','RELEASE_READY','NOT_READY','BLOCKED'], true)) {
+            throw new EngineeringAgentOutputValidationException('Integration & Release status is invalid.');
+        }
+    }
+
+    private function specialist(array $output): void
+    {
+        $this->required($output, ['status','summary','findings','required_actions','required_human_decisions','evidence','reviewed_revision']);
+        if (!is_array($output['findings']) || !is_array($output['required_actions']) || !is_array($output['required_human_decisions']) || !is_array($output['evidence'])) {
+            throw new EngineeringAgentOutputValidationException('Specialist result collections are invalid.');
+        }
     }
 
     private function manager(array $output): void
