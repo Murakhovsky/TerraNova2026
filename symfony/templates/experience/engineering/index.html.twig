@@ -160,9 +160,7 @@
                     </thead>
                     <tbody>
                     {% for feature in workspaceRows %}
-                        {% set isDraft = not feature.workflow_id and feature.status == 'NEW' %}
-                        {% set terminal = feature.workflow_state in ['DONE','CANCELLED','FAILED'] or feature.workflow_status in ['COMPLETED','CANCELLED','FAILED'] %}
-                        {% set waitsForHuman = feature.workflow_state in ['READY_FOR_HUMAN_APPROVAL','HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'] %}
+                        {% set actions = feature.actions|default({}) %}
                         {% set usage = feature.usage|default({}) %}
                         <tr data-engineering-feature-row="{{ feature.id }}">
                             <td class="engineering-table__title">
@@ -206,27 +204,34 @@
                             <td>
                                 <div class="engineering-actions">
                                     <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ feature.id }}">Відкрити</a>
-                                    {% if isDraft %}
+                                    {% if actions.queue|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/queue">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--primary" type="submit">У чергу</button>
                                         </form>
+                                    {% endif %}
+                                    {% if actions.run|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--ghost" type="submit">Запустити</button>
                                         </form>
-                                    {% elseif waitsForHuman %}
+                                    {% endif %}
+                                    {% if actions.resolve_human|default(false) %}
                                         <span class="cos-badge">Потрібне рішення</span>
-                                    {% elseif feature.workflow_state in ['CANCELLED','FAILED'] or feature.workflow_status in ['CANCELLED','FAILED'] %}
+                                    {% endif %}
+                                    {% if actions.retry|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--primary" type="submit">Повторити</button>
                                         </form>
-                                    {% elseif not terminal %}
+                                    {% endif %}
+                                    {% if actions.resume|default(false) or actions.continue|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                            <button class="cos-button cos-button--primary" type="submit">{{ feature.health == 'STALLED' ? 'Відновити' : 'Продовжити' }}</button>
+                                            <button class="cos-button cos-button--primary" type="submit">{{ actions.resume|default(false) ? 'Відновити' : 'Продовжити' }}</button>
                                         </form>
+                                    {% endif %}
+                                    {% if actions.cancel|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/cancel">
                                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <input type="hidden" name="reason" value="Скасовано з Engineering Workspace.">
