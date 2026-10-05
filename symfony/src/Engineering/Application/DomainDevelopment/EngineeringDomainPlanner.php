@@ -219,8 +219,9 @@ final readonly class EngineeringDomainPlanner
             $domainId,
             EngineeringDomainArtifactType::REPOSITORY_CONTEXT_INDEX->value,
         );
-        if ($repositoryIndexArtifact === null) {
-            $repositoryIndexContent = $this->repositoryIndex->build();
+        $repositoryIndexContent = $this->repositoryIndex->build();
+        $indexedRevision = (string) ($repositoryIndexArtifact['content']['revision'] ?? '');
+        if ($repositoryIndexArtifact === null || $indexedRevision !== (string) ($repositoryIndexContent['revision'] ?? '')) {
             $repositoryIndexArtifact = $this->domains->saveArtifact(
                 $domainId,
                 EngineeringDomainArtifactType::REPOSITORY_CONTEXT_INDEX->value,
@@ -289,6 +290,8 @@ final readonly class EngineeringDomainPlanner
         $this->graph->assertValid($features, $dependencies);
 
         $architecture = is_array($architect['domain_architecture'] ?? null) ? $architect['domain_architecture'] : [];
+        $architecture['repository_revision'] = (string) ($repositoryIndexArtifact['content']['revision'] ?? '');
+        $architecture['repository_context_index_hash'] = (string) ($repositoryIndexArtifact['content']['hash'] ?? $repositoryIndexArtifact['content_hash'] ?? '');
         $constitution = is_array($architect['architecture_constitution'] ?? null) ? $architect['architecture_constitution'] : [];
         if ($architecture === [] || $constitution === [] || $features === []) {
             throw new RuntimeException('Domain Architect produced an incomplete architecture/decomposition.');
