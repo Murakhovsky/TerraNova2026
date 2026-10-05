@@ -94,7 +94,7 @@ final readonly class EngineeringDomainReleaseService
         $repositoryRevision = null;
         $ci = ['state' => 'UNAVAILABLE', 'total' => 0, 'passed' => 0, 'failed' => 0, 'pending' => 0, 'checks' => []];
         if ($this->repository->available()) {
-            $repositoryRevision = $this->repository->currentBaseRevision();
+            $repositoryRevision = $this->repository->currentBaseRevision((string) $domain['target_branch']);
             $ci = $this->repository->commitChecks($repositoryRevision);
             if (($ci['failed'] ?? 0) > 0 || ($ci['state'] ?? null) === 'FAILED') {
                 $this->domains->updateStatus($domainId, EngineeringDomainStatus::BLOCKED->value, 'Integrated repository revision has failed CI.');
@@ -141,6 +141,19 @@ final readonly class EngineeringDomainReleaseService
             return $this->view($domainId, ['qa_status' => $qaStatus]);
         }
 
+        $integrationPullRequest = null;
+        if (
+            $this->repository->available()
+            && trim((string) $domain['target_branch']) !== $this->repository->configuredBaseBranch()
+        ) {
+            $integrationPullRequest = $this->repository->openPullRequest(
+                branch: (string) $domain['target_branch'],
+                title: 'Engineering Domain: '.$domain['name'].' v'.$domain['version'],
+                body: 'Domain Development Runtime V2 release candidate for '.$domain['domain_key'].'. Human merge remains mandatory.',
+                baseBranch: $this->repository->configuredBaseBranch(),
+            );
+        }
+
         $manifest = $this->releaseManifest(
             $domain,
             $features,
@@ -148,6 +161,7 @@ final readonly class EngineeringDomainReleaseService
             $repositoryRevision,
             $ci,
             $report,
+            $integrationPullRequest,
         );
         $this->domains->saveArtifact(
             $domainId,
@@ -173,6 +187,14 @@ final readonly class EngineeringDomainReleaseService
             throw new RuntimeException('Domain release approval requires Release Manifest and Domain QA PASS.');
         }
 
+        $integrationPullRequest = $manifest['content']['integration_pull_request'] ?? null;
+        if (is_array($integrationPullRequest) && (int) ($integrationPullRequest['number'] ?? 0) > 0) {
+            $pr = $this->repository->pullRequest((int) $integrationPullRequest['number']);
+            if (($pr['merged'] ?? false) !== true) {
+                throw new RuntimeException('Domain integration pull request must be merged before Domain can be completed.');
+            }
+        }
+
         $approvedManifest = $manifest['content'];
         $approvedManifest['human_approval'] = [
             'approved_by' => $approvedBy,
@@ -184,8 +206,8 @@ final readonly class EngineeringDomainReleaseService
         return $this->view($domainId, ['approved' => true]);
     }
 
-    /** @param array<string,mixed> $domain @param list<array<string,mixed>> $features @param array<string,mixed> $architecture @param array<string,mixed> $ci @param array<string,mixed> $qa */
-    private function releaseManifest(array $domain, array $features, array $architecture, ?string $revision, array $ci, array $qa): array
+    /** @param array<string,mixed> $domain @param list<array<string,mixed>> $features @param array<string,mixed> $architecture @param array<string,mixed> $ci @param array<string,mixed> $qa @param array<string,mixed>|null $integrationPullRequest */
+    private function releaseManifest(array $domain, array $features, array $architecture, ?string $revision, array $ci, array $qa, ?array $integrationPullRequest): array
     {
         return [
             'domain' => [
@@ -195,6 +217,9 @@ final readonly class EngineeringDomainReleaseService
                 'version' => (int) $domain['version'],
             ],
             'repository_revision' => $revision,
+            'integration_branch' => $domain['target_branch'],
+            'base_branch' => $this->repository->available() ? $this->repository->configuredBaseBranch() : null,
+            'integration_pull_request' => $integrationPullRequest,
             'included_features' => array_map(static fn (array $feature): array => [
                 'feature_key' => $feature['feature_key'],
                 'engineering_feature_id' => $feature['engineering_feature_id'],
