@@ -61,7 +61,7 @@ final readonly class EngineeringDomainController
                 name: $name,
                 masterSpecification: $specification,
                 targetRepository: $repository,
-                targetBranch: trim((string) ($input['target_branch'] ?? 'main')) ?: 'main',
+                targetBranch: trim((string) ($input['target_branch'] ?? '')),
                 createdBy: 'user:'.$tenant->userId()->value(),
                 maxParallelFeatures: max(1, min(20, (int) ($input['max_parallel_features'] ?? 3))),
             );
