@@ -20,7 +20,7 @@ final readonly class EngineeringHumanDecisionService
         private EngineeringFeatureStoreInterface $features,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringWorkflowLockInterface $lock,
-        private EngineeringManagerStageExecutor $managerStage,
+        private EngineeringProductRequirementsStageExecutor $productStage,
         private EngineeringAutonomousProgressionService $progression,
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -106,19 +106,19 @@ final readonly class EngineeringHumanDecisionService
         );
 
         $next = $prepared->next;
-        if ($next->agent === AgentRole::ENGINEERING_MANAGER) {
-            $managerRuns = array_values(array_filter(
+        if ($next->agent === AgentRole::PRODUCT_REQUIREMENTS) {
+            $productRuns = array_values(array_filter(
                 $this->agentRuns->forFeature($prepared->featureId),
-                static fn (array $run): bool => ($run['role'] ?? null) === AgentRole::ENGINEERING_MANAGER->value,
+                static fn (array $run): bool => ($run['role'] ?? null) === AgentRole::PRODUCT_REQUIREMENTS->value,
             ));
 
-            $next = $this->managerStage->execute(
+            $next = $this->productStage->execute(
                 featureId: $prepared->featureId,
                 workflowId: $prepared->workflowId,
                 request: $this->features->request($prepared->featureId),
                 organizationId: $organizationId,
                 correlationId: $correlationId,
-                logicalAttempt: count($managerRuns) + 1,
+                logicalAttempt: count($productRuns) + 1,
             );
         }
 
