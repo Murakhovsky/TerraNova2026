@@ -29,6 +29,10 @@ export default class extends Controller {
         this.fetching = false;
         this.currentRuns = [];
         this.currentWorkflow = null;
+        this.currentHealth = String(this.initialHealthValue || '').toUpperCase();
+        this.currentStopAt = this.hasWorkflowDurationTarget
+            ? (this.workflowDurationTarget.dataset.engineeringLiveDurationStop || '')
+            : '';
         this.lastEventFingerprint = '';
         this.lastPollAt = null;
         this.initialActionFingerprint = this.actionFingerprint(
@@ -84,6 +88,13 @@ export default class extends Controller {
             const state = String(workflow.state || workflow.current_state || this.initialStateValue || 'UNKNOWN').toUpperCase();
             const status = String(workflow.status || workflow.workflow_status || this.initialStatusValue || 'UNKNOWN').toUpperCase();
             const health = this.resolveHealth(workflow, state, status);
+            this.currentHealth = health;
+            this.currentStopAt = health === 'STALLED'
+                ? String(workflow.stalled_at || workflow.heartbeat_at || workflow.last_activity_at || '')
+                : '';
+            if (this.hasWorkflowDurationTarget) {
+                this.workflowDurationTarget.dataset.engineeringLiveDurationStop = this.currentStopAt;
+            }
 
             const displayStatus = !this.isTerminal(state, status) && health === 'STALLED' ? 'STALLED' : status;
             this.setText(this.workflowStatusTargets, this.localizeStatus(displayStatus));
@@ -133,7 +144,8 @@ export default class extends Controller {
         document.querySelectorAll('[data-engineering-live-duration-start]').forEach((node) => {
             const startedAt = node.dataset.engineeringLiveDurationStart || '';
             const finishedAt = node.dataset.engineeringLiveDurationFinish || '';
-            const seconds = this.durationSeconds(startedAt, finishedAt);
+            const stopAt = node.dataset.engineeringLiveDurationStop || '';
+            const seconds = this.durationSeconds(startedAt, finishedAt || stopAt);
             if (seconds !== null) {
                 node.textContent = this.formatDuration(seconds);
             }
@@ -141,7 +153,8 @@ export default class extends Controller {
 
         if (this.hasAgentRuntimeTarget && this.currentRuns.length > 0) {
             const total = this.currentRuns.reduce((sum, run) => {
-                const duration = this.durationSeconds(run?.started_at || '', run?.finished_at || '');
+                const runEnd = run?.finished_at || (this.currentHealth === 'STALLED' ? this.currentStopAt : '');
+                const duration = this.durationSeconds(run?.started_at || '', runEnd || '');
                 return sum + (duration ?? 0);
             }, 0);
             this.agentRuntimeTarget.textContent = this.formatDuration(total);
@@ -169,7 +182,8 @@ export default class extends Controller {
                 this.currentAgentTarget.textContent = this.localizeRole(running.role || 'AGENT');
             }
             if (this.hasCurrentActivityTarget) {
-                const duration = this.durationSeconds(running.started_at || '', '');
+                const runEnd = this.currentHealth === 'STALLED' ? this.currentStopAt : '';
+                const duration = this.durationSeconds(running.started_at || '', runEnd);
                 this.currentActivityTarget.textContent =
                     (duration !== null ? this.formatDuration(duration) + ' · ' : '') + String(running.id || '');
             }
