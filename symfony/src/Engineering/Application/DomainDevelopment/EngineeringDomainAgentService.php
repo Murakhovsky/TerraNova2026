@@ -71,12 +71,14 @@ final readonly class EngineeringDomainAgentService
             ],
         );
 
+        $failureRecorded = false;
         try {
             $run = $this->runtime->execute($instance, $context);
             $output = $run->output();
             if ($run->status() !== AgentRunStatus::COMPLETED || $output === null || $output->structured === []) {
                 $error = $run->error() ?? 'Domain Development agent did not return structured output.';
                 $this->domains->recordAgentRun($domainId, $role->value, 'FAILED', $runCorrelationId, $output?->provider, $output?->model, $output?->usage ?? [], $error);
+                $failureRecorded = true;
                 throw new RuntimeException($error);
             }
 
@@ -95,8 +97,18 @@ final readonly class EngineeringDomainAgentService
 
             return $output->structured;
         } catch (\Throwable $error) {
-            if (!isset($run)) {
-                $this->domains->recordAgentRun($domainId, $role->value, 'FAILED', $runCorrelationId, null, null, [], $error->getMessage());
+            if (!$failureRecorded) {
+                $output = isset($run) ? $run->output() : null;
+                $this->domains->recordAgentRun(
+                    $domainId,
+                    $role->value,
+                    'FAILED',
+                    $runCorrelationId,
+                    $output?->provider,
+                    $output?->model,
+                    $output?->usage ?? [],
+                    $error->getMessage(),
+                );
             }
             throw $error;
         }
