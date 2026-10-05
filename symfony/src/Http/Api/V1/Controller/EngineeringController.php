@@ -83,6 +83,34 @@ final readonly class EngineeringController
         }
     }
 
+    public function live(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, false)) !== null) return $denied;
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $status = $this->status->status($featureId);
+            $tenant = $this->tenants->current();
+            if (($status['feature']['organization_id'] ?? null) !== $tenant?->organizationId()->value()) {
+                throw new \RuntimeException('Engineering feature does not belong to the current organization.');
+            }
+
+            return new JsonResponse([
+                'ok' => true,
+                'data' => [
+                    'server_time' => (new \DateTimeImmutable())->format(DATE_ATOM),
+                    'workflow' => $status['workflow'] ?? null,
+                    'tasks' => $status['tasks'] ?? [],
+                    'agent_runs' => $status['agent_runs'] ?? [],
+                    'timeline' => array_slice(is_array($status['timeline'] ?? null) ? $status['timeline'] : [], 0, 150),
+                    'execution_events' => array_slice(is_array($status['execution_events'] ?? null) ? $status['execution_events'] : [], 0, 150),
+                ],
+            ]);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
     public function run(Request $request, string $id): JsonResponse
     {
         if (($denied = $this->authorize($request, true)) !== null) return $denied;
