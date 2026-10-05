@@ -64,6 +64,14 @@ final readonly class EngineeringDomainHumanGateService
             $notes,
         );
         $selected = strtoupper((string) ($decision['answer']['selected_option'] ?? ''));
+        if (in_array($selected, ['APPROVE','CONTINUE'], true) && $this->domains->openHumanDecisions($domainId) !== []) {
+            $this->domains->updateStatus(
+                $domainId,
+                EngineeringDomainStatus::HUMAN_APPROVAL->value,
+                'Additional Domain human gates remain open.',
+            );
+            return $decision;
+        }
         if (in_array($selected, ['APPROVE','CONTINUE'], true)) {
             $resume = EngineeringDomainStatus::from((string) $decision['resume_status']);
             $this->domains->updateStatus($domainId, $resume->value, 'Human gate approved by '.$answeredBy.'.');
