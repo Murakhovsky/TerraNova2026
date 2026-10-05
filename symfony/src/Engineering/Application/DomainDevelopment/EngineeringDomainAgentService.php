@@ -33,7 +33,15 @@ final readonly class EngineeringDomainAgentService
         array $inputs,
         string $correlationId,
     ): array {
-        if (!in_array($role, [AgentRole::ENGINEERING_MANAGER, AgentRole::PRINCIPAL_ARCHITECT, AgentRole::QA], true)) {
+        if (!in_array($role, [
+            AgentRole::ENGINEERING_MANAGER,
+            AgentRole::PRODUCT_REQUIREMENTS,
+            AgentRole::QA_PLANNER,
+            AgentRole::PRINCIPAL_ARCHITECT,
+            AgentRole::QA_EXECUTOR,
+            AgentRole::INTEGRATION_RELEASE,
+            AgentRole::QA,
+        ], true)) {
             throw new RuntimeException('Unsupported Domain Development agent role: '.$role->value);
         }
 
