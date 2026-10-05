@@ -5,6 +5,7 @@ namespace App\Engineering\Infrastructure\Persistence\Doctrine;
 
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
+use App\Engineering\Application\Security\EngineeringSecretIsolationGuard;
 use App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
@@ -20,6 +21,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         private EntityManagerInterface $entityManager,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringExecutionEventStoreInterface $events,
+        private EngineeringSecretIsolationGuard $secrets = new EngineeringSecretIsolationGuard(),
     ) {}
 
     public function start(string $workflowId, EngineeringAgentTask $task, string $traceId): string
@@ -49,7 +51,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             idempotencyKey: $task->idempotencyKey,
             modelProvider: 'pending',
             model: 'pending',
-            inputSnapshot: $task->inputSnapshot,
+            inputSnapshot: $this->secrets->sanitize($task->inputSnapshot),
             status: 'RUNNING',
             technicalRetry: 0,
             logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
@@ -69,7 +71,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
                 'role' => $task->role->value,
                 'task_id' => $task->id,
                 'logical_attempt' => max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
-                'objective' => mb_substr($task->objective, 0, 500),
+                'objective' => mb_substr($this->secrets->sanitizeText($task->objective), 0, 500),
             ],
             $runId,
             $runTraceId,
