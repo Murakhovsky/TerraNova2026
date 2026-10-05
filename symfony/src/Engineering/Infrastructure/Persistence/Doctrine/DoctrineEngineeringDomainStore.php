@@ -159,6 +159,20 @@ final readonly class DoctrineEngineeringDomainStore implements EngineeringDomain
         return array_map(fn (array $row): array => $this->artifactView($row), $rows);
     }
 
+    public function artifactHistory(string $domainId, ?string $type = null): array
+    {
+        $params = ['domain_id' => EngineeringId::assert($domainId)];
+        $sql = 'SELECT * FROM cos_engineering_domain_artifacts WHERE domain_id=:domain_id';
+        if ($type !== null && trim($type) !== '') {
+            $sql .= ' AND type=:type';
+            $params['type'] = strtoupper(trim($type));
+        }
+        $sql .= ' ORDER BY type ASC, version DESC, created_at DESC';
+
+        $rows = $this->db()->fetchAllAssociative($sql, $params);
+        return array_map(fn (array $row): array => $this->artifactView($row), $rows);
+    }
+
     public function replaceArtifactDependencies(string $domainId, array $edges): void
     {
         $domainId = EngineeringId::assert($domainId);
