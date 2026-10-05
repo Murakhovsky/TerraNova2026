@@ -961,8 +961,8 @@ pages:
       page_purpose: "Canonical Engineering Domain entity workspace."
     archetype: entity_workspace
     patterns:
-      required: [WorkspaceHeader, EntityHeader, Tabs, DataTable]
-      optional: [StatusTimeline, ErrorState]
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [KpiStrip, Timeline, ActionBar, ContextPanel, ErrorState]
     primary_action: engineering.domain.continue
     states: [normal, error]
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
