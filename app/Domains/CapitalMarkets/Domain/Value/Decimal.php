@@ -13,7 +13,7 @@ final readonly class Decimal extends ValueObject
     private function __construct(string $value)
     {
         $value = trim($value);
-        if (preg_match('/^[+-]?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/', $value) !== 1) {
+        if (preg_match('/^[+-]?[0-9]+(?:\.[0-9]+)?$/', $value) !== 1) {
             throw new InvalidArgumentException('Decimal value must be an explicit base-10 string.');
         }
 
