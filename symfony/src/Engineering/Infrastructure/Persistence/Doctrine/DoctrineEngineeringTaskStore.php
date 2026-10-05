@@ -16,7 +16,7 @@ final readonly class DoctrineEngineeringTaskStore implements EngineeringTaskStor
     {
     }
 
-    public function createFromManager(string $featureId, array $tasks): void
+    public function createFromProductRequirements(string $featureId, array $tasks): void
     {
         $now = new DateTimeImmutable();
         foreach (array_values($tasks) as $index => $task) {
@@ -59,6 +59,12 @@ final readonly class DoctrineEngineeringTaskStore implements EngineeringTaskStor
             ));
         }
         $this->entityManager->flush();
+    }
+
+    /** @deprecated V1 compatibility alias. */
+    public function createFromManager(string $featureId, array $tasks): void
+    {
+        $this->createFromProductRequirements($featureId, $tasks);
     }
 
     public function markRole(string $featureId, AgentRole $role, string $status, ?array $result = null): void
