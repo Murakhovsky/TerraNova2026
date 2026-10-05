@@ -418,6 +418,24 @@ final readonly class EngineeringDomainReleaseService
                 'PRODUCTION_EXECUTION_ENABLED' => false,
             ],
             'proposed_feature_flags' => $architecture['content']['feature_flags'] ?? [],
+            'documentation' => array_values(array_filter(array_map(
+                function (EngineeringDomainArtifactType $type) use ($domain): ?array {
+                    $artifact = $this->domains->latestArtifact((string) $domain['id'], $type->value);
+                    if ($artifact === null) return null;
+                    return [
+                        'artifact_id' => $artifact['id'],
+                        'type' => $artifact['type'],
+                        'version' => $artifact['version'],
+                        'hash' => $artifact['content_hash'],
+                    ];
+                },
+                [
+                    EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_PUBLIC,
+                    EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_INTEGRATOR,
+                    EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_DEVELOPER,
+                    EngineeringDomainArtifactType::DOMAIN_DOCUMENTATION_TRANSLATIONS,
+                ],
+            ))),
             'qa_result' => [
                 'status' => $qa['status'] ?? null,
                 'tested_revision' => $qa['tested_revision'] ?? null,
