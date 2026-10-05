@@ -2195,6 +2195,12 @@ cos_web_engineering_domain_approve:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_web_engineering_domain_feature_flags:
+  path: /admin/engineering/domains/{id}/feature-flags
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::featureFlags
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_domain:
   path: /admin/engineering/domains/{id}
   controller: App\Web\Engineering\EngineeringDomainWorkspaceController::show
@@ -2672,5 +2678,11 @@ cos_api_engineering_domain_verify:
 cos_api_engineering_domain_approve:
   path: /api/engineering/domains/{id}/approve
   controller: App\Http\Api\V1\Controller\EngineeringDomainController::approve
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+cos_api_engineering_domain_feature_flags:
+  path: /api/engineering/domains/{id}/feature-flags
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::featureFlags
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
