@@ -78,6 +78,20 @@ final readonly class EngineeringDomainAgentOutputValidator
         }
         if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS'], true)) return;
         if (!is_array($output['domain_architecture']) || $output['domain_architecture'] === []) throw new RuntimeException('Approved Domain Architecture cannot be empty.');
+        $featureFlags = $output['domain_architecture']['feature_flags'] ?? null;
+        if (!is_array($featureFlags) || array_is_list($featureFlags)) throw new RuntimeException('Approved Domain Architecture requires structured feature flags.');
+        foreach (['DOMAIN_ENABLED','FEATURE_ENABLED','INTEGRATION_ENABLED','PRODUCTION_EXECUTION_ENABLED'] as $flag) {
+            if (!array_key_exists($flag, $featureFlags)) throw new RuntimeException('Domain feature flags missing '.$flag.'.');
+        }
+        if (!is_bool($featureFlags['DOMAIN_ENABLED']) || !is_bool($featureFlags['INTEGRATION_ENABLED']) || !is_bool($featureFlags['PRODUCTION_EXECUTION_ENABLED'])) {
+            throw new RuntimeException('Domain enable/integration/production flags must be boolean.');
+        }
+        if (!is_array($featureFlags['FEATURE_ENABLED']) || array_is_list($featureFlags['FEATURE_ENABLED'])) {
+            throw new RuntimeException('FEATURE_ENABLED must be a feature-key boolean map.');
+        }
+        foreach ($featureFlags['FEATURE_ENABLED'] as $key => $enabled) {
+            if (!is_string($key) || trim($key) === '' || !is_bool($enabled)) throw new RuntimeException('FEATURE_ENABLED entries must be feature-key booleans.');
+        }
         if (!is_array($output['architecture_constitution']) || ($output['architecture_constitution']['rules'] ?? []) === []) throw new RuntimeException('Approved Domain Architecture requires Constitution rules.');
         if (!is_array($output['features']) || $output['features'] === []) throw new RuntimeException('Approved Domain Architecture requires feature decomposition.');
         if (!is_array($output['dependencies'])) throw new RuntimeException('Domain dependencies must be an array.');
