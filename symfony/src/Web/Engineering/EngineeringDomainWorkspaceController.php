@@ -89,7 +89,10 @@ final readonly class EngineeringDomainWorkspaceController
                 targetRepository: (string) $request->request->get('target_repository', ''),
                 targetBranch: (string) $request->request->get('target_branch', ''),
                 createdBy: 'user:'.$tenant->userId()->value(),
-                maxParallelFeatures: max(1, min(20, (int) $request->request->get('max_parallel_features', 3))),
+                maxParallelFeatures: max(0, min(20, (int) $request->request->get('max_parallel_features', 0))),
+                maxParallelDevelopers: max(0, min(20, (int) $request->request->get('max_parallel_developers', 0))),
+                maxParallelReviews: max(0, min(20, (int) $request->request->get('max_parallel_reviews', 0))),
+                maxParallelQa: max(0, min(20, (int) $request->request->get('max_parallel_qa', 0))),
             );
 
             if ($request->request->getBoolean('start_now', true)) {
