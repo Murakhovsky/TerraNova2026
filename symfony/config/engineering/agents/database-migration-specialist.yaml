@@ -1,0 +1,13 @@
+id: database-migration-specialist
+version: 2.0.0
+role: DATABASE_MIGRATION_SPECIALIST
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model: { tier: strong, reasoning: high }
+permissions:
+  repository: { read: true, write: false }
+  workflow: { read: true, propose_transition: true }
+  merge: false
+  deploy: false
+tools: [repository.search, repository.read, artifact.read, artifact.create, workflow.read]
