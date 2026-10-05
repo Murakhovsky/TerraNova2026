@@ -71,6 +71,10 @@ interface EngineeringDomainStoreInterface
     /** @return list<array<string,mixed>> */
     public function dependencies(string $domainId): array;
 
+    /** @param list<array<string,mixed>> $dependencies */
+    public function replaceDependencies(string $domainId, array $dependencies): void;
+
+
     public function linkEngineeringFeature(
         string $domainId,
         string $featureKey,
