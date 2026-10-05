@@ -6,6 +6,7 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
+use App\Engineering\Application\Agent\EngineeringSpecialistReportCollector;
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Observability\EngineeringExecutionJournal;
@@ -46,6 +47,7 @@ final readonly class EngineeringQaStageExecutor
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
+        private EngineeringSpecialistReportCollector $specialistReports,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -301,6 +303,7 @@ final readonly class EngineeringQaStageExecutor
                 'pull_request_files' => $diff,
                 'ci_evidence' => $ci,
                 'human_decisions' => $humanDecisionHistory,
+                'specialist_reports' => $this->specialistReports->forFeature($featureId),
                 'engineering_standards' => $this->standards->all(),
                 'application_surfaces' => [
                     'affected_areas' => $featureSpec['content']['affected_areas'] ?? [],
