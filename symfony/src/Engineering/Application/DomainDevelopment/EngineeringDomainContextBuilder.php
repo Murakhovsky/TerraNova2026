@@ -34,6 +34,22 @@ final readonly class EngineeringDomainContextBuilder
         $qaPlan = $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_PLAN->value);
         $repositoryIndex = $this->domains->latestArtifact($domainId, EngineeringDomainArtifactType::REPOSITORY_CONTEXT_INDEX->value);
 
+        $specContext = $specification !== null
+            ? $this->compressor->artifact($specification, ['purpose','business_context','scope','actors','capabilities','constraints'])
+            : null;
+        $architectureContext = $architecture !== null
+            ? $this->compressor->artifact($architecture, ['bounded_context','module_structure','aggregates','services','persistence','security','feature_flags'])
+            : null;
+        $constitutionContext = $constitution !== null
+            ? $this->compressor->artifact($constitution, ['rules','forbidden_dependencies','shared_kernel_rules','database_rules'])
+            : null;
+        $qaContext = $qaPlan !== null
+            ? $this->compressor->artifact($qaPlan, ['release_blocking_checks','cross_feature_workflows','regression'])
+            : null;
+        $repositoryContext = $repositoryIndex !== null
+            ? $this->compressor->repositoryIndex(is_array($repositoryIndex['content'] ?? null) ? $repositoryIndex['content'] : [])
+            : null;
+
         return [
             'domain_id' => $domainId,
             'domain_key' => $domain['domain_key'],
@@ -41,28 +57,24 @@ final readonly class EngineeringDomainContextBuilder
             'domain_version' => (int) $domain['version'],
             'target_repository' => $domain['target_repository'],
             'target_branch' => $domain['target_branch'],
-            'domain_specification' => $specification['content'] ?? [],
-            'domain_architecture' => $architecture['content'] ?? [],
+            'domain_specification' => $specContext,
+            'domain_architecture' => $architectureContext,
             'architecture_version' => (int) ($architecture['version'] ?? 0),
             'architecture_hash' => $architecture['content_hash'] ?? null,
-            'architecture_constitution' => $constitution['content'] ?? [],
-            'domain_qa_plan' => $qaPlan['content'] ?? [],
-            'compressed_artifacts' => [
-                'domain_specification' => $specification !== null
-                    ? $this->compressor->artifact($specification, ['purpose','business_context','scope','actors','capabilities','constraints'])
-                    : null,
-                'domain_architecture' => $architecture !== null
-                    ? $this->compressor->artifact($architecture, ['bounded_context','module_structure','aggregates','services','persistence','security','feature_flags'])
-                    : null,
-                'architecture_constitution' => $constitution !== null
-                    ? $this->compressor->artifact($constitution, ['rules','forbidden_dependencies','shared_kernel_rules','database_rules'])
-                    : null,
-                'domain_qa_plan' => $qaPlan !== null
-                    ? $this->compressor->artifact($qaPlan, ['release_blocking_checks','cross_feature_workflows','regression'])
-                    : null,
-                'repository_context_index' => $repositoryIndex !== null
-                    ? $this->compressor->repositoryIndex(is_array($repositoryIndex['content'] ?? null) ? $repositoryIndex['content'] : [])
-                    : null,
+            'architecture_constitution' => $constitutionContext,
+            'domain_qa_plan' => $qaContext,
+            'repository_context_index' => $repositoryContext,
+            'artifact_refs' => [
+                'domain_specification' => $specContext['artifact_ref'] ?? null,
+                'domain_architecture' => $architectureContext['artifact_ref'] ?? null,
+                'architecture_constitution' => $constitutionContext['artifact_ref'] ?? null,
+                'domain_qa_plan' => $qaContext['artifact_ref'] ?? null,
+            ],
+            'existing_code_awareness' => [
+                'reuse_before_create' => true,
+                'check_equivalent_class' => true,
+                'check_shared_kernel_primitive' => true,
+                'check_cross_domain_contract' => true,
             ],
             'feature' => $feature,
             'dependencies' => $dependencies,
