@@ -101,6 +101,10 @@ if(str_contains($migration,'fk_cm_pair_relationship')&&str_contains($migration,'
     throw new RuntimeException('Composite tenant relationship FK must not null organization_id on delete.');
 }
 
+if(str_contains($migration,'ON UPDATE CASCADE')){
+    throw new RuntimeException('Capital Markets canonical IDs are immutable; Foundation foreign keys must not cascade identifier updates.');
+}
+
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
 foreach([
     '/capital-markets',
