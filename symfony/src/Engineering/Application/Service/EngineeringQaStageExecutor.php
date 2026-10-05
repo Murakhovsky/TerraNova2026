@@ -354,6 +354,7 @@ final readonly class EngineeringQaStageExecutor
                 usage: $run->usage,
                 error: $run->error,
                 technicalRetries: $run->technicalRetries,
+                steps: $run->steps,
             );
         } catch (\Throwable $error) {
             $this->failRun($featureId, $engineeringRunId, $error);
