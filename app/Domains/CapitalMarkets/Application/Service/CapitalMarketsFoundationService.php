@@ -57,6 +57,7 @@ use Domains\CapitalMarkets\Domain\Venue\VenueInstrumentStatus;
 use Domains\CapitalMarkets\Domain\Venue\VenueStatus;
 use Domains\CapitalMarkets\Domain\Venue\VenueType;
 use InvalidArgumentException;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class CapitalMarketsFoundationService implements CapitalMarketsFoundationBoundary
 {
@@ -66,10 +67,14 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
         private VenueRepository $venues,
         private CapitalMarketsAuditTrail $audit,
         private CapitalMarketsEventPublisherInterface $events,
+        private TransactionManagerInterface $transactions,
     ){}
 
     public function createInstrument(CreateInstrument $command):array
     {
+        if(!$this->transactions->isActive()){
+            return $this->transactions->transactional(fn():array=>$this->createInstrument($command));
+        }
         $now=new DateTimeImmutable();
         $id=InstrumentId::fromString($this->id($command->input['id']??null,'instrument'));
         if($this->instruments->get($command->organizationId,$id)!==null){
@@ -85,12 +90,15 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
         $this->events->publish(new InstrumentCreated(
             $this->eventId(),$now,$command->organizationId,$id,
             ['symbol'=>$instrument->symbol,'family'=>$instrument->family->value,'status'=>$instrument->status->value],
-        ));
+        ),$command->correlationId,$command->actorId);
         return $next;
     }
 
     public function updateInstrument(UpdateInstrument $command):array
     {
+        if(!$this->transactions->isActive()){
+            return $this->transactions->transactional(fn():array=>$this->updateInstrument($command));
+        }
         $id=InstrumentId::fromString($command->instrumentId);
         $existing=$this->requireInstrument($command->organizationId,$id);
         $before=$this->instrumentArray($existing,$this->instruments->identifiers($command->organizationId,$id));
@@ -110,12 +118,21 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
             ?CapitalMarketsAuditAction::InstrumentUpdated:CapitalMarketsAuditAction::InstrumentStatusChanged;
         $this->audit->record($command->organizationId,$command->actorId,$action,
             CapitalMarketsAuditResourceType::Instrument,$id->value(),$before,$next,$command->correlationId);
-        $this->events->publish(new InstrumentUpdated($this->eventId(),$now,$command->organizationId,$id,['before'=>$before,'after'=>$next]));
+        $this->events->publish(
+            new InstrumentUpdated($this->eventId(),$now,$command->organizationId,$id,['before'=>$before,'after'=>$next]),
+            $command->correlationId,$command->actorId
+        );
         if($existing->status!==$instrument->status){
             if($instrument->status===InstrumentStatus::Active){
-                $this->events->publish(new InstrumentActivated($this->eventId(),$now,$command->organizationId,$id));
+                $this->events->publish(
+                    new InstrumentActivated($this->eventId(),$now,$command->organizationId,$id),
+                    $command->correlationId,$command->actorId
+                );
             }elseif($instrument->status===InstrumentStatus::Suspended){
-                $this->events->publish(new InstrumentSuspended($this->eventId(),$now,$command->organizationId,$id));
+                $this->events->publish(
+                    new InstrumentSuspended($this->eventId(),$now,$command->organizationId,$id),
+                    $command->correlationId,$command->actorId
+                );
             }
         }
         return $next;
@@ -137,6 +154,9 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
 
     public function addInstrumentIdentifier(AddInstrumentIdentifier $command):array
     {
+        if(!$this->transactions->isActive()){
+            return $this->transactions->transactional(fn():array=>$this->addInstrumentIdentifier($command));
+        }
         $id=InstrumentId::fromString($command->instrumentId);
         $instrument=$this->requireInstrument($command->organizationId,$id);
         $before=$this->instruments->identifiers($command->organizationId,$id);
@@ -153,12 +173,15 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
             ['identifiers'=>array_map($this->identifierArray(...),$before)],$next,$command->correlationId);
         $this->events->publish(new InstrumentUpdated(
             $this->eventId(),new DateTimeImmutable(),$command->organizationId,$id,['identifier_added'=>$this->identifierArray($new)]
-        ));
+        ),$command->correlationId,$command->actorId);
         return $next;
     }
 
     public function createRelationship(CreateRelationship $command):array
     {
+        if(!$this->transactions->isActive()){
+            return $this->transactions->transactional(fn():array=>$this->createRelationship($command));
+        }
         $source=InstrumentId::fromString($this->required($command->input,'source_instrument'));
         $target=InstrumentId::fromString($this->required($command->input,'target_instrument'));
         $sourceInstrument=$this->requireInstrument($command->organizationId,$source);
@@ -189,12 +212,15 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
         $this->events->publish(new RelationshipCreated(
             $this->eventId(),new DateTimeImmutable(),$command->organizationId,$relationship->id,
             ['source'=>$source->value(),'target'=>$target->value(),'type'=>$relationship->type->value,'strength'=>$relationship->strength->value],
-        ));
+        ),$command->correlationId,$command->actorId);
         return $next;
     }
 
     public function createVenue(CreateVenue $command):array
     {
+        if(!$this->transactions->isActive()){
+            return $this->transactions->transactional(fn():array=>$this->createVenue($command));
+        }
         $venueId=VenueId::fromString($this->id($command->input['id']??null,'venue'));
         if($this->venues->get($command->organizationId,$venueId)!==null){
             throw new DomainException('Venue already exists.');
@@ -223,12 +249,15 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
         $this->events->publish(new VenueCreated(
             $this->eventId(),new DateTimeImmutable(),$command->organizationId,$venue->id,
             ['code'=>$venue->code,'type'=>$venue->type->value,'status'=>$venue->status->value],
-        ));
+        ),$command->correlationId,$command->actorId);
         return $next;
     }
 
     public function registerVenueInstrument(RegisterVenueInstrument $command):array
     {
+        if(!$this->transactions->isActive()){
+            return $this->transactions->transactional(fn():array=>$this->registerVenueInstrument($command));
+        }
         $venueId=VenueId::fromString($command->venueId);
         $venue=$this->venues->get($command->organizationId,$venueId);
         if($venue===null)throw new DomainException('Venue not found.');
@@ -262,7 +291,7 @@ final readonly class CapitalMarketsFoundationService implements CapitalMarketsFo
             CapitalMarketsAuditResourceType::VenueInstrument,$resourceId,[],$next,$command->correlationId);
         $this->events->publish(new VenueInstrumentRegistered(
             $this->eventId(),new DateTimeImmutable(),$command->organizationId,$venueId,$instrumentId,$mapping->venueSymbol
-        ));
+        ),$command->correlationId,$command->actorId);
         return $next;
     }
 

@@ -13,8 +13,11 @@ final readonly class KernelCapitalMarketsEventPublisher implements CapitalMarket
 {
     public function __construct(private EventBus $events){}
 
-    public function publish(AbstractCapitalMarketsEvent $event):void
-    {
+    public function publish(
+        AbstractCapitalMarketsEvent $event,
+        ?string $correlationId=null,
+        ?int $actorId=null,
+    ):void{
         $this->events->publish(new KernelDomainEvent(
             id:$event->eventId(),
             organizationId:$event->organizationId,
@@ -23,10 +26,10 @@ final readonly class KernelCapitalMarketsEventPublisher implements CapitalMarket
             aggregateId:$event->aggregateId,
             payload:$event->payload,
             metadata:new EventMetadata(
-                correlationId:$event->eventId(),
+                correlationId:$correlationId!==null&&trim($correlationId)!==''?$correlationId:$event->eventId(),
                 causationId:null,
-                actorType:'SYSTEM',
-                actorId:'capital_markets',
+                actorType:$actorId===null?'SYSTEM':'USER',
+                actorId:$actorId===null?'capital_markets':(string)$actorId,
                 schemaVersion:$event->schemaVersion,
             ),
             occurredAt:$event->occurredAt(),
@@ -35,15 +38,9 @@ final readonly class KernelCapitalMarketsEventPublisher implements CapitalMarket
 
     private function aggregateType(string $eventType):string
     {
-        if(str_starts_with($eventType,'capital_markets.instrument.')){
-            return 'capital_markets.instrument';
-        }
-        if(str_starts_with($eventType,'capital_markets.relationship.')){
-            return 'capital_markets.relationship';
-        }
-        if(str_starts_with($eventType,'capital_markets.venue_instrument.')){
-            return 'capital_markets.venue_instrument';
-        }
+        if(str_starts_with($eventType,'capital_markets.instrument.'))return 'capital_markets.instrument';
+        if(str_starts_with($eventType,'capital_markets.relationship.'))return 'capital_markets.relationship';
+        if(str_starts_with($eventType,'capital_markets.venue_instrument.'))return 'capital_markets.venue_instrument';
         return 'capital_markets.venue';
     }
 }

@@ -22,7 +22,8 @@ final readonly class MysqlVenueRepository implements VenueRepository
 
     public function save(string $organizationId,VenueDescriptor $venue,array $capabilities):void
     {
-        $this->connection->beginTransaction();
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
         try{
             $exists=$this->connection->prepare(
                 'SELECT 1 FROM tn_capital_market_venues

@@ -26,6 +26,7 @@ use Domains\CapitalMarkets\Domain\Venue\VenueInstrument;
 use Platform\Audit\Contract\AuditSinkInterface;
 use Platform\Audit\Model\ActivityRecord;
 use Platform\Audit\Service\AuditRecorder;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 require dirname(__DIR__,2).'/vendor/autoload.php';
 
@@ -183,7 +184,45 @@ final class CmMemoryEventPublisher implements CapitalMarketsEventPublisherInterf
 {
     /** @var list<AbstractCapitalMarketsEvent> */
     public array $events=[];
-    public function publish(AbstractCapitalMarketsEvent $event):void{$this->events[]=$event;}
+    /** @var list<?string> */
+    public array $correlations=[];
+    /** @var list<?int> */
+    public array $actors=[];
+
+    public function publish(
+        AbstractCapitalMarketsEvent $event,
+        ?string $correlationId=null,
+        ?int $actorId=null,
+    ):void{
+        $this->events[]=$event;
+        $this->correlations[]=$correlationId;
+        $this->actors[]=$actorId;
+    }
+}
+
+final class CmMemoryTransactionManager implements TransactionManagerInterface
+{
+    private bool $active=false;
+    public int $transactions=0;
+
+    public function transactional(callable $operation):mixed
+    {
+        if($this->active)return $operation();
+        $this->active=true;
+        $this->transactions++;
+        try{
+            return $operation();
+        }finally{
+            $this->active=false;
+        }
+    }
+
+    public function isActive():bool{return $this->active;}
+
+    public function afterCommit(callable $callback):void
+    {
+        $callback();
+    }
 }
 
 $instruments=new CmMemoryInstrumentRepository();
@@ -191,6 +230,7 @@ $relationships=new CmMemoryRelationshipRepository();
 $venues=new CmMemoryVenueRepository();
 $auditSink=new CmMemoryAuditSink();
 $events=new CmMemoryEventPublisher();
+$transactions=new CmMemoryTransactionManager();
 
 $service=new CapitalMarketsFoundationService(
     $instruments,
@@ -198,6 +238,7 @@ $service=new CapitalMarketsFoundationService(
     $venues,
     new CapitalMarketsAuditTrail(new AuditRecorder($auditSink)),
     $events,
+    $transactions,
 );
 
 $org='tenant-capital-markets';
@@ -290,6 +331,9 @@ $assert(($mapping['venue']['code']??null)==='TVA','Venue mapping lost venue iden
 
 $assert(count($auditSink->records)===5,'Acceptance workflow must emit five audit records.');
 $assert(count($events->events)===5,'Acceptance workflow must emit five domain events.');
+$assert($transactions->transactions===5,'Each successful Foundation mutation must own one application transaction.');
+$assert(($events->correlations[0]??null)==='corr-aapl','Event correlation id must follow the command.');
+$assert(($events->actors[0]??null)===42,'Event actor id must follow the command.');
 $eventTypes=array_map(static fn(AbstractCapitalMarketsEvent $event):string=>$event->eventName(),$events->events);
 foreach([
     'capital_markets.instrument.created.v1',
