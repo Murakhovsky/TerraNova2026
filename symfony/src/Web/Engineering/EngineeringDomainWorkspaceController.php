@@ -37,7 +37,13 @@ final readonly class EngineeringDomainWorkspaceController
         $tenant = $this->manager();
         if ($tenant instanceof Response) return $tenant;
 
-        $domains = $this->runtime->list($tenant->organizationId()->value(), 100);
+        $loadError = null;
+        try {
+            $domains = $this->runtime->list($tenant->organizationId()->value(), 100);
+        } catch (Throwable $error) {
+            $domains = [];
+            $loadError = 'ERROR: '.$error->getMessage();
+        }
         $stats = [
             'total' => count($domains),
             'active' => 0,
@@ -69,7 +75,7 @@ final readonly class EngineeringDomainWorkspaceController
             'domains' => $domains,
             'stats' => $stats,
             'csrfToken' => $this->csrf->token($request),
-            'statusMessage' => trim((string) $request->query->get('status_message', '')),
+            'statusMessage' => $loadError ?? trim((string) $request->query->get('status_message', '')),
         ]));
     }
 
