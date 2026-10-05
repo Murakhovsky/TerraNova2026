@@ -35,6 +35,50 @@ final readonly class EngineeringSpecialistStageExecutor
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
 
+    public function executeRole(
+        string $featureId,
+        string $workflowId,
+        string $organizationId,
+        string $correlationId,
+        AgentRole $role,
+        string $phase = 'ESCALATION',
+    ): WorkflowDirective {
+        $featureSpec = $this->requiredArtifact($featureId, ArtifactType::FEATURE_SPEC);
+        $architecture = $this->requiredArtifact($featureId, ArtifactType::ARCHITECTURE_DECISION);
+        $development = $this->artifacts->latest($featureId, ArtifactType::DEVELOPMENT_RESULT);
+
+        $directive = $this->executeOne(
+            $featureId,
+            $workflowId,
+            $organizationId,
+            $correlationId,
+            $phase,
+            $role,
+            $featureSpec,
+            $architecture,
+            $development,
+        );
+        if ($directive !== null) return $directive;
+
+        $workflow = $this->workflows->get($workflowId);
+        return match ($workflow->currentState()->value) {
+            'DEVELOPMENT_RUNNING' => new WorkflowDirective(
+                \App\Engineering\Application\Workflow\WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::DEVELOPER,
+                $role->value.' approved the escalation; resume Developer.',
+            ),
+            'REVIEW_PENDING' => new WorkflowDirective(
+                \App\Engineering\Application\Workflow\WorkflowDirectiveType::RUN_AGENT,
+                AgentRole::REVIEWER,
+                $role->value.' approved the escalation; resume Reviewer.',
+            ),
+            default => $this->coordinator->requireHumanDecision(
+                $workflow,
+                $role->value.' completed but workflow cannot infer a safe resume role from '.$workflow->currentState()->value.'.',
+            ),
+        };
+    }
+
     public function executeRequired(
         string $featureId,
         string $workflowId,
