@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
+use App\Engineering\Application\Agent\EngineeringAgentToolPermissionPolicy;
 use App\Engineering\Application\Agent\EngineeringSpecialistReportCollector;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
@@ -44,6 +45,7 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringSpecialistReportCollector $specialistReports,
         private EngineeringArtifactInvalidationService $invalidation,
+        private EngineeringAgentToolPermissionPolicy $toolPolicy,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -289,6 +291,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     $pendingArchitectureDocumentation,
                     $developerChanges,
                 );
+                $this->toolPolicy->assertRepositoryMutationAllowed(AgentRole::DEVELOPER, $changes);
                 $commitMessage = trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
                     ? (string) $run->structuredOutput['commit_message']
                     : 'feat(engineering): implement '.$this->features->view($featureId)['title'];
