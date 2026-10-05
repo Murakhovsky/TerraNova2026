@@ -20,6 +20,13 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return trim($this->repositoryFullName) !== '' && trim($this->token) !== '';
     }
 
+    public function configuredRepository(): string
+    {
+        $repository = trim($this->repositoryFullName);
+        if ($repository === '') throw new RuntimeException('Engineering GitHub repository is not configured.');
+        return $repository;
+    }
+
     public function currentBaseRevision(?string $branch = null): string
     {
         $this->assertAvailable();
