@@ -5,6 +5,7 @@ namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Audit\EngineeringAuditQueryInterface;
 use App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionEventStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -26,6 +27,7 @@ final readonly class EngineeringStatusService
         private EngineeringHumanDecisionStoreInterface $humanDecisions,
         private EngineeringAuditQueryInterface $audit,
         private EngineeringObservabilityReadModelInterface $observability,
+        private EngineeringExecutionEventStoreInterface $executionEvents,
     ) {}
 
     public function status(string $featureId): array
@@ -54,6 +56,7 @@ final readonly class EngineeringStatusService
         $invocations = $workflowId !== null
             ? $this->observability->invocationsForWorkflow($workflowId)
             : $this->observability->invocationsForFeature($featureId);
+        $executionEvents = $workflowId !== null ? $this->executionEvents->forWorkflow($workflowId) : [];
 
         return [
             'feature' => $feature,
@@ -66,7 +69,8 @@ final readonly class EngineeringStatusService
             'transitions' => $transitions,
             'usage' => $usage,
             'llm_invocations' => $invocations,
-            'timeline' => $this->timeline($transitions, $agentRuns, $invocations, $tasks, $artifactViews, $findings),
+            'execution_events' => $executionEvents,
+            'timeline' => $this->timeline($transitions, $agentRuns, $invocations, $tasks, $artifactViews, $findings, $executionEvents),
         ];
     }
     /**
@@ -78,6 +82,7 @@ final readonly class EngineeringStatusService
      * @param list<array<string,mixed>> $tasks
      * @param array<string,array<string,mixed>> $artifacts
      * @param list<array<string,mixed>> $findings
+     * @param list<array<string,mixed>> $executionEvents
      * @return list<array<string,mixed>>
      */
     private function timeline(
@@ -87,6 +92,7 @@ final readonly class EngineeringStatusService
         array $tasks,
         array $artifacts,
         array $findings,
+        array $executionEvents,
     ): array {
         $events = [];
 
@@ -214,6 +220,23 @@ final readonly class EngineeringStatusService
                 'actor' => (string) ($finding['source_role'] ?? 'system'),
                 'correlation_id' => null,
                 'reference_id' => (string) ($finding['id'] ?? ''),
+            ];
+        }
+
+        foreach ($executionEvents as $event) {
+            $detailParts = [];
+            if (($event['duration_ms'] ?? null) !== null) $detailParts[] = (int) $event['duration_ms'].' ms';
+            if (($event['error'] ?? null) !== null) $detailParts[] = 'ERROR: '.(string) $event['error'];
+            $events[] = [
+                'time' => (string) ($event['occurred_at'] ?? ''),
+                'type' => (string) ($event['category'] ?? 'TOOL'),
+                'status' => (string) ($event['status'] ?? ''),
+                'title' => (string) ($event['action'] ?? 'operation').' · '.(string) ($event['summary'] ?? ''),
+                'detail' => implode(' · ', $detailParts),
+                'actor' => (string) ($event['agent_run_id'] ?? 'system'),
+                'correlation_id' => $event['correlation_id'] ?? null,
+                'reference_id' => (string) ($event['id'] ?? ''),
+                'details' => is_array($event['details'] ?? null) ? $event['details'] : [],
             ];
         }
 
