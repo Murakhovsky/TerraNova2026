@@ -89,7 +89,10 @@
         <div class="dw-card"><small>Running</small><strong>{{ featureStats.running }}</strong></div>
         <div class="dw-card"><small>Waiting</small><strong>{{ featureStats.waiting }}</strong></div>
         <div class="dw-card"><small>Attention</small><strong>{{ featureStats.blocked }}</strong></div>
-        <div class="dw-card"><small>Parallel limit</small><strong>{{ domain.max_parallel_features }}</strong></div>
+        <div class="dw-card"><small>Parallel features</small><strong>{{ domain.max_parallel_features }}</strong></div>
+        <div class="dw-card"><small>Developers</small><strong>{{ domain.max_parallel_developers }}</strong></div>
+        <div class="dw-card"><small>Reviews</small><strong>{{ domain.max_parallel_reviews }}</strong></div>
+        <div class="dw-card"><small>QA</small><strong>{{ domain.max_parallel_qa }}</strong></div>
     </div>
 
     {% set tabs = [
@@ -98,7 +101,7 @@
         {'key':'graph','label':'Dependency graph · ' ~ engineeringDomain.dependencies|length},
         {'key':'contracts','label':'Contracts · ' ~ engineeringDomain.contracts|length},
         {'key':'artifacts','label':'Artifacts · ' ~ engineeringDomain.artifacts|length},
-        {'key':'executions','label':'Executions · ' ~ engineeringDomain.agent_runs|length},
+        {'key':'executions','label':'Executions · ' ~ engineeringDomain.agent_runs|length ~ ' / events ' ~ engineeringDomain.runtime_events|default([])|length},
         {'key':'qa','label':'QA'},
         {'key':'release','label':'Release'}
     ] %}
@@ -259,6 +262,30 @@
                                     <td>{{ run.correlation_id }}</td>
                                     <td>{{ run.created_at }}</td>
                                     <td>{{ run.error_message|default(run.error|default('')) }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </section>
+
+            <section class="dw-panel" style="margin-top:10px">
+                <div class="dw-panel__head"><h2>Orchestration events</h2><span class="dw-muted">{{ engineeringDomain.runtime_events|default([])|length }} events</span></div>
+                {% if engineeringDomain.runtime_events|default([]) is empty %}
+                    <div class="dw-panel__body dw-muted">Runtime events ще не записані.</div>
+                {% else %}
+                    <div class="dw-table-wrap">
+                        <table class="dw-table">
+                            <thead><tr><th>Event</th><th>Feature</th><th>Correlation</th><th>Created</th><th>Payload</th></tr></thead>
+                            <tbody>
+                            {% for event in engineeringDomain.runtime_events %}
+                                <tr>
+                                    <td><strong>{{ event.event_type }}</strong></td>
+                                    <td>{{ event.feature_key|default('—') }}</td>
+                                    <td>{{ event.correlation_id }}</td>
+                                    <td>{{ event.created_at }}</td>
+                                    <td><details><summary>evidence</summary><div class="dw-json">{{ event.payload|json_encode(constant('JSON_PRETTY_PRINT')) }}</div></details></td>
                                 </tr>
                             {% endfor %}
                             </tbody>
