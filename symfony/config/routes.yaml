@@ -2207,6 +2207,12 @@ cos_web_engineering_domain_human_decision:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_web_engineering_domain_dependency_graph:
+  path: /admin/engineering/domains/{id}/dependency-graph
+  controller: App\Web\Engineering\EngineeringDomainWorkspaceController::dependencyGraph
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
 cos_web_engineering_domain:
   path: /admin/engineering/domains/{id}
   controller: App\Web\Engineering\EngineeringDomainWorkspaceController::show
@@ -2697,5 +2703,12 @@ cos_api_engineering_domain_feature_flags:
 cos_api_engineering_domain_human_decision:
   path: /api/engineering/domains/{id}/human-decision
   controller: App\Http\Api\V1\Controller\EngineeringDomainController::humanDecision
+  methods: [POST]
+  requirements: { id: '[0-9a-fA-F-]{36}' }
+
+
+cos_api_engineering_domain_dependency_graph:
+  path: /api/engineering/domains/{id}/dependency-graph
+  controller: App\Http\Api\V1\Controller\EngineeringDomainController::dependencyGraph
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
