@@ -42,8 +42,11 @@ if (!str_contains($runner, 'Legacy QA role is read-only compatibility state')) {
 if (!str_contains($manager, 'EngineeringProductRequirementsStageExecutor')) {
     throw new RuntimeException('Manager compatibility stage is not orchestration-only.');
 }
-foreach (['ArtifactType::FEATURE_SPEC','AgentRole::PRODUCT_REQUIREMENTS','createFromProductRequirements','applyProductSpecification'] as $needle) {
+foreach (['ArtifactType::FEATURE_SPEC','AgentRole::PRODUCT_REQUIREMENTS','createFromProductRequirements','applyProductSpecification','product_question'] as $needle) {
     if (!str_contains($product, $needle)) throw new RuntimeException('Product requirements stage missing '.$needle);
+}
+if (str_contains($product, "'product_decision'")) {
+    throw new RuntimeException('Product stage still carries workflow decision authority.');
 }
 if (!str_contains($qaPlanner, 'executePlanning') || !str_contains($qaExecutor, 'executeVerification')) {
     throw new RuntimeException('QA Planner and QA Executor are not physically separated entrypoints.');
