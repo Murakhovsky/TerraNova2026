@@ -67,10 +67,24 @@ final readonly class CapitalMarketsResearchLabController
             fn(TenantContext $tenant,array $payload):array=>$this->lab->recordResult($tenant->organizationId()->value(),$payload),201);
     }
 
+    public function queueBacktest(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->backtests->queue($tenant->organizationId()->value(),$payload),202);
+    }
+
     public function runBacktest(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
             fn(TenantContext $tenant,array $payload):array=>$this->backtests->run($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function cancelBacktest(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->backtests->cancel(
+                $tenant->organizationId()->value(),$id,trim((string)($payload['reason']??'USER_CANCELLED'))
+            ),200);
     }
 
     public function walkForward(Request $request):JsonResponse
