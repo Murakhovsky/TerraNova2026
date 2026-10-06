@@ -11,7 +11,16 @@ use Kernel\Process\ProcessStep;
 use Kernel\Process\RuntimeMapping;
 
 $registry = new JsonProcessRegistry($root . '/resources/processes');
-if (count($registry->all()) !== 7) throw new RuntimeException('Canonical Process Registry must expose seven current processes.');
+if (count($registry->all()) !== 8) throw new RuntimeException('Canonical Process Registry must expose eight current processes.');
+
+$capitalMarkets = $registry->get('capital-markets.market-data-to-trusted-state');
+if (!$capitalMarkets instanceof ProcessDefinition || $capitalMarkets->schemaVersion !== 4 || $capitalMarkets->domain !== 'capital_markets' || count($capitalMarkets->steps) !== 5) {
+    throw new RuntimeException('Capital Markets Market Intelligence process was not hydrated.');
+}
+if ($capitalMarkets->steps[0]->capability !== 'capital_markets.market_data.manage'
+    || $capitalMarkets->steps[4]->capability !== 'capital_markets.market_data.view') {
+    throw new RuntimeException('Capital Markets Market Intelligence capability bridge was not preserved.');
+}
 
 $property = $registry->get('property.submission-to-publication');
 if (!$property instanceof ProcessDefinition || $property->schemaVersion !== 4 || count($property->steps) !== 6) {
