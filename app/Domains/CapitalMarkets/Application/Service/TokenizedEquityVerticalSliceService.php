@@ -55,6 +55,7 @@ final readonly class TokenizedEquityVerticalSliceService
         $config=$this->config($options);
         $this->assertEconomicEquivalence($organizationId,$a->instrumentId,$b->instrumentId,$config,$now);
         $candidates=$this->detector->detectCrossVenue($marketPairId,$a,$b,$config,$now,$this->int($options,'ttl_ms',1000));
+        $this->saveScanObservation($organizationId,HypothesisCode::CrossVenueTokenizedEquityArbitrage,$marketPairId,$now,$candidates!==[]);
         return $this->evaluate($organizationId,$candidates,$config,$options,$now,true);
     }
 
@@ -93,6 +94,8 @@ final readonly class TokenizedEquityVerticalSliceService
         $candidates=$this->detector->detectReferenceDislocation(
             $marketPairId,$reference,$token,$config,$now,$this->int($options,'ttl_ms',1000),$conversion
         );
+
+        $this->saveScanObservation($organizationId,HypothesisCode::TokenizedEquityDislocation,$marketPairId,$now,$candidates!==[]);
 
         // H1 is research-capable now, but remains execution-closed until a real hedge venue is supplied.
         return $this->evaluate($organizationId,$candidates,$config,$options,$now,false);
@@ -181,6 +184,15 @@ final readonly class TokenizedEquityVerticalSliceService
             $this->repository->saveRiskAssessment(
                 $organizationId,$risk->id,$opportunityId,$risk->decision->value,$this->riskArray($risk)
             );
+            $this->saveEvaluationObservation(
+                $organizationId,
+                $candidate,
+                $opportunityId,
+                $finalStatus===OpportunityStatus::Approved,
+                $estimate->expectedNetPnl->value(),
+                $reasons,
+                $now
+            );
             $out[]=$payload;
         }
 
@@ -189,6 +201,60 @@ final readonly class TokenizedEquityVerticalSliceService
             'candidate_count'=>count($candidates),
             'opportunities'=>$out,
         ];
+    }
+
+
+    private function saveScanObservation(
+        string $organizationId,
+        HypothesisCode $hypothesis,
+        string $marketPairId,
+        DateTimeImmutable $observedAt,
+        bool $detected,
+    ):void{
+        $fingerprint=hash('sha256',implode('|',[
+            $organizationId,$hypothesis->value,'SCAN',$marketPairId,$observedAt->format('Y-m-d\\TH:i:s.uP'),
+        ]));
+        $id='cm_obs_'.substr($fingerprint,0,40);
+        $this->repository->saveHypothesisObservation(
+            $organizationId,$id,$hypothesis->value,'SCAN',$observedAt->format(DATE_ATOM),$fingerprint,[
+                'market_pair_id'=>$marketPairId,
+                'detected'=>$detected,
+                'executable'=>false,
+                'realized'=>false,
+                'expected_pnl'=>'0',
+                'realized_pnl'=>'0',
+                'reason'=>$detected?null:'NO_DETECTED_CANDIDATE',
+            ]
+        );
+    }
+
+    /** @param list<string> $reasons */
+    private function saveEvaluationObservation(
+        string $organizationId,
+        SpreadCandidate $candidate,
+        string $opportunityId,
+        bool $executable,
+        string $expectedPnl,
+        array $reasons,
+        DateTimeImmutable $observedAt,
+    ):void{
+        $fingerprint=hash('sha256',implode('|',[
+            $organizationId,$candidate->hypothesis->value,'EVALUATION',$candidate->id,$opportunityId,
+        ]));
+        $id='cm_obs_'.substr($fingerprint,0,40);
+        $this->repository->saveHypothesisObservation(
+            $organizationId,$id,$candidate->hypothesis->value,'EVALUATION',$observedAt->format(DATE_ATOM),$fingerprint,[
+                'market_pair_id'=>$candidate->marketPairId,
+                'candidate_id'=>$candidate->id,
+                'opportunity_id'=>$opportunityId,
+                'detected'=>true,
+                'executable'=>$executable,
+                'realized'=>false,
+                'expected_pnl'=>$expectedPnl,
+                'realized_pnl'=>'0',
+                'reason'=>$reasons===[]?null:implode(',',array_values(array_unique($reasons))),
+            ]
+        );
     }
 
     /** @return array<string,mixed> */

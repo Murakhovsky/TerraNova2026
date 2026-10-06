@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInter
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use App\Security\SessionCsrfValidator;
@@ -31,6 +32,7 @@ final readonly class CapitalMarketsTokenizedEquityController
         private CapitalMarketsFeatureGate $features,
         private TokenizedEquityVerticalSliceService $verticalSlice,
         private TokenizedEquityPaperExecutionService $paper,
+        private TokenizedEquityResearchService $research,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -42,6 +44,7 @@ final readonly class CapitalMarketsTokenizedEquityController
         return $this->respond(fn():array=>[
             'research'=>$this->verticalSlice->dashboard($tenant->organizationId()->value()),
             'paper_portfolio'=>$this->paper->portfolio($tenant->organizationId()->value()),
+            'hypothesis_research'=>$this->research->summary($tenant->organizationId()->value()),
         ]);
     }
 
@@ -85,6 +88,31 @@ final readonly class CapitalMarketsTokenizedEquityController
                     $this->options($p),
                 );
             });
+    }
+
+    public function research(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        $hypothesis=trim((string)$request->query->get('hypothesis',''));
+        return $this->respond(fn():array=>$this->research->summary(
+            $tenant->organizationId()->value(),
+            $hypothesis===''?null:$hypothesis,
+            min(10000,max(1,(int)$request->query->get('minimum_detected_sample',30))),
+            min(10000,max(1,(int)$request->query->get('minimum_paper_sample',10))),
+        ));
+    }
+
+    public function replayResearch(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::OpportunityView,
+            fn(TenantContext $tenant,array $p):array=>$this->research->replay(
+                $tenant->organizationId()->value(),
+                $this->required($p,'hypothesis'),
+                min(10000,max(1,(int)($p['minimum_detected_sample']??30))),
+                min(10000,max(1,(int)($p['minimum_paper_sample']??10))),
+            ));
     }
 
     public function initializePaperPortfolio(Request $request):JsonResponse

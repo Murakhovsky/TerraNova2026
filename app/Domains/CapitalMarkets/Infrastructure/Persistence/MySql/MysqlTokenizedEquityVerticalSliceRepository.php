@@ -333,6 +333,82 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         return array_map(fn(array $row):array=>$this->object((string)$row['payload_json']),$statement->fetchAll(PDO::FETCH_ASSOC));
     }
 
+
+    public function saveHypothesisObservation(
+        string $organizationId,
+        string $observationId,
+        string $hypothesis,
+        string $stage,
+        string $observedAt,
+        string $fingerprint,
+        array $payload
+    ):void{
+        $this->connection->prepare(
+            'INSERT IGNORE INTO tn_capital_market_hypothesis_observations
+             (organization_id,observation_id,hypothesis,stage,market_pair_id,candidate_id,opportunity_id,execution_id,
+              detected,executable,realized,expected_pnl,realized_pnl,reason,fingerprint,payload_json,observed_at)
+             VALUES
+             (:org,:id,:hypothesis,:stage,:market_pair,:candidate,:opportunity,:execution,
+              :detected,:executable,:realized,:expected_pnl,:realized_pnl,:reason,:fingerprint,:payload,:observed_at)'
+        )->execute([
+            'org'=>$organizationId,
+            'id'=>$observationId,
+            'hypothesis'=>$hypothesis,
+            'stage'=>$stage,
+            'market_pair'=>$payload['market_pair_id']??null,
+            'candidate'=>$payload['candidate_id']??null,
+            'opportunity'=>$payload['opportunity_id']??null,
+            'execution'=>$payload['execution_id']??null,
+            'detected'=>(int)(bool)($payload['detected']??false),
+            'executable'=>(int)(bool)($payload['executable']??false),
+            'realized'=>(int)(bool)($payload['realized']??false),
+            'expected_pnl'=>(string)($payload['expected_pnl']??'0'),
+            'realized_pnl'=>(string)($payload['realized_pnl']??'0'),
+            'reason'=>isset($payload['reason'])?(string)$payload['reason']:null,
+            'fingerprint'=>$fingerprint,
+            'payload'=>$this->json($payload),
+            'observed_at'=>$this->mysqlDate($observedAt),
+        ]);
+    }
+
+    public function listHypothesisObservations(string $organizationId,?string $hypothesis=null,int $limit=10000):array
+    {
+        $limit=max(1,min(10000,$limit));
+        $sql='SELECT observation_id,hypothesis,stage,market_pair_id,candidate_id,opportunity_id,execution_id,
+                    detected,executable,realized,expected_pnl,realized_pnl,reason,fingerprint,observed_at,payload_json
+              FROM tn_capital_market_hypothesis_observations
+              WHERE organization_id=:org';
+        $params=['org'=>$organizationId];
+        if($hypothesis!==null){
+            $sql.=' AND hypothesis=:hypothesis';
+            $params['hypothesis']=$hypothesis;
+        }
+        $sql.=' ORDER BY observed_at ASC,id ASC LIMIT '.$limit;
+        $statement=$this->connection->prepare($sql);
+        $statement->execute($params);
+        $rows=$statement->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(function(array $row):array{
+            $payload=$this->object((string)$row['payload_json']);
+            return array_replace($payload,[
+                'observation_id'=>(string)$row['observation_id'],
+                'hypothesis'=>(string)$row['hypothesis'],
+                'stage'=>(string)$row['stage'],
+                'market_pair_id'=>$row['market_pair_id'],
+                'candidate_id'=>$row['candidate_id'],
+                'opportunity_id'=>$row['opportunity_id'],
+                'execution_id'=>$row['execution_id'],
+                'detected'=>(bool)$row['detected'],
+                'executable'=>(bool)$row['executable'],
+                'realized'=>(bool)$row['realized'],
+                'expected_pnl'=>(string)$row['expected_pnl'],
+                'realized_pnl'=>(string)$row['realized_pnl'],
+                'reason'=>$row['reason'],
+                'fingerprint'=>(string)$row['fingerprint'],
+                'observed_at'=>(string)$row['observed_at'],
+            ]);
+        },$rows);
+    }
+
     public function dashboard(string $organizationId):array
     {
         $scalar=function(string $sql)use($organizationId):string{
@@ -344,6 +420,7 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
             'positive_net_opportunity_count'=>(int)$scalar('SELECT COUNT(*) FROM tn_capital_market_opportunities WHERE organization_id=:org AND expected_pnl>0'),
             'paper_execution_count'=>(int)$scalar('SELECT COUNT(*) FROM tn_capital_market_paper_executions WHERE organization_id=:org'),
             'paper_realized_pnl'=>$scalar('SELECT COALESCE(SUM(realized_pnl),0) FROM tn_capital_market_paper_executions WHERE organization_id=:org AND status=\'COMPLETED\''),
+            'hypothesis_observation_count'=>(int)$scalar('SELECT COUNT(*) FROM tn_capital_market_hypothesis_observations WHERE organization_id=:org'),
         ];
     }
 
