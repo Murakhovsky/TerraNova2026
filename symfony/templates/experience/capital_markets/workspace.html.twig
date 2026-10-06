@@ -296,7 +296,7 @@
       <h2>Research evidence & Edge Funnel</h2>
       <p>Verdict is deterministic and sample-gated. A few profitable paper fills do not magically become a strategy.</p>
       <div class="table-responsive"><table class="table">
-        <thead><tr><th>Hypothesis</th><th>Observed scans</th><th>Detected</th><th>Executable</th><th>Realized</th><th>Realized P&L</th><th>Avg capture</th><th>Verdict</th></tr></thead>
+        <thead><tr><th>Hypothesis</th><th>Observed</th><th>Detected</th><th>Executable</th><th>Attempts</th><th>Completed</th><th>Invalidated</th><th>Completion</th><th>P&L</th><th>Avg capture</th><th>Verdict</th></tr></thead>
         <tbody>
         {% for hypothesis, item in report.hypotheses|default({}) %}
           <tr>
@@ -304,17 +304,20 @@
             <td>{{ item.edge_funnel.observed_scans|default(0) }}</td>
             <td>{{ item.edge_funnel.detected|default(0) }}</td>
             <td>{{ item.edge_funnel.executable|default(0) }}</td>
-            <td>{{ item.edge_funnel.realized|default(0) }}</td>
+            <td>{{ item.edge_funnel.attempted|default(0) }}</td>
+            <td>{{ item.edge_funnel.completed|default(0) }}</td>
+            <td>{{ item.edge_funnel.invalidated|default(0) }}</td>
+            <td>{{ item.completion_rate|default('0') }}</td>
             <td>{{ item.total_realized_pnl|default('0') }}</td>
             <td>{{ item.average_edge_capture_ratio|default('0') }}</td>
             <td><strong>{{ item.verdict|default('INSUFFICIENT_SAMPLE') }}</strong></td>
           </tr>
         {% else %}
-          <tr><td colspan="8">No research observations yet.</td></tr>
+          <tr><td colspan="11">No research observations yet.</td></tr>
         {% endfor %}
         </tbody>
       </table></div>
-      <p><small>Default promotion evidence: 30 observations and 10 realized paper executions per hypothesis.</small></p>
+      <p><small>Default promotion evidence: 30 observations, 10 paper execution attempts and at least 50% completion rate per hypothesis.</small></p>
     </section>
 
     <section class="cos-panel">
