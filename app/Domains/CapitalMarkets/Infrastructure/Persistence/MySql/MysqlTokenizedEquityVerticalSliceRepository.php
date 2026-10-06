@@ -78,6 +78,70 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         ]);
     }
 
+    public function saveExecutionPlan(string $organizationId,string $planId,string $opportunityId,array $payload):void
+    {
+        $this->connection->prepare(
+            'INSERT INTO tn_capital_market_execution_plans
+             (organization_id,plan_id,opportunity_id,status,expires_at,payload_json)
+             VALUES (:org,:id,:opportunity,:status,:expires_at,:payload)
+             ON DUPLICATE KEY UPDATE status=VALUES(status),expires_at=VALUES(expires_at),payload_json=VALUES(payload_json)'
+        )->execute([
+            'org'=>$organizationId,'id'=>$planId,'opportunity'=>$opportunityId,
+            'status'=>(string)($payload['status']??'CREATED'),
+            'expires_at'=>$this->mysqlDate((string)($payload['expires_at']??'')),
+            'payload'=>$this->json($payload),
+        ]);
+    }
+
+    public function savePaperOrder(string $organizationId,string $orderId,string $executionId,string $legId,string $state,string $idempotencyKey,array $payload):void
+    {
+        $this->connection->prepare(
+            'INSERT INTO tn_capital_market_paper_orders
+             (organization_id,order_id,execution_id,leg_id,state,idempotency_key,payload_json)
+             VALUES (:org,:id,:execution,:leg,:state,:idempotency,:payload)
+             ON DUPLICATE KEY UPDATE state=VALUES(state),payload_json=VALUES(payload_json)'
+        )->execute([
+            'org'=>$organizationId,'id'=>$orderId,'execution'=>$executionId,'leg'=>$legId,
+            'state'=>$state,'idempotency'=>$idempotencyKey,'payload'=>$this->json($payload),
+        ]);
+    }
+
+    public function savePaperFill(string $organizationId,string $fillId,string $orderId,string $executionId,string $idempotencyKey,array $payload):void
+    {
+        $this->connection->prepare(
+            'INSERT IGNORE INTO tn_capital_market_paper_fills
+             (organization_id,fill_id,order_id,execution_id,idempotency_key,payload_json)
+             VALUES (:org,:id,:order_id,:execution,:idempotency,:payload)'
+        )->execute([
+            'org'=>$organizationId,'id'=>$fillId,'order_id'=>$orderId,'execution'=>$executionId,
+            'idempotency'=>$idempotencyKey,'payload'=>$this->json($payload),
+        ]);
+    }
+
+    public function savePosition(string $organizationId,string $positionId,string $portfolioId,string $strategyId,string $instrumentId,string $venueId,string $status,array $payload):void
+    {
+        $this->connection->prepare(
+            'INSERT INTO tn_capital_market_positions
+             (organization_id,position_id,portfolio_id,strategy_id,instrument_id,venue_id,status,payload_json)
+             VALUES (:org,:id,:portfolio,:strategy,:instrument,:venue,:status,:payload)
+             ON DUPLICATE KEY UPDATE status=VALUES(status),payload_json=VALUES(payload_json)'
+        )->execute([
+            'org'=>$organizationId,'id'=>$positionId,'portfolio'=>$portfolioId,'strategy'=>$strategyId,
+            'instrument'=>$instrumentId,'venue'=>$venueId,'status'=>$status,'payload'=>$this->json($payload),
+        ]);
+    }
+
+    public function listPositions(string $organizationId,int $limit=500):array
+    {
+        $limit=max(1,min(5000,$limit));
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_positions
+             WHERE organization_id=:org ORDER BY updated_at DESC,id DESC LIMIT '.$limit
+        );
+        $statement->execute(['org'=>$organizationId]);
+        return array_map(fn(array $row):array=>$this->object((string)$row['payload_json']),$statement->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function getExecutionForOpportunity(string $organizationId,string $opportunityId):?array
     {
         $statement=$this->connection->prepare(

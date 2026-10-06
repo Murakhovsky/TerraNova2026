@@ -20,6 +20,7 @@ final class TokenizedEquityRiskEngine
         DateTimeImmutable $now,
         bool $hedgeAvailable=true,
         bool $killSwitch=false,
+        ?Decimal $minimumExecutionProbability=null,
     ):RiskAssessment{
         $blocking=[];$warnings=[];
         if($killSwitch)$blocking[]='KILL_SWITCH_ACTIVE';
@@ -27,6 +28,7 @@ final class TokenizedEquityRiskEngine
         if(!$opportunity->economics->expectedNetPnl->isPositive())$blocking[]='NO_EXECUTABLE_EDGE';
         if(!$requestedQuantity->isPositive())$blocking[]='INVALID_QUANTITY';
         if(!$hedgeAvailable)$blocking[]='HEDGE_UNAVAILABLE';
+        if($minimumExecutionProbability!==null&&$opportunity->executionProbability->compareTo($minimumExecutionProbability)<0)$blocking[]='EXECUTION_PROBABILITY_TOO_LOW';
         if($opportunity->riskScore>$maxRiskScore)$blocking[]='RISK_SCORE_LIMIT';
 
         $notional=DecimalMath::multiply($opportunity->candidate->buyPrice,$requestedQuantity);
