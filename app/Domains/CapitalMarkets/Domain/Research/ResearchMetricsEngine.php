@@ -37,14 +37,16 @@ final class ResearchMetricsEngine
 
         $count=count($values);
         $mean=DecimalMath::divide($total,Decimal::fromString((string)$count),12);
-        usort($values,static fn(Decimal $a,Decimal $b):int=>$a->compareTo($b));
+        $ordered=$values;
+        $sorted=$values;
+        usort($sorted,static fn(Decimal $a,Decimal $b):int=>$a->compareTo($b));
         $middle=intdiv($count,2);
         $median=$count%2===0
-            ? DecimalMath::midpoint($values[$middle-1],$values[$middle],12)
-            : $values[$middle];
+            ? DecimalMath::midpoint($sorted[$middle-1],$sorted[$middle],12)
+            : $sorted[$middle];
 
         $deviation=Decimal::fromString('0');
-        foreach($values as $value)$deviation=DecimalMath::add($deviation,DecimalMath::abs(DecimalMath::subtract($value,$mean)));
+        foreach($ordered as $value)$deviation=DecimalMath::add($deviation,DecimalMath::abs(DecimalMath::subtract($value,$mean)));
         $meanDeviation=DecimalMath::divide($deviation,Decimal::fromString((string)$count),12);
 
         $profitFactor=$grossLoss->isZero()
@@ -54,7 +56,7 @@ final class ResearchMetricsEngine
         $equity=Decimal::fromString('0');
         $peak=Decimal::fromString('0');
         $maxDrawdown=Decimal::fromString('0');
-        foreach($values as $value){
+        foreach($ordered as $value){
             $equity=DecimalMath::add($equity,$value);
             if($equity->compareTo($peak)>0)$peak=$equity;
             $drawdown=DecimalMath::subtract($peak,$equity);
@@ -75,7 +77,7 @@ final class ResearchMetricsEngine
             'risk'=>[
                 'max_drawdown'=>$maxDrawdown->value(),
                 'max_drawdown_ratio'=>$drawdownRatio,
-                'worst_observation'=>$values[0]->value(),
+                'worst_observation'=>$sorted[0]->value(),
             ],
             'statistical'=>[
                 'mean'=>$mean->value(),
