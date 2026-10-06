@@ -21,6 +21,7 @@ use Domains\CapitalMarkets\Domain\Ledger\LedgerEntry;
 use Domains\CapitalMarkets\Domain\Ledger\LedgerTransaction;
 use Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator;
 use Domains\CapitalMarkets\Domain\Service\PaperPnlEngine;
+use Domains\CapitalMarkets\Domain\Service\PaperMultiLegExecutionSimulator;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 use Domains\CapitalMarkets\Domain\Venue\VenueId;
@@ -32,6 +33,7 @@ final readonly class TokenizedEquityPaperExecutionService
         private TokenizedEquityVerticalSliceRepositoryInterface $repository,
         private ExecutablePriceCalculator $prices,
         private PaperPnlEngine $pnl,
+        private PaperMultiLegExecutionSimulator $multiLeg,
     ){}
 
     /** @return array<string,mixed> */
@@ -66,7 +68,7 @@ final readonly class TokenizedEquityPaperExecutionService
         $existingExecution=$this->repository->getExecutionForOpportunity($organizationId,$opportunityId);
         if($existingExecution!==null){
             $existingStatus=(string)($existingExecution['status']??'');
-            if(in_array($existingStatus,['COMPLETED','INVALIDATED','FAILED','CANCELLED','EXPIRED'],true))return $existingExecution;
+            if(in_array($existingStatus,['COMPLETED','COMPLETED_COMPENSATED','INVALIDATED','FAILED','CANCELLED','EXPIRED'],true))return $existingExecution;
             throw new DomainException('EXECUTION_RECOVERY_REQUIRED');
         }
         if(($opportunity['hypothesis']??null)!=='H2'){
@@ -112,6 +114,13 @@ final readonly class TokenizedEquityPaperExecutionService
         }
         if(!$buyState->bestQuote->askPrice->quoteAsset->equals($sellState->bestQuote->bidPrice->quoteAsset)){
             return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'EXECUTION_QUOTE_CURRENCY_NOT_NORMALIZED',$executionEvidence);
+        }
+
+        if($buyState->orderBook!==null&&$sellState->orderBook!==null){
+            return $this->executeOrderBookPath(
+                $organizationId,$opportunityId,$executionId,$opportunity,$candidate,$parameters,$risk,
+                $buyState,$sellState,$quantity,$now,$expires,$executionEvidence
+            );
         }
 
         try{
