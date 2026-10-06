@@ -328,7 +328,7 @@ final readonly class TokenizedEquityPaperExecutionService
                 $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
             );
             $this->persistBuyVenuePosition(
-                $organizationId,$buyVenue,$buyInstrument,[$buyFill],$buy['price']
+                $organizationId,$executionId,$buyVenue,$buyInstrument,[$buyFill],$buy['price']
             );
             $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
@@ -633,7 +633,7 @@ final readonly class TokenizedEquityPaperExecutionService
         if($compensationFill!==null)$buyVenueFills[]=$compensationFill;
         $markPrice=$compensationFill?->price??$buyPrice;
         $this->persistBuyVenuePosition(
-            $organizationId,(string)$candidate['buy_venue_id'],(string)$candidate['buy_instrument_id'],
+            $organizationId,$executionId,(string)$candidate['buy_venue_id'],(string)$candidate['buy_instrument_id'],
             $buyVenueFills,$markPrice
         );
 
@@ -770,10 +770,11 @@ final readonly class TokenizedEquityPaperExecutionService
 
     /** @param list<PaperFill> $fills */
     private function persistBuyVenuePosition(
-        string $organizationId,string $venueId,string $instrumentId,array $fills,Decimal $markPrice
+        string $organizationId,string $executionId,string $venueId,string $instrumentId,array $fills,Decimal $markPrice
     ):void{
+        $portfolioId='paper:'.$executionId;
         $position=$this->positions->project(
-            'paper','TokenizedEquityRelativeValue-v1',$instrumentId,$venueId,$fills,$markPrice
+            $portfolioId,'TokenizedEquityRelativeValue-v1',$instrumentId,$venueId,$fills,$markPrice
         );
         $payload=[
             'position_id'=>$position->positionId,'portfolio_id'=>$position->portfolioId,'strategy_id'=>$position->strategyId,
@@ -786,7 +787,7 @@ final readonly class TokenizedEquityPaperExecutionService
             'closed_at'=>$position->closedAt?->format(DATE_ATOM),
         ];
         $this->repository->savePosition(
-            $organizationId,(string)$position->positionId,'paper','TokenizedEquityRelativeValue-v1',
+            $organizationId,(string)$position->positionId,$portfolioId,'TokenizedEquityRelativeValue-v1',
             $instrumentId,$venueId,$position->status(),$payload
         );
     }
