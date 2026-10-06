@@ -306,6 +306,15 @@ final readonly class TokenizedEquityPaperExecutionService
             ];
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'EXECUTING',$checkpoint);
             $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'ACCOUNTING'));
+            // Settlement is one atomic, idempotent financial transition. A crash can happen
+            // before or after this call without duplicating inventory, cash or realized P&L.
+            $sellCash=DecimalMath::subtract($sell['notional'],$sellFee);
+            $this->repository->settlePaperExecution(
+                $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
+                $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
+            );
+            $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             $observationFingerprint=hash('sha256',implode('|',[
                 $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
             ]));
@@ -331,15 +340,6 @@ final readonly class TokenizedEquityPaperExecutionService
                 ]
             );
 
-            // Settlement is one atomic, idempotent financial transition. A crash can happen
-            // before or after this call without duplicating inventory, cash or realized P&L.
-            $sellCash=DecimalMath::subtract($sell['notional'],$sellFee);
-            $this->repository->settlePaperExecution(
-                $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
-                $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
-            );
-            $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
-            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             return $payload;
         }catch(\Throwable $error){
             if($firstLegPersisted){
