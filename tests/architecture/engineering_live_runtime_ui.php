@@ -56,7 +56,10 @@ foreach ([
     'Токени',
     'Стан runtime',
     'ЩЕ НЕ РОЗПОЧАТО',
-    'Менеджер розробки',
+    'Менеджер / координатор',
+    'Продукт / вимоги',
+    'Планувальник QA',
+    'QA виконавець',
 ] as $needle) {
     if (!str_contains($template, $needle)) {
         throw new RuntimeException('Engineering live UI missing '.$needle);
