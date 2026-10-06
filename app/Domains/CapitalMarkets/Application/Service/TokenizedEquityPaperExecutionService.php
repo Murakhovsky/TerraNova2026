@@ -89,17 +89,35 @@ final readonly class TokenizedEquityPaperExecutionService
 
         $buyState=$this->marketStates->get($organizationId,VenueId::fromString($buyVenue),InstrumentId::fromString($buyInstrument));
         $sellState=$this->marketStates->get($organizationId,VenueId::fromString($sellVenue),InstrumentId::fromString($sellInstrument));
-        if($buyState===null||$sellState===null)throw new DomainException('Execution MarketState unavailable.');
-        if(!$buyState->quality->status->isUsableForDecision()||!$sellState->quality->status->isUsableForDecision()){
-            throw new DomainException('Execution blocked by untrusted market data.');
+        if($buyState===null||$sellState===null){
+            return $this->recordInvalidated(
+                $organizationId,$executionId,$opportunityId,$now,'EXECUTION_MARKET_STATE_UNAVAILABLE'
+            );
         }
-        if($buyState->bestQuote===null||$sellState->bestQuote===null)throw new DomainException('Execution quote unavailable.');
+        if(!$buyState->quality->status->isUsableForDecision()||!$sellState->quality->status->isUsableForDecision()){
+            return $this->recordInvalidated(
+                $organizationId,$executionId,$opportunityId,$now,'EXECUTION_UNTRUSTED_MARKET_DATA'
+            );
+        }
+        if($buyState->bestQuote===null||$sellState->bestQuote===null){
+            return $this->recordInvalidated(
+                $organizationId,$executionId,$opportunityId,$now,'EXECUTION_QUOTE_UNAVAILABLE'
+            );
+        }
         if(!$buyState->bestQuote->askPrice->quoteAsset->equals($sellState->bestQuote->bidPrice->quoteAsset)){
-            throw new DomainException('Execution quote currencies are not normalized.');
+            return $this->recordInvalidated(
+                $organizationId,$executionId,$opportunityId,$now,'EXECUTION_QUOTE_CURRENCY_NOT_NORMALIZED'
+            );
         }
 
-        $buy=$this->executable($buyState,ExecutionSide::Buy,$quantity);
-        $sell=$this->executable($sellState,ExecutionSide::Sell,$quantity);
+        try{
+            $buy=$this->executable($buyState,ExecutionSide::Buy,$quantity);
+            $sell=$this->executable($sellState,ExecutionSide::Sell,$quantity);
+        }catch(DomainException $error){
+            return $this->recordInvalidated(
+                $organizationId,$executionId,$opportunityId,$now,$error->getMessage()
+            );
+        }
         if($sell['price']->compareTo($buy['price'])<=0){
             return $this->recordInvalidated(
                 $organizationId,$executionId,$opportunityId,$now,'OPPORTUNITY_INVALIDATED',
