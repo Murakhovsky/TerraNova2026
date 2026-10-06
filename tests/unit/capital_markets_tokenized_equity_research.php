@@ -26,6 +26,12 @@ $base=[
 
 $assert($policy->verdict($base,30,10)===HypothesisVerdict::InsufficientSample,'Small sample must not produce a research conclusion.');
 
+$unobservableOnly=[...$base,'unobservable_count'=>100];
+$assert(
+    $policy->verdict($unobservableOnly,30,10)===HypothesisVerdict::InsufficientSample,
+    'Unobservable scans must not satisfy the research sample threshold.'
+);
+
 $noEdge=[...$base,'observation_count'=>30];
 $assert($policy->verdict($noEdge,30,10)===HypothesisVerdict::EdgeNotObserved,'No detected edge after sufficient observations must be explicit.');
 
