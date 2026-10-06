@@ -21,6 +21,8 @@ enum CapitalMarketsCapability:string
     case MarketDataQualityView='capital_markets.market_data.quality.view';
     case MarketDataHistoryView='capital_markets.market_data.history.view';
     case MarketDataReplayManage='capital_markets.market_data.replay.manage';
+    case OpportunityView='capital_markets.opportunity.view';
+    case PaperExecute='capital_markets.paper.execute';
 
     /** @return list<string> */
     public static function values():array{return array_map(static fn(self $case):string=>$case->value,self::cases());}
