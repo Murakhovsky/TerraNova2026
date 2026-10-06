@@ -296,12 +296,13 @@
       <h2>Research evidence & Edge Funnel</h2>
       <p>Verdict is deterministic and sample-gated. A few profitable paper fills do not magically become a strategy.</p>
       <div class="table-responsive"><table class="table">
-        <thead><tr><th>Hypothesis</th><th>Observed</th><th>Detected</th><th>Executable</th><th>Attempts</th><th>Completed</th><th>Invalidated</th><th>Completion</th><th>P&L</th><th>Avg capture</th><th>Verdict</th></tr></thead>
+        <thead><tr><th>Hypothesis</th><th>Observed</th><th>Unobservable</th><th>Detected</th><th>Executable</th><th>Attempts</th><th>Completed</th><th>Invalidated</th><th>Completion</th><th>P&L</th><th>Avg capture</th><th>Verdict</th></tr></thead>
         <tbody>
         {% for hypothesis, item in report.hypotheses|default({}) %}
           <tr>
             <td><strong>{{ hypothesis }}</strong></td>
             <td>{{ item.edge_funnel.observed_scans|default(0) }}</td>
+            <td>{{ item.edge_funnel.unobservable_scans|default(0) }}</td>
             <td>{{ item.edge_funnel.detected|default(0) }}</td>
             <td>{{ item.edge_funnel.executable|default(0) }}</td>
             <td>{{ item.edge_funnel.attempted|default(0) }}</td>
@@ -313,7 +314,7 @@
             <td><strong>{{ item.verdict|default('INSUFFICIENT_SAMPLE') }}</strong></td>
           </tr>
         {% else %}
-          <tr><td colspan="11">No research observations yet.</td></tr>
+          <tr><td colspan="12">No research observations yet.</td></tr>
         {% endfor %}
         </tbody>
       </table></div>
