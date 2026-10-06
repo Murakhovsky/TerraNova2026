@@ -78,7 +78,7 @@ $matches=$duplicates->find([
         'venues'=>['BYBIT'],
         'status'=>'REJECTED',
     ]
-],0.25);
+],2500);
 $assert($matches!==[],'Rejected prior research must participate in duplicate detection.');
 
 $windows=(new WalkForwardEngine())->windows(
