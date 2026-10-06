@@ -42,7 +42,10 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
 
     public function getOpportunity(string $organizationId,string $opportunityId):?array
     {
-        $statement=$this->connection->prepare('SELECT payload_json FROM tn_capital_market_opportunities WHERE organization_id=:org AND opportunity_id=:id LIMIT 1');
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_opportunities
+             WHERE organization_id=:org AND opportunity_id=:id LIMIT 1 FOR UPDATE'
+        );
         $statement->execute(['org'=>$organizationId,'id'=>$opportunityId]);
         $json=$statement->fetchColumn();
         return is_string($json)?$this->object($json):null;
@@ -73,6 +76,18 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
             'pnl'=>(string)($payload['realized_pnl']??'0'),'capture'=>(string)($payload['edge_capture_ratio']??'0'),
             'payload'=>$this->json($payload),
         ]);
+    }
+
+    public function getExecutionForOpportunity(string $organizationId,string $opportunityId):?array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_paper_executions
+             WHERE organization_id=:org AND opportunity_id=:opportunity
+             ORDER BY id ASC LIMIT 1'
+        );
+        $statement->execute(['org'=>$organizationId,'opportunity'=>$opportunityId]);
+        $json=$statement->fetchColumn();
+        return is_string($json)?$this->object($json):null;
     }
 
     public function saveLedgerTransaction(string $organizationId,string $transactionId,string $idempotencyKey,array $payload):void

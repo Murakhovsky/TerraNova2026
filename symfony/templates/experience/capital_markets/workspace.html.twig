@@ -299,7 +299,7 @@
       <div class="table-responsive">
         <table class="table">
           <thead>
-            <tr><th>Hypothesis</th><th>Verdict</th><th>Scans</th><th>Detected</th><th>Executable</th><th>Realized</th><th>Avg expected P&amp;L</th><th>Avg realized P&amp;L</th></tr>
+            <tr><th>Hypothesis</th><th>Verdict</th><th>Observable scans</th><th>Unobservable</th><th>Detected</th><th>Executable</th><th>Attempts</th><th>Realized</th><th>Invalidated</th><th>Completion</th><th>Avg expected P&amp;L</th><th>Avg realized / attempt</th></tr>
           </thead>
           <tbody>
           {% for code in ['H1','H2'] %}
@@ -310,17 +310,21 @@
               <td><strong>{{ code }}</strong></td>
               <td><strong>{{ h.verdict|default('INSUFFICIENT_DATA') }}</strong></td>
               <td>{{ sample.scan_count|default(0) }}</td>
+              <td>{{ sample.unobservable_scan_count|default(0) }}</td>
               <td>{{ sample.detected_count|default(0) }}</td>
               <td>{{ sample.executable_count|default(0) }}</td>
+              <td>{{ sample.execution_attempt_count|default(0) }}</td>
               <td>{{ sample.realized_count|default(0) }}</td>
+              <td>{{ sample.invalidated_execution_count|default(0) }}</td>
+              <td>{{ economics.completion_rate|default('0') }}</td>
               <td>{{ economics.average_expected_pnl|default('0') }}</td>
-              <td>{{ economics.average_realized_pnl|default('0') }}</td>
+              <td>{{ economics.average_realized_pnl_per_attempt|default('0') }}</td>
             </tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
-      <p><small>Edge Funnel: theoretical scan → detected candidate → executable opportunity → realized paper result. H1 remains execution-closed until a real hedge venue exists.</small></p>
+      <p><small>Edge Funnel: observable scan → detected candidate → executable opportunity → execution attempt → realized or invalidated result. Unobservable scans are tracked separately and never count as proof of no edge. H1 remains execution-closed until a real hedge venue exists.</small></p>
     </section>
 
     <section class="cos-panel">

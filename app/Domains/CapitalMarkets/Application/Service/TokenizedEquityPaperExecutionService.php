@@ -62,6 +62,8 @@ final readonly class TokenizedEquityPaperExecutionService
         }
         $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
         if($opportunity===null)throw new DomainException('Opportunity not found.');
+        $existingExecution=$this->repository->getExecutionForOpportunity($organizationId,$opportunityId);
+        if($existingExecution!==null)return $existingExecution;
         if(($opportunity['hypothesis']??null)!=='H2'){
             throw new DomainException('H1 paper execution requires a real executable hedge venue.');
         }
@@ -85,20 +87,39 @@ final readonly class TokenizedEquityPaperExecutionService
         $sellInstrument=(string)($candidate['sell_instrument_id']??'');
         if($buyVenue===''||$sellVenue===''||$buyInstrument===''||$sellInstrument==='')throw new DomainException('Opportunity legs are incomplete.');
 
+        $executionId='cm_exec_'.bin2hex(random_bytes(12));
+        $executionEvidence=[
+            'market_pair_id'=>(string)($candidate['market_pair_id']??''),
+            'candidate_id'=>(string)($candidate['id']??''),
+            'expected_pnl'=>(string)($opportunity['expected_pnl']??'0'),
+        ];
+
         $buyState=$this->marketStates->get($organizationId,VenueId::fromString($buyVenue),InstrumentId::fromString($buyInstrument));
         $sellState=$this->marketStates->get($organizationId,VenueId::fromString($sellVenue),InstrumentId::fromString($sellInstrument));
-        if($buyState===null||$sellState===null)throw new DomainException('Execution MarketState unavailable.');
-        if(!$buyState->quality->status->isUsableForDecision()||!$sellState->quality->status->isUsableForDecision()){
-            throw new DomainException('Execution blocked by untrusted market data.');
+        if($buyState===null||$sellState===null){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'EXECUTION_MARKET_STATE_UNAVAILABLE',$executionEvidence);
         }
-        if($buyState->bestQuote===null||$sellState->bestQuote===null)throw new DomainException('Execution quote unavailable.');
+        if(!$buyState->quality->status->isUsableForDecision()||!$sellState->quality->status->isUsableForDecision()){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'EXECUTION_UNTRUSTED_MARKET_DATA',$executionEvidence);
+        }
+        if($buyState->bestQuote===null||$sellState->bestQuote===null){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'EXECUTION_QUOTE_UNAVAILABLE',$executionEvidence);
+        }
         if(!$buyState->bestQuote->askPrice->quoteAsset->equals($sellState->bestQuote->bidPrice->quoteAsset)){
-            throw new DomainException('Execution quote currencies are not normalized.');
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'EXECUTION_QUOTE_CURRENCY_NOT_NORMALIZED',$executionEvidence);
         }
 
-        $buy=$this->executable($buyState,ExecutionSide::Buy,$quantity);
-        $sell=$this->executable($sellState,ExecutionSide::Sell,$quantity);
-        if($sell['price']->compareTo($buy['price'])<=0)throw new DomainException('OPPORTUNITY_INVALIDATED');
+        try{
+            $buy=$this->executable($buyState,ExecutionSide::Buy,$quantity);
+            $sell=$this->executable($sellState,ExecutionSide::Sell,$quantity);
+        }catch(DomainException $error){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,$error->getMessage(),$executionEvidence);
+        }
+        if($sell['price']->compareTo($buy['price'])<=0){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'OPPORTUNITY_INVALIDATED',[
+                ...$executionEvidence,'buy_price'=>$buy['price']->value(),'sell_price'=>$sell['price']->value(),
+            ]);
+        }
 
         $buyFeeRate=Decimal::fromString((string)($parameters['buy_fee_rate']??''));
         $sellFeeRate=Decimal::fromString((string)($parameters['sell_fee_rate']??''));
@@ -118,9 +139,12 @@ final readonly class TokenizedEquityPaperExecutionService
             DecimalMath::subtract($sell['notional'],$buy['notional']),
             DecimalMath::add($buyFee,$sellFee)
         );
-        if(!$preflightNet->isPositive())throw new DomainException('OPPORTUNITY_INVALIDATED_AFTER_EXECUTABLE_PRICING');
-
-        $executionId='cm_exec_'.bin2hex(random_bytes(12));
+        if(!$preflightNet->isPositive()){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'OPPORTUNITY_INVALIDATED_AFTER_EXECUTABLE_PRICING',[
+                ...$executionEvidence,'preflight_net'=>$preflightNet->value(),
+                'buy_fee'=>$buyFee->value(),'sell_fee'=>$sellFee->value(),
+            ]);
+        }
         $reservationId='cm_res_'.substr(hash('sha256',$opportunityId.'|'.$executionId),0,40);
         $buyCashReservation=$reservationId.':buy-cash';
         $sellInventoryReservation=$reservationId.':sell-inventory';
@@ -129,14 +153,16 @@ final readonly class TokenizedEquityPaperExecutionService
 
         if(!$this->repository->reserveCapital(
             $organizationId,$reservationId,$opportunityId,$requiredCapital->value(),$expires->format(DATE_ATOM)
-        ))throw new DomainException('INSUFFICIENT_PAPER_CAPITAL');
+        )){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'INSUFFICIENT_PAPER_CAPITAL',$executionEvidence);
+        }
 
         if(!$this->repository->reservePaperBalance(
             $organizationId,$buyCashReservation,$opportunityId,$buyVenue,$quoteAsset,
             $requiredCapital->value(),$expires->format(DATE_ATOM)
         )){
             $this->repository->releaseReservation($organizationId,$reservationId);
-            throw new DomainException('INSUFFICIENT_PREFUNDED_BUY_CASH');
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'INSUFFICIENT_PREFUNDED_BUY_CASH',$executionEvidence);
         }
 
         if(!$this->repository->reservePaperBalance(
@@ -145,7 +171,7 @@ final readonly class TokenizedEquityPaperExecutionService
         )){
             $this->repository->releasePaperBalanceReservation($organizationId,$buyCashReservation);
             $this->repository->releaseReservation($organizationId,$reservationId);
-            throw new DomainException('INSUFFICIENT_PREFUNDED_INVENTORY');
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'INSUFFICIENT_PREFUNDED_INVENTORY',$executionEvidence);
         }
 
         try{
@@ -158,9 +184,6 @@ final readonly class TokenizedEquityPaperExecutionService
                 $sellSlippage,$now,$executionId.':sell'
             );
             $realized=$this->pnl->realized([$buyFill,$sellFill]);
-            if(!$realized->isPositive()){
-                throw new DomainException('OPPORTUNITY_INVALIDATED_AFTER_EXECUTABLE_PRICING');
-            }
 
             $detectedEdge=Decimal::fromString((string)$candidate['gross_spread']);
             $executableEdge=DecimalMath::subtract($sell['price'],$buy['price']);
@@ -256,6 +279,53 @@ final readonly class TokenizedEquityPaperExecutionService
             $this->repository->releaseReservation($organizationId,$reservationId);
             throw $error;
         }
+    }
+
+    /** @param array<string,mixed> $evidence @return array<string,mixed> */
+    private function recordInvalidated(
+        string $organizationId,
+        string $executionId,
+        string $opportunityId,
+        DateTimeImmutable $at,
+        string $reason,
+        array $evidence=[],
+    ):array{
+        $payload=[
+            'id'=>$executionId,
+            'opportunity_id'=>$opportunityId,
+            'status'=>'INVALIDATED',
+            'executed_at'=>$at->format(DATE_ATOM),
+            'reason'=>$reason,
+            'realized_pnl'=>'0',
+            'edge_capture_ratio'=>'0',
+            'evidence'=>$evidence,
+        ];
+        $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'INVALIDATED',$payload);
+
+        $fingerprint=hash('sha256',implode('|',[
+            $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
+        ]));
+        $this->repository->saveHypothesisObservation(
+            $organizationId,
+            'cm_obs_'.substr($fingerprint,0,40),
+            'H2',
+            'EXECUTION',
+            $at->format(DATE_ATOM),
+            $fingerprint,
+            [
+                'market_pair_id'=>(string)($evidence['market_pair_id']??''),
+                'candidate_id'=>(string)($evidence['candidate_id']??''),
+                'opportunity_id'=>$opportunityId,
+                'execution_id'=>$executionId,
+                'detected'=>true,
+                'executable'=>false,
+                'realized'=>false,
+                'expected_pnl'=>(string)($evidence['expected_pnl']??'0'),
+                'realized_pnl'=>'0',
+                'reason'=>$reason,
+            ]
+        );
+        return $payload;
     }
 
     /** @return array{price:Decimal,notional:Decimal} */
