@@ -199,6 +199,7 @@ final readonly class ResearchLabService
         $experiments=$this->repository->listExperiments($organizationId,null,500);
         $knowledge=$this->repository->listKnowledge($organizationId,500);
         $runs=$this->repository->listBacktestRuns($organizationId,500);
+        $oosRuns=$this->repository->listOutOfSampleRuns($organizationId,500);
         $scorecards=$this->repository->listScorecards($organizationId,500);
         $rejections=$this->repository->listRejectedHypotheses($organizationId,500);
         $promotion=$this->repository->listAllPromotionDecisions($organizationId,500);
@@ -209,6 +210,7 @@ final readonly class ResearchLabService
             'experiments'=>$experiments,
             'knowledge'=>$knowledge,
             'backtest_runs'=>$runs,
+            'oos_runs'=>$oosRuns,
             'scorecards'=>$scorecards,
             'rejections'=>$rejections,
             'promotion_decisions'=>$promotion,
@@ -220,6 +222,9 @@ final readonly class ResearchLabService
                 'rejected_hypotheses'=>count($rejections),
                 'running_experiments'=>count(array_filter($experiments,static fn(array $e):bool=>($e['status']??'')==='RUNNING')),
                 'backtest_count'=>count($runs),
+                'oos_count'=>count($oosRuns),
+                'oos_completed'=>count(array_filter($oosRuns,static fn(array $r):bool=>($r['status']??'')==='COMPLETED')),
+                'oos_failed'=>count(array_filter($oosRuns,static fn(array $r):bool=>($r['status']??'')==='FAILED')),
                 'backtest_completed'=>count($completedRuns),
                 'backtest_failed'=>count($failedRuns),
                 'backtest_failure_rate'=>$runs===[]?0:count($failedRuns)/count($runs),
