@@ -15,9 +15,11 @@ interface ResearchLabRepositoryInterface
     public function saveExperiment(string $organizationId,array $record):void;
     public function getExperiment(string $organizationId,string $id):?array;
     public function listExperiments(string $organizationId,?string $hypothesisId=null,int $limit=200):array;
+    public function transitionExperimentStatus(string $organizationId,string $experimentId,string $from,string $to,string $updatedAt):bool;
 
     public function saveStrategyVersion(string $organizationId,array $record):void;
     public function listStrategyVersions(string $organizationId,string $strategyId):array;
+    public function getStrategyVersion(string $organizationId,string $strategyVersionId):?array;
 
     public function saveResult(string $organizationId,array $record):void;
     public function getResultForExperiment(string $organizationId,string $experimentId):?array;
