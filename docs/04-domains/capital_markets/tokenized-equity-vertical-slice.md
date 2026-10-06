@@ -50,7 +50,7 @@ MarketState
 
 Система вже вміє зберігати candidates, opportunities, risk assessments, paper executions, paper portfolio, venue balances і immutable ledger transactions; має API та окремий Tokenized Equity workspace; повторно перевіряє ринок перед paper execution та вимірює realized P&L і edge capture.
 
-V0.5 додає append-only `HypothesisObservation` journal для кожного SCAN, EVALUATION і completed EXECUTION. На його основі детерміновано будується Edge Funnel `theoretical scan → detected → executable → realized`, накопичуються expected/realized P&L samples і формується sample-gated verdict для H1/H2. Research replay не змінює стан: однаковий journal дає однаковий summary та `dataset_hash`.
+V0.5 додає append-only `HypothesisObservation` journal для кожного SCAN, EVALUATION і EXECUTION attempt. На його основі детерміновано будується Edge Funnel `observable scan → detected → executable → attempted → realized / invalidated`, накопичуються expected/realized P&L samples і формується sample-gated verdict для H1/H2. Stale, untrusted, closed, skewed або otherwise unusable market observations зберігаються як unobservable evidence, але не входять у sample denominator. Failed preflight/capital/inventory attempts також лишаються в journal, а verdict враховує completion rate, тому кілька успішних fills не можуть приховати масову кількість невдалих спроб. Research replay не змінює стан: однаковий journal дає однаковий summary та `dataset_hash`.
 
 ## Наступний етап
 
