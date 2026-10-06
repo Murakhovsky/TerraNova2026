@@ -86,6 +86,21 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
         string $organizationId,string $venueId,string $assetKey,string $amount
     ):void;
 
+    public function settlePaperExecution(
+        string $organizationId,
+        string $executionId,
+        string $capitalReservationId,
+        string $buyCashReservationId,
+        string $sellInventoryReservationId,
+        string $buyVenueId,
+        string $buyInstrumentId,
+        string $buyQuantity,
+        string $sellVenueId,
+        string $quoteAsset,
+        string $sellCash,
+        string $realizedPnl
+    ):void;
+
     /** @return list<array<string,mixed>> */
     public function listOpportunities(string $organizationId,int $limit=200):array;
 
