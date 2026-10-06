@@ -68,8 +68,9 @@ $runner=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application
 foreach([
     'AgentRuntime',
     'ToolRuntimeInterface',
-    'capital_markets_research',
-    "contextReferences",
+    'CapitalMarketsResearchAgent::NAME',
+    "evidence['research']['tool_requests']",
+    "input_json",
     'Research Agent requested tools after the final pass.',
 ] as $needle){
     $assert(str_contains($runner,$needle),'Two-pass Research Agent runtime missing: '.$needle);
@@ -80,6 +81,7 @@ foreach([
     'Research Agent cannot emit business action proposals.',
     'Research Agent may request at most four tools per pass.',
     'Research Agent requested forbidden tool:',
+    'input_json',
     'Research Agent recommendation exceeds authority.',
 ] as $needle){
     $assert(str_contains($validator,$needle),'Research Agent validator boundary missing: '.$needle);
