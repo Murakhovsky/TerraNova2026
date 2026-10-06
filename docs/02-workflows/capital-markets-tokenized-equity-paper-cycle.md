@@ -1,11 +1,12 @@
 ---
-title: Capital Markets Tokenized Equity Paper Cycle
+title: Цикл Tokenized Equity Paper у Capital Markets
 domain: capital_markets
 process: capital-markets.tokenized-equity-paper-cycle
 status: as-is
+description: "Канонічний процес від довіреного Market State до перевіреної H1/H2 можливості, pre-funded paper execution та зафіксованого P&L."
 ---
 
-# Trusted Market State → Tokenized Equity Paper Result
+# Довірений Market State → результат Tokenized Equity Paper
 
 Цей workflow описує фактичний Vertical Slice №1 для H1 Tokenized Equity Dislocation та H2 Cross-Venue Tokenized Equity Arbitrage.
 
