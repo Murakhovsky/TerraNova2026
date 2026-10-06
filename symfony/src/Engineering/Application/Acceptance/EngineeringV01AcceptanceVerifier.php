@@ -26,11 +26,12 @@ final class EngineeringV01AcceptanceVerifier
 
     /** @var list<string> */
     private const REQUIRED_ROLES = [
-        'ENGINEERING_MANAGER',
-        'QA',
+        'PRODUCT_REQUIREMENTS',
+        'QA_PLANNER',
         'PRINCIPAL_ARCHITECT',
         'DEVELOPER',
         'REVIEWER',
+        'QA_EXECUTOR',
     ];
 
     /** @var list<string> */
@@ -100,16 +101,17 @@ final class EngineeringV01AcceptanceVerifier
         $checks[] = $this->check(
             'all_roles_executed',
             $missingRoles === [],
-            $missingRoles === [] ? 'All five Engineering roles executed.' : 'Missing roles: '.implode(', ', $missingRoles).'.',
+            $missingRoles === [] ? 'All mandatory Feature execution roles executed.' : 'Missing roles: '.implode(', ', $missingRoles).'.',
         );
 
         $qaPlan = false;
         $qaPass = false;
         foreach ($runs as $run) {
-            if (!is_array($run) || ($run['role'] ?? null) !== 'QA') continue;
+            if (!is_array($run)) continue;
+            $role = (string) ($run['role'] ?? '');
             $output = is_array($run['output'] ?? null) ? $run['output'] : [];
-            if (($output['phase'] ?? null) === 'PLAN' && ($output['status'] ?? null) === 'PLAN_READY') $qaPlan = true;
-            if (($output['phase'] ?? null) === 'EXECUTION' && ($output['status'] ?? null) === 'PASS') $qaPass = true;
+            if ($role === 'QA_PLANNER' && ($output['status'] ?? null) === 'PLAN_READY') $qaPlan = true;
+            if ($role === 'QA_EXECUTOR' && ($output['status'] ?? null) === 'PASS') $qaPass = true;
         }
         $checks[] = $this->check('qa_planning_before_release', $qaPlan, $qaPlan ? 'QA PLAN_READY evidence exists.' : 'No QA PLAN_READY run found.');
         $checks[] = $this->check('qa_execution_passed', $qaPass, $qaPass ? 'QA PASS execution evidence exists.' : 'No QA execution PASS run found.');
@@ -199,7 +201,7 @@ final class EngineeringV01AcceptanceVerifier
         $qaMutationRevision = '';
 
         foreach ($runs as $run) {
-            if (!is_array($run) || ($run['role'] ?? null) !== 'QA') continue;
+            if (!is_array($run) || ($run['role'] ?? null) !== 'QA_EXECUTOR') continue;
             $output = is_array($run['output'] ?? null) ? $run['output'] : [];
             if (($output['status'] ?? null) !== 'TESTS_UPDATED') continue;
             $candidate = trim((string) ($output['repository_revision_after_tests'] ?? ''));

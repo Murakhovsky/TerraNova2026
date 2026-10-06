@@ -53,7 +53,6 @@ final readonly class EngineeringDomainReleaseService
             }
         }
 
-        $this->domains->updateStatus($domainId, EngineeringDomainStatus::DOMAIN_QA->value);
         $featureEvidence = [];
         foreach ($features as $feature) {
             $engineeringFeatureId = $feature['engineering_feature_id'] ?? null;
@@ -102,10 +101,49 @@ final readonly class EngineeringDomainReleaseService
             }
         }
 
+        $integration = $this->agents->run(
+            $domainId,
+            $organizationId,
+            AgentRole::INTEGRATION_RELEASE,
+            'Assemble and verify the completed Domain before Domain QA. Validate cross-feature compatibility, contracts, events, migration ordering, routing, DI/configuration and the integrated repository revision without changing business semantics.',
+            [
+                'mode' => 'INTEGRATION_MODE',
+                'domain' => $domain,
+                'features' => $featureEvidence,
+                'contracts' => $this->domains->contracts($domainId),
+                'events' => $this->domains->events($domainId),
+                'migration_plan' => $migration['content'],
+                'domain_architecture' => $architecture['content'],
+                'architecture_constitution' => $constitution['content'],
+                'repository_revision' => $repositoryRevision,
+                'repository_ci' => $ci,
+            ],
+            $correlationId.':domain-integration',
+        );
+        $this->validator->validate(AgentRole::INTEGRATION_RELEASE, $integration);
+        $this->domains->saveArtifact(
+            $domainId,
+            EngineeringDomainArtifactType::DOMAIN_INTEGRATION_REPORT->value,
+            $integration,
+            AgentRole::INTEGRATION_RELEASE->value,
+        );
+
+        $integrationStatus = (string) ($integration['status'] ?? '');
+        if (!in_array($integrationStatus, ['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS'], true)) {
+            $this->domains->updateStatus(
+                $domainId,
+                EngineeringDomainStatus::BLOCKED->value,
+                'Integration & Release Agent returned '.$integrationStatus.' before Domain QA.',
+            );
+            return $this->view($domainId, ['integration' => $integration]);
+        }
+
+        $this->domains->updateStatus($domainId, EngineeringDomainStatus::DOMAIN_QA->value);
+
         $result = $this->agents->run(
             $domainId,
             $organizationId,
-            AgentRole::QA,
+            AgentRole::QA_EXECUTOR,
             'Verify the integrated Domain against Domain Acceptance Criteria and the independent Domain QA Plan using only supplied evidence.',
             [
                 'phase' => 'EXECUTION',
@@ -123,7 +161,7 @@ final readonly class EngineeringDomainReleaseService
             ],
             $correlationId.':domain-qa',
         );
-        $this->validator->validate(AgentRole::QA, $result, 'EXECUTION');
+        $this->validator->validate(AgentRole::QA_EXECUTOR, $result, 'EXECUTION');
 
         $report = array_merge($result, [
             'tested_revision' => $repositoryRevision,
@@ -132,13 +170,45 @@ final readonly class EngineeringDomainReleaseService
             'architecture_version' => (int) $architecture['version'],
             'architecture_hash' => $architecture['content_hash'],
         ]);
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_REPORT->value, $report, AgentRole::QA_EXECUTOR->value);
 
         $qaStatus = (string) ($result['status'] ?? '');
         if ($qaStatus !== 'PASS') {
             $state = $qaStatus === 'FAIL' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value;
             $this->domains->updateStatus($domainId, $state, 'Domain QA returned '.$qaStatus.'.');
             return $this->view($domainId, ['qa_status' => $qaStatus]);
+        }
+
+        $releaseReadiness = $this->agents->run(
+            $domainId,
+            $organizationId,
+            AgentRole::INTEGRATION_RELEASE,
+            'Assess release readiness after independent Domain QA. Do not repeat implementation or bypass failed QA.',
+            [
+                'mode' => 'DOMAIN_RELEASE_MODE',
+                'domain' => $domain,
+                'features' => $featureEvidence,
+                'contracts' => $this->domains->contracts($domainId),
+                'events' => $this->domains->events($domainId),
+                'migration_plan' => $migration['content'],
+                'domain_qa_report' => $report,
+                'repository_revision' => $repositoryRevision,
+                'repository_ci' => $ci,
+            ],
+            $correlationId.':integration-release',
+        );
+        $this->validator->validate(AgentRole::INTEGRATION_RELEASE, $releaseReadiness);
+        $this->domains->saveArtifact(
+            $domainId,
+            EngineeringDomainArtifactType::RELEASE_READINESS_REPORT->value,
+            $releaseReadiness,
+            AgentRole::INTEGRATION_RELEASE->value,
+        );
+
+        $releaseStatus = (string) ($releaseReadiness['status'] ?? '');
+        if (!in_array($releaseStatus, ['RELEASE_READY', 'HUMAN_APPROVAL_REQUIRED'], true)) {
+            $this->domains->updateStatus($domainId, EngineeringDomainStatus::BLOCKED->value, 'Integration & Release Agent returned '.$releaseStatus.'.');
+            return $this->view($domainId, ['qa_status' => $qaStatus, 'release_readiness' => $releaseReadiness]);
         }
 
         $integrationPullRequest = null;

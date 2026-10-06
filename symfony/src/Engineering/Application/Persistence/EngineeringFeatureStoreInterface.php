@@ -13,7 +13,10 @@ interface EngineeringFeatureStoreInterface
     public function updateRequest(string $featureId, string $title, string $description, string $priority): void;
     public function appendPreviousContext(string $featureId, array $context): void;
     public function delete(string $featureId): void;
-    public function applyManagerAnalysis(string $featureId, array $specification, array $contextMap, ?string $repositoryRevision): void;
+    public function applyProductSpecification(string $featureId, array $specification, array $contextMap, ?string $repositoryRevision): void;
+
+/** @deprecated V1 compatibility alias. */
+public function applyManagerAnalysis(string $featureId, array $specification, array $contextMap, ?string $repositoryRevision): void;
 
     /** @return array<string,mixed> */
     public function view(string $featureId): array;

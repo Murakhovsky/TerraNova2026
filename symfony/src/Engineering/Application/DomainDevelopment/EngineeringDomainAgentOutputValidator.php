@@ -16,10 +16,32 @@ final readonly class EngineeringDomainAgentOutputValidator
     {
         match ($role) {
             AgentRole::ENGINEERING_MANAGER => $this->manager($output),
-            AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->productRequirements($output),
+            AgentRole::QA_PLANNER => $this->qaPlanner($output),
+            AgentRole::QA_EXECUTOR => $this->qaExecutor($output),
             AgentRole::QA => $this->qa($output, $phase),
+            AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
+            AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
             default => throw new RuntimeException('Unsupported Domain Development validation role: '.$role->value),
         };
+    }
+
+    /** @param array<string,mixed> $output */
+    private function productRequirements(array $output): void
+    {
+        $this->manager($output);
+    }
+
+    /** @param array<string,mixed> $output */
+    private function qaPlanner(array $output): void
+    {
+        $this->qa($output, 'PLAN');
+    }
+
+    /** @param array<string,mixed> $output */
+    private function qaExecutor(array $output): void
+    {
+        $this->qa($output, 'EXECUTION');
     }
 
     /** @param array<string,mixed> $output */
@@ -128,6 +150,18 @@ final readonly class EngineeringDomainAgentOutputValidator
             if ($status === 'FAIL' && ($output['defects'] ?? []) === [] && ($output['acceptance_criteria'] ?? []) === []) throw new RuntimeException('Domain QA FAIL requires failure evidence.');
             if ($status === 'BLOCKED' && ($output['blockers'] ?? []) === []) throw new RuntimeException('Domain QA BLOCKED requires blockers.');
             if ($status === 'HUMAN_TEST_REQUIRED' && ($output['human_tests_required'] ?? []) === []) throw new RuntimeException('Domain QA HUMAN_TEST_REQUIRED requires manual scenarios.');
+        }
+    }
+
+    /** @param array<string,mixed> $output */
+    private function integrationRelease(array $output): void
+    {
+        $this->required($output, ['status','integration_summary','release_readiness','blocking_issues','required_human_decisions']);
+        if (!in_array((string) $output['status'], ['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS','REWORK_REQUIRED','ARCHITECTURE_REVIEW_REQUIRED','RELEASE_READY','NOT_READY','HUMAN_APPROVAL_REQUIRED','BLOCKED'], true)) {
+            throw new RuntimeException('Integration & Release status is invalid.');
+        }
+        if (($output['status'] ?? null) === 'RELEASE_READY' && ($output['blocking_issues'] ?? []) !== []) {
+            throw new RuntimeException('Integration & Release cannot be RELEASE_READY with blocking issues.');
         }
     }
 

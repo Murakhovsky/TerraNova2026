@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
+use App\Engineering\Application\Agent\EngineeringAgentToolPermissionPolicy;
+use App\Engineering\Application\Agent\EngineeringSpecialistReportCollector;
 use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
@@ -41,6 +43,9 @@ final readonly class EngineeringDeveloperStageExecutor
         private EngineeringExecutionJournal $journal,
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringWorkflowLockInterface $lock,
+        private EngineeringSpecialistReportCollector $specialistReports,
+        private EngineeringArtifactInvalidationService $invalidation,
+        private EngineeringAgentToolPermissionPolicy $toolPolicy,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
     ) {}
@@ -209,6 +214,7 @@ final readonly class EngineeringDeveloperStageExecutor
                 'previous_review' => $previousReview['content'] ?? null,
                 'previous_qa' => $previousQa['content'] ?? null,
                 'human_decisions' => $humanDecisionHistory,
+                'specialist_reports' => $this->specialistReports->forFeature($featureId),
             ],
             contextRefs: [
                 'artifact:'.$featureSpec['id'],
@@ -285,6 +291,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     $pendingArchitectureDocumentation,
                     $developerChanges,
                 );
+                $this->toolPolicy->assertRepositoryMutationAllowed(AgentRole::DEVELOPER, $changes);
                 $commitMessage = trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
                     ? (string) $run->structuredOutput['commit_message']
                     : 'feat(engineering): implement '.$this->features->view($featureId)['title'];
@@ -371,7 +378,7 @@ final readonly class EngineeringDeveloperStageExecutor
             throw $error;
         }
 
-        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId): WorkflowDirective {
+        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId, $previousDevelopment): WorkflowDirective {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) {
                 throw new WorkflowAlreadyRunningException('Engineering workflow changed while Developer was running.');
@@ -385,13 +392,16 @@ final readonly class EngineeringDeveloperStageExecutor
                 in_array($developerStatus, ['COMPLETED','COMPLETED_WITH_LIMITATIONS'], true) ? 'COMPLETED' : ($developerStatus === 'BLOCKED' ? 'BLOCKED' : 'FAILED'),
                 ['status' => $developerStatus, 'revision' => $run->structuredOutput['repository_revision'] ?? null],
             );
-            $this->artifacts->createVersion(
+            $newDevelopment = $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::DEVELOPMENT_RESULT,
                 $run->structuredOutput,
                 agentRunId: $engineeringRunId,
                 createdByAgent: AgentRole::DEVELOPER->value,
             );
+            if ($previousDevelopment !== null && ($previousDevelopment['content_hash'] ?? null) !== ($newDevelopment['content_hash'] ?? null)) {
+                $this->invalidation->afterImplementationRevision($featureId);
+            }
 
             $next = $this->coordinator->acceptAgentResult(
                 $workflow,

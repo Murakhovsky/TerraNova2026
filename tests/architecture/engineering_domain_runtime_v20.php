@@ -16,6 +16,14 @@ $requiredFiles = [
     'symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringDomainStore.php',
     'symfony/src/Http/Api/V1/Controller/EngineeringDomainController.php',
     'symfony/migrations/Version20261005170000.php',
+    'symfony/config/engineering/agents/product-requirements.yaml',
+    'symfony/config/engineering/agents/qa-planner.yaml',
+    'symfony/config/engineering/agents/qa-executor.yaml',
+    'symfony/config/engineering/agents/integration-release.yaml',
+    'symfony/config/engineering/prompts/engineering-domain-product-v2.0.md',
+    'symfony/config/engineering/prompts/engineering-domain-qa-planner-v2.0.md',
+    'symfony/config/engineering/prompts/engineering-domain-qa-executor-v2.0.md',
+    'symfony/config/engineering/prompts/engineering-domain-integration-release-v2.0.md',
 ];
 
 foreach ($requiredFiles as $file) {
@@ -30,12 +38,16 @@ $migration = (string) file_get_contents($root.'/symfony/migrations/Version202610
 $routes = (string) file_get_contents($root.'/symfony/config/routes.yaml');
 $services = (string) file_get_contents($root.'/symfony/config/services.yaml');
 $schedule = (string) file_get_contents($root.'/symfony/src/Scheduler/CosScheduleProvider.php');
-$manager = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringManagerStageExecutor.php');
+$product = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringProductRequirementsStageExecutor.php');
 $architect = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArchitectStageExecutor.php');
 $developer = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringDeveloperStageExecutor.php');
 $reviewer = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringReviewerStageExecutor.php');
 $qa = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringQaStageExecutor.php');
 $gateway = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Repository/EngineeringRepositoryGatewayInterface.php');
+
+foreach (['AgentRole::PRODUCT_REQUIREMENTS', 'AgentRole::QA_PLANNER'] as $needle) {
+    if (!str_contains($planner, $needle)) throw new RuntimeException('Domain agent separation is missing '.$needle);
+}
 
 foreach ([
     'DOMAIN_SPECIFICATION',
@@ -63,11 +75,17 @@ foreach ([
 }
 
 foreach ([
+    'DOMAIN_INTEGRATION_REPORT',
     'DOMAIN_QA_REPORT',
     'DOMAIN_RELEASE_MANIFEST',
     'Domain integration pull request must be merged',
     'configuredBaseBranch',
     'openPullRequest',
+    'AgentRole::QA_EXECUTOR',
+    'AgentRole::INTEGRATION_RELEASE',
+    'RELEASE_READINESS_REPORT',
+    "'mode' => 'INTEGRATION_MODE'",
+    "'mode' => 'DOMAIN_RELEASE_MODE'",
 ] as $needle) {
     if (!str_contains($release, $needle)) throw new RuntimeException('Domain release gate is missing '.$needle);
 }
@@ -103,7 +121,7 @@ foreach (['ContinueEngineeringDomainsCommand', 'engineeringDomainAutonomyEnabled
     if (!str_contains($schedule, $needle)) throw new RuntimeException('Domain autonomy scheduler missing '.$needle);
 }
 
-foreach ([$manager, $architect, $developer, $reviewer, $qa] as $stage) {
+foreach ([$product, $architect, $developer, $reviewer, $qa] as $stage) {
     if (!str_contains($stage, 'DOMAIN_CONTEXT_PACK')) {
         throw new RuntimeException('One Engineering stage does not propagate DOMAIN_CONTEXT_PACK.');
     }

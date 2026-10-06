@@ -37,9 +37,16 @@ $valid = [
     'risks' => [],
     'assumptions' => [],
     'open_questions' => [],
-    'decision' => ['type' => 'RUN_AGENT', 'agent' => 'principal_architect', 'reason' => 'mandatory'],
 ];
-$validator->validate(AgentRole::ENGINEERING_MANAGER, $valid);
+$validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $valid);
+
+$productWithDecision = $valid;
+$productWithDecision['decision'] = ['type' => 'RUN_AGENT', 'agent' => 'PRINCIPAL_ARCHITECT', 'reason' => 'Product must not orchestrate.'];
+try {
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $productWithDecision);
+    throw new RuntimeException('Product workflow decision authority was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
 
 $managerHuman = $valid;
 $managerHuman['status'] = 'HUMAN_DECISION_REQUIRED';
@@ -49,12 +56,12 @@ $managerHuman['open_questions'] = [[
     'options' => [['id' => 'PRESERVE'], ['id' => 'BREAK']],
     'recommended_option' => 'PRESERVE',
 ]];
-$validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHuman);
+$validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $managerHuman);
 
 $managerHumanMissingOptions = $managerHuman;
 $managerHumanMissingOptions['open_questions'][0]['options'] = [];
 try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHumanMissingOptions);
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $managerHumanMissingOptions);
     throw new RuntimeException('Manager human gate without options was accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -62,7 +69,7 @@ try {
 $managerHumanDuplicateOptions = $managerHuman;
 $managerHumanDuplicateOptions['open_questions'][0]['options'] = [['id' => 'PRESERVE'], ['id' => 'preserve']];
 try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHumanDuplicateOptions);
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $managerHumanDuplicateOptions);
     throw new RuntimeException('Manager duplicate human options were accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -70,7 +77,7 @@ try {
 $managerHumanBadRecommendation = $managerHuman;
 $managerHumanBadRecommendation['open_questions'][0]['recommended_option'] = 'NOT_OFFERED';
 try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $managerHumanBadRecommendation);
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $managerHumanBadRecommendation);
     throw new RuntimeException('Manager recommended a human option that was not offered.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -78,7 +85,7 @@ try {
 $noTasks = $valid;
 $noTasks['tasks'] = [];
 try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $noTasks);
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $noTasks);
     throw new RuntimeException('Manager specification without engineering tasks was accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -86,7 +93,7 @@ try {
 $invalid = $valid;
 $invalid['feature']['acceptance_criteria'] = [['id' => 'whatever', 'description' => '', 'verification_type' => 'manual']];
 try {
-    $validator->validate(AgentRole::ENGINEERING_MANAGER, $invalid);
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $invalid);
     throw new RuntimeException('Invalid Manager acceptance criteria were accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -411,7 +418,7 @@ $qaPlan = [
     'test_plan' => $qaTestPlan,
     'test_changes' => [],
 ];
-$validator->validate(AgentRole::QA, $qaPlan);
+$validator->validate(AgentRole::QA_PLANNER, $qaPlan);
 
 $notApplicable = ['applicable' => false, 'status' => 'NOT_APPLICABLE', 'evidence' => null, 'reason' => 'Not part of this feature surface.'];
 $applicablePass = ['applicable' => true, 'status' => 'PASS', 'evidence' => ['type' => 'TEST_RESULT', 'reference' => 'qa-1'], 'reason' => null];
@@ -446,12 +453,12 @@ $qaPass = [
     'blockers' => [],
     'repository_revision_after_tests' => null,
 ];
-$validator->validate(AgentRole::QA, $qaPass);
+$validator->validate(AgentRole::QA_EXECUTOR, $qaPass);
 
 $qaEmptyEvidence = $qaPass;
 $qaEmptyEvidence['acceptance_criteria'][0]['evidence'] = '';
 try {
-    $validator->validate(AgentRole::QA, $qaEmptyEvidence);
+    $validator->validate(AgentRole::QA_EXECUTOR, $qaEmptyEvidence);
     throw new RuntimeException('QA PASS with empty acceptance evidence was accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -459,7 +466,7 @@ try {
 $qaMissingRequiredSuite = $qaPass;
 unset($qaMissingRequiredSuite['tests']['suites']['smoke']);
 try {
-    $validator->validate(AgentRole::QA, $qaMissingRequiredSuite);
+    $validator->validate(AgentRole::QA_EXECUTOR, $qaMissingRequiredSuite);
     throw new RuntimeException('QA PASS without required smoke suite was accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -468,7 +475,7 @@ $qaFailedTests = $qaPass;
 $qaFailedTests['tests']['passed'] = 2;
 $qaFailedTests['tests']['failed'] = 1;
 try {
-    $validator->validate(AgentRole::QA, $qaFailedTests);
+    $validator->validate(AgentRole::QA_EXECUTOR, $qaFailedTests);
     throw new RuntimeException('QA PASS with failed tests was accepted.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -477,7 +484,7 @@ $qaUnsafeTestMutation = $qaPass;
 $qaUnsafeTestMutation['status'] = 'TESTS_UPDATED';
 $qaUnsafeTestMutation['test_changes'] = [['path' => 'symfony/src/Backdoor.php', 'operation' => 'UPDATE', 'content' => '<?php']];
 try {
-    $validator->validate(AgentRole::QA, $qaUnsafeTestMutation);
+    $validator->validate(AgentRole::QA_EXECUTOR, $qaUnsafeTestMutation);
     throw new RuntimeException('QA production mutation escaped test roots.');
 } catch (EngineeringAgentOutputValidationException) {
 }
@@ -485,18 +492,18 @@ try {
 $qaTestsUpdated = $qaPass;
 $qaTestsUpdated['status'] = 'TESTS_UPDATED';
 $qaTestsUpdated['test_changes'] = [['path' => 'tests/unit/feature_regression.php', 'operation' => 'CREATE', 'content' => '<?php']];
-$validator->validate(AgentRole::QA, $qaTestsUpdated);
+$validator->validate(AgentRole::QA_EXECUTOR, $qaTestsUpdated);
 
 $qaHuman = $qaPass;
 $qaHuman['status'] = 'HUMAN_TEST_REQUIRED';
 $qaHuman['human_tests_required'] = [['scenario' => 'Visual focus order', 'required_evidence' => 'Manual UI observation']];
-$validator->validate(AgentRole::QA, $qaHuman);
+$validator->validate(AgentRole::QA_EXECUTOR, $qaHuman);
 
 $qaFail = $qaPass;
 $qaFail['status'] = 'FAIL';
 $qaFail['tests'] = ['total' => 1, 'passed' => 0, 'failed' => 1, 'skipped' => 0, 'suites' => ['functional' => 'FAIL']];
 $qaFail['acceptance_criteria'] = [['id' => 'AC-001', 'status' => 'FAIL', 'evidence' => ['type' => 'HTTP_RESPONSE', 'status' => 500]]];
 $qaFail['defects'] = [['severity' => 'MAJOR', 'title' => 'Request fails', 'description' => 'Expected success but received server error.']];
-$validator->validate(AgentRole::QA, $qaFail);
+$validator->validate(AgentRole::QA_EXECUTOR, $qaFail);
 
 echo "Engineering agent output validation passed.\n";

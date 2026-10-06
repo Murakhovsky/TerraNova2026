@@ -65,6 +65,26 @@ final readonly class DoctrineEngineeringArtifactStore implements EngineeringArti
         return $record instanceof AgentArtifactRecord ? $this->view($record) : null;
     }
 
+    public function invalidate(string $featureId, array $types): int
+    {
+        $invalidated = 0;
+        foreach ($types as $type) {
+            if (!$type instanceof ArtifactType) continue;
+            $records = $this->entityManager->getRepository(AgentArtifactRecord::class)->findBy([
+                'featureId' => $featureId,
+                'type' => $type->value,
+                'status' => 'ACTIVE',
+            ]);
+            foreach ($records as $record) {
+                if (!$record instanceof AgentArtifactRecord) continue;
+                $record->supersede();
+                ++$invalidated;
+            }
+        }
+        if ($invalidated > 0) $this->entityManager->flush();
+        return $invalidated;
+    }
+
     private function view(AgentArtifactRecord $record): array
     {
         return [

@@ -446,12 +446,22 @@ export default class extends Controller {
     localizeRole(value) {
         const key = String(value || '').toUpperCase();
         const labels = {
-            ENGINEERING_MANAGER: 'Менеджер розробки',
-            PRINCIPAL_ARCHITECT: 'Архітектор',
+            ENGINEERING_MANAGER: 'Менеджер / координатор',
+            PRODUCT_REQUIREMENTS: 'Продукт / вимоги',
+            QA_PLANNER: 'Планувальник QA',
+            PRINCIPAL_ARCHITECT: 'Головний архітектор',
             ARCHITECT: 'Архітектор',
             DEVELOPER: 'Розробник',
             REVIEWER: 'Рев’юер',
-            QA: 'QA',
+            QA_EXECUTOR: 'QA виконавець',
+            INTEGRATION_RELEASE: 'Інтеграція / реліз',
+            SECURITY_SPECIALIST: 'Спеціаліст з безпеки',
+            DATABASE_MIGRATION_SPECIALIST: 'Спеціаліст з міграцій',
+            PERFORMANCE_SPECIALIST: 'Спеціаліст з продуктивності',
+            DEVOPS_SPECIALIST: 'DevOps спеціаліст',
+            DOCUMENTATION_SPECIALIST: 'Спеціаліст з документації',
+            API_SPECIALIST: 'API спеціаліст',
+            QA: 'QA (legacy)',
             AGENT: 'Агент',
         };
         return labels[key] || String(value || 'Агент');

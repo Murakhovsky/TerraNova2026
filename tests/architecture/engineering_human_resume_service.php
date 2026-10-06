@@ -12,13 +12,13 @@ foreach ([
     'humanDecisions->answer',
     'resumeAfterHumanDecision',
     'appendPreviousContext',
-    'managerStage->execute',
+    'productStage->execute',
     'logicalAttempt',
     'Selected option is not offered for this human decision.',
     'offersOption',
 ] as $needle) {
     if (!str_contains($service.$featureStore.$featureRecord, $needle)) {
-        throw new RuntimeException('Human resume service missing '.$needle);
+        throw new RuntimeException('Human resume/Product service missing '.$needle);
     }
 }
 

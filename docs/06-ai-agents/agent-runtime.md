@@ -206,21 +206,26 @@ Retryable помилка LLM provider може привести до configured 
 
 Інженерна автоматизація використовує той самий Kernel Agent runtime, а не окремий паралельний фреймворк для агентів.
 
-Обов’язковий шлях V0.1:
+Обов’язковий Feature-шлях Engineering Runtime V2:
 
 ```text
-Engineering Manager
+Engineering Manager / Coordinator
+→ Product / Requirements Agent
 → FEATURE_SPEC + CONTEXT_MAP
-→ QA Test Plan
+→ QA Planner
+→ TEST_PLAN
 → Principal Architect
-→ ARCHITECTURE_DECISION
-→ IMPLEMENTATION_PLAN
-→ DEVELOPER_HANDOFF
-→ Architecture Gate
+→ ARCHITECTURE_DECISION + IMPLEMENTATION_PLAN + DEVELOPER_HANDOFF
 → Developer
+→ specialist gates when policy requires them
+→ Reviewer
+→ QA Executor
+→ READY_FOR_HUMAN_APPROVAL
 ```
 
-Principal Architect отримує обмежений набір доказів із repository, read-only snapshot схеми бази даних і, коли ревізія контексту Manager відрізняється від поточного `main`, порівняння ревізій. Runtime сам проставляє в Architecture Decision авторитетні `feature_id` та repository revision, замість того щоб довіряти LLM механічне копіювання цих ідентифікаторів.
+Engineering Manager / Coordinator керує потоком, але не створює Feature Specification і не виконує production implementation. Product визначає WHAT, QA Planner визначає HOW TO VERIFY, Architect визначає HOW IT FITS, Developer реалізує, Reviewer перевіряє технічну коректність, QA Executor незалежно перевіряє фактичну поведінку.
+
+Principal Architect отримує обмежений набір доказів із repository, read-only snapshot схеми бази даних і, коли ревізія Product context відрізняється від поточного `main`, порівняння ревізій. Runtime сам проставляє в Architecture Decision авторитетні `feature_id` та repository revision, замість того щоб довіряти LLM механічне копіювання цих ідентифікаторів.
 
 Значення Architecture Gate обмежені чотирма варіантами:
 
@@ -231,7 +236,7 @@ Principal Architect отримує обмежений набір доказів 
 
 Тільки перші два дозволяють перейти до Development. Перед першим запуском Developer повторно перевіряє, що затверджена repository revision усе ще є актуальною. Якщо `main` змінився, orchestration повертає роботу Principal Architect для revalidation замість реалізації за застарілим планом.
 
-Engineering roles можуть мати окремі model hints через `COS_ENGINEERING_MANAGER_MODEL`, `COS_ENGINEERING_ARCHITECT_MODEL`, `COS_ENGINEERING_DEVELOPER_MODEL`, `COS_ENGINEERING_REVIEWER_MODEL` і `COS_ENGINEERING_QA_MODEL`. Порожнє значення означає використання загального LLM routing/default model. Docker runtime передає ці змінні явно, тому production deployment не втрачає role-specific routing.
+Engineering roles можуть мати окремі model hints через role-specific runtime configuration; legacy `QA` залишається лише compatibility alias і не може стартувати нові V2 executions. Порожнє значення означає використання загального LLM routing/default model. Docker runtime передає ці змінні явно, тому production deployment не втрачає role-specific routing.
 
 Principal Architect може підготувати зміни архітектурної документації та ADR лише в межах `docs/`. Ці зміни зберігаються як керовані artifacts і застосовуються разом зі змінами Developer, тому repository не отримує окремий технічний commit лише заради документації, а авторство та audit trail залишаються явними.
 
@@ -244,7 +249,7 @@ Developer виконує preflight до мутацій: перевіряє repos
 
 Керовані результати: `COMPLETED`, `COMPLETED_WITH_LIMITATIONS`, `BLOCKED`, `ARCHITECTURE_REVIEW_REQUIRED`, `SPECIFICATION_REVIEW_REQUIRED`, `SECURITY_REVIEW_REQUIRED`, `FAILED`.
 
-`ARCHITECTURE_REVIEW_REQUIRED` повертає workflow Principal Architect без repository mutation. Specification/security escalation зупиняє автономне виконання на human decision boundary. Лише completion-статуси можуть перейти до bounded repository change set, commit/branch і PR; merge та production deploy залишаються за межами прав Developer.
+`ARCHITECTURE_REVIEW_REQUIRED` повертає workflow Principal Architect без repository mutation. Specification escalation повертає роботу Product / Requirements Agent; security, migration, performance, DevOps та API escalation спочатку маршрутизуються до відповідного Specialist Agent. Human boundary використовується, коли specialist або policy не можуть закрити рішення автономно. Лише completion-статуси можуть перейти до bounded repository change set, commit/branch і PR; merge та production deploy залишаються за межами прав Developer.
 
 Developer output зберігає preflight, scope, database/API impact, acceptance-criteria evidence, validation evidence, architecture compliance, security findings, limitations, deviations, risks і follow-up requirements. Відомий failure required validation не може завершитись completion-статусом.
 
@@ -255,9 +260,9 @@ Developer output зберігає preflight, scope, database/API impact, accepta
 
 Reviewer є read-only щодо production implementation: він не виправляє код, не merge-ить PR і не змінює Acceptance Criteria. Runtime окремо підтримує `COS_ENGINEERING_REVIEWER_MODEL`; для незалежності рекомендується route/model family, відмінний від Developer, коли це доступно через LLM governance.
 
-Severity: `BLOCKER`, `MAJOR`, `MINOR`, `SUGGESTION`. BLOCKER/MAJOR завжди блокують; MINOR блокує лише з `blocking=true`; SUGGESTION не блокує. Reviewer decision обмежений `APPROVED`, `REQUEST_CHANGES`, `ARCHITECTURE_REVIEW_REQUIRED`, `HUMAN_REVIEW_REQUIRED`.
+Severity: `BLOCKER`, `MAJOR`, `MINOR`, `SUGGESTION`. BLOCKER/MAJOR завжди блокують; MINOR блокує лише з `blocking=true`; SUGGESTION не блокує. Reviewer decision підтримує `APPROVED`, `REQUEST_CHANGES`, `ARCHITECTURE_REVIEW_REQUIRED`, specialist-review statuses і `HUMAN_REVIEW_REQUIRED`.
 
-Маршрути: `APPROVED → QA_PENDING → QA`; `REQUEST_CHANGES → CHANGES_REQUESTED → DEVELOPMENT_RUNNING → Developer`; `ARCHITECTURE_REVIEW_REQUIRED → ARCHITECTURE_PENDING → Principal Architect`; `HUMAN_REVIEW_REQUIRED → HUMAN_DECISION_REQUIRED`.
+Маршрути: `APPROVED → QA_PENDING → QA_EXECUTOR`; `REQUEST_CHANGES → CHANGES_REQUESTED → DEVELOPMENT_RUNNING → Developer`; `ARCHITECTURE_REVIEW_REQUIRED → ARCHITECTURE_PENDING → Principal Architect`; `HUMAN_REVIEW_REQUIRED → HUMAN_DECISION_REQUIRED`.
 
 `APPROVED` заборонений при неповному preflight, architecture non-compliance, unresolved blocking issues, BLOCKER/MAJOR, failed required CI або acceptance criterion без PASS evidence.
 

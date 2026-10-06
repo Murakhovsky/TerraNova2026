@@ -1,13 +1,13 @@
 {
-  "dataset": "engineering-agent-output-v0.1",
+  "dataset": "engineering-agent-output-v2.0",
   "version": "0.1.0",
-  "agent_version": "0.1.0",
+  "agent_version": "2.0.0",
   "prompt_version": "0.1.0",
-  "schema_version": "0.1.0",
+  "schema_version": "2.0.0",
   "cases": [
     {
-      "id": "manager-valid-minimal",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-valid-minimal",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": true,
       "output": {
         "status": "SPECIFICATION_READY",
@@ -49,17 +49,12 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
-      "id": "manager-empty-tasks-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-empty-tasks-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "SPECIFICATION_READY",
@@ -94,17 +89,12 @@
         "tasks": [],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Ready."
-        }
+        "open_questions": []
       }
     },
     {
-      "id": "manager-bad-acceptance-id-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-bad-acceptance-id-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "SPECIFICATION_READY",
@@ -144,12 +134,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -605,7 +590,7 @@
     },
     {
       "id": "qa-plan-valid",
-      "role": "QA",
+      "role": "QA_PLANNER",
       "expected_valid": true,
       "output": {
         "phase": "PLAN",
@@ -661,7 +646,7 @@
     },
     {
       "id": "qa-false-pass-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -832,7 +817,7 @@
     },
     {
       "id": "qa-fail-valid",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": true,
       "output": {
         "phase": "EXECUTION",
@@ -1009,7 +994,7 @@
     },
     {
       "id": "qa-production-mutation-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -1186,8 +1171,8 @@
       }
     },
     {
-      "id": "manager-empty-business-goal-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-empty-business-goal-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "SPECIFICATION_READY",
@@ -1229,17 +1214,12 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
-      "id": "manager-empty-scope-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-empty-scope-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "SPECIFICATION_READY",
@@ -1279,17 +1259,12 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
-      "id": "manager-empty-functional-requirements-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-empty-functional-requirements-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "SPECIFICATION_READY",
@@ -1327,17 +1302,12 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
-      "id": "manager-invalid-priority-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-invalid-priority-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "SPECIFICATION_READY",
@@ -1379,12 +1349,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -2318,7 +2283,7 @@
     },
     {
       "id": "qa-plan-cannot-pass-rejected",
-      "role": "QA",
+      "role": "QA_PLANNER",
       "expected_valid": false,
       "output": {
         "phase": "PLAN",
@@ -2374,7 +2339,7 @@
     },
     {
       "id": "qa-empty-evidence-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -2545,7 +2510,7 @@
     },
     {
       "id": "qa-missing-required-smoke-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -2718,7 +2683,7 @@
     },
     {
       "id": "qa-pass-with-failed-authorization-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -2892,7 +2857,7 @@
     },
     {
       "id": "qa-unjustified-not-applicable-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -3066,7 +3031,7 @@
     },
     {
       "id": "qa-blocked-without-blocker-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -3240,7 +3205,7 @@
     },
     {
       "id": "qa-human-test-without-scenario-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -3414,7 +3379,7 @@
     },
     {
       "id": "qa-tests-updated-without-change-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -3588,7 +3553,7 @@
     },
     {
       "id": "qa-test-path-traversal-rejected",
-      "role": "QA",
+      "role": "QA_EXECUTOR",
       "expected_valid": false,
       "output": {
         "phase": "EXECUTION",
@@ -3767,8 +3732,8 @@
       }
     },
     {
-      "id": "manager-human-decision-valid",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-human-decision-valid",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": true,
       "output": {
         "status": "HUMAN_DECISION_REQUIRED",
@@ -3824,17 +3789,12 @@
             ],
             "recommended_option": "A"
           }
-        ],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        ]
       }
     },
     {
-      "id": "manager-human-decision-missing-options-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-human-decision-missing-options-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "HUMAN_DECISION_REQUIRED",
@@ -3883,17 +3843,12 @@
             "options": [],
             "recommended_option": "A"
           }
-        ],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        ]
       }
     },
     {
-      "id": "manager-human-decision-bad-recommendation-rejected",
-      "role": "ENGINEERING_MANAGER",
+      "id": "product-human-decision-bad-recommendation-rejected",
+      "role": "PRODUCT_REQUIREMENTS",
       "expected_valid": false,
       "output": {
         "status": "HUMAN_DECISION_REQUIRED",
@@ -3949,12 +3904,7 @@
             ],
             "recommended_option": "C"
           }
-        ],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        ]
       }
     }
   ]

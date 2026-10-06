@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\Service;
 
+use App\Engineering\Application\Agent\EngineeringAgentAssignmentService;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -16,10 +17,14 @@ use App\Engineering\Domain\Agent\AgentRole;
 final readonly class EngineeringAutonomousProgressionService
 {
     public function __construct(
+        private EngineeringProductRequirementsStageExecutor $product,
+        private EngineeringQaPlannerStageExecutor $qaPlanner,
         private EngineeringArchitectStageExecutor $architect,
         private EngineeringDeveloperStageExecutor $developer,
         private EngineeringReviewerStageExecutor $reviewer,
-        private EngineeringQaStageExecutor $qa,
+        private EngineeringQaExecutorStageExecutor $qaExecutor,
+        private EngineeringAgentAssignmentService $assignments,
+        private EngineeringSpecialistStageExecutor $specialists,
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringFeatureStoreInterface $features,
@@ -41,6 +46,35 @@ final readonly class EngineeringAutonomousProgressionService
             $role = $directive->agent;
             if ($role === null) return $directive;
 
+            $this->assignments->assertAssignable($featureId, $role, 'FEATURE', 'MEDIUM');
+
+            if ($role === AgentRole::DEVELOPER) {
+                $specialistDirective = $this->specialists->executeRequired(
+                    $featureId,
+                    $workflowId,
+                    $organizationId,
+                    $correlationId,
+                    'PRE_DEVELOPMENT',
+                );
+                if ($specialistDirective !== null) {
+                    $directive = $specialistDirective;
+                    continue;
+                }
+            }
+            if ($role === AgentRole::REVIEWER) {
+                $specialistDirective = $this->specialists->executeRequired(
+                    $featureId,
+                    $workflowId,
+                    $organizationId,
+                    $correlationId,
+                    'POST_DEVELOPMENT',
+                );
+                if ($specialistDirective !== null) {
+                    $directive = $specialistDirective;
+                    continue;
+                }
+            }
+
             if (!$this->experienceAutonomyAllows($featureId, $workflowId, $role)) {
                 $level = $this->experienceAutonomyLevel($featureId) ?? 'L0';
                 return new WorkflowDirective(
@@ -59,6 +93,21 @@ final readonly class EngineeringAutonomousProgressionService
             }
 
             $directive = match ($role) {
+                AgentRole::PRODUCT_REQUIREMENTS => $this->product->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    request: $this->features->request($featureId),
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::PRODUCT_REQUIREMENTS),
+                ),
+                AgentRole::QA_PLANNER => $this->qaPlanner->execute(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::QA_PLANNER),
+                ),
                 AgentRole::PRINCIPAL_ARCHITECT => $this->architect->execute(
                     featureId: $featureId,
                     workflowId: $workflowId,
@@ -80,12 +129,24 @@ final readonly class EngineeringAutonomousProgressionService
                     correlationId: $correlationId,
                     logicalAttempt: $this->nextAttempt($featureId, AgentRole::REVIEWER),
                 ),
-                AgentRole::QA => $this->qa->execute(
+                AgentRole::QA_EXECUTOR => $this->qaExecutor->execute(
                     featureId: $featureId,
                     workflowId: $workflowId,
                     organizationId: $organizationId,
                     correlationId: $correlationId,
-                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::QA),
+                    logicalAttempt: $this->nextAttempt($featureId, AgentRole::QA_EXECUTOR),
+                ),
+                AgentRole::SECURITY_SPECIALIST,
+                AgentRole::DATABASE_MIGRATION_SPECIALIST,
+                AgentRole::PERFORMANCE_SPECIALIST,
+                AgentRole::DEVOPS_SPECIALIST,
+                AgentRole::DOCUMENTATION_SPECIALIST,
+                AgentRole::API_SPECIALIST => $this->specialists->executeRole(
+                    featureId: $featureId,
+                    workflowId: $workflowId,
+                    organizationId: $organizationId,
+                    correlationId: $correlationId,
+                    role: $role,
                 ),
                 default => $directive,
             };
@@ -118,10 +179,13 @@ final readonly class EngineeringAutonomousProgressionService
         $workflow = $this->workflows->get($workflowId);
         $required = match ($role) {
             AgentRole::ENGINEERING_MANAGER => 0,
+            AgentRole::PRODUCT_REQUIREMENTS => 0,
+            AgentRole::QA_PLANNER => 1,
             AgentRole::PRINCIPAL_ARCHITECT => 1,
             AgentRole::DEVELOPER => 2,
             AgentRole::REVIEWER => 3,
-            AgentRole::QA => $workflow->currentState()->value === 'QA_PLANNING' ? 1 : 3,
+            AgentRole::QA_EXECUTOR => 3,
+            default => 3,
         };
 
         return $rank >= $required;

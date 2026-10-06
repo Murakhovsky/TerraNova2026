@@ -1,0 +1,32 @@
+id: integration-release
+version: 0.1.0
+role: INTEGRATION_RELEASE
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model:
+  tier: strong
+  reasoning: high
+permissions:
+  repository:
+    read: true
+    write: branch_only
+  github:
+    pr_read: true
+    pr_write: true
+    checks_read: true
+  workflow:
+    read: true
+    propose_transition: true
+  merge: false
+  deploy: false
+  production:
+    access: false
+tools:
+  - repository.search
+  - repository.read
+  - github.pr.read
+  - github.checks.read
+  - artifact.read
+  - artifact.create
+  - workflow.read

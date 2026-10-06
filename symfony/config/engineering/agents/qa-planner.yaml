@@ -1,0 +1,25 @@
+id: qa-planner
+version: 0.1.0
+role: QA_PLANNER
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model:
+  tier: balanced
+  reasoning: medium
+permissions:
+  repository:
+    read: true
+    write: false
+  test_code:
+    read: true
+    write: false
+  workflow:
+    read: true
+    propose_transition: true
+  merge: false
+  deploy: false
+tools:
+  - artifact.read
+  - workflow.read
+  - repository.read

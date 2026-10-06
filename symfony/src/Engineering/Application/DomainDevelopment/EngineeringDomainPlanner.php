@@ -32,10 +32,10 @@ final readonly class EngineeringDomainPlanner
         }
 
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::ANALYSIS->value);
-        $manager = $this->agents->run(
+        $product = $this->agents->run(
             $domainId,
             $organizationId,
-            AgentRole::ENGINEERING_MANAGER,
+            AgentRole::PRODUCT_REQUIREMENTS,
             'Formalize the Master Domain Specification into a canonical Domain Specification, Domain Acceptance Criteria and capability map.',
             [
                 'domain_id' => $domainId,
@@ -45,36 +45,36 @@ final readonly class EngineeringDomainPlanner
                 'target_repository' => $domain['target_repository'],
                 'target_branch' => $domain['target_branch'],
             ],
-            $correlationId.':manager',
+            $correlationId.':product-requirements',
         );
 
-        $managerStatus = (string) ($manager['status'] ?? '');
-        if ($managerStatus !== 'SPECIFICATION_READY') {
-            $this->domains->saveArtifact($domainId, 'DOMAIN_MANAGER_RESULT', $manager, AgentRole::ENGINEERING_MANAGER->value);
+        $productStatus = (string) ($product['status'] ?? '');
+        if ($productStatus !== 'SPECIFICATION_READY') {
+            $this->domains->saveArtifact($domainId, 'DOMAIN_PRODUCT_REQUIREMENTS_RESULT', $product, AgentRole::PRODUCT_REQUIREMENTS->value);
             $this->domains->updateStatus(
                 $domainId,
-                $managerStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
-                'Domain Manager returned '.$managerStatus.'.',
+                $productStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
+                'Product / Requirements Agent returned '.$productStatus.'.',
             );
             return $this->view($domainId);
         }
 
-        $domainSpec = is_array($manager['domain_specification'] ?? null) ? $manager['domain_specification'] : [];
+        $domainSpec = is_array($product['domain_specification'] ?? null) ? $product['domain_specification'] : [];
         $domainSpec['key'] = $domain['domain_key'];
         $domainSpec['name'] = $domain['name'];
-        $domainAc = is_array($manager['domain_acceptance_criteria'] ?? null) ? $manager['domain_acceptance_criteria'] : [];
-        $capabilities = is_array($manager['capabilities'] ?? null) ? $manager['capabilities'] : [];
-        if ($domainAc === [] || $capabilities === []) throw new RuntimeException('Domain Manager produced an incomplete specification.');
+        $domainAc = is_array($product['domain_acceptance_criteria'] ?? null) ? $product['domain_acceptance_criteria'] : [];
+        $capabilities = is_array($product['capabilities'] ?? null) ? $product['capabilities'] : [];
+        if ($domainAc === [] || $capabilities === []) throw new RuntimeException('Product / Requirements Agent produced an incomplete specification.');
 
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION->value, $domainSpec, AgentRole::ENGINEERING_MANAGER->value);
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ACCEPTANCE_CRITERIA->value, ['criteria' => $domainAc], AgentRole::ENGINEERING_MANAGER->value);
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::CAPABILITY_MAP->value, ['capabilities' => $capabilities], AgentRole::ENGINEERING_MANAGER->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION->value, $domainSpec, AgentRole::PRODUCT_REQUIREMENTS->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_ACCEPTANCE_CRITERIA->value, ['criteria' => $domainAc], AgentRole::PRODUCT_REQUIREMENTS->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::CAPABILITY_MAP->value, ['capabilities' => $capabilities], AgentRole::PRODUCT_REQUIREMENTS->value);
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::DECOMPOSITION->value);
 
         $qa = $this->agents->run(
             $domainId,
             $organizationId,
-            AgentRole::QA,
+            AgentRole::QA_PLANNER,
             'Create an independent Domain QA Plan before architecture and implementation.',
             [
                 'phase' => 'PLAN',
@@ -85,12 +85,12 @@ final readonly class EngineeringDomainPlanner
             $correlationId.':qa-plan',
         );
         if (($qa['status'] ?? null) !== 'PLAN_READY') {
-            $this->domains->saveArtifact($domainId, 'DOMAIN_QA_PLANNING_RESULT', $qa, AgentRole::QA->value);
+            $this->domains->saveArtifact($domainId, 'DOMAIN_QA_PLANNING_RESULT', $qa, AgentRole::QA_PLANNER->value);
             $this->domains->updateStatus($domainId, EngineeringDomainStatus::BLOCKED->value, 'Domain QA planning did not reach PLAN_READY.');
             return $this->view($domainId);
         }
         $qaPlan = is_array($qa['domain_qa_plan'] ?? null) ? $qa['domain_qa_plan'] : [];
-        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_PLAN->value, $qaPlan, AgentRole::QA->value);
+        $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_QA_PLAN->value, $qaPlan, AgentRole::QA_PLANNER->value);
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::ARCHITECTURE->value);
 
         $architect = $this->agents->run(
@@ -101,7 +101,7 @@ final readonly class EngineeringDomainPlanner
             [
                 'domain_specification' => $domainSpec,
                 'domain_acceptance_criteria' => $domainAc,
-                'manager_capabilities' => $capabilities,
+                'product_capabilities' => $capabilities,
                 'domain_qa_plan' => $qaPlan,
                 'target_repository' => $domain['target_repository'],
                 'target_branch' => $domain['target_branch'],

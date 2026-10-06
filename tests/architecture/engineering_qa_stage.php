@@ -10,6 +10,8 @@ $validator = (string) file_get_contents($root.'/symfony/src/Engineering/Applicat
 
 foreach ([
     'EngineeringWorkflowState::QA_PLANNING',
+    'AgentRole::QA_PLANNER',
+    'AgentRole::QA_EXECUTOR',
     'executePlanning',
     'executeVerification',
     'commitChecks',
@@ -40,7 +42,9 @@ foreach (['QA_TEST_PLAN_READY','QA_TESTS_UPDATED_REVIEW_REQUIRED','AgentRole::PR
 }
 if (!str_contains($workflow, "'QA_PLANNING' => [EngineeringWorkflowState::ARCHITECTURE_PENDING")) throw new RuntimeException('QA planning transition is missing.');
 if (!str_contains($workflow, "'QA_PENDING' => [EngineeringWorkflowState::REVIEW_PENDING")) throw new RuntimeException('QA test-update re-review transition is missing.');
-if (!str_contains($progression, 'AgentRole::QA')) throw new RuntimeException('Autonomous progression does not run QA.');
+if (!str_contains($progression, 'AgentRole::QA_PLANNER')) throw new RuntimeException('Autonomous progression does not run QA Planner.');
+if (!str_contains($progression, 'AgentRole::QA_EXECUTOR')) throw new RuntimeException('Autonomous progression does not run QA Executor.');
+if (str_contains($progression, 'AgentRole::QA =>')) throw new RuntimeException('Autonomous progression still routes legacy QA.');
 foreach (['maxStepsPerProgression','maxLogicalAgentRunsPerFeature','escalateAutonomyBudget'] as $needle) { if (!str_contains($progression, $needle)) throw new RuntimeException('Autonomous progression safety budget missing '.$needle); }
 
 echo "Engineering QA stage passed.\n";

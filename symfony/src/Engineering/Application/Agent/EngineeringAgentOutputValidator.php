@@ -11,11 +11,99 @@ final class EngineeringAgentOutputValidator
     {
         match ($role) {
             AgentRole::ENGINEERING_MANAGER => $this->manager($output),
+            AgentRole::PRODUCT_REQUIREMENTS => $this->productRequirements($output),
+            AgentRole::QA_PLANNER => $this->qaPlanner($output),
             AgentRole::PRINCIPAL_ARCHITECT => $this->architect($output),
             AgentRole::DEVELOPER => $this->developer($output),
             AgentRole::REVIEWER => $this->reviewer($output),
+            AgentRole::QA_EXECUTOR => $this->qaExecutor($output),
+            AgentRole::INTEGRATION_RELEASE => $this->integrationRelease($output),
+            AgentRole::SECURITY_SPECIALIST,
+            AgentRole::DATABASE_MIGRATION_SPECIALIST,
+            AgentRole::PERFORMANCE_SPECIALIST,
+            AgentRole::DEVOPS_SPECIALIST,
+            AgentRole::API_SPECIALIST => $this->specialist($output),
+            AgentRole::DOCUMENTATION_SPECIALIST => $this->documentationSpecialist($output),
             AgentRole::QA => $this->qa($output),
         };
+    }
+
+    private function productRequirements(array $output): void
+    {
+        if (array_key_exists('decision', $output)) {
+            throw new EngineeringAgentOutputValidationException('Product / Requirements Agent must not orchestrate workflow decisions.');
+        }
+
+        $managerCompatible = $output;
+        $managerCompatible['decision'] = [
+            'type' => 'RUN_AGENT',
+            'agent' => null,
+            'reason' => 'Internal validator compatibility only.',
+        ];
+        $this->manager($managerCompatible);
+    }
+
+    private function qaPlanner(array $output): void
+    {
+        $this->qa($output);
+        if (($output['phase'] ?? null) !== 'PLAN') {
+            throw new EngineeringAgentOutputValidationException('QA Planner must return PLAN phase.');
+        }
+    }
+
+    private function qaExecutor(array $output): void
+    {
+        $this->qa($output);
+        if (($output['phase'] ?? null) !== 'EXECUTION') {
+            throw new EngineeringAgentOutputValidationException('QA Executor must return EXECUTION phase.');
+        }
+    }
+
+    private function integrationRelease(array $output): void
+    {
+        $this->required($output, ['status','summary','findings','required_actions','required_human_decisions','evidence']);
+        if (!in_array((string) $output['status'], ['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS','REWORK_REQUIRED','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_DECISION_REQUIRED','RELEASE_READY','NOT_READY','BLOCKED'], true)) {
+            throw new EngineeringAgentOutputValidationException('Integration & Release status is invalid.');
+        }
+    }
+
+    private function specialist(array $output): void
+    {
+        $this->required($output, ['status','summary','findings','required_actions','required_human_decisions','evidence','reviewed_revision']);
+        if (!is_array($output['findings']) || !is_array($output['required_actions']) || !is_array($output['required_human_decisions']) || !is_array($output['evidence'])) {
+            throw new EngineeringAgentOutputValidationException('Specialist result collections are invalid.');
+        }
+
+        $approved = in_array((string) ($output['status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS','COMPLETED'], true);
+        if ($approved) {
+            foreach ($output['findings'] as $finding) {
+                if (!is_array($finding)) continue;
+                $severity = strtoupper((string) ($finding['severity'] ?? ''));
+                if (in_array($severity, ['MAJOR','BLOCKER','HIGH','CRITICAL'], true)) {
+                    throw new EngineeringAgentOutputValidationException('Specialist approval cannot contain unresolved MAJOR/BLOCKER findings.');
+                }
+            }
+        }
+    }
+
+    private function documentationSpecialist(array $output): void
+    {
+        $this->specialist($output);
+        $this->required($output, ['changes','commit_message']);
+        if (($output['status'] ?? null) === 'COMPLETED' && (!is_array($output['changes']) || $output['changes'] === [])) {
+            throw new EngineeringAgentOutputValidationException('Documentation Specialist COMPLETED requires repository documentation changes.');
+        }
+        foreach (is_array($output['changes'] ?? null) ? $output['changes'] : [] as $change) {
+            if (!is_array($change)) throw new EngineeringAgentOutputValidationException('Documentation change must be an object.');
+            $this->required($change, ['path','operation','content']);
+            $path = str_replace('\\', '/', trim((string) $change['path']));
+            if (!str_starts_with($path, 'docs/') || str_contains($path, '..') || str_starts_with($path, '/')) {
+                throw new EngineeringAgentOutputValidationException('Documentation Specialist may mutate only docs/.');
+            }
+            if (!in_array((string) $change['operation'], ['CREATE','UPDATE'], true) || !is_string($change['content'])) {
+                throw new EngineeringAgentOutputValidationException('Documentation mutation must be CREATE/UPDATE with complete content.');
+            }
+        }
     }
 
     private function manager(array $output): void
@@ -271,7 +359,11 @@ final class EngineeringAgentOutputValidator
     {
         $this->required($output, ['status','reviewed_revision','base_revision','pull_request','preflight','summary','issues','correctness','architecture','security','maintainability','database','api','tests','acceptance_criteria','ci','unresolved_blockers','unresolved_majors','recommendation']);
         $status = (string) ($output['status'] ?? '');
-        if (!in_array($status, ['APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED'], true)) throw new EngineeringAgentOutputValidationException('Reviewer status is invalid.');
+        if (!in_array($status, [
+            'APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED',
+            'SECURITY_REVIEW_REQUIRED','MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED',
+            'DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED'
+        ], true)) throw new EngineeringAgentOutputValidationException('Reviewer status is invalid.');
         if (!is_array($output['preflight'] ?? null)) throw new EngineeringAgentOutputValidationException('Reviewer preflight must be an object.');
         $this->required($output['preflight'], ['status','reviewed_revision','diff_complete','required_artifacts_present','ci_evidence_available','blockers']);
         if (!in_array((string) $output['preflight']['status'], ['PASS','BLOCKED'], true)) throw new EngineeringAgentOutputValidationException('Reviewer preflight status is invalid.');
@@ -335,7 +427,8 @@ final class EngineeringAgentOutputValidator
         $status = (string) ($output['status'] ?? '');
         $allowed = [
             'COMPLETED','COMPLETED_WITH_LIMITATIONS','BLOCKED',
-            'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED','FAILED',
+            'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED',
+            'MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED','DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','FAILED',
         ];
         if (!in_array($status, $allowed, true)) {
             throw new EngineeringAgentOutputValidationException('Developer status is invalid.');
@@ -356,7 +449,10 @@ final class EngineeringAgentOutputValidator
             throw new EngineeringAgentOutputValidationException('Developer preflight status is invalid.');
         }
 
-        $reviewStatuses = ['ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED'];
+        $reviewStatuses = [
+            'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED',
+            'MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED','DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED',
+        ];
         if (in_array($status, $reviewStatuses, true)) {
             if (($output['changes'] ?? []) !== []) {
                 throw new EngineeringAgentOutputValidationException('Developer review escalation must not contain repository mutations.');

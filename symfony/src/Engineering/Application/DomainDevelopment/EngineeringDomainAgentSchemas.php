@@ -13,10 +13,36 @@ final class EngineeringDomainAgentSchemas
     {
         return match ($role) {
             AgentRole::ENGINEERING_MANAGER => self::manager(),
-            AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
+            AgentRole::PRODUCT_REQUIREMENTS => self::productRequirements(),
+            AgentRole::QA_PLANNER => self::qaPlanner(),
+            AgentRole::QA_EXECUTOR => self::qaExecutor(),
             AgentRole::QA => self::qa(),
+            AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
+            AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
             default => throw new InvalidArgumentException('Agent role does not support Domain Development mode: '.$role->value),
         };
+    }
+
+    /** @return array<string,mixed> */
+    private static function productRequirements(): array
+    {
+        return self::manager();
+    }
+
+    /** @return array<string,mixed> */
+    private static function qaPlanner(): array
+    {
+        $schema = self::qa();
+        $schema['properties']['status']['enum'] = ['PLAN_READY','BLOCKED','HUMAN_TEST_REQUIRED'];
+        return $schema;
+    }
+
+    /** @return array<string,mixed> */
+    private static function qaExecutor(): array
+    {
+        $schema = self::qa();
+        $schema['properties']['status']['enum'] = ['PASS','FAIL','BLOCKED','HUMAN_TEST_REQUIRED'];
+        return $schema;
     }
 
     /** @return array<string,mixed> */
@@ -144,6 +170,23 @@ final class EngineeringDomainAgentSchemas
                 'known_limitations' => ['type' => 'array'],
             ],
             'additionalProperties' => true,
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private static function integrationRelease(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','integration_summary','release_readiness','blocking_issues','required_human_decisions'],
+            'properties' => [
+                'status' => ['type' => 'string', 'enum' => ['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS','REWORK_REQUIRED','ARCHITECTURE_REVIEW_REQUIRED','RELEASE_READY','NOT_READY','HUMAN_APPROVAL_REQUIRED','BLOCKED']],
+                'integration_summary' => ['type' => ['object','array','string']],
+                'release_readiness' => ['type' => ['object','array']],
+                'blocking_issues' => ['type' => 'array'],
+                'required_human_decisions' => ['type' => 'array'],
+            ],
+            'additionalProperties' => false,
         ];
     }
 

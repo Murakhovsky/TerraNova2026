@@ -1,0 +1,13 @@
+id: documentation-specialist
+version: 2.0.0
+role: DOCUMENTATION_SPECIALIST
+type: specialist
+domain: engineering
+runtime: kernel-agent-runtime
+model: { tier: balanced, reasoning: medium }
+permissions:
+  repository: { read: true, write: docs_only }
+  workflow: { read: true, propose_transition: true }
+  merge: false
+  deploy: false
+tools: [repository.search, repository.read, artifact.read, artifact.create, workflow.read]

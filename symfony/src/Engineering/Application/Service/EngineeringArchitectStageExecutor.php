@@ -55,6 +55,7 @@ final readonly class EngineeringArchitectStageExecutor
         private EngineeringDatabaseSchemaProviderInterface $databaseSchema,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringExecutionJournal $journal,
+        private EngineeringArtifactInvalidationService $invalidation,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -308,7 +309,7 @@ final readonly class EngineeringArchitectStageExecutor
             throw $error;
         }
 
-        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId): WorkflowDirective {
+        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId, $previousArchitecture): WorkflowDirective {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
                 throw new WorkflowAlreadyRunningException('Engineering workflow changed while Architect was running.');
@@ -355,13 +356,16 @@ final readonly class EngineeringArchitectStageExecutor
                 ? $run->structuredOutput['documentation_changes']
                 : [];
 
-            $this->artifacts->createVersion(
+            $newArchitecture = $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::ARCHITECTURE_DECISION,
                 $architectureDecision,
                 agentRunId: $engineeringRunId,
                 createdByAgent: AgentRole::PRINCIPAL_ARCHITECT->value,
             );
+            if ($previousArchitecture !== null && ($previousArchitecture['content_hash'] ?? null) !== ($newArchitecture['content_hash'] ?? null)) {
+                $this->invalidation->afterArchitectureRevision($featureId);
+            }
             $this->artifacts->createVersion(
                 $featureId,
                 ArtifactType::IMPLEMENTATION_PLAN,

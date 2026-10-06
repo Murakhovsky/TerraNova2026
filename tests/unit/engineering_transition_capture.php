@@ -15,10 +15,10 @@ use App\Engineering\Domain\Workflow\EngineeringWorkflowState;
 use App\Engineering\Domain\Workflow\WorkflowExecution;
 
 $workflow = new WorkflowExecution(EngineeringId::generate(), EngineeringId::generate(), EngineeringWorkflowState::ANALYSIS, 'trace');
-$directive = (new EngineeringWorkflowCoordinator())->acceptAgentResult($workflow, AgentRole::ENGINEERING_MANAGER, ['status' => 'SPECIFICATION_READY']);
+$directive = (new EngineeringWorkflowCoordinator())->acceptAgentResult($workflow, AgentRole::PRODUCT_REQUIREMENTS, ['status' => 'SPECIFICATION_READY']);
 
-if (count($directive->transitions) !== 2) throw new RuntimeException('Manager workflow must expose both persisted transitions.');
-if ($directive->transitions[0]->from !== EngineeringWorkflowState::ANALYSIS || $directive->transitions[0]->to !== EngineeringWorkflowState::SPECIFICATION_READY) throw new RuntimeException('First Manager transition is incorrect.');
-if ($directive->transitions[1]->from !== EngineeringWorkflowState::SPECIFICATION_READY || $directive->transitions[1]->to !== EngineeringWorkflowState::QA_PLANNING) throw new RuntimeException('Second Manager transition must schedule QA planning.');
+if (count($directive->transitions) !== 2) throw new RuntimeException('Product workflow must expose both persisted transitions.');
+if ($directive->transitions[0]->from !== EngineeringWorkflowState::ANALYSIS || $directive->transitions[0]->to !== EngineeringWorkflowState::SPECIFICATION_READY) throw new RuntimeException('First Product transition is incorrect.');
+if ($directive->transitions[1]->from !== EngineeringWorkflowState::SPECIFICATION_READY || $directive->transitions[1]->to !== EngineeringWorkflowState::QA_PLANNING) throw new RuntimeException('Second Product transition must schedule QA planning.');
 
 echo "Engineering transition capture passed.\n";

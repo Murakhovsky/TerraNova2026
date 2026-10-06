@@ -12,9 +12,19 @@ final class EngineeringAgentSchemas
     {
         return match ($role) {
             AgentRole::ENGINEERING_MANAGER => self::manager(),
+            AgentRole::PRODUCT_REQUIREMENTS => self::productRequirements(),
+            AgentRole::QA_PLANNER => self::qaPlanner(),
             AgentRole::PRINCIPAL_ARCHITECT => self::architect(),
             AgentRole::DEVELOPER => self::developer(),
             AgentRole::REVIEWER => self::reviewer(),
+            AgentRole::QA_EXECUTOR => self::qaExecutor(),
+            AgentRole::INTEGRATION_RELEASE => self::integrationRelease(),
+            AgentRole::SECURITY_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_DECISION_REQUIRED','BLOCKED']),
+            AgentRole::DATABASE_MIGRATION_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','HUMAN_DECISION_REQUIRED','BLOCKED']),
+            AgentRole::PERFORMANCE_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','PERFORMANCE_TEST_REQUIRED','BLOCKED']),
+            AgentRole::DEVOPS_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','HUMAN_DECISION_REQUIRED','BLOCKED']),
+            AgentRole::DOCUMENTATION_SPECIALIST => self::documentationSpecialist(),
+            AgentRole::API_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','HUMAN_DECISION_REQUIRED','BLOCKED']),
             AgentRole::QA => self::qa(),
         };
     }
@@ -22,6 +32,99 @@ final class EngineeringAgentSchemas
     private static function baseStatus(array $values): array
     {
         return ['type' => 'string', 'enum' => $values];
+    }
+
+    /** @return array<string,mixed> */
+    private static function productRequirements(): array
+    {
+        $schema = self::manager();
+        $schema['required'] = array_values(array_filter(
+            $schema['required'],
+            static fn (string $field): bool => $field !== 'decision',
+        ));
+        unset($schema['properties']['decision']);
+
+        return $schema;
+    }
+
+    /** @return array<string,mixed> */
+    private static function qaPlanner(): array
+    {
+        $schema = self::qa();
+        $schema['properties']['phase'] = ['type' => 'string', 'enum' => ['PLAN']];
+        $schema['properties']['status'] = self::baseStatus(['PLAN_READY','BLOCKED','HUMAN_TEST_REQUIRED']);
+        return $schema;
+    }
+
+    /** @return array<string,mixed> */
+    private static function qaExecutor(): array
+    {
+        $schema = self::qa();
+        $schema['properties']['phase'] = ['type' => 'string', 'enum' => ['EXECUTION']];
+        $schema['properties']['status'] = self::baseStatus(['PASS','FAIL','BLOCKED','HUMAN_TEST_REQUIRED','TESTS_UPDATED']);
+        return $schema;
+    }
+
+    /** @return array<string,mixed> */
+    private static function integrationRelease(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','summary','findings','required_actions','required_human_decisions','evidence'],
+            'properties' => [
+                'status' => self::baseStatus(['INTEGRATION_READY','INTEGRATION_READY_WITH_CONDITIONS','REWORK_REQUIRED','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_DECISION_REQUIRED','RELEASE_READY','NOT_READY','BLOCKED']),
+                'summary' => ['type' => 'string'],
+                'findings' => ['type' => 'array'],
+                'required_actions' => ['type' => 'array'],
+                'required_human_decisions' => ['type' => 'array'],
+                'evidence' => ['type' => 'object'],
+                'mode' => ['type' => ['string','null']],
+            ],
+            'additionalProperties' => false,
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private static function specialist(array $statuses): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['status','summary','findings','required_actions','required_human_decisions','evidence','reviewed_revision'],
+            'properties' => [
+                'status' => self::baseStatus($statuses),
+                'summary' => ['type' => 'string'],
+                'findings' => ['type' => 'array'],
+                'required_actions' => ['type' => 'array'],
+                'required_human_decisions' => ['type' => 'array'],
+                'evidence' => ['type' => 'object'],
+                'reviewed_revision' => ['type' => ['string','null']],
+            ],
+            'additionalProperties' => false,
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private static function documentationSpecialist(): array
+    {
+        $schema = self::specialist(['COMPLETED','REQUEST_CHANGES','BLOCKED']);
+        $schema['required'][] = 'changes';
+        $schema['required'][] = 'commit_message';
+        $schema['properties']['changes'] = [
+            'type' => 'array',
+            'maxItems' => 20,
+            'items' => [
+                'type' => 'object',
+                'required' => ['path','operation','content'],
+                'properties' => [
+                    'path' => ['type' => 'string', 'minLength' => 1],
+                    'operation' => self::baseStatus(['CREATE','UPDATE']),
+                    'content' => ['type' => 'string', 'maxLength' => 250000],
+                ],
+                'additionalProperties' => false,
+            ],
+        ];
+        $schema['properties']['commit_message'] = ['type' => 'string', 'minLength' => 1];
+        return $schema;
     }
 
     /** @return array<string,mixed> */
@@ -203,7 +306,8 @@ final class EngineeringAgentSchemas
             'properties' => [
                 'status' => self::baseStatus([
                     'COMPLETED','COMPLETED_WITH_LIMITATIONS','BLOCKED',
-                    'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED','FAILED',
+                    'ARCHITECTURE_REVIEW_REQUIRED','SPECIFICATION_REVIEW_REQUIRED','SECURITY_REVIEW_REQUIRED',
+                    'MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED','DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','FAILED',
                 ]),
                 'preflight' => [
                     'type' => 'object',
@@ -308,7 +412,11 @@ final class EngineeringAgentSchemas
             'type' => 'object',
             'required' => ['status','reviewed_revision','base_revision','pull_request','preflight','summary','issues','correctness','architecture','security','maintainability','database','api','tests','acceptance_criteria','ci','unresolved_blockers','unresolved_majors','recommendation'],
             'properties' => [
-                'status' => self::baseStatus(['APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED']),
+                'status' => self::baseStatus([
+                    'APPROVED','REQUEST_CHANGES','ARCHITECTURE_REVIEW_REQUIRED',
+                    'SECURITY_REVIEW_REQUIRED','MIGRATION_REVIEW_REQUIRED','PERFORMANCE_REVIEW_REQUIRED',
+                    'DEVOPS_REVIEW_REQUIRED','API_REVIEW_REQUIRED','HUMAN_REVIEW_REQUIRED'
+                ]),
                 'reviewed_revision' => ['type' => 'string', 'minLength' => 1],
                 'base_revision' => ['type' => 'string', 'minLength' => 1],
                 'pull_request' => ['type' => ['integer','string']],

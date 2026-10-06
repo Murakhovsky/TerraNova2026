@@ -11,9 +11,13 @@ final class PageDeliveryAgentContract
     public function roles(): array
     {
         return [
-            AgentRole::ENGINEERING_MANAGER->value => [
+            AgentRole::PRODUCT_REQUIREMENTS->value => [
                 'responsibility' => 'Convert Page Contract and product intent into a bounded Feature Specification and delivery plan.',
                 'must_preserve' => ['page_id','route','domain','capability','priority','primary_goal','human_gate'],
+            ],
+            AgentRole::QA_PLANNER->value => [
+                'responsibility' => 'Define independent verification for the Page Contract before architecture and implementation.',
+                'must_verify' => ['functional','browser','desktop','mobile','overflow','keyboard','accessibility','browser_errors','screenshots'],
             ],
             AgentRole::PRINCIPAL_ARCHITECT->value => [
                 'responsibility' => 'Select canonical Experience architecture without creating parallel frontend or Domain UI infrastructure.',
@@ -27,7 +31,7 @@ final class PageDeliveryAgentContract
                 'responsibility' => 'Review the exact implementation revision for correctness, architecture, security and Experience contract compliance.',
                 'must_verify' => ['page_contract','architecture','changed_files','ci_revision','blocking_findings'],
             ],
-            AgentRole::QA->value => [
+            AgentRole::QA_EXECUTOR->value => [
                 'responsibility' => 'Verify observable page behavior and required Experience quality gates on the reviewed revision.',
                 'must_verify' => ['functional','browser','desktop','mobile','overflow','keyboard','accessibility','browser_errors','screenshots'],
             ],
