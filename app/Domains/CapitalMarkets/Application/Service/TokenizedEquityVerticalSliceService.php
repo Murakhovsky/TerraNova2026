@@ -55,7 +55,10 @@ final readonly class TokenizedEquityVerticalSliceService
         $config=$this->config($options);
         $this->assertEconomicEquivalence($organizationId,$a->instrumentId,$b->instrumentId,$config,$now);
         $candidates=$this->detector->detectCrossVenue($marketPairId,$a,$b,$config,$now,$this->int($options,'ttl_ms',1000));
-        return $this->evaluate($organizationId,$candidates,$config,$options,$now,true);
+        return $this->evaluate(
+            $organizationId,$marketPairId,HypothesisCode::CrossVenueTokenizedEquityArbitrage,
+            $candidates,$config,$options,$now,true
+        );
     }
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
@@ -95,7 +98,10 @@ final readonly class TokenizedEquityVerticalSliceService
         );
 
         // H1 is research-capable now, but remains execution-closed until a real hedge venue is supplied.
-        return $this->evaluate($organizationId,$candidates,$config,$options,$now,false);
+        return $this->evaluate(
+            $organizationId,$marketPairId,HypothesisCode::TokenizedEquityDislocation,
+            $candidates,$config,$options,$now,false
+        );
     }
 
     /** @return list<array<string,mixed>> */
@@ -117,6 +123,8 @@ final readonly class TokenizedEquityVerticalSliceService
      */
     private function evaluate(
         string $organizationId,
+        string $marketPairId,
+        HypothesisCode $hypothesis,
         array $candidates,
         SpreadDetectorConfig $config,
         array $options,
@@ -184,10 +192,36 @@ final readonly class TokenizedEquityVerticalSliceService
             $out[]=$payload;
         }
 
+        $executableCount=count(array_filter($out,static fn(array $item):bool=>($item['status']??null)==='APPROVED'));
+        $bestEdge=null;$bestPnl=null;
+        foreach($out as $item){
+            $edge=(string)($item['expected_net_edge_bps']??'0');
+            $pnl=(string)($item['expected_pnl']??'0');
+            if($bestEdge===null||Decimal::fromString($edge)->compareTo(Decimal::fromString($bestEdge))>0)$bestEdge=$edge;
+            if($bestPnl===null||Decimal::fromString($pnl)->compareTo(Decimal::fromString($bestPnl))>0)$bestPnl=$pnl;
+        }
+        $observation=[
+            'id'=>'cm_obs_'.substr(hash('sha256',$organizationId.'|'.$hypothesis->value.'|'.$marketPairId.'|'.$now->format('U.u')),0,40),
+            'hypothesis'=>$hypothesis->value,
+            'market_pair_id'=>$marketPairId,
+            'status'=>$candidates===[]?'NO_EDGE':($executableCount>0?'EXECUTABLE_EDGE':'DETECTED_NOT_EXECUTABLE'),
+            'candidate_count'=>count($candidates),
+            'opportunity_count'=>count($out),
+            'executable_count'=>$executableCount,
+            'best_net_edge_bps'=>$bestEdge,
+            'best_expected_pnl'=>$bestPnl,
+            'config_version'=>$config->version,
+            'observed_at'=>$now->format(DATE_ATOM),
+        ];
+        $this->repository->saveHypothesisObservation(
+            $organizationId,$observation['id'],$hypothesis->value,$observation['status'],$observation
+        );
+
         return [
-            'hypothesis'=>$candidates===[]?null:$candidates[0]->hypothesis->value,
+            'hypothesis'=>$hypothesis->value,
             'candidate_count'=>count($candidates),
             'opportunities'=>$out,
+            'research_observation'=>$observation,
         ];
     }
 
