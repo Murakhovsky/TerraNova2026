@@ -131,7 +131,7 @@ final readonly class TokenizedEquityPaperExecutionService
                 [
                     'buy_price'=>$buy['price']->value(),'sell_price'=>$sell['price']->value(),
                     'buy_fee'=>$buyFee->value(),'sell_fee'=>$sellFee->value(),
-                    'realized_pnl'=>$preflightNet->value(),
+                    'preflight_net'=>$preflightNet->value(),
                 ]
             );
         }
