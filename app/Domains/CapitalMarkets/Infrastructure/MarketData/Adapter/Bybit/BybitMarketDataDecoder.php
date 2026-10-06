@@ -58,21 +58,16 @@ final readonly class BybitMarketDataDecoder implements MarketDataDecoderInterfac
                 MarketSession::Unknown,
                 ReferenceType::ProviderReference,
             ),
-            'bybit.spot.orderbook.snapshot'=>new DecodedMarketEvent(
-                MarketEventType::OrderBookSnapshot,
-                $event->externalInstrument,
-                $timestamp,
-                $event->sequence,
-                [
-                    'bids'=>$this->orderBooks->parse($body,$event->externalInstrument)['bids'],
-                    'asks'=>$this->orderBooks->parse($body,$event->externalInstrument)['asks'],
-                ],
-                $event->mode,
-                $marketStatus,
-                MarketSession::Unknown,
-                ReferenceType::ProviderReference,
-            ),
+            'bybit.spot.orderbook.snapshot'=>$this->book($event,$body,$timestamp,$marketStatus),
             default=>throw new InvalidArgumentException('Unsupported Bybit raw event type: '.$event->eventType),
         };
+    private function book(RawMarketEvent $event,string $body,\DateTimeImmutable $timestamp,MarketStatus $status):DecodedMarketEvent
+    {
+        $book=$this->orderBooks->parse($body,$event->externalInstrument);
+        return new DecodedMarketEvent(
+            MarketEventType::OrderBookSnapshot,$event->externalInstrument,$timestamp,$event->sequence,
+            ['bids'=>$book['bids'],'asks'=>$book['asks']],
+            $event->mode,$status,MarketSession::Unknown,ReferenceType::ProviderReference,
+        );
     }
 }
