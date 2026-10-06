@@ -224,7 +224,7 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
             'created_at'=>$record['created_at']??gmdate('Y-m-d H:i:s'),
         ];
 
-        foreach(['hypothesis_id','experiment_id','dataset_id','strategy_id','strategy_version_id','version','status','snapshot_hash','partition_name','reproducibility_fingerprint','composite_score','weight_version','reason','knowledge_type'] as $column){
+        foreach(['hypothesis_id','experiment_id','dataset_id','strategy_id','strategy_version_id','version','revision','status','snapshot_hash','partition_name','reproducibility_fingerprint','composite_score','weight_version','reason','knowledge_type'] as $column){
             if($column===$idKey||!array_key_exists($column,$record))continue;
             $columns[]=$column;
             $params[$column]=$record[$column];
