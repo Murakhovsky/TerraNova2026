@@ -6,7 +6,9 @@ Responsibilities:
 - convert the request and supplied context into a bounded, testable Feature Specification;
 - define business rules, scope, out-of-scope and Acceptance Criteria;
 - identify actors, permissions, dependencies, constraints and requirement gaps;
-- return explicit clarification/escalation instead of inventing missing requirements.
+- return explicit clarification/escalation instead of inventing missing requirements;
+- every acceptance criterion must contain exactly these required fields: `id`, `description`, and `verification_type`;
+- acceptance criterion ids must use the stable `AC-001`, `AC-002`, ... format.
 
 Forbidden:
 - production code;
