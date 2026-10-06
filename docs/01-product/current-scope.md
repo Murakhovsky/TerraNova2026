@@ -31,7 +31,7 @@ kind: product
 
 ## Capital Markets: фундамент і ринкова аналітика
 
-Capital Markets `0.4.0` має три активні шари: структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE` та перший фінансовий vertical slice `CM-TOKENIZED-EQUITY`.
+Capital Markets `0.5.0` має три активні шари: структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE` та перший фінансовий vertical slice `CM-TOKENIZED-EQUITY`.
 
 Канонічний market-data flow:
 
@@ -57,7 +57,7 @@ Bybit Spot REST trading-source adapter і Massive U.S. Stocks REST reference ada
 
 Operator Market Data API/UI уже реалізований: sources створюються disabled, окремо enable/disable, subscriptions керуються по instrument/data type, manual poll показує source health і current state.
 
-Tokenized Equity comparison H1/H2 уже реалізований поверх trusted MarketState: economic relationship gating, quote normalization, explicit costs, deterministic risk, paper portfolio, pre-funded venue balances, two-leg H2 paper execution, asset-aware ledger та realized paper P&L. H1 залишається research-only без executable hedge venue. WebSocket streaming, production replay/backfill orchestration, Live Trading та Auto Execution залишаються наступними promotion gates.
+Tokenized Equity comparison H1/H2 уже реалізований поверх trusted MarketState: economic relationship gating, quote normalization, explicit costs, deterministic risk, paper portfolio, pre-funded venue balances, two-leg H2 paper execution, asset-aware ledger та realized paper P&L. V0.5 додає hypothesis observation journal, Edge Funnel `observed → detected → executable → realized` і deterministic sample-gated research verdict для окремого H1/H2 доказового циклу. H1 залишається research-only без executable hedge venue. WebSocket streaming, production replay/backfill orchestration, Live Trading та Auto Execution залишаються наступними promotion gates.
 
 ## Growth: інтелект можливостей
 
