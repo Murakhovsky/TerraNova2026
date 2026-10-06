@@ -472,7 +472,16 @@
                                     data-engineering-live-duration-finish="{{ run.finished_at|default('') }}"
                                 >{{ summary.run_durations[run.id].label|default('—') }}</strong>
                             </td>
-                            <td>{{ run.started_at|default('') }}<div class="engineering-muted">{{ run.finished_at|default('running') }}</div></td>
+                            <td>
+                                <span data-engineering-live-timestamp="{{ run.started_at|default('') }}">{{ run.started_at|default('') }}</span>
+                                <div class="engineering-muted">
+                                    {% if run.finished_at|default('') %}
+                                        <span data-engineering-live-timestamp="{{ run.finished_at }}">{{ run.finished_at }}</span>
+                                    {% else %}
+                                        виконується
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td>
                                 <details class="engineering-details">
                                     <summary>Деталі</summary>

@@ -10,6 +10,7 @@ $catalog = (string) file_get_contents($root.'/app/Infrastructure/Llm/OpenAiModel
 $usage = (string) file_get_contents($root.'/app/Kernel/Llm/LlmUsageRecord.php');
 $repository = (string) file_get_contents($root.'/app/Infrastructure/Llm/MysqlLlmGovernanceRepository.php');
 $migration = (string) file_get_contents($root.'/symfony/migrations/Version20261005124000.php');
+$costSourceMigration = (string) file_get_contents($root.'/symfony/migrations/Version20261006122500.php');
 $runner = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/EngineeringAgentRunner.php');
 $runStore = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php');
 $readModel = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Observability/DoctrineEngineeringObservabilityReadModel.php');
@@ -34,6 +35,9 @@ foreach (['cachedInputTokens','reasoningTokens','costSource','pricingVersion','p
 }
 foreach (['cached_input_tokens','reasoning_tokens','cost_source','pricing_version','provider_request_id'] as $needle) {
     if (!str_contains($repository.$migration.$readModel, $needle)) throw new RuntimeException('Detailed LLM persistence/read model missing '.$needle);
+}
+if (!str_contains($costSourceMigration, 'MODIFY cost_source VARCHAR(128) NULL')) {
+    throw new RuntimeException('LLM cost_source column is too narrow for calculated provenance labels.');
 }
 foreach (['runCorrelationId', "':agent:'"] as $needle) {
     if (!str_contains($runner, $needle) || !str_contains($runStore, $needle)) {

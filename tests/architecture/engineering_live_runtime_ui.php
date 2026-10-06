@@ -52,6 +52,8 @@ foreach ([
     'data-engineering-live-duration-start',
     'data-engineering-live-duration-stop',
     'data-engineering-live-timestamp',
+    'data-engineering-live-timestamp="{{ run.started_at|default(\'\') }}"',
+    'data-engineering-live-timestamp="{{ run.finished_at }}"',
     'data-engineering-live-interval-value="10000"',
     'автооновлення кожні 10 с',
     'LLM ще не запускався',
