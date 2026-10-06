@@ -80,6 +80,9 @@ foreach ([
 if (str_contains($continue, "\$this->workflows->touchRuntime(\$workflowId);\n        \$workflow = \$this->workflows->get(\$workflowId);")) {
     throw new RuntimeException('Engineering continue path still emits a false recovery heartbeat before real work begins.');
 }
+if (!str_contains($continue, "\$next->type !== WorkflowDirectiveType::STOP")) {
+    throw new RuntimeException('Engineering continue path still clears explicit runtime failures after STOP directives.');
+}
 
 if (!str_contains($architectStage, 'repository.revision_unavailable') || !str_contains($architectStage, "'human_decision_required' => false")) {
     throw new RuntimeException('Architect repository infrastructure failure is not classified as runtime-owned.');
