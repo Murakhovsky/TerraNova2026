@@ -39,10 +39,10 @@ final readonly class MarketState extends ValueObject
         }
         if($this->volume?->isNegative())throw new InvalidArgumentException('Market state volume cannot be negative.');
         foreach([
-            MarketEventType::FundingRate=>$this->fundingRate,
-            MarketEventType::OpenInterest=>$this->openInterest,
-            MarketEventType::MarkPrice=>$this->markPrice,
-            MarketEventType::IndexPrice=>$this->indexPrice,
+            MarketEventType::FundingRate->value=>$this->fundingRate,
+            MarketEventType::OpenInterest->value=>$this->openInterest,
+            MarketEventType::MarkPrice->value=>$this->markPrice,
+            MarketEventType::IndexPrice->value=>$this->indexPrice,
         ] as $type=>$observation){
             if($observation!==null&&$observation->eventType()->value!==$type){
                 throw new InvalidArgumentException('Market state scalar observation type mismatch.');
