@@ -204,6 +204,7 @@ final readonly class TokenizedEquityVerticalSliceService
                 $this->decimal($options,'max_trade_notional',$candidate->capitalCapacity),
                 $this->int($options,'max_risk_score',70),$now,$hedgeAvailable,
                 $this->bool($options,'kill_switch',false),
+                $config->minimumExecutionProbability,
             );
 
             $finalStatus=$passesEconomics&&$risk->approved()?OpportunityStatus::Approved:OpportunityStatus::Rejected;
@@ -390,6 +391,7 @@ final readonly class TokenizedEquityVerticalSliceService
             $this->decimal($options,'maximum_slippage_bps',Decimal::fromString('50')),
             $this->int($options,'minimum_opportunity_ttl_ms',500),
             $this->decimal($options,'economic_equivalence_threshold',Decimal::fromString('0.8')),
+            $this->decimal($options,'minimum_execution_probability',Decimal::fromString('0')),
         );
     }
 
