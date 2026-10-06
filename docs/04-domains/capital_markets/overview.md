@@ -9,7 +9,7 @@ contract: domain-v1
 
 # Огляд домену Capital Markets
 
-Capital Markets `0.7.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
+Capital Markets `0.8.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
 
 ## Призначення
 
@@ -33,14 +33,14 @@ MarketState / ReferenceMarketState
 
 ```text
 id: capital_markets
-version: 0.7.0
-runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 research evidence/paper
+version: 0.8.0
+runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto H4/H5/H6 + Research & Strategy Lab
 persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
 data modes: LIVE / DELAYED / HISTORICAL / REPLAY
 provider adapters: Bybit Spot REST + Massive Stocks REST
 provider polling: CLI + operator API/UI
-operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities
+operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities + /capital-markets/crypto-spot-perpetual + /capital-markets/research
 streaming: disabled / next wave
 execution: guarded H1/H2 paper; H1 requires explicit executable hedge venue; live disabled
 ```
@@ -64,3 +64,20 @@ Market Intelligence сам по собі не створює trading decisions. 
 - [Tokenized Equity vertical slice](./tokenized-equity-vertical-slice.md)
 - [Модулі та capabilities](../../12-reference/module-capabilities.md)
 - [Дозволи та capabilities](../../12-reference/permissions-capabilities.md)
+
+
+## Research & Strategy Lab
+
+Version 0.8.0 adds the governed Research & Strategy Lab:
+
+- formal ResearchHypothesis, ResearchExperiment, ResearchDataset and ResearchResult lineage;
+- immutable StrategyVersion;
+- historical replay and backtest orchestration;
+- strict TRAIN / VALIDATION / OUT_OF_SAMPLE separation;
+- walk-forward analysis and overfit warnings;
+- deterministic StrategyScorecard and promotion gates;
+- demotion policy, rejected-hypothesis memory and reusable ResearchKnowledge;
+- Research Agent assistance with draft-only authority;
+- operator workspace at `/capital-markets/research`.
+
+The Research Agent cannot enable live trading, change risk limits, mutate completed results or bypass deterministic promotion gates. Historical H4/H5/H6 replay reuses the same RelativeValue economics and evaluator stack used by the production paper vertical slice.
