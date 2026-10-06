@@ -64,7 +64,7 @@ foreach($iterator as $file){
 }
 
 $adapter=(string)file_get_contents($contracts.'/MarketDataAdapterInterface.php');
-foreach(['getSource()','getCapabilities()','supports(','resolveInstrument(','getSnapshot(','getHealth()'] as $needle){
+foreach(['getSource()','getCapabilities()','supports(','resolveInstrument(','getSnapshot(','getHealth('] as $needle){
     if(!str_contains($adapter,$needle))throw new RuntimeException('MarketDataAdapter contract missing: '.$needle);
 }
 
