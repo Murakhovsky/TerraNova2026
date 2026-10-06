@@ -1932,6 +1932,16 @@ services:
   Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelativeValueResearchRepository
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlResearchLabRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlResearchLabRepository
+
+  Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
+  Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
+
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
   Domains\CapitalMarkets\Domain\Service\FundingCashflowCalculator: ~
