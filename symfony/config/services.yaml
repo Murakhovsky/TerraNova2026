@@ -1901,6 +1901,8 @@ services:
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquityRiskEngine: ~
 
+  Domains\CapitalMarkets\Application\Service\TrustedConversionRateResolver: ~
+
   Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
 
