@@ -36,6 +36,9 @@ foreach ([$coordinator, $progression, $continue] as $runtime) {
         throw new RuntimeException('New Feature runtime still routes legacy QA.');
     }
 }
+if (!str_contains($runner, 'Engineering Manager is a deterministic orchestration role')) {
+    throw new RuntimeException('Direct Manager LLM execution is not hard-blocked.');
+}
 if (!str_contains($runner, 'Legacy QA role is read-only compatibility state')) {
     throw new RuntimeException('New legacy QA execution is not hard-blocked.');
 }
