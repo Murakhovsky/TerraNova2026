@@ -1981,6 +1981,14 @@ services:
       $walkForward: '@Domains\CapitalMarkets\Domain\Research\WalkForwardEngine'
       $budget: '@Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy'
 
+
+  Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService:
+    arguments:
+      $runtime: '@Kernel\Agent\Service\AgentRuntime'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $tools: '@Kernel\Tool\Contract\ToolRuntimeInterface'
+
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
   Domains\CapitalMarkets\Domain\Service\FundingCashflowCalculator: ~
