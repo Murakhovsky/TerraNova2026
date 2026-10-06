@@ -70,19 +70,39 @@ final readonly class MysqlTokenizedEquityScannerRepository implements TokenizedE
         return is_array($row)?$this->run($row):null;
     }
 
+    public function claimRun(
+        string $organizationId,string $runId,string $idempotencyKey,string $trigger,string $startedAt
+    ):bool{
+        try{
+            $this->connection->prepare(
+                'INSERT INTO tn_capital_market_scan_runs
+                 (organization_id,run_id,idempotency_key,trigger,status,target_count,completed_count,failed_count,
+                  result_json,started_at,completed_at)
+                 VALUES (:org,:run,:key,:trigger,\'RUNNING\',0,0,0,JSON_OBJECT(),:started,NULL)'
+            )->execute([
+                'org'=>$organizationId,'run'=>$runId,'key'=>$idempotencyKey,'trigger'=>$trigger,
+                'started'=>$this->mysqlDate($startedAt),
+            ]);
+            return true;
+        }catch(\PDOException $error){
+            if((string)$error->getCode()==='23000')return false;
+            throw $error;
+        }
+    }
+
     public function saveRun(
         string $organizationId,string $runId,string $idempotencyKey,string $trigger,string $status,
         int $targetCount,int $completedCount,int $failedCount,array $result,string $startedAt,string $completedAt
     ):void{
         $this->connection->prepare(
-            'INSERT INTO tn_capital_market_scan_runs
-             (organization_id,run_id,idempotency_key,trigger,status,target_count,completed_count,failed_count,
-              result_json,started_at,completed_at)
-             VALUES (:org,:run,:key,:trigger,:status,:targets,:completed,:failed,:result,:started,:finished)'
+            'UPDATE tn_capital_market_scan_runs
+             SET status=:status,target_count=:targets,completed_count=:completed,failed_count=:failed,
+                 result_json=:result,completed_at=:finished
+             WHERE organization_id=:org AND run_id=:run AND idempotency_key=:key'
         )->execute([
             'org'=>$organizationId,'run'=>$runId,'key'=>$idempotencyKey,'trigger'=>$trigger,'status'=>$status,
             'targets'=>$targetCount,'completed'=>$completedCount,'failed'=>$failedCount,'result'=>$this->json($result),
-            'started'=>$this->mysqlDate($startedAt),'finished'=>$this->mysqlDate($completedAt),
+            'finished'=>$this->mysqlDate($completedAt),
         ]);
     }
 
