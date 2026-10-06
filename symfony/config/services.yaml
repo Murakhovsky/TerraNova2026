@@ -2007,7 +2007,14 @@ services:
   Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalReplayService: ~
 
 
-  Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
+  Domains\CapitalMarkets\Infrastructure\Research\ResearchAgentContextBuilder:
+    arguments:
+      $research: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $relativeValue: '@Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface'
+
+  Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule:
+    arguments:
+      $researchAgentContext: '@Domains\CapitalMarkets\Infrastructure\Research\ResearchAgentContextBuilder'
 
   App\Web\CapitalMarkets\CapitalMarketsPageController:
     public: true
@@ -2018,6 +2025,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Http\Api\V1\Controller\CapitalMarketsResearchLabController:
     public: true
     tags: ['controller.service_arguments']
 
