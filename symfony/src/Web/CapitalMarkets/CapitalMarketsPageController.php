@@ -21,6 +21,7 @@ use Domains\CapitalMarkets\Application\Query\GetInstrument;
 use Domains\CapitalMarkets\Application\Query\ListInstruments;
 use Domains\CapitalMarkets\Application\Query\ListRelationships;
 use Domains\CapitalMarkets\Application\Query\ListVenues;
+use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
@@ -46,6 +47,7 @@ final readonly class CapitalMarketsPageController
         private CapitalMarketsAccessControlInterface $access,
         private CapitalMarketsFeatureGate $features,
         private CapitalMarketsFoundationBoundary $capitalMarkets,
+        private MarketDataAdministrationService $marketData,
         private OperationsSectionReader $operations,
     ){}
 
@@ -133,6 +135,93 @@ final readonly class CapitalMarketsPageController
                     'instruments'=>$this->capitalMarkets->listInstruments(new ListInstruments($org,['status'=>'ACTIVE'],500)),
                 ]];
             }
+        );
+    }
+
+    public function marketData(Request $request):Response
+    {
+        return $this->page(
+            $request,'Capital Markets Market Data','capital-markets-market-data','market_data',
+            CapitalMarketsCapability::MarketDataView,CapitalMarketsFeatureFlag::MarketData,
+            function(TenantContext $tenant):array{
+                $org=$tenant->organizationId()->value();
+                return ['workspace'=>array_replace(
+                    $this->marketData->dashboard($org),
+                    [
+                        'instruments'=>$this->capitalMarkets->listInstruments(new ListInstruments($org,['status'=>'ACTIVE'],500)),
+                        'venues'=>$this->capitalMarkets->listVenues(new ListVenues($org,250)),
+                    ]
+                )];
+            }
+        );
+    }
+
+    public function createMarketDataSource(Request $request):Response
+    {
+        return $this->mutate(
+            $request,CapitalMarketsCapability::MarketDataSourceManage,CapitalMarketsFeatureFlag::MarketData,
+            function(TenantContext $tenant,int $actor,array $input,string $correlation):string{
+                $this->marketData->createSource(
+                    $tenant->organizationId()->value(),$actor,$correlation,$input
+                );
+                return '/capital-markets/market-data?saved=1';
+            },'/capital-markets/market-data'
+        );
+    }
+
+    public function enableMarketDataSource(Request $request,string $id):Response
+    {
+        return $this->mutate(
+            $request,CapitalMarketsCapability::MarketDataSourceManage,CapitalMarketsFeatureFlag::MarketData,
+            function(TenantContext $tenant,int $actor,array $input,string $correlation)use($id):string{
+                $this->marketData->setSourceEnabled(
+                    $tenant->organizationId()->value(),$actor,$correlation,$id,true
+                );
+                return '/capital-markets/market-data?saved=1';
+            },'/capital-markets/market-data'
+        );
+    }
+
+    public function disableMarketDataSource(Request $request,string $id):Response
+    {
+        return $this->mutate(
+            $request,CapitalMarketsCapability::MarketDataSourceManage,CapitalMarketsFeatureFlag::MarketData,
+            function(TenantContext $tenant,int $actor,array $input,string $correlation)use($id):string{
+                $this->marketData->setSourceEnabled(
+                    $tenant->organizationId()->value(),$actor,$correlation,$id,false
+                );
+                return '/capital-markets/market-data?saved=1';
+            },'/capital-markets/market-data'
+        );
+    }
+
+    public function createMarketDataSubscription(Request $request,string $id):Response
+    {
+        return $this->mutate(
+            $request,CapitalMarketsCapability::MarketDataManage,CapitalMarketsFeatureFlag::MarketData,
+            function(TenantContext $tenant,int $actor,array $input,string $correlation)use($id):string{
+                $this->marketData->createSubscription(
+                    $tenant->organizationId()->value(),$actor,$correlation,$id,$input
+                );
+                return '/capital-markets/market-data?saved=1';
+            },'/capital-markets/market-data'
+        );
+    }
+
+    public function pollMarketDataSource(Request $request,string $id):Response
+    {
+        return $this->mutate(
+            $request,CapitalMarketsCapability::MarketDataManage,CapitalMarketsFeatureFlag::MarketData,
+            function(TenantContext $tenant,int $actor,array $input,string $correlation)use($id):string{
+                $result=$this->marketData->poll(
+                    $tenant->organizationId()->value(),$actor,$correlation,$id,
+                    isset($input['limit'])?(int)$input['limit']:100
+                );
+                if(($result['status']??null)==='FAILED'){
+                    return '/capital-markets/market-data?error=poll_failed';
+                }
+                return '/capital-markets/market-data?saved=1';
+            },'/capital-markets/market-data'
         );
     }
 
@@ -305,6 +394,8 @@ final readonly class CapitalMarketsPageController
             'canManageInstruments'=>$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage),
             'canManageRelationships'=>$this->allowed($org,$actor,CapitalMarketsCapability::RelationshipManage),
             'canManageVenues'=>$this->allowed($org,$actor,CapitalMarketsCapability::VenueManage),
+            'canManageMarketData'=>$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage),
+            'canManageMarketDataSources'=>$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataSourceManage),
         ],$extra);
 
         $context=new WebExtensionContext($org,$tenant->role()->value(),'workspace','capital-markets',$active);

@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id'=>'capital_markets',
     'name'=>'Capital Markets',
-    'version'=>'0.2.0',
-    'schema_version'=>'0.2.0',
+    'version'=>'0.3.0',
+    'schema_version'=>'0.3.0',
     'kernel_constraint'=>'>=0.11.0 <0.12.0',
-    'description'=>'Autonomous Capital Markets bounded context for instrument identity, economic relationships and venue registry. Foundation has no market-data or trading execution runtime.',
+    'description'=>'Autonomous Capital Markets bounded context with instrument/venue foundation and provider-neutral Market Intelligence runtime. Trading execution remains disabled and out of scope.',
     'icon'=>'chart-candlestick',
     'dependencies'=>[],
     'enabled_by_default'=>false,
@@ -25,6 +25,9 @@ return [
         'cross_domain_contracts'=>[],
         'migration_files'=>[
             'app/migrations/20261005_000124_capital_markets_foundation.sql',
+            'app/migrations/20261006_000125_capital_markets_market_sources.sql',
+            'app/migrations/20261006_000126_capital_markets_market_events.sql',
+            'app/migrations/20261006_000127_capital_markets_market_state.sql',
         ],
         'capabilities'=>[
             'capital_markets.view',
@@ -36,6 +39,13 @@ return [
             'capital_markets.venue.view',
             'capital_markets.venue.manage',
             'capital_markets.audit.view',
+            'capital_markets.market_data.view',
+            'capital_markets.market_data.manage',
+            'capital_markets.market_data.source.view',
+            'capital_markets.market_data.source.manage',
+            'capital_markets.market_data.quality.view',
+            'capital_markets.market_data.history.view',
+            'capital_markets.market_data.replay.manage',
         ],
     ],
 ];

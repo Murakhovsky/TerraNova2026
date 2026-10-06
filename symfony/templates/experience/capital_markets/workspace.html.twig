@@ -6,15 +6,16 @@
 <div class="cos-page__stack cos-capital-markets" data-csrf="{{ csrfToken }}">
   <header class="cos-growth-header">
     <div>
-      <small>Capital Markets · Foundation</small>
+      <small>Capital Markets · Foundation + Market Intelligence</small>
       <h1>{{ pageTitle }}</h1>
-      <p>Instrument identity, economic relationships and venue registry. No market data or trading execution is connected.</p>
+      <p>Canonical instruments, economic relationships, venues and trusted market data. Trading execution remains disabled.</p>
     </div>
     <nav class="cos-growth-actions" aria-label="Capital Markets navigation">
       <a class="btn btn-outline-secondary" href="/capital-markets">Overview</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/instruments">Instruments</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/relationships">Relationships</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/venues">Venues</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/market-data">Market Data</a>
     </nav>
   </header>
 
@@ -38,13 +39,13 @@
       <twig:CosMetric label="Instruments" value="{{ w.instrument_count|default(0) }}" hint="canonical identities" />
       <twig:CosMetric label="Relationships" value="{{ w.relationship_count|default(0) }}" hint="directed economic links" />
       <twig:CosMetric label="Venues" value="{{ w.venue_count|default(0) }}" hint="registered venues" />
-      <twig:CosMetric label="Stage" value="Foundation" hint="structural model only" />
+      <twig:CosMetric label="Stage" value="Market Intelligence" hint="read-only market visibility" />
     </section>
 
     <section class="cos-panel">
       <h2>System status</h2>
-      <p><strong>Foundation ready.</strong> The domain understands instruments, relationships and venues structurally.</p>
-      <p>Market data is not connected yet. The domain foundation is ready for Market Intelligence integration.</p>
+      <p><strong>Foundation + Market Intelligence ready.</strong> The domain understands instruments, relationships, venues and trusted market-state semantics.</p>
+      <p>External provider sources remain tenant-configured and explicitly gated. Paper Trading, Live Trading and Auto Execution remain disabled.</p>
     </section>
 
     <section class="cos-panel">
@@ -258,6 +259,216 @@
           <tbody>
           {% for row in w.audit %}
             <tr><td>{{ row.created_at|default('—') }}</td><td>{{ row.actor_id|default('—') }}</td><td>{{ row.correlation_id|default('—') }}</td><td>{{ row.category|default('platform_activity') }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+  {% elseif cmView == 'market_data' %}
+    <section class="cos-kpi-strip" aria-label="Capital Markets market data state">
+      <twig:CosMetric label="Sources" value="{{ w.sources|default([])|length }}" hint="configured providers" />
+      <twig:CosMetric label="Trading states" value="{{ w.states|default([])|length }}" hint="venue + instrument" />
+      <twig:CosMetric label="Reference states" value="{{ w.reference_states|default([])|length }}" hint="source + instrument" />
+      <twig:CosMetric label="Execution" value="Disabled" hint="read-only market intelligence" />
+    </section>
+
+    {% if canManageMarketDataSources %}
+      <section class="cos-panel">
+        <h2>Create market-data source</h2>
+        <p>Sources are created <strong>disabled</strong>. Enable them only after mappings, credentials and provider flags are ready.</p>
+        <form method="post" action="/capital-markets/market-data/sources" class="row g-2">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+          <div class="col-md-3"><input class="form-control" name="source_id" placeholder="source:bybit-xstocks" required></div>
+          <div class="col-md-3">
+            <select class="form-select" name="adapter_type" required>
+              <option value="">Adapter</option>
+              {% for adapter in w.adapter_types|default([]) %}
+                <option value="{{ adapter }}">{{ adapter }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" name="venue_id">
+              <option value="">No venue / reference source</option>
+              {% for venue in w.venues|default([]) %}
+                <option value="{{ venue.id }}">{{ venue.code }} · {{ venue.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3"><input class="form-control" name="credentials_reference" placeholder="env://CM_MASSIVE_API (optional)"></div>
+
+          <div class="col-md-4">
+            <label class="me-3"><input type="checkbox" name="roles[]" value="TRADING_SOURCE"> Trading source</label>
+            <label><input type="checkbox" name="roles[]" value="REFERENCE_SOURCE"> Reference source</label>
+          </div>
+          <div class="col-md-2">
+            <select class="form-select" name="data_mode">
+              <option value="">Data mode</option>
+              <option value="LIVE">LIVE</option>
+              <option value="DELAYED">DELAYED</option>
+            </select>
+          </div>
+          <div class="col-md-2"><input class="form-control" type="number" min="0" max="10000" name="priority" value="100" placeholder="Priority"></div>
+          <div class="col-md-2"><input class="form-control" type="number" min="1" name="request_budget" value="60" placeholder="Requests"></div>
+          <div class="col-md-2"><input class="form-control" type="number" min="1" name="window_seconds" value="60" placeholder="Window sec"></div>
+          <div class="col-md-8"><input class="form-control" name="license_profile" value="UNSPECIFIED" placeholder="License profile"></div>
+          <div class="col-md-4"><button class="btn btn-primary w-100">Create disabled source</button></div>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="cos-page__stack">
+      <h2>Sources and health</h2>
+      {% if w.sources|default([]) is empty %}
+        <section class="cos-panel"><p>No market-data sources configured.</p></section>
+      {% endif %}
+      {% for source in w.sources|default([]) %}
+        <section class="cos-panel">
+          <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+              <small>{{ source.adapter_type }}</small>
+              <h3>{{ source.id }}</h3>
+              <p>
+                {% if source.enabled %}
+                  <span class="badge text-bg-success">ENABLED</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">DISABLED</span>
+                {% endif %}
+                {% for role in source.roles %}<span class="badge text-bg-light me-1">{{ role }}</span>{% endfor %}
+              </p>
+              <p>Venue: <strong>{{ source.venue_id|default('reference / none') }}</strong> · Priority: {{ source.priority }} · License: {{ source.license_profile }}</p>
+              <p>Capabilities: {% if source.capabilities is empty %}—{% else %}{{ source.capabilities|join(', ') }}{% endif %}</p>
+              {% if source.credentials_configured %}<p>Credentials: <strong>configured</strong> via Platform Credential Vault.</p>{% endif %}
+            </div>
+            {% if canManageMarketDataSources or canManageMarketData %}
+              <div class="d-flex gap-2 flex-wrap">
+                {% if canManageMarketDataSources %}
+                  {% if source.enabled %}
+                    <form method="post" action="/capital-markets/market-data/sources/{{ source.id|url_encode }}/disable">
+                      <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                      <button class="btn btn-outline-danger">Disable</button>
+                    </form>
+                  {% else %}
+                    <form method="post" action="/capital-markets/market-data/sources/{{ source.id|url_encode }}/enable">
+                      <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                      <button class="btn btn-outline-success">Enable</button>
+                    </form>
+                  {% endif %}
+                {% endif %}
+                {% if canManageMarketData %}
+                  <form method="post" action="/capital-markets/market-data/sources/{{ source.id|url_encode }}/poll">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="limit" value="100">
+                    <button class="btn btn-primary" {% if not source.enabled %}disabled{% endif %}>Poll now</button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+
+          <hr>
+          <h4>Health</h4>
+          {% if source.health %}
+            <p>
+              State: <strong>{{ source.health.connection_state }}</strong> ·
+              Last event: {{ source.health.last_event_at|default('—') }} ·
+              Failures: {{ source.health.failure_count }} ·
+              Errors: {{ source.health.error_count }} ·
+              Queue lag: {{ source.health.queue_lag }}
+            </p>
+            {% if source.health.last_error %}<div class="alert alert-warning">{{ source.health.last_error }}</div>{% endif %}
+          {% else %}
+            <p>No runtime health yet. The source has not produced a successful or failed poll.</p>
+          {% endif %}
+
+          <h4>Subscriptions</h4>
+          {% if source.subscriptions is empty %}
+            <p>No subscriptions configured.</p>
+          {% else %}
+            <div class="table-responsive"><table class="table">
+              <thead><tr><th>Instrument</th><th>Data type</th><th>Status</th><th>Last event</th></tr></thead>
+              <tbody>
+              {% for subscription in source.subscriptions %}
+                <tr>
+                  <td>{{ subscription.instrument_id }}</td>
+                  <td>{{ subscription.data_type }}</td>
+                  <td>{{ subscription.status }}</td>
+                  <td>{{ subscription.last_event_at|default('—') }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table></div>
+          {% endif %}
+
+          {% if canManageMarketData %}
+            <form method="post" action="/capital-markets/market-data/sources/{{ source.id|url_encode }}/subscriptions" class="row g-2">
+              <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+              <div class="col-md-7">
+                <select class="form-select" name="instrument_id" required>
+                  <option value="">Instrument</option>
+                  {% for instrument in w.instruments|default([]) %}
+                    <option value="{{ instrument.id }}">{{ instrument.symbol }} · {{ instrument.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" name="data_type" required>
+                  <option value="BBO">BBO</option>
+                  <option value="VOLUME">VOLUME</option>
+                </select>
+              </div>
+              <div class="col-md-2"><button class="btn btn-outline-primary w-100">Subscribe</button></div>
+            </form>
+          {% endif %}
+        </section>
+      {% endfor %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Current trading MarketState</h2>
+      {% if w.states|default([]) is empty %}
+        <p>No trading state yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Venue</th><th>Instrument</th><th>Mid</th><th>Spread bps</th><th>Trust</th><th>Updated</th></tr></thead>
+          <tbody>
+          {% for state in w.states %}
+            <tr>
+              <td>{{ state.venue_id }}</td>
+              <td>{{ state.instrument_id }}</td>
+              <td>{{ state.mid_price|default('—') }}</td>
+              <td>{{ state.spread_bps|default('—') }}</td>
+              <td><strong>{{ state.trust_status }}</strong></td>
+              <td>{{ state.updated_at }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Reference MarketState</h2>
+      {% if w.reference_states|default([]) is empty %}
+        <p>No reference state yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Source</th><th>Instrument</th><th>Session</th><th>Reference</th><th>Trust</th><th>Updated</th></tr></thead>
+          <tbody>
+          {% for state in w.reference_states %}
+            <tr>
+              <td>{{ state.source_id }}</td>
+              <td>{{ state.instrument_id }}</td>
+              <td>{{ state.session }}</td>
+              <td>
+                {% if state.current_quote %}
+                  {{ state.current_quote.bid_price.value }} / {{ state.current_quote.ask_price.value }}
+                {% else %}—{% endif %}
+              </td>
+              <td><strong>{{ state.quality.status }}</strong></td>
+              <td>{{ state.updated_at }}</td>
+            </tr>
           {% endfor %}
           </tbody>
         </table></div>

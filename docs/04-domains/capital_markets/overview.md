@@ -1,60 +1,64 @@
 ---
 title: Огляд домену Capital Markets
-description: CM-FOUNDATION для фінансових інструментів, економічних зв'язків, venues та детермінованих фінансових primitives.
+description: CM-FOUNDATION + CM-MARKET-INTELLIGENCE для фінансових інструментів, venues, raw/canonical market data, quality і trusted MarketState.
 status: active
-updated: 2026-10-05
+updated: 2026-10-06
 kind: domain
 contract: domain-v1
 ---
 
 # Огляд домену Capital Markets
 
-Capital Markets \`0.2.0\` є **CM-FOUNDATION Architecture Foundation Pack** автономного фінансового bounded context COS. Поточний slice уже має tenant-scoped persistence, application boundary, API та UI для структурної моделі, але навмисно не отримує market data і не виконує paper/live trades.
+Capital Markets `0.3.0` поєднує **CM-FOUNDATION** та перший executable **CM-MARKET-INTELLIGENCE** runtime. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
 
 ## Призначення
 
-\`\`\`text
-InstrumentDescriptor
-├─ typed Instrument Identifiers
-├─ Instrument Family / Status
-├─ Economic Relationship Graph
-├─ MarketPair / InstrumentBasket
-│
-VenueDescriptor
-├─ VenueCapability
-└─ VenueInstrument
-│
-Money (Kernel)
-Price / Quantity / Rate / Percentage
-\`\`\`
+```text
+Instrument / Relationship / Venue Registry
+                ↓
+Market Source Configuration
+                ↓
+RawMarketEvent
+                ↓
+CanonicalMarketEvent
+                ↓
+Quality / Freshness / Trust
+                ↓
+MarketState / ReferenceMarketState
+```
 
-Домен створює спільний фундамент для Tokenized Securities, Crypto Spot, Crypto Perpetuals, Stablecoins та інших класів активів без універсальної фінансової God Entity.
+Мета Market Intelligence: система повинна бачити ринок і детерміновано знати, чи можна довіряти конкретному observation/state.
 
 ## Поточний стан
 
-\`\`\`text
+```text
 id: capital_markets
-version: 0.2.0
-runtime: Foundation registry runtime
-persistence: tenant-scoped structural metadata
-API: /api/v1/capital-markets/*
-UI: /capital-markets/*
-market data: none
+version: 0.3.0
+runtime: Foundation + Market Intelligence core
+persistence: tenant-scoped structural + raw/canonical/current-state data
+process: capital-markets.market-data-to-trusted-state
+data modes: LIVE / DELAYED / HISTORICAL / REPLAY
+provider adapters: Bybit Spot REST + Massive Stocks REST
+provider polling: CLI + operator API/UI
+operator workspace: /capital-markets/market-data
+streaming: disabled / next wave
 execution: none
-process model: explicitly deferred to Market Intelligence
-\`\`\`
+```
 
-Модуль вимкнений за замовчуванням. Foundation feature flags відповідають за Instruments, Relationships і Venues. Paper Trading, Live Trading та Auto Execution flags існують як майбутні promotion gates і seed-яться вимкненими.
+Модуль вимкнений за замовчуванням. Bybit Spot REST та Massive Stocks REST adapters уже реалізовані за provider-neutral contracts. Операторський Market Data workspace керує Sources, Subscriptions, Health та ручним Poll. Нові sources створюються disabled. Provider-specific flags і streaming flag залишаються вимкненими до tenant source configuration та production cutover.
 
 ## Межі
 
-Capital Markets володіє фінансовою предметною моделлю: instruments, economic relationships, venues та їх structural persistence. Він не дублює authentication, IAM, Queue, Workflow, Approval, Audit storage, Feature Flag runtime, Agent Runtime або іншу COS infrastructure.
+Capital Markets володіє фінансовою предметною моделлю, market-data semantics, data quality та current market state. Він не дублює authentication, IAM, Audit storage, Feature Flag runtime, Agent Runtime, Queue або Approval.
 
-\`Kernel\Shared\Domain\Money\` залишається канонічним money value object. \`Price\`, \`Quantity\`, \`Rate\` і \`Percentage\` використовують explicit decimal strings, щоб фінансовий core не залежав від floating-point арифметики.
+`Kernel\Shared\Domain\Money` лишається канонічним Money. Інші фінансові значення використовують explicit decimal strings без binary float.
 
-Зовнішні біржі, брокери, CEX/DEX та data providers у наступних slices підключаються через adapters. CM-FOUNDATION містить adapter contract, але не містить provider SDK, HTTP/WebSocket market-data clients або secrets.
+Provider-specific adapters, WebSocket/HTTP transport і credential material не потрапляють у Domain Core. Generic normalizer та quality engine не знають назв бірж або data providers.
+
+Market Intelligence не створює opportunity, strategy, position, order, portfolio або execution runtime.
 
 - [Foundation Architecture](./foundation-architecture.md)
+- [Market Intelligence Architecture](./market-intelligence-architecture.md)
+- [Market Intelligence workflow](../../02-workflows/capital-markets-market-data-to-trusted-state.md)
 - [Модулі та capabilities](../../12-reference/module-capabilities.md)
 - [Дозволи та capabilities](../../12-reference/permissions-capabilities.md)
-- [Покриття доменів процесами](../../12-reference/domain-process-coverage.md)

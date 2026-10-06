@@ -108,3 +108,26 @@ pages:
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: entity_list }
     qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+  - id: capital_markets.market_data
+    route: { name: capital_markets_market_data, path: /capital-markets/market-data, methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.market_data.view
+    owner: Capital Markets
+    priority: P1
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Configure read-only market-data sources, inspect source health and verify trusted trading/reference MarketState."
+      page_purpose: "Operator workspace for Market Intelligence source configuration, subscriptions, manual polling and current state without trading execution."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip, EntityList]
+      optional: [Toolbar, EmptyState, ErrorState]
+    primary_action: capital_markets.market_data.poll
+    states: [normal, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+

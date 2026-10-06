@@ -12,6 +12,11 @@ enum CapitalMarketsFeatureFlag:string
     case PaperTrading='capital_markets.paper_trading.enabled';
     case LiveTrading='capital_markets.live_trading.enabled';
     case AutoExecution='capital_markets.auto_execution.enabled';
+    case MarketData='capital_markets.market_data.enabled';
+    case MarketDataStreaming='capital_markets.market_data.streaming.enabled';
+    case MarketDataHistory='capital_markets.market_data.history.enabled';
+    case MarketDataBybit='capital_markets.market_data.bybit.enabled';
+    case MarketDataMassive='capital_markets.market_data.massive.enabled';
 
     /** @return list<string> */
     public static function values():array{return array_map(static fn(self $case):string=>$case->value,self::cases());}

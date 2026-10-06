@@ -14,6 +14,13 @@ enum CapitalMarketsCapability:string
     case VenueView='capital_markets.venue.view';
     case VenueManage='capital_markets.venue.manage';
     case AuditView='capital_markets.audit.view';
+    case MarketDataView='capital_markets.market_data.view';
+    case MarketDataManage='capital_markets.market_data.manage';
+    case MarketDataSourceView='capital_markets.market_data.source.view';
+    case MarketDataSourceManage='capital_markets.market_data.source.manage';
+    case MarketDataQualityView='capital_markets.market_data.quality.view';
+    case MarketDataHistoryView='capital_markets.market_data.history.view';
+    case MarketDataReplayManage='capital_markets.market_data.replay.manage';
 
     /** @return list<string> */
     public static function values():array{return array_map(static fn(self $case):string=>$case->value,self::cases());}

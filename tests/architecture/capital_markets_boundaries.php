@@ -52,8 +52,8 @@ foreach([
 }
 
 $manifest=require $domainRoot.'/module.php';
-if(($manifest['version']??null)!=='0.2.0'||($manifest['schema_version']??null)!=='0.2.0'){
-    throw new RuntimeException('Capital Markets Foundation manifest must be V0.2.0.');
+if(($manifest['version']??null)!=='0.3.0'||($manifest['schema_version']??null)!=='0.3.0'){
+    throw new RuntimeException('Capital Markets module manifest must be V0.3.0.');
 }
 if(($manifest['enabled_by_default']??true)!==false){
     throw new RuntimeException('Capital Markets Foundation must remain disabled by default.');
@@ -61,8 +61,15 @@ if(($manifest['enabled_by_default']??true)!==false){
 if(($manifest['contributions']['runtime_module_service']??null)!=='capitalMarketsDomainModule'){
     throw new RuntimeException('Capital Markets Foundation runtime module service is missing.');
 }
-if(!in_array('app/migrations/20261005_000124_capital_markets_foundation.sql',$manifest['contributions']['migration_files']??[],true)){
-    throw new RuntimeException('Capital Markets Foundation migration is missing.');
+foreach([
+    'app/migrations/20261005_000124_capital_markets_foundation.sql',
+    'app/migrations/20261006_000125_capital_markets_market_sources.sql',
+    'app/migrations/20261006_000126_capital_markets_market_events.sql',
+    'app/migrations/20261006_000127_capital_markets_market_state.sql',
+] as $migrationFile){
+    if(!in_array($migrationFile,$manifest['contributions']['migration_files']??[],true)){
+        throw new RuntimeException('Capital Markets migration is missing: '.$migrationFile);
+    }
 }
 foreach(['web.navigation','web.search','web.commands','web.workspace'] as $extension){
     if(!in_array('capitalMarketsNavigationContributor',$manifest['contributions']['extension_services'][$extension]??[],true)){
@@ -156,8 +163,11 @@ foreach([
     if(!str_contains($repositorySource,'$ownsTransaction=!$this->connection->inTransaction()')){
         throw new RuntimeException('Capital Markets repository must detect ownership of the database transaction: '.basename($repositoryFile));
     }
-    if(!str_contains($repositorySource,'if($ownsTransaction)')||!str_contains($repositorySource,'$this->connection->commit();')){
+    if(!str_contains($repositorySource,'if($ownsTransaction)$this->connection->commit();')){
         throw new RuntimeException('Capital Markets repository must commit only the transaction it owns: '.basename($repositoryFile));
+    }
+    if(!str_contains($repositorySource,'if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();')){
+        throw new RuntimeException('Capital Markets repository must rollback only the transaction it owns: '.basename($repositoryFile));
     }
 }
 
@@ -172,17 +182,21 @@ if(str_contains($eventPublisher,'IntegrationOutboxInterface')){
 }
 
 $ownership=(string)file_get_contents($root.'/app/Infrastructure/Platform/Persistence/TableOwnership.php');
-foreach(['tn_capital_market_instruments','tn_capital_market_relationships','tn_capital_market_venues'] as $table){
+foreach([
+    'tn_capital_market_instruments','tn_capital_market_relationships','tn_capital_market_venues',
+    'tn_capital_market_data_sources','tn_capital_market_raw_events','tn_capital_market_canonical_events',
+    'tn_capital_market_states','tn_capital_market_reference_states'
+] as $table){
     if(!str_contains($ownership,$table))throw new RuntimeException('Capital Markets table ownership missing: '.$table);
 }
 
 $readme=(string)file_get_contents($domainRoot.'/README.md');
 foreach([
-    'does **not** fetch market data',
     'does **not** create another Money class',
     'disabled by default',
-    'no exchange SDK',
+    'provider-specific adapters',
     'no fake prices',
+    'Live Trading',
 ] as $needle){
     if(!str_contains($readme,$needle))throw new RuntimeException('Capital Markets foundation boundary is undocumented: '.$needle);
 }

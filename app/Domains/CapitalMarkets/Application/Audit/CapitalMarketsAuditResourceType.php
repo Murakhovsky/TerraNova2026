@@ -11,4 +11,6 @@ enum CapitalMarketsAuditResourceType:string
     case VenueInstrument='capital_markets.venue_instrument';
     case Permission='capital_markets.permission';
     case FeatureFlag='capital_markets.feature_flag';
+    case MarketDataSource='capital_markets.market_data.source';
+    case MarketDataSubscription='capital_markets.market_data.subscription';
 }

@@ -1759,12 +1759,141 @@ services:
 
   Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService: ~
 
+  # Capital Markets CM-MARKET-INTELLIGENCE runtime
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MarketDataHydrator: ~
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSourceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketSourceRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSourceRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSubscriptionRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSubscriptionRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRawMarketEventRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\RawMarketEventRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRawMarketEventRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCanonicalMarketEventRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\CanonicalMarketEventRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCanonicalMarketEventRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketQualityMetricRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketQualityMetricRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketQualityMetricRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketStateRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketStateRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketSnapshotRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSnapshotRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketGapRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketGapRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketGapRepository
+
+  Domains\CapitalMarkets\Infrastructure\Time\SystemMarketClock: ~
+
+  Domains\CapitalMarkets\Domain\Contract\MarketClockInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Time\SystemMarketClock
+
+  Domains\CapitalMarkets\Application\Service\FoundationMarketInstrumentResolver: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketInstrumentResolverInterface:
+    alias: Domains\CapitalMarkets\Application\Service\FoundationMarketInstrumentResolver
+
+  Domains\CapitalMarkets\Application\Service\MarketDataNormalizer: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketDataNormalizerInterface:
+    alias: Domains\CapitalMarkets\Application\Service\MarketDataNormalizer
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Http\SafeMarketJsonHttpClient: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketJsonHttpClientInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Http\SafeMarketJsonHttpClient
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Security\MarketSourceCredentialResolver: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitTickerPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveQuotePayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder: ~
+
+  Domains\CapitalMarkets\Application\Service\MarketDataAdapterRegistry:
+    arguments:
+      $adapters:
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
+
+  Domains\CapitalMarkets\Application\Service\MarketDataDecoderRegistry:
+    arguments:
+      $decoders:
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketDataProviderAvailabilityInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability
+
+  Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
+
+  Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService: ~
+
+  Domains\CapitalMarkets\Domain\Service\MarketDataQualityEngine: ~
+  Domains\CapitalMarkets\Domain\Service\OrderBookRebuilder: ~
+  Domains\CapitalMarkets\Domain\Service\MarketStateEngine: ~
+  Domains\CapitalMarkets\Domain\Service\ReferenceMarketStateEngine: ~
+
+  App\Infrastructure\CapitalMarkets\MySqlMarketPartitionLock: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketPartitionLockInterface:
+    alias: App\Infrastructure\CapitalMarkets\MySqlMarketPartitionLock
+
+  Domains\CapitalMarkets\Application\Service\MarketDataIngestionService: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface:
+    alias: Domains\CapitalMarkets\Application\Service\MarketDataIngestionService
+
   Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary:
     alias: Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService
 
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
 
   App\Web\CapitalMarkets\CapitalMarketsPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Http\Api\V1\Controller\CapitalMarketsMarketDataController:
     public: true
     tags: ['controller.service_arguments']
 
