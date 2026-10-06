@@ -7,7 +7,7 @@ use InvalidArgumentException;
 
 final readonly class StrategyScorecard
 {
-    /** @param array<string,float|int> $dimensions @param array<string,float|int> $weights */
+    /** @param array<string,int|string> $dimensions @param array<string,int|string> $weights */
     public function __construct(
         public string $strategyVersionId,
         public array $dimensions,
@@ -17,12 +17,8 @@ final readonly class StrategyScorecard
     ){
         $required=['profitability','consistency','risk','execution_quality','capital_efficiency','capacity','robustness','data_confidence','operational_complexity'];
         foreach($required as $key){
-            if(!array_key_exists($key,$dimensions)){
-                throw new InvalidArgumentException('Missing scorecard dimension: '.$key);
-            }
+            if(!array_key_exists($key,$dimensions))throw new InvalidArgumentException('Missing scorecard dimension: '.$key);
         }
-        if($compositeScore<0||$compositeScore>100){
-            throw new InvalidArgumentException('Composite score must be 0..100.');
-        }
+        if($compositeScore<0||$compositeScore>100)throw new InvalidArgumentException('Composite score must be 0..100.');
     }
 }
