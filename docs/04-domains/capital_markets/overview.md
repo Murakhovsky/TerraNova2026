@@ -9,7 +9,7 @@ contract: domain-v1
 
 # Огляд домену Capital Markets
 
-Capital Markets `0.4.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
+Capital Markets `0.5.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
 
 ## Призначення
 
@@ -33,7 +33,7 @@ MarketState / ReferenceMarketState
 
 ```text
 id: capital_markets
-version: 0.4.0
+version: 0.5.0
 runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 research/paper
 persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
@@ -55,7 +55,7 @@ Capital Markets володіє фінансовою предметною мод�
 
 Provider-specific adapters, WebSocket/HTTP transport і credential material не потрапляють у Domain Core. Generic normalizer та quality engine не знають назв бірж або data providers.
 
-Market Intelligence сам по собі не створює trading decisions. Окремий CM-TOKENIZED-EQUITY layer споживає trusted MarketState, створює H1/H2 candidates/opportunities, застосовує deterministic risk і дозволяє лише guarded paper execution для H2.
+Market Intelligence сам по собі не створює trading decisions. Окремий CM-TOKENIZED-EQUITY layer споживає trusted MarketState, створює H1/H2 candidates/opportunities, застосовує deterministic risk, веде hypothesis observations та Edge Funnel, формує sample-gated research verdict і дозволяє лише guarded paper execution для H2.
 
 - [Foundation Architecture](./foundation-architecture.md)
 - [Market Intelligence Architecture](./market-intelligence-architecture.md)
