@@ -78,6 +78,32 @@ foreach([
     'tn_capital_market_hedge_groups',
 ] as $needle)$assert(str_contains($migration,$needle),'VS2 migration invariant missing: '.$needle);
 
+$routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
+foreach([
+    '/capital-markets/crypto-spot-perpetual',
+    '/api/v1/capital-markets/crypto-spot-perpetual',
+    '/api/v1/capital-markets/crypto-spot-perpetual/scan/spot-perp',
+    '/api/v1/capital-markets/crypto-spot-perpetual/scan/cross-venue-funding',
+    '/api/v1/capital-markets/crypto-spot-perpetual/opportunities/{id}/paper-execute',
+    '/api/v1/capital-markets/crypto-spot-perpetual/executions/{id}/close',
+    '/api/v1/capital-markets/crypto-spot-perpetual/funding',
+    '/api/v1/capital-markets/crypto-spot-perpetual/funding-settlements',
+    '/api/v1/capital-markets/crypto-spot-perpetual/basis',
+    '/api/v1/capital-markets/crypto-spot-perpetual/hedges/{id}',
+] as $route)$assert(str_contains($routes,$route),'VS2 runtime route missing: '.$route);
+
+$apiController=(string)file_get_contents($root.'/symfony/src/Http/Api/V1/Controller/CapitalMarketsCryptoSpotPerpetualController.php');
+foreach(['scanSpotPerp','scanCrossVenueFunding','executePaper','closeExecution','CryptoSpotPerpetual'] as $needle){
+    $assert(str_contains($apiController,$needle),'VS2 API contract missing: '.$needle);
+}
+
+$webController=(string)file_get_contents($root.'/symfony/src/Web/CapitalMarkets/CapitalMarketsPageController.php');
+$assert(str_contains($webController,'cryptoSpotPerpetual'),'VS2 workspace controller is missing.');
+$webProvider=(string)file_get_contents($root.'/symfony/src/Web/Experience/Extension/Provider/CapitalMarketsWebProvider.php');
+$assert(str_contains($webProvider,'/capital-markets/crypto-spot-perpetual'),'VS2 workspace navigation is missing.');
+$template=(string)file_get_contents($root.'/symfony/templates/experience/capital_markets/workspace.html.twig');
+$assert(str_contains($template,"cmView == 'crypto_spot_perp'"),'VS2 workspace template is missing.');
+
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach([
     'BybitPerpetualMarketDataAdapter','OkxPerpetualMarketDataAdapter',
