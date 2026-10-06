@@ -5,7 +5,7 @@ domain: capital_markets
 status: implemented
 ---
 
-# Tokenized Equity Vertical Slice V0.4
+# Вертикальний зріз Tokenized Equity V0.4
 
 Цей пакет реалізує детерміноване фінансове ядро для **H1 Tokenized Equity Dislocation** та **H2 Cross-Venue Tokenized Equity Arbitrage**.
 
