@@ -47,17 +47,30 @@ final readonly class TokenizedEquityVerticalSliceService
         string $instrumentB,
         array $options,
     ):array{
-        $a=$this->marketStates->get($organizationId,VenueId::fromString($venueA),InstrumentId::fromString($instrumentA));
-        $b=$this->marketStates->get($organizationId,VenueId::fromString($venueB),InstrumentId::fromString($instrumentB));
-        if($a===null||$b===null)throw new DomainException('Required trading MarketState is unavailable.');
-
         $now=new DateTimeImmutable();
         $config=$this->config($options);
-        $this->assertEconomicEquivalence($organizationId,$a->instrumentId,$b->instrumentId,$config,$now);
-        $candidates=$this->detector->detectCrossVenue($marketPairId,$a,$b,$config,$now,$this->int($options,'ttl_ms',1000));
+        $ttlMs=$this->int($options,'ttl_ms',1000);
+        $aInstrumentId=InstrumentId::fromString($instrumentA);
+        $bInstrumentId=InstrumentId::fromString($instrumentB);
+        $this->assertEconomicEquivalence($organizationId,$aInstrumentId,$bInstrumentId,$config,$now);
+
+        $a=$this->marketStates->get($organizationId,VenueId::fromString($venueA),$aInstrumentId);
+        $b=$this->marketStates->get($organizationId,VenueId::fromString($venueB),$bInstrumentId);
+        $issues=[];
+        if($a===null)$issues[]='STATE_A_UNAVAILABLE';
+        if($b===null)$issues[]='STATE_B_UNAVAILABLE';
+        if($issues!==[]){
+            return $this->evaluate(
+                $organizationId,$marketPairId,HypothesisCode::CrossVenueTokenizedEquityArbitrage,
+                [],$config,$options,$now,true,$issues
+            );
+        }
+
+        $issues=$this->detector->crossVenueObservationIssues($a,$b,$config,$now,$ttlMs);
+        $candidates=$this->detector->detectCrossVenue($marketPairId,$a,$b,$config,$now,$ttlMs);
         return $this->evaluate(
             $organizationId,$marketPairId,HypothesisCode::CrossVenueTokenizedEquityArbitrage,
-            $candidates,$config,$options,$now,true
+            $candidates,$config,$options,$now,true,$issues
         );
     }
 
@@ -71,17 +84,29 @@ final readonly class TokenizedEquityVerticalSliceService
         string $tokenInstrument,
         array $options,
     ):array{
-        $reference=$this->marketStates->getReference(
-            $organizationId,MarketSourceId::fromString($referenceSource),InstrumentId::fromString($underlyingInstrument)
-        );
-        $token=$this->marketStates->get(
-            $organizationId,VenueId::fromString($tokenVenue),InstrumentId::fromString($tokenInstrument)
-        );
-        if($reference===null||$token===null)throw new DomainException('Required reference/tokenized MarketState is unavailable.');
-
         $now=new DateTimeImmutable();
         $config=$this->config($options);
-        $this->assertEconomicEquivalence($organizationId,$reference->instrumentId,$token->instrumentId,$config,$now);
+        $ttlMs=$this->int($options,'ttl_ms',1000);
+        $underlyingId=InstrumentId::fromString($underlyingInstrument);
+        $tokenId=InstrumentId::fromString($tokenInstrument);
+        $this->assertEconomicEquivalence($organizationId,$underlyingId,$tokenId,$config,$now);
+
+        $reference=$this->marketStates->getReference(
+            $organizationId,MarketSourceId::fromString($referenceSource),$underlyingId
+        );
+        $token=$this->marketStates->get(
+            $organizationId,VenueId::fromString($tokenVenue),$tokenId
+        );
+        $issues=[];
+        if($reference===null)$issues[]='REFERENCE_STATE_UNAVAILABLE';
+        if($token===null)$issues[]='TOKEN_STATE_UNAVAILABLE';
+        if($issues!==[]){
+            return $this->evaluate(
+                $organizationId,$marketPairId,HypothesisCode::TokenizedEquityDislocation,
+                [],$config,$options,$now,false,$issues
+            );
+        }
+
         $conversion=null;
         if($reference->currentQuote!==null&&$token->bestQuote!==null){
             $referenceQuote=$reference->currentQuote->askPrice->quoteAsset;
@@ -90,17 +115,19 @@ final readonly class TokenizedEquityVerticalSliceService
                 $conversion=$this->conversionRates->resolve(
                     $organizationId,$tokenQuote,$referenceQuote,$now,$config->maximumSnapshotAgeMs
                 );
-                if($conversion===null)throw new DomainException('NOT_COMPARABLE: trusted quote conversion rate unavailable.');
             }
         }
+        $issues=$this->detector->referenceObservationIssues(
+            $reference,$token,$config,$now,$ttlMs,$conversion
+        );
         $candidates=$this->detector->detectReferenceDislocation(
-            $marketPairId,$reference,$token,$config,$now,$this->int($options,'ttl_ms',1000),$conversion
+            $marketPairId,$reference,$token,$config,$now,$ttlMs,$conversion
         );
 
         // H1 is research-capable now, but remains execution-closed until a real hedge venue is supplied.
         return $this->evaluate(
             $organizationId,$marketPairId,HypothesisCode::TokenizedEquityDislocation,
-            $candidates,$config,$options,$now,false
+            $candidates,$config,$options,$now,false,$issues
         );
     }
 
@@ -130,6 +157,7 @@ final readonly class TokenizedEquityVerticalSliceService
         array $options,
         DateTimeImmutable $now,
         bool $hedgeAvailable,
+        array $observationIssues=[],
     ):array{
         $out=[];
         foreach($candidates as $candidate){
@@ -204,13 +232,16 @@ final readonly class TokenizedEquityVerticalSliceService
             'id'=>'cm_obs_'.substr(hash('sha256',$organizationId.'|'.$hypothesis->value.'|'.$marketPairId.'|'.$now->format('U.u')),0,40),
             'hypothesis'=>$hypothesis->value,
             'market_pair_id'=>$marketPairId,
-            'status'=>$candidates===[]?'NO_EDGE':($executableCount>0?'EXECUTABLE_EDGE':'DETECTED_NOT_EXECUTABLE'),
+            'status'=>$observationIssues!==[]
+                ?'UNOBSERVABLE'
+                :($candidates===[]?'NO_EDGE':($executableCount>0?'EXECUTABLE_EDGE':'DETECTED_NOT_EXECUTABLE')),
             'candidate_count'=>count($candidates),
             'opportunity_count'=>count($out),
             'executable_count'=>$executableCount,
             'best_net_edge_bps'=>$bestEdge,
             'best_expected_pnl'=>$bestPnl,
             'config_version'=>$config->version,
+            'observation_issues'=>array_values(array_unique($observationIssues)),
             'observed_at'=>$now->format(DATE_ATOM),
         ];
         $this->repository->saveHypothesisObservation(
