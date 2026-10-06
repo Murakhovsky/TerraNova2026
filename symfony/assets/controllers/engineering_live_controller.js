@@ -19,7 +19,7 @@ export default class extends Controller {
 
     static values = {
         url: String,
-        interval: { type: Number, default: 6000 },
+        interval: { type: Number, default: 10000 },
         initialState: String,
         initialStatus: String,
         initialHealth: String,
@@ -50,14 +50,14 @@ export default class extends Controller {
         const initialState = String(this.initialStateValue || '').toUpperCase();
         const initialStatus = String(this.initialStatusValue || '').toUpperCase();
         if (this.shouldStopLiveUpdates(this.currentHealth, initialState, initialStatus)) {
-            this.stopLiveUpdates(this.currentHealth === 'STALLED' ? 'процес зупинено' : 'процес завершено');
+            this.stopLiveUpdates(this.stopReason(this.currentHealth, initialState, initialStatus));
             this.tick();
             return;
         }
 
         this.pollTimer = window.setInterval(
             () => this.refresh(),
-            Math.max(3000, this.intervalValue || 6000),
+            Math.max(3000, this.intervalValue || 10000),
         );
         this.clockTimer = window.setInterval(() => this.tick(), 1000);
 
@@ -101,14 +101,14 @@ export default class extends Controller {
             const status = String(workflow.status || workflow.workflow_status || this.initialStatusValue || 'UNKNOWN').toUpperCase();
             const health = this.resolveHealth(workflow, state, status);
             this.currentHealth = health;
-            this.currentStopAt = health === 'STALLED'
+            this.currentStopAt = ['STALE', 'STALLED'].includes(health)
                 ? String(workflow.stalled_at || workflow.heartbeat_at || workflow.last_activity_at || '')
                 : '';
             if (this.hasWorkflowDurationTarget) {
                 this.workflowDurationTarget.dataset.engineeringLiveDurationStop = this.currentStopAt;
             }
 
-            const displayStatus = !this.isTerminal(state, status) && health === 'STALLED' ? 'STALLED' : status;
+            const displayStatus = !this.isTerminal(state, status) && ['STALE', 'STALLED'].includes(health) ? health : status;
             this.setText(this.workflowStatusTargets, this.localizeStatus(displayStatus));
             this.setText(this.stateTargets, this.localizeStatus(state));
             const healthLabel = this.localizeStatus(health);
@@ -139,7 +139,7 @@ export default class extends Controller {
             }
 
             if (this.shouldStopLiveUpdates(health, state, status)) {
-                this.stopLiveUpdates(health === 'STALLED' ? 'процес зупинено' : 'процес завершено');
+                this.stopLiveUpdates(this.stopReason(health, state, status));
             }
         } catch (error) {
             if (this.hasPollStatusTarget) {
@@ -165,7 +165,7 @@ export default class extends Controller {
 
         if (this.hasAgentRuntimeTarget && this.currentRuns.length > 0) {
             const total = this.currentRuns.reduce((sum, run) => {
-                const runEnd = run?.finished_at || (this.currentHealth === 'STALLED' ? this.currentStopAt : '');
+                const runEnd = run?.finished_at || (['STALE', 'STALLED'].includes(this.currentHealth) ? this.currentStopAt : '');
                 const duration = this.durationSeconds(run?.started_at || '', runEnd || '');
                 return sum + (duration ?? 0);
             }, 0);
@@ -194,7 +194,7 @@ export default class extends Controller {
                 this.currentAgentTarget.textContent = this.localizeRole(running.role || 'AGENT');
             }
             if (this.hasCurrentActivityTarget) {
-                const runEnd = this.currentHealth === 'STALLED' ? this.currentStopAt : '';
+                const runEnd = ['STALE', 'STALLED'].includes(this.currentHealth) ? this.currentStopAt : '';
                 const duration = this.durationSeconds(running.started_at || '', runEnd);
                 this.currentActivityTarget.textContent =
                     (duration !== null ? this.formatDuration(duration) + ' · ' : '') + String(running.id || '');
@@ -294,7 +294,7 @@ export default class extends Controller {
         }
 
         const persisted = String(workflow?.health_status || '').toUpperCase();
-        if (['STALLED', 'WAITING', 'TERMINAL'].includes(persisted)) {
+        if (['STALE', 'STALLED', 'WAITING', 'TERMINAL'].includes(persisted)) {
             return persisted;
         }
 
@@ -316,7 +316,15 @@ export default class extends Controller {
     }
 
     shouldStopLiveUpdates(health, state, status) {
-        return String(health || '').toUpperCase() === 'STALLED' || this.isTerminal(state, status);
+        return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);
+    }
+
+    stopReason(health, state, status) {
+        const normalized = String(health || '').toUpperCase();
+        if (normalized === 'STALE') return 'процес неактивний';
+        if (normalized === 'STALLED') return 'процес зупинено';
+        if (this.isTerminal(state, status)) return 'процес завершено';
+        return '';
     }
 
     stopLiveUpdates(message = '') {

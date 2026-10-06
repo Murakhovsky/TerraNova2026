@@ -72,7 +72,7 @@
     data-engineering-feature-id="{{ engineering.feature.id }}"
     data-controller="engineering-live"
     data-engineering-live-url-value="/api/engineering/features/{{ engineering.feature.id }}/live"
-    data-engineering-live-interval-value="6000"
+    data-engineering-live-interval-value="10000"
     data-engineering-live-initial-state-value="{{ summary.state }}"
     data-engineering-live-initial-status-value="{{ summary.workflow_status }}"
     data-engineering-live-initial-health-value="{{ summary.health }}"
@@ -341,7 +341,7 @@
                 <h2>Термінал виконання</h2>
                 <span class="engineering-muted">
                     <span data-engineering-live-target="eventCount">{{ engineering.timeline|length }}</span> подій
-                    · <span data-engineering-live-target="pollStatus">автооновлення кожні 3 с</span>
+                    · <span data-engineering-live-target="pollStatus">автооновлення кожні 10 с</span>
                 </span>
             </div>
             <div class="engineering-terminal" data-engineering-live-target="terminal">
