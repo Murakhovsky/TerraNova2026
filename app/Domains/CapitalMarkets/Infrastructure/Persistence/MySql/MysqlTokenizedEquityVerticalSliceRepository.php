@@ -198,6 +198,131 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         }
     }
 
+    public function setPaperBalance(string $organizationId,string $venueId,string $assetKey,string $amount):void
+    {
+        $this->connection->prepare(
+            'INSERT INTO tn_capital_market_paper_balances
+             (organization_id,venue_id,asset_key,available_amount,reserved_amount)
+             VALUES (:org,:venue,:asset,:amount,0)
+             ON DUPLICATE KEY UPDATE available_amount=VALUES(available_amount),reserved_amount=0'
+        )->execute(['org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey,'amount'=>$amount]);
+    }
+
+    public function listPaperBalances(string $organizationId):array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT venue_id,asset_key,available_amount,reserved_amount,updated_at
+             FROM tn_capital_market_paper_balances WHERE organization_id=:org ORDER BY venue_id,asset_key'
+        );
+        $statement->execute(['org'=>$organizationId]);
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function reservePaperBalance(
+        string $organizationId,string $reservationId,string $opportunityId,
+        string $venueId,string $assetKey,string $amount,string $expiresAt
+    ):bool{
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $reserve=$this->connection->prepare(
+                'UPDATE tn_capital_market_paper_balances
+                 SET available_amount=available_amount-:amount,reserved_amount=reserved_amount+:amount
+                 WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset AND available_amount>=:amount'
+            );
+            $reserve->execute(['amount'=>$amount,'org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey]);
+            if($reserve->rowCount()!==1){
+                if($ownsTransaction)$this->connection->rollBack();
+                return false;
+            }
+            $this->connection->prepare(
+                'INSERT INTO tn_capital_market_paper_balance_reservations
+                 (organization_id,reservation_id,opportunity_id,venue_id,asset_key,amount,status,expires_at)
+                 VALUES (:org,:id,:opportunity,:venue,:asset,:amount,\'RESERVED\',:expires_at)'
+            )->execute([
+                'org'=>$organizationId,'id'=>$reservationId,'opportunity'=>$opportunityId,'venue'=>$venueId,
+                'asset'=>$assetKey,'amount'=>$amount,'expires_at'=>$this->mysqlDate($expiresAt),
+            ]);
+            if($ownsTransaction)$this->connection->commit();
+            return true;
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
+    public function releasePaperBalanceReservation(string $organizationId,string $reservationId):void
+    {
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $select=$this->connection->prepare(
+                'SELECT venue_id,asset_key,amount,status FROM tn_capital_market_paper_balance_reservations
+                 WHERE organization_id=:org AND reservation_id=:id FOR UPDATE'
+            );
+            $select->execute(['org'=>$organizationId,'id'=>$reservationId]);
+            $row=$select->fetch(PDO::FETCH_ASSOC);
+            if(is_array($row)&&$row['status']==='RESERVED'){
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_balance_reservations SET status=\'RELEASED\'
+                     WHERE organization_id=:org AND reservation_id=:id AND status=\'RESERVED\''
+                )->execute(['org'=>$organizationId,'id'=>$reservationId]);
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_balances
+                     SET available_amount=available_amount+:amount,reserved_amount=reserved_amount-:amount
+                     WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset'
+                )->execute([
+                    'amount'=>(string)$row['amount'],'org'=>$organizationId,
+                    'venue'=>(string)$row['venue_id'],'asset'=>(string)$row['asset_key'],
+                ]);
+            }
+            if($ownsTransaction)$this->connection->commit();
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
+    public function consumePaperBalanceReservation(string $organizationId,string $reservationId):void
+    {
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $select=$this->connection->prepare(
+                'SELECT venue_id,asset_key,amount,status FROM tn_capital_market_paper_balance_reservations
+                 WHERE organization_id=:org AND reservation_id=:id FOR UPDATE'
+            );
+            $select->execute(['org'=>$organizationId,'id'=>$reservationId]);
+            $row=$select->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($row)||$row['status']!=='RESERVED')throw new \DomainException('PAPER_BALANCE_RESERVATION_NOT_ACTIVE');
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_paper_balance_reservations SET status=\'CONSUMED\'
+                 WHERE organization_id=:org AND reservation_id=:id'
+            )->execute(['org'=>$organizationId,'id'=>$reservationId]);
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_paper_balances SET reserved_amount=reserved_amount-:amount
+                 WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset'
+            )->execute([
+                'amount'=>(string)$row['amount'],'org'=>$organizationId,
+                'venue'=>(string)$row['venue_id'],'asset'=>(string)$row['asset_key'],
+            ]);
+            if($ownsTransaction)$this->connection->commit();
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
+    public function creditPaperBalance(string $organizationId,string $venueId,string $assetKey,string $amount):void
+    {
+        $this->connection->prepare(
+            'INSERT INTO tn_capital_market_paper_balances
+             (organization_id,venue_id,asset_key,available_amount,reserved_amount)
+             VALUES (:org,:venue,:asset,:amount,0)
+             ON DUPLICATE KEY UPDATE available_amount=available_amount+VALUES(available_amount)'
+        )->execute(['org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey,'amount'=>$amount]);
+    }
+
     public function listOpportunities(string $organizationId,int $limit=200):array
     {
         $limit=max(1,min(1000,$limit));
