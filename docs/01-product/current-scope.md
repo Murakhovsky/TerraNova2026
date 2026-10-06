@@ -15,7 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Capital_markets | `0.5.0` | CM-FOUNDATION + Market Intelligence + Tokenized Equity H1/H2 research; deterministic opportunity/risk, hypothesis observations, Edge Funnel, sample-gated verdicts, pre-funded H2 paper execution, asset-aware ledger та realized paper P&L; Live Trading вимкнено |
+| Capital_markets | `0.5.0` | CM-FOUNDATION + Market Intelligence + Tokenized Equity H1/H2 research; deterministic opportunity/risk, hypothesis observations, survivorship-bias-safe Edge Funnel, sample-gated verdicts, pre-funded H2 paper execution, asset-aware ledger та realized paper P&L; Live Trading вимкнено |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
