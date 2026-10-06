@@ -3056,3 +3056,9 @@ cos_api_v1_capital_markets_research_backtest_cancel:
   controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::cancelBacktest
   methods: [POST]
   requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+
+cos_api_v1_capital_markets_research_agent_run:
+  path: /api/v1/capital-markets/research/agent/run
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::runAgent
+  methods: [POST]
