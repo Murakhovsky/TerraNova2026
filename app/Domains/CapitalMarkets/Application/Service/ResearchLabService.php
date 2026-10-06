@@ -9,6 +9,7 @@ use Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine;
 use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
 use Domains\CapitalMarkets\Domain\Research\ReplayDataGuard;
 use Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector;
+use Domains\CapitalMarkets\Domain\Research\HypothesisLifecyclePolicy;
 use InvalidArgumentException;
 
 final readonly class ResearchLabService
@@ -20,12 +21,16 @@ final readonly class ResearchLabService
         private ResearchIsolationPolicy $isolation,
         private ReplayDataGuard $replayGuard,
         private ResearchDuplicateDetector $duplicates,
+        private HypothesisLifecyclePolicy $hypothesisLifecycle,
     ){}
 
     public function createHypothesis(string $organizationId,array $record):array
     {
         foreach(['hypothesis_id','code','title','economic_reason','edge_source','status','priority'] as $required){
             if(!array_key_exists($required,$record))throw new InvalidArgumentException('Missing '.$required);
+        }
+        if($this->repository->getHypothesis($organizationId,(string)$record['hypothesis_id'])!==null){
+            throw new InvalidArgumentException('Hypothesis id already exists; create a new revision instead.');
         }
         if($record['status']==='READY_FOR_RESEARCH' && trim((string)$record['economic_reason'])===''){
             throw new InvalidArgumentException('economic_reason is required before READY_FOR_RESEARCH.');
@@ -40,10 +45,40 @@ final readonly class ResearchLabService
             }
         }
         unset($record['allow_duplicate']);
-        $record['revision']=max(1,(int)($record['revision']??1));
+        $record['revision']=1;
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->repository->saveHypothesis($organizationId,$record);
         return $record;
+    }
+
+    public function reviseHypothesis(string $organizationId,string $hypothesisId,array $changes):array
+    {
+        $current=$this->repository->getHypothesis($organizationId,$hypothesisId);
+        if($current===null)throw new InvalidArgumentException('Research hypothesis not found.');
+
+        foreach(['hypothesis_id','revision','created_at','created_by'] as $immutable){
+            unset($changes[$immutable]);
+        }
+
+        $next=array_replace($current,$changes);
+        $nextStatus=strtoupper(trim((string)($next['status']??'')));
+        $currentStatus=strtoupper(trim((string)($current['status']??'')));
+        if($nextStatus!==$currentStatus){
+            $this->hypothesisLifecycle->assertTransition($currentStatus,$nextStatus);
+        }
+
+        if($nextStatus==='READY_FOR_RESEARCH')$this->assertResearchReady($next);
+        if(!in_array($nextStatus,['IDEA','DRAFT'],true) && (string)($next['edge_source']??'UNKNOWN')==='UNKNOWN'){
+            throw new InvalidArgumentException('UNKNOWN edge source is allowed only for IDEA/DRAFT.');
+        }
+
+        $next['hypothesis_id']=$hypothesisId;
+        $next['revision']=max(1,(int)($current['revision']??1))+1;
+        $next['created_at']=gmdate('Y-m-d H:i:s');
+        $next['updated_at']=$next['created_at'];
+        $next['supersedes_revision']=(int)($current['revision']??1);
+        $this->repository->saveHypothesis($organizationId,$next);
+        return $next;
     }
 
     public function freezeDataset(string $organizationId,array $record):array
@@ -235,6 +270,19 @@ final readonly class ResearchLabService
                 'promotion_failed'=>count(array_filter($promotion,static fn(array $p):bool=>($p['status']??'')==='FAILED')),
             ],
         ];
+    }
+
+    private function assertResearchReady(array $record):void
+    {
+        foreach([
+            'description','economic_reason','edge_source','expected_behavior','required_data',
+            'success_criteria','failure_criteria','risk_assumptions','capital_assumptions'
+        ] as $field){
+            if(!array_key_exists($field,$record))throw new InvalidArgumentException($field.' is required before READY_FOR_RESEARCH.');
+            $value=$record[$field];
+            if(is_string($value)&&trim($value)==='')throw new InvalidArgumentException($field.' is required before READY_FOR_RESEARCH.');
+            if(is_array($value)&&$value===[])throw new InvalidArgumentException($field.' is required before READY_FOR_RESEARCH.');
+        }
     }
 
     private function canonicalize(array $value):array
