@@ -1978,6 +1978,11 @@ services:
 
   Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService: ~
 
+  Domains\CapitalMarkets\Automation\Job\ResearchBacktestJobHandler:
+    arguments:
+      $backtests: '@Domains\CapitalMarkets\Application\Service\ResearchBacktestService'
+      $repository: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+
   Domains\CapitalMarkets\Application\Service\ResearchBacktestService:
     arguments:
       $adapters:
