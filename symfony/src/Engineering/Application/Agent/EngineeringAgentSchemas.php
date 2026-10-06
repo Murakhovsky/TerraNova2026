@@ -151,7 +151,20 @@ final class EngineeringAgentSchemas
                         'user_roles' => ['type' => 'array'],
                         'functional_requirements' => ['type' => 'array', 'minItems' => 1],
                         'non_functional_requirements' => ['type' => 'array'],
-                        'acceptance_criteria' => ['type' => 'array', 'minItems' => 1, 'items' => ['type' => 'object']],
+                        'acceptance_criteria' => [
+                            'type' => 'array',
+                            'minItems' => 1,
+                            'items' => [
+                                'type' => 'object',
+                                'required' => ['id','description','verification_type'],
+                                'properties' => [
+                                    'id' => ['type' => 'string', 'minLength' => 1],
+                                    'description' => ['type' => 'string', 'minLength' => 1],
+                                    'verification_type' => ['type' => 'string', 'minLength' => 1],
+                                ],
+                                'additionalProperties' => false,
+                            ],
+                        ],
                         'dependencies' => ['type' => 'array'],
                         'constraints' => ['type' => 'array'],
                         'risks' => ['type' => 'array'],

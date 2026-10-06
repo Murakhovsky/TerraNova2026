@@ -52,6 +52,7 @@ foreach ([
     'data-engineering-live-duration-start',
     'data-engineering-live-duration-stop',
     'data-engineering-live-timestamp',
+    'data-engineering-live-interval-value="6000"',
     'LLM ще не запускався',
     'Токени',
     'Стан runtime',
@@ -68,6 +69,8 @@ foreach ([
 
 foreach ([
     'window.setInterval',
+    'default: 6000',
+    'this.intervalValue || 6000',
     'fetch(this.urlValue',
     'renderTimeline(',
     'relativeTime(',

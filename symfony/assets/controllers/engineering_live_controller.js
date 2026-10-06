@@ -19,7 +19,7 @@ export default class extends Controller {
 
     static values = {
         url: String,
-        interval: { type: Number, default: 3000 },
+        interval: { type: Number, default: 6000 },
         initialState: String,
         initialStatus: String,
         initialHealth: String,
@@ -57,7 +57,7 @@ export default class extends Controller {
 
         this.pollTimer = window.setInterval(
             () => this.refresh(),
-            Math.max(1500, this.intervalValue || 3000),
+            Math.max(3000, this.intervalValue || 6000),
         );
         this.clockTimer = window.setInterval(() => this.tick(), 1000);
 

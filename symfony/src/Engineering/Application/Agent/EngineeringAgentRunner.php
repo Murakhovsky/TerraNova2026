@@ -33,10 +33,11 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         }
 
         $lastError = null;
+        $validationFeedback = null;
         $runCorrelationId = $this->runCorrelationId($correlationId, $task->id);
 
         for ($technicalRetry = 0; $technicalRetry <= $this->maxTechnicalRetries; ++$technicalRetry) {
-            $result = $this->executeOnce($task, $organizationId, $runCorrelationId, $technicalRetry);
+            $result = $this->executeOnce($task, $organizationId, $runCorrelationId, $technicalRetry, $validationFeedback);
 
             if ($result->status !== AgentRunStatus::COMPLETED->value) {
                 $lastError = new EngineeringAgentTechnicalFailureException(
@@ -52,6 +53,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
                 return $result;
             } catch (EngineeringAgentOutputValidationException $error) {
                 $lastError = $error;
+                $validationFeedback = 'Previous structured output was rejected: '.$error->getMessage().'. Return a corrected result that fully matches expected_output_schema.';
                 if ($technicalRetry < $this->maxTechnicalRetries) continue;
 
                 throw new EngineeringAgentTechnicalFailureException(
@@ -79,6 +81,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         string $organizationId,
         string $correlationId,
         int $technicalRetry,
+        ?string $validationFeedback,
     ): EngineeringAgentRunResult {
         $definition = $this->definitions->create($task->role, $organizationId);
         $agent = new Agent(strtolower($task->role->value), $definition, tags: ['engineering']);
@@ -97,6 +100,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
                 'constraints' => $task->constraints,
                 'completion_criteria' => $task->completionCriteria,
                 'expected_output_schema' => $task->expectedOutputSchema,
+                'retry_correction' => $validationFeedback,
             ],
             data: [
                 'context_refs' => $task->contextRefs,
@@ -108,6 +112,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
                 'engineering_role' => $task->role->value,
                 'idempotency_key' => $task->idempotencyKey,
                 'technical_retry' => $technicalRetry,
+                'validation_feedback' => $validationFeedback,
             ],
         );
 
