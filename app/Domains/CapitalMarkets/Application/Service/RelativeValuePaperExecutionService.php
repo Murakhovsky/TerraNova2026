@@ -396,6 +396,7 @@ final readonly class RelativeValuePaperExecutionService
         if($position->quantity->compareTo($matched)!==0)throw new DomainException('POSITION_QUANTITY_DOES_NOT_MATCH_HEDGE');
         $row=[
             'position_id'=>$position->positionId,'portfolio_id'=>$position->portfolioId,'strategy_id'=>$position->strategyId,
+            'execution_id'=>$executionId,
             'instrument_id'=>$position->instrumentId,'venue_id'=>$position->venueId,'status'=>$position->status(),
             'side'=>$position->side->value,'quantity'=>$position->quantity->value(),
             'average_entry_price'=>$position->averageEntryPrice->value(),'mark_price'=>$position->markPrice->value(),
