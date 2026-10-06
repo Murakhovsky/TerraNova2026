@@ -32,6 +32,7 @@ final readonly class ResearchAgentContextBuilder implements AgentContextBuilderI
                 'type'=>$invocation->subjectType,
                 'id'=>$invocation->subjectId,
             ],
+            'tool_results'=>$invocation->contextReferences,
             'research_rules'=>[
                 'ai_proposes_engine_tests_data_decides'=>true,
                 'live_trading_authority'=>false,
