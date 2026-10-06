@@ -51,12 +51,21 @@ final readonly class TokenizedEquityScannerService
     {
         $trigger=trim($trigger)!==''?trim($trigger):'manual';
         $idempotencyKey=trim($idempotencyKey);
-        if($idempotencyKey==='')throw new InvalidArgumentException('idempotency_key is required.');
+        if($idempotencyKey===''||mb_strlen($idempotencyKey)>190){
+            throw new InvalidArgumentException('idempotency_key must contain 1..190 characters.');
+        }
+        if(mb_strlen($trigger)>64)throw new InvalidArgumentException('trigger must contain at most 64 characters.');
 
-        $existing=$this->repository->getRunByIdempotencyKey($organizationId,$idempotencyKey);
-        if($existing!==null)return [...$existing,'replayed'=>true];
-
+        $runId='cm_scan_run_'.substr(hash('sha256',$organizationId.'|'.$idempotencyKey),0,40);
         $started=new DateTimeImmutable();
+        if(!$this->repository->claimRun(
+            $organizationId,$runId,$idempotencyKey,$trigger,$started->format(DATE_ATOM)
+        )){
+            $existing=$this->repository->getRunByIdempotencyKey($organizationId,$idempotencyKey);
+            if($existing===null)throw new \RuntimeException('Scanner idempotency claim exists but cannot be read.');
+            return $this->response($existing,true);
+        }
+
         $targets=$this->repository->listTargets($organizationId,true,$limit);
         $results=[];$completed=0;$failed=0;
 
@@ -84,8 +93,6 @@ final readonly class TokenizedEquityScannerService
         },$results);
         $datasetHash=hash('sha256',json_encode($canonical,JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
         $payload=['results'=>$results,'dataset_hash'=>$datasetHash];
-        $runId='cm_scan_run_'.substr(hash('sha256',$organizationId.'|'.$idempotencyKey),0,40);
-
         $this->repository->saveRun(
             $organizationId,$runId,$idempotencyKey,$trigger,$status,count($targets),$completed,$failed,
             $payload,$started->format(DATE_ATOM),$finished->format(DATE_ATOM)
@@ -95,6 +102,25 @@ final readonly class TokenizedEquityScannerService
             'run_id'=>$runId,'idempotency_key'=>$idempotencyKey,'trigger'=>$trigger,'status'=>$status,
             'target_count'=>count($targets),'completed_count'=>$completed,'failed_count'=>$failed,
             'dataset_hash'=>$datasetHash,'results'=>$results,'replayed'=>false,
+        ];
+    }
+
+    /** @param array<string,mixed> $row @return array<string,mixed> */
+    private function response(array $row,bool $replayed):array
+    {
+        $payload=$row['result']??[];
+        if(!is_array($payload)||array_is_list($payload))$payload=[];
+        return [
+            'run_id'=>(string)($row['run_id']??''),
+            'idempotency_key'=>(string)($row['idempotency_key']??''),
+            'trigger'=>(string)($row['trigger']??''),
+            'status'=>(string)($row['status']??''),
+            'target_count'=>(int)($row['target_count']??0),
+            'completed_count'=>(int)($row['completed_count']??0),
+            'failed_count'=>(int)($row['failed_count']??0),
+            'dataset_hash'=>(string)($payload['dataset_hash']??''),
+            'results'=>is_array($payload['results']??null)?$payload['results']:[],
+            'replayed'=>$replayed,
         ];
     }
 
