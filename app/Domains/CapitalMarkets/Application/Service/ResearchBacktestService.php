@@ -44,6 +44,12 @@ final readonly class ResearchBacktestService
         if(!in_array($partition,['TRAIN','VALIDATION','OUT_OF_SAMPLE'],true)){
             throw new InvalidArgumentException('Invalid research data partition.');
         }
+        $existing=$this->repository->getBacktestRun($organizationId,(string)$specification['run_id']);
+        if($existing!==null){
+            $status=strtoupper((string)($existing['status']??''));
+            if(in_array($status,['QUEUED','RUNNING'],true))return $existing;
+            throw new InvalidArgumentException('Terminal backtest run_id cannot be reused; create a new run.');
+        }
         $record=$specification;
         $record['partition_name']=$partition;
         $record['status']='QUEUED';
@@ -111,8 +117,8 @@ final readonly class ResearchBacktestService
         }
         $specification['partition_name']=$partition;
         $existing=$this->repository->getBacktestRun($organizationId,(string)$specification['run_id']);
-        if($existing!==null&&($existing['status']??null)==='CANCELLED'){
-            throw new InvalidArgumentException('Cancelled backtest run cannot start.');
+        if($existing!==null&&in_array((string)($existing['status']??''),['COMPLETED','CANCELLED'],true)){
+            throw new InvalidArgumentException('Terminal backtest run cannot start again.');
         }
         $experiment=$this->repository->getExperiment($organizationId,(string)$specification['experiment_id']);
         if($experiment===null)throw new InvalidArgumentException('Backtest requires an existing experiment.');
