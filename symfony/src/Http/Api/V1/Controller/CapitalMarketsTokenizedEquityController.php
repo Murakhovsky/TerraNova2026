@@ -9,6 +9,7 @@ use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalBacktestService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use App\Security\SessionCsrfValidator;
@@ -33,6 +34,7 @@ final readonly class CapitalMarketsTokenizedEquityController
         private TokenizedEquityVerticalSliceService $verticalSlice,
         private TokenizedEquityPaperExecutionService $paper,
         private TokenizedEquityResearchService $research,
+        private TokenizedEquityHistoricalBacktestService $backtests,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -45,6 +47,7 @@ final readonly class CapitalMarketsTokenizedEquityController
             'research'=>$this->verticalSlice->dashboard($tenant->organizationId()->value()),
             'paper_portfolio'=>$this->paper->portfolio($tenant->organizationId()->value()),
             'hypothesis_research'=>$this->research->summary($tenant->organizationId()->value()),
+            'backtests'=>$this->backtests->runs($tenant->organizationId()->value(),20),
         ]);
     }
 
@@ -113,6 +116,39 @@ final readonly class CapitalMarketsTokenizedEquityController
                 min(10000,max(1,(int)($p['minimum_detected_sample']??30))),
                 min(10000,max(1,(int)($p['minimum_paper_sample']??10))),
             ));
+    }
+
+    public function backtests(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>[
+            'items'=>$this->backtests->runs(
+                $tenant->organizationId()->value(),
+                min(250,max(1,(int)$request->query->get('limit',50)))
+            ),
+        ]);
+    }
+
+    public function runBacktest(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::OpportunityView,
+            function(TenantContext $tenant,array $p):array{
+                $mapping=$p['mapping']??null;
+                $options=$p['options']??null;
+                if(!is_array($mapping)||array_is_list($mapping))throw new InvalidArgumentException('mapping must be an object.');
+                if(!is_array($options)||array_is_list($options))throw new InvalidArgumentException('options must be an object.');
+                return $this->backtests->run(
+                    $tenant->organizationId()->value(),
+                    $this->required($p,'hypothesis'),
+                    $this->required($p,'market_pair_id'),
+                    new \DateTimeImmutable($this->required($p,'from')),
+                    new \DateTimeImmutable($this->required($p,'to')),
+                    $mapping,
+                    $options,
+                );
+            });
     }
 
     public function initializePaperPortfolio(Request $request):JsonResponse
