@@ -55,6 +55,7 @@ generated: true
 | `capital_markets` | `app/migrations/20261006_000130_capital_markets_execution_recovery.sql` | `tn_capital_market_paper_fills` |
 | `capital_markets` | `app/migrations/20261006_000130_capital_markets_execution_recovery.sql` | `tn_capital_market_paper_orders` |
 | `capital_markets` | `app/migrations/20261006_000130_capital_markets_execution_recovery.sql` | `tn_capital_market_positions` |
+| `capital_markets` | `app/migrations/20261006_000131_capital_markets_kraken_market_data.sql` | — |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
