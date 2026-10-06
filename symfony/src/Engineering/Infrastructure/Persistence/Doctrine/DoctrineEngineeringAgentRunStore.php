@@ -10,6 +10,7 @@ use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Persistence\Doctrine\Entity\Engineering\AgentRunRecord;
+use App\Persistence\Doctrine\Entity\Engineering\EngineeringTaskRecord;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -40,6 +41,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
 
         $runId = EngineeringId::generate();
         $runTraceId = $this->runCorrelationId($traceId, $task->id);
+        $persistedTaskId = $this->persistedTaskId($task);
         $this->entityManager->persist(new AgentRunRecord(
             id: $runId,
             featureId: $task->featureId,
@@ -49,13 +51,16 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             idempotencyKey: $task->idempotencyKey,
             modelProvider: 'pending',
             model: 'pending',
-            inputSnapshot: $task->inputSnapshot,
+            inputSnapshot: array_merge($task->inputSnapshot, [
+                'execution_task_id' => $task->id,
+                'persisted_task_id' => $persistedTaskId,
+            ]),
             status: 'RUNNING',
             technicalRetry: 0,
             logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
             traceId: $runTraceId,
             startedAt: new DateTimeImmutable(),
-            taskId: $task->id,
+            taskId: $persistedTaskId,
         ));
         $this->entityManager->flush();
         $this->events->append(
@@ -67,14 +72,15 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             $task->role->value.' agent run started',
             [
                 'role' => $task->role->value,
-                'task_id' => $task->id,
+                'execution_task_id' => $task->id,
+                'persisted_task_id' => $persistedTaskId,
                 'logical_attempt' => max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
                 'objective' => mb_substr($task->objective, 0, 500),
             ],
             $runId,
             $runTraceId,
         );
-        $this->workflows->touchRuntime($workflowId, $runId, $task->id);
+        $this->workflows->touchRuntime($workflowId, $runId, $persistedTaskId);
         return $runId;
     }
 
@@ -217,6 +223,16 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             ['startedAt' => 'ASC'],
         );
         return array_map(fn (AgentRunRecord $record): array => $this->view($record), $records);
+    }
+
+    private function persistedTaskId(EngineeringAgentTask $task): ?string
+    {
+        $record = $this->entityManager->find(EngineeringTaskRecord::class, $task->id);
+        if (!$record instanceof EngineeringTaskRecord) {
+            return null;
+        }
+
+        return $record->featureId() === $task->featureId ? $record->id() : null;
     }
 
     private function recordByIdempotencyKey(string $key): ?AgentRunRecord
