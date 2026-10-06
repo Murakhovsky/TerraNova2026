@@ -59,6 +59,7 @@ final readonly class EngineeringProductRequirementsAnalysisService
                 'Do not make Principal Architect decisions.',
                 'Do not orchestrate workflow transitions; return product requirements only.',
                 'Do not silently invent business requirements.',
+                'If status is HUMAN_DECISION_REQUIRED, return exactly one top-level blocking open question with explicit options; keep other non-blocking questions under feature.open_questions.',
                 'Use repository evidence before assumptions.',
                 'Architecture stage is mandatory for V0.1 production tasks.',
             ],
@@ -69,7 +70,7 @@ final readonly class EngineeringProductRequirementsAnalysisService
                 'Acceptance criteria are testable.',
                 'Risks and assumptions are recorded.',
                 'Tasks and dependencies are defined.',
-                'Next action is explicit.',
+                'Blocking ambiguity, when present, is represented by exactly one answerable top-level human-decision question.',
             ],
             idempotencyKey: $featureId.':product-requirements:'.$logicalAttempt.':'.$contextMap->repositoryRevision,
             inputSnapshot: [
