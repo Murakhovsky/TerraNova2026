@@ -373,6 +373,304 @@ final readonly class TokenizedEquityPaperExecutionService
         }
     }
 
+    /** @param array<string,mixed> $opportunity @param array<string,mixed> $candidate @param array<string,mixed> $parameters @param array<string,mixed> $risk @param array<string,mixed> $executionEvidence @return array<string,mixed> */
+    private function executeOrderBookPath(
+        string $organizationId,
+        string $opportunityId,
+        string $executionId,
+        array $opportunity,
+        array $candidate,
+        array $parameters,
+        array $risk,
+        \Domains\CapitalMarkets\Domain\MarketData\MarketState $buyState,
+        \Domains\CapitalMarkets\Domain\MarketData\MarketState $sellState,
+        Decimal $requestedQuantity,
+        DateTimeImmutable $now,
+        DateTimeImmutable $expires,
+        array $executionEvidence,
+    ):array{
+        $simulation=$this->multiLeg->simulateH2(
+            $buyState->orderBook,$sellState->orderBook,$requestedQuantity,CompensationPolicy::EmergencyClose
+        );
+        if(!$simulation['residual_unhedged_quantity']->isZero()){
+            return $this->recordInvalidated(
+                $organizationId,$executionId,$opportunityId,$now,'UNHEDGED_POSITION',
+                [...$executionEvidence,'residual_unhedged_quantity'=>$simulation['residual_unhedged_quantity']->value()]
+            );
+        }
+
+        /** @var Decimal $buyQuantity */
+        $buyQuantity=$simulation['buy']['filled_quantity'];
+        /** @var Decimal $sellQuantity */
+        $sellQuantity=$simulation['sell']['filled_quantity'];
+        /** @var Decimal $buyPrice */
+        $buyPrice=$simulation['buy']['price'];
+        /** @var Decimal $sellPrice */
+        $sellPrice=$simulation['sell']['price'];
+        /** @var Decimal $buyNotional */
+        $buyNotional=$simulation['buy']['notional'];
+        /** @var Decimal $sellNotional */
+        $sellNotional=$simulation['sell']['notional'];
+
+        if(!$buyQuantity->isPositive()){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'NO_BUY_LIQUIDITY',$executionEvidence);
+        }
+
+        $buyFeeRate=Decimal::fromString((string)($parameters['buy_fee_rate']??''));
+        $sellFeeRate=Decimal::fromString((string)($parameters['sell_fee_rate']??''));
+        $buyFee=DecimalMath::multiply($buyNotional,$buyFeeRate);
+        $sellFee=DecimalMath::multiply($sellNotional,$sellFeeRate);
+
+        $detectedBuy=Decimal::fromString((string)$candidate['buy_price']);
+        $detectedSell=Decimal::fromString((string)$candidate['sell_price']);
+        $buySlipUnit=DecimalMath::subtract($buyPrice,$detectedBuy);
+        if($buySlipUnit->isNegative())$buySlipUnit=Decimal::fromString('0');
+        $sellSlipUnit=$sellQuantity->isPositive()?DecimalMath::subtract($detectedSell,$sellPrice):Decimal::fromString('0');
+        if($sellSlipUnit->isNegative())$sellSlipUnit=Decimal::fromString('0');
+        $buySlippage=DecimalMath::multiply($buySlipUnit,$buyQuantity);
+        $sellSlippage=DecimalMath::multiply($sellSlipUnit,$sellQuantity);
+
+        $compensation=$simulation['compensation'];
+        $compensationFill=null;
+        $compensationFee=Decimal::fromString('0');
+        $compensationCash=Decimal::fromString('0');
+        if(is_array($compensation)&&$compensation['filled_quantity']->isPositive()){
+            $compensationFee=DecimalMath::multiply($compensation['notional'],$sellFeeRate);
+            $compensationCash=DecimalMath::subtract($compensation['notional'],$compensationFee);
+            $compensationFill=new PaperFill(
+                $executionId.':compensation',$executionId,
+                (string)$candidate['buy_venue_id'],(string)$candidate['buy_instrument_id'],ExecutionSide::Sell,
+                $compensation['filled_quantity'],$compensation['price'],$compensationFee,Decimal::fromString('0'),
+                $now,$executionId.':compensation'
+            );
+        }
+
+        $quoteAsset=$buyState->bestQuote->askPrice->quoteAsset->value();
+        $requiredCapital=DecimalMath::add($buyNotional,$buyFee);
+        $reservationId='cm_res_'.substr(hash('sha256',$opportunityId.'|'.$executionId),0,40);
+        $buyCashReservation=$reservationId.':buy-cash';
+        $sellInventoryReservation=$sellQuantity->isPositive()?$reservationId.':sell-inventory':null;
+
+        if(!$this->repository->reserveCapital(
+            $organizationId,$reservationId,$opportunityId,$requiredCapital->value(),$expires->format(DATE_ATOM)
+        )){
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'INSUFFICIENT_PAPER_CAPITAL',$executionEvidence);
+        }
+        if(!$this->repository->reservePaperBalance(
+            $organizationId,$buyCashReservation,$opportunityId,(string)$candidate['buy_venue_id'],$quoteAsset,
+            $requiredCapital->value(),$expires->format(DATE_ATOM)
+        )){
+            $this->repository->releaseReservation($organizationId,$reservationId);
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'INSUFFICIENT_PREFUNDED_BUY_CASH',$executionEvidence);
+        }
+        if($sellInventoryReservation!==null&&!$this->repository->reservePaperBalance(
+            $organizationId,$sellInventoryReservation,$opportunityId,(string)$candidate['sell_venue_id'],(string)$candidate['sell_instrument_id'],
+            $sellQuantity->value(),$expires->format(DATE_ATOM)
+        )){
+            $this->repository->releasePaperBalanceReservation($organizationId,$buyCashReservation);
+            $this->repository->releaseReservation($organizationId,$reservationId);
+            return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'INSUFFICIENT_PREFUNDED_INVENTORY',$executionEvidence);
+        }
+
+        $buyLeg=new ExecutionLeg(
+            $executionId.':leg:buy',1,(string)$candidate['buy_venue_id'].':'.(string)$candidate['buy_instrument_id'],
+            (string)$candidate['buy_instrument_id'],ExecutionSide::Buy,$requestedQuantity,'IOC',null,$buyPrice,$buyFee,$buySlippage
+        );
+        $sellTargetPrice=$sellQuantity->isPositive()?$sellPrice:Decimal::fromString((string)$candidate['sell_price']);
+        $sellLeg=new ExecutionLeg(
+            $executionId.':leg:sell',2,(string)$candidate['sell_venue_id'].':'.(string)$candidate['sell_instrument_id'],
+            (string)$candidate['sell_instrument_id'],ExecutionSide::Sell,$buyQuantity,'IOC',null,$sellTargetPrice,$sellFee,$sellSlippage
+        );
+        $reservationIds=[$reservationId,$buyCashReservation];
+        if($sellInventoryReservation!==null)$reservationIds[]=$sellInventoryReservation;
+        $plan=new ExecutionPlan(
+            $executionId.':plan',$opportunityId,'TokenizedEquityRelativeValue-v1',$now,$expires,[$buyLeg,$sellLeg],
+            'SEQUENTIAL',PartialFillPolicy::AbortAndCompensate,CompensationPolicy::EmergencyClose,
+            (int)($parameters['max_total_latency_ms']??1000),(int)($parameters['max_leg_latency_ms']??500),
+            DecimalMath::add(DecimalMath::add($buyFee,$sellFee),$compensationFee),
+            Decimal::fromString((string)$opportunity['expected_pnl']),(string)($risk['id']??'unknown'),$reservationIds
+        );
+        $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'READY'));
+
+        $checkpoint=[
+            'id'=>$executionId,'opportunity_id'=>$opportunityId,'status'=>'READY','checkpoint'=>'RESERVATIONS_READY',
+            'executed_at'=>$now->format(DATE_ATOM),'reservation_id'=>$reservationId,
+            'buy_cash_reservation_id'=>$buyCashReservation,'sell_inventory_reservation_id'=>$sellInventoryReservation,
+            'buy_venue_id'=>(string)$candidate['buy_venue_id'],'sell_venue_id'=>(string)$candidate['sell_venue_id'],
+            'buy_instrument_id'=>(string)$candidate['buy_instrument_id'],'sell_instrument_id'=>(string)$candidate['sell_instrument_id'],
+            'quote_asset'=>$quoteAsset,'quantity'=>$requestedQuantity->value(),'plan_id'=>$plan->id,
+            'realized_pnl'=>'0','edge_capture_ratio'=>'0',
+        ];
+        $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'READY',$checkpoint);
+
+        $buyOrder=new PaperOrder(
+            $executionId.':order:buy',$executionId,$buyLeg->id,$buyLeg->venueMarketId,(string)$candidate['buy_instrument_id'],
+            ExecutionSide::Buy,$requestedQuantity,$buyQuantity,$simulation['buy']['state'],$now,$now,$now
+        );
+        $this->repository->savePaperOrder(
+            $organizationId,$buyOrder->id,$executionId,$buyLeg->id,$buyOrder->state->value,$buyOrder->id,$this->orderArray($buyOrder)
+        );
+        $buyFill=new PaperFill(
+            $executionId.':buy',$executionId,(string)$candidate['buy_venue_id'],(string)$candidate['buy_instrument_id'],
+            ExecutionSide::Buy,$buyQuantity,$buyPrice,$buyFee,$buySlippage,$now,$executionId.':buy'
+        );
+        $this->repository->savePaperFill(
+            $organizationId,$buyFill->id,$buyOrder->id,$executionId,$buyFill->idempotencyKey,$this->fillArray($buyFill)
+        );
+        $checkpoint=[
+            ...$checkpoint,'status'=>'PARTIALLY_EXECUTED','checkpoint'=>'LEG1_FILLED',
+            'buy_order'=>$this->orderArray($buyOrder),'buy_fill'=>$this->fillArray($buyFill),
+        ];
+        $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'PARTIALLY_EXECUTED',$checkpoint);
+
+        $sellOrder=new PaperOrder(
+            $executionId.':order:sell',$executionId,$sellLeg->id,$sellLeg->venueMarketId,(string)$candidate['sell_instrument_id'],
+            ExecutionSide::Sell,$buyQuantity,$sellQuantity,$simulation['sell']['state'],$now,$now,$now
+        );
+        $this->repository->savePaperOrder(
+            $organizationId,$sellOrder->id,$executionId,$sellLeg->id,$sellOrder->state->value,$sellOrder->id,$this->orderArray($sellOrder)
+        );
+
+        $sellFill=null;
+        if($sellQuantity->isPositive()){
+            $sellFill=new PaperFill(
+                $executionId.':sell',$executionId,(string)$candidate['sell_venue_id'],(string)$candidate['sell_instrument_id'],
+                ExecutionSide::Sell,$sellQuantity,$sellPrice,$sellFee,$sellSlippage,$now,$executionId.':sell'
+            );
+            $this->repository->savePaperFill(
+                $organizationId,$sellFill->id,$sellOrder->id,$executionId,$sellFill->idempotencyKey,$this->fillArray($sellFill)
+            );
+        }
+        $checkpoint=[
+            ...$checkpoint,
+            'status'=>$compensationFill!==null?'COMPENSATING':'EXECUTING',
+            'checkpoint'=>$compensationFill!==null?($sellQuantity->isPositive()?'LEG2_PARTIAL':'LEG2_REJECTED'):'LEGS_MATCHED',
+            'sell_order'=>$this->orderArray($sellOrder),
+            'sell_fill'=>$sellFill===null?null:$this->fillArray($sellFill),
+        ];
+        $this->repository->saveExecution(
+            $organizationId,$executionId,$opportunityId,$compensationFill!==null?'COMPENSATING':'EXECUTING',$checkpoint
+        );
+
+        $compOrder=null;
+        if($compensationFill!==null){
+            $compOrder=new PaperOrder(
+                $executionId.':order:compensation',$executionId,$executionId.':leg:compensation',
+                (string)$candidate['buy_venue_id'].':'.(string)$candidate['buy_instrument_id'],
+                (string)$candidate['buy_instrument_id'],ExecutionSide::Sell,
+                $compensationFill->quantity,$compensationFill->quantity,PaperOrderState::Filled,$now,$now,$now
+            );
+            $this->repository->savePaperOrder(
+                $organizationId,$compOrder->id,$executionId,$compOrder->legId,$compOrder->state->value,$compOrder->id,$this->orderArray($compOrder)
+            );
+            $this->repository->savePaperFill(
+                $organizationId,$compensationFill->id,$compOrder->id,$executionId,$compensationFill->idempotencyKey,$this->fillArray($compensationFill)
+            );
+            $checkpoint=[
+                ...$checkpoint,'status'=>'EXECUTING','checkpoint'=>'COMPENSATION_FILLED',
+                'compensation_order'=>$this->orderArray($compOrder),
+                'compensation_fill'=>$this->fillArray($compensationFill),
+                'compensation_quantity'=>$compensationFill->quantity->value(),
+                'compensation_cash'=>$compensationCash->value(),
+            ];
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'EXECUTING',$checkpoint);
+        }
+
+        $fills=[$buyFill];
+        if($sellFill!==null)$fills[]=$sellFill;
+        if($compensationFill!==null)$fills[]=$compensationFill;
+        $realized=$this->pnl->realized($fills);
+
+        $ledgerEntries=[];
+        foreach($fills as $fill)$ledgerEntries=[...$ledgerEntries,...$this->ledgerEntriesForFill($fill,$quoteAsset)];
+        $ledger=new LedgerTransaction(
+            'cm_ledger_'.substr(hash('sha256',$executionId.'|settlement'),0,40),$executionId.':settlement',$now,$ledgerEntries
+        );
+        $this->repository->saveLedgerTransaction($organizationId,$ledger->id,$ledger->idempotencyKey,[
+            'id'=>$ledger->id,'idempotency_key'=>$ledger->idempotencyKey,'posted_at'=>$ledger->postedAt->format(DATE_ATOM),
+            'entries'=>array_map(static fn(LedgerEntry $e):array=>[
+                'account'=>$e->account,'asset_key'=>$e->assetKey,'debit'=>$e->debit->value(),'credit'=>$e->credit->value(),
+            ],$ledger->entries),
+        ]);
+
+        $effectiveQuantity=$sellQuantity->isPositive()?$sellQuantity:$buyQuantity;
+        $detectedEdge=Decimal::fromString((string)$candidate['gross_spread']);
+        $executableEdge=$sellQuantity->isPositive()?DecimalMath::subtract($sellPrice,$buyPrice):Decimal::fromString('0');
+        $realizedEdge=$effectiveQuantity->isPositive()?DecimalMath::divide($realized,$effectiveQuantity,12):Decimal::fromString('0');
+        $performance=new ExecutionPerformance(
+            $executionId,$detectedEdge,$executableEdge,$realizedEdge,
+            Decimal::fromString((string)$opportunity['expected_pnl']),$realized,$requiredCapital,0
+        );
+
+        $checkpoint=[
+            ...$checkpoint,'status'=>'EXECUTING','checkpoint'=>'LEDGER_POSTED',
+            'realized_pnl'=>$realized->value(),'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
+        ];
+        $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'EXECUTING',$checkpoint);
+        $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'ACCOUNTING'));
+
+        $sellCash=$sellQuantity->isPositive()?DecimalMath::subtract($sellNotional,$sellFee):Decimal::fromString('0');
+        $this->repository->settlePaperExecution(
+            $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
+            (string)$candidate['buy_venue_id'],(string)$candidate['buy_instrument_id'],$buyQuantity->value(),
+            (string)$candidate['sell_venue_id'],$quoteAsset,$sellCash->value(),$realized->value(),
+            $compensationFill?->quantity->value(),$compensationFill===null?null:$compensationCash->value()
+        );
+
+        $status=$compensationFill!==null?'COMPLETED_COMPENSATED':'COMPLETED';
+        $payload=[
+            ...$checkpoint,
+            'status'=>$status,'checkpoint'=>'SETTLED','requested_quantity'=>$requestedQuantity->value(),
+            'buy_filled_quantity'=>$buyQuantity->value(),'sell_filled_quantity'=>$sellQuantity->value(),
+            'buy_fill'=>$this->fillArray($buyFill),
+            'sell_fill'=>$sellFill===null?null:$this->fillArray($sellFill),
+            'compensation_fill'=>$compensationFill===null?null:$this->fillArray($compensationFill),
+            'detected_edge'=>$detectedEdge->value(),'executable_edge'=>$executableEdge->value(),
+            'realized_edge'=>$realizedEdge->value(),'expected_pnl'=>$opportunity['expected_pnl'],
+            'realized_pnl'=>$realized->value(),'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
+            'partial_fill'=>!$simulation['buy']['fully_filled']||!$simulation['sell']['fully_filled'],
+            'compensated'=>$compensationFill!==null,'residual_unhedged_quantity'=>'0',
+        ];
+        $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,$status));
+        $this->repository->saveExecution($organizationId,$executionId,$opportunityId,$status,$payload);
+
+        $fingerprint=hash('sha256',implode('|',[$organizationId,'H2','EXECUTION',$opportunityId,$executionId]));
+        $this->repository->saveHypothesisObservation(
+            $organizationId,'cm_obs_'.substr($fingerprint,0,40),'H2','EXECUTION',$now->format(DATE_ATOM),$fingerprint,[
+                'market_pair_id'=>(string)($candidate['market_pair_id']??''),'candidate_id'=>(string)($candidate['id']??''),
+                'opportunity_id'=>$opportunityId,'execution_id'=>$executionId,'detected'=>true,'executable'=>true,'realized'=>true,
+                'expected_pnl'=>(string)$opportunity['expected_pnl'],'realized_pnl'=>$realized->value(),
+                'reason'=>$compensationFill!==null?'COMPENSATED_PARTIAL_FILL':null,
+                'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
+            ]
+        );
+
+        return $payload;
+    }
+
+    /** @return list<LedgerEntry> */
+    private function ledgerEntriesForFill(PaperFill $fill,string $quoteAsset):array
+    {
+        if($fill->side===ExecutionSide::Buy){
+            return [
+                new LedgerEntry('venue:'.$fill->venueId.':inventory',$fill->quantity,Decimal::fromString('0'),$fill->instrumentId),
+                new LedgerEntry('external:'.$fill->venueId.':inventory',Decimal::fromString('0'),$fill->quantity,$fill->instrumentId),
+                new LedgerEntry('external:'.$fill->venueId.':cash',$fill->notional(),Decimal::fromString('0'),$quoteAsset),
+                new LedgerEntry('venue:'.$fill->venueId.':cash',Decimal::fromString('0'),$fill->notional(),$quoteAsset),
+                new LedgerEntry('fees:'.$fill->venueId,$fill->fee,Decimal::fromString('0'),$quoteAsset),
+                new LedgerEntry('venue:'.$fill->venueId.':cash',Decimal::fromString('0'),$fill->fee,$quoteAsset),
+            ];
+        }
+        return [
+            new LedgerEntry('external:'.$fill->venueId.':inventory',$fill->quantity,Decimal::fromString('0'),$fill->instrumentId),
+            new LedgerEntry('venue:'.$fill->venueId.':inventory',Decimal::fromString('0'),$fill->quantity,$fill->instrumentId),
+            new LedgerEntry('venue:'.$fill->venueId.':cash',$fill->notional(),Decimal::fromString('0'),$quoteAsset),
+            new LedgerEntry('external:'.$fill->venueId.':cash',Decimal::fromString('0'),$fill->notional(),$quoteAsset),
+            new LedgerEntry('fees:'.$fill->venueId,$fill->fee,Decimal::fromString('0'),$quoteAsset),
+            new LedgerEntry('venue:'.$fill->venueId.':cash',Decimal::fromString('0'),$fill->fee,$quoteAsset),
+        ];
+    }
+
     /** @param array<string,mixed> $evidence @return array<string,mixed> */
     private function recordInvalidated(
         string $organizationId,
