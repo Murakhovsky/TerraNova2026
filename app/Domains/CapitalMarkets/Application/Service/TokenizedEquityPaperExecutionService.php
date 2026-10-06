@@ -21,6 +21,7 @@ use Domains\CapitalMarkets\Domain\Ledger\LedgerEntry;
 use Domains\CapitalMarkets\Domain\Ledger\LedgerTransaction;
 use Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator;
 use Domains\CapitalMarkets\Domain\Service\PaperPnlEngine;
+use Domains\CapitalMarkets\Domain\Service\PositionProjector;
 use Domains\CapitalMarkets\Domain\Service\PaperMultiLegExecutionSimulator;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
@@ -34,6 +35,7 @@ final readonly class TokenizedEquityPaperExecutionService
         private ExecutablePriceCalculator $prices,
         private PaperPnlEngine $pnl,
         private PaperMultiLegExecutionSimulator $multiLeg,
+        private PositionProjector $positions,
     ){}
 
     /** @return array<string,mixed> */
@@ -321,6 +323,9 @@ final readonly class TokenizedEquityPaperExecutionService
             $this->repository->settlePaperExecution(
                 $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
                 $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
+            );
+            $this->persistBuyVenuePosition(
+                $organizationId,$buyVenue,$buyInstrument,[$buyFill],$buy['price']
             );
             $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
@@ -616,6 +621,13 @@ final readonly class TokenizedEquityPaperExecutionService
             (string)$candidate['sell_venue_id'],$quoteAsset,$sellCash->value(),$realized->value(),
             $compensationFill?->quantity->value(),$compensationFill===null?null:$compensationCash->value()
         );
+        $buyVenueFills=[$buyFill];
+        if($compensationFill!==null)$buyVenueFills[]=$compensationFill;
+        $markPrice=$compensationFill?->price??$buyPrice;
+        $this->persistBuyVenuePosition(
+            $organizationId,(string)$candidate['buy_venue_id'],(string)$candidate['buy_instrument_id'],
+            $buyVenueFills,$markPrice
+        );
 
         $status=$compensationFill!==null?'COMPLETED_COMPENSATED':'COMPLETED';
         $payload=[
@@ -730,6 +742,29 @@ final readonly class TokenizedEquityPaperExecutionService
         if($available->compareTo($quantity)<0)throw new DomainException('INSUFFICIENT_LIQUIDITY');
         $price=$side===ExecutionSide::Buy?$quote->askPrice->value:$quote->bidPrice->value;
         return ['price'=>$price,'notional'=>DecimalMath::multiply($price,$quantity)];
+    }
+
+    /** @param list<PaperFill> $fills */
+    private function persistBuyVenuePosition(
+        string $organizationId,string $venueId,string $instrumentId,array $fills,Decimal $markPrice
+    ):void{
+        $position=$this->positions->project(
+            'paper','TokenizedEquityRelativeValue-v1',$instrumentId,$venueId,$fills,$markPrice
+        );
+        $payload=[
+            'position_id'=>$position->positionId,'portfolio_id'=>$position->portfolioId,'strategy_id'=>$position->strategyId,
+            'instrument_id'=>$position->instrumentId,'venue_id'=>$position->venueId,'status'=>$position->status(),
+            'quantity'=>$position->quantity->value(),'average_entry_price'=>$position->averageEntryPrice->value(),
+            'mark_price'=>$position->markPrice->value(),'market_value'=>$position->marketValue()->value(),
+            'fees'=>$position->fees->value(),'realized_pnl'=>$position->realizedPnl->value(),
+            'unrealized_pnl'=>$position->unrealizedPnl()->value(),
+            'opened_at'=>$position->openedAt?->format(DATE_ATOM),'updated_at'=>$position->updatedAt?->format(DATE_ATOM),
+            'closed_at'=>$position->closedAt?->format(DATE_ATOM),
+        ];
+        $this->repository->savePosition(
+            $organizationId,(string)$position->positionId,'paper','TokenizedEquityRelativeValue-v1',
+            $instrumentId,$venueId,$position->status(),$payload
+        );
     }
 
     /** @return array<string,mixed> */
