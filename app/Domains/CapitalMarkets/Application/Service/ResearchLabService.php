@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate;
 use Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine;
 use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
 use Domains\CapitalMarkets\Domain\Research\ReplayDataGuard;
+use Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector;
 use InvalidArgumentException;
 
 final readonly class ResearchLabService
@@ -18,6 +19,7 @@ final readonly class ResearchLabService
         private StrategyScorecardEngine $scorecards,
         private ResearchIsolationPolicy $isolation,
         private ReplayDataGuard $replayGuard,
+        private ResearchDuplicateDetector $duplicates,
     ){}
 
     public function createHypothesis(string $organizationId,array $record):array
@@ -31,6 +33,13 @@ final readonly class ResearchLabService
         if(!in_array((string)$record['status'],['IDEA','DRAFT'],true) && (string)$record['edge_source']==='UNKNOWN'){
             throw new InvalidArgumentException('UNKNOWN edge source is allowed only for IDEA/DRAFT.');
         }
+        if(!(bool)($record['allow_duplicate']??false)){
+            $matches=$this->duplicates->find($record,$this->repository->listHypotheses($organizationId,500));
+            if($matches!==[]){
+                throw new InvalidArgumentException('Potential duplicate research hypothesis: '.json_encode(array_slice($matches,0,3),JSON_THROW_ON_ERROR));
+            }
+        }
+        unset($record['allow_duplicate']);
         $record['revision']=max(1,(int)($record['revision']??1));
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->repository->saveHypothesis($organizationId,$record);
@@ -182,10 +191,21 @@ final readonly class ResearchLabService
 
     public function workspace(string $organizationId):array
     {
+        $hypotheses=$this->repository->listHypotheses($organizationId,500);
+        $experiments=$this->repository->listExperiments($organizationId,null,500);
+        $knowledge=$this->repository->listKnowledge($organizationId,500);
         return [
-            'hypotheses'=>$this->repository->listHypotheses($organizationId,500),
-            'experiments'=>$this->repository->listExperiments($organizationId,null,500),
-            'knowledge'=>$this->repository->listKnowledge($organizationId,500),
+            'hypotheses'=>$hypotheses,
+            'experiments'=>$experiments,
+            'knowledge'=>$knowledge,
+            'metrics'=>[
+                'hypothesis_count'=>count($hypotheses),
+                'experiment_count'=>count($experiments),
+                'knowledge_count'=>count($knowledge),
+                'validated_hypotheses'=>count(array_filter($hypotheses,static fn(array $h):bool=>($h['status']??'')==='VALIDATED')),
+                'rejected_hypotheses'=>count(array_filter($hypotheses,static fn(array $h):bool=>($h['status']??'')==='REJECTED')),
+                'running_experiments'=>count(array_filter($experiments,static fn(array $e):bool=>($e['status']??'')==='RUNNING')),
+            ],
         ];
     }
 
