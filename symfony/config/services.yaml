@@ -1965,7 +1965,19 @@ services:
   Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine: ~
   Domains\CapitalMarkets\Domain\Research\ParameterSensitivityEngine: ~
   Domains\CapitalMarkets\Domain\Research\StrategyDemotionPolicy: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector: ~
+  Domains\CapitalMarkets\Domain\Research\WalkForwardEngine: ~
   Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
+
+  Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService: ~
+
+  Domains\CapitalMarkets\Application\Service\ResearchBacktestService:
+    arguments:
+      $adapters:
+        - '@Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService'
+      $repository: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $lab: '@Domains\CapitalMarkets\Application\Service\ResearchLabService'
+      $walkForward: '@Domains\CapitalMarkets\Domain\Research\WalkForwardEngine'
 
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
