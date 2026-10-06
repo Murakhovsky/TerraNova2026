@@ -221,13 +221,29 @@
                     <article style="margin-bottom:12px">
                         <strong>{{ decision.question|default('Потрібне рішення') }}</strong>
                         <p class="engineering-muted">{{ decision.reason|default('Процес очікує на рішення.') }}</p>
+                        {% set requestedChecks = decision.evidence.human_tests_required|default([]) %}
+                        {% if requestedChecks is not empty %}
+                            <div class="cos-card" style="margin:8px 0;padding:10px">
+                                <strong>Що саме потребує участі людини</strong>
+                                {% for check in requestedChecks %}
+                                    {% if check is iterable %}
+                                        <div style="margin-top:6px">
+                                            {{ check.question|default(check.scenario|default(check.description|default('Ручна перевірка'))) }}
+                                            {% if check.required_evidence|default('') %}<div class="engineering-muted">Потрібне підтвердження: {{ check.required_evidence }}</div>{% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div style="margin-top:6px">{{ check }}</div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                         <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/human-decision">
                             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                             <input type="hidden" name="request_id" value="{{ decision.id }}">
                             <div class="engineering-inline">
                                 {% for option in decision.options|default([]) %}
                                     {% set optionValue = option is iterable ? option.value|default(option.id|default(option.option|default(''))) : option %}
-                                    {% set optionLabel = option is iterable ? option.label|default(option.title|default(optionValue)) : option %}
+                                    {% set optionLabel = option is iterable ? option.label|default(option.title|default(option.description|default(optionValue))) : option %}
                                     {% if optionValue %}<label><input type="radio" name="option" value="{{ optionValue }}" required> {{ optionLabel }}</label>{% endif %}
                                 {% else %}
                                     <input class="cos-input" name="option" placeholder="Рішення" required>

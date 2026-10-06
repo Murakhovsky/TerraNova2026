@@ -20,6 +20,9 @@ foreach ([
     "'requested_by_agent'",
     "'resume_state'",
     'answeredHumanDecisions',
+    'AgentRole::QA_PLANNER',
+    'decision_fingerprint',
+    'human_decision.loop_detected',
 ] as $needle) {
     if (!str_contains($productStage.$architectStage.$developerStage.$reviewerStage.$qaStage.$store, $needle)) {
         throw new RuntimeException('Human decision persistence missing '.$needle);
