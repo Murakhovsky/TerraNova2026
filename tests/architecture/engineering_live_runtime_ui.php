@@ -52,8 +52,8 @@ foreach ([
     'data-engineering-live-duration-start',
     'data-engineering-live-duration-stop',
     'data-engineering-live-timestamp',
-    'data-engineering-live-interval-value="6000"',
-    'автооновлення кожні 6 с',
+    'data-engineering-live-interval-value="10000"',
+    'автооновлення кожні 10 с',
     'LLM ще не запускався',
     'Токени',
     'Стан runtime',
@@ -70,8 +70,8 @@ foreach ([
 
 foreach ([
     'window.setInterval',
-    'default: 6000',
-    'this.intervalValue || 6000',
+    'default: 10000',
+    'this.intervalValue || 10000',
     'fetch(this.urlValue',
     'renderTimeline(',
     'relativeTime(',
