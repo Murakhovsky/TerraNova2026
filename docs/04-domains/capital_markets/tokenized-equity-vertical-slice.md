@@ -1,5 +1,5 @@
 ---
-title: Tokenized Equity Vertical Slice V0.4
+title: Tokenized Equity Vertical Slice V0.5
 description: "Опис першого фінансового vertical slice Capital Markets для H1/H2 research, deterministic risk та guarded paper execution."
 domain: capital_markets
 status: implemented
@@ -8,7 +8,7 @@ kind: domain
 contract: domain-v1
 ---
 
-# Вертикальний зріз Tokenized Equity V0.4
+# Вертикальний зріз Tokenized Equity V0.5
 
 Цей пакет реалізує детерміноване фінансове ядро для **H1 Tokenized Equity Dislocation** та **H2 Cross-Venue Tokenized Equity Arbitrage**.
 
@@ -46,10 +46,12 @@ MarketState
 - H1 залишається research-only, доки немає реального executable hedge venue;
 - Live Trading і withdrawals залишаються вимкненими.
 
-## Реалізований результат V0.4
+## Реалізований результат V0.5
 
 Система вже вміє зберігати candidates, opportunities, risk assessments, paper executions, paper portfolio, venue balances і immutable ledger transactions; має API та окремий Tokenized Equity workspace; повторно перевіряє ринок перед paper execution та вимірює realized P&L і edge capture.
 
+V0.5 додає append-only `HypothesisObservation` journal для кожного SCAN, EVALUATION і completed EXECUTION. На його основі детерміновано будується Edge Funnel `theoretical scan → detected → executable → realized`, накопичуються expected/realized P&L samples і формується sample-gated verdict для H1/H2. Research replay не змінює стан: однаковий journal дає однаковий summary та `dataset_hash`.
+
 ## Наступний етап
 
-Наступний пакет має розширювати provider coverage, automated scanning universe, historical replay/backtesting та operational observability. Live execution не входить у цей етап.
+Наступний пакет має закрити historical MarketState replay/backtesting, automated scanning universe, execution lifecycle/partial-fill hardening, position/exposure lifecycle та operational observability. Live execution не входить у цей етап.
