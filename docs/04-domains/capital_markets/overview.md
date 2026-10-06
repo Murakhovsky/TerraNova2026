@@ -42,10 +42,10 @@ provider adapters: Bybit Spot REST + Massive Stocks REST
 provider polling: CLI + operator API/UI
 operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities
 streaming: disabled / next wave
-execution: guarded H2 paper only; H1 research-only; live disabled
+execution: guarded H1/H2 paper; H1 requires explicit executable hedge venue; live disabled
 ```
 
-Модуль вимкнений за замовчуванням. Bybit Spot REST та Massive Stocks REST adapters уже реалізовані за provider-neutral contracts. Операторський Market Data workspace керує Sources, Subscriptions, Health та ручним Poll. Нові sources створюються disabled. Provider-specific flags і streaming flag залишаються вимкненими до tenant source configuration та production cutover.
+Модуль вимкнений за замовчуванням. Bybit Spot REST, Kraken public Spot/xStocks та Massive Stocks REST adapters уже реалізовані за provider-neutral contracts. Операторський Market Data workspace керує Sources, Subscriptions, Health та ручним Poll. Нові sources створюються disabled. Provider-specific flags і streaming flag залишаються вимкненими до tenant source configuration та production cutover.
 
 ## Межі
 
