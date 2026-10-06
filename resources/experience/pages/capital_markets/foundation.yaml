@@ -124,7 +124,7 @@ pages:
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip, EntityList]
-      optional: [ActionBar, EmptyState, ErrorState, ContextPanel]
+      optional: [Toolbar, EmptyState, ErrorState]
     primary_action: capital_markets.market_data.poll
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
