@@ -27,6 +27,7 @@ export default class extends Controller {
 
     connect() {
         this.fetching = false;
+        this.liveUpdatesStopped = false;
         this.currentRuns = [];
         this.currentWorkflow = null;
         this.currentHealth = String(this.initialHealthValue || '').toUpperCase();
@@ -69,7 +70,7 @@ export default class extends Controller {
     }
 
     async refresh() {
-        if (this.fetching || document.hidden || !this.hasUrlValue) {
+        if (this.liveUpdatesStopped || this.fetching || document.hidden || !this.hasUrlValue) {
             return;
         }
 
@@ -176,7 +177,7 @@ export default class extends Controller {
             this.heartbeatTarget.textContent = 'сигнал: ' + this.relativeTime(timestamp);
         }
 
-        if (this.hasPollStatusTarget && this.lastPollAt !== null) {
+        if (!this.liveUpdatesStopped && this.hasPollStatusTarget && this.lastPollAt !== null) {
             const age = Math.max(0, Math.floor((Date.now() - this.lastPollAt) / 1000));
             if (!this.pollStatusTarget.dataset.eventMessage) {
                 this.pollStatusTarget.textContent = age < 2 ? 'перевірено щойно' : 'перевірено ' + age + ' с тому';
@@ -319,6 +320,7 @@ export default class extends Controller {
     }
 
     stopLiveUpdates(message = '') {
+        this.liveUpdatesStopped = true;
         if (this.pollTimer !== null) {
             window.clearInterval(this.pollTimer);
             this.pollTimer = null;
