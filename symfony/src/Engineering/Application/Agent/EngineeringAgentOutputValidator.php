@@ -22,8 +22,8 @@ final class EngineeringAgentOutputValidator
             AgentRole::DATABASE_MIGRATION_SPECIALIST,
             AgentRole::PERFORMANCE_SPECIALIST,
             AgentRole::DEVOPS_SPECIALIST,
-            AgentRole::DOCUMENTATION_SPECIALIST,
             AgentRole::API_SPECIALIST => $this->specialist($output),
+            AgentRole::DOCUMENTATION_SPECIALIST => $this->documentationSpecialist($output),
             AgentRole::QA => $this->qa($output),
         };
     }
@@ -82,6 +82,26 @@ final class EngineeringAgentOutputValidator
                 if (in_array($severity, ['MAJOR','BLOCKER','HIGH','CRITICAL'], true)) {
                     throw new EngineeringAgentOutputValidationException('Specialist approval cannot contain unresolved MAJOR/BLOCKER findings.');
                 }
+            }
+        }
+    }
+
+    private function documentationSpecialist(array $output): void
+    {
+        $this->specialist($output);
+        $this->required($output, ['changes','commit_message']);
+        if (($output['status'] ?? null) === 'COMPLETED' && (!is_array($output['changes']) || $output['changes'] === [])) {
+            throw new EngineeringAgentOutputValidationException('Documentation Specialist COMPLETED requires repository documentation changes.');
+        }
+        foreach (is_array($output['changes'] ?? null) ? $output['changes'] : [] as $change) {
+            if (!is_array($change)) throw new EngineeringAgentOutputValidationException('Documentation change must be an object.');
+            $this->required($change, ['path','operation','content']);
+            $path = str_replace('\\', '/', trim((string) $change['path']));
+            if (!str_starts_with($path, 'docs/') || str_contains($path, '..') || str_starts_with($path, '/')) {
+                throw new EngineeringAgentOutputValidationException('Documentation Specialist may mutate only docs/.');
+            }
+            if (!in_array((string) $change['operation'], ['CREATE','UPDATE'], true) || !is_string($change['content'])) {
+                throw new EngineeringAgentOutputValidationException('Documentation mutation must be CREATE/UPDATE with complete content.');
             }
         }
     }
