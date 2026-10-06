@@ -1900,10 +1900,12 @@ services:
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquityRiskEngine: ~
+  Domains\CapitalMarkets\Domain\Service\HypothesisResearchPolicy: ~
 
   Domains\CapitalMarkets\Application\Service\TrustedConversionRateResolver: ~
 
   Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
 
 
