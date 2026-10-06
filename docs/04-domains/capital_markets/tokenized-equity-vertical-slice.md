@@ -44,6 +44,7 @@ MarketState
 - explicit costs віднімаються до розрахунку expected net P&L;
 - H2 paper execution вимагає pre-funded cash на buy venue та token inventory на sell venue;
 - paper execution працює за full-fill policy: якщо будь-яка нога не може бути виконана повністю, execution не стартує;
+- одна opportunity може створити не більше одного paper execution attempt; повторний API retry повертає вже збережений outcome;
 - Ledger балансується окремо для кожного asset;
 - realized paper P&L рахується з фактичних simulated fill prices та fees, без подвійного врахування slippage;
 - H1 залишається research-only, доки немає реального executable hedge venue;
