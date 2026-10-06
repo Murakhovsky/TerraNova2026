@@ -13,7 +13,7 @@ return [
     'enabled_by_default'=>false,
     'contributions'=>[
         'runtime_module_service'=>'capitalMarketsDomainModule',
-        'job_handler_services'=>[],
+        'job_handler_services'=>['capitalMarketsResearchBacktestJobHandler'],
         'api_route_contributor_services'=>[],
         'configuration_provisioner_services'=>[],
         'extension_services'=>[
