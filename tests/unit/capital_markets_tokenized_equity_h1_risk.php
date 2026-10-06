@@ -83,4 +83,10 @@ $risk=(new TokenizedEquityRiskEngine())->assess(
 $assert(!$risk->approved(),'H1 must fail closed when hedge is unavailable.');
 $assert(in_array('HEDGE_UNAVAILABLE',$risk->blockingReasons,true),'H1 risk rejection must explain missing hedge.');
 
+$riskWithHedge=(new TokenizedEquityRiskEngine())->assess(
+    $opportunity,Decimal::fromString('10'),Decimal::fromString('5000'),70,$now,true,false,
+);
+$assert($riskWithHedge->approved(),'H1 should be risk-approvable when a real executable hedge venue is available.');
+$assert(!in_array('HEDGE_UNAVAILABLE',$riskWithHedge->blockingReasons,true),'H1 hedge blocker must clear when executable hedge exists.');
+
 echo "Capital Markets Tokenized Equity H1/risk passed.\n";
