@@ -18,6 +18,7 @@ generated: true
 
 | Процес | Domain | Бізнес-стан | Verification | Кроків | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Market Source → Trusted Market State | `capital_markets` | `as-is` | `source-verified` | 5 | 0 | 5/5 | 5/5 | 5/5 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/capital-markets-market-data-to-trusted-state.md) |
 | Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
@@ -37,6 +38,7 @@ generated: true
 
 | Процес | Кроків з owner | Capability mapped | Capability gaps | Cross-domain кроки | Mapped кроки | Evidence-verified кроки | Runtime-backed кроки | Critical source-verified | Critical runtime-verified |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Market Source → Trusted Market State | 5/5 | 5/5 | 0/5 | 0/5 | 5/5 | 5/5 | 0/5 | 5/5 | 0/5 |
 | Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
@@ -44,6 +46,37 @@ generated: true
 | Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
 | Sales Request → Property Match | 5/5 | 1/5 | 4/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 | Service Request → Ticket Close | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 6/6 | 0/6 |
+
+## Market Source → Trusted Market State
+
+- **Process ID:** `capital-markets.market-data-to-trusted-state`
+- **Schema:** `v4`
+- **Domain:** `capital_markets`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 5/5 кроків
+- **Cross-domain кроки:** 0/5
+- **Derived verification:** `source-verified`
+- **Тригер:** An enabled Capital Markets source emits or returns a market-data observation
+- **Workflow:** [Market Source → Trusted Market State](../02-workflows/capital-markets-market-data-to-trusted-state.md)
+
+**Результати**
+
+- Raw provider evidence is durably preserved before interpretation
+- Provider semantics are normalized into canonical market events
+- Unknown instruments and malformed observations never mutate current state
+- Quality, freshness and trust are evaluated deterministically
+- Duplicate and out-of-order events do not regress current state
+- Trading and reference MarketState remain replayable and tenant-scoped
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Capture raw market event | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.manage` | `state` | так | source `app/Domains/CapitalMarkets/Application/Service/MarketDataIngestionService.php` · `public function ingest(` [source]<br>source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlRawMarketEventRepository.php` · `public function append(` [source] |
+| Decode and normalize provider observation | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.manage` | `operation` | так | source `app/Domains/CapitalMarkets/Application/Service/MarketDataNormalizer.php` · `public function normalize(` [source] |
+| Assess freshness, integrity and trust | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.quality.view` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Service/MarketDataQualityEngine.php` · `public function assess(` [source] |
+| Persist canonical event and quality metric | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.history.view` | `state` | так | source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlCanonicalMarketEventRepository.php` · `public function append(` [source]<br>source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlMarketQualityMetricRepository.php` · `public function append(` [source] |
+| Update trading or reference MarketState | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.view` | `outcome` | так | source `app/Domains/CapitalMarkets/Domain/Service/MarketStateEngine.php` · `public function apply(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Service/ReferenceMarketStateEngine.php` · `public function apply(` [source] |
 
 ## Diagnostic Session → Recommendation
 

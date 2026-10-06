@@ -15,7 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Capital_markets | `0.3.0` | CM-FOUNDATION + Market Intelligence core; raw/canonical events, deterministic quality/trust, current trading/reference MarketState, tenant-scoped persistence, Bybit Spot REST + Massive Stocks REST polling; streaming/execution ще відсутні |
+| Capital_markets | `0.3.0` | CM-FOUNDATION + Market Intelligence core; raw/canonical events, deterministic quality/trust, current trading/reference MarketState, Bybit Spot + Massive Stocks REST, operator Sources/Subscriptions/Health/Poll API+UI; streaming/execution ще відсутні |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
@@ -55,7 +55,9 @@ Raw evidence зберігається до normalization. Unknown symbol не с
 
 Bybit Spot REST trading-source adapter і Massive U.S. Stocks REST reference adapter уже реалізовані. Provider secrets не зберігаються в Capital Markets tables: source має лише `credentials_reference`, а runtime використовує Platform Credential Vault. Generic polling service coalesce-ить subscriptions одного інструмента в один provider snapshot і підтримує source health.
 
-WebSocket streaming, operator Market Data API/UI, production replay/backfill orchestration та Tokenized Equity comparison ще належать до наступних waves. Paper Trading, Live Trading та Auto Execution залишаються окремими вимкненими promotion gates.
+Operator Market Data API/UI уже реалізований: sources створюються disabled, окремо enable/disable, subscriptions керуються по instrument/data type, manual poll показує source health і current state.
+
+WebSocket streaming, production replay/backfill orchestration та Tokenized Equity comparison ще належать до наступних waves. Paper Trading, Live Trading та Auto Execution залишаються окремими вимкненими promotion gates.
 
 ## Growth: інтелект можливостей
 

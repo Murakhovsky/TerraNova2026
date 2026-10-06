@@ -39,12 +39,13 @@ persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
 data modes: LIVE / DELAYED / HISTORICAL / REPLAY
 provider adapters: Bybit Spot REST + Massive Stocks REST
-provider polling: manual CLI/runtime service
+provider polling: CLI + operator API/UI
+operator workspace: /capital-markets/market-data
 streaming: disabled / next wave
 execution: none
 ```
 
-Модуль вимкнений за замовчуванням. Bybit Spot REST та Massive Stocks REST adapters уже реалізовані за provider-neutral contracts. Provider-specific flags і streaming flag залишаються вимкненими до tenant source configuration та production cutover.
+Модуль вимкнений за замовчуванням. Bybit Spot REST та Massive Stocks REST adapters уже реалізовані за provider-neutral contracts. Операторський Market Data workspace керує Sources, Subscriptions, Health та ручним Poll. Нові sources створюються disabled. Provider-specific flags і streaming flag залишаються вимкненими до tenant source configuration та production cutover.
 
 ## Межі
 
