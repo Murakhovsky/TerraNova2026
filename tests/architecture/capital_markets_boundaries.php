@@ -52,8 +52,8 @@ foreach([
 }
 
 $manifest=require $domainRoot.'/module.php';
-if(($manifest['version']??null)!=='0.6.0'||($manifest['schema_version']??null)!=='0.6.0'){
-    throw new RuntimeException('Capital Markets module manifest must be V0.6.0.');
+if(($manifest['version']??null)!=='0.7.0'||($manifest['schema_version']??null)!=='0.7.0'){
+    throw new RuntimeException('Capital Markets module manifest must be V0.7.0.');
 }
 if(($manifest['enabled_by_default']??true)!==false){
     throw new RuntimeException('Capital Markets Foundation must remain disabled by default.');

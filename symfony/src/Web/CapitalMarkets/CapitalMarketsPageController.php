@@ -15,6 +15,8 @@ use Domains\CapitalMarkets\Application\Command\RegisterVenueInstrument;
 use Domains\CapitalMarkets\Application\Command\UpdateInstrument;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary;
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Query\GetInstrument;
@@ -56,6 +58,8 @@ final readonly class CapitalMarketsPageController
         private TokenizedEquityPaperExecutionService $paperExecution,
         private TokenizedEquityResearchService $tokenizedEquityResearch,
         private TokenizedEquityReadService $tokenizedEquityReads,
+        private CapitalMarketsTradingRepositoryInterface $trading,
+        private RelativeValueResearchRepositoryInterface $relativeValueResearch,
         private OperationsSectionReader $operations,
     ){}
 
@@ -162,6 +166,38 @@ final readonly class CapitalMarketsPageController
                     'positions'=>$this->tokenizedEquityReads->positions($org,100),
                     'performance'=>$this->tokenizedEquityReads->performance($org,1000),
                     'reconciliation'=>$this->tokenizedEquityReads->reconcile($org),
+                ]];
+            }
+        );
+    }
+
+
+    public function cryptoSpotPerpetual(Request $request):Response
+    {
+        return $this->page(
+            $request,'Crypto Spot / Perpetual','capital-markets-crypto-spot-perpetual','crypto_spot_perp',
+            CapitalMarketsCapability::OpportunityView,CapitalMarketsFeatureFlag::CryptoSpotPerpetual,
+            function(TenantContext $tenant)use($request):array{
+                $org=$tenant->organizationId()->value();
+                $limit=min(500,max(1,(int)$request->query->get('limit',200)));
+                $pair=trim((string)$request->query->get('market_pair_id',''));
+                $opportunities=array_values(array_filter(
+                    $this->trading->listOpportunities($org,$limit),
+                    static fn(array $row):bool=>in_array((string)($row['hypothesis']??''),['H4','H5','H6'],true)
+                ));
+                $executions=array_values(array_filter(
+                    $this->trading->listExecutions($org,$limit),
+                    static fn(array $row):bool=>in_array((string)($row['hypothesis']??''),['H4','H5','H6'],true)
+                ));
+                return ['workspace'=>[
+                    'dashboard'=>$this->trading->dashboard($org),
+                    'opportunities'=>$opportunities,
+                    'executions'=>$executions,
+                    'positions'=>$this->trading->listPositions($org,$limit),
+                    'funding_observations'=>$this->relativeValueResearch->listFundingObservations($org,null,null,$limit),
+                    'funding_settlements'=>$this->relativeValueResearch->listFundingSettlements($org,null,$limit),
+                    'basis_observations'=>$pair===''?[]:$this->relativeValueResearch->listBasisObservations($org,$pair,$limit),
+                    'market_pair_id'=>$pair,
                 ]];
             }
         );

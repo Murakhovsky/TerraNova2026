@@ -2693,6 +2693,12 @@ capital_markets_tokenized_equities:
   controller: App\Web\CapitalMarkets\CapitalMarketsPageController::tokenizedEquities
   methods: [GET]
 
+# Capital Markets CM-CRYPTO-SPOT-PERP UI
+capital_markets_crypto_spot_perpetual:
+  path: /capital-markets/crypto-spot-perpetual
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::cryptoSpotPerpetual
+  methods: [GET]
+
 # Capital Markets CM-MARKET-INTELLIGENCE UI
 capital_markets_market_data:
   path: /capital-markets/market-data
@@ -2825,6 +2831,55 @@ cos_api_v1_capital_markets_market_data_poll:
   requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
 
 
+
+# Capital Markets CM-CRYPTO-SPOT-PERP API
+cos_api_v1_capital_markets_crypto_spot_perp_dashboard:
+  path: /api/v1/capital-markets/crypto-spot-perpetual
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::dashboard
+  methods: [GET]
+
+cos_api_v1_capital_markets_crypto_spot_perp_scan:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/scan/spot-perp
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::scanSpotPerp
+  methods: [POST]
+
+cos_api_v1_capital_markets_cross_venue_funding_scan:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/scan/cross-venue-funding
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::scanCrossVenueFunding
+  methods: [POST]
+
+cos_api_v1_capital_markets_crypto_spot_perp_execute:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/opportunities/{id}/paper-execute
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::executePaper
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+cos_api_v1_capital_markets_crypto_spot_perp_close:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/executions/{id}/close
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::closeExecution
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+cos_api_v1_capital_markets_crypto_funding:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/funding
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::funding
+  methods: [GET]
+
+cos_api_v1_capital_markets_crypto_funding_settlements:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/funding-settlements
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::fundingSettlements
+  methods: [GET]
+
+cos_api_v1_capital_markets_crypto_basis:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/basis
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::basis
+  methods: [GET]
+
+cos_api_v1_capital_markets_crypto_hedge:
+  path: /api/v1/capital-markets/crypto-spot-perpetual/hedges/{id}
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCryptoSpotPerpetualController::hedge
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
 
 # Capital Markets CM-TOKENIZED-EQUITY API
 cos_api_v1_capital_markets_tokenized_equity_dashboard:

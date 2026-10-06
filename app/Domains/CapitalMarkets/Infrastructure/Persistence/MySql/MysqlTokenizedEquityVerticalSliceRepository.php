@@ -489,6 +489,24 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         )->execute(['org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey,'amount'=>$amount]);
     }
 
+    public function adjustPaperBalance(string $organizationId,string $venueId,string $assetKey,string $delta):void
+    {
+        $value=\Domains\CapitalMarkets\Domain\Value\Decimal::fromString($delta);
+        if($value->isZero())return;
+        if($value->isPositive()){
+            $this->creditPaperBalance($organizationId,$venueId,$assetKey,$value->value());
+            return;
+        }
+        $amount=\Domains\CapitalMarkets\Domain\Value\DecimalMath::abs($value);
+        $statement=$this->connection->prepare(
+            'UPDATE tn_capital_market_paper_balances
+             SET available_amount=available_amount-:amount
+             WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset AND available_amount>=:amount'
+        );
+        $statement->execute(['amount'=>$amount->value(),'org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey]);
+        if($statement->rowCount()!==1)throw new \DomainException('INSUFFICIENT_PAPER_BALANCE');
+    }
+
     public function settlePaperExecution(
         string $organizationId,
         string $executionId,

@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id'=>'capital_markets',
     'name'=>'Capital Markets',
-    'version'=>'0.6.0',
-    'schema_version'=>'0.6.0',
+    'version'=>'0.7.0',
+    'schema_version'=>'0.7.0',
     'kernel_constraint'=>'>=0.11.0 <0.12.0',
-    'description'=>'Autonomous Capital Markets bounded context with instrument/venue foundation, provider-neutral Market Intelligence and Tokenized Equity H1/H2 research, hypothesis evidence, deterministic verdicts, automated universe scanning, historical MarketState replay and guarded paper execution. Live trading remains disabled.',
+    'description'=>'Autonomous Capital Markets bounded context with shared instrument/venue, Market Intelligence, Tokenized Equity H1/H2 and Crypto Spot/Perpetual H4/H5/H6 relative-value research, hedge-aware paper execution, funding accounting and deterministic performance attribution. Live trading remains disabled.',
     'icon'=>'chart-candlestick',
     'dependencies'=>[],
     'enabled_by_default'=>false,
@@ -32,6 +32,7 @@ return [
             'app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql',
             'app/migrations/20261006_000130_capital_markets_execution_recovery.sql',
             'app/migrations/20261006_000131_capital_markets_kraken_market_data.sql',
+            'app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql',
         ],
         'capabilities'=>[
             'capital_markets.view',

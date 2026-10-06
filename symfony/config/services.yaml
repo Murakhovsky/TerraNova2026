@@ -1846,6 +1846,15 @@ services:
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitOrderBookPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualTickerPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualInstrumentPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitFundingHistoryPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPublicPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder: ~
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter: ~
@@ -1859,6 +1868,8 @@ services:
     arguments:
       $adapters:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
 
@@ -1866,6 +1877,8 @@ services:
     arguments:
       $decoders:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
 
@@ -1909,8 +1922,35 @@ services:
   Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository
 
+  Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelativeValueResearchRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelativeValueResearchRepository
+
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
+  Domains\CapitalMarkets\Domain\Service\FundingCashflowCalculator: ~
+  Domains\CapitalMarkets\Domain\Service\FundingRateNormalizer: ~
+  Domains\CapitalMarkets\Domain\Service\FundingSettlementEligibility: ~
+  Domains\CapitalMarkets\Domain\Service\HedgeMonitor: ~
+  Domains\CapitalMarkets\Domain\Service\SpotPerpetualMarketStateFactory: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueEconomicsCalculator: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueOpportunityEvaluator: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueRiskEvaluator: ~
+  Domains\CapitalMarkets\Domain\Service\FundingStatisticsEngine: ~
+  Domains\CapitalMarkets\Domain\Service\BasisStatisticsEngine: ~
+  Domains\CapitalMarkets\Application\Service\CryptoSpotPerpetualVerticalSliceService: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValuePerformanceEngine: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueExitEvaluator: ~
+  Domains\CapitalMarkets\Application\Service\RelativeValuePaperExecutionService: ~
+  Domains\CapitalMarkets\Application\Service\RelativeValuePositionLifecycleService: ~
+  Domains\CapitalMarkets\Application\Service\FundingSettlementService: ~
+  Domains\CapitalMarkets\Application\Service\DerivativeResearchHistoryService: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
   Domains\CapitalMarkets\Domain\Service\PositionProjector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~

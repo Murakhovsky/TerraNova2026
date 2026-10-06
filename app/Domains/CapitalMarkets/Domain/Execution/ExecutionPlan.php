@@ -27,13 +27,17 @@ final readonly class ExecutionPlan extends ValueObject
         public Decimal $expectedPnl,
         public string $riskAssessmentId,
         public array $capitalReservationIds=[],
+        public ExecutionPolicy $executionPolicy=ExecutionPolicy::Sequential,
+        public int $maximumUnhedgedTimeMs=0,
+        public ?string $hedgeGroupId=null,
     ){
         if($id===''||$opportunityId===''||$strategyVersion===''||count($legs)<2||$expiresAt<=$createdAt){
             throw new InvalidArgumentException('Invalid execution plan.');
         }
         foreach($legs as $leg)if(!$leg instanceof ExecutionLeg)throw new InvalidArgumentException('Execution plan legs must be typed.');
-        if(!$compensationPolicy->supportedInVerticalSliceV1()){
-            throw new InvalidArgumentException('Compensation policy is not supported in VS1.');
+        if(!$compensationPolicy->supportedInPaper()){
+            throw new InvalidArgumentException('Compensation policy is not supported in paper execution.');
         }
+        if($maximumUnhedgedTimeMs<0)throw new InvalidArgumentException('Maximum unhedged time cannot be negative.');
     }
 }

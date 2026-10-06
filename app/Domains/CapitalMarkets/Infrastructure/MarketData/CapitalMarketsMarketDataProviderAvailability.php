@@ -7,8 +7,10 @@ use Domains\CapitalMarkets\Application\Contract\MarketDataProviderAvailabilityIn
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter;
 
 final readonly class CapitalMarketsMarketDataProviderAvailability implements MarketDataProviderAvailabilityInterface
@@ -19,7 +21,9 @@ final readonly class CapitalMarketsMarketDataProviderAvailability implements Mar
     {
         if(!$this->features->enabled(CapitalMarketsFeatureFlag::MarketData,$organizationId))return false;
         $providerFlag=match($source->adapterType){
-            BybitSpotMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataBybit,
+            BybitSpotMarketDataAdapter::ADAPTER_TYPE,
+            BybitPerpetualMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataBybit,
+            OkxPerpetualMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataOkx,
             KrakenSpotMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataKraken,
             MassiveStocksReferenceAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataMassive,
             default=>null,

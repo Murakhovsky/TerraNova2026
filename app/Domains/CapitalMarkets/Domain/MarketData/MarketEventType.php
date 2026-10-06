@@ -17,4 +17,5 @@ enum MarketEventType:string
     case OpenInterest='OPEN_INTEREST';
     case MarkPrice='MARK_PRICE';
     case IndexPrice='INDEX_PRICE';
+    case InstrumentMetadata='INSTRUMENT_METADATA';
 }

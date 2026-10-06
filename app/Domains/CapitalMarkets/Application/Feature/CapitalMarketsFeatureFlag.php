@@ -16,9 +16,11 @@ enum CapitalMarketsFeatureFlag:string
     case MarketDataStreaming='capital_markets.market_data.streaming.enabled';
     case MarketDataHistory='capital_markets.market_data.history.enabled';
     case MarketDataBybit='capital_markets.market_data.bybit.enabled';
+    case MarketDataOkx='capital_markets.market_data.okx.enabled';
     case MarketDataKraken='capital_markets.market_data.kraken.enabled';
     case MarketDataMassive='capital_markets.market_data.massive.enabled';
     case TokenizedEquity='capital_markets.tokenized_equity.enabled';
+    case CryptoSpotPerpetual='capital_markets.crypto_spot_perpetual.enabled';
 
     /** @return list<string> */
     public static function values():array{return array_map(static fn(self $case):string=>$case->value,self::cases());}

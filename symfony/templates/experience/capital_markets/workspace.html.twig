@@ -489,6 +489,162 @@
       <p>Different quote currencies are not compared directly. AAPL/USD and AAPLx/USDT are <strong>NOT_COMPARABLE</strong> until a trusted conversion layer is available.</p>
     </section>
 
+  {% elseif cmView == 'crypto_spot_perp' %}
+    {% set opportunities = w.opportunities|default([]) %}
+    {% set executions = w.executions|default([]) %}
+    {% set funding = w.funding_observations|default([]) %}
+    {% set settlements = w.funding_settlements|default([]) %}
+    {% set basisRows = w.basis_observations|default([]) %}
+    <section class="cos-kpi-strip" aria-label="Crypto Spot Perpetual research state">
+      <twig:CosMetric label="H4/H5/H6 opportunities" value="{{ opportunities|length }}" hint="relative-value candidates" />
+      <twig:CosMetric label="Paper executions" value="{{ executions|length }}" hint="two-leg execution groups" />
+      <twig:CosMetric label="Funding samples" value="{{ funding|length }}" hint="native venue intervals" />
+      <twig:CosMetric label="Funding settlements" value="{{ settlements|length }}" hint="realized paper cashflows" />
+    </section>
+
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 flex-wrap">
+        <div>
+          <small>VERTICAL SLICE #2</small>
+          <h2>Crypto Spot / Perpetual</h2>
+          <p><strong>H4</strong> Spot/Perpetual Basis · <strong>H5</strong> Funding Capture · <strong>H6</strong> Cross-Venue Funding.</p>
+          <p>Execution economics use bid/ask and order-book depth. Mark price, index price and last price remain separate reference concepts.</p>
+        </div>
+        <div>
+          <span class="badge text-bg-warning">PAPER</span>
+          <span class="badge text-bg-danger">LIVE OFF</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Opportunity board</h2>
+      {% if opportunities is empty %}
+        <p>No H4/H5/H6 opportunities recorded yet. Poll trusted spot/perpetual sources and run a scan through the VS2 API.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Hypothesis</th><th>Type</th><th>Status</th><th>Strategy</th><th>Expected net P&amp;L</th><th>Capital</th><th>Risk</th><th>Expires</th></tr></thead>
+          <tbody>
+          {% for item in opportunities %}
+            <tr>
+              <td><strong>{{ item.hypothesis|default('—') }}</strong></td>
+              <td>{{ item.type|default(item.opportunity_type|default('—')) }}</td>
+              <td><strong>{{ item.status|default('—') }}</strong></td>
+              <td>{{ item.strategy_version|default('—') }}</td>
+              <td>{{ item.expected_net_pnl|default(item.expected_pnl|default('—')) }}</td>
+              <td>{{ item.required_capital|default('—') }}</td>
+              <td>{{ item.risk_score|default('—') }}</td>
+              <td>{{ item.expires_at|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+          <h2>Basis history</h2>
+          <p>Mid basis is diagnostic. Executable premium uses spot ask versus perpetual bid; reverse basis requires actual spot-short and borrow capability.</p>
+        </div>
+        <form method="get" action="/capital-markets/crypto-spot-perpetual" class="d-flex gap-2">
+          <input class="form-control" name="market_pair_id" value="{{ w.market_pair_id|default('') }}" placeholder="market_pair_id">
+          <button class="btn btn-outline-primary" type="submit">Load basis</button>
+        </form>
+      </div>
+      {% if basisRows is not empty %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Observed</th><th>Spot</th><th>Perpetual</th><th>Mid basis bps</th><th>Long spot / short perp</th><th>Reverse</th><th>Quality</th></tr></thead>
+          <tbody>
+          {% for row in basisRows|slice(0,100) %}
+            <tr>
+              <td>{{ row.observed_at|default(row.timestamp|default('—')) }}</td>
+              <td>{{ row.spot_market|default('—') }}</td>
+              <td>{{ row.perpetual_market|default('—') }}</td>
+              <td>{{ row.mid_basis_bps|default('—') }}</td>
+              <td>{{ row.long_spot_short_perp_basis|default(row.long_spot_short_perp_executable_basis|default('—')) }}</td>
+              <td>{{ row.short_spot_long_perp_basis|default(row.short_spot_long_perp_executable_basis|default('—')) }}</td>
+              <td>{{ row.quality|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Funding observations</h2>
+      {% if funding is empty %}
+        <p>No funding observations persisted yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Venue</th><th>Instrument</th><th>Rate</th><th>Status</th><th>Interval</th><th>Next settlement</th><th>Quality</th></tr></thead>
+          <tbody>
+          {% for row in funding|slice(0,100) %}
+            <tr>
+              <td>{{ row.venue_id|default('—') }}</td>
+              <td>{{ row.instrument_id|default('—') }}</td>
+              <td>{{ row.rate|default('—') }}</td>
+              <td>{{ row.status|default('—') }}</td>
+              <td>{{ row.funding_interval_seconds|default('—') }} s</td>
+              <td>{{ row.next_settlement_at|default('—') }}</td>
+              <td>{{ row.quality|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Paper execution / hedge state</h2>
+      {% if executions is empty %}
+        <p>No VS2 paper executions yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Execution</th><th>Hypothesis</th><th>Status</th><th>Strategy</th><th>Hedge group</th><th>Realized P&amp;L</th></tr></thead>
+          <tbody>
+          {% for row in executions|slice(0,100) %}
+            <tr>
+              <td><code>{{ row.execution_id|default(row.id|default('—')) }}</code></td>
+              <td>{{ row.hypothesis|default('—') }}</td>
+              <td><strong>{{ row.status|default('—') }}</strong></td>
+              <td>{{ row.strategy_version|default('—') }}</td>
+              <td><code>{{ row.hedge_group_id|default('—') }}</code></td>
+              <td>{{ row.realized_pnl|default('0') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Funding settlements</h2>
+      {% if settlements is empty %}
+        <p>No realized paper funding cashflows yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Settlement</th><th>Position</th><th>Venue</th><th>Rate</th><th>Notional</th><th>Side</th><th>Cashflow</th><th>Currency</th></tr></thead>
+          <tbody>
+          {% for row in settlements|slice(0,100) %}
+            <tr>
+              <td>{{ row.settlement_at|default('—') }}</td>
+              <td><code>{{ row.position_reference|default('—') }}</code></td>
+              <td>{{ row.venue_id|default('—') }}</td>
+              <td>{{ row.rate|default('—') }}</td>
+              <td>{{ row.position_notional|default('—') }}</td>
+              <td>{{ row.side|default('—') }}</td>
+              <td><strong>{{ row.gross_cashflow|default('—') }}</strong></td>
+              <td>{{ row.currency|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
   {% elseif cmView == 'market_data' %}
     <section class="cos-kpi-strip" aria-label="Capital Markets market data state">
       <twig:CosMetric label="Sources" value="{{ w.sources|default([])|length }}" hint="configured providers" />

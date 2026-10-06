@@ -4,7 +4,7 @@ namespace Domains\CapitalMarkets\Domain\Opportunity;
 use DateTimeImmutable;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Kernel\Shared\Domain\ValueObject;
-final readonly class SpreadCandidate extends ValueObject
+final readonly class SpreadCandidate extends ValueObject implements OpportunityCandidateInterface
 {
     public function __construct(
         public string $id,
@@ -26,5 +26,7 @@ final readonly class SpreadCandidate extends ValueObject
         public int $dataQualityScore,
         public array $evidence=[],
     ){}
+    public function candidateId():string{return $this->id;}
+    public function hypothesisCode():HypothesisCode{return $this->hypothesis;}
     public function expiredAt(DateTimeImmutable $at):bool{return $at >= $this->expiresAt;}
 }

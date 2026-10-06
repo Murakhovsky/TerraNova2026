@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
-
 namespace Domains\CapitalMarkets\Domain\MarketData;
-
 enum MarketDataCapability:string
 {
     case Ticker='TICKER';
@@ -13,6 +11,9 @@ enum MarketDataCapability:string
     case Volume='VOLUME';
     case Funding='FUNDING';
     case OpenInterest='OPEN_INTEREST';
+    case MarkPrice='MARK_PRICE';
+    case IndexPrice='INDEX_PRICE';
+    case DerivativesMetadata='DERIVATIVES_METADATA';
     case ReferencePrice='REFERENCE_PRICE';
     case HistoricalQuotes='HISTORICAL_QUOTES';
     case Streaming='STREAMING';

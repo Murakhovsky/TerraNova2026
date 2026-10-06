@@ -14,7 +14,7 @@ generated: true
 
 | Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
-| `capital_markets` | `0.6.0` | — | 18 |
+| `capital_markets` | `0.7.0` | — | 18 |
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `1.0.0` | — | 5 |
 | `finance` | `0.1.0` | — | 0 |

@@ -11,6 +11,7 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketDataMode;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketObservation;
+use Domains\CapitalMarkets\Domain\MarketData\MarketMetadataObservation;
 use Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQualityFlag;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQuote;
@@ -97,6 +98,10 @@ final class MarketDataHydrator
             isset($data['last_sequence'])&&$data['last_sequence']!==null?(string)$data['last_sequence']:null,
             (string)$data['last_event_fingerprint'],
             MarketDataMode::from((string)($data['mode']??MarketDataMode::Live->value)),
+            is_array($data['funding_rate']??null)?$this->scalar($data['funding_rate'],MarketEventType::FundingRate):null,
+            is_array($data['open_interest']??null)?$this->scalar($data['open_interest'],MarketEventType::OpenInterest):null,
+            is_array($data['mark_price']??null)?$this->scalar($data['mark_price'],MarketEventType::MarkPrice):null,
+            is_array($data['index_price']??null)?$this->scalar($data['index_price'],MarketEventType::IndexPrice):null,
         );
     }
 
@@ -181,12 +186,24 @@ final class MarketDataHydrator
             MarketEventType::Candle=>$this->candle($payload),
             MarketEventType::Volume,MarketEventType::ReferencePrice,MarketEventType::FundingRate,
             MarketEventType::OpenInterest,MarketEventType::MarkPrice,MarketEventType::IndexPrice
-                =>new MarketValueObservation(
-                    $type,
-                    Decimal::fromString((string)$payload['value']),
-                    isset($payload['unit'])&&$payload['unit']!==null?new AssetCode((string)$payload['unit']):null,
-                ),
+                =>$this->scalar($payload,$type),
+            MarketEventType::InstrumentMetadata=>new MarketMetadataObservation($payload),
         };
+    }
+
+    /** @param array<string,mixed> $data */
+    private function scalar(array $data,MarketEventType $type):MarketValueObservation
+    {
+        $attributes=$data['attributes']??[];
+        if(!is_array($attributes)||($attributes!==[]&&array_is_list($attributes))){
+            throw new InvalidArgumentException('Scalar market observation attributes must be an object.');
+        }
+        return new MarketValueObservation(
+            $type,
+            Decimal::fromString((string)$data['value']),
+            isset($data['unit'])&&$data['unit']!==null?new AssetCode((string)$data['unit']):null,
+            $attributes,
+        );
     }
 
     /** @param array<string,mixed> $data */

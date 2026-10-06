@@ -85,7 +85,7 @@ $aaplx=new InstrumentDescriptor(
 $assert(count(InstrumentFamily::cases())===15,'Master instrument-family coverage drifted.');
 $assert(count(EconomicRelationshipType::cases())===11,'Economic relationship vocabulary drifted.');
 $assert(count(VenueType::cases())===9,'Venue type vocabulary drifted.');
-$assert(count(VenueCapability::cases())===10,'Venue capability vocabulary drifted.');
+$assert(count(VenueCapability::cases())===14,'Venue capability vocabulary drifted.');
 $assert(count(InstrumentIdentifierType::cases())===7,'Instrument identifier vocabulary drifted.');
 $assert($aapl->isLiveEligible(),'ACTIVE instrument should be structurally eligible for future execution.');
 $assert(!(new InstrumentDescriptor(
@@ -200,7 +200,7 @@ $assert($instrumentEvent->envelope()['schema_version']===1,'Event schema version
 
 $manifest=ModuleDefinition::fromArray(require dirname(__DIR__,2).'/app/Domains/CapitalMarkets/module.php');
 $assert($manifest->manifest->id==='capital_markets','Capital Markets module id is invalid.');
-$assert($manifest->manifest->version==='0.6.0','Capital Markets module version is invalid.');
+$assert($manifest->manifest->version==='0.7.0','Capital Markets module version is invalid.');
 $assert($manifest->manifest->enabledByDefault===false,'Capital Markets must be disabled by default.');
 $assert($manifest->contributions->runtimeModuleService==='capitalMarketsDomainModule','Foundation runtime module service is missing.');
 foreach([
