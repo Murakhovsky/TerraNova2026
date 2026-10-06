@@ -3,6 +3,11 @@ title: Цикл Tokenized Equity Paper у Capital Markets
 domain: capital_markets
 process: capital-markets.tokenized-equity-paper-cycle
 status: as-is
+updated: 2026-10-06
+kind: workflow
+contract: workflow-v2
+process_state: as-is
+process_id: capital-markets.tokenized-equity-paper-cycle
 description: "Канонічний процес від довіреного Market State до перевіреної H1/H2 можливості, pre-funded paper execution та зафіксованого P&L."
 ---
 

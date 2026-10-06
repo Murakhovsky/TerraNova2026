@@ -2,7 +2,7 @@
 title: Поточний стан COS
 description: Фактичний продуктовий та архітектурний обсяг поточного main.
 status: active
-updated: 2026-09-28
+updated: 2026-10-06
 kind: product
 ---
 
@@ -15,7 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Capital_markets | `0.3.0` | CM-FOUNDATION + Market Intelligence core; raw/canonical events, deterministic quality/trust, current trading/reference MarketState, Bybit Spot + Massive Stocks REST, operator Sources/Subscriptions/Health/Poll API+UI; streaming/execution ще відсутні |
+| Capital_markets | `0.4.0` | CM-FOUNDATION + Market Intelligence + Tokenized Equity H1/H2 research; deterministic opportunity/risk, trusted quote conversion, pre-funded H2 paper execution, asset-aware ledger та realized paper P&L; Live Trading вимкнено |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
@@ -31,7 +31,7 @@ kind: product
 
 ## Capital Markets: фундамент і ринкова аналітика
 
-Capital Markets `0.3.0` має два активні шари: структурний `CM-FOUNDATION` та executable `CM-MARKET-INTELLIGENCE`.
+Capital Markets `0.4.0` має три активні шари: структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE` та перший фінансовий vertical slice `CM-TOKENIZED-EQUITY`.
 
 Канонічний market-data flow:
 
@@ -57,7 +57,7 @@ Bybit Spot REST trading-source adapter і Massive U.S. Stocks REST reference ada
 
 Operator Market Data API/UI уже реалізований: sources створюються disabled, окремо enable/disable, subscriptions керуються по instrument/data type, manual poll показує source health і current state.
 
-WebSocket streaming, production replay/backfill orchestration та Tokenized Equity comparison ще належать до наступних waves. Paper Trading, Live Trading та Auto Execution залишаються окремими вимкненими promotion gates.
+Tokenized Equity comparison H1/H2 уже реалізований поверх trusted MarketState: economic relationship gating, quote normalization, explicit costs, deterministic risk, paper portfolio, pre-funded venue balances, two-leg H2 paper execution, asset-aware ledger та realized paper P&L. H1 залишається research-only без executable hedge venue. WebSocket streaming, production replay/backfill orchestration, Live Trading та Auto Execution залишаються наступними promotion gates.
 
 ## Growth: інтелект можливостей
 

@@ -3,6 +3,9 @@ title: Tokenized Equity Vertical Slice V0.4
 description: "Опис першого фінансового vertical slice Capital Markets для H1/H2 research, deterministic risk та guarded paper execution."
 domain: capital_markets
 status: implemented
+updated: 2026-10-06
+kind: domain
+contract: domain-v1
 ---
 
 # Вертикальний зріз Tokenized Equity V0.4
