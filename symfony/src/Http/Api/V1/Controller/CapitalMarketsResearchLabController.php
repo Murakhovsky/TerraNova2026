@@ -64,6 +64,14 @@ final readonly class CapitalMarketsResearchLabController
             fn(TenantContext $tenant,array $payload):array=>$this->lab->createHypothesis($tenant->organizationId()->value(),$payload),201);
     }
 
+    public function reviseHypothesis(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->reviseHypothesis(
+                $tenant->organizationId()->value(),$id,$payload
+            ),201);
+    }
+
     public function freezeDataset(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
