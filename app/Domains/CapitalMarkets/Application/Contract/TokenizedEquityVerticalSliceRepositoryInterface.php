@@ -60,6 +60,20 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
     /** @return list<array<string,mixed>> */
     public function listOpportunities(string $organizationId,int $limit=200):array;
 
+    /** @param array<string,mixed> $payload */
+    public function saveHypothesisObservation(
+        string $organizationId,
+        string $observationId,
+        string $hypothesis,
+        string $stage,
+        string $observedAt,
+        string $fingerprint,
+        array $payload
+    ):void;
+
+    /** @return list<array<string,mixed>> */
+    public function listHypothesisObservations(string $organizationId,?string $hypothesis=null,int $limit=10000):array;
+
     /** @return array<string,mixed> */
     public function dashboard(string $organizationId):array;
 }
