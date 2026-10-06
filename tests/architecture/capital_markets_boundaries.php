@@ -163,7 +163,7 @@ foreach([
 }
 
 $scannerService=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityScannerService.php');
-foreach(['idempotency_key is required','listTargets($organizationId,true','PARTIAL','dataset_hash'] as $needle){
+foreach(['claimRun(','idempotency_key must contain 1..190 characters','trigger must contain at most 64 characters','listTargets($organizationId,true','PARTIAL','dataset_hash','private function response'] as $needle){
     if(!str_contains($scannerService,$needle)){
         throw new RuntimeException('Tokenized Equity scanner contract missing: '.$needle);
     }
@@ -185,6 +185,13 @@ if(!str_contains($messenger,'RunCapitalMarketsTokenizedEquityScannerCommand')){
 $apiController=(string)file_get_contents($root.'/symfony/src/Http/Api/V1/Controller/CapitalMarketsTokenizedEquityController.php');
 if(!str_contains($apiController,'CapitalMarketsCapability::PaperExecute,CapitalMarketsCapability::Manage=>CapitalMarketsCapability::Manage')){
     throw new RuntimeException('Capital Markets manage operations must not fall back to view capability.');
+}
+
+$scannerMigration=(string)file_get_contents($root.'/app/migrations/20261006_000130_capital_markets_tokenized_equity_scanner.sql');
+foreach(["'RUNNING'","uq_cm_scan_run_idempotency",'completed_at DATETIME(6) NULL'] as $needle){
+    if(!str_contains($scannerMigration,$needle)){
+        throw new RuntimeException('Tokenized Equity scanner atomic-claim schema missing: '.$needle);
+    }
 }
 
 $paperExecution=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityPaperExecutionService.php');
