@@ -91,7 +91,7 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
         string $executionId,
         string $capitalReservationId,
         string $buyCashReservationId,
-        string $sellInventoryReservationId,
+        ?string $sellInventoryReservationId,
         string $buyVenueId,
         string $buyInstrumentId,
         string $buyQuantity,
