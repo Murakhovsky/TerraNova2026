@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Application\CapitalMarkets\Command;
 
 use Domains\CapitalMarkets\Application\Contract\TokenizedEquityScannerRepositoryInterface;
+use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
+use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityScannerService;
 use InvalidArgumentException;
 use Kernel\Application\Command\CommandHandlerInterface;
@@ -16,6 +18,7 @@ final readonly class RunCapitalMarketsTokenizedEquityScannerCommandHandler imple
         private TokenizedEquityScannerRepositoryInterface $repository,
         private TokenizedEquityScannerService $scanner,
         private ActiveModuleResolver $modules,
+        private CapitalMarketsFeatureGate $features,
         private int $intervalMinutes=5,
         private int $organizationLimit=500,
         private int $targetLimit=500,
@@ -38,6 +41,20 @@ final readonly class RunCapitalMarketsTokenizedEquityScannerCommandHandler imple
         foreach($organizations as $organizationId){
             if(!$this->modules->isEnabled($organizationId,'capital_markets')){
                 $disabled++;$runs[]=['organization_id'=>$organizationId,'status'=>'MODULE_DISABLED'];continue;
+            }
+            $gates=[
+                CapitalMarketsFeatureFlag::DomainEnabled,
+                CapitalMarketsFeatureFlag::MarketData,
+                CapitalMarketsFeatureFlag::TokenizedEquity,
+            ];
+            $featureBlocked=false;
+            foreach($gates as $gate){
+                if(!$this->features->enabled($gate,$organizationId)){
+                    $featureBlocked=true;break;
+                }
+            }
+            if($featureBlocked){
+                $disabled++;$runs[]=['organization_id'=>$organizationId,'status'=>'FEATURE_DISABLED'];continue;
             }
             try{
                 $result=$this->scanner->run(
