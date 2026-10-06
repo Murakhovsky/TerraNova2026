@@ -22,6 +22,8 @@ use Domains\CapitalMarkets\Application\Query\ListInstruments;
 use Domains\CapitalMarkets\Application\Query\ListRelationships;
 use Domains\CapitalMarkets\Application\Query\ListVenues;
 use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
 use Kernel\Module\ActiveModuleResolver;
@@ -48,6 +50,8 @@ final readonly class CapitalMarketsPageController
         private CapitalMarketsFeatureGate $features,
         private CapitalMarketsFoundationBoundary $capitalMarkets,
         private MarketDataAdministrationService $marketData,
+        private TokenizedEquityVerticalSliceService $tokenizedEquity,
+        private TokenizedEquityPaperExecutionService $paperExecution,
         private OperationsSectionReader $operations,
     ){}
 
@@ -133,6 +137,22 @@ final readonly class CapitalMarketsPageController
                 return ['workspace'=>[
                     'venues'=>$this->capitalMarkets->listVenues(new ListVenues($org,250)),
                     'instruments'=>$this->capitalMarkets->listInstruments(new ListInstruments($org,['status'=>'ACTIVE'],500)),
+                ]];
+            }
+        );
+    }
+
+    public function tokenizedEquities(Request $request):Response
+    {
+        return $this->page(
+            $request,'Tokenized Equity','capital-markets-tokenized-equity','tokenized_equity',
+            CapitalMarketsCapability::OpportunityView,CapitalMarketsFeatureFlag::TokenizedEquity,
+            function(TenantContext $tenant):array{
+                $org=$tenant->organizationId()->value();
+                return ['workspace'=>[
+                    'research'=>$this->tokenizedEquity->dashboard($org),
+                    'opportunities'=>$this->tokenizedEquity->opportunities($org,200),
+                    'paper_portfolio'=>$this->paperExecution->portfolio($org),
                 ]];
             }
         );
@@ -396,6 +416,7 @@ final readonly class CapitalMarketsPageController
             'canManageVenues'=>$this->allowed($org,$actor,CapitalMarketsCapability::VenueManage),
             'canManageMarketData'=>$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage),
             'canManageMarketDataSources'=>$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataSourceManage),
+            'canPaperExecute'=>$this->allowed($org,$actor,CapitalMarketsCapability::PaperExecute),
         ],$extra);
 
         $context=new WebExtensionContext($org,$tenant->role()->value(),'workspace','capital-markets',$active);
