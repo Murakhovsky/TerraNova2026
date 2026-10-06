@@ -13,8 +13,13 @@ $required=[
     'app/Domains/CapitalMarkets/Application/Service/MarketSourcePollingService.php',
     'app/Domains/CapitalMarkets/Infrastructure/MarketData/Http/SafeMarketJsonHttpClient.php',
     'app/Domains/CapitalMarkets/Infrastructure/MarketData/Security/MarketSourceCredentialResolver.php',
+    'app/Domains/CapitalMarkets/Infrastructure/MarketData/VenueMarketStatusResolver.php',
+    'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Bybit/BybitOrderBookPayloadParser.php',
     'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Bybit/BybitSpotMarketDataAdapter.php',
     'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Bybit/BybitMarketDataDecoder.php',
+    'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Kraken/KrakenSpotPayloadParser.php',
+    'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Kraken/KrakenSpotMarketDataAdapter.php',
+    'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Kraken/KrakenMarketDataDecoder.php',
     'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Massive/MassiveStocksReferenceAdapter.php',
     'app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Massive/MassiveMarketDataDecoder.php',
     'symfony/src/Command/CapitalMarketsMarketDataPollCommand.php',
@@ -48,8 +53,21 @@ foreach(['getenv(','file_get_contents(','error_log(','var_dump('] as $forbidden)
 }
 
 $bybit=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Bybit/BybitSpotMarketDataAdapter.php');
-foreach(['/v5/market/tickers','category=spot','MarketDataCapability::Bbo','MarketDataCapability::Volume','requested($capabilities','bybit.spot.ticker.bbo','bybit.spot.ticker.volume'] as $needle){
+foreach(['/v5/market/tickers','/v5/market/orderbook','category=spot','MarketDataCapability::Bbo','MarketDataCapability::Volume','MarketDataCapability::OrderBook','requested($capabilities','bybit.spot.ticker.bbo','bybit.spot.ticker.volume','bybit.spot.orderbook.snapshot','market_status'] as $needle){
     if(!str_contains($bybit,$needle))throw new RuntimeException('Bybit REST adapter contract missing: '.$needle);
+}
+
+$kraken=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Kraken/KrakenSpotMarketDataAdapter.php');
+foreach(['/0/public/Ticker','/0/public/Depth','MarketDataCapability::Bbo','MarketDataCapability::Volume','MarketDataCapability::OrderBook','kraken.spot.ticker.bbo','kraken.spot.depth.snapshot','market_status'] as $needle){
+    if(!str_contains($kraken,$needle))throw new RuntimeException('Kraken REST adapter contract missing: '.$needle);
+}
+foreach(['Authorization:','credentialsReference','CredentialVaultInterface'] as $forbidden){
+    if(str_contains($kraken,$forbidden))throw new RuntimeException('Kraken public market-data adapter must not require credentials: '.$forbidden);
+}
+
+$status=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/MarketData/VenueMarketStatusResolver.php');
+foreach(['always_open','market_hours','market_hours_timezone','MarketStatus::Unknown','MarketStatus::Open','MarketStatus::Closed'] as $needle){
+    if(!str_contains($status,$needle))throw new RuntimeException('Venue market-status resolver contract missing: '.$needle);
 }
 
 $massive=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Massive/MassiveStocksReferenceAdapter.php');
