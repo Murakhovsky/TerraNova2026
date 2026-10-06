@@ -134,12 +134,19 @@ final readonly class TokenizedEquityPaperExecutionService
         if(!$this->repository->reservePaperBalance(
             $organizationId,$buyCashReservation,$opportunityId,$buyVenue,$quoteAsset,
             $requiredCapital->value(),$expires->format(DATE_ATOM)
-        ))throw new DomainException('INSUFFICIENT_PREFUNDED_BUY_CASH');
+        )){
+            $this->repository->releaseReservation($organizationId,$reservationId);
+            throw new DomainException('INSUFFICIENT_PREFUNDED_BUY_CASH');
+        }
 
         if(!$this->repository->reservePaperBalance(
             $organizationId,$sellInventoryReservation,$opportunityId,$sellVenue,$sellInstrument,
             $quantity->value(),$expires->format(DATE_ATOM)
-        ))throw new DomainException('INSUFFICIENT_PREFUNDED_INVENTORY');
+        )){
+            $this->repository->releasePaperBalanceReservation($organizationId,$buyCashReservation);
+            $this->repository->releaseReservation($organizationId,$reservationId);
+            throw new DomainException('INSUFFICIENT_PREFUNDED_INVENTORY');
+        }
 
         try{
             $buyFill=new PaperFill(
@@ -164,17 +171,25 @@ final readonly class TokenizedEquityPaperExecutionService
             );
 
             $ledger=new LedgerTransaction(
-                'cm_ledger_'.bin2hex(random_bytes(12)),$executionId.':result',$now,[
-                    new LedgerEntry(
-                        $realized->isPositive()?'paper_cash':'paper_realized_pnl',
-                        $realized->isPositive()?$realized:Decimal::fromString('0'),
-                        $realized->isNegative()?DecimalMath::abs($realized):Decimal::fromString('0'),
-                    ),
-                    new LedgerEntry(
-                        $realized->isPositive()?'paper_realized_pnl':'paper_cash',
-                        $realized->isNegative()?DecimalMath::abs($realized):Decimal::fromString('0'),
-                        $realized->isPositive()?$realized:Decimal::fromString('0'),
-                    ),
+                'cm_ledger_'.bin2hex(random_bytes(12)),$executionId.':settlement',$now,[
+                    // Token acquired on buy venue.
+                    new LedgerEntry('venue:'.$buyVenue.':inventory', $quantity, Decimal::fromString('0'), $buyInstrument),
+                    new LedgerEntry('external:'.$buyVenue.':inventory', Decimal::fromString('0'), $quantity, $buyInstrument),
+
+                    // Token delivered from pre-funded sell venue.
+                    new LedgerEntry('external:'.$sellVenue.':inventory', $quantity, Decimal::fromString('0'), $sellInstrument),
+                    new LedgerEntry('venue:'.$sellVenue.':inventory', Decimal::fromString('0'), $quantity, $sellInstrument),
+
+                    // Quote currency settlement and fees.
+                    new LedgerEntry('external:'.$buyVenue.':cash', $buy['notional'], Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('venue:'.$buyVenue.':cash', Decimal::fromString('0'), $buy['notional'], $quoteAsset),
+                    new LedgerEntry('fees:'.$buyVenue, $buyFee, Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('venue:'.$buyVenue.':cash', Decimal::fromString('0'), $buyFee, $quoteAsset),
+
+                    new LedgerEntry('venue:'.$sellVenue.':cash', $sell['notional'], Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('external:'.$sellVenue.':cash', Decimal::fromString('0'), $sell['notional'], $quoteAsset),
+                    new LedgerEntry('fees:'.$sellVenue, $sellFee, Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('venue:'.$sellVenue.':cash', Decimal::fromString('0'), $sellFee, $quoteAsset),
                 ]
             );
 
@@ -194,7 +209,7 @@ final readonly class TokenizedEquityPaperExecutionService
             $this->repository->saveLedgerTransaction($organizationId,$ledger->id,$ledger->idempotencyKey,[
                 'id'=>$ledger->id,'idempotency_key'=>$ledger->idempotencyKey,'posted_at'=>$ledger->postedAt->format(DATE_ATOM),
                 'entries'=>array_map(static fn(LedgerEntry $e):array=>[
-                    'account'=>$e->account,'debit'=>$e->debit->value(),'credit'=>$e->credit->value(),
+                    'account'=>$e->account,'asset_key'=>$e->assetKey,'debit'=>$e->debit->value(),'credit'=>$e->credit->value(),
                 ],$ledger->entries),
             ]);
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
