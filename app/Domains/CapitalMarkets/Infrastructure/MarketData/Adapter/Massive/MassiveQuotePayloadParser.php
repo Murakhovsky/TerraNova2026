@@ -16,8 +16,17 @@ final class MassiveQuotePayloadParser
         if(!is_array($payload)||array_is_list($payload))throw new InvalidArgumentException('Massive quote response must be an object.');
         if(strtoupper((string)($payload['status']??''))!=='OK')throw new InvalidArgumentException('Massive quote response status is not OK.');
 
+        $decodedResults=$payload['results']??null;
+        if(!is_array($decodedResults)||array_is_list($decodedResults)){
+            throw new InvalidArgumentException('Massive quote response results object is missing.');
+        }
+        $symbol=$decodedResults['T']??null;
+        if(!is_string($symbol)||trim($symbol)===''){
+            throw new InvalidArgumentException('Massive T field is missing.');
+        }
+        $symbol=trim($symbol);
+
         $results=$this->resultsObject($json);
-        $symbol=$this->stringField($results,'T');
         if(strtoupper($symbol)!==strtoupper($expectedSymbol)){
             throw new InvalidArgumentException('Massive quote response symbol does not match the requested symbol.');
         }
@@ -56,16 +65,6 @@ final class MassiveQuotePayloadParser
             }
         }
         throw new InvalidArgumentException('Massive quote response results object is malformed.');
-    }
-
-    private function stringField(string $json,string $field):string
-    {
-        $pattern='/"'.preg_quote($field,'/').'"\s*:\s*"((?:\\.|[^"\\])*)"/';
-        if(preg_match($pattern,$json,$matches)!==1)throw new InvalidArgumentException('Massive '.$field.' field is missing.');
-        try{$value=json_decode('"'.$matches[1].'"',true,8,JSON_THROW_ON_ERROR);}
-        catch(Throwable){throw new InvalidArgumentException('Massive '.$field.' string is malformed.');}
-        if(!is_string($value)||trim($value)==='')throw new InvalidArgumentException('Massive '.$field.' string is invalid.');
-        return $value;
     }
 
     private function numberField(string $json,string $field):string
