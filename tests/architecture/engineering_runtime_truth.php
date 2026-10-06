@@ -67,6 +67,15 @@ foreach (['touchRuntime($workflowId)', 'markRuntimeIssue(', 'Repository discover
 if (!str_contains($workflowStore, "COALESCE(w.health_status, 'HEALTHY') <> 'STALLED'")) {
     throw new RuntimeException('Engineering scheduler still retries STALLED workflows automatically.');
 }
+foreach ([
+    "w.runtime_reason",
+    "\$previousHealth === 'STALLED' && \$previousReason !== ''",
+    "\$reason = \$previousReason",
+] as $needle) {
+    if (!str_contains($workflowStore, $needle)) {
+        throw new RuntimeException('Engineering watchdog does not preserve explicit STALLED runtime failures: '.$needle);
+    }
+}
 if (str_contains($continue, "\$this->workflows->touchRuntime(\$workflowId);\n        \$workflow = \$this->workflows->get(\$workflowId);")) {
     throw new RuntimeException('Engineering continue path still emits a false recovery heartbeat before real work begins.');
 }
