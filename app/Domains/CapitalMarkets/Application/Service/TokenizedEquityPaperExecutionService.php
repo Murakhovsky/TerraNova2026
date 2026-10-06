@@ -298,6 +298,11 @@ final readonly class TokenizedEquityPaperExecutionService
                     'account'=>$e->account,'asset_key'=>$e->assetKey,'debit'=>$e->debit->value(),'credit'=>$e->credit->value(),
                 ],$ledger->entries),
             ]);
+            $checkpoint=[
+                ...$checkpoint,'status'=>'EXECUTING','checkpoint'=>'LEDGER_POSTED',
+                'realized_pnl'=>$realized->value(),'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
+            ];
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'EXECUTING',$checkpoint);
             $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             $observationFingerprint=hash('sha256',implode('|',[
@@ -325,15 +330,13 @@ final readonly class TokenizedEquityPaperExecutionService
                 ]
             );
 
-            // Settle pre-funded venue balances: cash leaves buy venue, inventory leaves sell venue,
-            // acquired token appears on buy venue, sale proceeds appear on sell venue.
-            $this->repository->consumePaperBalanceReservation($organizationId,$buyCashReservation);
-            $this->repository->consumePaperBalanceReservation($organizationId,$sellInventoryReservation);
-            $this->repository->creditPaperBalance($organizationId,$buyVenue,$buyInstrument,$quantity->value());
+            // Settlement is one atomic, idempotent financial transition. A crash can happen
+            // before or after this call without duplicating inventory, cash or realized P&L.
             $sellCash=DecimalMath::subtract($sell['notional'],$sellFee);
-            $this->repository->creditPaperBalance($organizationId,$sellVenue,$quoteAsset,$sellCash->value());
-
-            $this->repository->completeReservation($organizationId,$reservationId,$realized->value());
+            $this->repository->settlePaperExecution(
+                $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
+                $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
+            );
             return $payload;
         }catch(\Throwable $error){
             if($firstLegPersisted){
