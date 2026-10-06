@@ -156,6 +156,29 @@ foreach([
     }
 }
 
+$paperExecution=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityPaperExecutionService.php');
+foreach(['getExecutionForOpportunity','recordInvalidated','INSUFFICIENT_LIQUIDITY'] as $needle){
+    if(!str_contains($paperExecution,$needle)){
+        throw new RuntimeException('Tokenized Equity execution hardening missing: '.$needle);
+    }
+}
+$verticalSlice=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityVerticalSliceService.php');
+foreach(['crossVenueObservationIssues','referenceObservationIssues',"'observable'=>\$observable"] as $needle){
+    if(!str_contains($verticalSlice,$needle)){
+        throw new RuntimeException('Tokenized Equity observability gate missing: '.$needle);
+    }
+}
+$researchEngine=(string)file_get_contents($domainRoot.'/Domain/Research/HypothesisResearchEngine.php');
+foreach(['unobservable_scan_count','execution_attempt_count','invalidated_execution_count','completion_rate'] as $needle){
+    if(!str_contains($researchEngine,$needle)){
+        throw new RuntimeException('Tokenized Equity unbiased research metric missing: '.$needle);
+    }
+}
+$verticalRepository=(string)file_get_contents($domainRoot.'/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php');
+if(!str_contains($verticalRepository,'LIMIT 1 FOR UPDATE')||!str_contains($verticalRepository,'getExecutionForOpportunity')){
+    throw new RuntimeException('Tokenized Equity execution idempotency must serialize by opportunity row.');
+}
+
 $foundationService=(string)file_get_contents($domainRoot.'/Application/Service/CapitalMarketsFoundationService.php');
 foreach(['TransactionManagerInterface','transactional(fn():array=>$this->createInstrument($command))','transactional(fn():array=>$this->createRelationship($command))','transactional(fn():array=>$this->createVenue($command))'] as $needle){
     if(!str_contains($foundationService,$needle)){
