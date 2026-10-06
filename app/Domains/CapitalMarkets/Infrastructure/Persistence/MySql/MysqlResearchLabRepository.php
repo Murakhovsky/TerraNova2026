@@ -137,6 +137,11 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         return $this->many('tn_capital_market_backtest_runs',$organizationId,$limit);
     }
 
+    public function getBacktestRun(string $organizationId,string $runId):?array
+    {
+        return $this->one('tn_capital_market_backtest_runs','run_id',$organizationId,$runId);
+    }
+
     public function saveOutOfSampleRun(string $organizationId,array $record):void
     {
         $this->insert('tn_capital_market_oos_runs',$organizationId,$record,'run_id');
