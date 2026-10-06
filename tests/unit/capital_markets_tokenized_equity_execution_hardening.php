@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 use Domains\CapitalMarkets\Domain\Execution\CompensationPolicy;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionGroupState;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionModePolicy;
 use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
 use Domains\CapitalMarkets\Domain\Execution\PartialFillPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\EconomicExposure;
+use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
+use Domains\CapitalMarkets\Domain\Event\TokenizedEquityEventType;
 use Domains\CapitalMarkets\Domain\Risk\TokenizedSecurityRiskProfile;
 use Domains\CapitalMarkets\Domain\Opportunity\SpreadDetectorConfig;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -17,6 +20,11 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $assert(ExecutionGroupState::Completed->terminal(),'Completed execution group must be terminal.');
+$paperOnly=new ExecutionModePolicy();
+$paperOnly->assertPaperOnly();
+$assert(!$paperOnly->allowsLive(),'VS1 must default to paper-only execution.');
+$assert(CapitalMarketsAlertType::UnhedgedPosition->value==='UNHEDGED_POSITION','Unhedged alert contract drifted.');
+$assert(TokenizedEquityEventType::CompensationStarted->value==='CompensationStarted','Compensation event contract drifted.');
 $assert(!ExecutionGroupState::Compensating->terminal(),'Compensating execution group must not be terminal.');
 $assert(PaperOrderState::PartiallyFilled->terminal()===false,'Partial fill must remain actionable.');
 $assert(PartialFillPolicy::AbortAndCompensate->value==='ABORT_AND_COMPENSATE','Partial-fill policy contract drifted.');
@@ -39,6 +47,10 @@ $config=new SpreadDetectorConfig(
     2000,500,80,Decimal::fromString('50'),500,Decimal::fromString('0.8'),Decimal::fromString('0.75')
 );
 $assert($config->minimumExecutionProbability?->value()==='0.75','Execution probability threshold must be explicit and configurable.');
+
+$liveBlocked=false;
+try{ (new ExecutionModePolicy(true,false))->assertPaperOnly(); }catch(DomainException){$liveBlocked=true;}
+$assert($liveBlocked,'Any live execution switch must fail closed in VS1.');
 
 $failed=false;
 try{ new TokenizedSecurityRiskProfile(101,0,0,0,0,0,0,0,0); }catch(InvalidArgumentException){$failed=true;}
