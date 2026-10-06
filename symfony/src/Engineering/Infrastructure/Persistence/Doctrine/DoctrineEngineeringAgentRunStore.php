@@ -40,46 +40,53 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
 
         $runId = EngineeringId::generate();
         $runTraceId = $this->runCorrelationId($traceId, $task->id);
-        $this->entityManager->persist(new AgentRunRecord(
-            id: $runId,
-            featureId: $task->featureId,
-            workflowExecutionId: $workflowId,
-            agentId: strtolower($task->role->value).':'.$task->id,
-            agentRole: $task->role->value,
-            idempotencyKey: $task->idempotencyKey,
-            modelProvider: 'pending',
-            model: 'pending',
-            inputSnapshot: array_merge($task->inputSnapshot, [
-                '_execution_task_id' => $task->id,
-            ]),
-            status: 'RUNNING',
-            technicalRetry: 0,
-            logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
-            traceId: $runTraceId,
-            startedAt: new DateTimeImmutable(),
-            taskId: null,
-        ));
-        $this->entityManager->flush();
-        $this->events->append(
-            $task->featureId,
-            $workflowId,
-            'AGENT',
-            'agent.run_started',
-            'STARTED',
-            $task->role->value.' agent run started',
-            [
-                'role' => $task->role->value,
-                'task_id' => $task->id,
-                'logical_attempt' => max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
-                'objective' => mb_substr($task->objective, 0, 500),
-            ],
-            $runId,
-            $runTraceId,
-        );
-        // EngineeringAgentTask::id is an execution correlation id, not a persisted
-        // cos_engineering_tasks.id. Persisting it into task_id/current_task_id violates
-        // their foreign keys for stage-level agents (Product, QA Planner, Architect, ...).
-        $this->workflows->touchRuntime($workflowId, $runId, null);
+
+        $this->entityManager->getConnection()->transactional(function () use ($workflowId, $task, $runId, $runTraceId): void {
+            $this->entityManager->persist(new AgentRunRecord(
+                id: $runId,
+                featureId: $task->featureId,
+                workflowExecutionId: $workflowId,
+                agentId: strtolower($task->role->value).':'.$task->id,
+                agentRole: $task->role->value,
+                idempotencyKey: $task->idempotencyKey,
+                modelProvider: 'pending',
+                model: 'pending',
+                inputSnapshot: array_merge($task->inputSnapshot, [
+                    '_execution_task_id' => $task->id,
+                ]),
+                status: 'RUNNING',
+                technicalRetry: 0,
+                logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
+                traceId: $runTraceId,
+                startedAt: new DateTimeImmutable(),
+                taskId: null,
+            ));
+            $this->entityManager->flush();
+
+            $this->events->append(
+                $task->featureId,
+                $workflowId,
+                'AGENT',
+                'agent.run_started',
+                'STARTED',
+                $task->role->value.' agent run started',
+                [
+                    'role' => $task->role->value,
+                    'execution_task_id' => $task->id,
+                    'persisted_task_id' => null,
+                    'logical_attempt' => max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
+                    'objective' => mb_substr($task->objective, 0, 500),
+                ],
+                $runId,
+                $runTraceId,
+            );
+
+            // EngineeringAgentTask::id is an execution correlation id, not a persisted
+            // cos_engineering_tasks.id. Persisting it into task_id/current_task_id violates
+            // their foreign keys for stage-level agents (Product, QA Planner, Architect, ...).
+            $this->workflows->touchRuntime($workflowId, $runId, null);
+        });
+
         return $runId;
     }
 
