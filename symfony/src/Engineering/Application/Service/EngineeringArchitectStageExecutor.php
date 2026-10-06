@@ -116,7 +116,12 @@ final readonly class EngineeringArchitectStageExecutor
         }
 
         if ($repositoryRevision === '' || $repositoryRevision === 'unknown') {
-            return $this->requireRepositoryReadConfiguration($featureId, $workflowId);
+            return $this->stopForRepositoryInfrastructure(
+                $featureId,
+                $workflowId,
+                $contextRevision,
+                $this->repository->available(),
+            );
         }
 
         $contextPaths = self::CANONICAL_ARCHITECTURE_CONTEXT;
@@ -427,37 +432,59 @@ final readonly class EngineeringArchitectStageExecutor
         });
     }
 
-    private function requireRepositoryReadConfiguration(string $featureId, string $workflowId): WorkflowDirective
-    {
-        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId): WorkflowDirective {
-            $workflow = $this->workflows->get($workflowId);
-            $next = $this->coordinator->requireHumanDecision(
-                $workflow,
-                'Principal Architect requires an authoritative repository revision before architecture approval.',
-            );
-            $this->persistTransitions($workflow, $next->transitions);
-            $this->features->updateStatus($featureId, $workflow->currentState()->value);
-            $this->humanDecisions->create(
-                featureId: $featureId,
-                workflowId: $workflowId,
-                type: 'EXTERNAL_CREDENTIAL',
-                question: 'Configure Engineering GitHub repository read access before resuming Principal Architect.',
-                reason: $next->reason,
-                options: [
-                    ['id' => 'CONFIGURED', 'description' => 'Repository read access is configured; rerun Principal Architect.'],
-                    ['id' => 'CANCEL', 'description' => 'Cancel this engineering workflow.'],
-                ],
-                evidence: [
-                    'requested_by_agent' => AgentRole::PRINCIPAL_ARCHITECT->value,
-                    'resume_state' => $workflow->resumeState()?->value,
-                    'required_environment' => ['COS_ENGINEERING_GITHUB_REPOSITORY','COS_ENGINEERING_GITHUB_TOKEN'],
-                    'local_repository_revision' => 'unknown',
-                ],
-                blocking: true,
-                recommendedOption: 'CONFIGURED',
-            );
-            return $next;
-        });
+    private function stopForRepositoryInfrastructure(
+        string $featureId,
+        string $workflowId,
+        string $contextRevision,
+        bool $gatewayAvailable,
+    ): WorkflowDirective {
+        return $this->lock->synchronized(
+            $featureId,
+            function () use ($featureId, $workflowId, $contextRevision, $gatewayAvailable): WorkflowDirective {
+                $reason = $gatewayAvailable
+                    ? 'Principal Architect could not resolve an authoritative repository revision.'
+                    : 'Engineering GitHub repository gateway is not configured for the runtime worker.';
+
+                $this->workflows->markRuntimeIssue(
+                    $workflowId,
+                    'STALLED',
+                    $reason.' This is an infrastructure/runtime configuration problem and does not require a human product decision.',
+                );
+                $this->tasks->markRole(
+                    $featureId,
+                    AgentRole::PRINCIPAL_ARCHITECT,
+                    'BLOCKED',
+                    [
+                        'type' => 'INFRASTRUCTURE',
+                        'reason' => $reason,
+                        'repository_gateway_available' => $gatewayAvailable,
+                        'context_repository_revision' => $contextRevision !== '' ? $contextRevision : null,
+                    ],
+                );
+
+                $this->journal->event(
+                    $featureId,
+                    $workflowId,
+                    'RUNTIME',
+                    'repository.revision_unavailable',
+                    'STALLED',
+                    'Principal Architect stopped because authoritative repository revision is unavailable.',
+                    'engineering:architect:repository-revision',
+                    [
+                        'repository_gateway_available' => $gatewayAvailable,
+                        'context_repository_revision' => $contextRevision !== '' ? $contextRevision : null,
+                        'required_environment' => ['COS_ENGINEERING_GITHUB_REPOSITORY','COS_ENGINEERING_GITHUB_TOKEN'],
+                        'human_decision_required' => false,
+                    ],
+                );
+
+                return new WorkflowDirective(
+                    WorkflowDirectiveType::STOP,
+                    null,
+                    $reason,
+                );
+            },
+        );
     }
 
     /**
