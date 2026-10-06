@@ -1934,6 +1934,17 @@ services:
 
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
+  Domains\CapitalMarkets\Domain\Service\FundingCashflowCalculator: ~
+  Domains\CapitalMarkets\Domain\Service\FundingRateNormalizer: ~
+  Domains\CapitalMarkets\Domain\Service\FundingSettlementEligibility: ~
+  Domains\CapitalMarkets\Domain\Service\HedgeMonitor: ~
+  Domains\CapitalMarkets\Domain\Service\SpotPerpetualMarketStateFactory: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueEconomicsCalculator: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueOpportunityEvaluator: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueRiskEvaluator: ~
+  Domains\CapitalMarkets\Domain\Service\FundingStatisticsEngine: ~
+  Domains\CapitalMarkets\Domain\Service\BasisStatisticsEngine: ~
+  Domains\CapitalMarkets\Application\Service\CryptoSpotPerpetualVerticalSliceService: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
   Domains\CapitalMarkets\Domain\Service\PositionProjector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
