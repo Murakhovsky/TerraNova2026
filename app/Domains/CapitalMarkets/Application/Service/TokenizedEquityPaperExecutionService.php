@@ -213,6 +213,30 @@ final readonly class TokenizedEquityPaperExecutionService
                 ],$ledger->entries),
             ]);
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
+            $observationFingerprint=hash('sha256',implode('|',[
+                $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
+            ]));
+            $this->repository->saveHypothesisObservation(
+                $organizationId,
+                'cm_obs_'.substr($observationFingerprint,0,40),
+                'H2',
+                'EXECUTION',
+                $now->format(DATE_ATOM),
+                $observationFingerprint,
+                [
+                    'market_pair_id'=>(string)($candidate['market_pair_id']??''),
+                    'candidate_id'=>(string)($candidate['id']??''),
+                    'opportunity_id'=>$opportunityId,
+                    'execution_id'=>$executionId,
+                    'detected'=>true,
+                    'executable'=>true,
+                    'realized'=>true,
+                    'expected_pnl'=>(string)$opportunity['expected_pnl'],
+                    'realized_pnl'=>$realized->value(),
+                    'reason'=>null,
+                    'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
+                ]
+            );
 
             // Settle pre-funded venue balances: cash leaves buy venue, inventory leaves sell venue,
             // acquired token appears on buy venue, sale proceeds appear on sell venue.
