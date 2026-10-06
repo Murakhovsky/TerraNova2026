@@ -459,7 +459,9 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         string $sellVenueId,
         string $quoteAsset,
         string $sellCash,
-        string $realizedPnl
+        string $realizedPnl,
+        ?string $compensationQuantity=null,
+        ?string $compensationCash=null
     ):void{
         $ownsTransaction=!$this->connection->inTransaction();
         if($ownsTransaction)$this->connection->beginTransaction();
@@ -528,6 +530,32 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
             )->execute([
                 'org'=>$organizationId,'venue'=>$sellVenueId,'asset'=>$quoteAsset,'amount'=>$sellCash,
             ]);
+
+            $compensationQty=$compensationQuantity===null?null:\Domains\CapitalMarkets\Domain\Value\Decimal::fromString($compensationQuantity);
+            if($compensationQty!==null&&$compensationQty->isPositive()){
+                $debit=$this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_balances
+                     SET available_amount=available_amount-:amount
+                     WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset AND available_amount>=:amount'
+                );
+                $debit->execute([
+                    'amount'=>$compensationQty->value(),'org'=>$organizationId,
+                    'venue'=>$buyVenueId,'asset'=>$buyInstrumentId,
+                ]);
+                if($debit->rowCount()!==1)throw new \DomainException('COMPENSATION_INVENTORY_SETTLEMENT_FAILED');
+
+                $cash=\Domains\CapitalMarkets\Domain\Value\Decimal::fromString((string)($compensationCash??'0'));
+                if($cash->isPositive()){
+                    $this->connection->prepare(
+                        'INSERT INTO tn_capital_market_paper_balances
+                         (organization_id,venue_id,asset_key,available_amount,reserved_amount)
+                         VALUES (:org,:venue,:asset,:amount,0)
+                         ON DUPLICATE KEY UPDATE available_amount=available_amount+VALUES(available_amount)'
+                    )->execute([
+                        'org'=>$organizationId,'venue'=>$buyVenueId,'asset'=>$quoteAsset,'amount'=>$cash->value(),
+                    ]);
+                }
+            }
 
             $this->connection->prepare(
                 'UPDATE tn_capital_market_capital_reservations SET status=\'CONSUMED\'
