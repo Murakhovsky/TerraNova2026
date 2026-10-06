@@ -15,6 +15,8 @@ foreach ([
     "taskId: null",
     "'_execution_task_id' => \$task->id",
     "touchRuntime(\$workflowId, \$runId, null)",
+    "getConnection()->transactional(",
+    "'execution_task_id' => \$task->id",
 ] as $needle) {
     if (!str_contains($store, $needle)) {
         throw new RuntimeException('Engineering AgentRun execution/task FK separation missing '.$needle);
