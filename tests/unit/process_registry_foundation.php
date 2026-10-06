@@ -11,7 +11,7 @@ use Kernel\Process\ProcessStep;
 use Kernel\Process\RuntimeMapping;
 
 $registry = new JsonProcessRegistry($root . '/resources/processes');
-if (count($registry->all()) !== 8) throw new RuntimeException('Canonical Process Registry must expose eight current processes.');
+if (count($registry->all()) !== 9) throw new RuntimeException('Canonical Process Registry must expose nine current processes.');
 
 $capitalMarkets = $registry->get('capital-markets.market-data-to-trusted-state');
 if (!$capitalMarkets instanceof ProcessDefinition || $capitalMarkets->schemaVersion !== 4 || $capitalMarkets->domain !== 'capital_markets' || count($capitalMarkets->steps) !== 5) {
@@ -20,6 +20,15 @@ if (!$capitalMarkets instanceof ProcessDefinition || $capitalMarkets->schemaVers
 if ($capitalMarkets->steps[0]->capability !== 'capital_markets.market_data.manage'
     || $capitalMarkets->steps[4]->capability !== 'capital_markets.market_data.view') {
     throw new RuntimeException('Capital Markets Market Intelligence capability bridge was not preserved.');
+}
+
+$tokenizedEquity = $registry->get('capital-markets.tokenized-equity-paper-cycle');
+if (!$tokenizedEquity instanceof ProcessDefinition || $tokenizedEquity->schemaVersion !== 4 || $tokenizedEquity->domain !== 'capital_markets' || count($tokenizedEquity->steps) !== 7) {
+    throw new RuntimeException('Capital Markets Tokenized Equity process was not hydrated.');
+}
+if ($tokenizedEquity->steps[0]->capability !== 'capital_markets.opportunity.view'
+    || $tokenizedEquity->steps[6]->capability !== 'capital_markets.opportunity.view') {
+    throw new RuntimeException('Capital Markets Tokenized Equity capability bridge was not preserved.');
 }
 
 $property = $registry->get('property.submission-to-publication');
