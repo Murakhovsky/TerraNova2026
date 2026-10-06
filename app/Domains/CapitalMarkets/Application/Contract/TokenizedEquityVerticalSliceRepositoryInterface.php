@@ -57,6 +57,14 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
         string $organizationId,string $venueId,string $assetKey,string $amount
     ):void;
 
+    /** @param array<string,mixed> $payload */
+    public function saveHypothesisObservation(
+        string $organizationId,string $observationId,string $hypothesis,string $status,array $payload
+    ):void;
+
+    /** @return array{observation_count:int,detected_count:int,executable_count:int,realized_count:int,total_realized_pnl:string,average_edge_capture_ratio:string} */
+    public function researchMetrics(string $organizationId,string $hypothesis):array;
+
     /** @return list<array<string,mixed>> */
     public function listOpportunities(string $organizationId,int $limit=200):array;
 
