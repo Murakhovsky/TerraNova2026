@@ -1,5 +1,5 @@
 ---
-title: Capital Markets Research & Strategy Lab
+title: Лабораторія досліджень і стратегій Capital Markets
 domain: capital_markets
 process: capital-markets.research-strategy-lab
 status: as-is
@@ -11,7 +11,7 @@ process_id: capital-markets.research-strategy-lab
 description: "Канонічний процес від формальної research hypothesis до frozen experiment, historical replay, OOS, scorecard, promotion decision та накопиченого ResearchKnowledge."
 ---
 
-# Capital Markets Research & Strategy Lab
+# Лабораторія досліджень і стратегій Capital Markets
 
 Цей workflow описує фактичний CM-RESEARCH-LAB для H1/H2/H4/H5/H6 і наступних Capital Markets strategies.
 
@@ -59,7 +59,7 @@ ResearchHypothesis → Frozen ResearchDataset → StrategyVersion → ResearchEx
 
 Idea → Duplicate Research Search → ResearchHypothesis → Frozen Dataset → Strategy Version → Experiment → Queue / Budget Gate → Backtest / Replay → Parameter Sensitivity → Walk Forward → OOS → Scorecard → Promotion Gate → Paper → Validate / Reject → ResearchKnowledge
 
-## Acceptance
+## Критерії приймання
 
 Активні tests покривають positive H4 research cycle, negative H6 research cycle, look-ahead rejection, OOS reuse rejection, overfit warning, immutable result rejection та Research Agent authority boundary.
 
