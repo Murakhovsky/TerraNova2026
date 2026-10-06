@@ -25,8 +25,8 @@ interface TokenizedEquityScannerRepositoryInterface
 
     /** @param array<string,mixed> $result */
     public function saveRun(
-        string $organizationId,string $runId,string $idempotencyKey,string $trigger,string $status,
-        int $targetCount,int $completedCount,int $failedCount,array $result,string $startedAt,string $completedAt
+        string $organizationId,string $runId,string $idempotencyKey,string $status,
+        int $targetCount,int $completedCount,int $failedCount,array $result,string $completedAt
     ):void;
 
     /** @return list<array<string,mixed>> */
