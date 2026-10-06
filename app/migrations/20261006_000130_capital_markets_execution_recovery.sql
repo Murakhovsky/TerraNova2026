@@ -62,7 +62,6 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_positions (
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
     UNIQUE KEY uq_cm_position (organization_id,position_id),
-    UNIQUE KEY uq_cm_position_scope (organization_id,portfolio_id,strategy_id,instrument_id,venue_id),
     KEY ix_cm_position_status (organization_id,status,updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
