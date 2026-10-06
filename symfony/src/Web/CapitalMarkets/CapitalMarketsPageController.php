@@ -23,6 +23,7 @@ use Domains\CapitalMarkets\Application\Query\ListRelationships;
 use Domains\CapitalMarkets\Application\Query\ListVenues;
 use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
@@ -51,6 +52,7 @@ final readonly class CapitalMarketsPageController
         private CapitalMarketsFoundationBoundary $capitalMarkets,
         private MarketDataAdministrationService $marketData,
         private TokenizedEquityVerticalSliceService $tokenizedEquity,
+        private TokenizedEquityResearchService $tokenizedEquityResearch,
         private TokenizedEquityPaperExecutionService $paperExecution,
         private OperationsSectionReader $operations,
     ){}
@@ -151,6 +153,7 @@ final readonly class CapitalMarketsPageController
                 $org=$tenant->organizationId()->value();
                 return ['workspace'=>[
                     'research'=>$this->tokenizedEquity->dashboard($org),
+                    'research_report'=>$this->tokenizedEquityResearch->report($org),
                     'opportunities'=>$this->tokenizedEquity->opportunities($org,200),
                     'paper_portfolio'=>$this->paperExecution->portfolio($org),
                 ]];
