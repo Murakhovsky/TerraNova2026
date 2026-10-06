@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use DateTimeImmutable;
 use Domains\CapitalMarkets\Domain\Research\WalkForwardEngine;
+use Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy;
 
 final readonly class ResearchBacktestService
 {
@@ -18,7 +19,36 @@ final readonly class ResearchBacktestService
         private ResearchLabRepositoryInterface $repository,
         private ResearchLabService $lab,
         private WalkForwardEngine $walkForward,
+        private ResearchExecutionBudgetPolicy $budget,
     ){}
+
+    public function queue(string $organizationId,array $specification):array
+    {
+        foreach(['run_id','experiment_id','dataset_id','strategy_version_id','hypothesis_code','partition_name','configuration','reproducibility_fingerprint'] as $required){
+            if(!array_key_exists($required,$specification))throw new InvalidArgumentException('Missing '.$required);
+        }
+        $this->budget->assertBacktest((array)$specification['configuration']);
+        $record=$specification;
+        $record['status']='QUEUED';
+        $record['budget']=$this->budget->estimate((array)$specification['configuration']);
+        $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
+        $this->lab->recordBacktestRun($organizationId,$record);
+        return $record;
+    }
+
+    public function cancel(string $organizationId,string $runId,string $reason='USER_CANCELLED'):array
+    {
+        $run=$this->repository->getBacktestRun($organizationId,$runId);
+        if($run===null)throw new InvalidArgumentException('Backtest run not found.');
+        if(in_array((string)($run['status']??''),['COMPLETED','FAILED','CANCELLED'],true)){
+            throw new InvalidArgumentException('Terminal backtest run cannot be cancelled.');
+        }
+        $run['status']='CANCELLED';
+        $run['cancelled_at']=gmdate('Y-m-d H:i:s');
+        $run['cancel_reason']=$reason;
+        $this->lab->recordBacktestRun($organizationId,$run);
+        return $run;
+    }
 
     public function run(string $organizationId,array $specification):array
     {
@@ -27,6 +57,11 @@ final readonly class ResearchBacktestService
             'partition_name','configuration','reproducibility_fingerprint'
         ] as $required){
             if(!array_key_exists($required,$specification))throw new InvalidArgumentException('Missing '.$required);
+        }
+        $this->budget->assertBacktest((array)$specification['configuration']);
+        $existing=$this->repository->getBacktestRun($organizationId,(string)$specification['run_id']);
+        if($existing!==null&&($existing['status']??null)==='CANCELLED'){
+            throw new InvalidArgumentException('Cancelled backtest run cannot start.');
         }
         $experiment=$this->repository->getExperiment($organizationId,(string)$specification['experiment_id']);
         if($experiment===null)throw new InvalidArgumentException('Backtest requires an existing experiment.');
@@ -113,6 +148,7 @@ final readonly class ResearchBacktestService
             (int)$specification['test_days'],
             (int)$specification['step_days'],
         );
+        $this->budget->assertWalkForward($specification,count($windows));
 
         $results=[];
         foreach($windows as $index=>$window){
