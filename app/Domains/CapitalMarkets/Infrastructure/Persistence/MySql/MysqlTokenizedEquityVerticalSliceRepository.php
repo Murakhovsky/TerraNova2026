@@ -178,11 +178,15 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
     public function listPaperFillsForExecution(string $organizationId,string $executionId):array
     {
         $statement=$this->connection->prepare(
-            'SELECT payload_json FROM tn_capital_market_paper_fills
+            'SELECT order_id,payload_json FROM tn_capital_market_paper_fills
              WHERE organization_id=:org AND execution_id=:execution ORDER BY id ASC'
         );
         $statement->execute(['org'=>$organizationId,'execution'=>$executionId]);
-        return array_map(fn(array $row):array=>$this->object((string)$row['payload_json']),$statement->fetchAll(PDO::FETCH_ASSOC));
+        return array_map(function(array $row):array{
+            $payload=$this->object((string)$row['payload_json']);
+            $payload['_order_id']=(string)$row['order_id'];
+            return $payload;
+        },$statement->fetchAll(PDO::FETCH_ASSOC));
     }
 
     public function ledgerTransactionExists(string $organizationId,string $idempotencyKey):bool
