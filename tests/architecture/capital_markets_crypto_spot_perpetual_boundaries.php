@@ -120,6 +120,15 @@ $rateLimiter=(string)file_get_contents($root.'/symfony/src/Security/RequestRateL
 $assert(str_contains($rateLimiter,"'/capital-markets'"),
     'Capital Markets web mutations must participate in authenticated write rate limiting.');
 
+$cutover=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsProductionCutoverCommand.php');
+foreach(["name:'cos:capital-markets:cutover'",'ENABLE_CAPITAL_MARKETS','DISABLE_CAPITAL_MARKETS','ModuleControlService'] as $needle){
+    $assert(str_contains($cutover,$needle),'Capital Markets cutover contract missing: '.$needle);
+}
+$runtimeWorkflow=(string)file_get_contents($root.'/.github/workflows/runtime.yml');
+$assert(str_contains($runtimeWorkflow,'cos:capital-markets:cutover enable'),'Runtime browser acceptance must activate Capital Markets explicitly.');
+$devDeploy=(string)file_get_contents($root.'/deploy/dev.sh');
+$assert(str_contains($devDeploy,'cos:capital-markets:cutover enable'),'AWS dev deployment must activate Capital Markets explicitly.');
+
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach([
     'BybitPerpetualMarketDataAdapter','OkxPerpetualMarketDataAdapter',
