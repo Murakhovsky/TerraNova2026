@@ -47,6 +47,8 @@ $repo=new class implements ResearchLabRepositoryInterface{
     public function listBacktestRuns(string $organizationId,int $limit=200):array{return array_slice(array_values($this->runs),0,$limit);}
     public function getBacktestRun(string $organizationId,string $runId):?array{return $this->runs[$runId]??null;}
     public function saveOutOfSampleRun(string $organizationId,array $record):void{$this->oos[$record['run_id']]=$record;}
+    public function getOutOfSampleRun(string $organizationId,string $runId):?array{return $this->oos[$runId]??null;}
+    public function listOutOfSampleRuns(string $organizationId,int $limit=200):array{return array_slice(array_values($this->oos),0,$limit);}
     public function saveScorecard(string $organizationId,array $record):void{$this->scorecards[]=$record;}
     public function listScorecards(string $organizationId,int $limit=200):array{return array_slice($this->scorecards,0,$limit);}
     public function saveRejectedHypothesis(string $organizationId,array $record):void{$this->rejections[]=$record;}
@@ -85,7 +87,7 @@ $adapter=new class implements ResearchReplayAdapterInterface{
 };
 
 $backtests=new ResearchBacktestService(
-    [$adapter],$repo,$lab,new WalkForwardEngine(),new ResearchExecutionBudgetPolicy()
+    [$adapter],$repo,$lab,new WalkForwardEngine(),new ResearchExecutionBudgetPolicy(),new ResearchIsolationPolicy()
 );
 $org='org-research-acceptance';
 
