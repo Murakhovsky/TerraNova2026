@@ -10,6 +10,7 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQuote;
+use Domains\CapitalMarkets\Domain\MarketData\MarketQualityFlag;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
 use Domains\CapitalMarkets\Domain\MarketData\MarketStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketState;
@@ -108,3 +109,65 @@ try{
 $assert($failed,'Ledger imbalance must fail closed.');
 
 echo "Capital Markets Tokenized Equity vertical slice core passed.\n";
+
+$detector=new TokenizedEquitySpreadDetector();
+
+$closedState=new MarketState(
+    InstrumentId::fromString('instrument:aaplx-closed'),
+    VenueId::fromString('venue:closed'),
+    MarketSourceId::fromString('source:closed'),
+    null,$q('101','101.1'),null,null,MarketStatus::Closed,
+    new DateTimeImmutable('2026-10-06T12:00:00.405000+00:00'),
+    new DateTimeImmutable('2026-10-06T12:00:00.405000+00:00'),
+    $quality,1,null,str_repeat('d',64),MarketDataMode::Live,
+);
+$closedIssues=$detector->crossVenueObservationIssues($a,$closedState,$config,$now,1000);
+$assert(in_array('B_MARKET_NOT_OPEN',$closedIssues,true),'Closed venue must block cross-venue detection.');
+$assert($detector->detectCrossVenue('pair:closed',$a,$closedState,$config,$now,1000)===[],
+    'Closed market must not create candidates.');
+
+$skewedState=$state(
+    'venue:skew','instrument:aaplx-skew','101','101.1',
+    '2026-10-06T11:59:59.000000+00:00'
+);
+$skewIssues=$detector->crossVenueObservationIssues($a,$skewedState,$config,$now,1000);
+$assert(in_array('B_STALE',$skewIssues,true)||in_array('SNAPSHOT_SKEW_EXCEEDED',$skewIssues,true),
+    'Stale or excessively skewed market state must be rejected.');
+$assert($detector->detectCrossVenue('pair:skew',$a,$skewedState,$config,$now,1000)===[],
+    'Clock skew must not create executable candidates.');
+
+$disagreementQuality=new MarketDataQualityAssessment(
+    MarketTrustStatus::Untrusted,40,[MarketQualityFlag::ReferenceMismatch],100,10,110,Decimal::fromString('250')
+);
+$disagreementState=new MarketState(
+    InstrumentId::fromString('instrument:aaplx-disagree'),
+    VenueId::fromString('venue:disagree'),
+    MarketSourceId::fromString('source:disagree'),
+    null,$q('101','101.1'),null,null,MarketStatus::Open,
+    new DateTimeImmutable('2026-10-06T12:00:00.405000+00:00'),
+    new DateTimeImmutable('2026-10-06T12:00:00.405000+00:00'),
+    $disagreementQuality,1,null,str_repeat('e',64),MarketDataMode::Live,
+);
+$disagreementIssues=$detector->crossVenueObservationIssues($a,$disagreementState,$config,$now,1000);
+$assert(in_array('B_UNTRUSTED',$disagreementIssues,true),'Provider disagreement must fail the trust gate.');
+$assert(in_array('B_QUALITY_BELOW_MINIMUM',$disagreementIssues,true),'Provider disagreement must fail minimum data quality.');
+$assert($detector->detectCrossVenue('pair:disagree',$a,$disagreementState,$config,$now,1000)===[],
+    'Untrusted provider disagreement must not create candidates.');
+
+$detectedBook=new MarketOrderBook(MarketEventType::OrderBookSnapshot,'latency-1',
+    [new OrderBookLevel(new Price(Decimal::fromString('100.8'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))],
+    [new OrderBookLevel(new Price(Decimal::fromString('100.0'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))]
+);
+$afterLatencyBook=new MarketOrderBook(MarketEventType::OrderBookSnapshot,'latency-2',
+    [new OrderBookLevel(new Price(Decimal::fromString('100.2'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))],
+    [new OrderBookLevel(new Price(Decimal::fromString('100.9'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))]
+);
+$detectedSell=$calculator->vwap($detectedBook,ExecutionSide::Sell,Decimal::fromString('10'));
+$afterLatencySell=$calculator->vwap($afterLatencyBook,ExecutionSide::Sell,Decimal::fromString('10'));
+$assert($detectedSell['price']->value()==='100.8','Detection book sell price fixture drifted.');
+$assert($afterLatencySell['price']->value()==='100.2','Execution must use post-latency market state, not detection price.');
+$assert($afterLatencySell['price']->compareTo($detectedSell['price'])<0,
+    'Latency price move must reduce executable sell price when the market moved against us.');
+
+echo "Capital Markets Tokenized Equity hostile market-data scenarios passed.\n";
+
