@@ -1,0 +1,183 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Http\Api\V1\Controller;
+
+use App\Security\SessionCsrfValidator;
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
+use Domains\CapitalMarkets\Application\Service\ResearchLabService;
+use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
+use InvalidArgumentException;
+use JsonException;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
+use Kernel\Tenant\Model\TenantContext;
+use PDOException;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Throwable;
+
+final readonly class CapitalMarketsResearchLabController
+{
+    public function __construct(
+        private TenantContextProviderInterface $tenants,
+        private ActiveModuleResolver $modules,
+        private CapitalMarketsAccessControlInterface $access,
+        private ResearchLabService $lab,
+        private SessionCsrfValidator $csrf,
+    ){}
+
+    public function workspace():JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::ResearchView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->lab->workspace($tenant->organizationId()->value()));
+    }
+
+    public function createHypothesis(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->createHypothesis($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function freezeDataset(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->freezeDataset($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function createExperiment(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->createExperiment($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function createStrategyVersion(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::StrategyVersionManage,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->createStrategyVersion($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function recordResult(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->recordResult($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function scorecard(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->createScorecard(
+                $tenant->organizationId()->value(),
+                $id,
+                $this->object($payload,'dimensions'),
+                $this->object($payload,'weights'),
+                trim((string)($payload['weight_version']??'v1')),
+            ),201);
+    }
+
+    public function promotion(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::StrategyPromote,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->evaluatePromotion(
+                $tenant->organizationId()->value(),
+                $id,
+                $this->required($payload,'from'),
+                $this->required($payload,'to'),
+                $this->object($payload,'actual'),
+                $this->object($payload,'policy'),
+                $tenant->userId()->value(),
+            ),201);
+    }
+
+    public function reject(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::StrategyReject,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->rejectHypothesis($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function knowledge(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->recordKnowledge($tenant->organizationId()->value(),$payload),201);
+    }
+
+    private function mutation(Request $request,CapitalMarketsCapability $capability,callable $operation,int $success=200):JsonResponse
+    {
+        $context=$this->context($capability);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        if(!$this->csrf->isValid($request))return $this->error('Invalid CSRF token.',403);
+        try{return $this->ok($operation($tenant,$this->payload($request)),$success);}
+        catch(PDOException $error){return $this->error('Capital Markets research persistence conflict.',409);}
+        catch(InvalidArgumentException $error){return $this->error($error->getMessage(),422);}
+        catch(Throwable $error){
+            error_log('capital_markets.research_lab.api.failure '.$error->getMessage());
+            return $this->error('Research Lab operation failed.',500);
+        }
+    }
+
+    private function context(CapitalMarketsCapability $capability):array|JsonResponse
+    {
+        $tenant=$this->tenants->current();
+        if($tenant===null)return $this->error('Tenant context required.',403);
+        $organizationId=$tenant->organizationId()->value();
+        if(!$this->modules->isEnabled($organizationId,'capital_markets'))return $this->error('Capital Markets module is disabled.',403);
+        $actor=$tenant->userId()->value();
+        if(!ctype_digit($actor))return $this->error('Canonical numeric actor required.',403);
+        $actorId=(int)$actor;
+        if(!$this->allowed($organizationId,$actorId,$capability))return $this->error('Capital Markets research capability required.',403);
+        return [$tenant,$actorId];
+    }
+
+    private function allowed(string $organizationId,int $actorId,CapitalMarketsCapability $capability):bool
+    {
+        if($this->access->hasCapability($organizationId,$actorId,$capability->value))return true;
+        $broad=in_array($capability,[CapitalMarketsCapability::ResearchView],true)
+            ? CapitalMarketsCapability::View
+            : CapitalMarketsCapability::Manage;
+        return $this->access->hasCapability($organizationId,$actorId,$broad->value);
+    }
+
+    private function payload(Request $request):array
+    {
+        if(str_contains(strtolower((string)$request->headers->get('Content-Type','')),'application/json')){
+            try{$data=json_decode((string)$request->getContent(),true,flags:JSON_THROW_ON_ERROR);}
+            catch(JsonException){throw new InvalidArgumentException('JSON body is malformed.');}
+            if(!is_array($data)||array_is_list($data))throw new InvalidArgumentException('JSON body must be an object.');
+            unset($data['csrf_token']);
+            return $data;
+        }
+        $data=$request->request->all();
+        unset($data['csrf_token']);
+        return $data;
+    }
+
+    private function object(array $payload,string $key):array
+    {
+        $value=$payload[$key]??null;
+        if(!is_array($value)||array_is_list($value))throw new InvalidArgumentException($key.' must be an object.');
+        return $value;
+    }
+
+    private function required(array $payload,string $key):string
+    {
+        $value=trim((string)($payload[$key]??''));
+        if($value==='')throw new InvalidArgumentException($key.' is required.');
+        return $value;
+    }
+
+    private function respond(callable $reader):JsonResponse
+    {
+        try{return $this->ok($reader());}
+        catch(InvalidArgumentException $error){return $this->error($error->getMessage(),422);}
+        catch(Throwable $error){
+            error_log('capital_markets.research_lab.api.read_failure '.$error->getMessage());
+            return $this->error('Research Lab read failed.',500);
+        }
+    }
+
+    private function ok(mixed $data,int $status=200):JsonResponse{return new JsonResponse(['ok'=>true,'data'=>$data],$status);}
+    private function error(string $message,int $status):JsonResponse{return new JsonResponse(['ok'=>false,'error'=>$message],$status);}
+}
