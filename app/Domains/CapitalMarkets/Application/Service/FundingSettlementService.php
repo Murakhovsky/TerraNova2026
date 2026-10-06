@@ -106,6 +106,27 @@ final readonly class FundingSettlementService
             $positionId,$position->venueId,$position->instrumentId,$funding->rate,$notional,$cashflow,$settlementAt
         );
 
+        $executionId=(string)($payload['execution_id']??'');
+        if($executionId!==''){
+            $execution=$this->trading->getExecution($organizationId,$executionId);
+            if($execution!==null){
+                $hypothesis=(string)($execution['hypothesis']??'H5');
+                $fingerprint=hash('sha256',implode('|',[$organizationId,$hypothesis,'FUNDING',$settlementId]));
+                $this->trading->saveHypothesisObservation(
+                    $organizationId,'cm_obs_'.substr($fingerprint,0,40),$hypothesis,'FUNDING',
+                    $settlementAt->format(DATE_ATOM),$fingerprint,
+                    [
+                        'opportunity_id'=>(string)($execution['opportunity_id']??''),
+                        'execution_id'=>$executionId,'detected'=>true,'executable'=>true,'realized'=>true,
+                        'expected_pnl'=>'0','realized_pnl'=>$cashflow->value(),'reason'=>null,
+                        'position_reference'=>$positionId,'funding_settlement_id'=>$settlementId,
+                        'funding_rate'=>$funding->rate->value(),'position_notional'=>$notional->value(),
+                        'cashflow'=>$cashflow->value(),
+                    ]
+                );
+            }
+        }
+
         return [
             'settlement_id'=>$settlementId,'position_reference'=>$positionId,'venue_id'=>$position->venueId,
             'instrument_id'=>$position->instrumentId,'settlement_at'=>$settlementAt->format(DATE_ATOM),
