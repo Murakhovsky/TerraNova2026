@@ -37,7 +37,14 @@ final class EngineeringAgentSchemas
     /** @return array<string,mixed> */
     private static function productRequirements(): array
     {
-        return self::manager();
+        $schema = self::manager();
+        $schema['required'] = array_values(array_filter(
+            $schema['required'],
+            static fn (string $field): bool => $field !== 'decision',
+        ));
+        unset($schema['properties']['decision']);
+
+        return $schema;
     }
 
     /** @return array<string,mixed> */
