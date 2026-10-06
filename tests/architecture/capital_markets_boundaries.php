@@ -162,6 +162,31 @@ foreach([
     }
 }
 
+$scannerService=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityScannerService.php');
+foreach(['idempotency_key is required','listTargets($organizationId,true','PARTIAL','dataset_hash'] as $needle){
+    if(!str_contains($scannerService,$needle)){
+        throw new RuntimeException('Tokenized Equity scanner contract missing: '.$needle);
+    }
+}
+$scannerHandler=(string)file_get_contents($root.'/symfony/src/Application/CapitalMarkets/Command/RunCapitalMarketsTokenizedEquityScannerCommandHandler.php');
+foreach(['CapitalMarketsFeatureFlag::DomainEnabled','CapitalMarketsFeatureFlag::MarketData','CapitalMarketsFeatureFlag::TokenizedEquity','scheduled-tokenized-equity:'] as $needle){
+    if(!str_contains($scannerHandler,$needle)){
+        throw new RuntimeException('Tokenized Equity scheduled scanner safety gate missing: '.$needle);
+    }
+}
+$scheduler=(string)file_get_contents($root.'/symfony/src/Scheduler/CosScheduleProvider.php');
+foreach(['capitalMarketsScannerEnabled','RunCapitalMarketsTokenizedEquityScannerCommand'] as $needle){
+    if(!str_contains($scheduler,$needle))throw new RuntimeException('Capital Markets scanner scheduler wiring missing: '.$needle);
+}
+$messenger=(string)file_get_contents($root.'/symfony/config/packages/messenger.yaml');
+if(!str_contains($messenger,'RunCapitalMarketsTokenizedEquityScannerCommand')){
+    throw new RuntimeException('Capital Markets scanner command must be routed through Messenger.');
+}
+$apiController=(string)file_get_contents($root.'/symfony/src/Http/Api/V1/Controller/CapitalMarketsTokenizedEquityController.php');
+if(!str_contains($apiController,'CapitalMarketsCapability::PaperExecute,CapitalMarketsCapability::Manage=>CapitalMarketsCapability::Manage')){
+    throw new RuntimeException('Capital Markets manage operations must not fall back to view capability.');
+}
+
 $paperExecution=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityPaperExecutionService.php');
 foreach(['getExecutionForOpportunity','recordInvalidated','INSUFFICIENT_LIQUIDITY'] as $needle){
     if(!str_contains($paperExecution,$needle)){
