@@ -55,8 +55,11 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_subscriptions (
     subscription_id VARCHAR(190) NOT NULL,
     source_id VARCHAR(190) NOT NULL,
     venue_id VARCHAR(190) NULL,
-    venue_key VARCHAR(190) GENERATED ALWAYS AS (COALESCE(venue_id,'')) STORED,
     instrument_id VARCHAR(190) NOT NULL,
+    target_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin
+        GENERATED ALWAYS AS (
+            SHA2(CONCAT_WS(CHAR(31),organization_id,source_id,COALESCE(venue_id,''),instrument_id,data_type),256)
+        ) STORED,
     data_type VARCHAR(48) NOT NULL,
     status VARCHAR(24) NOT NULL,
     subscribed_at DATETIME(6) NOT NULL,
@@ -65,7 +68,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_subscriptions (
     updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
     UNIQUE KEY uq_cm_market_subscription_id (organization_id,subscription_id),
-    UNIQUE KEY uq_cm_market_subscription_target (organization_id,source_id,venue_key,instrument_id,data_type),
+    UNIQUE KEY uq_cm_market_subscription_target (target_fingerprint),
     KEY ix_cm_market_subscription_active (organization_id,source_id,status),
     CONSTRAINT fk_cm_market_subscription_source FOREIGN KEY (organization_id,source_id)
         REFERENCES tn_capital_market_data_sources (organization_id,source_id)

@@ -113,7 +113,11 @@ foreach([
     if(!is_file($path))throw new RuntimeException('Market Intelligence migration missing: '.$migration);
 }
 $sourceMigration=(string)file_get_contents($root.'/app/migrations/20261006_000125_capital_markets_market_sources.sql');
-foreach(['tn_capital_market_data_sources','tn_capital_market_source_health','tn_capital_market_subscriptions','credentials_reference','quality_policy_json','license_profile'] as $needle){
+foreach([
+    'tn_capital_market_data_sources','tn_capital_market_source_health','tn_capital_market_subscriptions',
+    'credentials_reference','quality_policy_json','license_profile','target_fingerprint','SHA2(',
+    'UNIQUE KEY uq_cm_market_subscription_target (target_fingerprint)'
+] as $needle){
     if(!str_contains($sourceMigration,$needle))throw new RuntimeException('Market source persistence contract missing: '.$needle);
 }
 if(str_contains($sourceMigration,'credentials_secret')||str_contains($sourceMigration,'api_secret')){
