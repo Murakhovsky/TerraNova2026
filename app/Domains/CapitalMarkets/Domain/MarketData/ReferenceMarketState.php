@@ -22,9 +22,16 @@ final readonly class ReferenceMarketState extends ValueObject
         public MarketDataQualityAssessment $quality,
         public DateTimeImmutable $updatedAt,
         public int $stateVersion,
+        public MarketDataMode $mode=MarketDataMode::Live,
+        public ?DateTimeImmutable $sourceTimestamp=null,
+        public ?string $lastSequence=null,
+        public ?string $lastEventFingerprint=null,
     ){
         if($this->referenceAgeMilliseconds<0)throw new InvalidArgumentException('Reference age cannot be negative.');
         if($this->stateVersion<1)throw new InvalidArgumentException('Reference state version must be positive.');
+        if($this->lastEventFingerprint!==null&&strlen($this->lastEventFingerprint)!==64){
+            throw new InvalidArgumentException('Reference state event fingerprint must be SHA-256 or null.');
+        }
     }
 
     /** @return array<string,mixed> */
@@ -42,6 +49,10 @@ final readonly class ReferenceMarketState extends ValueObject
             'quality'=>$this->quality->toArray(),
             'updated_at'=>$this->updatedAt->format(DATE_ATOM),
             'state_version'=>$this->stateVersion,
+            'mode'=>$this->mode->value,
+            'source_timestamp'=>$this->sourceTimestamp?->format(DATE_ATOM),
+            'last_sequence'=>$this->lastSequence,
+            'last_event_fingerprint'=>$this->lastEventFingerprint,
         ];
     }
 }

@@ -80,9 +80,9 @@ final readonly class MysqlVenueRepository implements VenueRepository
                     'capability'=>$capability->value,
                 ]);
             }
-            $this->connection->commit();
+            if($ownsTransaction)$this->connection->commit();
         }catch(\Throwable $error){
-            if($this->connection->inTransaction())$this->connection->rollBack();
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
             throw $error;
         }
     }

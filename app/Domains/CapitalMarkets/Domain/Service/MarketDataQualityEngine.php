@@ -11,13 +11,14 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityPolicy;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQualityFlag;
-use Domains\CapitalMarkets\Domain\MarketData\MarketSequencePolicy;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQuote;
+use Domains\CapitalMarkets\Domain\MarketData\MarketSequencePolicy;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceHealth;
 use Domains\CapitalMarkets\Domain\MarketData\MarketState;
 use Domains\CapitalMarkets\Domain\MarketData\MarketTrade;
 use Domains\CapitalMarkets\Domain\MarketData\MarketTrustStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketValueObservation;
+use Domains\CapitalMarkets\Domain\MarketData\ReferenceMarketState;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 
@@ -25,7 +26,7 @@ final readonly class MarketDataQualityEngine
 {
     public function assess(
         CanonicalMarketEvent $event,
-        ?MarketState $previous,
+        MarketState|ReferenceMarketState|null $previous,
         MarketSourceHealth $sourceHealth,
         DateTimeImmutable $now,
         MarketDataQualityPolicy $policy,
@@ -59,15 +60,17 @@ final readonly class MarketDataQualityEngine
 
         if($event->observation instanceof MarketOrderBook
             &&$event->eventType()===MarketEventType::OrderBookDelta
-            &&($previous===null||$previous->orderBook===null)){
+            &&(!($previous instanceof MarketState)||$previous->orderBook===null)){
             $flags[MarketQualityFlag::OrderBookInvalid->value]=MarketQualityFlag::OrderBookInvalid;
         }
 
         if($previous!==null){
-            if($previous->lastEventFingerprint===$event->fingerprint()){
+            $previousFingerprint=$previous->lastEventFingerprint;
+            if($previousFingerprint!==null&&$previousFingerprint===$event->fingerprint()){
                 $flags[MarketQualityFlag::Duplicate->value]=MarketQualityFlag::Duplicate;
             }
-            if($event->timestamps->sourceTimestamp<$previous->sourceTimestamp){
+            $previousTimestamp=$previous instanceof MarketState?$previous->sourceTimestamp:$previous->sourceTimestamp;
+            if($previousTimestamp!==null&&$event->timestamps->sourceTimestamp<$previousTimestamp){
                 $flags[MarketQualityFlag::OutOfOrder->value]=MarketQualityFlag::OutOfOrder;
             }
             $this->assessSequence($event,$previous,$policy,$flags);
@@ -75,7 +78,11 @@ final readonly class MarketDataQualityEngine
             $currentPrice=$this->eventPrice($event);
             $previousPrice=$this->statePrice($previous);
             if($currentPrice!==null&&$previousPrice!==null&&!$previousPrice->isZero()){
-                $jump=DecimalMath::basisPoints(DecimalMath::abs(DecimalMath::subtract($currentPrice,$previousPrice)),$previousPrice,6);
+                $jump=DecimalMath::basisPoints(
+                    DecimalMath::abs(DecimalMath::subtract($currentPrice,$previousPrice)),
+                    $previousPrice,
+                    6
+                );
                 if($jump->compareTo(Decimal::fromString((string)$policy->maximumJumpBps))>0){
                     $flags[MarketQualityFlag::AbnormalPrice->value]=MarketQualityFlag::AbnormalPrice;
                 }
@@ -104,12 +111,10 @@ final readonly class MarketDataQualityEngine
         );
     }
 
-    /**
-     * @param array<string,MarketQualityFlag> $flags
-     */
+    /** @param array<string,MarketQualityFlag> $flags */
     private function assessSequence(
         CanonicalMarketEvent $event,
-        MarketState $previous,
+        MarketState|ReferenceMarketState $previous,
         MarketDataQualityPolicy $policy,
         array &$flags,
     ):void{
@@ -212,8 +217,9 @@ final readonly class MarketDataQualityEngine
         };
     }
 
-    private function statePrice(MarketState $state):?Decimal
+    private function statePrice(MarketState|ReferenceMarketState $state):?Decimal
     {
+        if($state instanceof ReferenceMarketState)return $state->currentQuote?->midPrice();
         if($state->bestQuote!==null)return $state->bestQuote->midPrice();
         return $state->lastTrade?->price->value;
     }

@@ -27,6 +27,7 @@ final readonly class MarketSourceDescriptor extends ValueObject
         public MarketHealthPolicy $healthPolicy,
         public array $metadata=[],
         public string $licenseProfile='UNSPECIFIED',
+        public ?MarketDataQualityPolicy $qualityPolicy=null,
     ){
         if($this->adapterType===''||trim($this->adapterType)!==$this->adapterType||mb_strlen($this->adapterType)>120){
             throw new InvalidArgumentException('Market source adapter type is invalid.');

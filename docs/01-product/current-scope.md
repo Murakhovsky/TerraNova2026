@@ -15,7 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Capital_markets | `0.2.0` | CM-FOUNDATION runtime; installable, disabled by default; tenant-scoped Instrument/Relationship/Venue registries, API/UI, audit/events; без market data та execution runtime |
+| Capital_markets | `0.3.0` | CM-FOUNDATION + Market Intelligence core; raw/canonical events, deterministic quality/trust, current trading/reference MarketState, tenant-scoped persistence; provider adapters та execution ще відсутні |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
@@ -29,13 +29,31 @@ kind: product
 
 Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
 
-## Capital Markets: фінансовий Architecture Foundation
+## Capital Markets: Foundation + Market Intelligence
 
-Capital Markets \`0.2.0\` реалізує CM-FOUNDATION як автономний bounded context: typed Instrument identity, identifiers/statuses, directed economic relationships, Venue capabilities/mappings, deterministic \`Price / Quantity / Rate / Percentage\`, reuse Kernel \`Money\`, tenant-scoped persistence, granular permissions, Platform Feature Flags, Audit та durable domain-event outbox.
+Capital Markets `0.3.0` має два активні шари: структурний `CM-FOUNDATION` та executable `CM-MARKET-INTELLIGENCE`.
 
-Foundation має canonical Symfony API \`/api/v1/capital-markets/*\` і операторський workspace \`/capital-markets/*\` для Instruments, Relationships і Venues. Модуль лишається disabled by default. Paper Trading, Live Trading та Auto Execution flags seed-яться вимкненими.
+Канонічний market-data flow:
 
-Market-data adapters, MarketState, strategies, opportunity detection, ledger, portfolio, agents, orders/trades та execution runtime ще **не є реалізованою поведінкою**. Перший canonical executable business process з'явиться у Market Intelligence pack, тому CM-FOUNDATION має explicit process-coverage exemption.
+```text
+Source
+  ↓
+RawMarketEvent
+  ↓
+Decode / Resolve / Normalize
+  ↓
+CanonicalMarketEvent
+  ↓
+Deterministic Quality / Trust
+  ↓
+MarketState / ReferenceMarketState
+```
+
+Raw evidence зберігається до normalization. Unknown symbol не створює canonical/current state. Duplicate fingerprint не мутує state. Out-of-order event може лишитися у history, але не відкочує current state. Trading state partitioned мінімально за `venue + instrument`; reference state — за `source + instrument`.
+
+Підтримуються `LIVE / DELAYED / HISTORICAL / REPLAY`. Persistence включає Sources/Health/Subscriptions, Raw/Canonical Events, Quality Metrics, Current Trading/Reference State, Snapshots і Data Gaps.
+
+Provider-specific Bybit/Massive adapters, зовнішні credentials, operator Market Data API/UI, production replay/backfill orchestration та Tokenized Equity comparison ще належать до наступних waves. Paper Trading, Live Trading та Auto Execution залишаються окремими вимкненими promotion gates.
 
 ## Growth: інтелект можливостей
 

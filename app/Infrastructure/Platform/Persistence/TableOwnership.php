@@ -68,6 +68,11 @@ final class TableOwnership
             'tn_capital_market_relationships', 'tn_capital_market_pairs',
             'tn_capital_market_venues', 'tn_capital_market_venue_capabilities',
             'tn_capital_market_venue_instruments', 'capital_market_user_capabilities',
+            'tn_capital_market_data_sources', 'tn_capital_market_source_health',
+            'tn_capital_market_subscriptions', 'tn_capital_market_raw_events',
+            'tn_capital_market_canonical_events', 'tn_capital_market_states',
+            'tn_capital_market_reference_states', 'tn_capital_market_quality_metrics',
+            'tn_capital_market_snapshots', 'tn_capital_market_data_gaps',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [

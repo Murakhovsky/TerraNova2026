@@ -41,6 +41,8 @@ final readonly class KernelCapitalMarketsEventPublisher implements CapitalMarket
         if(str_starts_with($eventType,'capital_markets.instrument.'))return 'capital_markets.instrument';
         if(str_starts_with($eventType,'capital_markets.relationship.'))return 'capital_markets.relationship';
         if(str_starts_with($eventType,'capital_markets.venue_instrument.'))return 'capital_markets.venue_instrument';
+        if(str_starts_with($eventType,'capital_markets.market_state.'))return 'capital_markets.market_state';
+        if(str_starts_with($eventType,'capital_markets.market_data.'))return 'capital_markets.market_data';
         return 'capital_markets.venue';
     }
 }

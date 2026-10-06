@@ -14,7 +14,6 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketState;
 use Domains\CapitalMarkets\Domain\MarketData\MarketStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketTrade;
 use Domains\CapitalMarkets\Domain\MarketData\MarketValueObservation;
-use Domains\CapitalMarkets\Domain\Value\Decimal;
 
 final readonly class MarketStateEngine
 {
@@ -71,6 +70,7 @@ final readonly class MarketStateEngine
             ($previous?->stateVersion??0)+1,
             $event->sequence??$previous?->lastSequence,
             $event->fingerprint(),
+            $event->mode,
         );
     }
 
