@@ -78,6 +78,8 @@ final class TableOwnership
             'tn_capital_market_ledger_transactions', 'tn_capital_market_paper_portfolios',
             'tn_capital_market_capital_reservations', 'tn_capital_market_paper_balances',
             'tn_capital_market_paper_balance_reservations', 'tn_capital_market_hypothesis_observations',
+            'tn_capital_market_funding_observations', 'tn_capital_market_basis_observations',
+            'tn_capital_market_funding_settlements', 'tn_capital_market_hedge_groups',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [
