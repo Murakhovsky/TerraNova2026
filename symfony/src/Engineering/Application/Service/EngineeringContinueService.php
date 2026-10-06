@@ -81,7 +81,14 @@ final readonly class EngineeringContinueService
             $next = $this->progression->continue($featureId, $workflowId, $next, $organizationId, $correlationId);
         }
 
-        $this->workflows->touchRuntime($workflowId);
+        // Do not blindly recover runtime health after an autonomous step.
+        // A STOP directive may be the result of an explicit runtime failure already
+        // persisted by the stage (for example missing repository access). Touching
+        // the workflow here would erase STALLED and make the UI lie that execution
+        // is still healthy/running.
+        if ($next->type !== WorkflowDirectiveType::STOP) {
+            $this->workflows->touchRuntime($workflowId);
+        }
         $current = $this->workflows->get($workflowId);
         return new EngineeringStartResult(
             featureId: $featureId,
