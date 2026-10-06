@@ -2837,6 +2837,11 @@ cos_api_v1_capital_markets_tokenized_equity_opportunities:
   controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::opportunities
   methods: [GET]
 
+cos_api_v1_capital_markets_tokenized_equity_research:
+  path: /api/v1/capital-markets/tokenized-equities/research
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::research
+  methods: [GET]
+
 cos_api_v1_capital_markets_tokenized_equity_scan_h1:
   path: /api/v1/capital-markets/tokenized-equities/scan/h1
   controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::scanH1
