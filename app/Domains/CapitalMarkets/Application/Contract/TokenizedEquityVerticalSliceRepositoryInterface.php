@@ -98,7 +98,9 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
         string $sellVenueId,
         string $quoteAsset,
         string $sellCash,
-        string $realizedPnl
+        string $realizedPnl,
+        ?string $compensationQuantity=null,
+        ?string $compensationCash=null
     ):void;
 
     /** @return list<array<string,mixed>> */
