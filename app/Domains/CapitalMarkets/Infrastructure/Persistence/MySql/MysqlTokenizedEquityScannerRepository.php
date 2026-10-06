@@ -91,8 +91,8 @@ final readonly class MysqlTokenizedEquityScannerRepository implements TokenizedE
     }
 
     public function saveRun(
-        string $organizationId,string $runId,string $idempotencyKey,string $trigger,string $status,
-        int $targetCount,int $completedCount,int $failedCount,array $result,string $startedAt,string $completedAt
+        string $organizationId,string $runId,string $idempotencyKey,string $status,
+        int $targetCount,int $completedCount,int $failedCount,array $result,string $completedAt
     ):void{
         $this->connection->prepare(
             'UPDATE tn_capital_market_scan_runs
@@ -100,7 +100,7 @@ final readonly class MysqlTokenizedEquityScannerRepository implements TokenizedE
                  result_json=:result,completed_at=:finished
              WHERE organization_id=:org AND run_id=:run AND idempotency_key=:key'
         )->execute([
-            'org'=>$organizationId,'run'=>$runId,'key'=>$idempotencyKey,'trigger'=>$trigger,'status'=>$status,
+            'org'=>$organizationId,'run'=>$runId,'key'=>$idempotencyKey,'status'=>$status,
             'targets'=>$targetCount,'completed'=>$completedCount,'failed'=>$failedCount,'result'=>$this->json($result),
             'finished'=>$this->mysqlDate($completedAt),
         ]);
