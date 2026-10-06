@@ -2888,3 +2888,33 @@ cos_api_v1_capital_markets_tokenized_equity_execution_recovery:
   controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::executionRecovery
   methods: [GET]
   requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+cos_api_v1_capital_markets_tokenized_equity_executions:
+  path: /api/v1/capital-markets/tokenized-equities/executions
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::executions
+  methods: [GET]
+
+cos_api_v1_capital_markets_tokenized_equity_positions:
+  path: /api/v1/capital-markets/tokenized-equities/positions
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::positions
+  methods: [GET]
+
+cos_api_v1_capital_markets_tokenized_equity_ledger:
+  path: /api/v1/capital-markets/tokenized-equities/ledger
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::ledger
+  methods: [GET]
+
+cos_api_v1_capital_markets_tokenized_equity_performance:
+  path: /api/v1/capital-markets/tokenized-equities/performance/tokenized-equity
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::performance
+  methods: [GET]
+
+cos_api_v1_capital_markets_tokenized_equity_observations:
+  path: /api/v1/capital-markets/tokenized-equities/hypotheses/observations
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::observations
+  methods: [GET]
+
+cos_api_v1_capital_markets_tokenized_equity_reconciliation:
+  path: /api/v1/capital-markets/tokenized-equities/reconciliation
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::reconciliation
+  methods: [GET]
