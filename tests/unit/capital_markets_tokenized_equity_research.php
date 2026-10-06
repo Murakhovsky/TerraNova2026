@@ -13,6 +13,7 @@ $assert=static function(bool $condition,string $message):void{
 $policy=new HypothesisResearchPolicy();
 $base=[
     'observation_count'=>0,
+    'unobservable_count'=>0,
     'detected_count'=>0,
     'executable_count'=>0,
     'execution_attempt_count'=>0,
