@@ -100,6 +100,12 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
     }
 
 
+    public function listAllPromotionDecisions(string $organizationId,int $limit=200):array
+    {
+        return $this->many('tn_capital_market_strategy_promotion_decisions',$organizationId,$limit);
+    }
+
+
     public function saveBacktestRun(string $organizationId,array $record):void
     {
         $required=['run_id','experiment_id','dataset_id','strategy_version_id','partition_name','status','reproducibility_fingerprint'];
@@ -126,6 +132,11 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         ]);
     }
 
+    public function listBacktestRuns(string $organizationId,int $limit=200):array
+    {
+        return $this->many('tn_capital_market_backtest_runs',$organizationId,$limit);
+    }
+
     public function saveOutOfSampleRun(string $organizationId,array $record):void
     {
         $this->insert('tn_capital_market_oos_runs',$organizationId,$record,'run_id');
@@ -136,9 +147,19 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         $this->insert('tn_capital_market_strategy_scorecards',$organizationId,$record,'scorecard_id');
     }
 
+    public function listScorecards(string $organizationId,int $limit=200):array
+    {
+        return $this->many('tn_capital_market_strategy_scorecards',$organizationId,$limit);
+    }
+
     public function saveRejectedHypothesis(string $organizationId,array $record):void
     {
         $this->insert('tn_capital_market_rejected_hypotheses',$organizationId,$record,'rejection_id');
+    }
+
+    public function listRejectedHypotheses(string $organizationId,int $limit=200):array
+    {
+        return $this->many('tn_capital_market_rejected_hypotheses',$organizationId,$limit);
     }
 
     public function saveKnowledge(string $organizationId,array $record):void
