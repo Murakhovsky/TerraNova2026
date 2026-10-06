@@ -32,9 +32,9 @@ final readonly class ResearchLabService
         if($this->repository->getHypothesis($organizationId,(string)$record['hypothesis_id'])!==null){
             throw new InvalidArgumentException('Hypothesis id already exists; create a new revision instead.');
         }
-        if($record['status']==='READY_FOR_RESEARCH' && trim((string)$record['economic_reason'])===''){
-            throw new InvalidArgumentException('economic_reason is required before READY_FOR_RESEARCH.');
-        }
+        $record['status']=strtoupper(trim((string)$record['status']));
+        $record['edge_source']=strtoupper(trim((string)$record['edge_source']));
+        if($record['status']==='READY_FOR_RESEARCH')$this->assertResearchReady($record);
         if(!in_array((string)$record['status'],['IDEA','DRAFT'],true) && (string)$record['edge_source']==='UNKNOWN'){
             throw new InvalidArgumentException('UNKNOWN edge source is allowed only for IDEA/DRAFT.');
         }
