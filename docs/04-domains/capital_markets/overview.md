@@ -62,6 +62,7 @@ Market Intelligence сам по собі не створює trading decisions. 
 - [Market Intelligence workflow](../../02-workflows/capital-markets-market-data-to-trusted-state.md)
 - [Tokenized Equity workflow](../../02-workflows/capital-markets-tokenized-equity-paper-cycle.md)
 - [Tokenized Equity vertical slice](./tokenized-equity-vertical-slice.md)
+- [Research & Strategy Lab](./research-strategy-lab.md)
 - [Модулі та capabilities](../../12-reference/module-capabilities.md)
 - [Дозволи та capabilities](../../12-reference/permissions-capabilities.md)
 
