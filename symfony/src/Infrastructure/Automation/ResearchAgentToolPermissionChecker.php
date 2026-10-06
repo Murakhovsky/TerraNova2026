@@ -25,6 +25,8 @@ final readonly class ResearchAgentToolPermissionChecker implements ToolPermissio
         $name=$definition->name();
         if(!in_array($name,self::ALLOWED,true))return false;
         if($permission->name()!=='tool.'.$name.'.execute')return false;
+        $input=$invocation->input();
+        if(trim((string)($input['agent_name']??''))!=='capital_markets_research')return false;
         return $this->modules->isEnabled($invocation->organizationId()->value(),'capital_markets');
     }
 }
