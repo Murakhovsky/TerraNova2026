@@ -23,7 +23,7 @@ final class EngineeringAgentSchemas
             AgentRole::DATABASE_MIGRATION_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','HUMAN_DECISION_REQUIRED','BLOCKED']),
             AgentRole::PERFORMANCE_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','PERFORMANCE_TEST_REQUIRED','BLOCKED']),
             AgentRole::DEVOPS_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','HUMAN_DECISION_REQUIRED','BLOCKED']),
-            AgentRole::DOCUMENTATION_SPECIALIST => self::specialist(['COMPLETED','REQUEST_CHANGES','BLOCKED']),
+            AgentRole::DOCUMENTATION_SPECIALIST => self::documentationSpecialist(),
             AgentRole::API_SPECIALIST => self::specialist(['APPROVED','APPROVED_WITH_CONDITIONS','REQUEST_CHANGES','HUMAN_DECISION_REQUIRED','BLOCKED']),
             AgentRole::QA => self::qa(),
         };
@@ -101,6 +101,30 @@ final class EngineeringAgentSchemas
             ],
             'additionalProperties' => false,
         ];
+    }
+
+    /** @return array<string,mixed> */
+    private static function documentationSpecialist(): array
+    {
+        $schema = self::specialist(['COMPLETED','REQUEST_CHANGES','BLOCKED']);
+        $schema['required'][] = 'changes';
+        $schema['required'][] = 'commit_message';
+        $schema['properties']['changes'] = [
+            'type' => 'array',
+            'maxItems' => 20,
+            'items' => [
+                'type' => 'object',
+                'required' => ['path','operation','content'],
+                'properties' => [
+                    'path' => ['type' => 'string', 'minLength' => 1],
+                    'operation' => self::baseStatus(['CREATE','UPDATE']),
+                    'content' => ['type' => 'string', 'maxLength' => 250000],
+                ],
+                'additionalProperties' => false,
+            ],
+        ];
+        $schema['properties']['commit_message'] = ['type' => 'string', 'minLength' => 1];
+        return $schema;
     }
 
     /** @return array<string,mixed> */
