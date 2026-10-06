@@ -25,9 +25,14 @@ final readonly class Position extends ValueObject
         public ?DateTimeImmutable $openedAt=null,
         public ?DateTimeImmutable $updatedAt=null,
         public ?DateTimeImmutable $closedAt=null,
+        public PositionSide $side=PositionSide::Long,
+        public ?Decimal $contractMultiplier=null,
     ){
         if($instrumentId===''||$venueId===''||$quantity->isNegative()){
             throw new InvalidArgumentException('Invalid position identity or quantity.');
+        }
+        if($contractMultiplier!==null&&!$contractMultiplier->isPositive()){
+            throw new InvalidArgumentException('Position contract multiplier must be positive.');
         }
     }
 
@@ -43,10 +48,16 @@ final readonly class Position extends ValueObject
 
     public function unrealizedPnl():Decimal
     {
-        return DecimalMath::multiply(
-            $this->quantity,
-            DecimalMath::subtract($this->markPrice,$this->averageEntryPrice)
-        );
+        $movement=DecimalMath::subtract($this->markPrice,$this->averageEntryPrice);
+        if($this->side===PositionSide::Short)$movement=DecimalMath::negate($movement);
+        return DecimalMath::multiply($this->quantity,$movement);
+    }
+
+    public function signedUnderlyingExposure():Decimal
+    {
+        $multiplier=$this->contractMultiplier??Decimal::fromString('1');
+        $exposure=DecimalMath::multiply($this->quantity,$multiplier);
+        return $this->side===PositionSide::Long?$exposure:DecimalMath::negate($exposure);
     }
 
     public function status():string
