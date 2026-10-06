@@ -1840,9 +1840,16 @@ services:
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Security\MarketSourceCredentialResolver: ~
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\VenueMarketStatusResolver: ~
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitTickerPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitOrderBookPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder: ~
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveQuotePayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter: ~
@@ -1852,12 +1859,14 @@ services:
     arguments:
       $adapters:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
 
   Domains\CapitalMarkets\Application\Service\MarketDataDecoderRegistry:
     arguments:
       $decoders:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
 
   Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability: ~
