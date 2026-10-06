@@ -14,6 +14,14 @@ use Domains\CapitalMarkets\Domain\Portfolio\EconomicExposure;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionLegResult;
 use Domains\CapitalMarkets\Domain\Service\ExecutionCompensationEngine;
 use Domains\CapitalMarkets\Domain\Service\PositionProjector;
+use Domains\CapitalMarkets\Domain\Service\PaperMultiLegExecutionSimulator;
+use Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator;
+use Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook;
+use Domains\CapitalMarkets\Domain\MarketData\OrderBookLevel;
+use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
+use Domains\CapitalMarkets\Domain\Value\AssetCode;
+use Domains\CapitalMarkets\Domain\Value\Price;
+use Domains\CapitalMarkets\Domain\Value\Quantity;
 use Domains\CapitalMarkets\Domain\Execution\PaperFill;
 use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 use Domains\CapitalMarkets\Domain\Event\TokenizedEquityEventType;
@@ -93,3 +101,22 @@ try{ new TokenizedSecurityRiskProfile(101,0,0,0,0,0,0,0,0); }catch(InvalidArgume
 $assert($failed,'Out-of-range tokenization risk must fail closed.');
 
 echo "Capital Markets VS1 execution hardening contracts passed.\n";
+
+
+$base=new AssetCode('AAPLX');
+$quote=new AssetCode('USD');
+$buyBook=new MarketOrderBook(MarketEventType::OrderBookSnapshot,'1',
+    [new OrderBookLevel(new Price(Decimal::fromString('99.8'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))],
+    [new OrderBookLevel(new Price(Decimal::fromString('100'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))]
+);
+$sellBook=new MarketOrderBook(MarketEventType::OrderBookSnapshot,'2',
+    [new OrderBookLevel(new Price(Decimal::fromString('101'),$base,$quote,4),new Quantity(Decimal::fromString('6'),$base,8))],
+    [new OrderBookLevel(new Price(Decimal::fromString('101.2'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))]
+);
+$simulator=new PaperMultiLegExecutionSimulator(new ExecutablePriceCalculator(),new ExecutionCompensationEngine());
+$sim=$simulator->simulateH2($buyBook,$sellBook,Decimal::fromString('10'),CompensationPolicy::EmergencyClose);
+$assert($sim['sell']['filled_quantity']->value()==='6','Second leg must expose partial fill quantity.');
+$assert($sim['compensation']['filled_quantity']->value()==='4','Emergency close must cover unhedged remainder.');
+$assert($sim['residual_unhedged_quantity']->isZero(),'Successful emergency close must leave zero residual exposure.');
+$assert($sim['state']===ExecutionGroupState::Completed,'Fully compensated execution must become completed.');
+
