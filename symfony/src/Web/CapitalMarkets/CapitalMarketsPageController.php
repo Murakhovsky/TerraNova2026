@@ -24,6 +24,7 @@ use Domains\CapitalMarkets\Application\Query\ListVenues;
 use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalBacktestService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
@@ -54,6 +55,7 @@ final readonly class CapitalMarketsPageController
         private TokenizedEquityVerticalSliceService $tokenizedEquity,
         private TokenizedEquityPaperExecutionService $paperExecution,
         private TokenizedEquityResearchService $tokenizedEquityResearch,
+        private TokenizedEquityHistoricalBacktestService $tokenizedEquityBacktests,
         private OperationsSectionReader $operations,
     ){}
 
@@ -156,6 +158,7 @@ final readonly class CapitalMarketsPageController
                     'opportunities'=>$this->tokenizedEquity->opportunities($org,200),
                     'paper_portfolio'=>$this->paperExecution->portfolio($org),
                     'hypothesis_research'=>$this->tokenizedEquityResearch->summary($org),
+                    'backtests'=>$this->tokenizedEquityBacktests->runs($org,20),
                 ]];
             }
         );
