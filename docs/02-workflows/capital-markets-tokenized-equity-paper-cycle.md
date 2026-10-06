@@ -1,5 +1,5 @@
 ---
-title: Цикл Tokenized Equity Paper у Capital Markets
+title: Trusted Market State → Tokenized Equity Paper Result
 domain: capital_markets
 process: capital-markets.tokenized-equity-paper-cycle
 status: as-is
