@@ -1,26 +1,52 @@
+---
+title: Tokenized Equity Vertical Slice V0.4
+description: "Опис першого фінансового vertical slice Capital Markets для H1/H2 research, deterministic risk та guarded paper execution."
+domain: capital_markets
+status: implemented
+---
+
 # Tokenized Equity Vertical Slice V0.4
 
-This package introduces the deterministic financial core for H1 Tokenized Equity Dislocation and H2 Cross-Venue Tokenized Equity Arbitrage.
+Цей пакет реалізує детерміноване фінансове ядро для **H1 Tokenized Equity Dislocation** та **H2 Cross-Venue Tokenized Equity Arbitrage**.
 
-## Flow
+## Потік
 
-MarketState -> SpreadCandidate -> Net Economics -> Opportunity/Risk -> Paper Fill -> Ledger/Position/P&L -> Performance.
+```text
+MarketState
+→ SpreadCandidate
+→ Net Economics
+→ Opportunity
+→ Risk
+→ Paper Fill
+→ Asset-Aware Ledger
+→ Position / P&L
+→ Execution Performance
+```
 
-The implementation reuses Foundation and Market Intelligence V0.3. It cannot submit live orders.
+Реалізація повторно використовує Foundation і Market Intelligence V0.3/V0.4 та не створює паралельний market-data stack.
 
-## Invariants
+## Інваріанти
 
-- financial arithmetic uses Decimal, never float;
-- BUY uses ask and SELL uses bid;
-- larger quantities use order-book VWAP;
-- stale/untrusted/closed markets do not produce candidates;
-- snapshot age and skew are bounded;
-- gross spread is not treated as profit;
-- explicit costs are deducted before expected net P&L;
-- ledger transactions must balance;
-- paper P&L comes from fills, fees and slippage;
-- live execution remains out of scope.
+- фінансові обчислення використовують `Decimal`, без `float/double`;
+- BUY оцінюється по ask, SELL по bid;
+- для більших обсягів використовується order-book VWAP;
+- stale, untrusted або closed market state не створює candidate;
+- snapshot age та skew мають жорсткі межі;
+- однаковий symbol не є доказом economic equivalence;
+- різні quote currencies не порівнюються без trusted conversion rate;
+- gross spread не вважається profit;
+- explicit costs віднімаються до розрахунку expected net P&L;
+- H2 paper execution вимагає pre-funded cash на buy venue та token inventory на sell venue;
+- paper execution працює за full-fill policy: якщо будь-яка нога не може бути виконана повністю, execution не стартує;
+- Ledger балансується окремо для кожного asset;
+- realized paper P&L рахується з фактичних simulated fill prices та fees, без подвійного врахування slippage;
+- H1 залишається research-only, доки немає реального executable hedge venue;
+- Live Trading і withdrawals залишаються вимкненими.
 
-## Next integration pack
+## Реалізований результат V0.4
 
-Persistence/application orchestration persists candidates, opportunities, risk assessments, executions, ledger and positions, then exposes API/UI and connects detection to trusted MarketState updates.
+Система вже вміє зберігати candidates, opportunities, risk assessments, paper executions, paper portfolio, venue balances і immutable ledger transactions; має API та окремий Tokenized Equity workspace; повторно перевіряє ринок перед paper execution та вимірює realized P&L і edge capture.
+
+## Наступний етап
+
+Наступний пакет має розширювати provider coverage, automated scanning universe, historical replay/backtesting та operational observability. Live execution не входить у цей етап.
