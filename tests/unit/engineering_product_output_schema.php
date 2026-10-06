@@ -34,6 +34,32 @@ if (($item['additionalProperties'] ?? null) !== false) {
     throw new RuntimeException('Product acceptance criterion schema must reject undeclared fields.');
 }
 
+$questions = $schema['properties']['open_questions'] ?? null;
+if (!is_array($questions) || ($questions['maxItems'] ?? null) !== 1) {
+    throw new RuntimeException('Product blocking open_questions must allow at most one question.');
+}
+$question = $questions['items'] ?? null;
+if (!is_array($question) || ($question['type'] ?? null) !== 'object') {
+    throw new RuntimeException('Product blocking question schema is invalid.');
+}
+foreach (['id','question','options','recommended_option'] as $field) {
+    if (!in_array($field, $question['required'] ?? [], true)) {
+        throw new RuntimeException('Product blocking question schema does not require '.$field.'.');
+    }
+}
+if (($question['properties']['options']['minItems'] ?? 0) < 2) {
+    throw new RuntimeException('Product blocking question must require at least two options.');
+}
+$option = $question['properties']['options']['items'] ?? null;
+if (!is_array($option) || ($option['additionalProperties'] ?? null) !== false) {
+    throw new RuntimeException('Product human-decision option schema must be closed.');
+}
+foreach (['id','label'] as $field) {
+    if (!in_array($field, $option['required'] ?? [], true)) {
+        throw new RuntimeException('Product human-decision option schema does not require '.$field.'.');
+    }
+}
+
 $runner = (string) file_get_contents(dirname(__DIR__, 2).'/symfony/src/Engineering/Application/Agent/EngineeringAgentRunner.php');
 foreach (['validationFeedback', 'retry_correction', 'Previous structured output was rejected:'] as $needle) {
     if (!str_contains($runner, $needle)) {
