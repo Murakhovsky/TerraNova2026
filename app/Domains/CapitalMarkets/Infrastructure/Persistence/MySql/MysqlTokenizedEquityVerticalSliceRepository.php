@@ -388,7 +388,11 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         return [
             'observation_count'=>(int)$scalar(
                 'SELECT COUNT(*) FROM tn_capital_market_hypothesis_observations
-                 WHERE organization_id=:org AND hypothesis=:hypothesis'
+                 WHERE organization_id=:org AND hypothesis=:hypothesis AND status<>\'UNOBSERVABLE\''
+            ),
+            'unobservable_count'=>(int)$scalar(
+                'SELECT COUNT(*) FROM tn_capital_market_hypothesis_observations
+                 WHERE organization_id=:org AND hypothesis=:hypothesis AND status=\'UNOBSERVABLE\''
             ),
             'detected_count'=>(int)$scalar(
                 'SELECT COUNT(*) FROM tn_capital_market_spread_candidates
