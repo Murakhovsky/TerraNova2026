@@ -77,6 +77,13 @@ ensure_secret SPATIAL_JWT_SECRET
 ensure_secret MERCURE_JWT_SECRET
 ensure_secret COS_SECRET_MASTER_KEY
 
+engineering_repo="$(sed -n 's/^COS_ENGINEERING_GITHUB_REPOSITORY=//p' "$ENV_FILE" | tail -n 1)"
+engineering_token="$(sed -n 's/^COS_ENGINEERING_GITHUB_TOKEN=//p' "$ENV_FILE" | tail -n 1)"
+if [[ -z "$engineering_repo" || -z "$engineering_token" ]]; then
+  echo "WARNING: Engineering GitHub repository gateway is not configured in $ENV_FILE." >&2
+  echo "Principal Architect / Developer / Reviewer stages that require authoritative GitHub access will stop as STALLED." >&2
+fi
+
 "${COMPOSE[@]}" config --quiet
 "${COMPOSE[@]}" build --pull php nginx
 
