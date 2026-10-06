@@ -272,6 +272,7 @@
     {% set hypotheses = w.hypotheses|default([]) %}
     {% set experiments = w.experiments|default([]) %}
     {% set knowledge = w.knowledge|default([]) %}
+    {% set results = w.results|default([]) %}
     {% set runs = w.backtest_runs|default([]) %}
     {% set oosRuns = w.oos_runs|default([]) %}
     {% set scorecards = w.scorecards|default([]) %}
@@ -404,6 +405,30 @@
     </section>
 
     <section class="cos-panel">
+      <h2>Experiment Results</h2>
+      {% if results is empty %}
+        <p>No completed research results yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Experiment</th><th>Status</th><th>Confidence</th><th>Fidelity</th><th>Expected P&amp;L</th><th>Max drawdown</th><th>Limitations</th></tr></thead>
+          <tbody>
+          {% for result in results %}
+            <tr>
+              <td><strong>{{ result.experiment_id|default('—') }}</strong></td>
+              <td>{{ result.status|default('—') }}</td>
+              <td>{{ result.confidence|default('—') }}</td>
+              <td>{{ result.execution_fidelity|default(result.execution_metrics.execution_fidelity|default('—')) }}</td>
+              <td>{{ result.financial_metrics.expected_pnl_total|default(result.financial_metrics.pnl_total|default('—')) }}</td>
+              <td>{{ result.risk_metrics.max_drawdown|default('—') }}</td>
+              <td>{{ result.limitations|default([])|join(', ') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
       <h2>Out-of-Sample Runs</h2>
       {% if oosRuns is empty %}
         <p>No isolated OOS runs yet.</p>
@@ -486,7 +511,7 @@
 
     <section class="cos-panel">
       <h2>Research Knowledge</h2>
-      <p>This section deliberately keeps failed research. Deleting inconvenient experiments is not a research method, despite humanity's occasional enthusiasm for the concept.</p>
+      <p>Negative research is retained so future experiments can reuse prior evidence and avoid repeating failed work.</p>
       {% if knowledge is empty %}
         <p>No reusable knowledge records yet.</p>
       {% else %}
