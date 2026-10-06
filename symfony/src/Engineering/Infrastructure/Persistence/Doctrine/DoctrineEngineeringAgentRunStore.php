@@ -160,7 +160,13 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             null,
             $errorMessage,
         );
-        $this->workflows->touchRuntime($record->workflowExecutionId(), $record->id(), $record->taskId());
+        $this->workflows->markRuntimeIssue(
+            $record->workflowExecutionId(),
+            'STALLED',
+            'AgentRun '.$record->agentRole().' failed ['.$errorType.']: '.mb_substr($errorMessage, 0, 500),
+            $record->id(),
+            $record->taskId(),
+        );
     }
 
     public function existsByIdempotencyKey(string $idempotencyKey): bool
