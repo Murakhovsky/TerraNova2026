@@ -19,7 +19,8 @@ final readonly class ResearchSearchHypothesesTool implements ToolInterface
         return new ToolDefinition(
             'research.searchhypotheses',
             'Search formal Capital Markets research hypotheses, including rejected and active records.',
-            ['type'=>'object','properties'=>[
+            ['type'=>'object','required'=>['agent_name'],'properties'=>[
+                'agent_name'=>['type'=>'string'],
                 'status'=>['type'=>'string'],
                 'edge_source'=>['type'=>'string'],
                 'query'=>['type'=>'string'],
