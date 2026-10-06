@@ -21,7 +21,7 @@ $productStage = (string) file_get_contents($root.'/symfony/src/Engineering/Appli
 foreach (['heartbeatAt','healthStatus','stalledAt','runtimeReason','touchRuntime'] as $needle) {
     if (!str_contains($workflowEntity, $needle)) throw new RuntimeException('Workflow runtime entity missing '.$needle);
 }
-foreach (['refreshRuntimeHealthForOrganization', "'STALLED'", "'STALE'", "'WAITING'", 'heartbeat_at', 'runtime_reason', 'f.status AS feature_status', 'runtime.health_changed'] as $needle) {
+foreach (['refreshRuntimeHealthForOrganization', "'STALLED'", "'STALE'", "'WAITING'", 'heartbeat_at', 'runtime_reason', 'f.status AS feature_status', 'runtime.health_changed', "$previousHealth === 'STALLED'", 'Explicit runtime failures are sticky'] as $needle) {
     if (!str_contains($workflowStore, $needle)) throw new RuntimeException('Workflow runtime store missing '.$needle);
 }
 if (str_contains($workflowStore, "'workflow.health_changed'")) {
@@ -59,7 +59,7 @@ foreach (['heartbeat_at','health_status','stalled_at','runtime_reason'] as $need
 foreach (['maxScannedFiles', 'maxTotalReadBytes', 'maxScanMilliseconds', 'elapsedMilliseconds', 'hrtime(true)'] as $needle) {
     if (!str_contains($repositoryDiscovery, $needle)) throw new RuntimeException('Repository discovery runtime budget missing '.$needle);
 }
-foreach (['touchRuntime($workflowId)', 'markRuntimeIssue(', 'Repository discovery failed before AgentRun start'] as $needle) {
+foreach (['touchRuntime($workflowId)', 'markRuntimeIssue(', 'Repository discovery failed before AgentRun start', 'AgentRun start failed after repository discovery'] as $needle) {
     if (!str_contains($productStage, $needle)) throw new RuntimeException('Product pre-agent runtime observability missing '.$needle);
 }
 
