@@ -199,6 +199,8 @@ final readonly class TokenizedEquityPaperExecutionService
             'id'=>$executionId,'opportunity_id'=>$opportunityId,'status'=>'READY','checkpoint'=>'RESERVATIONS_READY',
             'executed_at'=>$now->format(DATE_ATOM),'reservation_id'=>$reservationId,
             'buy_cash_reservation_id'=>$buyCashReservation,'sell_inventory_reservation_id'=>$sellInventoryReservation,
+            'buy_venue_id'=>$buyVenue,'sell_venue_id'=>$sellVenue,
+            'buy_instrument_id'=>$buyInstrument,'sell_instrument_id'=>$sellInstrument,'quote_asset'=>$quoteAsset,
             'quantity'=>$quantity->value(),'plan_id'=>$plan->id,'realized_pnl'=>'0','edge_capture_ratio'=>'0',
         ];
         $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'READY',$checkpoint);
@@ -303,8 +305,7 @@ final readonly class TokenizedEquityPaperExecutionService
                 'realized_pnl'=>$realized->value(),'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
             ];
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'EXECUTING',$checkpoint);
-            $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
-            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
+            $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'ACCOUNTING'));
             $observationFingerprint=hash('sha256',implode('|',[
                 $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
             ]));
@@ -337,6 +338,8 @@ final readonly class TokenizedEquityPaperExecutionService
                 $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
                 $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
             );
+            $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             return $payload;
         }catch(\Throwable $error){
             if($firstLegPersisted){
