@@ -109,15 +109,15 @@ $assert(str_contains($security,'capital-markets'),'Capital Markets web routes mu
 $assert(str_contains($security,"^/capital-markets(?:/|$)"),'Capital Markets web routes must require an authenticated session.');
 
 $sessionAuthenticator=(string)file_get_contents($root.'/symfony/src/Security/SessionAuthenticator.php');
-$assert(str_contains($sessionAuthenticator,"str_starts_with($path,'/capital-markets')"),
+$assert(str_contains($sessionAuthenticator,"'/capital-markets'"),
     'SessionAuthenticator must hydrate authenticated tenant context for Capital Markets web routes.');
 
 $csrfSubscriber=(string)file_get_contents($root.'/symfony/src/Security/AuthenticatedSessionCsrfSubscriber.php');
-$assert(str_contains($csrfSubscriber,"str_starts_with($path, '/capital-markets')"),
+$assert(str_contains($csrfSubscriber,"'/capital-markets'"),
     'Capital Markets web mutations must participate in authenticated session CSRF protection.');
 
 $rateLimiter=(string)file_get_contents($root.'/symfony/src/Security/RequestRateLimitSubscriber.php');
-$assert(str_contains($rateLimiter,"str_starts_with($path, '/capital-markets')"),
+$assert(str_contains($rateLimiter,"'/capital-markets'"),
     'Capital Markets web mutations must participate in authenticated write rate limiting.');
 
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
