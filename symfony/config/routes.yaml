@@ -3044,3 +3044,15 @@ cos_api_v1_capital_markets_research_walk_forward:
   path: /api/v1/capital-markets/research/walk-forward
   controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::walkForward
   methods: [POST]
+
+
+cos_api_v1_capital_markets_research_backtest_queue:
+  path: /api/v1/capital-markets/research/backtests
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::queueBacktest
+  methods: [POST]
+
+cos_api_v1_capital_markets_research_backtest_cancel:
+  path: /api/v1/capital-markets/research/backtests/{id}/cancel
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::cancelBacktest
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
