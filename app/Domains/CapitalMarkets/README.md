@@ -2,7 +2,7 @@
 
 `CapitalMarkets` is an autonomous COS bounded context for canonical financial instruments, economic relationships, venues and trusted market intelligence.
 
-Version `0.3.0` contains **CM-FOUNDATION + CM-MARKET-INTELLIGENCE runtime**. The module remains disabled by default. It can persist raw market evidence, normalize provider observations into canonical events, evaluate deterministic data quality and maintain trading/reference MarketState. It still does not run strategies, calculate opportunities, manage portfolios, place orders or execute Paper/Live Trading.
+Version `0.6.0` contains **CM-FOUNDATION + CM-MARKET-INTELLIGENCE + TOKENIZED-EQUITY VS1 runtime**. The module remains disabled by default. It persists raw/canonical market evidence, maintains trusted trading/reference MarketState, scans configurable Tokenized Equity universes, evaluates H1/H2 opportunities with deterministic economics/risk, reserves paper capital, simulates multi-leg execution with partial-fill compensation/recovery, posts idempotent double-entry ledger effects, persists positions/P&L and accumulates hypothesis research evidence. Live Trading remains disabled.
 
 ## Domain ownership
 
@@ -102,19 +102,19 @@ Market Intelligence now adds:
 - manual provider poll;
 - source health, trading MarketState and ReferenceMarketState visibility.
 
-New sources are created disabled. Mutations require tenant context, Capital Markets capabilities, Market Data feature gates and CSRF. The UI contains no order, position or execution controls.
+New sources are created disabled. Mutations require tenant context, Capital Markets capabilities, Market Data feature gates and CSRF. The Tokenized Equity workspace exposes guarded Paper Execution, execution/performance history, persisted positions, reconciliation and research surfaces. Live order submission remains unavailable.
 
 ## Safety posture
 
 Operator and provider surfaces expose **no fake prices**: market values exist only after real provider observations pass canonical normalization and quality checks.
 
-The module contains no `Order`, `Position`, `Portfolio` or execution runtime.
+The module contains a dedicated **Paper** portfolio, execution plans/groups, paper orders/fills, double-entry ledger, positions, realized/unrealized P&L, execution recovery and research performance records. These paths cannot invoke a Live adapter.
 
-Paper Trading, Live Trading and Auto Execution feature flags remain separate promotion gates and stay disabled. Market Intelligence is read-only with respect to capital and order placement.
+Paper Trading, Live Trading and Auto Execution remain separate promotion gates. Paper Trading is explicitly gated per tenant; Live Trading and Auto Execution stay disabled for VS1.
 
 ## Canonical process
 
-The first executable Capital Markets process is:
+The first full financial Capital Markets process is:
 
 ```text
 Market Source
@@ -122,6 +122,15 @@ Market Source
   → Canonical Event
   → Quality / Trust
   → Current MarketState
+  → Economic Relationship
+  → H1/H2 Detection
+  → Net Economics
+  → Deterministic Risk
+  → Paper Capital Reservation
+  → Multi-leg Paper Execution
+  → Double-entry Ledger
+  → Position / P&L
+  → Hypothesis Research Evidence
 ```
 
 See `resources/processes/capital-markets-market-data-to-trusted-state.json`.
@@ -139,12 +148,10 @@ The first external read-only connectors are implemented:
 
 Provider flags remain disabled by default. Streaming remains disabled until the WebSocket lifecycle/resubscription/recovery wave is implemented.
 
-## Next packs
+## Next promotion gates
 
-1. Replay/backfill/gap recovery.
-2. Tokenized Equity comparison slice.
-3. Bybit/Massive streaming connectors.
-4. Spot/Perpetual vertical slice.
-5. Research Lab and hypothesis registry.
-6. Portfolio, ledger and governed agents.
-7. Limited Live only after promotion gates.
+1. Accumulate a statistically meaningful real/replayed H1/H2 research dataset and reach explicit hypothesis verdicts.
+2. WebSocket streaming/resubscription/recovery for supported providers.
+3. Broader historical backfill and long-window replay datasets.
+4. Additional Capital Markets vertical slices such as Spot/Perpetual relative value.
+5. Limited Live execution only after separate security, legal, operational and financial promotion gates.
