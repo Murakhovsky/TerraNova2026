@@ -5,6 +5,9 @@ namespace Domains\CapitalMarkets\Application\Service;
 
 use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate;
+use Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine;
+use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
+use Domains\CapitalMarkets\Domain\Research\ReplayDataGuard;
 use InvalidArgumentException;
 
 final readonly class ResearchLabService
@@ -12,6 +15,9 @@ final readonly class ResearchLabService
     public function __construct(
         private ResearchLabRepositoryInterface $repository,
         private StrategyPromotionGate $promotionGate,
+        private StrategyScorecardEngine $scorecards,
+        private ResearchIsolationPolicy $isolation,
+        private ReplayDataGuard $replayGuard,
     ){}
 
     public function createHypothesis(string $organizationId,array $record):array
@@ -87,6 +93,67 @@ final readonly class ResearchLabService
         return $record;
     }
 
+    public function recordBacktestRun(string $organizationId,array $record):array
+    {
+        foreach(['run_id','experiment_id','dataset_id','strategy_version_id','partition_name','status','reproducibility_fingerprint'] as $required){
+            if(!array_key_exists($required,$record))throw new InvalidArgumentException('Missing '.$required);
+        }
+        $configuration=(array)($record['configuration']??[]);
+        $this->replayGuard->assertTransactionCosts($configuration);
+        $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
+        $this->repository->saveBacktestRun($organizationId,$record);
+        return $record;
+    }
+
+    public function recordOutOfSampleRun(string $organizationId,array $record,array $frozenExperiment):array
+    {
+        foreach(['run_id','experiment_id','dataset_id','strategy_version_id','status','from','to','parameters_hash','success_criteria_hash','failure_criteria_hash'] as $required){
+            if(!array_key_exists($required,$record))throw new InvalidArgumentException('Missing '.$required);
+        }
+        $this->isolation->assertOosFrozen($frozenExperiment,$record);
+        $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
+        $this->repository->saveOutOfSampleRun($organizationId,$record);
+        return $record;
+    }
+
+    public function createScorecard(string $organizationId,string $strategyVersionId,array $dimensions,array $weights,string $weightVersion):array
+    {
+        $scorecard=$this->scorecards->calculate($strategyVersionId,$dimensions,$weights,$weightVersion);
+        $record=[
+            'scorecard_id'=>'scorecard-'.bin2hex(random_bytes(12)),
+            'strategy_version_id'=>$strategyVersionId,
+            'dimensions'=>$scorecard->dimensions,
+            'weights'=>$scorecard->weights,
+            'composite_score'=>$scorecard->compositeScore,
+            'weight_version'=>$scorecard->weightVersion,
+            'created_at'=>gmdate('Y-m-d H:i:s'),
+        ];
+        $this->repository->saveScorecard($organizationId,$record);
+        return $record;
+    }
+
+    public function rejectHypothesis(string $organizationId,array $record):array
+    {
+        foreach(['rejection_id','hypothesis_id','reason','evidence','experiment_ids'] as $required){
+            if(!array_key_exists($required,$record))throw new InvalidArgumentException('Missing '.$required);
+        }
+        $allowed=['NO_EDGE','EDGE_TOO_SMALL','COSTS_DESTROY_EDGE','TOO_RISKY','INSUFFICIENT_CAPACITY','UNSTABLE','DATA_INSUFFICIENT','NOT_EXECUTABLE','REGIME_DEPENDENT','TECHNICALLY_INFEASIBLE'];
+        if(!in_array((string)$record['reason'],$allowed,true))throw new InvalidArgumentException('Invalid rejection reason.');
+        $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
+        $this->repository->saveRejectedHypothesis($organizationId,$record);
+        return $record;
+    }
+
+    public function recordKnowledge(string $organizationId,array $record):array
+    {
+        foreach(['knowledge_id','knowledge_type','statement','experiment_ids','dataset_ids','strategy_version_ids','result_ids'] as $required){
+            if(!array_key_exists($required,$record))throw new InvalidArgumentException('Missing '.$required);
+        }
+        $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
+        $this->repository->saveKnowledge($organizationId,$record);
+        return $record;
+    }
+
     public function evaluatePromotion(
         string $organizationId,
         string $strategyVersionId,
@@ -118,6 +185,7 @@ final readonly class ResearchLabService
         return [
             'hypotheses'=>$this->repository->listHypotheses($organizationId,500),
             'experiments'=>$this->repository->listExperiments($organizationId,null,500),
+            'knowledge'=>$this->repository->listKnowledge($organizationId,500),
         ];
     }
 
