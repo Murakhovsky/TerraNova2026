@@ -7,6 +7,7 @@ use App\Security\SessionCsrfValidator;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Application\Service\ResearchLabService;
 use Domains\CapitalMarkets\Application\Service\ResearchBacktestService;
+use Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
 use JsonException;
@@ -26,8 +27,28 @@ final readonly class CapitalMarketsResearchLabController
         private CapitalMarketsAccessControlInterface $access,
         private ResearchLabService $lab,
         private ResearchBacktestService $backtests,
+        private CapitalMarketsResearchAgentService $researchAgent,
         private SessionCsrfValidator $csrf,
     ){}
+
+    public function runAgent(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchAgentUse,
+            function(TenantContext $tenant,array $payload):array{
+                $subjectType=trim((string)($payload['subject_type']??'research'));
+                $subjectId=trim((string)($payload['subject_id']??'capital-markets'));
+                $question=$this->required($payload,'question');
+                $correlation=trim((string)($payload['correlation_id']??''));
+                if($correlation==='')$correlation='CM-RESEARCH-'.strtoupper(bin2hex(random_bytes(6)));
+                return $this->researchAgent->run(
+                    $tenant->organizationId()->value(),
+                    $subjectType===''?'research':$subjectType,
+                    $subjectId===''?'capital-markets':$subjectId,
+                    $question,
+                    $correlation,
+                );
+            },200);
+    }
 
     public function workspace():JsonResponse
     {
