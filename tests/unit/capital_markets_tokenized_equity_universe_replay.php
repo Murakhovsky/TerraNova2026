@@ -24,6 +24,6 @@ $a=$service->replay('org',$options);
 $b=$service->replay('org',$options);
 $assert($a['dataset_hash']===$b['dataset_hash'],'Historical replay dataset hash must be deterministic.');
 $assert($a['mutated']===false,'Historical replay must be read-only.');
-$assert($a['instrument_state_count']===0&&$a['reference_state_count']===0,'Historical replay counts drifted.');
+$assert($a['snapshot_count']===1&&$a['observation_count']===0,'Historical replay counts drifted.');
 
 echo "Capital Markets Tokenized Equity universe/replay passed.\n";
