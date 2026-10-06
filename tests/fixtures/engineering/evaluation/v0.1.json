@@ -3781,10 +3781,12 @@
             "question": "Which behavior?",
             "options": [
               {
-                "id": "A"
+                "id": "A",
+                "label": "Option A"
               },
               {
-                "id": "B"
+                "id": "B",
+                "label": "Option B"
               }
             ],
             "recommended_option": "A"
