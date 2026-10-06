@@ -32,7 +32,7 @@ final readonly class EngineeringDomainPlanner
         }
 
         $this->domains->updateStatus($domainId, EngineeringDomainStatus::ANALYSIS->value);
-        $manager = $this->agents->run(
+        $product = $this->agents->run(
             $domainId,
             $organizationId,
             AgentRole::PRODUCT_REQUIREMENTS,
@@ -45,25 +45,25 @@ final readonly class EngineeringDomainPlanner
                 'target_repository' => $domain['target_repository'],
                 'target_branch' => $domain['target_branch'],
             ],
-            $correlationId.':manager',
+            $correlationId.':product-requirements',
         );
 
-        $managerStatus = (string) ($manager['status'] ?? '');
-        if ($managerStatus !== 'SPECIFICATION_READY') {
-            $this->domains->saveArtifact($domainId, 'DOMAIN_MANAGER_RESULT', $manager, AgentRole::PRODUCT_REQUIREMENTS->value);
+        $productStatus = (string) ($product['status'] ?? '');
+        if ($productStatus !== 'SPECIFICATION_READY') {
+            $this->domains->saveArtifact($domainId, 'DOMAIN_PRODUCT_REQUIREMENTS_RESULT', $product, AgentRole::PRODUCT_REQUIREMENTS->value);
             $this->domains->updateStatus(
                 $domainId,
-                $managerStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
-                'Product / Requirements Agent returned '.$managerStatus.'.',
+                $productStatus === 'FAILED' ? EngineeringDomainStatus::FAILED->value : EngineeringDomainStatus::BLOCKED->value,
+                'Product / Requirements Agent returned '.$productStatus.'.',
             );
             return $this->view($domainId);
         }
 
-        $domainSpec = is_array($manager['domain_specification'] ?? null) ? $manager['domain_specification'] : [];
+        $domainSpec = is_array($product['domain_specification'] ?? null) ? $product['domain_specification'] : [];
         $domainSpec['key'] = $domain['domain_key'];
         $domainSpec['name'] = $domain['name'];
-        $domainAc = is_array($manager['domain_acceptance_criteria'] ?? null) ? $manager['domain_acceptance_criteria'] : [];
-        $capabilities = is_array($manager['capabilities'] ?? null) ? $manager['capabilities'] : [];
+        $domainAc = is_array($product['domain_acceptance_criteria'] ?? null) ? $product['domain_acceptance_criteria'] : [];
+        $capabilities = is_array($product['capabilities'] ?? null) ? $product['capabilities'] : [];
         if ($domainAc === [] || $capabilities === []) throw new RuntimeException('Product / Requirements Agent produced an incomplete specification.');
 
         $this->domains->saveArtifact($domainId, EngineeringDomainArtifactType::DOMAIN_SPECIFICATION->value, $domainSpec, AgentRole::PRODUCT_REQUIREMENTS->value);
@@ -101,7 +101,7 @@ final readonly class EngineeringDomainPlanner
             [
                 'domain_specification' => $domainSpec,
                 'domain_acceptance_criteria' => $domainAc,
-                'manager_capabilities' => $capabilities,
+                'product_capabilities' => $capabilities,
                 'domain_qa_plan' => $qaPlan,
                 'target_repository' => $domain['target_repository'],
                 'target_branch' => $domain['target_branch'],
