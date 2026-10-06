@@ -150,3 +150,16 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_research_knowledge (
     UNIQUE KEY uq_cm_research_knowledge (organization_id,knowledge_id),
     KEY idx_cm_research_knowledge_type (organization_id,knowledge_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+UPDATE tn_modules
+SET installed_version='0.8.0',
+    schema_version='0.8.0',
+    updated_at=CURRENT_TIMESTAMP
+WHERE module_id='capital_markets'
+  AND status='INSTALLED'
+  AND installed_version='0.7.0'
+  AND schema_version='0.7.0';
+
+INSERT IGNORE INTO tn_migrations (migration)
+VALUES ('20261006_000133_capital_markets_research_lab');
