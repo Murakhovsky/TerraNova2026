@@ -13,6 +13,7 @@ use Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine;
 use Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector;
 use Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy;
 use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
+use Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine;
 use Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate;
 use Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine;
 use Domains\CapitalMarkets\Domain\Research\WalkForwardEngine;
@@ -87,7 +88,7 @@ $adapter=new class implements ResearchReplayAdapterInterface{
 };
 
 $backtests=new ResearchBacktestService(
-    [$adapter],$repo,$lab,new WalkForwardEngine(),new ResearchExecutionBudgetPolicy(),new ResearchIsolationPolicy()
+    [$adapter],$repo,$lab,new WalkForwardEngine(),new ResearchExecutionBudgetPolicy(),new ResearchIsolationPolicy(),new ResearchMetricsEngine(),new ResearchConfidenceEngine()
 );
 $org='org-research-acceptance';
 
