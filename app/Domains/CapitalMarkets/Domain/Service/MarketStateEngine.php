@@ -35,6 +35,10 @@ final readonly class MarketStateEngine
         $bestQuote=$previous?->bestQuote;
         $orderBook=$previous?->orderBook;
         $volume=$previous?->volume;
+        $fundingRate=$previous?->fundingRate;
+        $openInterest=$previous?->openInterest;
+        $markPrice=$previous?->markPrice;
+        $indexPrice=$previous?->indexPrice;
 
         if($event->observation instanceof MarketTrade)$lastTrade=$event->observation;
         if($event->observation instanceof MarketQuote)$bestQuote=$event->observation;
@@ -51,26 +55,22 @@ final readonly class MarketStateEngine
             }
         }
 
-        if($event->observation instanceof MarketValueObservation&&$event->eventType()===MarketEventType::Volume){
-            $volume=$event->observation->value;
+        if($event->observation instanceof MarketValueObservation){
+            match($event->eventType()){
+                MarketEventType::Volume=>$volume=$event->observation->value,
+                MarketEventType::FundingRate=>$fundingRate=$event->observation,
+                MarketEventType::OpenInterest=>$openInterest=$event->observation,
+                MarketEventType::MarkPrice=>$markPrice=$event->observation,
+                MarketEventType::IndexPrice=>$indexPrice=$event->observation,
+                default=>null,
+            };
         }
 
         return new MarketState(
-            $event->instrumentId,
-            $event->venueId,
-            $event->sourceId,
-            $lastTrade,
-            $bestQuote,
-            $orderBook,
-            $volume,
-            $marketStatus,
-            $event->timestamps->sourceTimestamp,
-            $event->timestamps->processedTimestamp,
-            $quality,
-            ($previous?->stateVersion??0)+1,
-            $event->sequence??$previous?->lastSequence,
-            $event->fingerprint(),
-            $event->mode,
+            $event->instrumentId,$event->venueId,$event->sourceId,$lastTrade,$bestQuote,$orderBook,$volume,
+            $marketStatus,$event->timestamps->sourceTimestamp,$event->timestamps->processedTimestamp,$quality,
+            ($previous?->stateVersion??0)+1,$event->sequence??$previous?->lastSequence,$event->fingerprint(),$event->mode,
+            $fundingRate,$openInterest,$markPrice,$indexPrice,
         );
     }
 
