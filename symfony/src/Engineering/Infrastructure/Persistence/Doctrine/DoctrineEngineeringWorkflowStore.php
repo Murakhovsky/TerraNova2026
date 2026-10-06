@@ -277,6 +277,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
             ->where("w.workflow_type = 'ENGINEERING'")
             ->andWhere("w.current_state IN ('ANALYSIS','QA_PLANNING','ARCHITECTURE_PENDING','DEVELOPMENT_RUNNING','REVIEW_PENDING','QA_PENDING')")
+            ->andWhere("COALESCE(w.health_status, 'HEALTHY') <> 'STALLED'")
             ->orderBy("CASE f.priority WHEN 'P0' THEN 0 WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 9 END", 'ASC')
             ->addOrderBy('w.started_at', 'ASC')
             ->setMaxResults($limit);
