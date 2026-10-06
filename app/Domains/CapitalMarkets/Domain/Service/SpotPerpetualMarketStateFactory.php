@@ -40,8 +40,9 @@ final class SpotPerpetualMarketStateFactory
 
         $mark=$perpetual->markPrice?->value;
         $index=$perpetual->indexPrice?->value;
+        $updatedAt=$spot->updatedAt >= $perpetual->updatedAt ? $spot->updatedAt : $perpetual->updatedAt;
         $basis=BasisObservation::fromTopOfBook(
-            $spot->key(),$perpetual->key(),max($spot->updatedAt,$perpetual->updatedAt),
+            $spot->key(),$perpetual->key(),$updatedAt,
             $spot->bestQuote->bidPrice->value,$spot->bestQuote->askPrice->value,
             $perpetual->bestQuote->bidPrice->value,$perpetual->bestQuote->askPrice->value,
             $mark,$index,min($spot->quality->score,$perpetual->quality->score),
@@ -50,7 +51,7 @@ final class SpotPerpetualMarketStateFactory
         return new SpotPerpetualMarketState(
             $spot,$perpetual,$basis,$funding,$mark,$index,$perpetual->openInterest?->value,
             $this->liquidityScore($spot,$perpetual),$relationshipValid,
-            min($spot->quality->score,$perpetual->quality->score),max($spot->updatedAt,$perpetual->updatedAt),
+            min($spot->quality->score,$perpetual->quality->score),$updatedAt,
         );
     }
 
