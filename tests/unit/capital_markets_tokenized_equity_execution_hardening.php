@@ -12,6 +12,8 @@ use Domains\CapitalMarkets\Domain\Execution\ExecutionModePolicy;
 use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
 use Domains\CapitalMarkets\Domain\Execution\PartialFillPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\EconomicExposure;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionLegResult;
+use Domains\CapitalMarkets\Domain\Service\ExecutionCompensationEngine;
 use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 use Domains\CapitalMarkets\Domain\Event\TokenizedEquityEventType;
 use Domains\CapitalMarkets\Domain\Risk\TokenizedSecurityRiskProfile;
@@ -36,6 +38,14 @@ $plan=new ExecutionPlan(
 $assert(count($plan->legs)===2,'Execution plan must preserve both arbitrage legs.');
 $order=new PaperOrder('ord-1','group-1','leg-1','vm-a','AAPLX',ExecutionSide::Buy,Decimal::fromString('10'),Decimal::fromString('6'),PaperOrderState::PartiallyFilled,$now,$now,$now);
 $assert($order->remainingQuantity()->value()==='4','Paper order must preserve remaining quantity after partial fill.');
+$compensation=(new ExecutionCompensationEngine())->decide(
+    new ExecutionLegResult('leg-1',Decimal::fromString('10'),Decimal::fromString('10'),PaperOrderState::Filled),
+    new ExecutionLegResult('leg-2',Decimal::fromString('10'),Decimal::fromString('6'),PaperOrderState::PartiallyFilled,'LIQUIDITY_DISAPPEARED'),
+    CompensationPolicy::EmergencyClose
+);
+$assert($compensation->nextState===ExecutionGroupState::Compensating,'Unhedged first-leg fill must enter compensation.');
+$assert($compensation->unhedgedQuantity->value()==='4','Compensation must expose exact unhedged quantity.');
+$assert($compensation->policy===CompensationPolicy::EmergencyClose,'Emergency-close policy must be preserved.');
 $paperOnly=new ExecutionModePolicy();
 $paperOnly->assertPaperOnly();
 $assert(!$paperOnly->allowsLive(),'VS1 must default to paper-only execution.');
