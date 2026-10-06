@@ -67,18 +67,18 @@ Market Intelligence сам по собі не створює trading decisions. 
 - [Дозволи та capabilities](../../12-reference/permissions-capabilities.md)
 
 
-## Research & Strategy Lab
+## Лабораторія досліджень і стратегій
 
-Version 0.8.0 adds the governed Research & Strategy Lab:
+Версія 0.8.0 додає керовану Research & Strategy Lab:
 
-- formal ResearchHypothesis, ResearchExperiment, ResearchDataset and ResearchResult lineage;
+- формальний lineage ResearchHypothesis, ResearchExperiment, ResearchDataset та ResearchResult;
 - immutable StrategyVersion;
-- historical replay and backtest orchestration;
-- strict TRAIN / VALIDATION / OUT_OF_SAMPLE separation;
-- walk-forward analysis and overfit warnings;
-- deterministic StrategyScorecard and promotion gates;
-- demotion policy, rejected-hypothesis memory and reusable ResearchKnowledge;
-- Research Agent assistance with draft-only authority;
-- operator workspace at `/capital-markets/research`.
+- historical replay та orchestration backtest;
+- жорстке розділення TRAIN / VALIDATION / OUT_OF_SAMPLE;
+- walk-forward analysis та overfit warnings;
+- deterministic StrategyScorecard та promotion gates;
+- demotion policy, пам’ять rejected hypotheses та reusable ResearchKnowledge;
+- Research Agent із draft-only authority;
+- операторський workspace `/capital-markets/research`.
 
-The Research Agent cannot enable live trading, change risk limits, mutate completed results or bypass deterministic promotion gates. Historical H4/H5/H6 replay reuses the same RelativeValue economics and evaluator stack used by the production paper vertical slice.
+Research Agent не може активувати Live Trading, змінювати risk limits, мутувати completed results або обходити deterministic promotion gates. Historical replay H4/H5/H6 повторно використовує той самий RelativeValue economics та evaluator stack, що й production paper vertical slice.
