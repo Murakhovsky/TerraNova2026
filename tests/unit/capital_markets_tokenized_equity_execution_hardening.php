@@ -9,7 +9,6 @@ use Domains\CapitalMarkets\Domain\Execution\ExecutionSide;
 use Domains\CapitalMarkets\Domain\Execution\PaperOrder;
 use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionModePolicy;
-use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
 use Domains\CapitalMarkets\Domain\Execution\PartialFillPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\EconomicExposure;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionLegResult;
