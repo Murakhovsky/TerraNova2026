@@ -94,8 +94,8 @@ final readonly class TokenizedEquityScannerService
         $datasetHash=hash('sha256',json_encode($canonical,JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
         $payload=['results'=>$results,'dataset_hash'=>$datasetHash];
         $this->repository->saveRun(
-            $organizationId,$runId,$idempotencyKey,$trigger,$status,count($targets),$completed,$failed,
-            $payload,$started->format(DATE_ATOM),$finished->format(DATE_ATOM)
+            $organizationId,$runId,$idempotencyKey,$status,count($targets),$completed,$failed,
+            $payload,$finished->format(DATE_ATOM)
         );
 
         return [
