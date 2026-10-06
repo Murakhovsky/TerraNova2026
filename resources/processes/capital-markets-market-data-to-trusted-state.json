@@ -1,0 +1,125 @@
+{
+  "schema_version": 4,
+  "id": "capital-markets.market-data-to-trusted-state",
+  "title": "Market Source → Trusted Market State",
+  "domain": "capital_markets",
+  "state": "as-is",
+  "workflow": "02-workflows/capital-markets-market-data-to-trusted-state.md",
+  "trigger": "An enabled Capital Markets source emits or returns a market-data observation",
+  "outcomes": [
+    "Raw provider evidence is durably preserved before interpretation",
+    "Provider semantics are normalized into canonical market events",
+    "Unknown instruments and malformed observations never mutate current state",
+    "Quality, freshness and trust are evaluated deterministically",
+    "Duplicate and out-of-order events do not regress current state",
+    "Trading and reference MarketState remain replayable and tenant-scoped"
+  ],
+  "actors": [
+    "market data adapter",
+    "Market Intelligence runtime",
+    "capital markets operator"
+  ],
+  "steps": [
+    {
+      "id": "capture-raw",
+      "label": "Capture raw market event",
+      "kind": "state",
+      "owner": "Market Intelligence runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.market_data.manage",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/MarketDataIngestionService.php",
+          "symbol": "public function ingest("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlRawMarketEventRepository.php",
+          "symbol": "public function append("
+        }
+      ]
+    },
+    {
+      "id": "decode-normalize",
+      "label": "Decode and normalize provider observation",
+      "kind": "operation",
+      "owner": "Market Intelligence runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.market_data.manage",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/MarketDataNormalizer.php",
+          "symbol": "public function normalize("
+        }
+      ]
+    },
+    {
+      "id": "assess-quality",
+      "label": "Assess freshness, integrity and trust",
+      "kind": "decision",
+      "owner": "Market Intelligence runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.market_data.quality.view",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/MarketDataQualityEngine.php",
+          "symbol": "public function assess("
+        }
+      ]
+    },
+    {
+      "id": "persist-canonical",
+      "label": "Persist canonical event and quality metric",
+      "kind": "state",
+      "owner": "Market Intelligence runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.market_data.history.view",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlCanonicalMarketEventRepository.php",
+          "symbol": "public function append("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlMarketQualityMetricRepository.php",
+          "symbol": "public function append("
+        }
+      ]
+    },
+    {
+      "id": "update-state",
+      "label": "Update trading or reference MarketState",
+      "kind": "outcome",
+      "owner": "Market Intelligence runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.market_data.view",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/MarketStateEngine.php",
+          "symbol": "public function apply("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/ReferenceMarketStateEngine.php",
+          "symbol": "public function apply("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "capture-raw", "to": "decode-normalize" },
+    { "from": "decode-normalize", "to": "assess-quality" },
+    { "from": "assess-quality", "to": "persist-canonical" },
+    { "from": "persist-canonical", "to": "update-state" }
+  ]
+}

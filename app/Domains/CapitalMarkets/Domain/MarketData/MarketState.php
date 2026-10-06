@@ -27,6 +27,7 @@ final readonly class MarketState extends ValueObject
         public int $stateVersion,
         public ?string $lastSequence,
         public string $lastEventFingerprint,
+        public MarketDataMode $mode=MarketDataMode::Live,
     ){
         if($this->stateVersion<1)throw new InvalidArgumentException('Market state version must be positive.');
         if($this->lastEventFingerprint===''||strlen($this->lastEventFingerprint)!==64){
@@ -62,9 +63,12 @@ final readonly class MarketState extends ValueObject
             'quality_status'=>$this->quality->status->value,
             'quality_score'=>$this->quality->score,
             'quality_flags'=>array_map(static fn(MarketQualityFlag $flag):string=>$flag->value,$this->quality->flags),
+            'reference_deviation_bps'=>$this->quality->referenceDeviationBps?->value(),
             'trust_status'=>$this->quality->status->value,
             'state_version'=>$this->stateVersion,
             'last_sequence'=>$this->lastSequence,
+            'last_event_fingerprint'=>$this->lastEventFingerprint,
+            'mode'=>$this->mode->value,
         ];
     }
 }

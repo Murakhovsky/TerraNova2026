@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DomainException;
 use Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment;
+use Domains\CapitalMarkets\Domain\MarketData\MarketQualityFlag;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQuote;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSession;
 use Domains\CapitalMarkets\Domain\MarketData\ReferenceMarketState;
@@ -24,6 +25,12 @@ final readonly class ReferenceMarketStateEngine
     ):ReferenceMarketState{
         if(!$event->observation instanceof MarketQuote){
             throw new DomainException('Reference MarketState currently requires a canonical quote/NBBO observation.');
+        }
+        if($previous!==null&&(
+            in_array(MarketQualityFlag::Duplicate,$quality->flags,true)
+            ||in_array(MarketQualityFlag::OutOfOrder,$quality->flags,true)
+        )){
+            return $previous;
         }
 
         $regular=$previous?->lastRegularMarketQuote;
@@ -45,6 +52,10 @@ final readonly class ReferenceMarketStateEngine
             $quality,
             $event->timestamps->processedTimestamp,
             ($previous?->stateVersion??0)+1,
+            $event->mode,
+            $event->timestamps->sourceTimestamp,
+            $event->sequence??$previous?->lastSequence,
+            $event->fingerprint(),
         );
     }
 }

@@ -1,109 +1,127 @@
 # Capital Markets Domain
 
-\`CapitalMarkets\` is an autonomous COS bounded context for canonical financial instrument identity, economic relationships and venue registry.
+`CapitalMarkets` is an autonomous COS bounded context for canonical financial instruments, economic relationships, venues and trusted market intelligence.
 
-Version \`0.2.0\` is the **CM-FOUNDATION Architecture Foundation Pack**. It contains executable registry runtime, tenant-scoped persistence, permissions, feature flags, audit, domain-event outbox, API and operator UI. It deliberately does **not** fetch market data, run strategies, calculate opportunities, manage portfolios, place orders or execute paper/live trades.
+Version `0.3.0` contains **CM-FOUNDATION + CM-MARKET-INTELLIGENCE runtime**. The module remains disabled by default. It can persist raw market evidence, normalize provider observations into canonical events, evaluate deterministic data quality and maintain trading/reference MarketState. It still does not run strategies, calculate opportunities, manage portfolios, place orders or execute Paper/Live Trading.
 
-## Foundation ownership
+## Domain ownership
 
 Capital Markets owns:
 
-- canonical financial instrument identity through \`InstrumentDescriptor\`;
+- canonical financial instrument identity through `InstrumentDescriptor`;
 - typed external identifiers and controlled instrument families;
-- explicit status/lifecycle rules for instruments;
-- directed economic relationships between instruments;
-- bounded relationship graph traversal;
-- \`MarketPair\` and \`InstrumentBasket\` primitives;
+- directed economic relationships and graph traversal;
+- `MarketPair` and `InstrumentBasket` primitives;
 - venue identity, venue capabilities and venue/instrument mappings;
-- deterministic decimal primitives for \`Price\`, \`Quantity\`, \`Rate\` and \`Percentage\`;
-- Capital Markets capability and feature-flag vocabularies;
-- tenant-scoped repositories and Foundation application boundary;
-- audited mutations and durable versioned domain-event envelopes;
-- Foundation API and UI for Instruments, Relationships and Venues.
+- deterministic decimal primitives for `Price`, `Quantity`, `Rate` and `Percentage`;
+- provider-neutral market-data source/configuration vocabulary;
+- raw and canonical market event contracts;
+- deterministic quality, freshness, ordering and trust rules;
+- trading `MarketState` and session-aware `ReferenceMarketState`;
+- tenant-scoped persistence for structural and market intelligence data;
+- audited structural mutations and significant versioned domain events.
 
 Capital Markets does not own authentication, tenant identity, generic audit storage, global feature-flag storage, queues, approvals, notifications, agent runtime or other COS platform capabilities.
 
 ## Deterministic finance rule
 
-\`Kernel\Shared\Domain\Money\` is reused for three-letter money values. Capital Markets does **not** create another Money class.
+`Kernel\Shared\Domain\Money` is reused for three-letter money values. Capital Markets does **not** create another Money class.
 
-\`Price\`, \`Quantity\`, \`Rate\` and \`Percentage\` use explicit decimal strings and typed asset/currency codes. Binary floating-point arithmetic is not allowed in the Capital Markets Domain layer.
+`Price`, `Quantity`, `Rate`, `Percentage` and Market Intelligence arithmetic use explicit decimal strings. Binary floating-point arithmetic is forbidden in the Domain layer.
 
-Rates use one canonical representation: **decimal fraction**. For example, 8% is represented as \`0.08\`.
+## Market Intelligence pipeline
 
-## Instrument model
+```text
+Venue / Provider
+        ↓
+provider-specific adapters
+        ↓
+RawMarketEvent
+        ↓
+Decode + Instrument Resolution + Normalization
+        ↓
+CanonicalMarketEvent
+        ↓
+MarketDataQualityEngine
+        ↓
+MarketState / ReferenceMarketState
+```
 
-\`InstrumentDescriptor\` provides provider-independent identity. External identifiers are typed and stored separately.
+Raw provider evidence is stored before normalization. Unknown instruments and malformed provider values do not mutate current state.
 
-Supported families:
+Duplicate canonical fingerprints are idempotent. Out-of-order events may remain in history but cannot regress current state. Order-book continuity is controlled by explicit per-event sequence policies instead of assuming every provider sequence is contiguous.
 
-- Equity
-- Tokenized Security
-- Crypto Asset
-- Stablecoin
-- Spot Market
-- Perpetual
-- Future
-- Option
-- Fixed Income
-- Tokenized Fixed Income
-- RWA
-- FX
-- Commodity
-- Index
-- Fund
+Supported data modes are `LIVE`, `DELAYED`, `HISTORICAL` and `REPLAY`.
 
-Economic equivalence is modeled separately by \`EconomicRelationship\`; two instruments never collapse into one merely because they share exposure.
+## Provider boundary
 
-## Venue model
+Provider-specific adapters, transport clients, credential resolution and payload decoding belong outside the Domain model.
 
-\`VenueDescriptor\` identifies Brokers, Stock Exchanges, CEXs, DEXs, AMMs, Perpetual DEXs, Tokenized Securities Venues, RWA Platforms and Data Providers.
+Generic `MarketDataNormalizer`, quality rules and MarketState engines do not branch on provider names.
 
-Venue-specific connectivity belongs to adapters. Foundation defines \`VenueAdapterInterface\`, but contains no exchange SDK, market-data HTTP client, WebSocket feed or secrets.
+Source configuration stores only `credentials_reference`; secret material remains in the Platform credential boundary.
 
-## Runtime and persistence
+## Persistence
 
-Foundation persists only structural financial metadata:
+Structural tables:
 
-- \`tn_capital_market_instruments\`
-- \`tn_capital_market_instrument_identifiers\`
-- \`tn_capital_market_relationships\`
-- \`tn_capital_market_pairs\`
-- \`tn_capital_market_venues\`
-- \`tn_capital_market_venue_capabilities\`
-- \`tn_capital_market_venue_instruments\`
-- \`capital_market_user_capabilities\`
+- `tn_capital_market_instruments`
+- `tn_capital_market_instrument_identifiers`
+- `tn_capital_market_relationships`
+- `tn_capital_market_pairs`
+- `tn_capital_market_venues`
+- `tn_capital_market_venue_capabilities`
+- `tn_capital_market_venue_instruments`
+- `capital_market_user_capabilities`
+
+Market Intelligence tables:
+
+- `tn_capital_market_data_sources`
+- `tn_capital_market_source_health`
+- `tn_capital_market_subscriptions`
+- `tn_capital_market_raw_events`
+- `tn_capital_market_canonical_events`
+- `tn_capital_market_quality_metrics`
+- `tn_capital_market_states`
+- `tn_capital_market_reference_states`
+- `tn_capital_market_snapshots`
+- `tn_capital_market_data_gaps`
 
 Every business row and permission row is organization-scoped.
 
-The module remains disabled by default. Foundation flags can be enabled for an installed tenant, while paper trading, live trading and auto-execution remain disabled.
-
 ## API and UI
 
-Canonical endpoints live under \`/api/v1/capital-markets/*\`.
+Foundation endpoints remain under `/api/v1/capital-markets/*`, with the operator workspace under `/capital-markets/*`.
 
-The operator workspace lives under:
-
-- \`/capital-markets\`
-- \`/capital-markets/instruments\`
-- \`/capital-markets/relationships\`
-- \`/capital-markets/venues\`
-
-The UI intentionally contains no fake prices, PnL, charts or order controls.
+Market Intelligence API/UI surfaces are added as a separate feature wave. Until a real source is configured, the UI must expose no fake prices, PnL, charts or market status.
 
 ## Safety posture
 
-Foundation creates no \`Order\`, \`Trade\`, \`Position\`, \`Portfolio\` or \`Backtest\` runtime. There is no live-trading permission in CM-FOUNDATION. Future execution authority must be introduced by a later pack with separate promotion gates and controls.
+The module contains no `Order`, `Position`, `Portfolio` or execution runtime.
+
+Paper Trading, Live Trading and Auto Execution feature flags remain separate promotion gates and stay disabled. Market Intelligence is read-only with respect to capital and order placement.
+
+## Canonical process
+
+The first executable Capital Markets process is:
+
+```text
+Market Source
+  → Raw Evidence
+  → Canonical Event
+  → Quality / Trust
+  → Current MarketState
+```
+
+See `resources/processes/capital-markets-market-data-to-trusted-state.json`.
 
 ## Next packs
 
-The next implementation packs build on this foundation:
-
-1. Market Intelligence and normalized MarketState.
-2. Tokenized Equity vertical slice.
-3. Spot/Perpetual vertical slice.
-4. Research Lab and hypothesis registry.
-5. Portfolio, ledger and capital allocation.
-6. Governed runtime agents.
-7. Decision Workspace.
+1. Bybit xStocks trading-source adapter and Massive U.S. Stocks reference adapter.
+2. Market-data operator API/UI and source health.
+3. Replay/backfill/gap recovery.
+4. Tokenized Equity vertical slice.
+5. Spot/Perpetual vertical slice.
+6. Research Lab and hypothesis registry.
+7. Portfolio, ledger and governed agents.
 8. Limited Live only after promotion gates.
