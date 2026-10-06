@@ -10,6 +10,7 @@ use App\Application\Growth\Command\RunGrowthAutonomousOutreachCommand;
 use App\Application\Growth\Command\RunGrowthAutonomousContentCommand;
 use App\Application\Growth\Command\RunGrowthOutreachSequencesCommand;
 use App\Application\Growth\Command\RunGrowthMarketDiscoveryCommand;
+use App\Application\CapitalMarkets\Command\RunCapitalMarketsTokenizedEquityScannerCommand;
 use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
 use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
@@ -44,6 +45,8 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly bool $growthMarketDiscoveryEnabled = false,
         private readonly int $growthMarketDiscoveryIntervalMinutes = 60,
         private readonly int $growthMarketDiscoveryActorId = 0,
+        private readonly bool $capitalMarketsScannerEnabled = false,
+        private readonly int $capitalMarketsScannerIntervalMinutes = 5,
         private readonly bool $engineeringAutonomyEnabled = false,
         private readonly int $engineeringAutonomyIntervalMinutes = 2,
         private readonly bool $engineeringDomainAutonomyEnabled = false,
@@ -80,6 +83,9 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if($this->growthMarketDiscoveryEnabled&&$this->growthMarketDiscoveryActorId<1){
             throw new InvalidArgumentException('Growth market discovery requires a positive system actor id.');
+        }
+        if($this->capitalMarketsScannerIntervalMinutes<1||$this->capitalMarketsScannerIntervalMinutes>1440){
+            throw new InvalidArgumentException('Capital Markets scanner interval must be between 1 and 1440 minutes.');
         }
         if($this->engineeringAutonomyIntervalMinutes<1||$this->engineeringAutonomyIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering autonomy interval must be between 1 and 60 minutes.');
@@ -138,6 +144,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthMarketDiscoveryIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthMarketDiscoveryCommand('scheduler'), 'async'),
+            );
+        }
+
+        if($this->capitalMarketsScannerEnabled){
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsScannerIntervalMinutes.' minutes',
+                new RedispatchMessage(new RunCapitalMarketsTokenizedEquityScannerCommand('scheduler'), 'async'),
             );
         }
 

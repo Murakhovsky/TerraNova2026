@@ -9,6 +9,7 @@ use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityScannerService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use App\Security\SessionCsrfValidator;
@@ -33,6 +34,7 @@ final readonly class CapitalMarketsTokenizedEquityController
         private TokenizedEquityVerticalSliceService $verticalSlice,
         private TokenizedEquityPaperExecutionService $paper,
         private TokenizedEquityResearchService $research,
+        private TokenizedEquityScannerService $scanner,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -115,6 +117,47 @@ final readonly class CapitalMarketsTokenizedEquityController
             ));
     }
 
+    public function scanTargets(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>[
+            'targets'=>$this->scanner->targets(
+                $tenant->organizationId()->value(),
+                filter_var($request->query->get('enabled_only','0'),FILTER_VALIDATE_BOOL),
+                min(2000,max(1,(int)$request->query->get('limit',500))),
+            ),
+            'runs'=>$this->scanner->runs(
+                $tenant->organizationId()->value(),
+                min(500,max(1,(int)$request->query->get('run_limit',50))),
+            ),
+        ]);
+    }
+
+    public function configureScanTarget(Request $request):JsonResponse
+    {
+        return $this->mutation(
+            $request,CapitalMarketsCapability::Manage,
+            fn(TenantContext $tenant,array $p):array=>$this->scanner->configureTarget(
+                $tenant->organizationId()->value(),$p
+            ),201
+        );
+    }
+
+    public function runScanner(Request $request):JsonResponse
+    {
+        return $this->mutation(
+            $request,CapitalMarketsCapability::Manage,
+            fn(TenantContext $tenant,array $p):array=>$this->scanner->run(
+                $tenant->organizationId()->value(),
+                trim((string)($p['trigger']??'manual'))?:'manual',
+                $this->required($p,'idempotency_key'),
+                min(2000,max(1,(int)($p['limit']??500))),
+            ),201
+        );
+    }
+
     public function initializePaperPortfolio(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::PaperExecute,
@@ -190,7 +233,10 @@ final readonly class CapitalMarketsTokenizedEquityController
     private function allowed(string $organizationId,int $actorId,CapitalMarketsCapability $capability):bool
     {
         if($this->access->hasCapability($organizationId,$actorId,$capability->value))return true;
-        $broad=$capability===CapitalMarketsCapability::PaperExecute?CapitalMarketsCapability::Manage:CapitalMarketsCapability::View;
+        $broad=match($capability){
+            CapitalMarketsCapability::PaperExecute,CapitalMarketsCapability::Manage=>CapitalMarketsCapability::Manage,
+            default=>CapitalMarketsCapability::View,
+        };
         return $this->access->hasCapability($organizationId,$actorId,$broad->value);
     }
 

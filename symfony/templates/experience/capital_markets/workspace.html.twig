@@ -328,6 +328,53 @@
     </section>
 
     <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <h2>Scanner universe</h2>
+          <p>Configured H1/H2 targets are scanned as an ordered research universe. Scheduler execution is separately gated and disabled by default.</p>
+        </div>
+        <span class="badge text-bg-secondary">{{ w.scan_targets|default([])|length }} targets</span>
+      </div>
+      {% if w.scan_targets|default([]) is empty %}
+        <p>No scanner targets configured.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Target</th><th>Hypothesis</th><th>Priority</th><th>Enabled</th><th>Market pair</th></tr></thead>
+          <tbody>
+          {% for target in w.scan_targets %}
+            <tr>
+              <td><strong>{{ target.target_id }}</strong></td>
+              <td>{{ target.hypothesis }}</td>
+              <td>{{ target.priority }}</td>
+              <td>{{ target.enabled ? 'YES' : 'NO' }}</td>
+              <td>{{ target.config.market_pair_id|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+      {% if w.scan_runs|default([]) is not empty %}
+        <h3>Recent scanner runs</h3>
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Run</th><th>Trigger</th><th>Status</th><th>Targets</th><th>Completed</th><th>Failed</th><th>Started</th></tr></thead>
+          <tbody>
+          {% for run in w.scan_runs %}
+            <tr>
+              <td><code>{{ run.run_id }}</code></td>
+              <td>{{ run.trigger }}</td>
+              <td><strong>{{ run.status }}</strong></td>
+              <td>{{ run.target_count }}</td>
+              <td>{{ run.completed_count }}</td>
+              <td>{{ run.failed_count }}</td>
+              <td>{{ run.started_at }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
       <h2>Paper portfolio</h2>
       {% if portfolio %}
         <div class="row g-3">
