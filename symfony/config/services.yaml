@@ -1940,6 +1940,12 @@ services:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlResearchLabRepository
 
   Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
+  Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy: ~
+  Domains\CapitalMarkets\Domain\Research\ReplayDataGuard: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine: ~
+  Domains\CapitalMarkets\Domain\Research\ParameterSensitivityEngine: ~
+  Domains\CapitalMarkets\Domain\Research\StrategyDemotionPolicy: ~
   Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
 
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
