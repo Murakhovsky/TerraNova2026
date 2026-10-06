@@ -53,10 +53,45 @@ $managerHuman['status'] = 'HUMAN_DECISION_REQUIRED';
 $managerHuman['open_questions'] = [[
     'id' => 'Q-001',
     'question' => 'Which compatibility behavior should be preserved?',
-    'options' => [['id' => 'PRESERVE'], ['id' => 'BREAK']],
+    'options' => [['id' => 'PRESERVE', 'label' => 'Preserve compatibility'], ['id' => 'BREAK', 'label' => 'Allow breaking change']],
     'recommended_option' => 'PRESERVE',
 ]];
 $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $managerHuman);
+
+$productHumanMultipleQuestions = $managerHuman;
+$productHumanMultipleQuestions['open_questions'][] = [
+    'id' => 'Q-002',
+    'question' => 'Choose another blocking option?',
+    'options' => [
+        ['id' => 'A', 'label' => 'Option A'],
+        ['id' => 'B', 'label' => 'Option B'],
+    ],
+    'recommended_option' => null,
+];
+try {
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $productHumanMultipleQuestions);
+    throw new RuntimeException('Product human gate accepted multiple top-level blocking questions.');
+} catch (EngineeringAgentOutputValidationException $error) {
+    if (!str_contains($error->getMessage(), 'Product / Requirements Agent HUMAN_DECISION_REQUIRED')) {
+        throw new RuntimeException('Product human-gate validation did not identify the Product role.');
+    }
+}
+
+$productReadyWithBlockingQuestion = $valid;
+$productReadyWithBlockingQuestion['open_questions'] = [[
+    'id' => 'Q-001',
+    'question' => 'This must not remain blocking when specification is ready.',
+    'options' => [
+        ['id' => 'A', 'label' => 'Option A'],
+        ['id' => 'B', 'label' => 'Option B'],
+    ],
+    'recommended_option' => 'A',
+]];
+try {
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $productReadyWithBlockingQuestion);
+    throw new RuntimeException('Product SPECIFICATION_READY accepted a top-level blocking question.');
+} catch (EngineeringAgentOutputValidationException) {
+}
 
 $managerHumanMissingOptions = $managerHuman;
 $managerHumanMissingOptions['open_questions'][0]['options'] = [];
