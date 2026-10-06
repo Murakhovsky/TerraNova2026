@@ -324,6 +324,32 @@
     </section>
 
     <section class="cos-panel">
+      <h2>Historical backtests</h2>
+      <p>Chronological train/out-of-sample validation uses immutable MarketSnapshot datasets. OOS is never mixed back into the training partition.</p>
+      {% if w.backtests|default([]) is empty %}
+        <p>No historical H1/H2 backtest runs yet. Create a snapshot dataset, then run the backtest API with explicit fees and mapping.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Hypothesis</th><th>Period</th><th>Snapshots</th><th>Train / OOS</th><th>Promotion</th><th>Dataset</th></tr></thead>
+            <tbody>
+            {% for run in w.backtests %}
+              <tr>
+                <td><strong>{{ run.hypothesis }}</strong></td>
+                <td>{{ run.from }} → {{ run.to }}</td>
+                <td>{{ run.snapshot_count }}</td>
+                <td>{{ run.train_count }} / {{ run.oos_count }}</td>
+                <td><strong>{{ run.summary.promotion|default('—') }}</strong></td>
+                <td><code>{{ run.dataset_hash|slice(0,12) }}</code></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
       <h2>Paper portfolio</h2>
       {% if portfolio %}
         <div class="row g-3">

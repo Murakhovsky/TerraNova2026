@@ -1892,6 +1892,13 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityBacktestRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\TokenizedEquityBacktestRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityBacktestRepository
+
   Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository
 
@@ -1901,12 +1908,14 @@ services:
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquityRiskEngine: ~
   Domains\CapitalMarkets\Domain\Research\HypothesisResearchEngine: ~
+  Domains\CapitalMarkets\Domain\Research\HistoricalBacktestPromotionPolicy: ~
 
   Domains\CapitalMarkets\Application\Service\TrustedConversionRateResolver: ~
 
   Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService: ~
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalBacktestService: ~
 
 
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
