@@ -26,6 +26,8 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
         private MarketJsonHttpClientInterface $http,
         private MarketClockInterface $clock,
         private BybitTickerPayloadParser $parser,
+        private BybitOrderBookPayloadParser $orderBooks,
+        private \Domains\CapitalMarkets\Infrastructure\MarketData\VenueMarketStatusResolver $status,
     ){}
 
     public function adapterType():string{return self::ADAPTER_TYPE;}
@@ -33,7 +35,7 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
 
     public function getCapabilities():array
     {
-        return [MarketDataCapability::Bbo,MarketDataCapability::Volume];
+        return [MarketDataCapability::Bbo,MarketDataCapability::Volume,MarketDataCapability::OrderBook];
     }
 
     public function supports(MarketDataCapability $capability,MarketDataInstrumentTarget $target):bool
@@ -74,6 +76,7 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
         $receivedAt=$this->clock->now();
         $providerAt=ProviderTimestamp::fromMilliseconds($ticker['time']);
         $rawPayload=['raw_json'=>$body];
+        $marketStatus=$this->status->resolve($target->venueInstrument,$receivedAt)->value;
 
         $events=[];
         $requested=$this->requested($capabilities,$target);
@@ -81,14 +84,30 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
             $events[]=new RawMarketEvent(
                 $this->eventId('bbo'),$source->id,$source->venueId,$symbol,'bybit.spot.ticker.bbo',
                 $providerAt,$receivedAt,null,$rawPayload,
-                ['provider'=>'BYBIT','transport'=>'REST','endpoint'=>'/v5/market/tickers'],
+                ['provider'=>'BYBIT','transport'=>'REST','endpoint'=>'/v5/market/tickers','market_status'=>$marketStatus],
             );
         }
         if(isset($requested[MarketDataCapability::Volume->value])){
             $events[]=new RawMarketEvent(
                 $this->eventId('volume'),$source->id,$source->venueId,$symbol,'bybit.spot.ticker.volume',
                 $providerAt,$receivedAt,null,$rawPayload,
-                ['provider'=>'BYBIT','transport'=>'REST','endpoint'=>'/v5/market/tickers'],
+                ['provider'=>'BYBIT','transport'=>'REST','endpoint'=>'/v5/market/tickers','market_status'=>$marketStatus],
+            );
+        }
+
+        if(isset($requested[MarketDataCapability::OrderBook->value])){
+            $bookBody=$this->http->get(
+                $organizationId,
+                'capital_markets.bybit.spot.orderbook',
+                self::BASE_URL.'/v5/market/orderbook?category=spot&symbol='.rawurlencode($symbol).'&limit=50',
+                [],
+                [self::HOST],
+            );
+            $book=$this->orderBooks->parse($bookBody,$symbol);
+            $events[]=new RawMarketEvent(
+                $this->eventId('book'),$source->id,$source->venueId,$symbol,'bybit.spot.orderbook.snapshot',
+                ProviderTimestamp::fromMilliseconds($book['time']),$receivedAt,$book['sequence'],['raw_json'=>$bookBody],
+                ['provider'=>'BYBIT','transport'=>'REST','endpoint'=>'/v5/market/orderbook','market_status'=>$marketStatus],
             );
         }
 

@@ -53,7 +53,7 @@ Raw evidence зберігається до normalization. Unknown symbol не с
 
 Підтримуються `LIVE / DELAYED / HISTORICAL / REPLAY`. Persistence включає Sources/Health/Subscriptions, Raw/Canonical Events, Quality Metrics, Current Trading/Reference State, Snapshots і Data Gaps.
 
-Bybit Spot REST trading-source adapter і Massive U.S. Stocks REST reference adapter уже реалізовані. Provider secrets не зберігаються в Capital Markets tables: source має лише `credentials_reference`, а runtime використовує Platform Credential Vault. Generic polling service coalesce-ить subscriptions одного інструмента в один provider snapshot і підтримує source health.
+Bybit Spot REST та Kraken public Spot REST/xStocks trading-source adapters і Massive U.S. Stocks REST reference adapter уже реалізовані. Provider secrets не зберігаються в Capital Markets tables: source має лише `credentials_reference`, а runtime використовує Platform Credential Vault. Generic polling service coalesce-ить subscriptions одного інструмента в один provider snapshot і підтримує source health.
 
 Operator Market Data API/UI уже реалізований: sources створюються disabled, окремо enable/disable, subscriptions керуються по instrument/data type, manual poll показує source health і current state.
 

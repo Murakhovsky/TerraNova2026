@@ -40,7 +40,7 @@ generated: true
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261005_000124_capital_markets_foundation.sql`, `app/migrations/20261006_000125_capital_markets_market_sources.sql`, `app/migrations/20261006_000126_capital_markets_market_events.sql`, `app/migrations/20261006_000127_capital_markets_market_state.sql`, `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql`, `app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql`, `app/migrations/20261006_000130_capital_markets_execution_recovery.sql`.
+- міграції: `app/migrations/20261005_000124_capital_markets_foundation.sql`, `app/migrations/20261006_000125_capital_markets_market_sources.sql`, `app/migrations/20261006_000126_capital_markets_market_events.sql`, `app/migrations/20261006_000127_capital_markets_market_state.sql`, `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql`, `app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql`, `app/migrations/20261006_000130_capital_markets_execution_recovery.sql`, `app/migrations/20261006_000131_capital_markets_kraken_market_data.sql`.
 
 ### Задекларовані capabilities
 

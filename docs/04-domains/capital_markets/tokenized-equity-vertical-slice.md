@@ -60,3 +60,8 @@ V0.5 додає append-only `HypothesisObservation` journal для кожног�
 ## Наступний етап
 
 Historical MarketState replay/backtesting, automated universe scanning, execution recovery/partial-fill hardening, position persistence та operational observability вже входять у V0.6. Наступний етап має бути окремим пакетом для розширення research dataset, venue coverage, production-grade scheduling/monitoring і, лише після окремого risk/legal/release gate, потенційного live execution. Live Trading і withdrawals у VS1 залишаються вимкненими.
+
+
+## Реальні джерела ринкових даних для H2
+
+H2 може використовувати два незалежні public trading feeds: Bybit Spot та Kraken Spot/xStocks. Обидва adapters підтримують BBO і order-book depth. Trading MarketState не вважається OPEN за замовчуванням: `VenueInstrument.metadata` має містити `market_hours_timezone` + `market_hours` або explicit `always_open=true`; без такого правила статус лишається `UNKNOWN` і detector fail-closed.

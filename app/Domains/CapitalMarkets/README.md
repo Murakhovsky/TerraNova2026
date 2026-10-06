@@ -130,7 +130,8 @@ See `resources/processes/capital-markets-market-data-to-trusted-state.json`.
 
 The first external read-only connectors are implemented:
 
-- Bybit V5 Spot REST ticker adapter for trading-source BBO + 24h volume;
+- Bybit V5 Spot REST adapter for trading-source BBO + 24h volume + orderbook depth;
+- Kraken public Spot REST adapter for xStocks BBO + 24h volume + orderbook depth, without trading credentials;
 - Massive U.S. Stocks REST NBBO reference adapter;
 - tenant-safe credential resolution through Platform Credential Vault;
 - provider-specific decoders behind the generic raw → canonical pipeline;
