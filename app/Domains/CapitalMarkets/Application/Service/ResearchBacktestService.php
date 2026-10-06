@@ -10,6 +10,7 @@ use RuntimeException;
 use DateTimeImmutable;
 use Domains\CapitalMarkets\Domain\Research\WalkForwardEngine;
 use Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy;
+use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
 
 final readonly class ResearchBacktestService
 {
@@ -20,6 +21,7 @@ final readonly class ResearchBacktestService
         private ResearchLabService $lab,
         private WalkForwardEngine $walkForward,
         private ResearchExecutionBudgetPolicy $budget,
+        private ResearchIsolationPolicy $isolation,
     ){}
 
     public function queue(string $organizationId,array $specification):array
@@ -28,7 +30,12 @@ final readonly class ResearchBacktestService
             if(!array_key_exists($required,$specification))throw new InvalidArgumentException('Missing '.$required);
         }
         $this->budget->assertBacktest((array)$specification['configuration']);
+        $partition=strtoupper(trim((string)$specification['partition_name']));
+        if(!in_array($partition,['TRAIN','VALIDATION','OUT_OF_SAMPLE'],true)){
+            throw new InvalidArgumentException('Invalid research data partition.');
+        }
         $record=$specification;
+        $record['partition_name']=$partition;
         $record['status']='QUEUED';
         $record['budget']=$this->budget->estimate((array)$specification['configuration']);
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
@@ -59,6 +66,11 @@ final readonly class ResearchBacktestService
             if(!array_key_exists($required,$specification))throw new InvalidArgumentException('Missing '.$required);
         }
         $this->budget->assertBacktest((array)$specification['configuration']);
+        $partition=strtoupper(trim((string)$specification['partition_name']));
+        if(!in_array($partition,['TRAIN','VALIDATION','OUT_OF_SAMPLE'],true)){
+            throw new InvalidArgumentException('Invalid research data partition.');
+        }
+        $specification['partition_name']=$partition;
         $existing=$this->repository->getBacktestRun($organizationId,(string)$specification['run_id']);
         if($existing!==null&&($existing['status']??null)==='CANCELLED'){
             throw new InvalidArgumentException('Cancelled backtest run cannot start.');
@@ -70,6 +82,35 @@ final readonly class ResearchBacktestService
         }
         if(($experiment['strategy_version_id']??null)!==$specification['strategy_version_id']){
             throw new InvalidArgumentException('Backtest strategy version must equal experiment strategy version.');
+        }
+
+        $oos=null;
+        if($partition==='OUT_OF_SAMPLE'){
+            $configuration=(array)$specification['configuration'];
+            $from=trim((string)($configuration['from']??''));
+            $to=trim((string)($configuration['to']??''));
+            if($from===''||$to==='')throw new InvalidArgumentException('OUT_OF_SAMPLE run requires configuration.from and configuration.to.');
+
+            $candidate=[
+                'run_id'=>$specification['run_id'],
+                'experiment_id'=>$specification['experiment_id'],
+                'dataset_id'=>$specification['dataset_id'],
+                'strategy_version_id'=>$specification['strategy_version_id'],
+                'parameters_hash'=>$experiment['parameters_hash']??null,
+                'success_criteria_hash'=>$experiment['success_criteria_hash']??null,
+                'failure_criteria_hash'=>$experiment['failure_criteria_hash']??null,
+                'from'=>$from,'to'=>$to,
+                'status'=>'RUNNING',
+                'started_at'=>gmdate('Y-m-d H:i:s'),
+            ];
+            foreach($this->repository->listOutOfSampleRuns($organizationId,500) as $previous){
+                if(($previous['run_id']??null)===$candidate['run_id'])continue;
+                if(($previous['strategy_version_id']??null)!==$candidate['strategy_version_id'])continue;
+                if(!in_array((string)($previous['status']??''),['FAILED','COMPLETED'],true))continue;
+                $this->isolation->assertNewOosPeriod($previous,$candidate);
+            }
+            $this->lab->recordOutOfSampleRun($organizationId,$candidate,$experiment);
+            $oos=$candidate;
         }
 
         $adapter=$this->adapter((string)$specification['hypothesis_code']);
@@ -90,6 +131,12 @@ final readonly class ResearchBacktestService
             $record['completed_at']=gmdate('Y-m-d H:i:s');
             $record['error']=$error->getMessage();
             $this->lab->recordBacktestRun($organizationId,$record);
+            if($oos!==null){
+                $oos['status']='FAILED';
+                $oos['completed_at']=gmdate('Y-m-d H:i:s');
+                $oos['error']=$error->getMessage();
+                $this->lab->recordOutOfSampleRun($organizationId,$oos,$experiment);
+            }
             throw $error;
         }
 
@@ -131,8 +178,14 @@ final readonly class ResearchBacktestService
         $completed['completed_at']=gmdate('Y-m-d H:i:s');
         $completed['result_id']=$resultId;
         $this->lab->recordBacktestRun($organizationId,$completed);
+        if($oos!==null){
+            $oos['status']='COMPLETED';
+            $oos['completed_at']=$completed['completed_at'];
+            $oos['result_id']=$resultId;
+            $this->lab->recordOutOfSampleRun($organizationId,$oos,$experiment);
+        }
 
-        return ['run'=>$completed,'result'=>$result,'replay'=>$replay];
+        return ['run'=>$completed,'oos_run'=>$oos,'result'=>$result,'replay'=>$replay];
     }
 
     public function walkForward(string $organizationId,array $specification):array
