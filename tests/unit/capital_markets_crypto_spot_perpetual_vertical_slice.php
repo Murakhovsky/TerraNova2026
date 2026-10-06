@@ -166,8 +166,14 @@ $policy=new DerivativesRiskPolicy(
 $risk=(new RelativeValueRiskEvaluator())->assess($market,$hedge,$policy,$liq,Decimal::fromString('2'),100);
 $assert($risk['accepted'],'Healthy delta-neutral derivative risk state should pass.');
 
-$leg1=new ExecutionLeg('leg-spot',1,'bybit:spot','BTCUSDT',ExecutionSide::Buy,Decimal::fromString('0.1'),'IOC');
-$leg2=new ExecutionLeg('leg-perp',2,'bybit:perp','BTCUSDT-PERP',ExecutionSide::Sell,Decimal::fromString('100'),'IOC');
+$leg1=new ExecutionLeg(
+    'leg-spot',1,'bybit:spot','BTCUSDT',ExecutionSide::Buy,Decimal::fromString('0.1'),'IOC',null,
+    Decimal::fromString('100'),Decimal::fromString('0.01'),Decimal::fromString('0.01')
+);
+$leg2=new ExecutionLeg(
+    'leg-perp',2,'bybit:perp','BTCUSDT-PERP',ExecutionSide::Sell,Decimal::fromString('100'),'IOC',null,
+    Decimal::fromString('101'),Decimal::fromString('0.01'),Decimal::fromString('0.01')
+);
 $group=new ExecutionGroup(
     'exec-group-1','FundingCaptureStrategy-v1','opp-1',[$leg1,$leg2],
     ExecutionPolicy::Simultaneous,HedgePolicy::MaintainDeltaNeutral,ExecutionGroupState::Ready,1500,$now,'HG-1008'
