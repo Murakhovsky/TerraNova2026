@@ -8,6 +8,12 @@ use DomainException;
 use Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionPerformance;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionLeg;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionPlan;
+use Domains\CapitalMarkets\Domain\Execution\PaperOrder;
+use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
+use Domains\CapitalMarkets\Domain\Execution\PartialFillPolicy;
+use Domains\CapitalMarkets\Domain\Execution\CompensationPolicy;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionSide;
 use Domains\CapitalMarkets\Domain\Execution\PaperFill;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
@@ -174,7 +180,39 @@ final readonly class TokenizedEquityPaperExecutionService
             return $this->recordInvalidated($organizationId,$executionId,$opportunityId,$now,'INSUFFICIENT_PREFUNDED_INVENTORY',$executionEvidence);
         }
 
+        $buyLeg=new ExecutionLeg(
+            $executionId.':leg:buy',1,$buyVenue.':'.$buyInstrument,$buyInstrument,ExecutionSide::Buy,$quantity,
+            'IOC',null,$buy['price'],$buyFee,$buySlippage
+        );
+        $sellLeg=new ExecutionLeg(
+            $executionId.':leg:sell',2,$sellVenue.':'.$sellInstrument,$sellInstrument,ExecutionSide::Sell,$quantity,
+            'IOC',null,$sell['price'],$sellFee,$sellSlippage
+        );
+        $plan=new ExecutionPlan(
+            $executionId.':plan',$opportunityId,'TokenizedEquityRelativeValue-v1',$now,$expires,[$buyLeg,$sellLeg],
+            'SEQUENTIAL',PartialFillPolicy::AbortAndCompensate,CompensationPolicy::EmergencyClose,
+            (int)($parameters['max_total_latency_ms']??1000),(int)($parameters['max_leg_latency_ms']??500),
+            DecimalMath::add($buyFee,$sellFee),Decimal::fromString((string)$opportunity['expected_pnl']),
+            (string)($risk['id']??'unknown'),[$reservationId,$buyCashReservation,$sellInventoryReservation]
+        );
+        $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'READY'));
+
         try{
+            $buyOrder=new PaperOrder(
+                $executionId.':order:buy',$executionId,$buyLeg->id,$buyLeg->venueMarketId,$buyInstrument,ExecutionSide::Buy,
+                $quantity,$quantity,PaperOrderState::Filled,$now,$now,$now
+            );
+            $sellOrder=new PaperOrder(
+                $executionId.':order:sell',$executionId,$sellLeg->id,$sellLeg->venueMarketId,$sellInstrument,ExecutionSide::Sell,
+                $quantity,$quantity,PaperOrderState::Filled,$now,$now,$now
+            );
+            $this->repository->savePaperOrder(
+                $organizationId,$buyOrder->id,$executionId,$buyLeg->id,$buyOrder->state->value,$buyOrder->id,$this->orderArray($buyOrder)
+            );
+            $this->repository->savePaperOrder(
+                $organizationId,$sellOrder->id,$executionId,$sellLeg->id,$sellOrder->state->value,$sellOrder->id,$this->orderArray($sellOrder)
+            );
+
             $buyFill=new PaperFill(
                 $executionId.':buy',$executionId,$buyVenue,$buyInstrument,ExecutionSide::Buy,$quantity,$buy['price'],$buyFee,
                 $buySlippage,$now,$executionId.':buy'
@@ -182,6 +220,12 @@ final readonly class TokenizedEquityPaperExecutionService
             $sellFill=new PaperFill(
                 $executionId.':sell',$executionId,$sellVenue,$sellInstrument,ExecutionSide::Sell,$quantity,$sell['price'],$sellFee,
                 $sellSlippage,$now,$executionId.':sell'
+            );
+            $this->repository->savePaperFill(
+                $organizationId,$buyFill->id,$buyOrder->id,$executionId,$buyFill->idempotencyKey,$this->fillArray($buyFill)
+            );
+            $this->repository->savePaperFill(
+                $organizationId,$sellFill->id,$sellOrder->id,$executionId,$sellFill->idempotencyKey,$this->fillArray($sellFill)
             );
             $realized=$this->pnl->realized([$buyFill,$sellFill]);
 
@@ -235,6 +279,7 @@ final readonly class TokenizedEquityPaperExecutionService
                     'account'=>$e->account,'asset_key'=>$e->assetKey,'debit'=>$e->debit->value(),'credit'=>$e->credit->value(),
                 ],$ledger->entries),
             ]);
+            $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             $observationFingerprint=hash('sha256',implode('|',[
                 $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
@@ -340,6 +385,45 @@ final readonly class TokenizedEquityPaperExecutionService
         if($available->compareTo($quantity)<0)throw new DomainException('INSUFFICIENT_LIQUIDITY');
         $price=$side===ExecutionSide::Buy?$quote->askPrice->value:$quote->bidPrice->value;
         return ['price'=>$price,'notional'=>DecimalMath::multiply($price,$quantity)];
+    }
+
+    /** @return array<string,mixed> */
+    private function planArray(ExecutionPlan $plan,string $status):array
+    {
+        return [
+            'id'=>$plan->id,'opportunity_id'=>$plan->opportunityId,'strategy_version'=>$plan->strategyVersion,
+            'status'=>$status,'created_at'=>$plan->createdAt->format(DATE_ATOM),'expires_at'=>$plan->expiresAt->format(DATE_ATOM),
+            'sequence_policy'=>$plan->sequencePolicy,'partial_fill_policy'=>$plan->partialFillPolicy->value,
+            'compensation_policy'=>$plan->compensationPolicy->value,'max_total_latency_ms'=>$plan->maxTotalLatencyMs,
+            'max_leg_latency_ms'=>$plan->maxLegLatencyMs,'expected_cost'=>$plan->expectedCost->value(),
+            'expected_pnl'=>$plan->expectedPnl->value(),'risk_assessment_id'=>$plan->riskAssessmentId,
+            'capital_reservation_ids'=>$plan->capitalReservationIds,
+            'legs'=>array_map(fn(ExecutionLeg $leg):array=>$this->legArray($leg),$plan->legs),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private function legArray(ExecutionLeg $leg):array
+    {
+        return [
+            'id'=>$leg->id,'sequence'=>$leg->sequence,'venue_market_id'=>$leg->venueMarketId,
+            'instrument_id'=>$leg->instrumentId,'side'=>$leg->side->value,'quantity'=>$leg->quantity->value(),
+            'order_type'=>$leg->orderType,'limit_price'=>$leg->limitPrice?->value(),'target_price'=>$leg->targetPrice->value(),
+            'expected_fee'=>$leg->expectedFee->value(),'expected_slippage'=>$leg->expectedSlippage->value(),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private function orderArray(PaperOrder $order):array
+    {
+        return [
+            'id'=>$order->id,'execution_group_id'=>$order->executionGroupId,'leg_id'=>$order->legId,
+            'venue_market_id'=>$order->venueMarketId,'instrument_id'=>$order->instrumentId,'side'=>$order->side->value,
+            'requested_quantity'=>$order->requestedQuantity->value(),'filled_quantity'=>$order->filledQuantity->value(),
+            'remaining_quantity'=>$order->remainingQuantity()->value(),'state'=>$order->state->value,
+            'created_at'=>$order->createdAt->format(DATE_ATOM),'submitted_at'=>$order->submittedAt?->format(DATE_ATOM),
+            'filled_at'=>$order->filledAt?->format(DATE_ATOM),
+        ];
     }
 
     /** @return array<string,mixed> */
