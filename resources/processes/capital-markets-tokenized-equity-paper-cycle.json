@@ -1,0 +1,183 @@
+{
+  "schema_version": 4,
+  "id": "capital-markets.tokenized-equity-paper-cycle",
+  "title": "Trusted Market State → Tokenized Equity Paper Result",
+  "domain": "capital_markets",
+  "state": "as-is",
+  "workflow": "02-workflows/capital-markets-tokenized-equity-paper-cycle.md",
+  "trigger": "Trusted comparable Equity/Tokenized Equity or cross-venue Tokenized Equity market states are available",
+  "outcomes": [
+    "H1 and H2 dislocations are detected only from trustworthy comparable market state",
+    "Gross spread is converted into realistic expected net edge after explicit costs",
+    "Economic relationship and deterministic risk gates can reject false opportunities",
+    "H2 paper execution requires pre-funded venue cash and token inventory",
+    "Execution settlement is recorded through an immutable asset-aware double-entry ledger",
+    "Realistic paper P&L and edge capture are persisted as research evidence"
+  ],
+  "actors": [
+    "Capital Markets research runtime",
+    "Risk Engine",
+    "Paper Execution runtime",
+    "capital markets operator"
+  ],
+  "steps": [
+    {
+      "id": "detect",
+      "label": "Detect H1/H2 spread candidate",
+      "kind": "decision",
+      "owner": "Capital Markets research runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.opportunity.view",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/TokenizedEquitySpreadDetector.php",
+          "symbol": "public function detectCrossVenue("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/TokenizedEquitySpreadDetector.php",
+          "symbol": "public function detectReferenceDislocation("
+        }
+      ]
+    },
+    {
+      "id": "evaluate",
+      "label": "Evaluate net economics and relationship",
+      "kind": "decision",
+      "owner": "Capital Markets research runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.opportunity.view",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/TokenizedEquityVerticalSliceService.php",
+          "symbol": "private function evaluate("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/NetEconomicsEngine.php",
+          "symbol": "public function estimate("
+        }
+      ]
+    },
+    {
+      "id": "risk",
+      "label": "Apply deterministic risk gate",
+      "kind": "decision",
+      "owner": "Risk Engine",
+      "domain": "capital_markets",
+      "capability": "capital_markets.paper.execute",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/TokenizedEquityRiskEngine.php",
+          "symbol": "public function assess("
+        }
+      ]
+    },
+    {
+      "id": "reserve",
+      "label": "Reserve paper capital and venue balances",
+      "kind": "state",
+      "owner": "Paper Execution runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.paper.execute",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php",
+          "symbol": "public function reserveCapital("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php",
+          "symbol": "public function reservePaperBalance("
+        }
+      ]
+    },
+    {
+      "id": "execute",
+      "label": "Revalidate market state and simulate two-leg execution",
+      "kind": "operation",
+      "owner": "Paper Execution runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.paper.execute",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/TokenizedEquityPaperExecutionService.php",
+          "symbol": "public function execute("
+        }
+      ]
+    },
+    {
+      "id": "ledger",
+      "label": "Post asset-aware double-entry settlement",
+      "kind": "state",
+      "owner": "Paper Execution runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.paper.execute",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Ledger/LedgerTransaction.php",
+          "symbol": "public function __construct("
+        }
+      ]
+    },
+    {
+      "id": "measure",
+      "label": "Persist realized paper P&L and edge capture",
+      "kind": "outcome",
+      "owner": "Capital Markets research runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.opportunity.view",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Execution/ExecutionPerformance.php",
+          "symbol": "public function __construct("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php",
+          "symbol": "public function saveExecution("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "detect",
+      "to": "evaluate"
+    },
+    {
+      "from": "evaluate",
+      "to": "risk"
+    },
+    {
+      "from": "risk",
+      "to": "reserve"
+    },
+    {
+      "from": "reserve",
+      "to": "execute"
+    },
+    {
+      "from": "execute",
+      "to": "ledger"
+    },
+    {
+      "from": "ledger",
+      "to": "measure"
+    }
+  ]
+}
