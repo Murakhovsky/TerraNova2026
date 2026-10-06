@@ -82,6 +82,7 @@ foreach ([
     "mysqlUtc[1] + 'T'",
     ".padEnd(3, '0')",
     "['STALE', 'STALLED'].includes(health) ? health : status",
+    "['STALE', 'STALLED', 'WAITING', 'TERMINAL'].includes(persisted)",
     'localizeStatus(',
     'localizeRole(',
     'localizeEventType(',
