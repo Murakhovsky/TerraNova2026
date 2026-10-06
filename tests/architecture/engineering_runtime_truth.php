@@ -18,6 +18,8 @@ $eventMigration = (string) file_get_contents($root.'/symfony/migrations/Version2
 $repositoryDiscovery = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Repository/LocalRepositoryDiscovery.php');
 $productStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringProductRequirementsStageExecutor.php');
 
+$continue = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringContinueService.php');
+
 foreach (['heartbeatAt','healthStatus','stalledAt','runtimeReason','touchRuntime'] as $needle) {
     if (!str_contains($workflowEntity, $needle)) throw new RuntimeException('Workflow runtime entity missing '.$needle);
 }
@@ -61,6 +63,12 @@ foreach (['maxScannedFiles', 'maxTotalReadBytes', 'maxScanMilliseconds', 'elapse
 }
 foreach (['touchRuntime($workflowId)', 'markRuntimeIssue(', 'Repository discovery failed before AgentRun start'] as $needle) {
     if (!str_contains($productStage, $needle)) throw new RuntimeException('Product pre-agent runtime observability missing '.$needle);
+}
+if (!str_contains($workflowStore, "COALESCE(w.health_status, 'HEALTHY') <> 'STALLED'")) {
+    throw new RuntimeException('Engineering scheduler still retries STALLED workflows automatically.');
+}
+if (str_contains($continue, "\$this->workflows->touchRuntime(\$workflowId);\n        \$workflow = \$this->workflows->get(\$workflowId);")) {
+    throw new RuntimeException('Engineering continue path still emits a false recovery heartbeat before real work begins.');
 }
 
 echo "Engineering runtime truth and observability contract passed.\n";
