@@ -27,6 +27,7 @@ final class TokenizedEquitySpreadDetector
     ):array{
         if(!$this->usableTradingState($a,$config,$now)||!$this->usableTradingState($b,$config,$now))return [];
         if($this->skewMs($a->sourceTimestamp,$b->sourceTimestamp)>$config->maximumSnapshotSkewMs)return [];
+        if(!$a->bestQuote->askPrice->quoteAsset->equals($b->bestQuote->bidPrice->quoteAsset))return [];
 
         $out=[];
         $this->candidate(
@@ -66,6 +67,7 @@ final class TokenizedEquitySpreadDetector
         $referenceTimestamp=$reference->sourceTimestamp??$reference->updatedAt;
         if($this->ageMs($referenceTimestamp,$now)>$config->maximumSnapshotAgeMs)return [];
         if($this->skewMs($referenceTimestamp,$tokenized->sourceTimestamp)>$config->maximumSnapshotSkewMs)return [];
+        if(!$reference->currentQuote->askPrice->quoteAsset->equals($tokenized->bestQuote->bidPrice->quoteAsset))return [];
 
         $out=[];
         $referenceVenue='reference:'.$reference->sourceId->value();
