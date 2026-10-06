@@ -17,6 +17,9 @@ final readonly class EngineeringPolicyEngine
         string $riskLevel,
         array $history = [],
     ): void {
+        if ($role === AgentRole::ENGINEERING_MANAGER) {
+            throw new RuntimeException('Engineering Manager is orchestration-only in Runtime V2.');
+        }
         if ($role === AgentRole::QA) {
             throw new RuntimeException('Legacy QA role is forbidden for new Engineering Runtime V2 executions.');
         }
