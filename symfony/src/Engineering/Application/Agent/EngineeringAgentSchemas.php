@@ -44,6 +44,36 @@ final class EngineeringAgentSchemas
         ));
         unset($schema['properties']['decision']);
 
+        // Product-level open_questions is the blocking workflow gate, not a general
+        // brainstorming list. Non-blocking ambiguities belong in feature.open_questions.
+        $schema['properties']['open_questions'] = [
+            'type' => 'array',
+            'maxItems' => 1,
+            'items' => [
+                'type' => 'object',
+                'required' => ['id','question','options','recommended_option'],
+                'properties' => [
+                    'id' => ['type' => 'string', 'minLength' => 1],
+                    'question' => ['type' => 'string', 'minLength' => 1],
+                    'options' => [
+                        'type' => 'array',
+                        'minItems' => 2,
+                        'items' => [
+                            'type' => 'object',
+                            'required' => ['id','label'],
+                            'properties' => [
+                                'id' => ['type' => 'string', 'minLength' => 1],
+                                'label' => ['type' => 'string', 'minLength' => 1],
+                            ],
+                            'additionalProperties' => false,
+                        ],
+                    ],
+                    'recommended_option' => ['type' => ['string','null']],
+                ],
+                'additionalProperties' => false,
+            ],
+        ];
+
         return $schema;
     }
 
