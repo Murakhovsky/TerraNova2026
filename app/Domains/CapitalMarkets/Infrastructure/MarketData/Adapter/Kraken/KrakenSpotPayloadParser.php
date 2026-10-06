@@ -34,7 +34,9 @@ final class KrakenSpotPayloadParser
             foreach($rows as $level){
                 if(!is_array($level)||count($level)<2)throw new InvalidArgumentException('Kraken depth level invalid.');
                 $out[$side][]=['price'=>$this->decimal($level[0]??null,'price'),'quantity'=>$this->decimal($level[1]??null,'quantity')];
-                $ts=(int)floor((float)($level[2]??0)); if($ts>$latest)$latest=$ts;
+                $timestamp=(string)($level[2]??'0');
+                $seconds=(int)(explode('.',$timestamp,2)[0]??'0');
+                if($seconds>$latest)$latest=$seconds;
             }
         }
         return ['bids'=>$out['bids'],'asks'=>$out['asks'],'timestamp'=>$latest];
