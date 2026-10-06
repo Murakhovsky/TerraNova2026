@@ -26,6 +26,7 @@ final readonly class ResearchBacktestService
         private ResearchIsolationPolicy $isolation,
         private ResearchMetricsEngine $metrics,
         private ResearchConfidenceEngine $confidence,
+        private ResearchTelemetry $telemetry,
     ){}
 
     public function queue(string $organizationId,array $specification):array
@@ -128,7 +129,12 @@ final readonly class ResearchBacktestService
         }
 
         $adapter=$this->adapter((string)$specification['hypothesis_code']);
+        $startedClock=microtime(true);
         $startedAt=gmdate('Y-m-d H:i:s');
+        $this->telemetry->metric($organizationId,'backtest_started_total',1.0,[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+            'partition'=>$partition,
+        ]);
         $record=$specification;
         $record['status']='RUNNING';
         $record['started_at']=$startedAt;
@@ -141,6 +147,12 @@ final readonly class ResearchBacktestService
                 (array)$specification['configuration']
             );
         }catch(\Throwable $error){
+            $this->telemetry->failure($organizationId,'backtest_failed',[
+                'run_id'=>(string)$specification['run_id'],
+                'hypothesis'=>(string)$specification['hypothesis_code'],
+                'partition'=>$partition,
+                'error'=>$error->getMessage(),
+            ]);
             $record['status']='FAILED';
             $record['completed_at']=gmdate('Y-m-d H:i:s');
             $record['error']=$error->getMessage();
@@ -205,6 +217,30 @@ final readonly class ResearchBacktestService
         $completed['completed_at']=gmdate('Y-m-d H:i:s');
         $completed['result_id']=$resultId;
         $this->lab->recordBacktestRun($organizationId,$completed);
+        $duration=max(0.0,microtime(true)-$startedClock);
+        $this->telemetry->metric($organizationId,'backtest_duration_seconds',$duration,[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+            'partition'=>$partition,
+        ]);
+        $this->telemetry->metric($organizationId,'backtest_sample_count',(float)$sampleCount,[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+            'partition'=>$partition,
+        ]);
+        $this->telemetry->metric($organizationId,'backtest_completed_total',1.0,[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+            'partition'=>$partition,
+            'result_status'=>(string)$result['status'],
+        ]);
+        $this->telemetry->event($organizationId,'backtest_completed',[
+            'run_id'=>(string)$specification['run_id'],
+            'result_id'=>$resultId,
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+            'partition'=>$partition,
+            'sample_count'=>$sampleCount,
+            'confidence'=>$confidence,
+            'duration_seconds'=>$duration,
+        ]);
+
         if($oos!==null){
             $oos['status']='COMPLETED';
             $oos['completed_at']=$completed['completed_at'];
@@ -229,6 +265,10 @@ final readonly class ResearchBacktestService
             (int)$specification['step_days'],
         );
         $this->budget->assertWalkForward($specification,count($windows));
+        $startedClock=microtime(true);
+        $this->telemetry->metric($organizationId,'walk_forward_started_total',1.0,[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+        ]);
 
         $results=[];
         foreach($windows as $index=>$window){
@@ -247,10 +287,17 @@ final readonly class ResearchBacktestService
             ];
         }
 
+        $summary=$this->walkForward->summarize($results);
+        $this->telemetry->metric($organizationId,'walk_forward_windows',(float)count($results),[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+        ]);
+        $this->telemetry->metric($organizationId,'walk_forward_duration_seconds',max(0.0,microtime(true)-$startedClock),[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+        ]);
         return [
             'hypothesis'=>strtoupper((string)$specification['hypothesis_code']),
             'windows'=>$results,
-            'summary'=>$this->walkForward->summarize($results),
+            'summary'=>$summary,
         ];
     }
 
