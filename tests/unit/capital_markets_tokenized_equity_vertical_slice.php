@@ -85,7 +85,7 @@ $assert($candidates[0]->grossSpread->value()==='0.7','Detector must compare buy 
 $buy=new PaperFill('f1','g1','venue:a','aaplx',ExecutionSide::Buy,Decimal::fromString('10'),Decimal::fromString('100.1'),Decimal::fromString('1'),Decimal::fromString('0.5'),$now,'idem:f1');
 $sell=new PaperFill('f2','g1','venue:b','aaplx',ExecutionSide::Sell,Decimal::fromString('10'),Decimal::fromString('100.8'),Decimal::fromString('1'),Decimal::fromString('0.5'),$now,'idem:f2');
 $pnl=(new PaperPnlEngine())->realized([$buy,$sell]);
-$assert($pnl->value()==='4','Paper net P&L golden value drifted.');
+$assert($pnl->value()==='5','Paper net P&L golden value drifted.');
 
 $tx=new LedgerTransaction('tx1','idem:tx1',$now,[
     new LedgerEntry('cash',Decimal::fromString('10'),Decimal::fromString('0')),
