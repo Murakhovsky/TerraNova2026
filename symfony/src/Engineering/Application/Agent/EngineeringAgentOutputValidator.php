@@ -146,7 +146,11 @@ final class EngineeringAgentOutputValidator
 
         foreach ($output['feature']['acceptance_criteria'] as $index => $criterion) {
             if (!is_array($criterion)) throw new EngineeringAgentOutputValidationException('Acceptance criterion must be an object.');
-            $this->required($criterion, ['id','description','verification_type']);
+            foreach (['id','description','verification_type'] as $field) {
+                if (!array_key_exists($field, $criterion)) {
+                    throw new EngineeringAgentOutputValidationException(sprintf('Missing required feature.acceptance_criteria[%d].%s.', $index, $field));
+                }
+            }
             if (!preg_match('/^AC-[0-9]{3,}$/', (string) $criterion['id'])) {
                 throw new EngineeringAgentOutputValidationException(sprintf('Acceptance criterion %d has invalid id.', $index));
             }
