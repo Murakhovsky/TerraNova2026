@@ -9,7 +9,7 @@ contract: domain-v1
 
 # Огляд домену Capital Markets
 
-Capital Markets `0.5.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
+Capital Markets `0.6.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
 
 ## Призначення
 
@@ -33,7 +33,7 @@ MarketState / ReferenceMarketState
 
 ```text
 id: capital_markets
-version: 0.5.0
+version: 0.6.0
 runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 research evidence/paper
 persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
@@ -42,7 +42,7 @@ provider adapters: Bybit Spot REST + Massive Stocks REST
 provider polling: CLI + operator API/UI
 operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities
 streaming: disabled / next wave
-execution: guarded H2 paper only; H1 research-only; live disabled
+execution: guarded H2 paper only; H1 research-only; automated research scanner opt-in; live disabled
 ```
 
 Модуль вимкнений за замовчуванням. Bybit Spot REST та Massive Stocks REST adapters уже реалізовані за provider-neutral contracts. Операторський Market Data workspace керує Sources, Subscriptions, Health та ручним Poll. Нові sources створюються disabled. Provider-specific flags і streaming flag залишаються вимкненими до tenant source configuration та production cutover.
