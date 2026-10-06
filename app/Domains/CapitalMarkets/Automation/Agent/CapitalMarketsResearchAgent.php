@@ -45,6 +45,67 @@ final class CapitalMarketsResearchAgent
             confidenceThreshold:0.65,
             maxActionsPerRun:0,
             configurationManaged:false,
+            outputSchema:[
+                'type'=>'object',
+                'required'=>['decision','reason','confidence','proposed_actions','evidence'],
+                'properties'=>[
+                    'decision'=>['type'=>'string'],
+                    'reason'=>['type'=>'string'],
+                    'confidence'=>['type'=>'number','minimum'=>0,'maximum'=>1],
+                    'proposed_actions'=>[
+                        'type'=>'array',
+                        'maxItems'=>0,
+                        'items'=>['type'=>'object','additionalProperties'=>false],
+                    ],
+                    'evidence'=>[
+                        'type'=>'object',
+                        'required'=>['research'],
+                        'properties'=>[
+                            'research'=>[
+                                'type'=>'object',
+                                'required'=>['tool_requests','findings'],
+                                'properties'=>[
+                                    'tool_requests'=>[
+                                        'type'=>'array',
+                                        'maxItems'=>4,
+                                        'items'=>[
+                                            'type'=>'object',
+                                            'required'=>['name','input'],
+                                            'properties'=>[
+                                                'name'=>[
+                                                    'type'=>'string',
+                                                    'enum'=>[
+                                                        'research.searchhypotheses',
+                                                        'research.createhypothesis',
+                                                        'research.createexperimentdraft',
+                                                        'research.searchknowledge',
+                                                    ],
+                                                ],
+                                                'input'=>['type'=>'object'],
+                                            ],
+                                            'additionalProperties'=>false,
+                                        ],
+                                    ],
+                                    'findings'=>[
+                                        'type'=>'array',
+                                        'maxItems'=>20,
+                                        'items'=>['type'=>'string'],
+                                    ],
+                                    'hypothesis_candidate'=>['type'=>['object','null']],
+                                    'limitations'=>[
+                                        'type'=>'array',
+                                        'maxItems'=>20,
+                                        'items'=>['type'=>'string'],
+                                    ],
+                                ],
+                                'additionalProperties'=>false,
+                            ],
+                        ],
+                        'additionalProperties'=>false,
+                    ],
+                ],
+                'additionalProperties'=>false,
+            ],
         );
     }
 }
