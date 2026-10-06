@@ -6,6 +6,7 @@ namespace App\Http\Api\V1\Controller;
 use App\Security\SessionCsrfValidator;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Application\Service\ResearchLabService;
+use Domains\CapitalMarkets\Application\Service\ResearchBacktestService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
 use JsonException;
@@ -24,6 +25,7 @@ final readonly class CapitalMarketsResearchLabController
         private ActiveModuleResolver $modules,
         private CapitalMarketsAccessControlInterface $access,
         private ResearchLabService $lab,
+        private ResearchBacktestService $backtests,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -63,6 +65,18 @@ final readonly class CapitalMarketsResearchLabController
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
             fn(TenantContext $tenant,array $payload):array=>$this->lab->recordResult($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function runBacktest(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->backtests->run($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function walkForward(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->backtests->walkForward($tenant->organizationId()->value(),$payload),200);
     }
 
     public function scorecard(Request $request,string $id):JsonResponse
