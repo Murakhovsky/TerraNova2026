@@ -11,6 +11,7 @@ use Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalReplaySe
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityExecutionRecoveryService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityReadService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityUniverseScanner;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
@@ -39,6 +40,7 @@ final readonly class CapitalMarketsTokenizedEquityController
         private TokenizedEquityUniverseScanner $universeScanner,
         private TokenizedEquityHistoricalReplayService $historicalReplay,
         private TokenizedEquityExecutionRecoveryService $executionRecovery,
+        private TokenizedEquityReadService $reads,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -178,6 +180,66 @@ final readonly class CapitalMarketsTokenizedEquityController
         return $this->respond(fn():array=>$this->executionRecovery->inspect(
             $tenant->organizationId()->value(),$id
         ));
+    }
+
+    public function executions(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->reads->executions(
+            $tenant->organizationId()->value(),min(5000,max(1,(int)$request->query->get('limit',500)))
+        ));
+    }
+
+    public function positions(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->reads->positions(
+            $tenant->organizationId()->value(),min(5000,max(1,(int)$request->query->get('limit',500)))
+        ));
+    }
+
+    public function ledger(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->reads->ledger(
+            $tenant->organizationId()->value(),min(5000,max(1,(int)$request->query->get('limit',500)))
+        ));
+    }
+
+    public function performance(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->reads->performance(
+            $tenant->organizationId()->value(),min(5000,max(1,(int)$request->query->get('limit',1000)))
+        ));
+    }
+
+    public function observations(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        $hypothesis=trim((string)$request->query->get('hypothesis',''));
+        return $this->respond(fn():array=>$this->reads->observations(
+            $tenant->organizationId()->value(),$hypothesis===''?null:$hypothesis,
+            min(10000,max(1,(int)$request->query->get('limit',1000)))
+        ));
+    }
+
+    public function reconciliation():JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->reads->reconcile($tenant->organizationId()->value()));
     }
 
     /**
