@@ -42,6 +42,7 @@ foreach([
     'ResearchSearchKnowledgeTool',
     'CompositeToolPermissionChecker',
     'ResearchAgentToolPermissionChecker',
+    'CapitalMarketsResearchAgentService',
 ] as $needle){
     $assert(str_contains($services,$needle),'Research tool runtime wiring missing: '.$needle);
 }
@@ -60,5 +61,31 @@ foreach([
 ] as $route){
     $assert(str_contains($routes,$route),'Research Lab route missing: '.$route);
 }
+
+
+
+$runner=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/CapitalMarketsResearchAgentService.php');
+foreach([
+    'AgentRuntime',
+    'ToolRuntimeInterface',
+    'capital_markets_research',
+    "contextReferences",
+    'Research Agent requested tools after the final pass.',
+] as $needle){
+    $assert(str_contains($runner,$needle),'Two-pass Research Agent runtime missing: '.$needle);
+}
+
+$validator=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Automation/Agent/CapitalMarketsResearchAgentResultValidator.php');
+foreach([
+    'Research Agent cannot emit business action proposals.',
+    'Research Agent may request at most four tools per pass.',
+    'Research Agent requested forbidden tool:',
+    'Research Agent recommendation exceeds authority.',
+] as $needle){
+    $assert(str_contains($validator,$needle),'Research Agent validator boundary missing: '.$needle);
+}
+
+$permission=(string)file_get_contents($root.'/symfony/src/Infrastructure/Automation/ResearchAgentToolPermissionChecker.php');
+$assert(str_contains($permission,"capital_markets_research"),'Research tools must be bound to Research Agent identity.');
 
 echo "Capital Markets Research Agent contracts passed.\n";
