@@ -15,22 +15,31 @@ final readonly class TokenizedEquityResearchService
     ){}
 
     /** @return array<string,mixed> */
-    public function report(string $organizationId,int $minimumObservations=30,int $minimumRealized=10):array
-    {
+    public function report(
+        string $organizationId,
+        int $minimumObservations=30,
+        int $minimumExecutionAttempts=10,
+        string $minimumCompletionRate='0.5',
+    ):array{
         $reports=[];
         foreach(HypothesisCode::cases() as $hypothesis){
             $metrics=$this->repository->researchMetrics($organizationId,$hypothesis->value);
             $reports[$hypothesis->value]=[
                 ...$metrics,
                 'hypothesis'=>$hypothesis->value,
-                'verdict'=>$this->policy->verdict($metrics,$minimumObservations,$minimumRealized)->value,
+                'verdict'=>$this->policy->verdict(
+                    $metrics,$minimumObservations,$minimumExecutionAttempts,$minimumCompletionRate
+                )->value,
                 'minimum_observations'=>$minimumObservations,
-                'minimum_realized_executions'=>$minimumRealized,
+                'minimum_execution_attempts'=>$minimumExecutionAttempts,
+                'minimum_completion_rate'=>$minimumCompletionRate,
                 'edge_funnel'=>[
                     'observed_scans'=>$metrics['observation_count'],
                     'detected'=>$metrics['detected_count'],
                     'executable'=>$metrics['executable_count'],
-                    'realized'=>$metrics['realized_count'],
+                    'attempted'=>$metrics['execution_attempt_count'],
+                    'completed'=>$metrics['completed_execution_count'],
+                    'invalidated'=>$metrics['invalidated_execution_count'],
                 ],
             ];
         }
