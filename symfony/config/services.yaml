@@ -1846,6 +1846,11 @@ services:
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitOrderBookPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualTickerPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualInstrumentPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitFundingHistoryPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder: ~
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter: ~
@@ -1859,6 +1864,7 @@ services:
     arguments:
       $adapters:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
 
@@ -1866,6 +1872,7 @@ services:
     arguments:
       $decoders:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
 
