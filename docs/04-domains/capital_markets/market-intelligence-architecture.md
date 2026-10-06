@@ -237,6 +237,26 @@ Bybit є `TRADING_SOURCE`, Massive — `REFERENCE_SOURCE`. Massive credentials �
 
 REST polling доступний через generic `MarketSourcePollingService` та CLI `cos:capital-markets:market-data:poll`. Реальна WebSocket streaming connectivity ще не реалізована і захищена вимкненим feature flag.
 
+## Operator surface
+
+Market Intelligence має canonical operator surface:
+
+```text
+/capital-markets/market-data
+/api/v1/capital-markets/market-data/*
+```
+
+Оператор може:
+
+- створити source у disabled state;
+- явно enable/disable source;
+- додати instrument/data-type subscription;
+- вручну запустити bounded provider poll;
+- переглянути source health;
+- переглянути trading та reference current state.
+
+Mutation paths використовують tenant context, capability checks, Market Data feature gate, CSRF та Capital Markets Audit. Secret material не приймається через UI/API: source config зберігає тільки `credentials_reference`.
+
 ## Acceptance core
 
 Core вважається готовим, коли automated tests підтверджують:

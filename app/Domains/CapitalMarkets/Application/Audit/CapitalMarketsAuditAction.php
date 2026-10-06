@@ -16,4 +16,9 @@ enum CapitalMarketsAuditAction:string
     case VenueInstrumentRegistered='capital_markets.venue_instrument.registered';
     case PermissionChanged='capital_markets.permission.changed';
     case FeatureFlagChanged='capital_markets.feature_flag.changed';
+    case MarketDataSourceCreated='capital_markets.market_data.source.created';
+    case MarketDataSourceEnabled='capital_markets.market_data.source.enabled';
+    case MarketDataSourceDisabled='capital_markets.market_data.source.disabled';
+    case MarketDataSubscriptionSaved='capital_markets.market_data.subscription.saved';
+    case MarketDataPollTriggered='capital_markets.market_data.poll.triggered';
 }

@@ -93,7 +93,16 @@ Every business row and permission row is organization-scoped.
 
 Foundation endpoints remain under `/api/v1/capital-markets/*`, with the operator workspace under `/capital-markets/*`.
 
-Market Intelligence API/UI surfaces are added as a separate feature wave. Until a real source is configured, the UI must expose no fake prices, PnL, charts or market status.
+Market Intelligence now adds:
+
+- operator workspace: `/capital-markets/market-data`;
+- read dashboard: `GET /api/v1/capital-markets/market-data`;
+- source create/enable/disable;
+- source subscriptions;
+- manual provider poll;
+- source health, trading MarketState and ReferenceMarketState visibility.
+
+New sources are created disabled. Mutations require tenant context, Capital Markets capabilities, Market Data feature gates and CSRF. The UI contains no order, position or execution controls.
 
 ## Safety posture
 
@@ -129,11 +138,10 @@ Provider flags remain disabled by default. Streaming remains disabled until the 
 
 ## Next packs
 
-1. Market-data operator API/UI and source health.
-2. Replay/backfill/gap recovery.
-3. Tokenized Equity comparison slice.
-4. Bybit/Massive streaming connectors.
-5. Spot/Perpetual vertical slice.
-6. Research Lab and hypothesis registry.
-7. Portfolio, ledger and governed agents.
-8. Limited Live only after promotion gates.
+1. Replay/backfill/gap recovery.
+2. Tokenized Equity comparison slice.
+3. Bybit/Massive streaming connectors.
+4. Spot/Perpetual vertical slice.
+5. Research Lab and hypothesis registry.
+6. Portfolio, ledger and governed agents.
+7. Limited Live only after promotion gates.

@@ -1863,6 +1863,8 @@ services:
 
   Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
 
+  Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService: ~
+
   Domains\CapitalMarkets\Domain\Service\MarketDataQualityEngine: ~
   Domains\CapitalMarkets\Domain\Service\OrderBookRebuilder: ~
   Domains\CapitalMarkets\Domain\Service\MarketStateEngine: ~
@@ -1884,6 +1886,10 @@ services:
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
 
   App\Web\CapitalMarkets\CapitalMarketsPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Http\Api\V1\Controller\CapitalMarketsMarketDataController:
     public: true
     tags: ['controller.service_arguments']
 
