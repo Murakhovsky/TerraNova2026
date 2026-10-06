@@ -40,6 +40,20 @@ description: "Канонічний процес від довіреного Mark
 | Double-entry ledger | `app/Domains/CapitalMarkets/Domain/Ledger/LedgerTransaction.php` |
 | Process Registry | `resources/processes/capital-markets-tokenized-equity-paper-cycle.json` |
 
+## Процес
+
+<ProcessDiagram process-id="capital-markets.tokenized-equity-paper-cycle" />
+
+Діаграма генерується з канонічного Process Registry і показує фактичний `as-is` шлях від trusted MarketState до H1/H2 research result та guarded H2 paper execution.
+
+## Представлення відповідальності
+
+<ProcessDiagram process-id="capital-markets.tokenized-equity-paper-cycle" view="ownership" direction="LR" />
+
+## Представлення можливостей
+
+<ProcessDiagram process-id="capital-markets.tokenized-equity-paper-cycle" view="capability" direction="LR" />
+
 ## Потік
 
 ```text
