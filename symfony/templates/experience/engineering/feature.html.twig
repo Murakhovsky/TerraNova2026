@@ -305,11 +305,21 @@
         {% endfor %}
     </section>
 
+    {% if summary.health == 'STALLED' %}
+        <twig:CosAlert
+            title="Процес зупинено"
+            copy="{{ engineering.workflow.runtime_reason|default('Runtime не зміг продовжити виконання. Перевірте останню подію в терміналі та відновіть процес після виправлення причини.') }}"
+            tone="danger"
+        />
+    {% endif %}
+
     {% if summary.tokens is null and summary.agent_runs == 0 %}
         <twig:CosAlert
             title="LLM ще не запускався"
-            copy="Зараз система готує контекст для першого агента. Токени й вартість з’являться після першого виклику LLM."
-            tone="info"
+            copy="{{ summary.health == 'STALLED'
+                ? 'Перший AgentRun не був створений, тому виклику LLM і витрат токенів не було.'
+                : 'Зараз система готує контекст для першого агента. Токени й вартість з’являться після першого виклику LLM.' }}"
+            tone="{{ summary.health == 'STALLED' ? 'warning' : 'info' }}"
         />
     {% elseif summary.tokens is null %}
         <twig:CosAlert

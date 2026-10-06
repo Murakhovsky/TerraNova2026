@@ -10,6 +10,24 @@ foreach (['existsByIdempotencyKey', 'inputSnapshot', 'idempotencyKey', 'start(',
         throw new RuntimeException('Engineering AgentRun persistence missing '.$needle);
     }
 }
+
+foreach ([
+    "taskId: null",
+    "'_execution_task_id' => \$task->id",
+    "touchRuntime(\$workflowId, \$runId, null)",
+    "getConnection()->transactional(",
+    "'execution_task_id' => \$task->id",
+] as $needle) {
+    if (!str_contains($store, $needle)) {
+        throw new RuntimeException('Engineering AgentRun execution/task FK separation missing '.$needle);
+    }
+}
+if (str_contains($store, 'taskId: $task->id')) {
+    throw new RuntimeException('Engineering AgentRun still writes ephemeral execution task id into persisted task FK.');
+}
+if (!str_contains($store, "markRuntimeIssue(") || !str_contains($store, "'STALLED'")) {
+    throw new RuntimeException('Engineering AgentRun failure does not stall the workflow.');
+}
 if (strpos($orchestrator, 'agentRuns->start') > strpos($orchestrator, 'manager->execute')) {
     throw new RuntimeException('Engineering AgentRun intent must be persisted before LLM execution.');
 }
