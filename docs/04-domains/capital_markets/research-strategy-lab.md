@@ -1,19 +1,19 @@
 ---
-title: Research & Strategy Lab
-description: Governed Capital Markets research runtime for hypotheses, experiments, replay, OOS, strategy versioning, scorecards and promotion gates.
+title: Лабораторія досліджень і стратегій
+description: Керований дослідницький runtime Capital Markets для гіпотез, експериментів, replay, OOS, версіонування стратегій, scorecard та promotion gates.
 status: active
 updated: 2026-10-07
 kind: domain
 contract: domain-v1
 ---
 
-# Research & Strategy Lab
+# Лабораторія досліджень і стратегій
 
-Capital Markets `0.8.0` adds a governed research runtime above the existing Tokenized Equity H1/H2 and Crypto Spot / Perpetual H4/H5/H6 vertical slices.
+Capital Markets `0.8.0` додає керований дослідницький runtime поверх наявних vertical slices Tokenized Equity H1/H2 та Crypto Spot / Perpetual H4/H5/H6.
 
-The purpose is not to let AI "pick trades". The purpose is to make research reproducible, auditable and reusable.
+Мета цього шару не в тому, щоб AI «обирала угоди». Його задача — зробити дослідження відтворюваними, аудитованими та придатними до повторного використання.
 
-## Canonical lineage
+## Канонічний lineage
 
 ```text
 ResearchHypothesis
@@ -39,23 +39,23 @@ PAPER / LIMITED_LIVE decision boundary
 ResearchKnowledge / RejectedHypothesisRecord
 ```
 
-Completed results, frozen datasets and used strategy versions are evidence. They are not silently rewritten after an inconvenient result.
+Завершені результати, frozen datasets та використані версії стратегій є доказами. Вони не переписуються після незручного результату.
 
-## Historical replay
+## Історичний replay
 
-H4/H5/H6 replay uses historical `MarketSnapshot` data and reuses the production Capital Markets stack:
+Replay H4/H5/H6 використовує історичні `MarketSnapshot` і повторно використовує production stack Capital Markets:
 
 - `SpotPerpetualMarketStateFactory`;
 - `RelativeValueEconomicsCalculator`;
 - `RelativeValueOpportunityEvaluator`.
 
-The replay layer does not implement a second P&L formula.
+Replay layer не реалізує другу формулу P&L.
 
-Promotion-valid backtests require explicit fees and slippage. Replay guards reject data whose availability timestamp is after the simulated timestamp.
+Backtest, придатний для promotion, вимагає явних fees та slippage. Replay guards відхиляють дані, availability timestamp яких пізніший за simulated timestamp.
 
-## Isolation
+## Ізоляція даних
 
-Research data partitions are explicit:
+Дослідницькі partition задаються явно:
 
 ```text
 TRAIN
@@ -63,21 +63,21 @@ VALIDATION
 OUT_OF_SAMPLE
 ```
 
-They may not overlap. After an OOS result, tuning cannot reuse the same OOS period as if it were still unseen evidence. A failed or consumed OOS window requires a new strategy version and/or a new OOS period.
+Вони не можуть перекриватися. Після OOS tuning не може повторно використати той самий OOS period так, ніби це все ще unseen evidence. Невдалий або вже використаний OOS window вимагає нової StrategyVersion та/або нового OOS period.
 
-## Walk-forward
+## Ковзна перевірка Walk-forward
 
-The Lab can generate rolling train/test windows and aggregate stability across them. Parameter sensitivity analysis raises `OVERFIT_RISK` when performance exists only in a narrow parameter peak.
+Лабораторія генерує rolling train/test windows і агрегує стабільність результатів. Parameter sensitivity піднімає `OVERFIT_RISK`, якщо performance існує лише у вузькому parameter peak.
 
-## Strategy governance
+## Керування стратегіями
 
-`StrategyVersion` is immutable and carries logic/configuration identity.
+`StrategyVersion` є immutable та фіксує ідентичність logic/configuration.
 
-`StrategyScorecard` combines versioned dimensions such as profitability, consistency, risk, execution quality, capital efficiency, capacity, robustness, data confidence and operational complexity.
+`StrategyScorecard` об’єднує versioned dimensions: profitability, consistency, risk, execution quality, capital efficiency, capacity, robustness, data confidence та operational complexity.
 
-A high score does not bypass promotion criteria.
+Високий score не обходить promotion criteria.
 
-Supported promotion transitions are deterministic and auditable:
+Підтримувані переходи promotion є deterministic та auditable:
 
 ```text
 RESEARCH → BACKTEST
@@ -88,36 +88,36 @@ LIMITED_LIVE → VALIDATED
 VALIDATED → SCALE
 ```
 
-Live trading remains disabled in Capital Markets 0.8.0.
+Live Trading у Capital Markets 0.8.0 залишається вимкненим.
 
-## Negative research
+## Негативні результати досліджень
 
-Rejected hypotheses are retained with reason, evidence, experiments, market conditions, data limitations and optional reopen conditions.
+Відхилені гіпотези зберігаються разом із reason, evidence, experiments, market conditions, data limitations та optional reopen conditions.
 
-Reusable `ResearchKnowledge` includes both positive and negative findings. Duplicate detection checks new hypotheses against prior research, including rejected hypotheses.
+Повторно використовуваний `ResearchKnowledge` містить як позитивні, так і негативні findings. Duplicate detection перевіряє нові гіпотези проти попередніх досліджень, включно з rejected hypotheses.
 
-## Research Agent
+## Дослідницький агент
 
-The Capital Markets Research Agent is registered in the canonical Agent Runtime.
+Capital Markets Research Agent зареєстрований у канонічному Agent Runtime.
 
-It may:
+Він може:
 
-- inspect formal hypotheses, experiments and knowledge;
-- inspect H4/H5/H6 funding and basis evidence;
-- search prior research;
-- create hypothesis drafts;
-- create experiment drafts.
+- аналізувати formal hypotheses, experiments і knowledge;
+- аналізувати H4/H5/H6 funding та basis evidence;
+- шукати попередні дослідження;
+- створювати draft hypothesis;
+- створювати draft experiment.
 
-It may not:
+Він не може:
 
-- activate Live Trading;
-- change risk or capital limits;
-- mutate completed results;
-- mutate frozen datasets;
-- mutate used strategy versions;
-- override a promotion gate.
+- активувати Live Trading;
+- змінювати risk або capital limits;
+- мутувати completed results;
+- мутувати frozen datasets;
+- мутувати використані strategy versions;
+- обходити promotion gate.
 
-The rule is simple:
+Базове правило:
 
 ```text
 AI proposes.
@@ -125,7 +125,7 @@ Deterministic engines test.
 Data decides.
 ```
 
-## Operator surface
+## Операторська поверхня
 
 Workspace:
 
@@ -133,9 +133,9 @@ Workspace:
 /capital-markets/research
 ```
 
-The workspace shows hypotheses, experiments, backtest runtime, OOS runs, scorecards, promotion decisions, rejected hypotheses and reusable knowledge.
+Workspace показує hypotheses, experiments, backtest runtime, OOS runs, scorecards, promotion decisions, rejected hypotheses та reusable knowledge.
 
-Main API surfaces include:
+Основні API surfaces:
 
 ```text
 GET  /api/v1/capital-markets/research
@@ -150,20 +150,20 @@ POST /api/v1/capital-markets/strategies/{id}/scorecard
 POST /api/v1/capital-markets/strategies/{id}/promotion-request
 ```
 
-Mutations require tenant context, module activation, explicit Capital Markets research capability and CSRF.
+Mutations потребують tenant context, активованого модуля, явної Capital Markets research capability та CSRF.
 
-## Manual acceptance sequence
+## Послідовність ручного acceptance
 
-1. Open `/capital-markets/research`.
-2. Create an H4 or H5 hypothesis with explicit economic reason, edge source, success criteria and failure criteria.
-3. Freeze a dataset and verify that a deterministic snapshot hash is produced.
-4. Create Strategy v1 and an experiment against the frozen dataset.
-5. Queue/run a TRAIN backtest with explicit fees and slippage.
-6. Verify a persisted backtest run and immutable result.
-7. Create Strategy v2 if parameters or logic change.
-8. Run OOS with unchanged frozen criteria/parameters for that strategy version.
-9. Verify the OOS run is persisted and cannot be reused after tuning.
-10. Create a scorecard and request promotion.
-11. Verify deterministic criteria decide PASSED/FAILED/MANUAL_REVIEW_REQUIRED.
-12. Record positive or negative knowledge.
-13. Run the Research Agent and verify it can create only research drafts, not Live actions.
+1. Відкрити `/capital-markets/research`.
+2. Створити H4 або H5 hypothesis з явними economic reason, edge source, success criteria та failure criteria.
+3. Зафіксувати dataset і перевірити створення deterministic snapshot hash.
+4. Створити Strategy v1 та experiment для frozen dataset.
+5. Поставити в queue або запустити TRAIN backtest з явними fees та slippage.
+6. Перевірити persisted backtest run та immutable result.
+7. Створити Strategy v2, якщо parameters або logic змінилися.
+8. Запустити OOS з незмінними frozen criteria/parameters для цієї strategy version.
+9. Переконатися, що OOS run збережений і не може бути повторно використаний після tuning.
+10. Створити scorecard і promotion request.
+11. Перевірити deterministic рішення `PASSED / FAILED / MANUAL_REVIEW_REQUIRED`.
+12. Записати позитивний або негативний knowledge.
+13. Запустити Research Agent і перевірити, що він може створювати лише research drafts, а не Live actions.
