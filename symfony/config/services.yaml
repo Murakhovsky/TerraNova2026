@@ -1946,7 +1946,9 @@ services:
   Domains\CapitalMarkets\Domain\Service\BasisStatisticsEngine: ~
   Domains\CapitalMarkets\Application\Service\CryptoSpotPerpetualVerticalSliceService: ~
   Domains\CapitalMarkets\Domain\Service\RelativeValuePerformanceEngine: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValueExitEvaluator: ~
   Domains\CapitalMarkets\Application\Service\RelativeValuePaperExecutionService: ~
+  Domains\CapitalMarkets\Application\Service\RelativeValuePositionLifecycleService: ~
   Domains\CapitalMarkets\Application\Service\FundingSettlementService: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
   Domains\CapitalMarkets\Domain\Service\PositionProjector: ~
