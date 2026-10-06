@@ -1950,6 +1950,7 @@ services:
   Domains\CapitalMarkets\Application\Service\RelativeValuePaperExecutionService: ~
   Domains\CapitalMarkets\Application\Service\RelativeValuePositionLifecycleService: ~
   Domains\CapitalMarkets\Application\Service\FundingSettlementService: ~
+  Domains\CapitalMarkets\Application\Service\DerivativeResearchHistoryService: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
   Domains\CapitalMarkets\Domain\Service\PositionProjector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
