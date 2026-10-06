@@ -7,6 +7,8 @@ use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\ResearchReplayAdapterInterface;
 use InvalidArgumentException;
 use RuntimeException;
+use Kernel\Queue\Contract\JobQueueInterface;
+use Domains\CapitalMarkets\Automation\Job\ResearchBacktestJobHandler;
 use DateTimeImmutable;
 use Domains\CapitalMarkets\Domain\Research\WalkForwardEngine;
 use Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy;
@@ -27,6 +29,7 @@ final readonly class ResearchBacktestService
         private ResearchMetricsEngine $metrics,
         private ResearchConfidenceEngine $confidence,
         private ResearchTelemetry $telemetry,
+        private JobQueueInterface $queue,
     ){}
 
     public function queue(string $organizationId,array $specification):array
@@ -45,6 +48,25 @@ final readonly class ResearchBacktestService
         $record['budget']=$this->budget->estimate((array)$specification['configuration']);
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->lab->recordBacktestRun($organizationId,$record);
+
+        $correlation=trim((string)($specification['correlation_id']??''));
+        if($correlation==='')$correlation='CM-RESEARCH-BACKTEST-'.strtoupper(bin2hex(random_bytes(6)));
+        $jobId=$this->queue->enqueue(
+            $organizationId,
+            ResearchBacktestJobHandler::TYPE,
+            ['specification'=>$specification],
+            $correlation,
+            'research-backtest:'.(string)$specification['run_id'],
+            3,
+            300,
+        );
+        $record['queue_job_id']=$jobId;
+        $record['correlation_id']=$correlation;
+        $this->lab->recordBacktestRun($organizationId,$record);
+        $this->telemetry->metric($organizationId,'backtest_queued_total',1.0,[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+            'partition'=>$partition,
+        ]);
         return $record;
     }
 
