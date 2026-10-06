@@ -75,6 +75,10 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
         string $organizationId,string $venueId,string $assetKey,string $amount
     ):void;
 
+    public function debitPaperBalance(
+        string $organizationId,string $venueId,string $assetKey,string $amount
+    ):void;
+
     /** @return list<array<string,mixed>> */
     public function listOpportunities(string $organizationId,int $limit=200):array;
 
