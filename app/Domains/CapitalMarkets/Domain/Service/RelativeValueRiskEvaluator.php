@@ -28,6 +28,7 @@ final class RelativeValueRiskEvaluator
         $delta=$hedge->netUnderlyingExposure();
         if(DecimalMath::abs($delta)->compareTo($policy->maximumNetDelta)>0)$blocks[]='HEDGE_DRIFT_RISK';
         if($unhedgedTimeMs>$policy->maximumUnhedgedTimeMs)$blocks[]='HEDGE_BREACH';
+        if($liquidation->status===LiquidationRiskStatus::Unknown)$blocks[]='LIQUIDATION_MODEL_UNAVAILABLE';
         if($liquidation->status===LiquidationRiskStatus::Breach)$blocks[]='LIQUIDATION_RISK';
         if($liquidation->distanceToLiquidation!==null
             && $liquidation->distanceToLiquidation->compareTo($policy->minimumLiquidationDistance)<0){
