@@ -53,9 +53,9 @@ MarketState
 
 Система зберігає candidates, opportunities, risk assessments, paper executions, paper portfolio, venue balances та immutable ledger transactions. Кожен H1/H2 scan тепер також створює окремий hypothesis observation, включно зі спостереженнями без знайденого edge.
 
-Research layer агрегує Edge Funnel `observed scans → detected → executable → realized`, realized P&L та середній edge capture. Детермінована policy повертає один із verdicts: `INSUFFICIENT_SAMPLE`, `EDGE_NOT_OBSERVED`, `EDGE_OBSERVED_NOT_EXECUTABLE`, `EDGE_EXECUTABLE_UNVALIDATED`, `EDGE_VALIDATED`, `EDGE_NOT_VALIDATED`.
+Research layer агрегує Edge Funnel `observed scans → detected → executable → attempted → completed / invalidated`, realized P&L, completion rate та середній edge capture. Invalidated attempts не зникають зі статистики, а збиткові paper fills зберігаються як completed outcomes і входять у realized P&L. Детермінована policy повертає один із verdicts: `INSUFFICIENT_SAMPLE`, `EDGE_NOT_OBSERVED`, `EDGE_OBSERVED_NOT_EXECUTABLE`, `EDGE_EXECUTABLE_UNVALIDATED`, `EDGE_VALIDATED`, `EDGE_NOT_VALIDATED`.
 
-За замовчуванням остаточний verdict вимагає щонайменше 30 observations та 10 realized paper executions. Пороги доступні в research API як параметри читання, а не як прихована AI-оцінка.
+За замовчуванням остаточний verdict вимагає щонайменше 30 observations, 10 paper execution attempts і completion rate не нижче 50%. Пороги доступні в research API як параметри читання, а не як прихована AI-оцінка.
 
 API: `GET /api/v1/capital-markets/tokenized-equities/research`. Workspace показує funnel, realized evidence та verdict окремо для H1 і H2.
 
