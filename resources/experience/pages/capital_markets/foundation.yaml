@@ -170,7 +170,7 @@ pages:
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip, EntityList]
-      optional: [Toolbar, FilterBar, EmptyState, ErrorState]
+      optional: [Toolbar, EmptyState, ErrorState]
     primary_action: capital_markets.paper.execute
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
