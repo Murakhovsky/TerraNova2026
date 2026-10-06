@@ -9,8 +9,8 @@ use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 use DomainException;
 final class ExecutablePriceCalculator
 {
-    /** @return array{price:Decimal,filled_quantity:Decimal,notional:Decimal} */
-    public function vwap(MarketOrderBook $book,ExecutionSide $side,Decimal $requestedQuantity):array
+    /** @return array{price:Decimal,filled_quantity:Decimal,remaining_quantity:Decimal,notional:Decimal,fully_filled:bool} */
+    public function executableFill(MarketOrderBook $book,ExecutionSide $side,Decimal $requestedQuantity):array
     {
         if(!$requestedQuantity->isPositive())throw new DomainException('Requested quantity must be positive.');
         $levels=$side===ExecutionSide::Buy?$book->asks:$book->bids;
@@ -24,7 +24,21 @@ final class ExecutablePriceCalculator
             $filled=DecimalMath::add($filled,$take);
             $remaining=DecimalMath::subtract($remaining,$take);
         }
-        if($filled->compareTo($requestedQuantity)<0)throw new DomainException('INSUFFICIENT_LIQUIDITY');
-        return ['price'=>DecimalMath::divide($notional,$filled,12),'filled_quantity'=>$filled,'notional'=>$notional];
+        if(!$filled->isPositive())throw new DomainException('ZERO_LIQUIDITY');
+        return [
+            'price'=>DecimalMath::divide($notional,$filled,12),
+            'filled_quantity'=>$filled,
+            'remaining_quantity'=>$remaining,
+            'notional'=>$notional,
+            'fully_filled'=>$remaining->isZero(),
+        ];
+    }
+
+    /** @return array{price:Decimal,filled_quantity:Decimal,notional:Decimal} */
+    public function vwap(MarketOrderBook $book,ExecutionSide $side,Decimal $requestedQuantity):array
+    {
+        $fill=$this->executableFill($book,$side,$requestedQuantity);
+        if(!$fill['fully_filled'])throw new DomainException('INSUFFICIENT_LIQUIDITY');
+        return ['price'=>$fill['price'],'filled_quantity'=>$fill['filled_quantity'],'notional'=>$fill['notional']];
     }
 }
