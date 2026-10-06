@@ -1,5 +1,5 @@
 ---
-title: Tokenized Equity Vertical Slice V0.5
+title: Tokenized Equity Vertical Slice V0.6
 description: "Опис першого фінансового vertical slice Capital Markets для H1/H2 research, deterministic risk та guarded paper execution."
 domain: capital_markets
 status: implemented
@@ -8,7 +8,7 @@ kind: domain
 contract: domain-v1
 ---
 
-# Вертикальний зріз Tokenized Equity V0.5
+# Вертикальний зріз Tokenized Equity V0.6
 
 Цей пакет реалізує детерміноване фінансове ядро для **H1 Tokenized Equity Dislocation** та **H2 Cross-Venue Tokenized Equity Arbitrage**.
 
@@ -46,12 +46,14 @@ MarketState
 - H1 залишається research-only, доки немає реального executable hedge venue;
 - Live Trading і withdrawals залишаються вимкненими.
 
-## Реалізований результат V0.5
+## Реалізований результат V0.6
 
 Система вже вміє зберігати candidates, opportunities, risk assessments, paper executions, paper portfolio, venue balances і immutable ledger transactions; має API та окремий Tokenized Equity workspace; повторно перевіряє ринок перед paper execution та вимірює realized P&L і edge capture.
 
 V0.5 додає append-only `HypothesisObservation` journal для кожного SCAN, EVALUATION і EXECUTION attempt. На його основі детерміновано будується Edge Funnel `observable scan → detected → executable → attempted → realized / invalidated`, накопичуються expected/realized P&L samples і формується sample-gated verdict для H1/H2. Stale, untrusted, closed, skewed або otherwise unusable market observations зберігаються як unobservable evidence, але не входять у sample denominator. Failed preflight/capital/inventory attempts також лишаються в journal, а verdict враховує completion rate, тому кілька успішних fills не можуть приховати масову кількість невдалих спроб. Research replay не змінює стан: однаковий journal дає однаковий summary та `dataset_hash`.
 
+V0.6 додає керований Scanner Universe: кожен target явно задає H1/H2, market pair, venues/reference source, instruments, fees і detector options. Batch runner обробляє targets у детермінованому порядку `priority → target_id`, ізолює помилку одного target від решти universe, зберігає run history і має idempotency key. Scheduler окремо gated через `COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_ENABLED=0` за замовчуванням і повторно перевіряє module + MarketData + TokenizedEquity feature gates.
+
 ## Наступний етап
 
-Наступний пакет має закрити historical MarketState replay/backtesting, automated scanning universe, execution lifecycle/partial-fill hardening, position/exposure lifecycle та operational observability. Live execution не входить у цей етап.
+Наступний пакет має закрити historical MarketState replay/backtesting, execution lifecycle/partial-fill hardening, position/exposure lifecycle та operational observability. Live execution не входить у цей етап.
