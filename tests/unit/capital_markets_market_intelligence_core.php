@@ -44,8 +44,8 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $assert(count(MarketSourceRole::cases())===5,'Market source role vocabulary drifted.');
-$assert(count(MarketDataCapability::cases())===11,'Market-data capability vocabulary drifted.');
-$assert(count(MarketEventType::cases())===12,'Canonical market event vocabulary drifted.');
+$assert(count(MarketDataCapability::cases())===14,'Market-data capability vocabulary drifted.');
+$assert(count(MarketEventType::cases())===13,'Canonical market event vocabulary drifted.');
 $assert(count(MarketConnectionState::cases())===9,'Connection-state vocabulary drifted.');
 
 $assert(DecimalMath::add(Decimal::fromString('99999999999999999999.9'),Decimal::fromString('0.1'))->value()==='100000000000000000000','Decimal add lost precision.');
