@@ -5,11 +5,12 @@ namespace Domains\CapitalMarkets\Domain\Research;
 
 use DateInterval;
 use DateTimeImmutable;
+use Domains\CapitalMarkets\Domain\Value\Decimal;
+use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 use InvalidArgumentException;
 
 final class WalkForwardEngine
 {
-    /** @return list<array{train:array{from:string,to:string},test:array{from:string,to:string}}> */
     public function windows(
         DateTimeImmutable $from,
         DateTimeImmutable $to,
@@ -31,7 +32,6 @@ final class WalkForwardEngine
             $trainTo=$cursor->add($trainInterval);
             $testTo=$trainTo->add($testInterval);
             if($testTo>$to)break;
-
             $windows[]=[
                 'train'=>['from'=>$cursor->format(DATE_ATOM),'to'=>$trainTo->format(DATE_ATOM)],
                 'test'=>['from'=>$trainTo->format(DATE_ATOM),'to'=>$testTo->format(DATE_ATOM)],
@@ -45,18 +45,40 @@ final class WalkForwardEngine
 
     public function summarize(array $results):array
     {
-        if($results===[])return ['windows'=>0,'positive_windows'=>0,'stability'=>0,'average_score'=>0];
-        $scores=array_map(static fn(array $r):float=>(float)($r['score']??0),$results);
-        $positive=count(array_filter($scores,static fn(float $v):bool=>$v>0));
-        $mean=array_sum($scores)/count($scores);
-        $variance=array_sum(array_map(static fn(float $v):float=>($v-$mean)**2,$scores))/count($scores);
-        $stdev=sqrt($variance);
-        $stability=$mean==0.0?0:max(0,min(100,(int)round(100-(100*$stdev/max(abs($mean),0.000001)))));
+        if($results===[])return ['windows'=>0,'positive_windows'=>0,'positive_ratio'=>'0','stability'=>0,'average_score'=>'0'];
+
+        $scores=[];$sum=Decimal::fromString('0');$positive=0;
+        foreach($results as $result){
+            $score=Decimal::fromString((string)($result['score']??0));
+            $scores[]=$score;
+            $sum=DecimalMath::add($sum,$score);
+            if($score->isPositive())$positive++;
+        }
+        $mean=DecimalMath::divide($sum,Decimal::fromString((string)count($scores)),12);
+        $deviation=Decimal::fromString('0');
+        foreach($scores as $score)$deviation=DecimalMath::add($deviation,DecimalMath::abs(DecimalMath::subtract($score,$mean)));
+        $meanDeviation=DecimalMath::divide($deviation,Decimal::fromString((string)count($scores)),12);
+
+        $stability=100;
+        $meanAbs=DecimalMath::abs($mean);
+        if($meanAbs->isPositive()){
+            $ratioBps=DecimalMath::divide(
+                DecimalMath::multiplyInteger($meanDeviation,10000),
+                $meanAbs,
+                0
+            );
+            $penalty=min(100,(int)DecimalMath::divide($ratioBps,Decimal::fromString('100'),0)->value());
+            $stability=max(0,100-$penalty);
+        }elseif(!$meanDeviation->isZero()){
+            $stability=0;
+        }
+
         return [
             'windows'=>count($results),
             'positive_windows'=>$positive,
-            'positive_ratio'=>$positive/count($results),
-            'average_score'=>$mean,
+            'positive_ratio'=>DecimalMath::divide(Decimal::fromString((string)$positive),Decimal::fromString((string)count($results)),8)->value(),
+            'average_score'=>$mean->value(),
+            'mean_absolute_deviation'=>$meanDeviation->value(),
             'stability'=>$stability,
         ];
     }
