@@ -1922,6 +1922,16 @@ services:
   Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository
 
+  Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelativeValueResearchRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelativeValueResearchRepository
+
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
