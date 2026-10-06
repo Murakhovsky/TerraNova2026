@@ -33,17 +33,34 @@ final readonly class EngineeringPolicyEngine
             if (!$this->hasCompleted($history, AgentRole::DEVELOPER) || !$this->hasCompleted($history, AgentRole::REVIEWER)) {
                 throw new RuntimeException('QA Executor requires completed Developer and Reviewer executions.');
             }
+            $developer = $this->latestCompleted($history, AgentRole::DEVELOPER);
+            $reviewer = $this->latestCompleted($history, AgentRole::REVIEWER);
+            if ($developer === null || $reviewer === null) {
+                throw new RuntimeException('Independent approval identities are unavailable.');
+            }
+            $developerActor = trim((string) ($developer['actor_id'] ?? $developer['agent_id'] ?? ''));
+            $reviewerActor = trim((string) ($reviewer['actor_id'] ?? $reviewer['agent_id'] ?? ''));
+            if ($developerActor === '' || $reviewerActor === '' || hash_equals($developerActor, $reviewerActor)) {
+                throw new RuntimeException('No Self Approval violation: Developer and Reviewer must have distinct execution actors.');
+            }
         }
     }
 
     /** @param list<array<string,mixed>> $history */
     private function hasCompleted(array $history, AgentRole $role): bool
     {
+        return $this->latestCompleted($history, $role) !== null;
+    }
+
+    /** @param list<array<string,mixed>> $history @return array<string,mixed>|null */
+    private function latestCompleted(array $history, AgentRole $role): ?array
+    {
+        $match = null;
         foreach ($history as $run) {
             if (($run['role'] ?? null) === $role->value && strtoupper((string) ($run['status'] ?? '')) === 'COMPLETED') {
-                return true;
+                $match = $run;
             }
         }
-        return false;
+        return $match;
     }
 }
