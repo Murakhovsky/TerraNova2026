@@ -88,6 +88,20 @@ $expectFailure(
     ]]),
     'QA Executor escaped test roots.',
 );
+$tools->assertRepositoryMutationAllowed(AgentRole::DOCUMENTATION_SPECIALIST, [[
+    'path' => 'docs/06-ai-agents/example.md',
+    'operation' => 'UPDATE',
+    'content' => '# Updated',
+]]);
+$expectFailure(
+    static fn () => $tools->assertRepositoryMutationAllowed(AgentRole::DOCUMENTATION_SPECIALIST, [[
+        'path' => 'symfony/src/DocsEscape.php',
+        'operation' => 'CREATE',
+        'content' => '<?php',
+    ]]),
+    'Documentation Specialist escaped docs-only boundary.',
+);
+
 $expectFailure(
     static fn () => $tools->assertRepositoryMutationAllowed(AgentRole::REVIEWER, [[
         'path' => 'symfony/src/ReviewMutation.php',
