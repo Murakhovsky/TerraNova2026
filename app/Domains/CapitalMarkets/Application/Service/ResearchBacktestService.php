@@ -15,6 +15,8 @@ use Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy;
 use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
 use Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine;
 use Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine;
+use Domains\CapitalMarkets\Domain\Value\Decimal;
+use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 
 final readonly class ResearchBacktestService
 {
@@ -192,12 +194,16 @@ final readonly class ResearchBacktestService
         $metrics=$this->metrics->calculate((array)($replay['rows']??[]));
         $sampleCount=(int)($replay['sample_count']??$metrics['financial']['sample_count']??0);
         $minimumSample=max(1,(int)($specification['minimum_sample']??100));
-        $dataQuality=$sampleCount<=0?0:max(0,min(100,(int)round(100*(1-((int)($replay['skipped_count']??0)/max(1,$sampleCount+(int)($replay['skipped_count']??0)))))));
+        $skipped=max(0,(int)($replay['skipped_count']??0));
+        $observed=max(1,$sampleCount+$skipped);
+        $dataQuality=max(0,min(100,intdiv($sampleCount*100,$observed)));
+        $validatedRate=Decimal::fromString((string)($replay['validated_rate']??'0'));
+        $validatedPercent=DecimalMath::multiplyInteger($validatedRate,100);
         $confidence=$this->confidence->calculate(
             $sampleCount,
             $minimumSample,
             $dataQuality,
-            (int)round(100*(float)($replay['validated_rate']??0)),
+            max(0,min(100,(int)$validatedPercent->value())),
             (int)($specification['regime_diversity_score']??50),
             $this->fidelityScore((string)($replay['execution_fidelity']??'LIMITED')),
             (int)($specification['result_stability_score']??50),
@@ -302,9 +308,9 @@ final readonly class ResearchBacktestService
                 'window'=>$index+1,
                 'train'=>$window['train'],
                 'test'=>$window['test'],
-                'score'=>(float)($replay['expected_pnl_average']??0),
+                'score'=>(string)($replay['expected_pnl_average']??'0'),
                 'sample_count'=>(int)($replay['sample_count']??0),
-                'validated_rate'=>(float)($replay['validated_rate']??0),
+                'validated_rate'=>(string)($replay['validated_rate']??'0'),
                 'replay'=>$replay,
             ];
         }
@@ -346,9 +352,9 @@ final readonly class ResearchBacktestService
     {
         $sample=(int)($replay['sample_count']??0);
         if($sample<1)return 'INCOMPLETE';
-        $rate=(float)($replay['validated_rate']??0);
-        if($rate>=0.6)return 'POSITIVE';
-        if($rate<=0.1)return 'NEGATIVE';
+        $rate=Decimal::fromString((string)($replay['validated_rate']??'0'));
+        if($rate->compareTo(Decimal::fromString('0.6'))>=0)return 'POSITIVE';
+        if($rate->compareTo(Decimal::fromString('0.1'))<=0)return 'NEGATIVE';
         return 'MIXED';
     }
 }
