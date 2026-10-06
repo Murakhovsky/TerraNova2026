@@ -121,7 +121,7 @@ pages:
     product:
       primary_goal: "Configure read-only market-data sources, inspect source health and verify trusted trading/reference MarketState."
       page_purpose: "Operator workspace for Market Intelligence source configuration, subscriptions, manual polling and current state without trading execution."
-    archetype: operations_dashboard
+    archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip, EntityList]
       optional: [ActionBar, EmptyState, ErrorState, ContextPanel]
