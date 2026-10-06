@@ -60,6 +60,15 @@ foreach(['reconcile(','reconciliation_runs_total','PositionReconciliationError',
     $assert(str_contains($read,$needle),'Read/reconciliation acceptance contract missing: '.$needle);
 }
 
+$universe=(string)file_get_contents(
+    $root.'/app/Domains/CapitalMarkets/Application/Service/TokenizedEquityUniverseScanner.php'
+);
+foreach(['TokenizedEquityUniverse::fromArray','allowsHypothesis','allowsUnderlying','allowsToken','allowsVenue'] as $needle){
+    $assert(str_contains($universe,$needle),'Curated universe scanner contract missing: '.$needle);
+}
+$assert(is_file($root.'/app/Domains/CapitalMarkets/Domain/Opportunity/TokenizedEquityUniverse.php'),
+    'Configurable TokenizedEquityUniverse model is missing.');
+
 $vertical=(string)file_get_contents(
     $root.'/app/Domains/CapitalMarkets/Application/Service/TokenizedEquityVerticalSliceService.php'
 );
