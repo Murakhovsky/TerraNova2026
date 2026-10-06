@@ -148,6 +148,24 @@ final class AgentCapabilityRegistry
 
     private function scalar(string $value): mixed
     {
+        $value = trim($value);
+        if (str_starts_with($value, '{') && str_ends_with($value, '}')) {
+            $inner = trim(substr($value, 1, -1));
+            if ($inner === '') return [];
+            $map = [];
+            foreach (explode(',', $inner) as $entry) {
+                [$key, $item] = array_pad(explode(':', $entry, 2), 2, '');
+                $key = trim($key, " \t\n\r\0\x0B\"'");
+                if ($key !== '') $map[$key] = $this->scalar($item);
+            }
+            return $map;
+        }
+        if (str_starts_with($value, '[') && str_ends_with($value, ']')) {
+            $inner = trim(substr($value, 1, -1));
+            if ($inner === '') return [];
+            return array_values(array_map(fn (string $item): mixed => $this->scalar($item), explode(',', $inner)));
+        }
+
         $value = trim($value, " \t\n\r\0\x0B\"'");
         return match (strtolower($value)) {
             'true' => true,
