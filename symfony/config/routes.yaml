@@ -3027,3 +3027,9 @@ cos_api_v1_capital_markets_research_knowledge:
   path: /api/v1/capital-markets/research/knowledge
   controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::knowledge
   methods: [POST]
+
+
+capital_markets_research_lab:
+  path: /capital-markets/research
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::researchLab
+  methods: [GET, HEAD]
