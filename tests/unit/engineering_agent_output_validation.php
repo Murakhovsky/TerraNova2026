@@ -37,9 +37,16 @@ $valid = [
     'risks' => [],
     'assumptions' => [],
     'open_questions' => [],
-    'decision' => ['type' => 'RUN_AGENT', 'agent' => 'principal_architect', 'reason' => 'mandatory'],
 ];
 $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $valid);
+
+$productWithDecision = $valid;
+$productWithDecision['decision'] = ['type' => 'RUN_AGENT', 'agent' => 'PRINCIPAL_ARCHITECT', 'reason' => 'Product must not orchestrate.'];
+try {
+    $validator->validate(AgentRole::PRODUCT_REQUIREMENTS, $productWithDecision);
+    throw new RuntimeException('Product workflow decision authority was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
 
 $managerHuman = $valid;
 $managerHuman['status'] = 'HUMAN_DECISION_REQUIRED';
