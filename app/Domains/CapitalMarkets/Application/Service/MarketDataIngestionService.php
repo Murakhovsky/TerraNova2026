@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DomainException;
 use Domains\CapitalMarkets\Application\Contract\CanonicalMarketEventRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsEventPublisherInterface;
+use Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketDataNormalizerInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketPartitionLockInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketQualityMetricRepositoryInterface;
@@ -42,7 +43,7 @@ use Kernel\Transaction\Contract\TransactionManagerInterface;
 use RuntimeException;
 use Throwable;
 
-final readonly class MarketDataIngestionService
+final readonly class MarketDataIngestionService implements MarketDataIngestionInterface
 {
     public function __construct(
         private MarketSourceRepositoryInterface $sources,

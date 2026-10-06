@@ -1829,7 +1829,39 @@ services:
   Domains\CapitalMarkets\Application\Contract\MarketDataNormalizerInterface:
     alias: Domains\CapitalMarkets\Application\Service\MarketDataNormalizer
 
-  Domains\CapitalMarkets\Application\Service\MarketDataDecoderRegistry: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Http\SafeMarketJsonHttpClient: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketJsonHttpClientInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Http\SafeMarketJsonHttpClient
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Security\MarketSourceCredentialResolver: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitTickerPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveQuotePayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder: ~
+
+  Domains\CapitalMarkets\Application\Service\MarketDataAdapterRegistry:
+    arguments:
+      $adapters:
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
+
+  Domains\CapitalMarkets\Application\Service\MarketDataDecoderRegistry:
+    arguments:
+      $decoders:
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketDataProviderAvailabilityInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability
+
+  Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
 
   Domains\CapitalMarkets\Domain\Service\MarketDataQualityEngine: ~
   Domains\CapitalMarkets\Domain\Service\OrderBookRebuilder: ~
@@ -1842,6 +1874,9 @@ services:
     alias: App\Infrastructure\CapitalMarkets\MySqlMarketPartitionLock
 
   Domains\CapitalMarkets\Application\Service\MarketDataIngestionService: ~
+
+  Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface:
+    alias: Domains\CapitalMarkets\Application\Service\MarketDataIngestionService
 
   Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary:
     alias: Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService

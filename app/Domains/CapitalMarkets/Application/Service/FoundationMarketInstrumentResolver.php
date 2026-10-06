@@ -9,6 +9,8 @@ use Domains\CapitalMarkets\Domain\Contract\InstrumentRepository;
 use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentIdentifier;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentIdentifierType;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
+use Domains\CapitalMarkets\Domain\MarketData\MarketDataInstrumentTarget;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor;
 
 final readonly class FoundationMarketInstrumentResolver implements MarketInstrumentResolverInterface
@@ -47,5 +49,37 @@ final readonly class FoundationMarketInstrumentResolver implements MarketInstrum
             }
         }
         return null;
+    }
+
+    public function target(
+        string $organizationId,
+        MarketSourceDescriptor $source,
+        InstrumentId $instrumentId,
+    ):?MarketDataInstrumentTarget{
+        $instrument=$this->instruments->get($organizationId,$instrumentId);
+        if($instrument===null)return null;
+
+        if($source->venueId!==null){
+            foreach($this->venues->instruments($organizationId,$source->venueId) as $mapping){
+                if(!$mapping->instrumentId->equals($instrumentId))continue;
+                return new MarketDataInstrumentTarget($instrument,$mapping,$mapping->venueSymbol);
+            }
+            return null;
+        }
+
+        $identifiers=$this->instruments->identifiers($organizationId,$instrumentId);
+        foreach([
+            [InstrumentIdentifierType::ProviderId,$source->id->value()],
+            [InstrumentIdentifierType::Ticker,$source->id->value()],
+            [InstrumentIdentifierType::ProviderId,null],
+            [InstrumentIdentifierType::Ticker,null],
+        ] as [$type,$identifierSource]){
+            foreach($identifiers as $identifier){
+                if($identifier->type!==$type||$identifier->source!==$identifierSource)continue;
+                return new MarketDataInstrumentTarget($instrument,null,$identifier->value);
+            }
+        }
+
+        return new MarketDataInstrumentTarget($instrument,null,$instrument->symbol);
     }
 }
