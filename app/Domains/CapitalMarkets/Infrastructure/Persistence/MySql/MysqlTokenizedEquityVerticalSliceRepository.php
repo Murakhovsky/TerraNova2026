@@ -84,6 +84,120 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         )->execute(['org'=>$organizationId,'id'=>$transactionId,'idempotency'=>$idempotencyKey,'payload'=>$this->json($payload)]);
     }
 
+    public function initializePaperPortfolio(string $organizationId,string $currency,string $initialCapital):array
+    {
+        $this->connection->prepare(
+            'INSERT INTO tn_capital_market_paper_portfolios
+             (organization_id,currency,initial_capital,available_capital,reserved_capital,realized_pnl)
+             VALUES (:org,:currency,:capital,:capital,0,0)
+             ON DUPLICATE KEY UPDATE currency=VALUES(currency),initial_capital=VALUES(initial_capital),
+             available_capital=VALUES(initial_capital),reserved_capital=0,realized_pnl=0'
+        )->execute(['org'=>$organizationId,'currency'=>$currency,'capital'=>$initialCapital]);
+        return $this->paperPortfolio($organizationId)??[];
+    }
+
+    public function paperPortfolio(string $organizationId):?array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT currency,initial_capital,available_capital,reserved_capital,realized_pnl,updated_at
+             FROM tn_capital_market_paper_portfolios WHERE organization_id=:org LIMIT 1'
+        );
+        $statement->execute(['org'=>$organizationId]);
+        $row=$statement->fetch(PDO::FETCH_ASSOC);
+        return is_array($row)?$row:null;
+    }
+
+    public function reserveCapital(
+        string $organizationId,string $reservationId,string $opportunityId,string $amount,string $expiresAt
+    ):bool{
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $reserve=$this->connection->prepare(
+                'UPDATE tn_capital_market_paper_portfolios
+                 SET available_capital=available_capital-:amount,reserved_capital=reserved_capital+:amount
+                 WHERE organization_id=:org AND available_capital>=:amount'
+            );
+            $reserve->execute(['amount'=>$amount,'org'=>$organizationId]);
+            if($reserve->rowCount()!==1){
+                if($ownsTransaction)$this->connection->rollBack();
+                return false;
+            }
+            $this->connection->prepare(
+                'INSERT INTO tn_capital_market_capital_reservations
+                 (organization_id,reservation_id,opportunity_id,amount,status,expires_at)
+                 VALUES (:org,:id,:opportunity,:amount,\'RESERVED\',:expires_at)'
+            )->execute([
+                'org'=>$organizationId,'id'=>$reservationId,'opportunity'=>$opportunityId,'amount'=>$amount,
+                'expires_at'=>$this->mysqlDate($expiresAt),
+            ]);
+            if($ownsTransaction)$this->connection->commit();
+            return true;
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
+    public function releaseReservation(string $organizationId,string $reservationId):void
+    {
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $select=$this->connection->prepare(
+                'SELECT amount,status FROM tn_capital_market_capital_reservations
+                 WHERE organization_id=:org AND reservation_id=:id FOR UPDATE'
+            );
+            $select->execute(['org'=>$organizationId,'id'=>$reservationId]);
+            $row=$select->fetch(PDO::FETCH_ASSOC);
+            if(is_array($row)&&$row['status']==='RESERVED'){
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_capital_reservations SET status=\'RELEASED\'
+                     WHERE organization_id=:org AND reservation_id=:id AND status=\'RESERVED\''
+                )->execute(['org'=>$organizationId,'id'=>$reservationId]);
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_portfolios
+                     SET available_capital=available_capital+:amount,reserved_capital=reserved_capital-:amount
+                     WHERE organization_id=:org'
+                )->execute(['amount'=>(string)$row['amount'],'org'=>$organizationId]);
+            }
+            if($ownsTransaction)$this->connection->commit();
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
+    public function completeReservation(string $organizationId,string $reservationId,string $realizedPnl):void
+    {
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $select=$this->connection->prepare(
+                'SELECT amount,status FROM tn_capital_market_capital_reservations
+                 WHERE organization_id=:org AND reservation_id=:id FOR UPDATE'
+            );
+            $select->execute(['org'=>$organizationId,'id'=>$reservationId]);
+            $row=$select->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($row)||$row['status']!=='RESERVED')throw new \DomainException('CAPITAL_RESERVATION_NOT_ACTIVE');
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_capital_reservations SET status=\'CONSUMED\'
+                 WHERE organization_id=:org AND reservation_id=:id'
+            )->execute(['org'=>$organizationId,'id'=>$reservationId]);
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_paper_portfolios
+                 SET available_capital=available_capital+:amount+:pnl,
+                     reserved_capital=reserved_capital-:amount,
+                     realized_pnl=realized_pnl+:pnl
+                 WHERE organization_id=:org'
+            )->execute(['amount'=>(string)$row['amount'],'pnl'=>$realizedPnl,'org'=>$organizationId]);
+            if($ownsTransaction)$this->connection->commit();
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
     public function listOpportunities(string $organizationId,int $limit=200):array
     {
         $limit=max(1,min(1000,$limit));
