@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Domains\CapitalMarkets\Domain\Research\HypothesisResearchEngine;
+use Domains\CapitalMarkets\Domain\Value\Decimal;
 
 require dirname(__DIR__,2).'/vendor/autoload.php';
 
