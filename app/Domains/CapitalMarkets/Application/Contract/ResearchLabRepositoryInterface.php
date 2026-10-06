@@ -21,6 +21,7 @@ interface ResearchLabRepositoryInterface
 
     public function saveResult(string $organizationId,array $record):void;
     public function getResultForExperiment(string $organizationId,string $experimentId):?array;
+    public function listResults(string $organizationId,int $limit=200):array;
 
     public function savePromotionDecision(string $organizationId,array $record):void;
     public function listPromotionDecisions(string $organizationId,string $strategyVersionId):array;
