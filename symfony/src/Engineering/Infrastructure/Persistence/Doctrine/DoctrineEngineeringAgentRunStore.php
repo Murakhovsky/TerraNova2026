@@ -49,13 +49,15 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             idempotencyKey: $task->idempotencyKey,
             modelProvider: 'pending',
             model: 'pending',
-            inputSnapshot: $task->inputSnapshot,
+            inputSnapshot: array_merge($task->inputSnapshot, [
+                '_execution_task_id' => $task->id,
+            ]),
             status: 'RUNNING',
             technicalRetry: 0,
             logicalAttempt: max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
             traceId: $runTraceId,
             startedAt: new DateTimeImmutable(),
-            taskId: $task->id,
+            taskId: null,
         ));
         $this->entityManager->flush();
         $this->events->append(
@@ -74,7 +76,10 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             $runId,
             $runTraceId,
         );
-        $this->workflows->touchRuntime($workflowId, $runId, $task->id);
+        // EngineeringAgentTask::id is an execution correlation id, not a persisted
+        // cos_engineering_tasks.id. Persisting it into task_id/current_task_id violates
+        // their foreign keys for stage-level agents (Product, QA Planner, Architect, ...).
+        $this->workflows->touchRuntime($workflowId, $runId, null);
         return $runId;
     }
 
