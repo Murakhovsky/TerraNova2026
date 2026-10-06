@@ -69,17 +69,23 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_subscriptions (
     PRIMARY KEY (id),
     UNIQUE KEY uq_cm_market_subscription_id (organization_id,subscription_id),
     UNIQUE KEY uq_cm_market_subscription_target (target_fingerprint),
-    KEY ix_cm_market_subscription_active (organization_id,source_id,status),
-    CONSTRAINT fk_cm_market_subscription_source FOREIGN KEY (organization_id,source_id)
-        REFERENCES tn_capital_market_data_sources (organization_id,source_id)
-        ON UPDATE RESTRICT ON DELETE CASCADE,
-    CONSTRAINT fk_cm_market_subscription_venue FOREIGN KEY (organization_id,venue_id)
-        REFERENCES tn_capital_market_venues (organization_id,venue_id)
-        ON UPDATE RESTRICT ON DELETE RESTRICT,
-    CONSTRAINT fk_cm_market_subscription_instrument FOREIGN KEY (organization_id,instrument_id)
-        REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
-        ON UPDATE RESTRICT ON DELETE RESTRICT
+    KEY ix_cm_market_subscription_active (organization_id,source_id,status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE tn_capital_market_subscriptions
+    ADD CONSTRAINT fk_cm_market_subscription_source FOREIGN KEY (organization_id,source_id)
+        REFERENCES tn_capital_market_data_sources (organization_id,source_id)
+        ON UPDATE RESTRICT ON DELETE CASCADE;
+
+ALTER TABLE tn_capital_market_subscriptions
+    ADD CONSTRAINT fk_cm_market_subscription_venue FOREIGN KEY (organization_id,venue_id)
+        REFERENCES tn_capital_market_venues (organization_id,venue_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE tn_capital_market_subscriptions
+    ADD CONSTRAINT fk_cm_market_subscription_instrument FOREIGN KEY (organization_id,instrument_id)
+        REFERENCES tn_capital_market_instruments (organization_id,instrument_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 INSERT IGNORE INTO tn_migrations (migration)
 VALUES ('20261006_000125_capital_markets_market_sources');
