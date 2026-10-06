@@ -303,6 +303,23 @@
       {% else %}
         <p>No paper portfolio initialized. Use the Tokenized Equity API to initialize research capital before paper execution.</p>
       {% endif %}
+      {% if portfolio and portfolio.venue_balances|default([]) is not empty %}
+        <hr>
+        <h3>Pre-funded venue balances</h3>
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Venue</th><th>Asset / instrument</th><th>Available</th><th>Reserved</th></tr></thead>
+          <tbody>
+          {% for balance in portfolio.venue_balances %}
+            <tr>
+              <td>{{ balance.venue_id }}</td>
+              <td>{{ balance.asset_key }}</td>
+              <td>{{ balance.available_amount }}</td>
+              <td>{{ balance.reserved_amount }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
     </section>
 
     <section class="cos-panel">
