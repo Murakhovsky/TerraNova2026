@@ -49,12 +49,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -94,12 +89,7 @@
         "tasks": [],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -144,12 +134,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -1229,12 +1214,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -1279,12 +1259,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -1327,12 +1302,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -1379,12 +1349,7 @@
         ],
         "risks": [],
         "assumptions": [],
-        "open_questions": [],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        "open_questions": []
       }
     },
     {
@@ -3824,12 +3789,7 @@
             ],
             "recommended_option": "A"
           }
-        ],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        ]
       }
     },
     {
@@ -3883,12 +3843,7 @@
             "options": [],
             "recommended_option": "A"
           }
-        ],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        ]
       }
     },
     {
@@ -3949,12 +3904,7 @@
             ],
             "recommended_option": "C"
           }
-        ],
-        "decision": {
-          "type": "RUN_AGENT",
-          "agent": "PRINCIPAL_ARCHITECT",
-          "reason": "Specification ready."
-        }
+        ]
       }
     }
   ]
