@@ -40,8 +40,8 @@ generated: true
 ### Capital Markets (`capital_markets`)
 
 - `capital-markets.market-data-to-trusted-state`
-- `capital-markets.tokenized-equity-paper-cycle`
 - `capital-markets.research-strategy-lab`
+- `capital-markets.tokenized-equity-paper-cycle`
 
 ### Construction (`construction`)
 
