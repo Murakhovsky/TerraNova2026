@@ -26,13 +26,13 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_scan_runs (
     failed_count INT UNSIGNED NOT NULL DEFAULT 0,
     result_json JSON NOT NULL,
     started_at DATETIME(6) NOT NULL,
-    completed_at DATETIME(6) NOT NULL,
+    completed_at DATETIME(6) NULL,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
     UNIQUE KEY uq_cm_scan_run (organization_id,run_id),
     UNIQUE KEY uq_cm_scan_run_idempotency (organization_id,idempotency_key),
     KEY ix_cm_scan_run_time (organization_id,started_at),
-    CONSTRAINT chk_cm_scan_run_status CHECK (status IN ('COMPLETED','PARTIAL','FAILED'))
+    CONSTRAINT chk_cm_scan_run_status CHECK (status IN ('RUNNING','COMPLETED','PARTIAL','FAILED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 UPDATE cos_module_installations
