@@ -25,10 +25,12 @@ interface MarketDataAdapterInterface
         MarketDataInstrumentTarget $target,
     ):?string;
 
+    /** @param list<MarketDataCapability> $capabilities */
     public function getSnapshot(
         string $organizationId,
         MarketSourceDescriptor $source,
         MarketDataInstrumentTarget $target,
+        array $capabilities,
     ):MarketDataBatch;
 
     public function getHealth(string $organizationId,MarketSourceDescriptor $source):MarketSourceHealth;

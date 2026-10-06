@@ -24,7 +24,7 @@ foreach($required as $relative){
 }
 
 $adapter=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Domain/Contract/MarketDataAdapterInterface.php');
-foreach(['string $organizationId','MarketDataInstrumentTarget','getSnapshot(','getHealth('] as $needle){
+foreach(['string $organizationId','MarketDataInstrumentTarget','array $capabilities','getSnapshot(','getHealth('] as $needle){
     if(!str_contains($adapter,$needle))throw new RuntimeException('Tenant-safe market adapter contract missing: '.$needle);
 }
 
@@ -48,7 +48,7 @@ foreach(['getenv(','file_get_contents(','error_log(','var_dump('] as $forbidden)
 }
 
 $bybit=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Bybit/BybitSpotMarketDataAdapter.php');
-foreach(['/v5/market/tickers','category=spot','MarketDataCapability::Bbo','MarketDataCapability::Volume','bybit.spot.ticker.bbo','bybit.spot.ticker.volume'] as $needle){
+foreach(['/v5/market/tickers','category=spot','MarketDataCapability::Bbo','MarketDataCapability::Volume','requested($capabilities','bybit.spot.ticker.bbo','bybit.spot.ticker.volume'] as $needle){
     if(!str_contains($bybit,$needle))throw new RuntimeException('Bybit REST adapter contract missing: '.$needle);
 }
 

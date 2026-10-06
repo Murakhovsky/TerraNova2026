@@ -45,6 +45,7 @@ final readonly class MarketSourcePollingService
         $groups=[];$errors=[];$configurationFailures=0;
         foreach($this->subscriptions->forSource($organizationId,$sourceId,true) as $subscription){
             $key=$subscription->instrumentId->value();
+            if(!isset($groups[$key])&&count($groups)>=$targetLimit)continue;
             $target=$groups[$key]['target']??$this->instruments->target($organizationId,$source,$subscription->instrumentId);
             if($target===null){
                 $configurationFailures++;
@@ -57,14 +58,19 @@ final readonly class MarketSourcePollingService
                 if(count($errors)<10)$errors[]='Adapter does not support '.$capability->value.' for '.$subscription->instrumentId->value();
                 continue;
             }
-            $groups[$key]=['target'=>$target];
-            if(count($groups)>=$targetLimit)break;
+            $groups[$key]??=['target'=>$target,'capabilities'=>[]];
+            $groups[$key]['capabilities'][$capability->value]=$capability;
         }
 
         $rawEvents=0;$accepted=0;$duplicates=0;$failed=$configurationFailures;$polled=0;
         foreach($groups as $group){
             try{
-                $batch=$adapter->getSnapshot($organizationId,$source,$group['target']);
+                $batch=$adapter->getSnapshot(
+                    $organizationId,
+                    $source,
+                    $group['target'],
+                    array_values($group['capabilities']),
+                );
                 $polled++;
                 $now=$this->clock->now();
                 $previous=$this->sources->health($organizationId,$sourceId);

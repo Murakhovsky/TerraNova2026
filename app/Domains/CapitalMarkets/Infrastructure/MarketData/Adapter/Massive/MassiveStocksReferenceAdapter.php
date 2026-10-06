@@ -36,7 +36,7 @@ final readonly class MassiveStocksReferenceAdapter implements MarketDataAdapterI
 
     public function getCapabilities():array
     {
-        return [MarketDataCapability::Bbo,MarketDataCapability::ReferencePrice];
+        return [MarketDataCapability::Bbo];
     }
 
     public function supports(MarketDataCapability $capability,MarketDataInstrumentTarget $target):bool
@@ -59,9 +59,16 @@ final readonly class MassiveStocksReferenceAdapter implements MarketDataAdapterI
         string $organizationId,
         MarketSourceDescriptor $source,
         MarketDataInstrumentTarget $target,
+        array $capabilities,
     ):MarketDataBatch{
         $symbol=$this->resolveInstrument($organizationId,$source,$target);
         if($symbol===null)throw new InvalidArgumentException('Massive reference target is invalid.');
+        if($capabilities===[])throw new InvalidArgumentException('Massive snapshot requires BBO capability.');
+        foreach($capabilities as $capability){
+            if(!$capability instanceof MarketDataCapability||!$this->supports($capability,$target)){
+                throw new InvalidArgumentException('Unsupported Massive snapshot capability.');
+            }
+        }
         $mode=$this->dataMode($source);
         $apiKey=$this->credentials->apiKey($organizationId,$source,'capital_markets.market_data.read');
 

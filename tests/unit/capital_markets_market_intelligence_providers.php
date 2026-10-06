@@ -110,12 +110,16 @@ $bybitSource=new MarketSourceDescriptor(
 
 $bybitParser=new BybitTickerPayloadParser();
 $bybitAdapter=new BybitSpotMarketDataAdapter($http,$clock,$bybitParser);
-$bybitBatch=$bybitAdapter->getSnapshot($organization,$bybitSource,$bybitTarget);
+$bybitBatch=$bybitAdapter->getSnapshot(
+    $organization,$bybitSource,$bybitTarget,[MarketDataCapability::Bbo,MarketDataCapability::Volume]
+);
 $assert(count($bybitBatch->events)===2,'Bybit ticker snapshot must preserve BBO and 24h volume observations.');
 $assert($bybitBatch->events[0]->providerTimestamp?->format('U.u')==='1760000000.123000','Bybit millisecond timestamp conversion drifted.');
 $assert($bybitBatch->events[0]->mode===MarketDataMode::Live,'Bybit snapshot must remain LIVE.');
 $assert($bybitAdapter->supports(MarketDataCapability::Bbo,$bybitTarget),'Bybit BBO capability missing.');
 $assert($bybitAdapter->supports(MarketDataCapability::Volume,$bybitTarget),'Bybit volume capability missing.');
+$bybitBboOnly=$bybitAdapter->getSnapshot($organization,$bybitSource,$bybitTarget,[MarketDataCapability::Bbo]);
+$assert(count($bybitBboOnly->events)===1&&$bybitBboOnly->events[0]->eventType==='bybit.spot.ticker.bbo','Bybit snapshot leaked unsubscribed Volume data.');
 
 $bybitDecoder=new BybitMarketDataDecoder($bybitParser);
 $decodedBbo=$bybitDecoder->decode($bybitSource,$bybitBatch->events[0]);
@@ -149,7 +153,9 @@ $massiveSource=new MarketSourceDescriptor(
 $massiveParser=new MassiveQuotePayloadParser();
 $credentialResolver=new MarketSourceCredentialResolver($vault);
 $massiveAdapter=new MassiveStocksReferenceAdapter($http,$credentialResolver,$clock,$massiveParser);
-$massiveBatch=$massiveAdapter->getSnapshot($organization,$massiveSource,$massiveTarget);
+$massiveBatch=$massiveAdapter->getSnapshot(
+    $organization,$massiveSource,$massiveTarget,[MarketDataCapability::Bbo]
+);
 $assert(count($massiveBatch->events)===1,'Massive NBBO snapshot must emit exactly one raw quote event.');
 $massiveRaw=$massiveBatch->events[0];
 $assert($massiveRaw->sequence==='83480742','Massive quote sequence was not preserved.');

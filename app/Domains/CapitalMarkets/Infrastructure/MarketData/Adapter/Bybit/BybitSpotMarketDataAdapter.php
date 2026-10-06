@@ -33,7 +33,7 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
 
     public function getCapabilities():array
     {
-        return [MarketDataCapability::Ticker,MarketDataCapability::Bbo,MarketDataCapability::Volume];
+        return [MarketDataCapability::Bbo,MarketDataCapability::Volume];
     }
 
     public function supports(MarketDataCapability $capability,MarketDataInstrumentTarget $target):bool
@@ -57,6 +57,7 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
         string $organizationId,
         MarketSourceDescriptor $source,
         MarketDataInstrumentTarget $target,
+        array $capabilities,
     ):MarketDataBatch{
         $symbol=$this->resolveInstrument($organizationId,$source,$target);
         if($symbol===null)throw new InvalidArgumentException('Bybit target is not mapped to the configured venue.');
@@ -74,18 +75,22 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
         $providerAt=ProviderTimestamp::fromMilliseconds($ticker['time']);
         $rawPayload=['raw_json'=>$body];
 
-        $events=[
-            new RawMarketEvent(
+        $events=[];
+        $requested=$this->requested($capabilities,$target);
+        if(isset($requested[MarketDataCapability::Bbo->value])){
+            $events[]=new RawMarketEvent(
                 $this->eventId('bbo'),$source->id,$source->venueId,$symbol,'bybit.spot.ticker.bbo',
                 $providerAt,$receivedAt,null,$rawPayload,
                 ['provider'=>'BYBIT','transport'=>'REST','endpoint'=>'/v5/market/tickers'],
-            ),
-            new RawMarketEvent(
+            );
+        }
+        if(isset($requested[MarketDataCapability::Volume->value])){
+            $events[]=new RawMarketEvent(
                 $this->eventId('volume'),$source->id,$source->venueId,$symbol,'bybit.spot.ticker.volume',
                 $providerAt,$receivedAt,null,$rawPayload,
                 ['provider'=>'BYBIT','transport'=>'REST','endpoint'=>'/v5/market/tickers'],
-            ),
-        ];
+            );
+        }
 
         return new MarketDataBatch($source->id,$events);
     }
@@ -101,6 +106,20 @@ final readonly class BybitSpotMarketDataAdapter implements MarketDataAdapterInte
             0,
             $this->clock->reliable(),
         );
+    }
+
+    /** @param list<MarketDataCapability> $capabilities @return array<string,true> */
+    private function requested(array $capabilities,MarketDataInstrumentTarget $target):array
+    {
+        if($capabilities===[])throw new InvalidArgumentException('Bybit snapshot requires at least one capability.');
+        $requested=[];
+        foreach($capabilities as $capability){
+            if(!$capability instanceof MarketDataCapability||!$this->supports($capability,$target)){
+                throw new InvalidArgumentException('Unsupported Bybit snapshot capability.');
+            }
+            $requested[$capability->value]=true;
+        }
+        return $requested;
     }
 
     private function eventId(string $kind):string

@@ -98,6 +98,8 @@ final class CmPollAvailability implements MarketDataProviderAvailabilityInterfac
 final class CmPollAdapter implements MarketDataAdapterInterface
 {
     public int $snapshotCalls=0;
+    /** @var list<list<MarketDataCapability>> */
+    public array $requested=[];
     public function __construct(private DateTimeImmutable $now){}
     public function adapterType():string{return 'fixture.poll';}
     public function getSource():string{return 'FIXTURE';}
@@ -110,9 +112,15 @@ final class CmPollAdapter implements MarketDataAdapterInterface
     {
         return $target->externalSymbol;
     }
-    public function getSnapshot(string $organizationId,MarketSourceDescriptor $source,MarketDataInstrumentTarget $target):MarketDataBatch
+    public function getSnapshot(
+        string $organizationId,
+        MarketSourceDescriptor $source,
+        MarketDataInstrumentTarget $target,
+        array $capabilities,
+    ):MarketDataBatch
     {
         $this->snapshotCalls++;
+        $this->requested[]=$capabilities;
         return new MarketDataBatch($source->id,[
             new RawMarketEvent(
                 'poll-raw-'.$this->snapshotCalls,$source->id,$source->venueId,$target->externalSymbol,'fixture.bbo',
@@ -180,6 +188,9 @@ $result=$service->poll($organization,$sourceId);
 $assert($result->status==='OK','Healthy provider poll must be OK.');
 $assert($result->targets===1,'Two subscriptions for one instrument must coalesce to one provider snapshot.');
 $assert($adapter->snapshotCalls===1,'Provider snapshot was called more than once for the same instrument.');
+$requested=array_map(static fn(MarketDataCapability $capability):string=>$capability->value,$adapter->requested[0]);
+sort($requested,SORT_STRING);
+$assert($requested===['BBO','VOLUME'],'Coalesced provider snapshot lost requested subscription capabilities.');
 $assert($result->rawEvents===1&&$result->accepted===1&&$result->failed===0,'Provider poll counters drifted.');
 $assert($ingestion->calls===1,'Provider poll did not feed raw event into canonical ingestion.');
 $assert($sources->health($organization,$sourceId)?->connectionState===MarketConnectionState::Active,'Successful provider poll did not mark source ACTIVE.');
