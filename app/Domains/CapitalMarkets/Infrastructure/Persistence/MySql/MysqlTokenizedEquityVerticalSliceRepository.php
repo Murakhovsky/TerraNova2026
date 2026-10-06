@@ -154,6 +154,47 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         return is_string($json)?$this->object($json):null;
     }
 
+    public function getExecution(string $organizationId,string $executionId):?array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_paper_executions
+             WHERE organization_id=:org AND execution_id=:id LIMIT 1'
+        );
+        $statement->execute(['org'=>$organizationId,'id'=>$executionId]);
+        $json=$statement->fetchColumn();
+        return is_string($json)?$this->object($json):null;
+    }
+
+    public function listPaperOrdersForExecution(string $organizationId,string $executionId):array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_paper_orders
+             WHERE organization_id=:org AND execution_id=:execution ORDER BY id ASC'
+        );
+        $statement->execute(['org'=>$organizationId,'execution'=>$executionId]);
+        return array_map(fn(array $row):array=>$this->object((string)$row['payload_json']),$statement->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function listPaperFillsForExecution(string $organizationId,string $executionId):array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_paper_fills
+             WHERE organization_id=:org AND execution_id=:execution ORDER BY id ASC'
+        );
+        $statement->execute(['org'=>$organizationId,'execution'=>$executionId]);
+        return array_map(fn(array $row):array=>$this->object((string)$row['payload_json']),$statement->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function ledgerTransactionExists(string $organizationId,string $idempotencyKey):bool
+    {
+        $statement=$this->connection->prepare(
+            'SELECT 1 FROM tn_capital_market_ledger_transactions
+             WHERE organization_id=:org AND idempotency_key=:idempotency LIMIT 1'
+        );
+        $statement->execute(['org'=>$organizationId,'idempotency'=>$idempotencyKey]);
+        return $statement->fetchColumn()!==false;
+    }
+
     public function saveLedgerTransaction(string $organizationId,string $transactionId,string $idempotencyKey,array $payload):void
     {
         $this->connection->prepare(
