@@ -148,6 +148,13 @@ foreach([
     if(!str_contains($services,$service))throw new RuntimeException('Capital Markets service wiring missing: '.$service);
 }
 
+$researchService=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityResearchService.php');
+foreach(['execution_attempt_count','completed_execution_count','invalidated_execution_count','completion_rate'] as $needle){
+    if(!str_contains($researchService,$needle)){
+        throw new RuntimeException('Capital Markets research evidence must include unsuccessful execution outcomes: '.$needle);
+    }
+}
+
 foreach([
     $domainRoot.'/Infrastructure/Persistence/MySql/MysqlInstrumentRepository.php',
     $domainRoot.'/Infrastructure/Persistence/MySql/MysqlRelationshipRepository.php',
