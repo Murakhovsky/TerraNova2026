@@ -85,7 +85,7 @@ $aaplx=new InstrumentDescriptor(
 $assert(count(InstrumentFamily::cases())===15,'Master instrument-family coverage drifted.');
 $assert(count(EconomicRelationshipType::cases())===11,'Economic relationship vocabulary drifted.');
 $assert(count(VenueType::cases())===9,'Venue type vocabulary drifted.');
-$assert(count(VenueCapability::cases())===10,'Venue capability vocabulary drifted.');
+$assert(count(VenueCapability::cases())===14,'Venue capability vocabulary drifted.');
 $assert(count(InstrumentIdentifierType::cases())===7,'Instrument identifier vocabulary drifted.');
 $assert($aapl->isLiveEligible(),'ACTIVE instrument should be structurally eligible for future execution.');
 $assert(!(new InstrumentDescriptor(
