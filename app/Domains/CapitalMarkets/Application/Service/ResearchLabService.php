@@ -194,17 +194,33 @@ final readonly class ResearchLabService
         $hypotheses=$this->repository->listHypotheses($organizationId,500);
         $experiments=$this->repository->listExperiments($organizationId,null,500);
         $knowledge=$this->repository->listKnowledge($organizationId,500);
+        $runs=$this->repository->listBacktestRuns($organizationId,500);
+        $scorecards=$this->repository->listScorecards($organizationId,500);
+        $rejections=$this->repository->listRejectedHypotheses($organizationId,500);
+        $promotion=$this->repository->listAllPromotionDecisions($organizationId,500);
+        $completedRuns=array_values(array_filter($runs,static fn(array $r):bool=>($r['status']??'')==='COMPLETED'));
+        $failedRuns=array_values(array_filter($runs,static fn(array $r):bool=>($r['status']??'')==='FAILED'));
         return [
             'hypotheses'=>$hypotheses,
             'experiments'=>$experiments,
             'knowledge'=>$knowledge,
+            'backtest_runs'=>$runs,
+            'scorecards'=>$scorecards,
+            'rejections'=>$rejections,
+            'promotion_decisions'=>$promotion,
             'metrics'=>[
                 'hypothesis_count'=>count($hypotheses),
                 'experiment_count'=>count($experiments),
                 'knowledge_count'=>count($knowledge),
                 'validated_hypotheses'=>count(array_filter($hypotheses,static fn(array $h):bool=>($h['status']??'')==='VALIDATED')),
-                'rejected_hypotheses'=>count(array_filter($hypotheses,static fn(array $h):bool=>($h['status']??'')==='REJECTED')),
+                'rejected_hypotheses'=>count($rejections),
                 'running_experiments'=>count(array_filter($experiments,static fn(array $e):bool=>($e['status']??'')==='RUNNING')),
+                'backtest_count'=>count($runs),
+                'backtest_completed'=>count($completedRuns),
+                'backtest_failed'=>count($failedRuns),
+                'backtest_failure_rate'=>$runs===[]?0:count($failedRuns)/count($runs),
+                'promotion_passed'=>count(array_filter($promotion,static fn(array $p):bool=>($p['status']??'')==='PASSED')),
+                'promotion_failed'=>count(array_filter($promotion,static fn(array $p):bool=>($p['status']??'')==='FAILED')),
             ],
         ];
     }
