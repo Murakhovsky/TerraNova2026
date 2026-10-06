@@ -25,6 +25,9 @@ foreach ([
 if (str_contains($store, 'taskId: $task->id')) {
     throw new RuntimeException('Engineering AgentRun still writes ephemeral execution task id into persisted task FK.');
 }
+if (!str_contains($store, "markRuntimeIssue(") || !str_contains($store, "'STALLED'")) {
+    throw new RuntimeException('Engineering AgentRun failure does not stall the workflow.');
+}
 if (strpos($orchestrator, 'agentRuns->start') > strpos($orchestrator, 'manager->execute')) {
     throw new RuntimeException('Engineering AgentRun intent must be persisted before LLM execution.');
 }
