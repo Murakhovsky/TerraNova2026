@@ -92,6 +92,9 @@ final readonly class MarketDataNormalizer implements MarketDataNormalizerInterfa
             MarketEventType::Candle=>[
                 $this->candle($resolved,$decoded,$base,$quote,$flags),$flags,
             ],
+            MarketEventType::InstrumentMetadata=>[
+                new \Domains\CapitalMarkets\Domain\MarketData\MarketMetadataObservation($decoded->values),$flags,
+            ],
             MarketEventType::Volume,MarketEventType::ReferencePrice,MarketEventType::FundingRate,
             MarketEventType::OpenInterest,MarketEventType::MarkPrice,MarketEventType::IndexPrice=>[
                 new MarketValueObservation(
