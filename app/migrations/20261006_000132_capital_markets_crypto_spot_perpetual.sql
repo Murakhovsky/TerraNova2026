@@ -5,6 +5,13 @@ ALTER TABLE tn_capital_market_hypothesis_observations
     ADD CONSTRAINT chk_cm_hypothesis_code
     CHECK (hypothesis IN ('H1','H2','H4','H5','H6'));
 
+ALTER TABLE tn_capital_market_hypothesis_observations
+    DROP CHECK chk_cm_hypothesis_stage;
+
+ALTER TABLE tn_capital_market_hypothesis_observations
+    ADD CONSTRAINT chk_cm_hypothesis_stage
+    CHECK (stage IN ('SCAN','EVALUATION','EXECUTION','FUNDING','PERFORMANCE'));
+
 CREATE TABLE IF NOT EXISTS tn_capital_market_funding_observations (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     organization_id VARCHAR(190) NOT NULL,
