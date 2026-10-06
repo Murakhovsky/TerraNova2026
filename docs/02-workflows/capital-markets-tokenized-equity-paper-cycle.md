@@ -73,7 +73,7 @@ Trusted Market State
 
 ## Ключові правила
 
-- H1 може бути research evidence, але paper execution закритий, доки немає реального executable hedge venue.
+- H1 може бути research evidence без hedge venue; якщо задано реальний executable hedge venue, H1 проходить той самий Risk → Paper Execution → Ledger → P&L pipeline, що й H2.
 - H2 використовує pre-funded cash на buy venue та pre-funded token inventory на sell venue.
 - BUY оцінюється по ask/VWAP, SELL по bid/VWAP.
 - Різні quote currencies не порівнюються без trusted conversion MarketState.

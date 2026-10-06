@@ -126,9 +126,10 @@ final readonly class TokenizedEquityExecutionRecoveryService
         $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
         if(is_array($opportunity)){
             $candidate=$opportunity['candidate']??[];
-            $fingerprint=hash('sha256',implode('|',[$organizationId,'H2','EXECUTION',$opportunityId,$executionId]));
+            $hypothesis=(string)($opportunity['hypothesis']??'H2');
+            $fingerprint=hash('sha256',implode('|',[$organizationId,$hypothesis,'EXECUTION',$opportunityId,$executionId]));
             $this->repository->saveHypothesisObservation(
-                $organizationId,'cm_obs_'.substr($fingerprint,0,40),'H2','EXECUTION',
+                $organizationId,'cm_obs_'.substr($fingerprint,0,40),$hypothesis,'EXECUTION',
                 (new \DateTimeImmutable())->format(DATE_ATOM),$fingerprint,[
                     'market_pair_id'=>(string)($candidate['market_pair_id']??''),
                     'candidate_id'=>(string)($candidate['id']??''),

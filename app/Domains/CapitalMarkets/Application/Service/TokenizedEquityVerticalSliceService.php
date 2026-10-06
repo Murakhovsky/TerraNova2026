@@ -22,6 +22,7 @@ use Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine;
 use Domains\CapitalMarkets\Domain\Service\TokenizedEquityRiskEngine;
 use Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
+use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 use Domains\CapitalMarkets\Domain\Venue\VenueId;
 use InvalidArgumentException;
 
@@ -131,8 +132,110 @@ final readonly class TokenizedEquityVerticalSliceService
             $issues===[],$candidates!==[],$issues
         );
 
-        // H1 is research-capable now, but remains execution-closed until a real hedge venue is supplied.
-        return $this->evaluate($organizationId,$candidates,$config,$options,$now,false);
+        $hedgeVenue=trim((string)($options['hedge_venue_id']??''));
+        $hedgeInstrument=trim((string)($options['hedge_instrument_id']??''));
+        if(($hedgeVenue==='')!==($hedgeInstrument==='')){
+            throw new InvalidArgumentException('hedge_venue_id and hedge_instrument_id must be supplied together.');
+        }
+        if($hedgeVenue===''||$hedgeInstrument===''){
+            // Research-only H1 remains fail-closed when no executable hedge venue is supplied.
+            return $this->evaluate($organizationId,$candidates,$config,$options,$now,false);
+        }
+
+        $hedgeId=InstrumentId::fromString($hedgeInstrument);
+        $this->assertEconomicEquivalence($organizationId,$underlyingId,$hedgeId,$config,$now);
+        $hedge=$this->marketStates->get($organizationId,VenueId::fromString($hedgeVenue),$hedgeId);
+        if($hedge===null){
+            return $this->evaluate($organizationId,$candidates,$config,$options,$now,false);
+        }
+        $hedgeIssues=$this->detector->crossVenueObservationIssues($token,$hedge,$config,$now,$ttlMs);
+        if($hedgeIssues!==[]){
+            return $this->evaluate($organizationId,$candidates,$config,$options,$now,false);
+        }
+
+        $executableCandidates=$this->repriceH1Candidates($candidates,$token,$hedge);
+        return $this->evaluate($organizationId,$executableCandidates,$config,$options,$now,true);
+    }
+
+    /**
+     * @param list<SpreadCandidate> $candidates
+     * @return list<SpreadCandidate>
+     */
+    private function repriceH1Candidates(
+        array $candidates,
+        \Domains\CapitalMarkets\Domain\MarketData\MarketState $token,
+        \Domains\CapitalMarkets\Domain\MarketData\MarketState $hedge,
+    ):array{
+        if($token->bestQuote===null||$hedge->bestQuote===null)return [];
+        $out=[];
+        foreach($candidates as $candidate){
+            $buyIsReference=str_starts_with($candidate->buyVenueId,'reference:');
+            $sellIsReference=str_starts_with($candidate->sellVenueId,'reference:');
+            if(!$buyIsReference&&!$sellIsReference){
+                $out[]=$candidate;
+                continue;
+            }
+
+            if($buyIsReference){
+                $buyVenue=$hedge->venueId->value();
+                $buyInstrument=$hedge->instrumentId->value();
+                $buyPrice=$hedge->bestQuote->askPrice->value;
+                $buyQuantity=$hedge->bestQuote->askQuantity->value;
+                $sellVenue=$token->venueId->value();
+                $sellInstrument=$token->instrumentId->value();
+                $sellPrice=$token->bestQuote->bidPrice->value;
+                $sellQuantity=$token->bestQuote->bidQuantity->value;
+            }else{
+                $buyVenue=$token->venueId->value();
+                $buyInstrument=$token->instrumentId->value();
+                $buyPrice=$token->bestQuote->askPrice->value;
+                $buyQuantity=$token->bestQuote->askQuantity->value;
+                $sellVenue=$hedge->venueId->value();
+                $sellInstrument=$hedge->instrumentId->value();
+                $sellPrice=$hedge->bestQuote->bidPrice->value;
+                $sellQuantity=$hedge->bestQuote->bidQuantity->value;
+            }
+
+            $quantity=$buyQuantity->compareTo($sellQuantity)<=0?$buyQuantity:$sellQuantity;
+            if(!$quantity->isPositive())continue;
+            $spread=DecimalMath::subtract($sellPrice,$buyPrice);
+            $edgeBps=DecimalMath::basisPoints($spread,$buyPrice,6);
+            $capacity=DecimalMath::multiply($buyPrice,$quantity);
+            $id='cm_candidate_'.hash('sha256',implode('|',[
+                $candidate->id,'hedge',$hedge->venueId->value(),$hedge->instrumentId->value(),
+                (string)$hedge->stateVersion,$buyPrice->value(),$sellPrice->value(),
+            ]));
+            $out[]=new SpreadCandidate(
+                $id,
+                HypothesisCode::TokenizedEquityDislocation,
+                $candidate->marketPairId,
+                $candidate->direction,
+                $candidate->detectedAt,
+                $candidate->expiresAt,
+                $buyVenue,
+                $sellVenue,
+                $buyInstrument,
+                $sellInstrument,
+                $buyPrice,
+                $sellPrice,
+                $quantity,
+                $spread,
+                $edgeBps,
+                $capacity,
+                min($candidate->dataQualityScore,$hedge->quality->score),
+                [
+                    ...$candidate->evidence,
+                    'theoretical_candidate_id'=>$candidate->id,
+                    'theoretical_buy_price'=>$candidate->buyPrice->value(),
+                    'theoretical_sell_price'=>$candidate->sellPrice->value(),
+                    'theoretical_gross_edge_bps'=>$candidate->grossEdgeBps->value(),
+                    'hedge_venue_id'=>$hedge->venueId->value(),
+                    'hedge_instrument_id'=>$hedge->instrumentId->value(),
+                    'hedge_state_version'=>$hedge->stateVersion,
+                ],
+            );
+        }
+        return $out;
     }
 
     /** @return list<array<string,mixed>> */

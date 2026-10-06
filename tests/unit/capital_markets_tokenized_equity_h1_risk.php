@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Domain\MarketData\ConversionRate;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataMode;
@@ -82,5 +83,33 @@ $risk=(new TokenizedEquityRiskEngine())->assess(
 );
 $assert(!$risk->approved(),'H1 must fail closed when hedge is unavailable.');
 $assert(in_array('HEDGE_UNAVAILABLE',$risk->blockingReasons,true),'H1 risk rejection must explain missing hedge.');
+
+$riskWithHedge=(new TokenizedEquityRiskEngine())->assess(
+    $opportunity,Decimal::fromString('10'),Decimal::fromString('5000'),70,$now,true,false,
+);
+$assert($riskWithHedge->approved(),'H1 should be risk-approvable when a real executable hedge venue is available.');
+$assert(!in_array('HEDGE_UNAVAILABLE',$riskWithHedge->blockingReasons,true),'H1 hedge blocker must clear when executable hedge exists.');
+
+$tokenUsdState=new MarketState(
+    InstrumentId::fromString('instrument:aaplx'),VenueId::fromString('venue:kraken'),
+    MarketSourceId::fromString('source:kraken'),null,$quote('100.8','100.9',$tok),null,null,
+    MarketStatus::Open,$sourceTime,$sourceTime,$quality,2,null,str_repeat('d',64),MarketDataMode::Live,
+);
+$hedgeState=new MarketState(
+    InstrumentId::fromString('instrument:aapl'),VenueId::fromString('venue:broker'),
+    MarketSourceId::fromString('source:broker'),null,$quote('100','100.1',$eq),null,null,
+    MarketStatus::Open,$sourceTime,$sourceTime,$quality,3,null,str_repeat('e',64),MarketDataMode::Live,
+);
+$serviceReflection=new ReflectionClass(TokenizedEquityVerticalSliceService::class);
+$serviceWithoutConstructor=$serviceReflection->newInstanceWithoutConstructor();
+$repricer=$serviceReflection->getMethod('repriceH1Candidates');
+$repricer->setAccessible(true);
+$repriced=$repricer->invoke($serviceWithoutConstructor,[$candidates[0]],$tokenUsdState,$hedgeState);
+$assert(count($repriced)===1,'H1 executable hedge repricing must preserve the detected candidate.');
+$assert($repriced[0]->buyVenueId==='venue:broker','Reference buy leg must be replaced with real executable hedge venue.');
+$assert($repriced[0]->sellVenueId==='venue:kraken','Token sell leg must remain on the real token venue.');
+$assert($repriced[0]->buyPrice->value()==='100.1','H1 hedge BUY must use executable hedge ask.');
+$assert($repriced[0]->sellPrice->value()==='100.8','H1 token SELL must use executable token bid.');
+$assert(isset($repriced[0]->evidence['theoretical_candidate_id']),'Executable H1 candidate must retain theoretical detection evidence.');
 
 echo "Capital Markets Tokenized Equity H1/risk passed.\n";

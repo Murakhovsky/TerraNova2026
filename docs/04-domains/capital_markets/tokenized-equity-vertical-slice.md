@@ -44,7 +44,7 @@ MarketState
 - Ledger балансується окремо для кожного asset та пишеться idempotently;
 - execution lifecycle зберігає persisted checkpoints і після restart відновлюється з `LEG1_FILLED`, `LEG2_PARTIAL/REJECTED`, `COMPENSATION_FILLED` або `LEDGER_POSTED` без повторного settlement;
 - realized paper P&L рахується з фактичних simulated fill prices та fees, без подвійного врахування slippage;
-- H1 залишається research-only, доки немає реального executable hedge venue;
+- H1 за замовчуванням лишається research-only; якщо явно передано реальний executable hedge venue, candidate перепрайсується по hedge bid/ask і може пройти Risk → Paper Execution;
 - Live Trading і withdrawals залишаються вимкненими.
 
 ## Реалізований результат V0.6
