@@ -139,6 +139,7 @@ final readonly class CryptoSpotPerpetualVerticalSliceService
                 'perp_bid'=>$state->basis->perpBid->value(),'perp_ask'=>$state->basis->perpAsk->value(),
                 'mark_price'=>$state->markPrice?->value(),'index_price'=>$state->indexPrice?->value(),
                 'funding_rate'=>$state->funding->rate->value(),'next_funding'=>$state->funding->nextSettlementAt?->format(DATE_ATOM),
+                'data_quality_score'=>$state->quality,'candidate_ttl_ms'=>$this->int($options,'candidate_ttl_ms',1500),
             ],
             [
                 $this->leg($spot,PositionSide::Long,$quantity,$state->basis->spotAsk,'SPOT'),
@@ -157,6 +158,7 @@ final readonly class CryptoSpotPerpetualVerticalSliceService
                 'funding_interval_seconds'=>$state->funding->fundingIntervalSeconds,
                 'next_funding'=>$state->funding->nextSettlementAt?->format(DATE_ATOM),
                 'basis_bps'=>$state->basis->midBasisBps->value(),
+                'data_quality_score'=>$state->quality,'candidate_ttl_ms'=>$this->int($options,'candidate_ttl_ms',1500),
             ],
             [
                 $this->leg($spot,PositionSide::Long,$quantity,$state->basis->spotAsk,'SPOT'),
@@ -200,8 +202,10 @@ final readonly class CryptoSpotPerpetualVerticalSliceService
 
         if($a->bestQuote===null||$b->bestQuote===null)throw new DomainException('H6_BBO_REQUIRED');
         $requested=$this->requiredDecimal($options,'quantity');
-        $available=$a->bestQuote->askQuantity->value->compareTo($b->bestQuote->bidQuantity->value)<=0
-            ?$a->bestQuote->askQuantity->value:$b->bestQuote->bidQuantity->value;
+        $available=$this->minimum([
+            $a->bestQuote->askQuantity->value,$a->bestQuote->bidQuantity->value,
+            $b->bestQuote->askQuantity->value,$b->bestQuote->bidQuantity->value,
+        ]);
         $quantity=$requested->compareTo($available)<=0?$requested:$available;
 
         $horizon=$this->requiredInt($options,'holding_horizon_seconds');
@@ -258,6 +262,8 @@ final readonly class CryptoSpotPerpetualVerticalSliceService
                 'venue_a_rate'=>$fundingA->rate->value(),'venue_a_interval_seconds'=>$fundingA->fundingIntervalSeconds,
                 'venue_b_rate'=>$fundingB->rate->value(),'venue_b_interval_seconds'=>$fundingB->fundingIntervalSeconds,
                 'direction'=>$aLong?'LONG_A_SHORT_B':'LONG_B_SHORT_A',
+                'data_quality_score'=>min($a->quality->score,$b->quality->score),
+                'candidate_ttl_ms'=>$this->int($options,'candidate_ttl_ms',1500),
             ],
             [
                 $this->leg($longState,PositionSide::Long,$quantity,$longState->bestQuote->askPrice->value,'PERPETUAL'),
@@ -275,14 +281,15 @@ final readonly class CryptoSpotPerpetualVerticalSliceService
         RelativeValueEvaluation $evaluation,ExpectedEconomics $economics,HedgeGroup $hedge,array $risk,
         Decimal $quantity,DateTimeImmutable $now,Decimal $signalBps,array $evidence,array $legs,string $strategyVersion,
     ):array{
-        $ttlMs=1500;$expires=$now->modify('+'.$ttlMs.' milliseconds');
+        $ttlMs=max(100,(int)($evidence['candidate_ttl_ms']??1500));
+        $expires=$now->modify('+'.$ttlMs.' milliseconds');
         $candidateId='cm_candidate_'.substr(hash('sha256',implode('|',[
             $organizationId,$hypothesis->value,$marketPairId,$now->format('U.u'),$strategyVersion
         ])),0,40);
         $candidate=new RelativeValueCandidate(
             $candidateId,$hypothesis,$type,$marketPairId,$now,$expires,$legs,
             $economics->capitalRequired,$economics->capitalRequired,
-            $this->qualityFromRisk($risk),$evidence,
+            min((int)($evidence['data_quality_score']??100),$this->qualityFromRisk($risk)),$evidence,
         );
         $candidatePayload=[
             'id'=>$candidateId,'hypothesis'=>$hypothesis->value,'type'=>$type->value,'market_pair_id'=>$marketPairId,
@@ -484,6 +491,23 @@ final readonly class CryptoSpotPerpetualVerticalSliceService
              'realized_pnl'=>'0','reason'=>$evaluation->reasons===[]?null:implode(',',$evaluation->reasons),
              'research_status'=>$evaluation->status->value]
         );
+    }
+
+    /** @param list<Decimal> $values */
+    private function minimum(array $values):Decimal
+    {
+        if($values===[])throw new InvalidArgumentException('Minimum requires at least one Decimal.');
+        $min=$values[0];
+        foreach($values as $value){
+            if(!$value instanceof Decimal)throw new InvalidArgumentException('Minimum values must be Decimal.');
+            if($value->compareTo($min)<0)$min=$value;
+        }
+        return $min;
+    }
+
+    private function int(array $options,string $key,int $default):int
+    {
+        return array_key_exists($key,$options)?(int)$options[$key]:$default;
     }
 
     private function qualityFromRisk(array $risk):int
