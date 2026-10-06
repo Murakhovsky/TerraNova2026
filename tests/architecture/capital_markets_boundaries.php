@@ -61,6 +61,9 @@ if(($manifest['enabled_by_default']??true)!==false){
 if(($manifest['contributions']['runtime_module_service']??null)!=='capitalMarketsDomainModule'){
     throw new RuntimeException('Capital Markets Foundation runtime module service is missing.');
 }
+if(!in_array('capitalMarketsResearchBacktestJobHandler',$manifest['contributions']['job_handler_services']??[],true)){
+    throw new RuntimeException('Capital Markets Research backtest queue handler is missing from module contributions.');
+}
 foreach([
     'app/migrations/20261005_000124_capital_markets_foundation.sql',
     'app/migrations/20261006_000125_capital_markets_market_sources.sql',
@@ -155,6 +158,9 @@ foreach([
     'ResearchBacktestService',
     'RelativeValueHistoricalReplayService',
     'CapitalMarketsResearchAgentService',
+    'ResearchBacktestJobHandler',
+    'runtime.capital_markets_research_backtest_job_handler',
+    'capitalMarketsResearchBacktestJobHandler',
 ] as $service){
     if(!str_contains($services,$service))throw new RuntimeException('Capital Markets service wiring missing: '.$service);
 }
@@ -233,7 +239,13 @@ foreach([
     'tn_capital_market_spread_candidates','tn_capital_market_opportunities','tn_capital_market_risk_assessments',
     'tn_capital_market_paper_executions','tn_capital_market_ledger_transactions','tn_capital_market_paper_portfolios',
     'tn_capital_market_capital_reservations','tn_capital_market_paper_balances',
-    'tn_capital_market_paper_balance_reservations'
+    'tn_capital_market_paper_balance_reservations',
+    'tn_capital_market_research_hypotheses','tn_capital_market_research_datasets',
+    'tn_capital_market_strategy_versions','tn_capital_market_research_experiments',
+    'tn_capital_market_research_results','tn_capital_market_strategy_promotion_decisions',
+    'tn_capital_market_backtest_runs','tn_capital_market_oos_runs',
+    'tn_capital_market_strategy_scorecards','tn_capital_market_rejected_hypotheses',
+    'tn_capital_market_research_knowledge'
 ] as $table){
     if(!str_contains($ownership,$table))throw new RuntimeException('Capital Markets table ownership missing: '.$table);
 }
