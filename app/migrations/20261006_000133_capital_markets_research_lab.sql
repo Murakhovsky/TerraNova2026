@@ -2,11 +2,12 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_research_hypotheses (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     organization_id VARCHAR(190) NOT NULL,
     hypothesis_id VARCHAR(190) NOT NULL,
+    revision INT UNSIGNED NOT NULL,
     status VARCHAR(32) NOT NULL,
     record_json JSON NOT NULL,
     created_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_cm_research_hypothesis (organization_id,hypothesis_id),
+    UNIQUE KEY uq_cm_research_hypothesis_revision (organization_id,hypothesis_id,revision),
     KEY idx_cm_research_hypothesis_status (organization_id,status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
