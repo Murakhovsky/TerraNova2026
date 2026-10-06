@@ -70,6 +70,9 @@ final readonly class EngineeringReviewerStageExecutor
         $development = $this->requiredArtifact($featureId, ArtifactType::DEVELOPMENT_RESULT);
         $pullRequest = (int) ($development['content']['pull_request'] ?? 0);
         $revision = trim((string) ($development['content']['repository_revision'] ?? ''));
+        $documentationReport = $this->artifacts->latest($featureId, ArtifactType::DOCUMENTATION_REPORT);
+        $documentationRevision = trim((string) ($documentationReport['content']['repository_revision'] ?? ''));
+        if ($documentationRevision !== '') $revision = $documentationRevision;
         $previousQa = $this->artifacts->latest($featureId, ArtifactType::QA_REPORT);
         if (($previousQa['content']['status'] ?? null) === 'TESTS_UPDATED') {
             $qaRevision = trim((string) ($previousQa['content']['repository_revision_after_tests'] ?? ''));
