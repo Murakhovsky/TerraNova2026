@@ -11,6 +11,8 @@ use DateTimeImmutable;
 use Domains\CapitalMarkets\Domain\Research\WalkForwardEngine;
 use Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy;
 use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
+use Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine;
+use Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine;
 
 final readonly class ResearchBacktestService
 {
@@ -22,6 +24,8 @@ final readonly class ResearchBacktestService
         private WalkForwardEngine $walkForward,
         private ResearchExecutionBudgetPolicy $budget,
         private ResearchIsolationPolicy $isolation,
+        private ResearchMetricsEngine $metrics,
+        private ResearchConfidenceEngine $confidence,
     ){}
 
     public function queue(string $organizationId,array $specification):array
@@ -151,6 +155,19 @@ final readonly class ResearchBacktestService
         }
 
         $resultId='result-'.substr(hash('sha256',(string)$specification['run_id'].'|'.json_encode($replay,JSON_THROW_ON_ERROR)),0,32);
+        $metrics=$this->metrics->calculate((array)($replay['rows']??[]));
+        $sampleCount=(int)($replay['sample_count']??$metrics['financial']['sample_count']??0);
+        $minimumSample=max(1,(int)($specification['minimum_sample']??100));
+        $dataQuality=$sampleCount<=0?0:max(0,min(100,(int)round(100*(1-((int)($replay['skipped_count']??0)/max(1,$sampleCount+(int)($replay['skipped_count']??0)))))));
+        $confidence=$this->confidence->calculate(
+            $sampleCount,
+            $minimumSample,
+            $dataQuality,
+            (int)round(100*(float)($replay['validated_rate']??0)),
+            (int)($specification['regime_diversity_score']??50),
+            $this->fidelityScore((string)($replay['execution_fidelity']??'LIMITED')),
+            (int)($specification['result_stability_score']??50),
+        );
         $result=[
             'result_id'=>$resultId,
             'experiment_id'=>$specification['experiment_id'],
@@ -160,16 +177,16 @@ final readonly class ResearchBacktestService
                 'positive_rate'=>$replay['positive_rate']??0,
                 'validated_rate'=>$replay['validated_rate']??0,
             ],
-            'financial_metrics'=>[
+            'financial_metrics'=>array_replace($metrics['financial'],[
                 'expected_pnl_total'=>$replay['expected_pnl_total']??'0',
                 'expected_pnl_average'=>$replay['expected_pnl_average']??'0',
-            ],
-            'risk_metrics'=>[],
+            ]),
+            'risk_metrics'=>$metrics['risk'],
             'execution_metrics'=>[
                 'execution_fidelity'=>$replay['execution_fidelity']??'LIMITED',
                 'production_economics_reused'=>$replay['production_economics_reused']??false,
             ],
-            'statistical_metrics'=>[],
+            'statistical_metrics'=>$metrics['statistical'],
             'data_quality'=>[
                 'skipped_count'=>$replay['skipped_count']??0,
                 'sample_count'=>$replay['sample_count']??0,
@@ -178,7 +195,7 @@ final readonly class ResearchBacktestService
             'conclusion'=>$this->resultStatus($replay),
             'sample'=>['count'=>$replay['sample_count']??0],
             'execution_fidelity'=>$replay['execution_fidelity']??'LIMITED',
-            'confidence'=>0,
+            'confidence'=>$confidence,
         ];
         $this->lab->recordResult($organizationId,$result);
 
@@ -243,6 +260,17 @@ final readonly class ResearchBacktestService
             if($adapter->supports($hypothesis))return $adapter;
         }
         throw new RuntimeException('No ResearchReplayAdapter supports '.$hypothesis.'.');
+    }
+
+    private function fidelityScore(string $fidelity):int
+    {
+        return match(strtoupper($fidelity)){
+            'HIGH'=>100,
+            'MEDIUM'=>80,
+            'LIMITED'=>55,
+            'SYNTHETIC'=>25,
+            default=>0,
+        };
     }
 
     private function resultStatus(array $replay):string
