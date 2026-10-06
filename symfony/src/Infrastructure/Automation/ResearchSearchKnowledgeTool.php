@@ -19,7 +19,7 @@ final readonly class ResearchSearchKnowledgeTool implements ToolInterface
         return new ToolDefinition(
             'research.searchknowledge',
             'Search reusable Capital Markets research knowledge, including negative findings.',
-            ['type'=>'object','properties'=>['query'=>['type'=>'string'],'limit'=>['type'=>'integer']]],
+            ['type'=>'object','required'=>['agent_name'],'properties'=>['agent_name'=>['type'=>'string'],'query'=>['type'=>'string'],'limit'=>['type'=>'integer']]],
             ['type'=>'object'],
             ToolEffect::READ,
         );
