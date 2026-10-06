@@ -233,7 +233,10 @@ final readonly class CapitalMarketsTokenizedEquityController
     private function allowed(string $organizationId,int $actorId,CapitalMarketsCapability $capability):bool
     {
         if($this->access->hasCapability($organizationId,$actorId,$capability->value))return true;
-        $broad=$capability===CapitalMarketsCapability::PaperExecute?CapitalMarketsCapability::Manage:CapitalMarketsCapability::View;
+        $broad=match($capability){
+            CapitalMarketsCapability::PaperExecute,CapitalMarketsCapability::Manage=>CapitalMarketsCapability::Manage,
+            default=>CapitalMarketsCapability::View,
+        };
         return $this->access->hasCapability($organizationId,$actorId,$broad->value);
     }
 
