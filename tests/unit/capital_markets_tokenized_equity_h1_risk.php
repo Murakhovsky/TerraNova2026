@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
+use Domains\CapitalMarkets\Domain\MarketData\ConversionRate;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataMode;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQuote;
@@ -33,6 +34,7 @@ $assert=static function(bool $condition,string $message):void{
 $eq=new AssetCode('AAPL');
 $tok=new AssetCode('AAPLX');
 $usd=new AssetCode('USD');
+$usdt=new AssetCode('USDT');
 $quote=static fn(string $bid,string $ask,AssetCode $base)=>new MarketQuote(
     new Price(Decimal::fromString($bid),$base,$usd,4),new Quantity(Decimal::fromString('20'),$base,8),
     new Price(Decimal::fromString($ask),$base,$usd,4),new Quantity(Decimal::fromString('20'),$base,8),
@@ -48,7 +50,10 @@ $reference=new ReferenceMarketState(
 );
 $tokenState=new MarketState(
     InstrumentId::fromString('instrument:aaplx'),VenueId::fromString('venue:bybit'),
-    MarketSourceId::fromString('source:bybit'),null,$quote('100.8','100.9',$tok),null,null,
+    MarketSourceId::fromString('source:bybit'),null,new MarketQuote(
+        new Price(Decimal::fromString('100.8'),$tok,$usdt,4),new Quantity(Decimal::fromString('20'),$tok,8),
+        new Price(Decimal::fromString('100.9'),$tok,$usdt,4),new Quantity(Decimal::fromString('20'),$tok,8)
+    ),null,null,
     MarketStatus::Open,$sourceTime,$sourceTime,$quality,1,null,str_repeat('c',64),MarketDataMode::Live,
 );
 $config=new SpreadDetectorConfig(
@@ -57,9 +62,11 @@ $config=new SpreadDetectorConfig(
 );
 $candidates=(new TokenizedEquitySpreadDetector())->detectReferenceDislocation(
     'pair:aapl-aaplx',$reference,$tokenState,$config,$now,1000,
+    new ConversionRate($usdt,$usd,Decimal::fromString('0.999'),$sourceTime,MarketSourceId::fromString('source:fx'),MarketTrustStatus::Trusted),
 );
 $assert(count($candidates)===1,'H1 should detect token-over-reference dislocation.');
 $assert($candidates[0]->hypothesis->value==='H1','H1 candidate hypothesis drifted.');
+$assert(isset($candidates[0]->evidence['conversion']),'H1 cross-currency comparison must preserve conversion evidence.');
 
 $economics=(new NetEconomicsEngine())->estimate(
     $candidates[0]->buyPrice,$candidates[0]->sellPrice,Decimal::fromString('10'),
