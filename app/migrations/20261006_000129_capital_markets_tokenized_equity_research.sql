@@ -1,3 +1,6 @@
+ALTER TABLE tn_capital_market_paper_executions
+    ADD UNIQUE KEY uq_cm_paper_execution_one_attempt (organization_id,opportunity_id);
+
 CREATE TABLE IF NOT EXISTS tn_capital_market_hypothesis_observations (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     organization_id VARCHAR(190) NOT NULL,
