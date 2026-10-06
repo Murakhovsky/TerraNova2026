@@ -587,48 +587,204 @@ final readonly class EngineeringQaStageExecutor
     }
 
     /** @return list<array<string,mixed>> */
-    private function answeredHumanDecisions(string $featureId): array
+    private function answeredHumanDecisions(string $featureId, AgentRole $role): array
     {
         return array_slice(array_values(array_filter(
             $this->humanDecisions->historyForFeature($featureId),
             static fn (array $decision): bool =>
                 ($decision['status'] ?? null) === 'ANSWERED'
-                && ($decision['evidence']['requested_by_agent'] ?? null) === AgentRole::QA_EXECUTOR->value,
+                && ($decision['evidence']['requested_by_agent'] ?? null) === $role->value,
         )), -20);
+    }
+
+    /**
+     * QA planning is allowed to describe future manual checks without interrupting the
+     * workflow. A human gate is reserved for a concrete choice that must be made now.
+     * Repeating an already answered gate is classified as an agent loop, not another
+     * notification to the user.
+     *
+     * @param array<string,mixed> $output
+     * @return array<string,mixed>
+     */
+    private function resolvePlanningHumanDecision(
+        string $featureId,
+        string $workflowId,
+        array $output,
+        string $correlationId,
+        string $agentRunId,
+    ): array {
+        if (($output['status'] ?? null) !== 'HUMAN_TEST_REQUIRED') {
+            return $output;
+        }
+
+        $manual = is_array($output['human_tests_required'] ?? null) ? $output['human_tests_required'] : [];
+        $fingerprint = $this->humanDecisionFingerprint('QA_PLANNING', $manual);
+        foreach ($this->answeredHumanDecisions($featureId, AgentRole::QA_PLANNER) as $decision) {
+            $previousManual = is_array($decision['evidence']['human_tests_required'] ?? null)
+                ? $decision['evidence']['human_tests_required']
+                : [];
+            if ($this->humanDecisionFingerprint('QA_PLANNING', $previousManual) !== $fingerprint) {
+                continue;
+            }
+
+            $output['status'] = 'BLOCKED';
+            $blockers = is_array($output['blockers'] ?? null) ? $output['blockers'] : [];
+            $blockers[] = [
+                'type' => 'AGENT_LOOP',
+                'description' => 'QA Planner repeated a human decision that was already answered. The workflow stopped instead of asking the user again.',
+            ];
+            $output['blockers'] = $blockers;
+
+            $this->journal->event(
+                $featureId,
+                $workflowId,
+                'RUNTIME',
+                'human_decision.loop_detected',
+                'BLOCKED',
+                'QA Planner repeated an already answered human decision; duplicate prompt suppressed.',
+                $correlationId,
+                [
+                    'phase' => 'QA_PLANNING',
+                    'decision_request_id' => $decision['id'] ?? null,
+                    'selected_option' => $decision['answer']['selected_option'] ?? null,
+                    'fingerprint' => $fingerprint,
+                ],
+                $agentRunId,
+            );
+
+            return $output;
+        }
+
+        if (!$this->containsConcreteHumanChoice($manual)) {
+            $output['status'] = 'PLAN_READY';
+            $plan = is_array($output['test_plan'] ?? null) ? $output['test_plan'] : [];
+            $plan['human_tests_required'] = $manual;
+            $output['test_plan'] = $plan;
+
+            $this->journal->event(
+                $featureId,
+                $workflowId,
+                'RUNTIME',
+                'human_decision.auto_resolved',
+                'COMPLETED',
+                'QA planning manual checks were deferred to QA execution; no human decision is required now.',
+                $correlationId,
+                [
+                    'phase' => 'QA_PLANNING',
+                    'manual_check_count' => count($manual),
+                    'policy' => 'DEFER_MANUAL_TEST_TO_EXECUTION',
+                    'fingerprint' => $fingerprint,
+                ],
+                $agentRunId,
+            );
+        }
+
+        return $output;
+    }
+
+    /** @param list<mixed> $manual */
+    private function containsConcreteHumanChoice(array $manual): bool
+    {
+        foreach ($manual as $item) {
+            if (!is_array($item)) continue;
+            $question = trim((string) ($item['question'] ?? ''));
+            $options = is_array($item['options'] ?? null) ? array_values(array_filter(
+                $item['options'],
+                static fn (mixed $option): bool => is_scalar($option) || is_array($option),
+            )) : [];
+            if ($question !== '' && count($options) >= 2) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** @param list<mixed> $manual */
+    private function humanDecisionFingerprint(string $phase, array $manual): string
+    {
+        $normalize = static function (mixed $value) use (&$normalize): mixed {
+            if (!is_array($value)) return is_string($value) ? trim($value) : $value;
+            if (array_is_list($value)) return array_map($normalize, $value);
+            ksort($value);
+            foreach ($value as $key => $item) $value[$key] = $normalize($item);
+            return $value;
+        };
+
+        return hash('sha256', json_encode(
+            ['phase' => $phase, 'manual' => $normalize($manual)],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
+        ));
     }
 
     /** @param array<string,mixed> $output */
     private function createQaHumanDecision(string $featureId, WorkflowExecution $workflow, array $output, string $phase): void
     {
         $manual = is_array($output['human_tests_required'] ?? null) ? $output['human_tests_required'] : [];
-        $options = $phase === 'QA_EXECUTION'
-            ? [
-                ['id' => 'TEST_PASSED', 'description' => 'Required manual verification passed; rerun QA with this evidence.'],
-                ['id' => 'TEST_FAILED', 'description' => 'Required manual verification failed; rerun QA with this evidence.'],
-                ['id' => 'CANCEL', 'description' => 'Cancel this engineering workflow.'],
-            ]
-            : [
-                ['id' => 'CONTINUE', 'description' => 'Human supplied the requested planning decision/evidence; rerun QA planning.'],
-                ['id' => 'CANCEL', 'description' => 'Cancel this engineering workflow.'],
+        $question = $phase === 'QA_EXECUTION'
+            ? 'Потрібно підтвердити результат ручної перевірки перед завершенням QA.'
+            : 'QA потребує вашого рішення перед формуванням плану перевірки.';
+        $reason = $phase === 'QA_EXECUTION'
+            ? 'Автоматичні перевірки не можуть підтвердити цей сценарій без людського спостереження.'
+            : 'QA Planner виявив конкретний вибір, який не можна безпечно зробити автоматично.';
+        $recommended = null;
+
+        if ($phase === 'QA_EXECUTION') {
+            $options = [
+                ['id' => 'TEST_PASSED', 'label' => 'Перевірка пройдена', 'description' => 'Підтверджую, що ручна перевірка пройшла успішно.'],
+                ['id' => 'TEST_FAILED', 'label' => 'Перевірка не пройдена', 'description' => 'Ручна перевірка виявила проблему.'],
             ];
+        } else {
+            $decision = null;
+            foreach ($manual as $candidate) {
+                if (!is_array($candidate)) continue;
+                if (trim((string) ($candidate['question'] ?? '')) === '') continue;
+                if (!is_array($candidate['options'] ?? null) || count($candidate['options']) < 2) continue;
+                $decision = $candidate;
+                break;
+            }
+
+            if (is_array($decision)) {
+                $question = trim((string) $decision['question']);
+                $reason = trim((string) ($decision['reason'] ?? '')) ?: $reason;
+                $recommended = trim((string) ($decision['recommended_option'] ?? '')) ?: null;
+                $options = [];
+                foreach ($decision['options'] as $index => $option) {
+                    if (is_scalar($option)) {
+                        $value = trim((string) $option);
+                        if ($value === '') continue;
+                        $options[] = ['id' => $value, 'label' => $value];
+                        continue;
+                    }
+                    if (!is_array($option)) continue;
+                    $value = trim((string) ($option['id'] ?? $option['value'] ?? $option['option'] ?? ''));
+                    if ($value === '') $value = 'OPTION_'.($index + 1);
+                    $label = trim((string) ($option['label'] ?? $option['title'] ?? $option['description'] ?? $value));
+                    $options[] = ['id' => $value, 'label' => $label ?: $value];
+                }
+            } else {
+                $options = [
+                    ['id' => 'CONTINUE', 'label' => 'Продовжити', 'description' => 'Продовжити з рекомендованим QA підходом.'],
+                ];
+                $recommended = 'CONTINUE';
+            }
+        }
 
         $this->humanDecisions->create(
             featureId: $featureId,
             workflowId: $workflow->id(),
             type: 'MANUAL_TEST_DECISION',
-            question: $phase === 'QA_EXECUTION'
-                ? 'QA requires manual verification evidence before the feature can pass.'
-                : 'QA planning requires a human testing decision before architecture can continue.',
-            reason: 'QA returned HUMAN_TEST_REQUIRED.',
+            question: $question,
+            reason: $reason,
             options: $options,
             evidence: [
                 'requested_by_agent' => ($phase === 'QA_EXECUTION' ? AgentRole::QA_EXECUTOR : AgentRole::QA_PLANNER)->value,
                 'resume_state' => $workflow->resumeState()?->value,
                 'phase' => $phase,
                 'human_tests_required' => $manual,
+                'decision_fingerprint' => $this->humanDecisionFingerprint($phase, $manual),
             ],
             blocking: true,
-            recommendedOption: $phase === 'QA_EXECUTION' ? null : 'CONTINUE',
+            recommendedOption: $recommended,
         );
     }
 
