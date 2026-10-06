@@ -10,7 +10,7 @@ final readonly class HypothesisResearchPolicy
 {
     /**
      * @param array{
-     *   observation_count:int,detected_count:int,executable_count:int,
+     *   observation_count:int,unobservable_count:int,detected_count:int,executable_count:int,
      *   execution_attempt_count:int,completed_execution_count:int,invalidated_execution_count:int,
      *   total_realized_pnl:string,average_edge_capture_ratio:string,completion_rate:string
      * } $metrics
