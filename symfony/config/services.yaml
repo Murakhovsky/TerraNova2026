@@ -1983,6 +1983,16 @@ services:
       $backtests: '@Domains\CapitalMarkets\Application\Service\ResearchBacktestService'
       $repository: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
 
+  runtime.capital_markets_research_backtest_job_handler:
+    class: Kernel\Queue\Handler\ModuleAwareJobHandler
+    arguments:
+      $moduleId: 'capital_markets'
+      $inner: '@Domains\CapitalMarkets\Automation\Job\ResearchBacktestJobHandler'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  capitalMarketsResearchBacktestJobHandler:
+    alias: runtime.capital_markets_research_backtest_job_handler
+
   Domains\CapitalMarkets\Application\Service\ResearchBacktestService:
     arguments:
       $adapters:
@@ -2790,6 +2800,7 @@ services:
         - '@Kernel\Queue\Handler\ActionExecutionJobHandler'
         - '@Kernel\Queue\Handler\AgentRunJobHandler'
         - '@runtime.sales_crm_job_handler'
+        - '@runtime.capital_markets_research_backtest_job_handler'
 
   Kernel\Queue\Service\QueueWorker:
     arguments:
