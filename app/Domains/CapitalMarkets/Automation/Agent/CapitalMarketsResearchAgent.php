@@ -63,14 +63,14 @@ final class CapitalMarketsResearchAgent
                         'properties'=>[
                             'research'=>[
                                 'type'=>'object',
-                                'required'=>['tool_requests','findings'],
+                                'required'=>['tool_requests','findings','hypothesis_candidate_json','limitations'],
                                 'properties'=>[
                                     'tool_requests'=>[
                                         'type'=>'array',
                                         'maxItems'=>4,
                                         'items'=>[
                                             'type'=>'object',
-                                            'required'=>['name','input'],
+                                            'required'=>['name','input_json'],
                                             'properties'=>[
                                                 'name'=>[
                                                     'type'=>'string',
@@ -81,7 +81,7 @@ final class CapitalMarketsResearchAgent
                                                         'research.searchknowledge',
                                                     ],
                                                 ],
-                                                'input'=>['type'=>'object'],
+                                                'input_json'=>['type'=>'string'],
                                             ],
                                             'additionalProperties'=>false,
                                         ],
@@ -91,7 +91,7 @@ final class CapitalMarketsResearchAgent
                                         'maxItems'=>20,
                                         'items'=>['type'=>'string'],
                                     ],
-                                    'hypothesis_candidate'=>['type'=>['object','null']],
+                                    'hypothesis_candidate_json'=>['type'=>['string','null']],
                                     'limitations'=>[
                                         'type'=>'array',
                                         'maxItems'=>20,
