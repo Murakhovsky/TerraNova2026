@@ -1945,6 +1945,9 @@ services:
   Domains\CapitalMarkets\Domain\Service\FundingStatisticsEngine: ~
   Domains\CapitalMarkets\Domain\Service\BasisStatisticsEngine: ~
   Domains\CapitalMarkets\Application\Service\CryptoSpotPerpetualVerticalSliceService: ~
+  Domains\CapitalMarkets\Domain\Service\RelativeValuePerformanceEngine: ~
+  Domains\CapitalMarkets\Application\Service\RelativeValuePaperExecutionService: ~
+  Domains\CapitalMarkets\Application\Service\FundingSettlementService: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
   Domains\CapitalMarkets\Domain\Service\PositionProjector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
