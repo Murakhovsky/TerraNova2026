@@ -36,7 +36,6 @@ final readonly class EngineeringDomainAgentService
         string $correlationId,
     ): array {
         if (!in_array($role, [
-            AgentRole::ENGINEERING_MANAGER,
             AgentRole::PRODUCT_REQUIREMENTS,
             AgentRole::QA_PLANNER,
             AgentRole::PRINCIPAL_ARCHITECT,
