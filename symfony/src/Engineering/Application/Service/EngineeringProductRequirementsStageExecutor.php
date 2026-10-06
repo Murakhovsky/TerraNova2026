@@ -176,7 +176,7 @@ final readonly class EngineeringProductRequirementsStageExecutor
                             'requested_by_agent' => AgentRole::PRODUCT_REQUIREMENTS->value,
                             'resume_state' => $workflow->resumeState()?->value,
                             'question_id' => $question['id'] ?? null,
-                            'product_decision' => $analysis->featureSpecification['decision'] ?? [],
+                            'product_question' => $question,
                             'risks' => $analysis->featureSpecification['risks'] ?? [],
                         ],
                         blocking: true,
