@@ -31,9 +31,21 @@ final readonly class PaperMultiLegExecutionSimulator
         $buyQuantity=$buy['filled_quantity'];
         $buyState=$buy['fully_filled']?PaperOrderState::Filled:PaperOrderState::PartiallyFilled;
 
-        $sell=$this->prices->executableFill($sellBook,ExecutionSide::Sell,$buyQuantity);
-        $sellQuantity=$sell['filled_quantity'];
-        $sellState=$sell['fully_filled']?PaperOrderState::Filled:PaperOrderState::PartiallyFilled;
+        try{
+            $sell=$this->prices->executableFill($sellBook,ExecutionSide::Sell,$buyQuantity);
+            $sellQuantity=$sell['filled_quantity'];
+            $sellState=$sell['fully_filled']?PaperOrderState::Filled:PaperOrderState::PartiallyFilled;
+        }catch(DomainException){
+            $sell=[
+                'price'=>Decimal::fromString('0'),
+                'filled_quantity'=>Decimal::fromString('0'),
+                'remaining_quantity'=>$buyQuantity,
+                'notional'=>Decimal::fromString('0'),
+                'fully_filled'=>false,
+            ];
+            $sellQuantity=Decimal::fromString('0');
+            $sellState=PaperOrderState::Rejected;
+        }
 
         $decision=$this->compensation->decide(
             new ExecutionLegResult('BUY',$requestedQuantity,$buyQuantity,$buyState),
