@@ -1980,6 +1980,7 @@ services:
       $lab: '@Domains\CapitalMarkets\Application\Service\ResearchLabService'
       $walkForward: '@Domains\CapitalMarkets\Domain\Research\WalkForwardEngine'
       $budget: '@Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy'
+      $isolation: '@Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy'
 
 
   Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService:
