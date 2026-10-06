@@ -1963,6 +1963,7 @@ services:
   Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy: ~
   Domains\CapitalMarkets\Domain\Research\ReplayDataGuard: ~
   Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine: ~
   Domains\CapitalMarkets\Domain\Research\ParameterSensitivityEngine: ~
   Domains\CapitalMarkets\Domain\Research\StrategyDemotionPolicy: ~
   Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector: ~
@@ -1981,6 +1982,8 @@ services:
       $walkForward: '@Domains\CapitalMarkets\Domain\Research\WalkForwardEngine'
       $budget: '@Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy'
       $isolation: '@Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy'
+      $metrics: '@Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine'
+      $confidence: '@Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine'
 
 
   Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService:
