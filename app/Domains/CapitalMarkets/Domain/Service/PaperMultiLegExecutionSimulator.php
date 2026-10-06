@@ -21,35 +21,39 @@ final readonly class PaperMultiLegExecutionSimulator
     ){}
 
     /** @return array<string,mixed> */
-    public function simulateH2(
-        MarketOrderBook $buyBook,
-        MarketOrderBook $sellBook,
+    public function simulateTwoLeg(
+        MarketOrderBook $firstBook,
+        ExecutionSide $firstSide,
+        MarketOrderBook $secondBook,
+        ExecutionSide $secondSide,
         Decimal $requestedQuantity,
         CompensationPolicy $compensationPolicy=CompensationPolicy::EmergencyClose,
     ):array{
-        $buy=$this->prices->executableFill($buyBook,ExecutionSide::Buy,$requestedQuantity);
-        $buyQuantity=$buy['filled_quantity'];
-        $buyState=$buy['fully_filled']?PaperOrderState::Filled:PaperOrderState::PartiallyFilled;
+        if($firstSide===$secondSide)throw new DomainException('TWO_LEG_RELATIVE_VALUE_REQUIRES_OPPOSING_SIDES');
+
+        $first=$this->prices->executableFill($firstBook,$firstSide,$requestedQuantity);
+        $firstQuantity=$first['filled_quantity'];
+        $firstState=$first['fully_filled']?PaperOrderState::Filled:PaperOrderState::PartiallyFilled;
 
         try{
-            $sell=$this->prices->executableFill($sellBook,ExecutionSide::Sell,$buyQuantity);
-            $sellQuantity=$sell['filled_quantity'];
-            $sellState=$sell['fully_filled']?PaperOrderState::Filled:PaperOrderState::PartiallyFilled;
+            $second=$this->prices->executableFill($secondBook,$secondSide,$firstQuantity);
+            $secondQuantity=$second['filled_quantity'];
+            $secondState=$second['fully_filled']?PaperOrderState::Filled:PaperOrderState::PartiallyFilled;
         }catch(DomainException){
-            $sell=[
+            $second=[
                 'price'=>Decimal::fromString('0'),
                 'filled_quantity'=>Decimal::fromString('0'),
-                'remaining_quantity'=>$buyQuantity,
+                'remaining_quantity'=>$firstQuantity,
                 'notional'=>Decimal::fromString('0'),
                 'fully_filled'=>false,
             ];
-            $sellQuantity=Decimal::fromString('0');
-            $sellState=PaperOrderState::Rejected;
+            $secondQuantity=Decimal::fromString('0');
+            $secondState=PaperOrderState::Rejected;
         }
 
         $decision=$this->compensation->decide(
-            new ExecutionLegResult('BUY',$requestedQuantity,$buyQuantity,$buyState),
-            new ExecutionLegResult('SELL',$buyQuantity,$sellQuantity,$sellState,$sell['fully_filled']?null:'LIQUIDITY_DISAPPEARED'),
+            new ExecutionLegResult('LEG1',$requestedQuantity,$firstQuantity,$firstState),
+            new ExecutionLegResult('LEG2',$firstQuantity,$secondQuantity,$secondState,$second['fully_filled']?null:'LIQUIDITY_DISAPPEARED'),
             $compensationPolicy,
         );
 
@@ -59,8 +63,10 @@ final readonly class PaperMultiLegExecutionSimulator
 
         if($decision->nextState===ExecutionGroupState::Compensating&&$decision->policy===CompensationPolicy::EmergencyClose){
             try{
-                $close=$this->prices->executableFill($buyBook,ExecutionSide::Sell,$decision->unhedgedQuantity);
+                $closeSide=$firstSide===ExecutionSide::Buy?ExecutionSide::Sell:ExecutionSide::Buy;
+                $close=$this->prices->executableFill($firstBook,$closeSide,$decision->unhedgedQuantity);
                 $compensationFill=[
+                    'side'=>$closeSide,
                     'price'=>$close['price'],
                     'filled_quantity'=>$close['filled_quantity'],
                     'notional'=>$close['notional'],
@@ -76,18 +82,34 @@ final readonly class PaperMultiLegExecutionSimulator
         return [
             'state'=>$finalState,
             'requested_quantity'=>$requestedQuantity,
-            'buy'=>[
-                'price'=>$buy['price'],'filled_quantity'=>$buyQuantity,'notional'=>$buy['notional'],
-                'state'=>$buyState,'fully_filled'=>$buy['fully_filled'],
+            'first'=>[
+                'side'=>$firstSide,'price'=>$first['price'],'filled_quantity'=>$firstQuantity,'notional'=>$first['notional'],
+                'state'=>$firstState,'fully_filled'=>$first['fully_filled'],
             ],
-            'sell'=>[
-                'price'=>$sell['price'],'filled_quantity'=>$sellQuantity,'notional'=>$sell['notional'],
-                'state'=>$sellState,'fully_filled'=>$sell['fully_filled'],
+            'second'=>[
+                'side'=>$secondSide,'price'=>$second['price'],'filled_quantity'=>$secondQuantity,'notional'=>$second['notional'],
+                'state'=>$secondState,'fully_filled'=>$second['fully_filled'],
             ],
             'compensation_policy'=>$decision->policy,
             'compensation'=>$compensationFill,
             'residual_unhedged_quantity'=>$residual,
             'reason'=>$decision->reason,
         ];
+    }
+
+    /** @return array<string,mixed> */
+    public function simulateH2(
+        MarketOrderBook $buyBook,
+        MarketOrderBook $sellBook,
+        Decimal $requestedQuantity,
+        CompensationPolicy $compensationPolicy=CompensationPolicy::EmergencyClose,
+    ):array{
+        $result=$this->simulateTwoLeg(
+            $buyBook,ExecutionSide::Buy,$sellBook,ExecutionSide::Sell,$requestedQuantity,$compensationPolicy
+        );
+        // Compatibility shape for VS1.
+        $result['buy']=$result['first'];
+        $result['sell']=$result['second'];
+        return $result;
     }
 }
