@@ -36,7 +36,7 @@ Quality/trust визначаються deterministic rules. AI/LLM не бере
 
 Duplicate canonical fingerprint є idempotent. Out-of-order event може залишитися в history, але не має права відкотити current MarketState.
 
-## Runtime boundaries
+## Межі середовища виконання
 
 - provider transport і provider payload decoding живуть поза Domain;
 - `MarketDataNormalizer` не містить `if provider == ...`;

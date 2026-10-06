@@ -339,7 +339,7 @@
               </p>
               <p>Venue: <strong>{{ source.venue_id|default('reference / none') }}</strong> · Priority: {{ source.priority }} · License: {{ source.license_profile }}</p>
               <p>Capabilities: {% if source.capabilities is empty %}—{% else %}{{ source.capabilities|join(', ') }}{% endif %}</p>
-              {% if source.credentials_configured %}<p>Credential reference: <code>{{ source.credentials_reference }}</code></p>{% endif %}
+              {% if source.credentials_configured %}<p>Credentials: <strong>configured</strong> via Platform Credential Vault.</p>{% endif %}
             </div>
             {% if canManageMarketDataSources or canManageMarketData %}
               <div class="d-flex gap-2 flex-wrap">

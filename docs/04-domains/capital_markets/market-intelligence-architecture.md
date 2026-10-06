@@ -40,7 +40,7 @@ Current State persistence + historical persistence + API/UI
 
 Provider names та provider payload semantics не можуть потрапляти в `Domains\CapitalMarkets\Domain`.
 
-## Source model
+## Модель джерела
 
 Кожен source має:
 
@@ -55,7 +55,7 @@ Provider names та provider payload semantics не можуть потрапл�
 
 Credential material вирішується тільки через Platform Credential Vault.
 
-## Adapter contracts
+## Контракти адаптерів
 
 Foundation `VenueAdapterInterface` не роздувається. Market Intelligence додає окремі contracts:
 
@@ -69,7 +69,7 @@ ConversionRateProviderInterface
 
 Capability discovery є обов'язковим. Application layer не припускає, що source підтримує BBO, ORDER_BOOK або STREAMING.
 
-## Deterministic financial math
+## Детермінована фінансова математика
 
 Binary floating-point arithmetic у Capital Markets Domain заборонена. `DecimalMath` виконує add/subtract/multiply/divide/midpoint/basis-points над explicit base-10 strings.
 
@@ -83,7 +83,7 @@ spread_bps
 
 без float.
 
-## Time semantics
+## Семантика часу
 
 Кожен canonical event містить три різні timestamps:
 
@@ -125,7 +125,7 @@ UNAVAILABLE
 
 Quality score 0–100 існує для UI, але decision logic не повинна використовувати score замість flags/status.
 
-## Order book
+## Книга заявок
 
 `ORDER_BOOK_SNAPSHOT` та `ORDER_BOOK_DELTA` є різними event types.
 
@@ -133,7 +133,7 @@ Delta ніколи не застосовується без валідного s
 
 Provider-specific sequence semantics задаються policy. Наприклад, feed з monotonic-but-not-consecutive sequence не можна помилково трактувати як gap.
 
-## Market State
+## Стан ринку
 
 Trading `MarketState` keyed мінімально:
 
@@ -158,13 +158,13 @@ venue_id + instrument_id
 
 Reference feeds мають окремий `ReferenceMarketState` із session context, last regular quote, last extended quote, reference age та reference type.
 
-## Currency comparison
+## Порівняння валют
 
 Native quote asset ніколи не втрачається. AAPLX/USDT не порівнюється напряму з AAPL/USD.
 
 Cross-currency comparison дозволена тільки після valid `ConversionRateProviderInterface` result. Якщо conversion rate відсутній або untrusted, comparison layer повинна повернути `NOT_COMPARABLE`, а не fake spread.
 
-## Backpressure
+## Контроль навантаження
 
 High-frequency market data не маршрутизується tick-for-tick у глобальний COS Event Bus.
 
@@ -175,7 +175,7 @@ High-frequency market data не маршрутизується tick-for-tick у 
 - order-book delta відхиляється, якщо continuity більше не можна гарантувати, після чого потрібен snapshot resync;
 - business-significant state transitions можуть публікуватися через Kernel EventBus.
 
-## Persistence decision V1
+## Рішення щодо зберігання даних V1
 
 Поточний COS runtime канонічно використовує MySQL 8.4. Для Market Intelligence V1 не додається окремий PostgreSQL/Timescale cluster лише заради самого факту існування time-series.
 
@@ -194,7 +194,7 @@ historical candles / aggregates
 
 High-volume extraction у PostgreSQL/TimescaleDB залишається дозволеним майбутнім scaling step через repository contracts.
 
-## Retention policy
+## Політика зберігання
 
 Retention не є Domain invariant. V1 runtime config підтримує hot/warm/archive policy окремо для raw і canonical events.
 
@@ -237,7 +237,7 @@ Bybit є `TRADING_SOURCE`, Massive — `REFERENCE_SOURCE`. Massive credentials �
 
 REST polling доступний через generic `MarketSourcePollingService` та CLI `cos:capital-markets:market-data:poll`. Реальна WebSocket streaming connectivity ще не реалізована і захищена вимкненим feature flag.
 
-## Operator surface
+## Операторська поверхня
 
 Market Intelligence має canonical operator surface:
 
@@ -257,7 +257,7 @@ Market Intelligence має canonical operator surface:
 
 Mutation paths використовують tenant context, capability checks, Market Data feature gate, CSRF та Capital Markets Audit. Secret material не приймається через UI/API: source config зберігає тільки `credentials_reference`.
 
-## Acceptance core
+## Базові критерії приймання
 
 Core вважається готовим, коли automated tests підтверджують:
 

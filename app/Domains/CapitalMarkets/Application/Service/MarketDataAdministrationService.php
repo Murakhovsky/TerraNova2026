@@ -219,7 +219,6 @@ final readonly class MarketDataAdministrationService
             'enabled'=>$source->enabled,
             'priority'=>$source->priority,
             'roles'=>array_map(static fn(MarketSourceRole $role):string=>$role->value,$source->roles),
-            'credentials_reference'=>$source->credentialsReference,
             'credentials_configured'=>$source->credentialsReference!==null,
             'license_profile'=>$source->licenseProfile,
             'metadata'=>$source->metadata,

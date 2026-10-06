@@ -35,6 +35,9 @@ foreach(['api_key','secret','password','token'] as $forbiddenField){
 foreach(['credentials_reference','credentials_configured'] as $needle){
     if(!str_contains($admin,$needle))throw new RuntimeException('Credential-reference operator contract missing: '.$needle);
 }
+if(str_contains($admin,"'credentials_reference'=>")){
+    throw new RuntimeException('Credential reference must not be exposed in the Market Data read projection.');
+}
 
 $api=(string)file_get_contents($root.'/symfony/src/Http/Api/V1/Controller/CapitalMarketsMarketDataController.php');
 foreach([
@@ -67,7 +70,7 @@ foreach([
 $template=(string)file_get_contents($root.'/symfony/templates/experience/capital_markets/workspace.html.twig');
 foreach([
     "cmView == 'market_data'",'Create disabled source','Sources and health','Current trading MarketState',
-    'Reference MarketState','Poll now','credentials_reference',
+    'Reference MarketState','Poll now','Credentials: <strong>configured</strong>',
 ] as $needle){
     if(!str_contains($template,$needle))throw new RuntimeException('Market Data workspace UI contract missing: '.$needle);
 }

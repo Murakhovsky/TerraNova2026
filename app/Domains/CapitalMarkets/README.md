@@ -106,6 +106,8 @@ New sources are created disabled. Mutations require tenant context, Capital Mark
 
 ## Safety posture
 
+Operator and provider surfaces expose **no fake prices**: market values exist only after real provider observations pass canonical normalization and quality checks.
+
 The module contains no `Order`, `Position`, `Portfolio` or execution runtime.
 
 Paper Trading, Live Trading and Auto Execution feature flags remain separate promotion gates and stay disabled. Market Intelligence is read-only with respect to capital and order placement.

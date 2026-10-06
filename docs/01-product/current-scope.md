@@ -29,7 +29,7 @@ kind: product
 
 Машиночитані факти: [довідник модулів і можливостей](../12-reference/module-capabilities.md).
 
-## Capital Markets: Foundation + Market Intelligence
+## Capital Markets: фундамент і ринкова аналітика
 
 Capital Markets `0.3.0` має два активні шари: структурний `CM-FOUNDATION` та executable `CM-MARKET-INTELLIGENCE`.
 
