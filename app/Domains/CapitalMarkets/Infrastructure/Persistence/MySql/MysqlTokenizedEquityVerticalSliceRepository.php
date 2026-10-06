@@ -353,6 +353,26 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
             $statement->execute(['org'=>$organizationId,'hypothesis'=>$hypothesis]);
             return (string)$statement->fetchColumn();
         };
+        $attempts=(int)$scalar(
+            'SELECT COUNT(*) FROM tn_capital_market_paper_executions e
+             INNER JOIN tn_capital_market_opportunities o
+               ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
+             WHERE e.organization_id=:org AND o.hypothesis=:hypothesis'
+        );
+        $completed=(int)$scalar(
+            'SELECT COUNT(*) FROM tn_capital_market_paper_executions e
+             INNER JOIN tn_capital_market_opportunities o
+               ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
+             WHERE e.organization_id=:org AND o.hypothesis=:hypothesis AND e.status=\'COMPLETED\''
+        );
+        $completionRate=$attempts===0
+            ? '0'
+            : \Domains\CapitalMarkets\Domain\Value\DecimalMath::divide(
+                \Domains\CapitalMarkets\Domain\Value\Decimal::fromString((string)$completed),
+                \Domains\CapitalMarkets\Domain\Value\Decimal::fromString((string)$attempts),
+                12
+            )->value();
+
         return [
             'observation_count'=>(int)$scalar(
                 'SELECT COUNT(*) FROM tn_capital_market_hypothesis_observations
@@ -366,24 +386,22 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
                 'SELECT COUNT(*) FROM tn_capital_market_opportunities
                  WHERE organization_id=:org AND hypothesis=:hypothesis AND status=\'APPROVED\''
             ),
-            'realized_count'=>(int)$scalar(
-                'SELECT COUNT(*) FROM tn_capital_market_paper_executions e
-                 INNER JOIN tn_capital_market_opportunities o
-                   ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
-                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis AND e.status=\'COMPLETED\''
-            ),
+            'execution_attempt_count'=>$attempts,
+            'completed_execution_count'=>$completed,
+            'invalidated_execution_count'=>$attempts-$completed,
             'total_realized_pnl'=>$scalar(
                 'SELECT COALESCE(SUM(e.realized_pnl),0) FROM tn_capital_market_paper_executions e
                  INNER JOIN tn_capital_market_opportunities o
                    ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
-                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis AND e.status=\'COMPLETED\''
+                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis'
             ),
             'average_edge_capture_ratio'=>$scalar(
                 'SELECT COALESCE(AVG(e.edge_capture_ratio),0) FROM tn_capital_market_paper_executions e
                  INNER JOIN tn_capital_market_opportunities o
                    ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
-                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis AND e.status=\'COMPLETED\''
+                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis'
             ),
+            'completion_rate'=>$completionRate,
         ];
     }
 
