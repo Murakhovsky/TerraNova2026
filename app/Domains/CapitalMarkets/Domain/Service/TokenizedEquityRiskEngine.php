@@ -4,7 +4,9 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Domain\Service;
 
 use DateTimeImmutable;
+use DomainException;
 use Domains\CapitalMarkets\Domain\Opportunity\Opportunity;
+use Domains\CapitalMarkets\Domain\Opportunity\SpreadCandidate;
 use Domains\CapitalMarkets\Domain\Risk\RiskAssessment;
 use Domains\CapitalMarkets\Domain\Risk\RiskDecision;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -22,6 +24,9 @@ final class TokenizedEquityRiskEngine
         bool $killSwitch=false,
         ?Decimal $minimumExecutionProbability=null,
     ):RiskAssessment{
+        if(!$opportunity->candidate instanceof SpreadCandidate||$opportunity->economics===null){
+            throw new DomainException('TOKENIZED_EQUITY_RISK_REQUIRES_SPREAD_OPPORTUNITY');
+        }
         $blocking=[];$warnings=[];
         if($killSwitch)$blocking[]='KILL_SWITCH_ACTIVE';
         if($opportunity->candidate->expiredAt($now))$blocking[]='OPPORTUNITY_EXPIRED';
