@@ -176,7 +176,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         $db = $this->entityManager->getConnection();
 
         $rows = $db->fetchAllAssociative(
-            "SELECT w.id, w.feature_id, w.trace_id, w.current_state, w.status, w.health_status,
+            "SELECT w.id, w.feature_id, w.trace_id, w.current_state, w.status, w.health_status, w.runtime_reason,
                     f.status AS feature_status,
                     TIMESTAMPDIFF(SECOND, COALESCE(w.heartbeat_at, w.last_activity_at), UTC_TIMESTAMP(6)) AS age_seconds
              FROM cos_engineering_workflows w
@@ -190,6 +190,8 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
         foreach ($rows as $row) {
             $state = (string) ($row['current_state'] ?? '');
             $featureStatus = strtoupper((string) ($row['feature_status'] ?? ''));
+            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
+            $previousReason = trim((string) ($row['runtime_reason'] ?? ''));
             $age = max(0, (int) ($row['age_seconds'] ?? 0));
             if ($featureStatus === 'QUEUED') {
                 $health = 'WAITING';
@@ -199,6 +201,13 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                 $health = 'WAITING';
                 ++$counts['waiting'];
                 $reason = 'Workflow is waiting for explicit human action.';
+            } elseif ($previousHealth === 'STALLED' && $previousReason !== '') {
+                // Explicit runtime failures are sticky. Only a real runtime heartbeat via
+                // touchRuntime() may recover them to HEALTHY; the watchdog must not erase
+                // the failure merely because the last heartbeat is still recent.
+                $health = 'STALLED';
+                ++$counts['stalled'];
+                $reason = $previousReason;
             } elseif ($age >= $stalledAfterSeconds) {
                 $health = 'STALLED';
                 ++$counts['stalled'];
@@ -213,7 +222,6 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                 $reason = null;
             }
 
-            $previousHealth = strtoupper((string) ($row['health_status'] ?? 'UNKNOWN'));
             $db->executeStatement(
                 "UPDATE cos_engineering_workflows
                  SET health_status = :health,
