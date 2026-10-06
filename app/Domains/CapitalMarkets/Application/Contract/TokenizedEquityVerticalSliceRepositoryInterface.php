@@ -37,6 +37,26 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
 
     public function completeReservation(string $organizationId,string $reservationId,string $realizedPnl):void;
 
+    public function setPaperBalance(
+        string $organizationId,string $venueId,string $assetKey,string $amount
+    ):void;
+
+    /** @return list<array<string,mixed>> */
+    public function listPaperBalances(string $organizationId):array;
+
+    public function reservePaperBalance(
+        string $organizationId,string $reservationId,string $opportunityId,
+        string $venueId,string $assetKey,string $amount,string $expiresAt
+    ):bool;
+
+    public function releasePaperBalanceReservation(string $organizationId,string $reservationId):void;
+
+    public function consumePaperBalanceReservation(string $organizationId,string $reservationId):void;
+
+    public function creditPaperBalance(
+        string $organizationId,string $venueId,string $assetKey,string $amount
+    ):void;
+
     /** @return list<array<string,mixed>> */
     public function listOpportunities(string $organizationId,int $limit=200):array;
 
