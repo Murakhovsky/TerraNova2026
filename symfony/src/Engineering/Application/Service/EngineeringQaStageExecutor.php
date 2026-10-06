@@ -509,7 +509,7 @@ final readonly class EngineeringQaStageExecutor
                 staticAnalysisPassed: $this->staticAnalysisPassed($ci),
                 requiredTestsPassed: $this->requiredSuitesPassed($testPlan['content'], $run->structuredOutput),
                 smokePassed: $this->smokePassed($testPlan['content'], $run->structuredOutput),
-                documentationImpactChecked: $this->documentationImpactChecked($implementation['content'], $development['content']),
+                documentationImpactChecked: $this->documentationImpactChecked($featureId, $implementation['content'], $development['content']),
                 hasOpenMajorOrHigherFinding: $this->findings->hasOpenMajorOrHigher($featureId),
                 revisionConsistent: ($review['content']['reviewed_revision'] ?? null) === ($run->structuredOutput['tested_revision'] ?? null)
                     && ($prState['head_revision'] ?? null) === ($run->structuredOutput['tested_revision'] ?? null),
@@ -789,7 +789,7 @@ final readonly class EngineeringQaStageExecutor
         return false;
     }
 
-    private function documentationImpactChecked(array $implementation, array $development): bool
+    private function documentationImpactChecked(string $featureId, array $implementation, array $development): bool
     {
         $required = [];
         foreach (is_array($implementation['documentation_updates'] ?? null) ? $implementation['documentation_updates'] : [] as $entry) {
@@ -801,9 +801,11 @@ final readonly class EngineeringQaStageExecutor
         if ($required === []) return true;
 
         $applied = [];
+        $documentationReport = $this->artifacts->latest($featureId, ArtifactType::DOCUMENTATION_REPORT);
         foreach (array_merge(
             is_array($development['changed_files'] ?? null) ? $development['changed_files'] : [],
             is_array($development['architect_documentation_applied'] ?? null) ? $development['architect_documentation_applied'] : [],
+            is_array($documentationReport['content']['changed_files'] ?? null) ? $documentationReport['content']['changed_files'] : [],
         ) as $path) {
             if (is_string($path) && trim($path) !== '') $applied[trim($path)] = true;
         }
