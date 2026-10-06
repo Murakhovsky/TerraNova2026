@@ -15,7 +15,7 @@ use InvalidArgumentException;
 
 final readonly class BybitMarketDataDecoder implements MarketDataDecoderInterface
 {
-    public function __construct(private BybitTickerPayloadParser $parser){}
+    public function __construct(private BybitTickerPayloadParser $parser,private BybitOrderBookPayloadParser $orderBooks){}
 
     public function adapterType():string{return BybitSpotMarketDataAdapter::ADAPTER_TYPE;}
 
@@ -26,6 +26,9 @@ final readonly class BybitMarketDataDecoder implements MarketDataDecoderInterfac
         if(!is_string($body)||$body==='')throw new InvalidArgumentException('Bybit raw JSON is missing.');
         $ticker=$this->parser->parse($body,$event->externalInstrument);
         $timestamp=$event->providerTimestamp??$event->receivedAt;
+        $marketStatus=match((string)($event->transportMetadata['market_status']??'UNKNOWN')){
+            'OPEN'=>MarketStatus::Open,'CLOSED'=>MarketStatus::Closed,default=>MarketStatus::Unknown,
+        };
 
         return match($event->eventType){
             'bybit.spot.ticker.bbo'=>new DecodedMarketEvent(
@@ -40,7 +43,7 @@ final readonly class BybitMarketDataDecoder implements MarketDataDecoderInterfac
                     'ask_quantity'=>$ticker['ask1Size'],
                 ],
                 $event->mode,
-                MarketStatus::Unknown,
+                $marketStatus,
                 MarketSession::Unknown,
                 ReferenceType::ProviderReference,
             ),
@@ -51,7 +54,21 @@ final readonly class BybitMarketDataDecoder implements MarketDataDecoderInterfac
                 $event->sequence,
                 ['value'=>$ticker['volume24h']],
                 $event->mode,
-                MarketStatus::Unknown,
+                $marketStatus,
+                MarketSession::Unknown,
+                ReferenceType::ProviderReference,
+            ),
+            'bybit.spot.orderbook.snapshot'=>new DecodedMarketEvent(
+                MarketEventType::OrderBookSnapshot,
+                $event->externalInstrument,
+                $timestamp,
+                $event->sequence,
+                [
+                    'bids'=>$this->orderBooks->parse($body,$event->externalInstrument)['bids'],
+                    'asks'=>$this->orderBooks->parse($body,$event->externalInstrument)['asks'],
+                ],
+                $event->mode,
+                $marketStatus,
                 MarketSession::Unknown,
                 ReferenceType::ProviderReference,
             ),
