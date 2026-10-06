@@ -20,7 +20,7 @@ generated: true
 
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `capital_markets` | Capital Markets | `0.5.0` | `0.5.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | Capital Markets | `0.6.0` | `0.6.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
@@ -34,7 +34,7 @@ generated: true
 
 ## Capital Markets (`capital_markets`)
 
-**Опис із manifest:** Autonomous Capital Markets bounded context with instrument/venue foundation, provider-neutral Market Intelligence and Tokenized Equity H1/H2 research, hypothesis evidence, deterministic verdicts and guarded paper execution. Live trading remains disabled.
+**Опис із manifest:** Autonomous Capital Markets bounded context with instrument/venue foundation, provider-neutral Market Intelligence and Tokenized Equity H1/H2 research, hypothesis evidence, deterministic verdicts, automated universe scanning, historical MarketState replay and guarded paper execution. Live trading remains disabled.
 
 - runtime service модуля: `capitalMarketsDomainModule`;
 - обробники jobs: —;
