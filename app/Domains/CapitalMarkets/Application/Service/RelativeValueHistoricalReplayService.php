@@ -22,6 +22,7 @@ use Domains\CapitalMarkets\Domain\Service\RelativeValueOpportunityEvaluator;
 use Domains\CapitalMarkets\Domain\Service\SpotPerpetualMarketStateFactory;
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
+use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 use InvalidArgumentException;
 
 final readonly class RelativeValueHistoricalReplayService implements ResearchReplayAdapterInterface
@@ -63,20 +64,35 @@ final readonly class RelativeValueHistoricalReplayService implements ResearchRep
             }
         }
 
-        $positive=array_values(array_filter($rows,static fn(array $r):bool=>(float)($r['expected_net_pnl']??0)>0));
+        $positive=array_values(array_filter($rows,static fn(array $r):bool=>
+            Decimal::fromString((string)($r['expected_net_pnl']??'0'))->isPositive()
+        ));
         $validated=array_values(array_filter($rows,static fn(array $r):bool=>($r['status']??'')==='VALIDATED'));
-        $pnl=array_map(static fn(array $r):float=>(float)($r['expected_net_pnl']??0),$rows);
+        $total=Decimal::fromString('0');
+        foreach($rows as $row){
+            $total=DecimalMath::add($total,Decimal::fromString((string)($row['expected_net_pnl']??'0')));
+        }
+        $count=count($rows);
+        $positiveRate=$count===0
+            ? Decimal::fromString('0')
+            : DecimalMath::divide(Decimal::fromString((string)count($positive)),Decimal::fromString((string)$count),12);
+        $validatedRate=$count===0
+            ? Decimal::fromString('0')
+            : DecimalMath::divide(Decimal::fromString((string)count($validated)),Decimal::fromString((string)$count),12);
+        $average=$count===0
+            ? Decimal::fromString('0')
+            : DecimalMath::divide($total,Decimal::fromString((string)$count),12);
 
         return [
             'hypothesis'=>$code,
-            'sample_count'=>count($rows),
+            'sample_count'=>$count,
             'skipped_count'=>$skipped,
             'positive_count'=>count($positive),
             'validated_count'=>count($validated),
-            'positive_rate'=>$rows===[]?0.0:count($positive)/count($rows),
-            'validated_rate'=>$rows===[]?0.0:count($validated)/count($rows),
-            'expected_pnl_total'=>(string)array_sum($pnl),
-            'expected_pnl_average'=>$rows===[]?'0':(string)(array_sum($pnl)/count($rows)),
+            'positive_rate'=>$positiveRate->value(),
+            'validated_rate'=>$validatedRate->value(),
+            'expected_pnl_total'=>$total->value(),
+            'expected_pnl_average'=>$average->value(),
             'execution_fidelity'=>'MEDIUM',
             'production_economics_reused'=>true,
             'rows'=>$rows,
