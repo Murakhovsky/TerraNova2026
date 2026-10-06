@@ -44,6 +44,8 @@ $expectFailure(
 $developerHistory = [[
     'role' => AgentRole::DEVELOPER->value,
     'status' => 'COMPLETED',
+    'agent_id' => 'developer:run-1',
+    'actor_id' => 'developer:run-1',
 ]];
 $policy->assertExecutionAllowed(AgentRole::REVIEWER, 'FEATURE', 'MEDIUM', $developerHistory);
 
@@ -54,9 +56,18 @@ $expectFailure(
 
 $reviewedHistory = [
     ...$developerHistory,
-    ['role' => AgentRole::REVIEWER->value, 'status' => 'COMPLETED'],
+    ['role' => AgentRole::REVIEWER->value, 'status' => 'COMPLETED', 'agent_id' => 'reviewer:run-2', 'actor_id' => 'reviewer:run-2'],
 ];
 $policy->assertExecutionAllowed(AgentRole::QA_EXECUTOR, 'FEATURE', 'MEDIUM', $reviewedHistory);
+
+$selfApprovalHistory = [
+    ['role' => AgentRole::DEVELOPER->value, 'status' => 'COMPLETED', 'agent_id' => 'same-actor', 'actor_id' => 'same-actor'],
+    ['role' => AgentRole::REVIEWER->value, 'status' => 'COMPLETED', 'agent_id' => 'same-actor', 'actor_id' => 'same-actor'],
+];
+$expectFailure(
+    static fn () => $policy->assertExecutionAllowed(AgentRole::QA_EXECUTOR, 'FEATURE', 'HIGH', $selfApprovalHistory),
+    'Identity-level self approval was accepted.',
+);
 $policy->assertExecutionAllowed(AgentRole::SECURITY_SPECIALIST, 'FEATURE', 'HIGH', $reviewedHistory);
 
 $tools->assertRepositoryMutationAllowed(AgentRole::QA_EXECUTOR, [[
