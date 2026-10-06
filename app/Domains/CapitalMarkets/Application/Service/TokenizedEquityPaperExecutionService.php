@@ -19,6 +19,7 @@ use Domains\CapitalMarkets\Domain\Execution\PaperFill;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Domain\Ledger\LedgerEntry;
 use Domains\CapitalMarkets\Domain\Ledger\LedgerTransaction;
+use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 use Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator;
 use Domains\CapitalMarkets\Domain\Service\PaperPnlEngine;
 use Domains\CapitalMarkets\Domain\Service\PositionProjector;
@@ -36,6 +37,7 @@ final readonly class TokenizedEquityPaperExecutionService
         private PaperPnlEngine $pnl,
         private PaperMultiLegExecutionSimulator $multiLeg,
         private PositionProjector $positions,
+        private TokenizedEquityTelemetry $telemetry,
     ){}
 
     /** @return array<string,mixed> */
@@ -65,6 +67,7 @@ final readonly class TokenizedEquityPaperExecutionService
     /** @return array<string,mixed> */
     public function execute(string $organizationId,string $opportunityId):array
     {
+        $this->telemetry->metric($organizationId,'paper_execution_total',1.0,['phase'=>'attempt']);
         $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
         if($opportunity===null)throw new DomainException('Opportunity not found.');
         $existingExecution=$this->repository->getExecutionForOpportunity($organizationId,$opportunityId);
@@ -354,6 +357,11 @@ final readonly class TokenizedEquityPaperExecutionService
                 ]
             );
 
+            $this->recordExecutionTelemetry(
+                $organizationId,(string)($payload['status']??'COMPLETED'),
+                Decimal::fromString((string)($payload['realized_pnl']??'0')),
+                Decimal::fromString((string)($payload['edge_capture_ratio']??'0'))
+            );
             return $payload;
         }catch(\Throwable $error){
             if($firstLegPersisted){
@@ -657,6 +665,11 @@ final readonly class TokenizedEquityPaperExecutionService
             ]
         );
 
+        $this->recordExecutionTelemetry(
+            $organizationId,(string)($payload['status']??'COMPLETED'),
+            Decimal::fromString((string)($payload['realized_pnl']??'0')),
+            Decimal::fromString((string)($payload['edge_capture_ratio']??'0'))
+        );
         return $payload;
     }
 
@@ -703,6 +716,17 @@ final readonly class TokenizedEquityPaperExecutionService
             'evidence'=>$evidence,
         ];
         $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'INVALIDATED',$payload);
+        $this->telemetry->metric($organizationId,'paper_execution_total',1.0,['phase'=>'invalidated','reason'=>$reason]);
+        if($reason==='UNHEDGED_POSITION'){
+            $this->telemetry->alert($organizationId,CapitalMarketsAlertType::UnhedgedPosition,[
+                'execution_id'=>$executionId,'opportunity_id'=>$opportunityId,'reason'=>$reason,
+            ]);
+        }
+        if(str_contains($reason,'LEDGER')){
+            $this->telemetry->alert($organizationId,CapitalMarketsAlertType::LedgerInconsistency,[
+                'execution_id'=>$executionId,'opportunity_id'=>$opportunityId,'reason'=>$reason,
+            ]);
+        }
 
         $fingerprint=hash('sha256',implode('|',[
             $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
@@ -765,6 +789,17 @@ final readonly class TokenizedEquityPaperExecutionService
             $organizationId,(string)$position->positionId,'paper','TokenizedEquityRelativeValue-v1',
             $instrumentId,$venueId,$position->status(),$payload
         );
+    }
+
+    private function recordExecutionTelemetry(
+        string $organizationId,string $status,Decimal $realizedPnl,Decimal $edgeCapture
+    ):void{
+        $this->telemetry->metric($organizationId,'paper_execution_total',1.0,['phase'=>'completed','status'=>$status]);
+        $this->telemetry->metric($organizationId,'paper_execution_realized_pnl',(float)$realizedPnl->value(),['status'=>$status]);
+        $this->telemetry->metric($organizationId,'paper_execution_edge_capture_ratio',(float)$edgeCapture->value(),['status'=>$status]);
+        if($status==='COMPLETED_COMPENSATED'){
+            $this->telemetry->metric($organizationId,'paper_execution_compensation_total',1.0,['status'=>$status]);
+        }
     }
 
     /** @return array<string,mixed> */
