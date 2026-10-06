@@ -23,6 +23,20 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
     /** @param array<string,mixed> $payload */
     public function saveLedgerTransaction(string $organizationId,string $transactionId,string $idempotencyKey,array $payload):void;
 
+    /** @return array<string,mixed> */
+    public function initializePaperPortfolio(string $organizationId,string $currency,string $initialCapital):array;
+
+    /** @return array<string,mixed>|null */
+    public function paperPortfolio(string $organizationId):?array;
+
+    public function reserveCapital(
+        string $organizationId,string $reservationId,string $opportunityId,string $amount,string $expiresAt
+    ):bool;
+
+    public function releaseReservation(string $organizationId,string $reservationId):void;
+
+    public function completeReservation(string $organizationId,string $reservationId,string $realizedPnl):void;
+
     /** @return list<array<string,mixed>> */
     public function listOpportunities(string $organizationId,int $limit=200):array;
 
