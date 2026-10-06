@@ -76,7 +76,8 @@ final class TableOwnership
             'tn_capital_market_spread_candidates', 'tn_capital_market_opportunities',
             'tn_capital_market_risk_assessments', 'tn_capital_market_paper_executions',
             'tn_capital_market_ledger_transactions', 'tn_capital_market_paper_portfolios',
-            'tn_capital_market_capital_reservations',
+            'tn_capital_market_capital_reservations', 'tn_capital_market_paper_balances',
+            'tn_capital_market_paper_balance_reservations',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [
