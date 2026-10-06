@@ -99,6 +99,37 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         return array_map([$this,'decode'],array_column($statement->fetchAll(PDO::FETCH_ASSOC),'record_json'));
     }
 
+
+    public function saveBacktestRun(string $organizationId,array $record):void
+    {
+        $this->insert('tn_capital_market_backtest_runs',$organizationId,$record,'run_id');
+    }
+
+    public function saveOutOfSampleRun(string $organizationId,array $record):void
+    {
+        $this->insert('tn_capital_market_oos_runs',$organizationId,$record,'run_id');
+    }
+
+    public function saveScorecard(string $organizationId,array $record):void
+    {
+        $this->insert('tn_capital_market_strategy_scorecards',$organizationId,$record,'scorecard_id');
+    }
+
+    public function saveRejectedHypothesis(string $organizationId,array $record):void
+    {
+        $this->insert('tn_capital_market_rejected_hypotheses',$organizationId,$record,'rejection_id');
+    }
+
+    public function saveKnowledge(string $organizationId,array $record):void
+    {
+        $this->insert('tn_capital_market_research_knowledge',$organizationId,$record,'knowledge_id');
+    }
+
+    public function listKnowledge(string $organizationId,int $limit=200):array
+    {
+        return $this->many('tn_capital_market_research_knowledge',$organizationId,$limit);
+    }
+
     private function insert(string $table,string $organizationId,array $record,string $idKey):void
     {
         $id=trim((string)($record[$idKey]??''));
@@ -112,7 +143,7 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
             'created_at'=>$record['created_at']??gmdate('Y-m-d H:i:s'),
         ];
 
-        foreach(['hypothesis_id','experiment_id','dataset_id','strategy_id','strategy_version_id','version','status','snapshot_hash'] as $column){
+        foreach(['hypothesis_id','experiment_id','dataset_id','strategy_id','strategy_version_id','version','status','snapshot_hash','partition_name','reproducibility_fingerprint','composite_score','weight_version','reason','knowledge_type'] as $column){
             if($column===$idKey||!array_key_exists($column,$record))continue;
             $columns[]=$column;
             $params[$column]=$record[$column];
