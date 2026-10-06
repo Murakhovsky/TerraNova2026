@@ -17,6 +17,7 @@ $migration = (string) file_get_contents($root.'/symfony/migrations/Version202610
 $eventMigration = (string) file_get_contents($root.'/symfony/migrations/Version20261005111500.php');
 $repositoryDiscovery = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Repository/LocalRepositoryDiscovery.php');
 $productStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringProductRequirementsStageExecutor.php');
+$architectStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArchitectStageExecutor.php');
 
 $continue = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringContinueService.php');
 
@@ -78,6 +79,13 @@ foreach ([
 }
 if (str_contains($continue, "\$this->workflows->touchRuntime(\$workflowId);\n        \$workflow = \$this->workflows->get(\$workflowId);")) {
     throw new RuntimeException('Engineering continue path still emits a false recovery heartbeat before real work begins.');
+}
+
+if (!str_contains($architectStage, 'repository.revision_unavailable') || !str_contains($architectStage, "'human_decision_required' => false")) {
+    throw new RuntimeException('Architect repository infrastructure failure is not classified as runtime-owned.');
+}
+if (str_contains($architectStage, "type: 'EXTERNAL_CREDENTIAL'")) {
+    throw new RuntimeException('Architect repository infrastructure still asks the user to confirm runtime configuration.');
 }
 
 echo "Engineering runtime truth and observability contract passed.\n";

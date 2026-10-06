@@ -20,7 +20,7 @@ foreach ([
     "'repository_files'",
     "'database_schema'",
     "'human_decisions'",
-    'requireRepositoryReadConfiguration',
+    'stopForRepositoryInfrastructure',
     'currentBaseRevision',
     'historyForFeature',
     "'requested_by_agent'",
@@ -38,5 +38,8 @@ if (!str_contains($schemaProvider, 'get_debug_type($column->getType())')) throw 
 if (str_contains($schemaProvider, 'getDefault()')) throw new RuntimeException('Architect DB schema snapshot must not expose column default values.');
 if (!str_contains($stage, "'NEEDS_HUMAN_DECISION'")) throw new RuntimeException('Architect stage does not implement canonical human decision gate.');
 if (!str_contains($stage, "'repository_revision'")) throw new RuntimeException('Architect stage does not bind decisions to repository revision.');
+if (!str_contains($stage, "'human_decision_required' => false")) throw new RuntimeException('Repository infrastructure failure must not be exposed as a human decision.');
+if (!str_contains($stage, "markRuntimeIssue(") || !str_contains($stage, "'STALLED'")) throw new RuntimeException('Repository infrastructure failure must stall runtime explicitly.');
+if (str_contains($stage, "type: 'EXTERNAL_CREDENTIAL'")) throw new RuntimeException('Architect still creates EXTERNAL_CREDENTIAL human decisions for runtime configuration.');
 
 echo "Engineering Architect stage passed.\n";
