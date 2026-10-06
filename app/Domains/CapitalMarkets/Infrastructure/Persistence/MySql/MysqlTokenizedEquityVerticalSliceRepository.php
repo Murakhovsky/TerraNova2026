@@ -447,6 +447,109 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         )->execute(['org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey,'amount'=>$amount]);
     }
 
+    public function settlePaperExecution(
+        string $organizationId,
+        string $executionId,
+        string $capitalReservationId,
+        string $buyCashReservationId,
+        string $sellInventoryReservationId,
+        string $buyVenueId,
+        string $buyInstrumentId,
+        string $buyQuantity,
+        string $sellVenueId,
+        string $quoteAsset,
+        string $sellCash,
+        string $realizedPnl
+    ):void{
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $capital=$this->connection->prepare(
+                'SELECT amount,status FROM tn_capital_market_capital_reservations
+                 WHERE organization_id=:org AND reservation_id=:id FOR UPDATE'
+            );
+            $capital->execute(['org'=>$organizationId,'id'=>$capitalReservationId]);
+            $capitalRow=$capital->fetch(PDO::FETCH_ASSOC);
+
+            $balance=$this->connection->prepare(
+                'SELECT reservation_id,venue_id,asset_key,amount,status
+                 FROM tn_capital_market_paper_balance_reservations
+                 WHERE organization_id=:org AND reservation_id IN (:buy_id,:sell_id) FOR UPDATE'
+            );
+            $balance->execute([
+                'org'=>$organizationId,'buy_id'=>$buyCashReservationId,'sell_id'=>$sellInventoryReservationId,
+            ]);
+            $rows=$balance->fetchAll(PDO::FETCH_ASSOC);
+            $byId=[];
+            foreach($rows as $row)$byId[(string)$row['reservation_id']]=$row;
+            $buyRow=$byId[$buyCashReservationId]??null;
+            $sellRow=$byId[$sellInventoryReservationId]??null;
+
+            if(is_array($capitalRow)&&$capitalRow['status']==='CONSUMED'
+                &&is_array($buyRow)&&$buyRow['status']==='CONSUMED'
+                &&is_array($sellRow)&&$sellRow['status']==='CONSUMED'){
+                if($ownsTransaction)$this->connection->commit();
+                return;
+            }
+            if(!is_array($capitalRow)||$capitalRow['status']!=='RESERVED'
+                ||!is_array($buyRow)||$buyRow['status']!=='RESERVED'
+                ||!is_array($sellRow)||$sellRow['status']!=='RESERVED'){
+                throw new \DomainException('PAPER_EXECUTION_SETTLEMENT_STATE_INCONSISTENT');
+            }
+
+            foreach([$buyRow,$sellRow] as $row){
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_balance_reservations SET status=\'CONSUMED\'
+                     WHERE organization_id=:org AND reservation_id=:id AND status=\'RESERVED\''
+                )->execute(['org'=>$organizationId,'id'=>(string)$row['reservation_id']]);
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_balances
+                     SET reserved_amount=reserved_amount-:amount
+                     WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset'
+                )->execute([
+                    'amount'=>(string)$row['amount'],'org'=>$organizationId,
+                    'venue'=>(string)$row['venue_id'],'asset'=>(string)$row['asset_key'],
+                ]);
+            }
+
+            $this->connection->prepare(
+                'INSERT INTO tn_capital_market_paper_balances
+                 (organization_id,venue_id,asset_key,available_amount,reserved_amount)
+                 VALUES (:org,:venue,:asset,:amount,0)
+                 ON DUPLICATE KEY UPDATE available_amount=available_amount+VALUES(available_amount)'
+            )->execute([
+                'org'=>$organizationId,'venue'=>$buyVenueId,'asset'=>$buyInstrumentId,'amount'=>$buyQuantity,
+            ]);
+            $this->connection->prepare(
+                'INSERT INTO tn_capital_market_paper_balances
+                 (organization_id,venue_id,asset_key,available_amount,reserved_amount)
+                 VALUES (:org,:venue,:asset,:amount,0)
+                 ON DUPLICATE KEY UPDATE available_amount=available_amount+VALUES(available_amount)'
+            )->execute([
+                'org'=>$organizationId,'venue'=>$sellVenueId,'asset'=>$quoteAsset,'amount'=>$sellCash,
+            ]);
+
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_capital_reservations SET status=\'CONSUMED\'
+                 WHERE organization_id=:org AND reservation_id=:id AND status=\'RESERVED\''
+            )->execute(['org'=>$organizationId,'id'=>$capitalReservationId]);
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_paper_portfolios
+                 SET available_capital=available_capital+:amount+:pnl,
+                     reserved_capital=reserved_capital-:amount,
+                     realized_pnl=realized_pnl+:pnl
+                 WHERE organization_id=:org'
+            )->execute([
+                'amount'=>(string)$capitalRow['amount'],'pnl'=>$realizedPnl,'org'=>$organizationId,
+            ]);
+
+            if($ownsTransaction)$this->connection->commit();
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
     public function listOpportunities(string $organizationId,int $limit=200):array
     {
         $limit=max(1,min(1000,$limit));
