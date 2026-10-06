@@ -40,14 +40,27 @@ final class CapitalMarketsResearchAgentResultValidator implements AgentResultVal
             if(!in_array($name,self::TOOLS,true)){
                 throw new InvalidArgumentException('Research Agent requested forbidden tool: '.$name);
             }
-            if(!is_array($request['input']??null)||array_is_list($request['input'])){
-                throw new InvalidArgumentException('Research tool request input must be an object.');
+            $inputJson=$request['input_json']??null;
+            if(!is_string($inputJson)||trim($inputJson)===''){
+                throw new InvalidArgumentException('Research tool request input_json must be a non-empty JSON object string.');
+            }
+            try{$decoded=json_decode($inputJson,true,512,JSON_THROW_ON_ERROR);}
+            catch(\JsonException $error){
+                throw new InvalidArgumentException('Research tool request input_json is malformed.',0,$error);
+            }
+            if(!is_array($decoded)||array_is_list($decoded)){
+                throw new InvalidArgumentException('Research tool request input_json must encode an object.');
             }
         }
 
-        $recommendation=strtoupper((string)($research['recommendation']??''));
-        foreach(['LIVE','AUTO_EXECUTE','OVERRIDE_RISK','CHANGE_RISK_LIMIT'] as $forbidden){
-            if(str_contains($recommendation,$forbidden)){
+        $authorityText=strtoupper(implode(' ',[
+            $result->decision,
+            $result->reason,
+            implode(' ',array_map('strval',(array)($research['findings']??[]))),
+            implode(' ',array_map('strval',(array)($research['limitations']??[]))),
+        ]));
+        foreach(['ENABLE LIVE','ACTIVATE LIVE','AUTO_EXECUTE','OVERRIDE_RISK','CHANGE_RISK_LIMIT'] as $forbidden){
+            if(str_contains($authorityText,$forbidden)){
                 throw new InvalidArgumentException('Research Agent recommendation exceeds authority.');
             }
         }
