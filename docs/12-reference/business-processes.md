@@ -19,6 +19,7 @@ generated: true
 | Процес | Domain | Бізнес-стан | Verification | Кроків | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Market Source → Trusted Market State | `capital_markets` | `as-is` | `source-verified` | 5 | 0 | 5/5 | 5/5 | 5/5 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/capital-markets-market-data-to-trusted-state.md) |
+| Research Hypothesis → Strategy Decision → Knowledge | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-research-strategy-lab.md) |
 | Trusted Market State → Tokenized Equity Paper Result | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-tokenized-equity-paper-cycle.md) |
 | Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
@@ -40,6 +41,7 @@ generated: true
 | Процес | Кроків з owner | Capability mapped | Capability gaps | Cross-domain кроки | Mapped кроки | Evidence-verified кроки | Runtime-backed кроки | Critical source-verified | Critical runtime-verified |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Market Source → Trusted Market State | 5/5 | 5/5 | 0/5 | 0/5 | 5/5 | 5/5 | 0/5 | 5/5 | 0/5 |
+| Research Hypothesis → Strategy Decision → Knowledge | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Trusted Market State → Tokenized Equity Paper Result | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
@@ -79,6 +81,39 @@ generated: true
 | Assess freshness, integrity and trust | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.quality.view` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Service/MarketDataQualityEngine.php` · `public function assess(` [source] |
 | Persist canonical event and quality metric | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.history.view` | `state` | так | source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlCanonicalMarketEventRepository.php` · `public function append(` [source]<br>source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlMarketQualityMetricRepository.php` · `public function append(` [source] |
 | Update trading or reference MarketState | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.view` | `outcome` | так | source `app/Domains/CapitalMarkets/Domain/Service/MarketStateEngine.php` · `public function apply(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Service/ReferenceMarketStateEngine.php` · `public function apply(` [source] |
+
+## Research Hypothesis → Strategy Decision → Knowledge
+
+- **Process ID:** `capital-markets.research-strategy-lab`
+- **Schema:** `v4`
+- **Domain:** `capital_markets`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 7/7 кроків
+- **Cross-domain кроки:** 0/7
+- **Derived verification:** `source-verified`
+- **Тригер:** A formal Capital Markets research hypothesis or strategy improvement proposal is ready for testing
+- **Workflow:** [Research Hypothesis → Strategy Decision → Knowledge](../02-workflows/capital-markets-research-strategy-lab.md)
+
+**Результати**
+
+- Every research decision has immutable hypothesis, dataset, strategy version and experiment lineage
+- Historical replay reuses production economics instead of parallel financial math
+- TRAIN, VALIDATION and OUT_OF_SAMPLE are isolated and OOS reuse after tuning is blocked
+- Promotion is deterministic and auditable
+- Rejected hypotheses remain reusable knowledge
+- Research Agent can assist with drafts but cannot activate live trading or override risk
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Create or retrieve formal ResearchHypothesis | Capital Markets Research Agent | `capital_markets` | `capital_markets.research.manage` | `state` | так | source `app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php` · `public function createHypothesis(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Research/ResearchDuplicateDetector.php` · `public function find(` [source] |
+| Freeze dataset and strategy/experiment specification | Research Backtest runtime | `capital_markets` | `capital_markets.research.manage` | `state` | так | source `app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php` · `public function freezeDataset(` [source]<br>source `app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php` · `public function createExperiment(` [source] |
+| Run historical replay with production economics | Research Backtest runtime | `capital_markets` | `capital_markets.research.experiment.run` | `operation` | так | source `app/Domains/CapitalMarkets/Application/Service/ResearchBacktestService.php` · `public function run(` [source]<br>source `app/Domains/CapitalMarkets/Application/Service/RelativeValueHistoricalReplayService.php` · `public function replay(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Service/RelativeValueEconomicsCalculator.php` · `public function historicalSpotPerp(` [source] |
+| Enforce OUT_OF_SAMPLE isolation | Research Backtest runtime | `capital_markets` | `capital_markets.research.experiment.run` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Research/ResearchIsolationPolicy.php` · `public function assertOosFrozen(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Research/ResearchIsolationPolicy.php` · `public function assertNewOosPeriod(` [source] |
+| Calculate StrategyScorecard | Strategy Promotion Gate | `capital_markets` | `capital_markets.research.manage` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Research/StrategyScorecardEngine.php` · `public function calculate(` [source] |
+| Apply deterministic promotion gate | Strategy Promotion Gate | `capital_markets` | `capital_markets.strategy.promote` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Research/StrategyPromotionGate.php` · `public function evaluate(` [source] |
+| Persist validated or rejected research knowledge | Capital Markets operator | `capital_markets` | `capital_markets.research.manage` | `outcome` | так | source `app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php` · `public function recordKnowledge(` [source]<br>source `app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php` · `public function rejectHypothesis(` [source] |
 
 ## Trusted Market State → Tokenized Equity Paper Result
 
