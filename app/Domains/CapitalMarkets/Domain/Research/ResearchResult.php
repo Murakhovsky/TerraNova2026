@@ -11,7 +11,7 @@ final readonly class ResearchResult
     /** @param array<string,mixed> $metrics @param array<string,mixed> $financialMetrics
      *  @param array<string,mixed> $riskMetrics @param array<string,mixed> $executionMetrics
      *  @param array<string,mixed> $statisticalMetrics @param array<string,mixed> $dataQuality
-     *  @param list<string> $limitations @param array<string,int|float|string> $sample
+     *  @param list<string> $limitations @param array<string,int|string> $sample
      */
     public function __construct(
         public string $id,
@@ -30,17 +30,13 @@ final readonly class ResearchResult
         public int $confidence,
         public DateTimeImmutable $createdAt,
     ){
-        if(trim($id)===''||trim($experimentId)===''){
-            throw new InvalidArgumentException('Invalid research result identity.');
-        }
+        if(trim($id)===''||trim($experimentId)==='')throw new InvalidArgumentException('Invalid research result identity.');
         if(!in_array($status,['POSITIVE','NEGATIVE','MIXED','INCONCLUSIVE','INVALID','INCOMPLETE'],true)){
             throw new InvalidArgumentException('Invalid research result status.');
         }
         if(!in_array($executionFidelity,['HIGH','MEDIUM','LIMITED','SYNTHETIC'],true)){
             throw new InvalidArgumentException('Invalid execution fidelity.');
         }
-        if($confidence<0||$confidence>100){
-            throw new InvalidArgumentException('Confidence must be 0..100.');
-        }
+        if($confidence<0||$confidence>100)throw new InvalidArgumentException('Confidence must be 0..100.');
     }
 }
