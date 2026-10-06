@@ -2686,6 +2686,13 @@ capital_markets_venue_instrument_register:
   controller: App\Web\CapitalMarkets\CapitalMarketsPageController::registerVenueInstrument
   methods: [POST]
 
+# Capital Markets CM-TOKENIZED-EQUITY UI
+
+capital_markets_tokenized_equities:
+  path: /capital-markets/tokenized-equities
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::tokenizedEquities
+  methods: [GET]
+
 # Capital Markets CM-MARKET-INTELLIGENCE UI
 capital_markets_market_data:
   path: /capital-markets/market-data
