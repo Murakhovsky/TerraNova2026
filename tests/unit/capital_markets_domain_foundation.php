@@ -200,7 +200,7 @@ $assert($instrumentEvent->envelope()['schema_version']===1,'Event schema version
 
 $manifest=ModuleDefinition::fromArray(require dirname(__DIR__,2).'/app/Domains/CapitalMarkets/module.php');
 $assert($manifest->manifest->id==='capital_markets','Capital Markets module id is invalid.');
-$assert($manifest->manifest->version==='0.4.0','Capital Markets module version is invalid.');
+$assert($manifest->manifest->version==='0.5.0','Capital Markets module version is invalid.');
 $assert($manifest->manifest->enabledByDefault===false,'Capital Markets must be disabled by default.');
 $assert($manifest->contributions->runtimeModuleService==='capitalMarketsDomainModule','Foundation runtime module service is missing.');
 foreach([
