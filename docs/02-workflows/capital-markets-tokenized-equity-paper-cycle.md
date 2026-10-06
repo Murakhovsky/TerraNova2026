@@ -15,6 +15,31 @@ description: "Канонічний процес від довіреного Mark
 
 Цей workflow описує фактичний Vertical Slice №1 для H1 Tokenized Equity Dislocation та H2 Cross-Venue Tokenized Equity Arbitrage.
 
+## Бізнес-мета
+
+Перетворювати довірені та економічно порівнювані market states у відтворювані H1/H2 research opportunities з реалістичним net edge, deterministic risk assessment і безпечним paper execution. Результатом є не прогноз ціни, а перевірений evidence про те, чи існувала виконувана ринкова неефективність після liquidity, fees, quote normalization, pre-funded inventory та execution constraints.
+
+## Учасники
+
+- Capital Markets research runtime, який виявляє H1/H2 candidates і рахує economics;
+- deterministic Risk Engine, який застосовує capital/risk/kill-switch constraints;
+- Paper Execution runtime, який повторно перевіряє ринок, резервує pre-funded balances і моделює дві ноги;
+- оператор Capital Markets, який керує market sources, economic relationships, paper portfolio та venue balances.
+
+## Карта коду
+
+| Етап | Канонічна реалізація |
+| --- | --- |
+| H1/H2 detection | `app/Domains/CapitalMarkets/Domain/Service/TokenizedEquitySpreadDetector.php` |
+| Quote conversion | `app/Domains/CapitalMarkets/Application/Service/TrustedConversionRateResolver.php` |
+| Net economics | `app/Domains/CapitalMarkets/Domain/Service/NetEconomicsEngine.php` |
+| Opportunity orchestration | `app/Domains/CapitalMarkets/Application/Service/TokenizedEquityVerticalSliceService.php` |
+| Deterministic risk | `app/Domains/CapitalMarkets/Domain/Service/TokenizedEquityRiskEngine.php` |
+| Paper execution | `app/Domains/CapitalMarkets/Application/Service/TokenizedEquityPaperExecutionService.php` |
+| Capital / inventory reservation | `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php` |
+| Double-entry ledger | `app/Domains/CapitalMarkets/Domain/Ledger/LedgerTransaction.php` |
+| Process Registry | `resources/processes/capital-markets-tokenized-equity-paper-cycle.json` |
+
 ## Потік
 
 ```text
