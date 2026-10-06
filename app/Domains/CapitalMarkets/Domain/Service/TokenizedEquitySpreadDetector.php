@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Domain\Service;
 
 use DateTimeImmutable;
+use Domains\CapitalMarkets\Domain\MarketData\ConversionRate;
 use Domains\CapitalMarkets\Domain\MarketData\MarketState;
 use Domains\CapitalMarkets\Domain\MarketData\MarketStatus;
 use Domains\CapitalMarkets\Domain\MarketData\ReferenceMarketState;
@@ -59,6 +60,7 @@ final class TokenizedEquitySpreadDetector
         SpreadDetectorConfig $config,
         DateTimeImmutable $now,
         int $ttlMs=1000,
+        ?ConversionRate $tokenQuoteToReferenceQuote=null,
     ):array{
         if($ttlMs<$config->minimumOpportunityTtlMs)return [];
         if(!$reference->quality->status->isUsableForDecision()||$reference->quality->score<$config->minimumDataQuality)return [];
@@ -67,7 +69,21 @@ final class TokenizedEquitySpreadDetector
         $referenceTimestamp=$reference->sourceTimestamp??$reference->updatedAt;
         if($this->ageMs($referenceTimestamp,$now)>$config->maximumSnapshotAgeMs)return [];
         if($this->skewMs($referenceTimestamp,$tokenized->sourceTimestamp)>$config->maximumSnapshotSkewMs)return [];
-        if(!$reference->currentQuote->askPrice->quoteAsset->equals($tokenized->bestQuote->bidPrice->quoteAsset))return [];
+        $referenceQuoteAsset=$reference->currentQuote->askPrice->quoteAsset;
+        $tokenQuoteAsset=$tokenized->bestQuote->bidPrice->quoteAsset;
+        $conversion=Decimal::fromString('1');
+        $conversionEvidence=null;
+        if(!$referenceQuoteAsset->equals($tokenQuoteAsset)){
+            if($tokenQuoteToReferenceQuote===null||!$tokenQuoteToReferenceQuote->usable())return [];
+            if(!$tokenQuoteToReferenceQuote->sourceAsset->equals($tokenQuoteAsset)
+                ||!$tokenQuoteToReferenceQuote->targetAsset->equals($referenceQuoteAsset))return [];
+            if($this->ageMs($tokenQuoteToReferenceQuote->timestamp,$now)>$config->maximumSnapshotAgeMs)return [];
+            $conversion=$tokenQuoteToReferenceQuote->rate;
+            $conversionEvidence=$tokenQuoteToReferenceQuote->toArray();
+        }
+
+        $tokenBid=DecimalMath::multiply($tokenized->bestQuote->bidPrice->value,$conversion);
+        $tokenAsk=DecimalMath::multiply($tokenized->bestQuote->askPrice->value,$conversion);
 
         $out=[];
         $referenceVenue='reference:'.$reference->sourceId->value();
@@ -76,19 +92,19 @@ final class TokenizedEquitySpreadDetector
         $this->candidate(
             $out,HypothesisCode::TokenizedEquityDislocation,$marketPairId,
             $tokenized->venueId->value(),$referenceVenue,$tokenized->instrumentId->value(),$reference->instrumentId->value(),
-            $tokenized->bestQuote->askPrice->value,$reference->currentQuote->bidPrice->value,
+            $tokenAsk,$reference->currentQuote->bidPrice->value,
             $tokenized->bestQuote->askQuantity->value,$reference->currentQuote->bidQuantity->value,
             SpreadDirection::BuyA_SellB,$quality,
-            ['token_state_version'=>$tokenized->stateVersion,'reference_state_version'=>$reference->stateVersion],
+            ['token_state_version'=>$tokenized->stateVersion,'reference_state_version'=>$reference->stateVersion,'conversion'=>$conversionEvidence],
             $config,$now,$ttlMs,
         );
         $this->candidate(
             $out,HypothesisCode::TokenizedEquityDislocation,$marketPairId,
             $referenceVenue,$tokenized->venueId->value(),$reference->instrumentId->value(),$tokenized->instrumentId->value(),
-            $reference->currentQuote->askPrice->value,$tokenized->bestQuote->bidPrice->value,
+            $reference->currentQuote->askPrice->value,$tokenBid,
             $reference->currentQuote->askQuantity->value,$tokenized->bestQuote->bidQuantity->value,
             SpreadDirection::BuyB_SellA,$quality,
-            ['token_state_version'=>$tokenized->stateVersion,'reference_state_version'=>$reference->stateVersion],
+            ['token_state_version'=>$tokenized->stateVersion,'reference_state_version'=>$reference->stateVersion,'conversion'=>$conversionEvidence],
             $config,$now,$ttlMs,
         );
         return $out;
