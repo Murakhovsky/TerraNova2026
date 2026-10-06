@@ -27,6 +27,7 @@ use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityReadService;
+use Domains\CapitalMarkets\Application\Service\ResearchLabService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
@@ -60,6 +61,7 @@ final readonly class CapitalMarketsPageController
         private TokenizedEquityReadService $tokenizedEquityReads,
         private CapitalMarketsTradingRepositoryInterface $trading,
         private RelativeValueResearchRepositoryInterface $relativeValueResearch,
+        private ResearchLabService $researchLab,
         private OperationsSectionReader $operations,
     ){}
 
@@ -202,6 +204,18 @@ final readonly class CapitalMarketsPageController
             }
         );
     }
+
+    public function researchLab(Request $request):Response
+    {
+        return $this->page(
+            $request,'Research & Strategy Lab','capital-markets-research','research_lab',
+            CapitalMarketsCapability::ResearchView,CapitalMarketsFeatureFlag::DomainEnabled,
+            function(TenantContext $tenant):array{
+                return ['workspace'=>$this->researchLab->workspace($tenant->organizationId()->value())];
+            }
+        );
+    }
+
 
     public function marketData(Request $request):Response
     {
