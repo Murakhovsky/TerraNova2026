@@ -104,6 +104,22 @@ $assert(str_contains($webProvider,'/capital-markets/crypto-spot-perpetual'),'VS2
 $template=(string)file_get_contents($root.'/symfony/templates/experience/capital_markets/workspace.html.twig');
 $assert(str_contains($template,"cmView == 'crypto_spot_perp'"),'VS2 workspace template is missing.');
 
+$security=(string)file_get_contents($root.'/symfony/config/packages/security.yaml');
+$assert(str_contains($security,'capital-markets'),'Capital Markets web routes must be owned by the authenticated Symfony firewall.');
+$assert(str_contains($security,"^/capital-markets(?:/|$)"),'Capital Markets web routes must require an authenticated session.');
+
+$sessionAuthenticator=(string)file_get_contents($root.'/symfony/src/Security/SessionAuthenticator.php');
+$assert(str_contains($sessionAuthenticator,"str_starts_with($path,'/capital-markets')"),
+    'SessionAuthenticator must hydrate authenticated tenant context for Capital Markets web routes.');
+
+$csrfSubscriber=(string)file_get_contents($root.'/symfony/src/Security/AuthenticatedSessionCsrfSubscriber.php');
+$assert(str_contains($csrfSubscriber,"str_starts_with($path, '/capital-markets')"),
+    'Capital Markets web mutations must participate in authenticated session CSRF protection.');
+
+$rateLimiter=(string)file_get_contents($root.'/symfony/src/Security/RequestRateLimitSubscriber.php');
+$assert(str_contains($rateLimiter,"str_starts_with($path, '/capital-markets')"),
+    'Capital Markets web mutations must participate in authenticated write rate limiting.');
+
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach([
     'BybitPerpetualMarketDataAdapter','OkxPerpetualMarketDataAdapter',
