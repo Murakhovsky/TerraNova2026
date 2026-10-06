@@ -76,9 +76,8 @@ final readonly class TokenizedEquityPaperExecutionService
             if(in_array($existingStatus,['COMPLETED','COMPLETED_COMPENSATED','INVALIDATED','FAILED','CANCELLED','EXPIRED'],true))return $existingExecution;
             throw new DomainException('EXECUTION_RECOVERY_REQUIRED');
         }
-        if(($opportunity['hypothesis']??null)!=='H2'){
-            throw new DomainException('H1 paper execution requires a real executable hedge venue.');
-        }
+        $hypothesis=(string)($opportunity['hypothesis']??'');
+        if(!in_array($hypothesis,['H1','H2'],true))throw new DomainException('Unsupported paper execution hypothesis.');
         if(($opportunity['status']??null)!=='APPROVED')throw new DomainException('Opportunity is not approved for paper execution.');
 
         $now=new DateTimeImmutable();
@@ -98,12 +97,16 @@ final readonly class TokenizedEquityPaperExecutionService
         $buyInstrument=(string)($candidate['buy_instrument_id']??'');
         $sellInstrument=(string)($candidate['sell_instrument_id']??'');
         if($buyVenue===''||$sellVenue===''||$buyInstrument===''||$sellInstrument==='')throw new DomainException('Opportunity legs are incomplete.');
+        if($hypothesis==='H1'&&(str_starts_with($buyVenue,'reference:')||str_starts_with($sellVenue,'reference:'))){
+            throw new DomainException('H1 paper execution requires a real executable hedge venue.');
+        }
 
         $executionId='cm_exec_'.bin2hex(random_bytes(12));
         $executionEvidence=[
             'market_pair_id'=>(string)($candidate['market_pair_id']??''),
             'candidate_id'=>(string)($candidate['id']??''),
             'expected_pnl'=>(string)($opportunity['expected_pnl']??'0'),
+            'hypothesis'=>$hypothesis,
         ];
 
         $buyState=$this->marketStates->get($organizationId,VenueId::fromString($buyVenue),InstrumentId::fromString($buyInstrument));
@@ -333,12 +336,12 @@ final readonly class TokenizedEquityPaperExecutionService
             $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             $observationFingerprint=hash('sha256',implode('|',[
-                $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
+                $organizationId,$hypothesis,'EXECUTION',$opportunityId,$executionId,
             ]));
             $this->repository->saveHypothesisObservation(
                 $organizationId,
                 'cm_obs_'.substr($observationFingerprint,0,40),
-                'H2',
+                $hypothesis,
                 'EXECUTION',
                 $now->format(DATE_ATOM),
                 $observationFingerprint,
@@ -654,9 +657,10 @@ final readonly class TokenizedEquityPaperExecutionService
         $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,$status));
         $this->repository->saveExecution($organizationId,$executionId,$opportunityId,$status,$payload);
 
-        $fingerprint=hash('sha256',implode('|',[$organizationId,'H2','EXECUTION',$opportunityId,$executionId]));
+        $hypothesis=(string)($opportunity['hypothesis']??'H2');
+        $fingerprint=hash('sha256',implode('|',[$organizationId,$hypothesis,'EXECUTION',$opportunityId,$executionId]));
         $this->repository->saveHypothesisObservation(
-            $organizationId,'cm_obs_'.substr($fingerprint,0,40),'H2','EXECUTION',$now->format(DATE_ATOM),$fingerprint,[
+            $organizationId,'cm_obs_'.substr($fingerprint,0,40),$hypothesis,'EXECUTION',$now->format(DATE_ATOM),$fingerprint,[
                 'market_pair_id'=>(string)($candidate['market_pair_id']??''),'candidate_id'=>(string)($candidate['id']??''),
                 'opportunity_id'=>$opportunityId,'execution_id'=>$executionId,'detected'=>true,'executable'=>true,'realized'=>true,
                 'expected_pnl'=>(string)$opportunity['expected_pnl'],'realized_pnl'=>$realized->value(),
@@ -728,13 +732,14 @@ final readonly class TokenizedEquityPaperExecutionService
             ]);
         }
 
+        $hypothesis=(string)($evidence['hypothesis']??'H2');
         $fingerprint=hash('sha256',implode('|',[
-            $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
+            $organizationId,$hypothesis,'EXECUTION',$opportunityId,$executionId,
         ]));
         $this->repository->saveHypothesisObservation(
             $organizationId,
             'cm_obs_'.substr($fingerprint,0,40),
-            'H2',
+            $hypothesis,
             'EXECUTION',
             $at->format(DATE_ATOM),
             $fingerprint,
