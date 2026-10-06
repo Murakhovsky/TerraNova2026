@@ -81,6 +81,10 @@ final readonly class ResearchLabService
         if($this->repository->getDataset($organizationId,(string)$record['dataset_id'])===null){
             throw new InvalidArgumentException('Experiment requires a frozen dataset.');
         }
+        $record['parameters']=$record['parameters']??[];
+        $record['parameters_hash']=hash('sha256',json_encode($this->canonicalize((array)$record['parameters']),JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
+        $record['success_criteria_hash']=hash('sha256',json_encode($this->canonicalize((array)$record['success_criteria']),JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
+        $record['failure_criteria_hash']=hash('sha256',json_encode($this->canonicalize((array)$record['failure_criteria']),JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->repository->saveExperiment($organizationId,$record);
         return $record;
