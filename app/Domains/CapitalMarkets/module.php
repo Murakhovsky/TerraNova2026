@@ -4,10 +4,10 @@ declare(strict_types=1);
 return [
     'id'=>'capital_markets',
     'name'=>'Capital Markets',
-    'version'=>'0.4.0',
-    'schema_version'=>'0.4.0',
+    'version'=>'0.5.0',
+    'schema_version'=>'0.5.0',
     'kernel_constraint'=>'>=0.11.0 <0.12.0',
-    'description'=>'Autonomous Capital Markets bounded context with instrument/venue foundation, provider-neutral Market Intelligence and Tokenized Equity H1/H2 research plus guarded paper execution. Live trading remains disabled.',
+    'description'=>'Autonomous Capital Markets bounded context with instrument/venue foundation, provider-neutral Market Intelligence and Tokenized Equity H1/H2 research evidence, Edge Funnel and guarded paper execution. Live trading remains disabled.',
     'icon'=>'chart-candlestick',
     'dependencies'=>[],
     'enabled_by_default'=>false,
@@ -29,6 +29,7 @@ return [
             'app/migrations/20261006_000126_capital_markets_market_events.sql',
             'app/migrations/20261006_000127_capital_markets_market_state.sql',
             'app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql',
+            'app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql',
         ],
         'capabilities'=>[
             'capital_markets.view',
