@@ -2973,3 +2973,57 @@ cos_api_v1_capital_markets_tokenized_equity_reconciliation:
   path: /api/v1/capital-markets/tokenized-equities/reconciliation
   controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::reconciliation
   methods: [GET]
+
+
+# Capital Markets Research & Strategy Lab
+cos_api_v1_capital_markets_research_workspace:
+  path: /api/v1/capital-markets/research
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::workspace
+  methods: [GET]
+
+cos_api_v1_capital_markets_research_hypotheses_create:
+  path: /api/v1/capital-markets/research/hypotheses
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::createHypothesis
+  methods: [POST]
+
+cos_api_v1_capital_markets_research_datasets_create:
+  path: /api/v1/capital-markets/research/datasets
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::freezeDataset
+  methods: [POST]
+
+cos_api_v1_capital_markets_research_experiments_create:
+  path: /api/v1/capital-markets/research/experiments
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::createExperiment
+  methods: [POST]
+
+cos_api_v1_capital_markets_strategy_versions_create:
+  path: /api/v1/capital-markets/strategies/versions
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::createStrategyVersion
+  methods: [POST]
+
+cos_api_v1_capital_markets_research_results_create:
+  path: /api/v1/capital-markets/research/results
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::recordResult
+  methods: [POST]
+
+cos_api_v1_capital_markets_strategy_scorecard_create:
+  path: /api/v1/capital-markets/strategies/{id}/scorecard
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::scorecard
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+cos_api_v1_capital_markets_strategy_promotion:
+  path: /api/v1/capital-markets/strategies/{id}/promotion-request
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::promotion
+  methods: [POST]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+cos_api_v1_capital_markets_research_reject:
+  path: /api/v1/capital-markets/research/rejections
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::reject
+  methods: [POST]
+
+cos_api_v1_capital_markets_research_knowledge:
+  path: /api/v1/capital-markets/research/knowledge
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::knowledge
+  methods: [POST]
