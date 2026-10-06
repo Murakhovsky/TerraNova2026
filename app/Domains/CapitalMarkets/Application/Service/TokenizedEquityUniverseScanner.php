@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Domain\Contract\RelationshipRepository;
 use Domains\CapitalMarkets\Domain\Instrument\EconomicRelationship;
 use Domains\CapitalMarkets\Domain\Instrument\EconomicRelationshipStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketState;
+use Domains\CapitalMarkets\Domain\Opportunity\TokenizedEquityUniverse;
 use InvalidArgumentException;
 
 final readonly class TokenizedEquityUniverseScanner
@@ -21,6 +22,14 @@ final readonly class TokenizedEquityUniverseScanner
     /** @param array<string,mixed> $options @return array<string,mixed> */
     public function scan(string $organizationId,array $options):array
     {
+        $universePayload=$options['universe']??[];
+        if(!is_array($universePayload)||array_is_list($universePayload))throw new InvalidArgumentException('universe must be an object.');
+        $universe=TokenizedEquityUniverse::fromArray($universePayload);
+        if(!$universe->enabled||$universe->status!=='ACTIVE')return [
+            'universe'=>['id'=>$universe->id,'name'=>$universe->name,'status'=>$universe->status,'enabled'=>$universe->enabled],
+            'relationships_considered'=>0,'market_states_considered'=>0,'reference_states_considered'=>0,
+            'h1_scans'=>0,'h2_scans'=>0,'h1'=>[],'h2'=>[],'errors'=>[],
+        ];
         $states=$this->marketStates->list($organizationId,1000);
         $references=$this->marketStates->listReferences($organizationId,1000);
         $relationships=$this->relationships->list($organizationId,500);
@@ -34,9 +43,11 @@ final readonly class TokenizedEquityUniverseScanner
             if(!$relationship instanceof EconomicRelationship||$relationship->status!==EconomicRelationshipStatus::Active)continue;
             $left=$relationship->sourceInstrument->value();
             $right=$relationship->targetInstrument->value();
-            foreach([[$left,$right],[$right,$left]] as [$underlying,$token]){
+            if($universe->allowsHypothesis('H1'))foreach([[$left,$right],[$right,$left]] as [$underlying,$token]){
+                if(!$universe->allowsUnderlying($underlying)||!$universe->allowsToken($token))continue;
                 foreach($referenceByInstrument[$underlying]??[] as $reference){
                     foreach($stateByInstrument[$token]??[] as $tokenState){
+                        if(!$universe->allowsVenue($tokenState->venueId->value()))continue;
                         $pairId=$this->pairId('H1',[$reference->sourceId->value(),$underlying,$tokenState->venueId->value(),$token]);
                         try{
                             $h1[]=$this->verticalSlice->scanReference(
@@ -48,9 +59,13 @@ final readonly class TokenizedEquityUniverseScanner
                 }
             }
 
+            if(!$universe->allowsHypothesis('H2'))continue;
             $combined=[];
             foreach([$left,$right] as $instrument){
-                foreach($stateByInstrument[$instrument]??[] as $state)$combined[]=$state;
+                if(!$universe->allowsToken($instrument))continue;
+                foreach($stateByInstrument[$instrument]??[] as $state){
+                    if($universe->allowsVenue($state->venueId->value()))$combined[]=$state;
+                }
             }
             $count=count($combined);
             for($i=0;$i<$count;$i++){
@@ -72,6 +87,12 @@ final readonly class TokenizedEquityUniverseScanner
         }
 
         return [
+            'universe'=>[
+                'id'=>$universe->id,'name'=>$universe->name,'status'=>$universe->status,'enabled'=>$universe->enabled,
+                'underlying_instrument_ids'=>$universe->underlyingInstrumentIds,
+                'tokenized_instrument_ids'=>$universe->tokenizedInstrumentIds,
+                'venues'=>$universe->venues,'hypotheses'=>$universe->hypotheses,
+            ],
             'relationships_considered'=>count($relationships),
             'market_states_considered'=>count($states),
             'reference_states_considered'=>count($references),
