@@ -56,6 +56,11 @@ generated: true
 | `capital_markets` | `app/migrations/20261006_000130_capital_markets_execution_recovery.sql` | `tn_capital_market_paper_orders` |
 | `capital_markets` | `app/migrations/20261006_000130_capital_markets_execution_recovery.sql` | `tn_capital_market_positions` |
 | `capital_markets` | `app/migrations/20261006_000131_capital_markets_kraken_market_data.sql` | — |
+| `capital_markets` | `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql` | `tn_capital_market_basis_observations` |
+| `capital_markets` | `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql` | `tn_capital_market_funding_observations` |
+| `capital_markets` | `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql` | `tn_capital_market_funding_settlements` |
+| `capital_markets` | `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql` | `tn_capital_market_hedge_groups` |
+| `capital_markets` | `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql` | `tn_capital_market_hypothesis_observations` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
