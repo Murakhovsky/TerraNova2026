@@ -6,10 +6,14 @@ namespace Domains\CapitalMarkets\Application\Service;
 use Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
+use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 
 final readonly class TokenizedEquityReadService
 {
-    public function __construct(private TokenizedEquityVerticalSliceRepositoryInterface $repository){}
+    public function __construct(
+        private TokenizedEquityVerticalSliceRepositoryInterface $repository,
+        private TokenizedEquityTelemetry $telemetry,
+    ){}
 
     /** @return list<array<string,mixed>> */
     public function positions(string $organizationId,int $limit=500):array
@@ -90,8 +94,19 @@ final readonly class TokenizedEquityReadService
         if($negativeBalances!==[])$issues[]='NEGATIVE_VENUE_BALANCE';
         if($unsettled!==[])$issues[]='UNSETTLED_EXECUTION';
 
+        $ok=$issues===[];
+        $this->telemetry->metric($organizationId,'reconciliation_runs_total',1.0,['ok'=>$ok]);
+        if(!$ok){
+            $this->telemetry->metric($organizationId,'reconciliation_failures_total',1.0,['issue_count'=>count($issues)]);
+            $this->telemetry->alert($organizationId,CapitalMarketsAlertType::PositionReconciliationError,[
+                'issues'=>$issues,
+                'unsettled_execution_count'=>count($unsettled),
+                'negative_balance_count'=>count($negativeBalances),
+            ]);
+        }
+
         return [
-            'ok'=>$issues===[],
+            'ok'=>$ok,
             'issues'=>$issues,
             'portfolio'=>$portfolio,
             'venue_balance_count'=>count($balances),
