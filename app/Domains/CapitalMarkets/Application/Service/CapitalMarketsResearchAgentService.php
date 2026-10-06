@@ -61,8 +61,10 @@ final readonly class CapitalMarketsResearchAgentService
         foreach(array_slice($requests,0,4) as $index=>$request){
             if(!is_array($request))continue;
             $name=strtolower(trim((string)($request['name']??'')));
-            $input=$request['input']??[];
-            if(!is_array($input)||array_is_list($input))throw new RuntimeException('Research tool input must be an object.');
+            $inputJson=(string)($request['input_json']??'{}');
+            try{$input=json_decode($inputJson,true,512,JSON_THROW_ON_ERROR);}
+            catch(\JsonException $error){throw new RuntimeException('Research tool input_json is malformed.',0,$error);}
+            if(!is_array($input)||array_is_list($input))throw new RuntimeException('Research tool input_json must encode an object.');
             $input['agent_name']=$agentName;
 
             $execution=$this->tools->execute(new ToolInvocation(
