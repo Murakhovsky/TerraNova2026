@@ -61,6 +61,28 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         return array_map([$this,'decode'],array_column($statement->fetchAll(PDO::FETCH_ASSOC),'record_json'));
     }
 
+    public function transitionExperimentStatus(
+        string $organizationId,string $experimentId,string $from,string $to,string $updatedAt
+    ):bool{
+        $current=$this->getExperiment($organizationId,$experimentId);
+        if($current===null||strtoupper((string)($current['status']??''))!==strtoupper($from))return false;
+        $current['status']=strtoupper($to);
+        $current['updated_at']=$updatedAt;
+        $statement=$this->connection->prepare(
+            'UPDATE tn_capital_market_research_experiments
+             SET status=:to_status,record_json=:record_json
+             WHERE organization_id=:organization_id AND experiment_id=:experiment_id AND status=:from_status'
+        );
+        $statement->execute([
+            'to_status'=>strtoupper($to),
+            'record_json'=>json_encode($current,JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION),
+            'organization_id'=>$organizationId,
+            'experiment_id'=>$experimentId,
+            'from_status'=>strtoupper($from),
+        ]);
+        return $statement->rowCount()===1;
+    }
+
     public function saveStrategyVersion(string $organizationId,array $record):void
     {
         $this->insert('tn_capital_market_strategy_versions',$organizationId,$record,'strategy_version_id');
@@ -73,6 +95,11 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         );
         $statement->execute(['organization_id'=>$organizationId,'strategy_id'=>$strategyId]);
         return array_map([$this,'decode'],array_column($statement->fetchAll(PDO::FETCH_ASSOC),'record_json'));
+    }
+
+    public function getStrategyVersion(string $organizationId,string $strategyVersionId):?array
+    {
+        return $this->one('tn_capital_market_strategy_versions','strategy_version_id',$organizationId,$strategyVersionId);
     }
 
     public function saveResult(string $organizationId,array $record):void
