@@ -21,9 +21,9 @@ final readonly class ResearchCreateExperimentDraftTool implements ToolInterface
             'Create an immutable experiment draft against an already frozen dataset and strategy version.',
             [
                 'type'=>'object',
-                'required'=>['experiment_id','hypothesis_id','dataset_id','strategy_version_id','experiment_type','success_criteria','failure_criteria'],
+                'required'=>['agent_name','experiment_id','hypothesis_id','dataset_id','strategy_version_id','experiment_type','success_criteria','failure_criteria'],
                 'properties'=>[
-                    'experiment_id'=>['type'=>'string'],'hypothesis_id'=>['type'=>'string'],'dataset_id'=>['type'=>'string'],
+                    'agent_name'=>['type'=>'string'],'experiment_id'=>['type'=>'string'],'hypothesis_id'=>['type'=>'string'],'dataset_id'=>['type'=>'string'],
                     'strategy_version_id'=>['type'=>'string'],'experiment_type'=>['type'=>'string'],'title'=>['type'=>'string'],
                     'objective'=>['type'=>'string'],'parameters'=>['type'=>'object'],'success_criteria'=>['type'=>'object'],
                     'failure_criteria'=>['type'=>'object'],'start_period'=>['type'=>'string'],'end_period'=>['type'=>'string'],
@@ -38,6 +38,7 @@ final readonly class ResearchCreateExperimentDraftTool implements ToolInterface
     public function invoke(ToolInvocation $invocation):ToolResult
     {
         $input=$invocation->input();
+        unset($input['agent_name']);
         $input['status']='DRAFT';
         $input['title']=$input['title']??$input['experiment_id'];
         $input['objective']=$input['objective']??'Test hypothesis under predefined criteria';
