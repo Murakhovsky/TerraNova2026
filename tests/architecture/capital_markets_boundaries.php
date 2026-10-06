@@ -148,6 +148,15 @@ foreach([
     if(!str_contains($services,$service))throw new RuntimeException('Capital Markets service wiring missing: '.$service);
 }
 
+$paperExecutionService=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityPaperExecutionService.php');
+if(!str_contains($paperExecutionService,'getExecutionForOpportunity')){
+    throw new RuntimeException('Capital Markets paper execution must be idempotent per opportunity.');
+}
+$researchMigration=(string)file_get_contents($root.'/app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql');
+if(!str_contains($researchMigration,'uq_cm_paper_execution_one_attempt')){
+    throw new RuntimeException('Capital Markets paper execution idempotency requires a database uniqueness guard.');
+}
+
 $researchService=(string)file_get_contents($domainRoot.'/Application/Service/TokenizedEquityResearchService.php');
 foreach(['execution_attempt_count','completed_execution_count','invalidated_execution_count','completion_rate'] as $needle){
     if(!str_contains($researchService,$needle)){
