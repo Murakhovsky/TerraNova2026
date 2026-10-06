@@ -38,6 +38,17 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
     /** @return array<string,mixed>|null */
     public function getExecutionForOpportunity(string $organizationId,string $opportunityId):?array;
 
+    /** @return array<string,mixed>|null */
+    public function getExecution(string $organizationId,string $executionId):?array;
+
+    /** @return list<array<string,mixed>> */
+    public function listPaperOrdersForExecution(string $organizationId,string $executionId):array;
+
+    /** @return list<array<string,mixed>> */
+    public function listPaperFillsForExecution(string $organizationId,string $executionId):array;
+
+    public function ledgerTransactionExists(string $organizationId,string $idempotencyKey):bool;
+
     /** @param array<string,mixed> $payload */
     public function saveLedgerTransaction(string $organizationId,string $transactionId,string $idempotencyKey,array $payload):void;
 
