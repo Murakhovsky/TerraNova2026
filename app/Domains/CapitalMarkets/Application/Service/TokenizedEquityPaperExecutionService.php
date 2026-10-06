@@ -19,8 +19,10 @@ use Domains\CapitalMarkets\Domain\Execution\PaperFill;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Domain\Ledger\LedgerEntry;
 use Domains\CapitalMarkets\Domain\Ledger\LedgerTransaction;
+use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 use Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator;
 use Domains\CapitalMarkets\Domain\Service\PaperPnlEngine;
+use Domains\CapitalMarkets\Domain\Service\PositionProjector;
 use Domains\CapitalMarkets\Domain\Service\PaperMultiLegExecutionSimulator;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
@@ -34,6 +36,8 @@ final readonly class TokenizedEquityPaperExecutionService
         private ExecutablePriceCalculator $prices,
         private PaperPnlEngine $pnl,
         private PaperMultiLegExecutionSimulator $multiLeg,
+        private PositionProjector $positions,
+        private TokenizedEquityTelemetry $telemetry,
     ){}
 
     /** @return array<string,mixed> */
@@ -63,6 +67,7 @@ final readonly class TokenizedEquityPaperExecutionService
     /** @return array<string,mixed> */
     public function execute(string $organizationId,string $opportunityId):array
     {
+        $this->telemetry->metric($organizationId,'paper_execution_total',1.0,['phase'=>'attempt']);
         $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
         if($opportunity===null)throw new DomainException('Opportunity not found.');
         $existingExecution=$this->repository->getExecutionForOpportunity($organizationId,$opportunityId);
@@ -322,6 +327,9 @@ final readonly class TokenizedEquityPaperExecutionService
                 $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
                 $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
             );
+            $this->persistBuyVenuePosition(
+                $organizationId,$executionId,$buyVenue,$buyInstrument,[$buyFill],$buy['price']
+            );
             $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             $observationFingerprint=hash('sha256',implode('|',[
@@ -349,6 +357,11 @@ final readonly class TokenizedEquityPaperExecutionService
                 ]
             );
 
+            $this->recordExecutionTelemetry(
+                $organizationId,(string)($payload['status']??'COMPLETED'),
+                Decimal::fromString((string)($payload['realized_pnl']??'0')),
+                Decimal::fromString((string)($payload['edge_capture_ratio']??'0'))
+            );
             return $payload;
         }catch(\Throwable $error){
             if($firstLegPersisted){
@@ -616,6 +629,13 @@ final readonly class TokenizedEquityPaperExecutionService
             (string)$candidate['sell_venue_id'],$quoteAsset,$sellCash->value(),$realized->value(),
             $compensationFill?->quantity->value(),$compensationFill===null?null:$compensationCash->value()
         );
+        $buyVenueFills=[$buyFill];
+        if($compensationFill!==null)$buyVenueFills[]=$compensationFill;
+        $markPrice=$compensationFill?->price??$buyPrice;
+        $this->persistBuyVenuePosition(
+            $organizationId,$executionId,(string)$candidate['buy_venue_id'],(string)$candidate['buy_instrument_id'],
+            $buyVenueFills,$markPrice
+        );
 
         $status=$compensationFill!==null?'COMPLETED_COMPENSATED':'COMPLETED';
         $payload=[
@@ -645,6 +665,11 @@ final readonly class TokenizedEquityPaperExecutionService
             ]
         );
 
+        $this->recordExecutionTelemetry(
+            $organizationId,(string)($payload['status']??'COMPLETED'),
+            Decimal::fromString((string)($payload['realized_pnl']??'0')),
+            Decimal::fromString((string)($payload['edge_capture_ratio']??'0'))
+        );
         return $payload;
     }
 
@@ -691,6 +716,17 @@ final readonly class TokenizedEquityPaperExecutionService
             'evidence'=>$evidence,
         ];
         $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'INVALIDATED',$payload);
+        $this->telemetry->metric($organizationId,'paper_execution_total',1.0,['phase'=>'invalidated','reason'=>$reason]);
+        if($reason==='UNHEDGED_POSITION'){
+            $this->telemetry->alert($organizationId,CapitalMarketsAlertType::UnhedgedPosition,[
+                'execution_id'=>$executionId,'opportunity_id'=>$opportunityId,'reason'=>$reason,
+            ]);
+        }
+        if(str_contains($reason,'LEDGER')){
+            $this->telemetry->alert($organizationId,CapitalMarketsAlertType::LedgerInconsistency,[
+                'execution_id'=>$executionId,'opportunity_id'=>$opportunityId,'reason'=>$reason,
+            ]);
+        }
 
         $fingerprint=hash('sha256',implode('|',[
             $organizationId,'H2','EXECUTION',$opportunityId,$executionId,
@@ -730,6 +766,41 @@ final readonly class TokenizedEquityPaperExecutionService
         if($available->compareTo($quantity)<0)throw new DomainException('INSUFFICIENT_LIQUIDITY');
         $price=$side===ExecutionSide::Buy?$quote->askPrice->value:$quote->bidPrice->value;
         return ['price'=>$price,'notional'=>DecimalMath::multiply($price,$quantity)];
+    }
+
+    /** @param list<PaperFill> $fills */
+    private function persistBuyVenuePosition(
+        string $organizationId,string $executionId,string $venueId,string $instrumentId,array $fills,Decimal $markPrice
+    ):void{
+        $portfolioId='paper:'.$executionId;
+        $position=$this->positions->project(
+            $portfolioId,'TokenizedEquityRelativeValue-v1',$instrumentId,$venueId,$fills,$markPrice
+        );
+        $payload=[
+            'position_id'=>$position->positionId,'portfolio_id'=>$position->portfolioId,'strategy_id'=>$position->strategyId,
+            'instrument_id'=>$position->instrumentId,'venue_id'=>$position->venueId,'status'=>$position->status(),
+            'quantity'=>$position->quantity->value(),'average_entry_price'=>$position->averageEntryPrice->value(),
+            'mark_price'=>$position->markPrice->value(),'market_value'=>$position->marketValue()->value(),
+            'fees'=>$position->fees->value(),'realized_pnl'=>$position->realizedPnl->value(),
+            'unrealized_pnl'=>$position->unrealizedPnl()->value(),
+            'opened_at'=>$position->openedAt?->format(DATE_ATOM),'updated_at'=>$position->updatedAt?->format(DATE_ATOM),
+            'closed_at'=>$position->closedAt?->format(DATE_ATOM),
+        ];
+        $this->repository->savePosition(
+            $organizationId,(string)$position->positionId,$portfolioId,'TokenizedEquityRelativeValue-v1',
+            $instrumentId,$venueId,$position->status(),$payload
+        );
+    }
+
+    private function recordExecutionTelemetry(
+        string $organizationId,string $status,Decimal $realizedPnl,Decimal $edgeCapture
+    ):void{
+        $this->telemetry->metric($organizationId,'paper_execution_total',1.0,['phase'=>'completed','status'=>$status]);
+        $this->telemetry->metric($organizationId,'paper_execution_realized_pnl',(float)$realizedPnl->value(),['status'=>$status]);
+        $this->telemetry->metric($organizationId,'paper_execution_edge_capture_ratio',(float)$edgeCapture->value(),['status'=>$status]);
+        if($status==='COMPLETED_COMPENSATED'){
+            $this->telemetry->metric($organizationId,'paper_execution_compensation_total',1.0,['status'=>$status]);
+        }
     }
 
     /** @return array<string,mixed> */

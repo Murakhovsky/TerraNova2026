@@ -35,6 +35,7 @@ final readonly class TokenizedEquityVerticalSliceService
         private TrustedConversionRateResolver $conversionRates,
         private NetEconomicsEngine $economics,
         private TokenizedEquityRiskEngine $risk,
+        private TokenizedEquityTelemetry $telemetry,
     ){}
 
     /** @param array<string,mixed> $options @return array<string,mixed> */
@@ -48,6 +49,7 @@ final readonly class TokenizedEquityVerticalSliceService
         array $options,
     ):array{
         $now=new DateTimeImmutable();
+        $this->telemetry->metric($organizationId,'spread_detector_runs_total',1.0,['hypothesis'=>'H2']);
         $config=$this->config($options);
         $ttlMs=$this->int($options,'ttl_ms',1000);
         $aInstrumentId=InstrumentId::fromString($instrumentA);
@@ -86,6 +88,7 @@ final readonly class TokenizedEquityVerticalSliceService
         array $options,
     ):array{
         $now=new DateTimeImmutable();
+        $this->telemetry->metric($organizationId,'spread_detector_runs_total',1.0,['hypothesis'=>'H1']);
         $config=$this->config($options);
         $ttlMs=$this->int($options,'ttl_ms',1000);
         $underlyingId=InstrumentId::fromString($underlyingInstrument);
@@ -225,9 +228,16 @@ final readonly class TokenizedEquityVerticalSliceService
                 $reasons,
                 $now
             );
+            $this->telemetry->metric($organizationId,'opportunity_evaluations_total',1.0,[
+                'hypothesis'=>$candidate->hypothesis->value,
+                'status'=>$finalStatus->value,
+            ]);
             $out[]=$payload;
         }
 
+        $this->telemetry->metric($organizationId,'spread_candidates_total',(float)count($candidates),[
+            'hypothesis'=>$candidates===[]?'NONE':$candidates[0]->hypothesis->value,
+        ]);
         return [
             'hypothesis'=>$candidates===[]?null:$candidates[0]->hypothesis->value,
             'candidate_count'=>count($candidates),
@@ -250,6 +260,10 @@ final readonly class TokenizedEquityVerticalSliceService
             $organizationId,$hypothesis->value,'SCAN',$marketPairId,$observedAt->format('Y-m-d\\TH:i:s.uP'),
         ]));
         $id='cm_obs_'.substr($fingerprint,0,40);
+        $this->telemetry->metric($organizationId,'market_snapshots_total',1.0,['hypothesis'=>$hypothesis->value,'observable'=>$observable]);
+        if(!$observable){
+            $this->telemetry->metric($organizationId,'unobservable_scans_total',1.0,['hypothesis'=>$hypothesis->value]);
+        }
         $this->repository->saveHypothesisObservation(
             $organizationId,$id,$hypothesis->value,'SCAN',$observedAt->format(DATE_ATOM),$fingerprint,[
                 'market_pair_id'=>$marketPairId,

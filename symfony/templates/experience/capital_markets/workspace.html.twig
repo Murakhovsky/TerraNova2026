@@ -399,6 +399,90 @@
       {% endif %}
     </section>
 
+    {% set perf = w.performance|default({}) %}
+    {% set recon = w.reconciliation|default({}) %}
+    <section class="cos-panel">
+      <h2>Execution performance</h2>
+      <div class="row g-3">
+        <div class="col-md-2"><strong>Attempts</strong><br>{{ perf.execution_attempts|default(0) }}</div>
+        <div class="col-md-2"><strong>Completed</strong><br>{{ perf.completed|default(0) }}</div>
+        <div class="col-md-2"><strong>Compensated</strong><br>{{ perf.compensated|default(0) }}</div>
+        <div class="col-md-2"><strong>Completion</strong><br>{{ perf.completion_rate|default('0') }}</div>
+        <div class="col-md-2"><strong>Realized P&L</strong><br>{{ perf.realized_pnl|default('0') }}</div>
+        <div class="col-md-2"><strong>Avg edge capture</strong><br>{{ perf.average_edge_capture_ratio|default('0') }}</div>
+      </div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Recent executions</h2>
+      {% if w.executions|default([]) is empty %}
+        <p>No paper executions yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Execution</th><th>Status</th><th>Checkpoint</th><th>Requested</th><th>Buy fill</th><th>Sell fill</th><th>Compensated</th><th>Realized P&L</th><th>Edge capture</th></tr></thead>
+          <tbody>
+          {% for e in w.executions|slice(0,25) %}
+            <tr>
+              <td><code>{{ e.execution_id|default(e.id|default('—')) }}</code></td>
+              <td><strong>{{ e.status|default('—') }}</strong></td>
+              <td>{{ e.checkpoint|default('—') }}</td>
+              <td>{{ e.requested_quantity|default(e.quantity|default('—')) }}</td>
+              <td>{{ e.buy_filled_quantity|default(e.buy_fill.quantity|default('—')) }}</td>
+              <td>{{ e.sell_filled_quantity|default(e.sell_fill.quantity|default('—')) }}</td>
+              <td>{{ e.compensated|default(false) ? 'yes' : 'no' }}</td>
+              <td>{{ e.realized_pnl|default('0') }}</td>
+              <td>{{ e.edge_capture_ratio|default('0') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Positions / exposure</h2>
+      {% if w.positions|default([]) is empty %}
+        <p>No persisted strategy positions yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Instrument</th><th>Venue</th><th>Status</th><th>Quantity</th><th>Avg entry</th><th>Mark</th><th>Market value</th><th>Realized</th><th>Unrealized</th></tr></thead>
+          <tbody>
+          {% for p in w.positions %}
+            <tr>
+              <td>{{ p.instrument_id|default('—') }}</td>
+              <td>{{ p.venue_id|default('—') }}</td>
+              <td>{{ p.status|default('—') }}</td>
+              <td>{{ p.quantity|default('0') }}</td>
+              <td>{{ p.average_entry_price|default('0') }}</td>
+              <td>{{ p.mark_price|default('0') }}</td>
+              <td>{{ p.market_value|default('0') }}</td>
+              <td>{{ p.realized_pnl|default('0') }}</td>
+              <td>{{ p.unrealized_pnl|default('0') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Reconciliation / data quality</h2>
+      {% if recon.ok|default(false) %}
+        <div class="alert alert-success">Paper portfolio reconciliation is clean.</div>
+      {% else %}
+        <div class="alert alert-warning">
+          Reconciliation requires attention.
+          {% if recon.issues|default([]) is not empty %}{{ recon.issues|join(', ') }}{% endif %}
+        </div>
+      {% endif %}
+      <div class="row g-3">
+        <div class="col-md-3"><strong>Venue balances</strong><br>{{ recon.venue_balance_count|default(0) }}</div>
+        <div class="col-md-3"><strong>Positions</strong><br>{{ recon.position_count|default(0) }}</div>
+        <div class="col-md-3"><strong>Unsettled executions</strong><br>{{ recon.unsettled_execution_count|default(0) }}</div>
+        <div class="col-md-3"><strong>Negative balances</strong><br>{{ recon.negative_balance_count|default(0) }}</div>
+      </div>
+    </section>
+
     <section class="cos-panel">
       <h2>Execution policy</h2>
       <p>H2 can reach guarded Paper Execution only after a current-state revalidation and atomic capital reservation. H1 remains research-only until a real executable hedge venue is configured.</p>

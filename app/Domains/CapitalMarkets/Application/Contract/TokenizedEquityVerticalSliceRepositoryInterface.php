@@ -35,6 +35,12 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
     /** @return list<array<string,mixed>> */
     public function listPositions(string $organizationId,int $limit=500):array;
 
+    /** @return list<array<string,mixed>> */
+    public function listExecutions(string $organizationId,int $limit=500):array;
+
+    /** @return list<array<string,mixed>> */
+    public function listLedgerTransactions(string $organizationId,int $limit=500):array;
+
     /** @return array<string,mixed>|null */
     public function getExecutionForOpportunity(string $organizationId,string $opportunityId):?array;
 

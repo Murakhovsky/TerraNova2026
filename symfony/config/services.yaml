@@ -1903,11 +1903,18 @@ services:
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
+  Domains\CapitalMarkets\Domain\Service\PositionProjector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
   Domains\CapitalMarkets\Domain\Service\TokenizedEquityRiskEngine: ~
   Domains\CapitalMarkets\Domain\Research\HypothesisResearchEngine: ~
 
   Domains\CapitalMarkets\Application\Service\TrustedConversionRateResolver: ~
+
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityTelemetry:
+    arguments:
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityReadService: ~
 
   Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
