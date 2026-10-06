@@ -76,3 +76,77 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_strategy_promotion_decisions (
     UNIQUE KEY uq_cm_strategy_promotion_decision (organization_id,decision_id),
     KEY idx_cm_strategy_promotion_version (organization_id,strategy_version_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS tn_capital_market_backtest_runs (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id VARCHAR(190) NOT NULL,
+    run_id VARCHAR(190) NOT NULL,
+    experiment_id VARCHAR(190) NOT NULL,
+    dataset_id VARCHAR(190) NOT NULL,
+    strategy_version_id VARCHAR(190) NOT NULL,
+    partition_name VARCHAR(24) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    reproducibility_fingerprint VARCHAR(64) NOT NULL,
+    record_json JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cm_backtest_run (organization_id,run_id),
+    KEY idx_cm_backtest_experiment (organization_id,experiment_id),
+    KEY idx_cm_backtest_fingerprint (organization_id,reproducibility_fingerprint)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tn_capital_market_oos_runs (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id VARCHAR(190) NOT NULL,
+    run_id VARCHAR(190) NOT NULL,
+    experiment_id VARCHAR(190) NOT NULL,
+    dataset_id VARCHAR(190) NOT NULL,
+    strategy_version_id VARCHAR(190) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    record_json JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cm_oos_run (organization_id,run_id),
+    KEY idx_cm_oos_experiment (organization_id,experiment_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tn_capital_market_strategy_scorecards (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id VARCHAR(190) NOT NULL,
+    scorecard_id VARCHAR(190) NOT NULL,
+    strategy_version_id VARCHAR(190) NOT NULL,
+    composite_score INT UNSIGNED NOT NULL,
+    weight_version VARCHAR(64) NOT NULL,
+    record_json JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cm_strategy_scorecard (organization_id,scorecard_id),
+    KEY idx_cm_strategy_scorecard_version (organization_id,strategy_version_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tn_capital_market_rejected_hypotheses (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id VARCHAR(190) NOT NULL,
+    rejection_id VARCHAR(190) NOT NULL,
+    hypothesis_id VARCHAR(190) NOT NULL,
+    reason VARCHAR(48) NOT NULL,
+    record_json JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cm_rejected_hypothesis (organization_id,rejection_id),
+    KEY idx_cm_rejected_hypothesis_id (organization_id,hypothesis_id),
+    KEY idx_cm_rejected_reason (organization_id,reason)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tn_capital_market_research_knowledge (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id VARCHAR(190) NOT NULL,
+    knowledge_id VARCHAR(190) NOT NULL,
+    knowledge_type VARCHAR(48) NOT NULL,
+    record_json JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cm_research_knowledge (organization_id,knowledge_id),
+    KEY idx_cm_research_knowledge_type (organization_id,knowledge_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
