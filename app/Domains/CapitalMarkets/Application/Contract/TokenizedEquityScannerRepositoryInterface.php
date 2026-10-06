@@ -19,6 +19,10 @@ interface TokenizedEquityScannerRepositoryInterface
     /** @return array<string,mixed>|null */
     public function getRunByIdempotencyKey(string $organizationId,string $idempotencyKey):?array;
 
+    public function claimRun(
+        string $organizationId,string $runId,string $idempotencyKey,string $trigger,string $startedAt
+    ):bool;
+
     /** @param array<string,mixed> $result */
     public function saveRun(
         string $organizationId,string $runId,string $idempotencyKey,string $trigger,string $status,
