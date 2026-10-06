@@ -2693,6 +2693,12 @@ capital_markets_tokenized_equities:
   controller: App\Web\CapitalMarkets\CapitalMarketsPageController::tokenizedEquities
   methods: [GET]
 
+# Capital Markets CM-CRYPTO-SPOT-PERP UI
+capital_markets_crypto_spot_perpetual:
+  path: /capital-markets/crypto-spot-perpetual
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::cryptoSpotPerpetual
+  methods: [GET]
+
 # Capital Markets CM-MARKET-INTELLIGENCE UI
 capital_markets_market_data:
   path: /capital-markets/market-data
