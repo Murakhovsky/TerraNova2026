@@ -20,6 +20,21 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
     /** @param array<string,mixed> $payload */
     public function saveExecution(string $organizationId,string $executionId,string $opportunityId,string $status,array $payload):void;
 
+    /** @param array<string,mixed> $payload */
+    public function saveExecutionPlan(string $organizationId,string $planId,string $opportunityId,array $payload):void;
+
+    /** @param array<string,mixed> $payload */
+    public function savePaperOrder(string $organizationId,string $orderId,string $executionId,string $legId,string $state,string $idempotencyKey,array $payload):void;
+
+    /** @param array<string,mixed> $payload */
+    public function savePaperFill(string $organizationId,string $fillId,string $orderId,string $executionId,string $idempotencyKey,array $payload):void;
+
+    /** @param array<string,mixed> $payload */
+    public function savePosition(string $organizationId,string $positionId,string $portfolioId,string $strategyId,string $instrumentId,string $venueId,string $status,array $payload):void;
+
+    /** @return list<array<string,mixed>> */
+    public function listPositions(string $organizationId,int $limit=500):array;
+
     /** @return array<string,mixed>|null */
     public function getExecutionForOpportunity(string $organizationId,string $opportunityId):?array;
 
