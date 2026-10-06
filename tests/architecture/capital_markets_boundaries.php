@@ -52,8 +52,8 @@ foreach([
 }
 
 $manifest=require $domainRoot.'/module.php';
-if(($manifest['version']??null)!=='0.4.0'||($manifest['schema_version']??null)!=='0.4.0'){
-    throw new RuntimeException('Capital Markets module manifest must be V0.4.0.');
+if(($manifest['version']??null)!=='0.5.0'||($manifest['schema_version']??null)!=='0.5.0'){
+    throw new RuntimeException('Capital Markets module manifest must be V0.5.0.');
 }
 if(($manifest['enabled_by_default']??true)!==false){
     throw new RuntimeException('Capital Markets Foundation must remain disabled by default.');
@@ -67,6 +67,7 @@ foreach([
     'app/migrations/20261006_000126_capital_markets_market_events.sql',
     'app/migrations/20261006_000127_capital_markets_market_state.sql',
     'app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql',
+    'app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql',
 ] as $migrationFile){
     if(!in_array($migrationFile,$manifest['contributions']['migration_files']??[],true)){
         throw new RuntimeException('Capital Markets migration is missing: '.$migrationFile);
@@ -124,6 +125,7 @@ foreach([
     '/api/v1/capital-markets/venues',
     '/capital-markets/tokenized-equities',
     '/api/v1/capital-markets/tokenized-equities',
+    '/api/v1/capital-markets/tokenized-equities/research',
 ] as $route){
     if(!str_contains($routes,$route))throw new RuntimeException('Capital Markets route missing: '.$route);
 }
@@ -139,6 +141,8 @@ foreach([
     'KernelCapitalMarketsEventPublisher',
     'TokenizedEquityVerticalSliceService',
     'TokenizedEquityPaperExecutionService',
+    'TokenizedEquityResearchService',
+    'HypothesisResearchPolicy',
     'MysqlTokenizedEquityVerticalSliceRepository',
 ] as $service){
     if(!str_contains($services,$service))throw new RuntimeException('Capital Markets service wiring missing: '.$service);
@@ -195,7 +199,7 @@ foreach([
     'tn_capital_market_spread_candidates','tn_capital_market_opportunities','tn_capital_market_risk_assessments',
     'tn_capital_market_paper_executions','tn_capital_market_ledger_transactions','tn_capital_market_paper_portfolios',
     'tn_capital_market_capital_reservations','tn_capital_market_paper_balances',
-    'tn_capital_market_paper_balance_reservations'
+    'tn_capital_market_paper_balance_reservations','tn_capital_market_hypothesis_observations'
 ] as $table){
     if(!str_contains($ownership,$table))throw new RuntimeException('Capital Markets table ownership missing: '.$table);
 }
@@ -215,7 +219,7 @@ $domainIterator=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($do
 foreach($domainIterator as $candidate){
     if(!$candidate->isFile())continue;
     if(in_array($candidate->getFilename(),['LiveOrder.php','LiveTrade.php','Backtest.php'],true)){
-        throw new RuntimeException('Out-of-scope V0.4 live/backtest entity exists: '.$candidate->getFilename());
+        throw new RuntimeException('Out-of-scope V0.5 live/backtest entity exists: '.$candidate->getFilename());
     }
 }
 
