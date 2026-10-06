@@ -17,9 +17,13 @@ final readonly class SpreadDetectorConfig extends ValueObject
         public Decimal $maximumSlippageBps,
         public int $minimumOpportunityTtlMs,
         public Decimal $economicEquivalenceThreshold,
+        public ?Decimal $minimumExecutionProbability=null,
     ){
         if($version===''||$maximumSnapshotAgeMs<1||$maximumSnapshotSkewMs<0||$minimumDataQuality<0||$minimumDataQuality>100||$minimumOpportunityTtlMs<1){
             throw new InvalidArgumentException('Invalid spread detector configuration.');
+        }
+        if($minimumExecutionProbability!==null&&($minimumExecutionProbability->isNegative()||$minimumExecutionProbability->compareTo(Decimal::fromString('1'))>0)){
+            throw new InvalidArgumentException('Minimum execution probability must be in range 0..1.');
         }
     }
 }
