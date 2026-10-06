@@ -115,10 +115,17 @@ foreach([
 $sourceMigration=(string)file_get_contents($root.'/app/migrations/20261006_000125_capital_markets_market_sources.sql');
 foreach([
     'tn_capital_market_data_sources','tn_capital_market_source_health','tn_capital_market_subscriptions',
-    'credentials_reference','quality_policy_json','license_profile','target_fingerprint','SHA2(',
+    'credentials_reference','quality_policy_json','license_profile','target_fingerprint',
     'UNIQUE KEY uq_cm_market_subscription_target (target_fingerprint)'
 ] as $needle){
     if(!str_contains($sourceMigration,$needle))throw new RuntimeException('Market source persistence contract missing: '.$needle);
+}
+if(str_contains($sourceMigration,'GENERATED ALWAYS AS')){
+    throw new RuntimeException('Market subscription target fingerprint must be materialized by the repository; generated columns interfere with MySQL foreign-key constraints.');
+}
+$subscriptionRepository=(string)file_get_contents($infrastructure.'/Persistence/MySql/MysqlMarketSubscriptionRepository.php');
+foreach(['target_fingerprint','targetFingerprint(','hash(\'sha256\'','implode(chr(31)'] as $needle){
+    if(!str_contains($subscriptionRepository,$needle))throw new RuntimeException('Market subscription fingerprint persistence contract missing: '.$needle);
 }
 if(str_contains($sourceMigration,'credentials_secret')||str_contains($sourceMigration,'api_secret')){
     throw new RuntimeException('Market source persistence must not store raw provider secrets.');

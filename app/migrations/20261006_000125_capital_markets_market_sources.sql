@@ -56,10 +56,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_subscriptions (
     source_id VARCHAR(190) NOT NULL,
     venue_id VARCHAR(190) NULL,
     instrument_id VARCHAR(190) NOT NULL,
-    target_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin
-        GENERATED ALWAYS AS (
-            SHA2(CONCAT_WS(CHAR(31),organization_id,source_id,COALESCE(venue_id,''),instrument_id,data_type),256)
-        ) STORED,
+    target_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     data_type VARCHAR(48) NOT NULL,
     status VARCHAR(24) NOT NULL,
     subscribed_at DATETIME(6) NOT NULL,

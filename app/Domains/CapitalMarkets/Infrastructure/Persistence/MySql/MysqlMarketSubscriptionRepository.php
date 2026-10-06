@@ -22,18 +22,31 @@ final readonly class MysqlMarketSubscriptionRepository implements MarketSubscrip
     {
         $statement=$this->connection->prepare(
             'INSERT INTO tn_capital_market_subscriptions
-             (organization_id,subscription_id,source_id,venue_id,instrument_id,data_type,status,subscribed_at,last_event_at)
+             (organization_id,subscription_id,source_id,venue_id,instrument_id,target_fingerprint,data_type,status,subscribed_at,last_event_at)
              VALUES
-             (:organization_id,:subscription_id,:source_id,:venue_id,:instrument_id,:data_type,:status,:subscribed_at,:last_event_at)
+             (:organization_id,:subscription_id,:source_id,:venue_id,:instrument_id,:target_fingerprint,:data_type,:status,:subscribed_at,:last_event_at)
              ON DUPLICATE KEY UPDATE status=VALUES(status),subscribed_at=VALUES(subscribed_at),last_event_at=VALUES(last_event_at)'
         );
         $statement->execute([
             'organization_id'=>$organizationId,'subscription_id'=>$subscription->id->value(),
             'source_id'=>$subscription->sourceId->value(),'venue_id'=>$subscription->venueId?->value(),
-            'instrument_id'=>$subscription->instrumentId->value(),'data_type'=>$subscription->dataType->value,
+            'instrument_id'=>$subscription->instrumentId->value(),
+            'target_fingerprint'=>$this->targetFingerprint($organizationId,$subscription),
+            'data_type'=>$subscription->dataType->value,
             'status'=>$subscription->status->value,'subscribed_at'=>$subscription->subscribedAt->format('Y-m-d H:i:s.u'),
             'last_event_at'=>$subscription->lastEventAt?->format('Y-m-d H:i:s.u'),
         ]);
+    }
+
+    private function targetFingerprint(string $organizationId,MarketSubscription $subscription):string
+    {
+        return hash('sha256',implode(chr(31),[
+            $organizationId,
+            $subscription->sourceId->value(),
+            $subscription->venueId?->value()??'',
+            $subscription->instrumentId->value(),
+            $subscription->dataType->value,
+        ]));
     }
 
     public function forSource(string $organizationId,MarketSourceId $sourceId,bool $activeOnly=false):array
