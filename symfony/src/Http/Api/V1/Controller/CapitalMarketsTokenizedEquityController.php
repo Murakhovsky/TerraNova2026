@@ -55,7 +55,8 @@ final readonly class CapitalMarketsTokenizedEquityController
         return $this->respond(fn():array=>$this->research->report(
             $tenant->organizationId()->value(),
             min(100000,max(1,(int)$request->query->get('minimum_observations',30))),
-            min(100000,max(1,(int)$request->query->get('minimum_realized',10))),
+            min(100000,max(1,(int)$request->query->get('minimum_execution_attempts',10))),
+            (string)$request->query->get('minimum_completion_rate','0.5'),
         ));
     }
 
