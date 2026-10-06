@@ -452,7 +452,7 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         string $executionId,
         string $capitalReservationId,
         string $buyCashReservationId,
-        string $sellInventoryReservationId,
+        ?string $sellInventoryReservationId,
         string $buyVenueId,
         string $buyInstrumentId,
         string $buyQuantity,
@@ -473,33 +473,38 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
             $capital->execute(['org'=>$organizationId,'id'=>$capitalReservationId]);
             $capitalRow=$capital->fetch(PDO::FETCH_ASSOC);
 
+            $reservationIds=[$buyCashReservationId];
+            if($sellInventoryReservationId!==null)$reservationIds[]=$sellInventoryReservationId;
+            $placeholders=implode(',',array_fill(0,count($reservationIds),'?'));
             $balance=$this->connection->prepare(
                 'SELECT reservation_id,venue_id,asset_key,amount,status
                  FROM tn_capital_market_paper_balance_reservations
-                 WHERE organization_id=:org AND reservation_id IN (:buy_id,:sell_id) FOR UPDATE'
+                 WHERE organization_id=? AND reservation_id IN ('.$placeholders.') FOR UPDATE'
             );
-            $balance->execute([
-                'org'=>$organizationId,'buy_id'=>$buyCashReservationId,'sell_id'=>$sellInventoryReservationId,
-            ]);
+            $balance->execute([$organizationId,...$reservationIds]);
             $rows=$balance->fetchAll(PDO::FETCH_ASSOC);
             $byId=[];
             foreach($rows as $row)$byId[(string)$row['reservation_id']]=$row;
             $buyRow=$byId[$buyCashReservationId]??null;
-            $sellRow=$byId[$sellInventoryReservationId]??null;
+            $sellRow=$sellInventoryReservationId===null?null:($byId[$sellInventoryReservationId]??null);
 
+            $sellConsumed=$sellInventoryReservationId===null||(is_array($sellRow)&&$sellRow['status']==='CONSUMED');
             if(is_array($capitalRow)&&$capitalRow['status']==='CONSUMED'
                 &&is_array($buyRow)&&$buyRow['status']==='CONSUMED'
-                &&is_array($sellRow)&&$sellRow['status']==='CONSUMED'){
+                &&$sellConsumed){
                 if($ownsTransaction)$this->connection->commit();
                 return;
             }
+            $sellReserved=$sellInventoryReservationId===null||(is_array($sellRow)&&$sellRow['status']==='RESERVED');
             if(!is_array($capitalRow)||$capitalRow['status']!=='RESERVED'
                 ||!is_array($buyRow)||$buyRow['status']!=='RESERVED'
-                ||!is_array($sellRow)||$sellRow['status']!=='RESERVED'){
+                ||!$sellReserved){
                 throw new \DomainException('PAPER_EXECUTION_SETTLEMENT_STATE_INCONSISTENT');
             }
 
-            foreach([$buyRow,$sellRow] as $row){
+            $reservationRows=[$buyRow];
+            if($sellRow!==null)$reservationRows[]=$sellRow;
+            foreach($reservationRows as $row){
                 $this->connection->prepare(
                     'UPDATE tn_capital_market_paper_balance_reservations SET status=\'CONSUMED\'
                      WHERE organization_id=:org AND reservation_id=:id AND status=\'RESERVED\''
