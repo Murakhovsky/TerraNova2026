@@ -200,7 +200,7 @@ $assert($instrumentEvent->envelope()['schema_version']===1,'Event schema version
 
 $manifest=ModuleDefinition::fromArray(require dirname(__DIR__,2).'/app/Domains/CapitalMarkets/module.php');
 $assert($manifest->manifest->id==='capital_markets','Capital Markets module id is invalid.');
-$assert($manifest->manifest->version==='0.4.0','Capital Markets module version is invalid.');
+$assert($manifest->manifest->version==='0.5.0','Capital Markets module version is invalid.');
 $assert($manifest->manifest->enabledByDefault===false,'Capital Markets must be disabled by default.');
 $assert($manifest->contributions->runtimeModuleService==='capitalMarketsDomainModule','Foundation runtime module service is missing.');
 foreach([
@@ -208,6 +208,8 @@ foreach([
     'app/migrations/20261006_000125_capital_markets_market_sources.sql',
     'app/migrations/20261006_000126_capital_markets_market_events.sql',
     'app/migrations/20261006_000127_capital_markets_market_state.sql',
+    'app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql',
+    'app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql',
 ] as $migration){
     $assert(in_array($migration,$manifest->contributions->migrationFiles,true),'Capital Markets migration missing: '.$migration);
 }
