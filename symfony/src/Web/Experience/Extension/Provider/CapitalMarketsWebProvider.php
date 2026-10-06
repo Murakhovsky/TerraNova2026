@@ -31,6 +31,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new NavigationContribution('capital-markets-market-data','Market Data','/capital-markets/market-data',priority:50,parentKey:'capital-markets'),
             new NavigationContribution('capital-markets-tokenized-equity','Tokenized Equity','/capital-markets/tokenized-equities',priority:60,parentKey:'capital-markets'),
             new NavigationContribution('capital-markets-crypto-spot-perpetual','Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual',priority:70,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-research','Research Lab','/capital-markets/research',priority:80,parentKey:'capital-markets'),
         ];
     }
 
@@ -44,6 +45,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new SearchResult('capital_markets.search.market_data','Capital Markets Market Data','/capital-markets/market-data','workspace','Sources, subscriptions, health and trusted market state'),
             new SearchResult('capital_markets.search.tokenized_equity','Tokenized Equity','/capital-markets/tokenized-equities','workspace','H1/H2 dislocations, paper execution and P&L'),
             new SearchResult('capital_markets.search.crypto_spot_perpetual','Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual','workspace','H4 basis, H5 funding capture and H6 cross-venue funding'),
+            new SearchResult('capital_markets.search.research','Research & Strategy Lab','/capital-markets/research','workspace','Hypotheses, experiments, OOS, scorecards, promotion and research knowledge'),
         ],$query,$limit);
     }
 
@@ -57,6 +59,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new ShellCommandItem('capital_markets.market_data','Open Market Data','/capital-markets/market-data','navigation','Capital Markets'),
             new ShellCommandItem('capital_markets.tokenized_equity','Open Tokenized Equity','/capital-markets/tokenized-equities','navigation','Capital Markets'),
             new ShellCommandItem('capital_markets.crypto_spot_perpetual','Open Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.research','Open Research Lab','/capital-markets/research','navigation','Capital Markets'),
         ];
     }
 
@@ -71,6 +74,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new WorkspaceDefinition('capital_markets.market_data','Capital Markets Market Data','/capital-markets/market-data',null,60),
             new WorkspaceDefinition('capital_markets.tokenized_equity','Tokenized Equity','/capital-markets/tokenized-equities',null,70),
             new WorkspaceDefinition('capital_markets.crypto_spot_perpetual','Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual',null,80),
+            new WorkspaceDefinition('capital_markets.research','Research & Strategy Lab','/capital-markets/research',null,90),
         ];
     }
 }
