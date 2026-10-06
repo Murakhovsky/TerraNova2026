@@ -27,6 +27,7 @@ export default class extends Controller {
 
     connect() {
         this.fetching = false;
+        this.liveUpdatesStopped = false;
         this.currentRuns = [];
         this.currentWorkflow = null;
         this.currentHealth = String(this.initialHealthValue || '').toUpperCase();
@@ -41,24 +42,35 @@ export default class extends Controller {
             this.initialHealthValue,
         );
 
+        this.pollTimer = null;
+        this.clockTimer = null;
+
+        this.formatStaticTimestamps();
+
+        const initialState = String(this.initialStateValue || '').toUpperCase();
+        const initialStatus = String(this.initialStatusValue || '').toUpperCase();
+        if (this.shouldStopLiveUpdates(this.currentHealth, initialState, initialStatus)) {
+            this.stopLiveUpdates(this.currentHealth === 'STALLED' ? 'процес зупинено' : 'процес завершено');
+            this.tick();
+            return;
+        }
+
         this.pollTimer = window.setInterval(
             () => this.refresh(),
             Math.max(1500, this.intervalValue || 3000),
         );
         this.clockTimer = window.setInterval(() => this.tick(), 1000);
 
-        this.formatStaticTimestamps();
         this.refresh();
         this.tick();
     }
 
     disconnect() {
-        window.clearInterval(this.pollTimer);
-        window.clearInterval(this.clockTimer);
+        this.stopLiveUpdates();
     }
 
     async refresh() {
-        if (this.fetching || document.hidden || !this.hasUrlValue) {
+        if (this.liveUpdatesStopped || this.fetching || document.hidden || !this.hasUrlValue) {
             return;
         }
 
@@ -126,8 +138,8 @@ export default class extends Controller {
                 return;
             }
 
-            if (this.isTerminal(state, status)) {
-                window.clearInterval(this.pollTimer);
+            if (this.shouldStopLiveUpdates(health, state, status)) {
+                this.stopLiveUpdates(health === 'STALLED' ? 'процес зупинено' : 'процес завершено');
             }
         } catch (error) {
             if (this.hasPollStatusTarget) {
@@ -165,7 +177,7 @@ export default class extends Controller {
             this.heartbeatTarget.textContent = 'сигнал: ' + this.relativeTime(timestamp);
         }
 
-        if (this.hasPollStatusTarget && this.lastPollAt !== null) {
+        if (!this.liveUpdatesStopped && this.hasPollStatusTarget && this.lastPollAt !== null) {
             const age = Math.max(0, Math.floor((Date.now() - this.lastPollAt) / 1000));
             if (!this.pollStatusTarget.dataset.eventMessage) {
                 this.pollStatusTarget.textContent = age < 2 ? 'перевірено щойно' : 'перевірено ' + age + ' с тому';
@@ -301,6 +313,27 @@ export default class extends Controller {
     isTerminal(state, status) {
         return ['DONE', 'CANCELLED', 'FAILED'].includes(state)
             || ['COMPLETED', 'CANCELLED', 'FAILED'].includes(status);
+    }
+
+    shouldStopLiveUpdates(health, state, status) {
+        return String(health || '').toUpperCase() === 'STALLED' || this.isTerminal(state, status);
+    }
+
+    stopLiveUpdates(message = '') {
+        this.liveUpdatesStopped = true;
+        if (this.pollTimer !== null) {
+            window.clearInterval(this.pollTimer);
+            this.pollTimer = null;
+        }
+        if (this.clockTimer !== null) {
+            window.clearInterval(this.clockTimer);
+            this.clockTimer = null;
+        }
+        if (message && this.hasPollStatusTarget) {
+            delete this.pollStatusTarget.dataset.eventMessage;
+            this.pollStatusTarget.textContent = 'оновлення зупинено · ' + message;
+            this.pollStatusTarget.title = '';
+        }
     }
 
     actionFingerprint(state, status, health) {

@@ -80,6 +80,10 @@ foreach ([
     'localizeEventType(',
     'currentStopAt',
     "health === 'STALLED'",
+    'shouldStopLiveUpdates(',
+    'stopLiveUpdates(',
+    'liveUpdatesStopped',
+    "'оновлення зупинено · '",
     "'сигнал: '",
     'без нових подій',
 ] as $needle) {
