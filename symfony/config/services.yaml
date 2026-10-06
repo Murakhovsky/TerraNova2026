@@ -1888,6 +1888,8 @@ services:
     alias: Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService
 
   # Capital Markets CM-TOKENIZED-EQUITY vertical slice runtime
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityExecutionRecoveryService: ~
+
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository:
     arguments:
       $connection: '@cos.database.pdo'
