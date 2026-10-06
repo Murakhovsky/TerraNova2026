@@ -19,6 +19,7 @@ generated: true
 | Процес | Domain | Бізнес-стан | Verification | Кроків | Cross-domain | Ownership | Capability mapped | Evidence verified | Critical source | Critical runtime | Workflow |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Market Source → Trusted Market State | `capital_markets` | `as-is` | `source-verified` | 5 | 0 | 5/5 | 5/5 | 5/5 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/capital-markets-market-data-to-trusted-state.md) |
+| Trusted Market State → Tokenized Equity Paper Result | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-tokenized-equity-paper-cycle.md) |
 | Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
@@ -39,6 +40,7 @@ generated: true
 | Процес | Кроків з owner | Capability mapped | Capability gaps | Cross-domain кроки | Mapped кроки | Evidence-verified кроки | Runtime-backed кроки | Critical source-verified | Critical runtime-verified |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Market Source → Trusted Market State | 5/5 | 5/5 | 0/5 | 0/5 | 5/5 | 5/5 | 0/5 | 5/5 | 0/5 |
+| Trusted Market State → Tokenized Equity Paper Result | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
@@ -77,6 +79,39 @@ generated: true
 | Assess freshness, integrity and trust | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.quality.view` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Service/MarketDataQualityEngine.php` · `public function assess(` [source] |
 | Persist canonical event and quality metric | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.history.view` | `state` | так | source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlCanonicalMarketEventRepository.php` · `public function append(` [source]<br>source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlMarketQualityMetricRepository.php` · `public function append(` [source] |
 | Update trading or reference MarketState | Market Intelligence runtime | `capital_markets` | `capital_markets.market_data.view` | `outcome` | так | source `app/Domains/CapitalMarkets/Domain/Service/MarketStateEngine.php` · `public function apply(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Service/ReferenceMarketStateEngine.php` · `public function apply(` [source] |
+
+## Trusted Market State → Tokenized Equity Paper Result
+
+- **Process ID:** `capital-markets.tokenized-equity-paper-cycle`
+- **Schema:** `v4`
+- **Domain:** `capital_markets`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 7/7 кроків
+- **Cross-domain кроки:** 0/7
+- **Derived verification:** `source-verified`
+- **Тригер:** Trusted comparable Equity/Tokenized Equity or cross-venue Tokenized Equity market states are available
+- **Workflow:** [Trusted Market State → Tokenized Equity Paper Result](../02-workflows/capital-markets-tokenized-equity-paper-cycle.md)
+
+**Результати**
+
+- H1 and H2 dislocations are detected only from trustworthy comparable market state
+- Gross spread is converted into realistic expected net edge after explicit costs
+- Economic relationship and deterministic risk gates can reject false opportunities
+- H2 paper execution requires pre-funded venue cash and token inventory
+- Execution settlement is recorded through an immutable asset-aware double-entry ledger
+- Realistic paper P&L and edge capture are persisted as research evidence
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Detect H1/H2 spread candidate | Capital Markets research runtime | `capital_markets` | `capital_markets.opportunity.view` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Service/TokenizedEquitySpreadDetector.php` · `public function detectCrossVenue(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Service/TokenizedEquitySpreadDetector.php` · `public function detectReferenceDislocation(` [source] |
+| Evaluate net economics and relationship | Capital Markets research runtime | `capital_markets` | `capital_markets.opportunity.view` | `decision` | так | source `app/Domains/CapitalMarkets/Application/Service/TokenizedEquityVerticalSliceService.php` · `private function evaluate(` [source]<br>source `app/Domains/CapitalMarkets/Domain/Service/NetEconomicsEngine.php` · `public function estimate(` [source] |
+| Apply deterministic risk gate | Risk Engine | `capital_markets` | `capital_markets.paper.execute` | `decision` | так | source `app/Domains/CapitalMarkets/Domain/Service/TokenizedEquityRiskEngine.php` · `public function assess(` [source] |
+| Reserve paper capital and venue balances | Paper Execution runtime | `capital_markets` | `capital_markets.paper.execute` | `state` | так | source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php` · `public function reserveCapital(` [source]<br>source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php` · `public function reservePaperBalance(` [source] |
+| Revalidate market state and simulate two-leg execution | Paper Execution runtime | `capital_markets` | `capital_markets.paper.execute` | `operation` | так | source `app/Domains/CapitalMarkets/Application/Service/TokenizedEquityPaperExecutionService.php` · `public function execute(` [source] |
+| Post asset-aware double-entry settlement | Paper Execution runtime | `capital_markets` | `capital_markets.paper.execute` | `state` | так | source `app/Domains/CapitalMarkets/Domain/Ledger/LedgerTransaction.php` · `public function __construct(` [source] |
+| Persist realized paper P&L and edge capture | Capital Markets research runtime | `capital_markets` | `capital_markets.opportunity.view` | `outcome` | так | source `app/Domains/CapitalMarkets/Domain/Execution/ExecutionPerformance.php` · `public function __construct(` [source]<br>source `app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlTokenizedEquityVerticalSliceRepository.php` · `public function saveExecution(` [source] |
 
 ## Diagnostic Session → Recommendation
 
