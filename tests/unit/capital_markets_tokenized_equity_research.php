@@ -64,7 +64,7 @@ for($i=0;$i<50;$i++)$survivorship[]=['stage'=>'EXECUTION','realized'=>false,'rea
 $summary=$engine->summarize($survivorship,30,10);
 $assert($summary['verdict']==='NO_EDGE','Ten successful fills among fifty invalidated attempts must not validate edge.');
 $assert($summary['sample']['invalidated_execution_count']===50,'Invalidated execution attempts were lost.');
-$assert($summary['economics']['completion_rate']==='0.166667','Completion rate must use the full attempt population.');
+$assert($summary['economics']['completion_rate']==='0.166666','Completion rate must use the full attempt population.');
 
 $losing=[];
 for($i=0;$i<30;$i++){
