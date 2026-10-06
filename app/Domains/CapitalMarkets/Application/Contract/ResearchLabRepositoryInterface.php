@@ -24,11 +24,15 @@ interface ResearchLabRepositoryInterface
 
     public function savePromotionDecision(string $organizationId,array $record):void;
     public function listPromotionDecisions(string $organizationId,string $strategyVersionId):array;
+    public function listAllPromotionDecisions(string $organizationId,int $limit=200):array;
 
     public function saveBacktestRun(string $organizationId,array $record):void;
+    public function listBacktestRuns(string $organizationId,int $limit=200):array;
     public function saveOutOfSampleRun(string $organizationId,array $record):void;
     public function saveScorecard(string $organizationId,array $record):void;
+    public function listScorecards(string $organizationId,int $limit=200):array;
     public function saveRejectedHypothesis(string $organizationId,array $record):void;
+    public function listRejectedHypotheses(string $organizationId,int $limit=200):array;
     public function saveKnowledge(string $organizationId,array $record):void;
     public function listKnowledge(string $organizationId,int $limit=200):array;
 }
