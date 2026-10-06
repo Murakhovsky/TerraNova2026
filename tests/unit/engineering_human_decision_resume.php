@@ -26,14 +26,14 @@ $engine = new EngineeringWorkflowEngine();
 $engine->transition(
     $workflow,
     EngineeringWorkflowState::HUMAN_DECISION_REQUIRED,
-    new WorkflowTransitionContext('TEST', 'ambiguity', 'AGENT', 'manager'),
+    new WorkflowTransitionContext('TEST', 'ambiguity', 'AGENT', 'product-requirements'),
 );
 
 $decisionId = EngineeringId::generate();
 $directive = (new EngineeringWorkflowCoordinator())->resumeAfterHumanDecision($workflow, $decisionId);
 
 if ($workflow->currentState() !== EngineeringWorkflowState::ANALYSIS) throw new RuntimeException('Human decision did not restore ANALYSIS.');
-if ($directive->agent !== AgentRole::ENGINEERING_MANAGER) throw new RuntimeException('Manager was not selected after ANALYSIS resume.');
+if ($directive->agent !== AgentRole::PRODUCT_REQUIREMENTS) throw new RuntimeException('Product / Requirements Agent was not selected after ANALYSIS resume.');
 if (($directive->transitions[0]->context->humanDecisionId ?? null) !== $decisionId) throw new RuntimeException('Human decision id was not attached to transition audit.');
 
 echo "Engineering human decision resume passed.\n";
