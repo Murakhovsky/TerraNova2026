@@ -117,12 +117,18 @@ final class TokenizedEquitySpreadDetector
 
     private function ageMs(DateTimeImmutable $source,DateTimeImmutable $now):int
     {
-        return max(0,(int)round(((float)$now->format('U.u')-(float)$source->format('U.u'))*1000));
+        $delta=$this->epochMicros($now)-$this->epochMicros($source);
+        return max(0,intdiv($delta,1000));
     }
 
     private function skewMs(DateTimeImmutable $a,DateTimeImmutable $b):int
     {
-        return (int)round(abs((float)$a->format('U.u')-(float)$b->format('U.u'))*1000);
+        return intdiv(abs($this->epochMicros($a)-$this->epochMicros($b)),1000);
+    }
+
+    private function epochMicros(DateTimeImmutable $value):int
+    {
+        return ((int)$value->format('U')*1000000)+(int)$value->format('u');
     }
 
     private function candidate(
