@@ -5,7 +5,7 @@ security:
 
   firewalls:
     cos_api:
-      pattern: '^/(?:api/v1|api/engineering|api/spatial|account|cabinet|sales|growth|workspace|client-case|cos/(?:architecture|control-center|action|approval)|admin|property/(?:manage|listing|submissions|submission|presentationShare)|diagnostics|spatial|dev)(?:/|$)'
+      pattern: '^/(?:api/v1|api/engineering|api/spatial|account|cabinet|sales|growth|workspace|client-case|capital-markets|cos/(?:architecture|control-center|action|approval)|admin|property/(?:manage|listing|submissions|submission|presentationShare)|diagnostics|spatial|dev)(?:/|$)'
       stateless: true
       provider: cos_users
       custom_authenticators:
@@ -26,6 +26,7 @@ security:
     - { path: '^/account(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/cabinet(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/client-case(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
+    - { path: '^/capital-markets(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/cos/(?:architecture|control-center|action|approval)(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/admin(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
     - { path: '^/property/(?:manage|listing|submissions|submission|presentationShare)(?:/|$)', roles: IS_AUTHENTICATED_FULLY }
