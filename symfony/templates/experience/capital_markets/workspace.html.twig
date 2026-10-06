@@ -272,11 +272,18 @@
     {% set hypotheses = w.hypotheses|default([]) %}
     {% set experiments = w.experiments|default([]) %}
     {% set knowledge = w.knowledge|default([]) %}
+    {% set runs = w.backtest_runs|default([]) %}
+    {% set scorecards = w.scorecards|default([]) %}
+    {% set rejections = w.rejections|default([]) %}
+    {% set promotions = w.promotion_decisions|default([]) %}
+    {% set metrics = w.metrics|default({}) %}
 
     <section class="cos-kpi-strip" aria-label="Research Lab state">
-      <twig:CosMetric label="Hypotheses" value="{{ hypotheses|length }}" hint="formal research objects" />
-      <twig:CosMetric label="Experiments" value="{{ experiments|length }}" hint="immutable specifications" />
-      <twig:CosMetric label="Knowledge" value="{{ knowledge|length }}" hint="validated + rejected findings" />
+      <twig:CosMetric label="Hypotheses" value="{{ metrics.hypothesis_count|default(hypotheses|length) }}" hint="formal research objects" />
+      <twig:CosMetric label="Experiments" value="{{ metrics.experiment_count|default(experiments|length) }}" hint="immutable specifications" />
+      <twig:CosMetric label="Backtests" value="{{ metrics.backtest_count|default(runs|length) }}" hint="historical replay runs" />
+      <twig:CosMetric label="Failure rate" value="{{ metrics.backtest_failure_rate|default(0) }}" hint="research runtime health" />
+      <twig:CosMetric label="Knowledge" value="{{ metrics.knowledge_count|default(knowledge|length) }}" hint="validated + rejected findings" />
       <twig:CosMetric label="Authority" value="GATED" hint="AI cannot promote to Live" />
     </section>
 
@@ -367,6 +374,87 @@
             </tbody>
           </table>
         </div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Backtest Runtime</h2>
+      {% if runs is empty %}
+        <p>No backtest runs yet. Historical replay is available through the Research API and uses the production Capital Markets economics stack.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Run</th><th>Experiment</th><th>Partition</th><th>Status</th><th>Strategy</th><th>Dataset</th><th>Result</th></tr></thead>
+          <tbody>
+          {% for run in runs %}
+            <tr>
+              <td><strong>{{ run.run_id|default('—') }}</strong></td>
+              <td>{{ run.experiment_id|default('—') }}</td>
+              <td>{{ run.partition_name|default('—') }}</td>
+              <td>{{ run.status|default('—') }}</td>
+              <td>{{ run.strategy_version_id|default('—') }}</td>
+              <td>{{ run.dataset_id|default('—') }}</td>
+              <td>{{ run.result_id|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Strategy Scorecards & Promotion</h2>
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <h3>Scorecards</h3>
+          {% if scorecards is empty %}
+            <p>No scorecards yet.</p>
+          {% else %}
+            <div class="table-responsive"><table class="table">
+              <thead><tr><th>Strategy Version</th><th>Score</th><th>Weights</th></tr></thead>
+              <tbody>
+              {% for s in scorecards %}
+                <tr><td>{{ s.strategy_version_id|default('—') }}</td><td><strong>{{ s.composite_score|default('—') }}</strong></td><td>{{ s.weight_version|default('—') }}</td></tr>
+              {% endfor %}
+              </tbody>
+            </table></div>
+          {% endif %}
+        </div>
+        <div class="col-lg-6">
+          <h3>Promotion decisions</h3>
+          {% if promotions is empty %}
+            <p>No promotion decisions yet.</p>
+          {% else %}
+            <div class="table-responsive"><table class="table">
+              <thead><tr><th>Strategy Version</th><th>Transition</th><th>Status</th><th>Approver</th></tr></thead>
+              <tbody>
+              {% for p in promotions %}
+                <tr><td>{{ p.strategy_version_id|default('—') }}</td><td>{{ p.from|default('—') }} → {{ p.to|default('—') }}</td><td><strong>{{ p.status|default('—') }}</strong></td><td>{{ p.approver|default('—') }}</td></tr>
+              {% endfor %}
+              </tbody>
+            </table></div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Rejected Hypotheses</h2>
+      {% if rejections is empty %}
+        <p>No rejected hypotheses recorded yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Hypothesis</th><th>Reason</th><th>Evidence</th><th>Review after</th></tr></thead>
+          <tbody>
+          {% for r in rejections %}
+            <tr>
+              <td>{{ r.hypothesis_id|default('—') }}</td>
+              <td><strong>{{ r.reason|default('—') }}</strong></td>
+              <td>{{ r.evidence|default({})|json_encode }}</td>
+              <td>{{ r.review_after|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
       {% endif %}
     </section>
 
