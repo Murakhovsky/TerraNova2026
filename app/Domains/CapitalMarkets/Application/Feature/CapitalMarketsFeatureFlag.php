@@ -17,6 +17,7 @@ enum CapitalMarketsFeatureFlag:string
     case MarketDataHistory='capital_markets.market_data.history.enabled';
     case MarketDataBybit='capital_markets.market_data.bybit.enabled';
     case MarketDataMassive='capital_markets.market_data.massive.enabled';
+    case TokenizedEquity='capital_markets.tokenized_equity.enabled';
 
     /** @return list<string> */
     public static function values():array{return array_map(static fn(self $case):string=>$case->value,self::cases());}

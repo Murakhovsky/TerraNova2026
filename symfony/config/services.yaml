@@ -1887,6 +1887,26 @@ services:
   Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary:
     alias: Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService
 
+  # Capital Markets CM-TOKENIZED-EQUITY vertical slice runtime
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository
+
+  Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
+  Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
+  Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
+  Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector: ~
+  Domains\CapitalMarkets\Domain\Service\TokenizedEquityRiskEngine: ~
+
+  Domains\CapitalMarkets\Application\Service\TrustedConversionRateResolver: ~
+
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
+
+
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
 
   App\Web\CapitalMarkets\CapitalMarketsPageController:
@@ -1894,6 +1914,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Http\Api\V1\Controller\CapitalMarketsMarketDataController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController:
     public: true
     tags: ['controller.service_arguments']
 

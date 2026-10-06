@@ -40,6 +40,15 @@ generated: true
 | `capital_markets` | `app/migrations/20261006_000127_capital_markets_market_state.sql` | `tn_capital_market_snapshots` |
 | `capital_markets` | `app/migrations/20261006_000127_capital_markets_market_state.sql` | `tn_capital_market_states` |
 | `capital_markets` | `app/migrations/20261006_000127_capital_markets_market_state.sql` | `tn_capital_market_venues` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_capital_reservations` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_ledger_transactions` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_opportunities` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_paper_balance_reservations` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_paper_balances` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_paper_executions` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_paper_portfolios` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_risk_assessments` |
+| `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_spread_candidates` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |

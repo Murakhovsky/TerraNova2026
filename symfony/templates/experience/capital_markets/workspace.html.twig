@@ -6,9 +6,9 @@
 <div class="cos-page__stack cos-capital-markets" data-csrf="{{ csrfToken }}">
   <header class="cos-growth-header">
     <div>
-      <small>Capital Markets · Foundation + Market Intelligence</small>
+      <small>Capital Markets · Research + Risk + Paper Execution</small>
       <h1>{{ pageTitle }}</h1>
-      <p>Canonical instruments, economic relationships, venues and trusted market data. Trading execution remains disabled.</p>
+      <p>Canonical instruments, economic relationships, trusted market data and guarded paper research. Live execution remains disabled.</p>
     </div>
     <nav class="cos-growth-actions" aria-label="Capital Markets navigation">
       <a class="btn btn-outline-secondary" href="/capital-markets">Overview</a>
@@ -16,6 +16,7 @@
       <a class="btn btn-outline-secondary" href="/capital-markets/relationships">Relationships</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/venues">Venues</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/market-data">Market Data</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/tokenized-equities">Tokenized Equity</a>
     </nav>
   </header>
 
@@ -263,6 +264,109 @@
           </tbody>
         </table></div>
       {% endif %}
+    </section>
+
+  {% elseif cmView == 'tokenized_equity' %}
+    {% set r = w.research|default({}) %}
+    {% set portfolio = w.paper_portfolio|default(null) %}
+    <section class="cos-kpi-strip" aria-label="Tokenized Equity research state">
+      <twig:CosMetric label="Candidates" value="{{ r.candidate_count|default(0) }}" hint="H1 + H2 observations" />
+      <twig:CosMetric label="Opportunities" value="{{ r.opportunity_count|default(0) }}" hint="validated research records" />
+      <twig:CosMetric label="Positive net" value="{{ r.positive_net_opportunity_count|default(0) }}" hint="after explicit costs" />
+      <twig:CosMetric label="Paper P&L" value="{{ r.paper_realized_pnl|default('0') }}" hint="realized simulated result" />
+    </section>
+
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 flex-wrap">
+        <div>
+          <small>VERTICAL SLICE #1</small>
+          <h2>Tokenized Equity</h2>
+          <p><strong>H1</strong> Equity ↔ Tokenized Equity dislocation · <strong>H2</strong> cross-venue tokenized-equity arbitrage.</p>
+          <p>Gross spread is only a candidate. Opportunities survive data quality, economic relationship, fees, liquidity and deterministic risk gates before paper execution.</p>
+        </div>
+        <div>
+          <span class="badge text-bg-warning">PAPER</span>
+          <span class="badge text-bg-danger">LIVE OFF</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Paper portfolio</h2>
+      {% if portfolio %}
+        <div class="row g-3">
+          <div class="col-md-3"><strong>Currency</strong><br>{{ portfolio.currency }}</div>
+          <div class="col-md-3"><strong>Available</strong><br>{{ portfolio.available_capital }}</div>
+          <div class="col-md-3"><strong>Reserved</strong><br>{{ portfolio.reserved_capital }}</div>
+          <div class="col-md-3"><strong>Realized P&L</strong><br>{{ portfolio.realized_pnl }}</div>
+        </div>
+      {% else %}
+        <p>No paper portfolio initialized. Use the Tokenized Equity API to initialize research capital before paper execution.</p>
+      {% endif %}
+      {% if portfolio and portfolio.venue_balances|default([]) is not empty %}
+        <hr>
+        <h3>Pre-funded venue balances</h3>
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Venue</th><th>Asset / instrument</th><th>Available</th><th>Reserved</th></tr></thead>
+          <tbody>
+          {% for balance in portfolio.venue_balances %}
+            <tr>
+              <td>{{ balance.venue_id }}</td>
+              <td>{{ balance.asset_key }}</td>
+              <td>{{ balance.available_amount }}</td>
+              <td>{{ balance.reserved_amount }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Opportunity board</h2>
+      {% if w.opportunities|default([]) is empty %}
+        <p>No H1/H2 opportunities recorded yet. Configure trusted market sources and run a scan.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Hypothesis</th><th>Relationship / legs</th><th>Gross edge</th><th>Net edge</th>
+                <th>Expected P&L</th><th>Capital</th><th>Risk</th><th>TTL</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for item in w.opportunities %}
+              {% set candidate = item.candidate|default({}) %}
+              <tr>
+                <td><strong>{{ item.hypothesis|default('—') }}</strong></td>
+                <td>
+                  {{ candidate.buy_instrument_id|default('—') }} @ {{ candidate.buy_venue_id|default('—') }}
+                  ↔
+                  {{ candidate.sell_instrument_id|default('—') }} @ {{ candidate.sell_venue_id|default('—') }}
+                </td>
+                <td>{{ candidate.gross_edge_bps|default('—') }} bps</td>
+                <td>{{ item.expected_net_edge_bps|default('—') }} bps</td>
+                <td>{{ item.expected_pnl|default('—') }}</td>
+                <td>{{ item.required_capital|default('—') }}</td>
+                <td>{{ item.risk_score|default('—') }}</td>
+                <td>{{ candidate.expires_at|default('—') }}</td>
+                <td><strong>{{ item.status|default('—') }}</strong></td>
+              </tr>
+              {% if item.rejection_reasons|default([]) is not empty %}
+                <tr><td colspan="9"><small>Rejected / blocked: {{ item.rejection_reasons|join(', ') }}</small></td></tr>
+              {% endif %}
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Execution policy</h2>
+      <p>H2 can reach guarded Paper Execution only after a current-state revalidation and atomic capital reservation. H1 remains research-only until a real executable hedge venue is configured.</p>
+      <p>Different quote currencies are not compared directly. AAPL/USD and AAPLx/USDT are <strong>NOT_COMPARABLE</strong> until a trusted conversion layer is available.</p>
     </section>
 
   {% elseif cmView == 'market_data' %}

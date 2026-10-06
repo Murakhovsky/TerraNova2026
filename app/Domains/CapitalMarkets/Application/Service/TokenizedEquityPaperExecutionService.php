@@ -1,0 +1,261 @@
+<?php
+declare(strict_types=1);
+
+namespace Domains\CapitalMarkets\Application\Service;
+
+use DateTimeImmutable;
+use DomainException;
+use Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionPerformance;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionSide;
+use Domains\CapitalMarkets\Domain\Execution\PaperFill;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
+use Domains\CapitalMarkets\Domain\Ledger\LedgerEntry;
+use Domains\CapitalMarkets\Domain\Ledger\LedgerTransaction;
+use Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator;
+use Domains\CapitalMarkets\Domain\Service\PaperPnlEngine;
+use Domains\CapitalMarkets\Domain\Value\Decimal;
+use Domains\CapitalMarkets\Domain\Value\DecimalMath;
+use Domains\CapitalMarkets\Domain\Venue\VenueId;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
+
+final readonly class TokenizedEquityPaperExecutionService
+{
+    public function __construct(
+        private MarketStateRepositoryInterface $marketStates,
+        private TokenizedEquityVerticalSliceRepositoryInterface $repository,
+        private ExecutablePriceCalculator $prices,
+        private PaperPnlEngine $pnl,
+        private TransactionManagerInterface $transactions,
+    ){}
+
+    /** @return array<string,mixed> */
+    public function initializePortfolio(string $organizationId,string $currency,string $initialCapital):array
+    {
+        $capital=Decimal::fromString($initialCapital);
+        if(!$capital->isPositive())throw new DomainException('Paper initial capital must be positive.');
+        return $this->repository->initializePaperPortfolio($organizationId,$currency,$capital->value());
+    }
+
+    /** @return array<string,mixed>|null */
+    public function portfolio(string $organizationId):?array
+    {
+        $portfolio=$this->repository->paperPortfolio($organizationId);
+        if($portfolio!==null)$portfolio['venue_balances']=$this->repository->listPaperBalances($organizationId);
+        return $portfolio;
+    }
+
+    public function setVenueBalance(
+        string $organizationId,string $venueId,string $assetKey,string $amount
+    ):void{
+        $value=Decimal::fromString($amount);
+        if($value->isNegative())throw new DomainException('Paper venue balance cannot be negative.');
+        $this->repository->setPaperBalance($organizationId,$venueId,$assetKey,$value->value());
+    }
+
+    /** @return array<string,mixed> */
+    public function execute(string $organizationId,string $opportunityId):array
+    {
+        if(!$this->transactions->isActive()){
+            return $this->transactions->transactional(fn():array=>$this->execute($organizationId,$opportunityId));
+        }
+        $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
+        if($opportunity===null)throw new DomainException('Opportunity not found.');
+        if(($opportunity['hypothesis']??null)!=='H2'){
+            throw new DomainException('H1 paper execution requires a real executable hedge venue.');
+        }
+        if(($opportunity['status']??null)!=='APPROVED')throw new DomainException('Opportunity is not approved for paper execution.');
+
+        $now=new DateTimeImmutable();
+        $expires=new DateTimeImmutable((string)$opportunity['expires_at']);
+        if($now >= $expires)throw new DomainException('OPPORTUNITY_EXPIRED');
+
+        $candidate=$opportunity['candidate']??null;
+        $parameters=$opportunity['execution_parameters']??null;
+        $risk=$opportunity['risk']??null;
+        if(!is_array($candidate)||!is_array($parameters)||!is_array($risk))throw new DomainException('Opportunity execution evidence is incomplete.');
+
+        $quantity=Decimal::fromString((string)($risk['approved_quantity']??$parameters['quantity']??'0'));
+        if(!$quantity->isPositive())throw new DomainException('No risk-approved execution quantity.');
+
+        $buyVenue=(string)($candidate['buy_venue_id']??'');
+        $sellVenue=(string)($candidate['sell_venue_id']??'');
+        $buyInstrument=(string)($candidate['buy_instrument_id']??'');
+        $sellInstrument=(string)($candidate['sell_instrument_id']??'');
+        if($buyVenue===''||$sellVenue===''||$buyInstrument===''||$sellInstrument==='')throw new DomainException('Opportunity legs are incomplete.');
+
+        $buyState=$this->marketStates->get($organizationId,VenueId::fromString($buyVenue),InstrumentId::fromString($buyInstrument));
+        $sellState=$this->marketStates->get($organizationId,VenueId::fromString($sellVenue),InstrumentId::fromString($sellInstrument));
+        if($buyState===null||$sellState===null)throw new DomainException('Execution MarketState unavailable.');
+        if(!$buyState->quality->status->isUsableForDecision()||!$sellState->quality->status->isUsableForDecision()){
+            throw new DomainException('Execution blocked by untrusted market data.');
+        }
+        if($buyState->bestQuote===null||$sellState->bestQuote===null)throw new DomainException('Execution quote unavailable.');
+        if(!$buyState->bestQuote->askPrice->quoteAsset->equals($sellState->bestQuote->bidPrice->quoteAsset)){
+            throw new DomainException('Execution quote currencies are not normalized.');
+        }
+
+        $buy=$this->executable($buyState,ExecutionSide::Buy,$quantity);
+        $sell=$this->executable($sellState,ExecutionSide::Sell,$quantity);
+        if($sell['price']->compareTo($buy['price'])<=0)throw new DomainException('OPPORTUNITY_INVALIDATED');
+
+        $buyFeeRate=Decimal::fromString((string)($parameters['buy_fee_rate']??''));
+        $sellFeeRate=Decimal::fromString((string)($parameters['sell_fee_rate']??''));
+        $buyFee=DecimalMath::multiply($buy['notional'],$buyFeeRate);
+        $sellFee=DecimalMath::multiply($sell['notional'],$sellFeeRate);
+
+        $detectedBuy=Decimal::fromString((string)$candidate['buy_price']);
+        $detectedSell=Decimal::fromString((string)$candidate['sell_price']);
+        $buySlipUnit=DecimalMath::subtract($buy['price'],$detectedBuy);
+        if($buySlipUnit->isNegative())$buySlipUnit=Decimal::fromString('0');
+        $sellSlipUnit=DecimalMath::subtract($detectedSell,$sell['price']);
+        if($sellSlipUnit->isNegative())$sellSlipUnit=Decimal::fromString('0');
+        $buySlippage=DecimalMath::multiply($buySlipUnit,$quantity);
+        $sellSlippage=DecimalMath::multiply($sellSlipUnit,$quantity);
+
+        $preflightNet=DecimalMath::subtract(
+            DecimalMath::subtract($sell['notional'],$buy['notional']),
+            DecimalMath::add($buyFee,$sellFee)
+        );
+        if(!$preflightNet->isPositive())throw new DomainException('OPPORTUNITY_INVALIDATED_AFTER_EXECUTABLE_PRICING');
+
+        $executionId='cm_exec_'.bin2hex(random_bytes(12));
+        $reservationId='cm_res_'.substr(hash('sha256',$opportunityId.'|'.$executionId),0,40);
+        $buyCashReservation=$reservationId.':buy-cash';
+        $sellInventoryReservation=$reservationId.':sell-inventory';
+        $requiredCapital=DecimalMath::add($buy['notional'],$buyFee);
+        $quoteAsset=$buyState->bestQuote->askPrice->quoteAsset->value();
+
+        if(!$this->repository->reserveCapital(
+            $organizationId,$reservationId,$opportunityId,$requiredCapital->value(),$expires->format(DATE_ATOM)
+        ))throw new DomainException('INSUFFICIENT_PAPER_CAPITAL');
+
+        if(!$this->repository->reservePaperBalance(
+            $organizationId,$buyCashReservation,$opportunityId,$buyVenue,$quoteAsset,
+            $requiredCapital->value(),$expires->format(DATE_ATOM)
+        )){
+            $this->repository->releaseReservation($organizationId,$reservationId);
+            throw new DomainException('INSUFFICIENT_PREFUNDED_BUY_CASH');
+        }
+
+        if(!$this->repository->reservePaperBalance(
+            $organizationId,$sellInventoryReservation,$opportunityId,$sellVenue,$sellInstrument,
+            $quantity->value(),$expires->format(DATE_ATOM)
+        )){
+            $this->repository->releasePaperBalanceReservation($organizationId,$buyCashReservation);
+            $this->repository->releaseReservation($organizationId,$reservationId);
+            throw new DomainException('INSUFFICIENT_PREFUNDED_INVENTORY');
+        }
+
+        try{
+            $buyFill=new PaperFill(
+                $executionId.':buy',$executionId,$buyVenue,$buyInstrument,ExecutionSide::Buy,$quantity,$buy['price'],$buyFee,
+                $buySlippage,$now,$executionId.':buy'
+            );
+            $sellFill=new PaperFill(
+                $executionId.':sell',$executionId,$sellVenue,$sellInstrument,ExecutionSide::Sell,$quantity,$sell['price'],$sellFee,
+                $sellSlippage,$now,$executionId.':sell'
+            );
+            $realized=$this->pnl->realized([$buyFill,$sellFill]);
+            if(!$realized->isPositive()){
+                throw new DomainException('OPPORTUNITY_INVALIDATED_AFTER_EXECUTABLE_PRICING');
+            }
+
+            $detectedEdge=Decimal::fromString((string)$candidate['gross_spread']);
+            $executableEdge=DecimalMath::subtract($sell['price'],$buy['price']);
+            $realizedEdge=DecimalMath::divide($realized,$quantity,12);
+            $performance=new ExecutionPerformance(
+                $executionId,$detectedEdge,$executableEdge,$realizedEdge,
+                Decimal::fromString((string)$opportunity['expected_pnl']),$realized,$requiredCapital,0
+            );
+
+            $ledger=new LedgerTransaction(
+                'cm_ledger_'.bin2hex(random_bytes(12)),$executionId.':settlement',$now,[
+                    // Token acquired on buy venue.
+                    new LedgerEntry('venue:'.$buyVenue.':inventory', $quantity, Decimal::fromString('0'), $buyInstrument),
+                    new LedgerEntry('external:'.$buyVenue.':inventory', Decimal::fromString('0'), $quantity, $buyInstrument),
+
+                    // Token delivered from pre-funded sell venue.
+                    new LedgerEntry('external:'.$sellVenue.':inventory', $quantity, Decimal::fromString('0'), $sellInstrument),
+                    new LedgerEntry('venue:'.$sellVenue.':inventory', Decimal::fromString('0'), $quantity, $sellInstrument),
+
+                    // Quote currency settlement and fees.
+                    new LedgerEntry('external:'.$buyVenue.':cash', $buy['notional'], Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('venue:'.$buyVenue.':cash', Decimal::fromString('0'), $buy['notional'], $quoteAsset),
+                    new LedgerEntry('fees:'.$buyVenue, $buyFee, Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('venue:'.$buyVenue.':cash', Decimal::fromString('0'), $buyFee, $quoteAsset),
+
+                    new LedgerEntry('venue:'.$sellVenue.':cash', $sell['notional'], Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('external:'.$sellVenue.':cash', Decimal::fromString('0'), $sell['notional'], $quoteAsset),
+                    new LedgerEntry('fees:'.$sellVenue, $sellFee, Decimal::fromString('0'), $quoteAsset),
+                    new LedgerEntry('venue:'.$sellVenue.':cash', Decimal::fromString('0'), $sellFee, $quoteAsset),
+                ]
+            );
+
+            $payload=[
+                'id'=>$executionId,'opportunity_id'=>$opportunityId,'status'=>'COMPLETED',
+                'executed_at'=>$now->format(DATE_ATOM),'reservation_id'=>$reservationId,
+                'quantity'=>$quantity->value(),'buy_fill'=>$this->fillArray($buyFill),'sell_fill'=>$this->fillArray($sellFill),
+                'detected_edge'=>$detectedEdge->value(),'executable_edge'=>$executableEdge->value(),
+                'realized_edge'=>$realizedEdge->value(),'expected_pnl'=>$opportunity['expected_pnl'],
+                'realized_pnl'=>$realized->value(),'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
+                'slippage'=>[
+                    'buy'=>$buySlippage->value(),'sell'=>$sellSlippage->value(),
+                    'total'=>DecimalMath::add($buySlippage,$sellSlippage)->value(),
+                ],
+                'fees'=>['buy'=>$buyFee->value(),'sell'=>$sellFee->value()],
+            ];
+            $this->repository->saveLedgerTransaction($organizationId,$ledger->id,$ledger->idempotencyKey,[
+                'id'=>$ledger->id,'idempotency_key'=>$ledger->idempotencyKey,'posted_at'=>$ledger->postedAt->format(DATE_ATOM),
+                'entries'=>array_map(static fn(LedgerEntry $e):array=>[
+                    'account'=>$e->account,'asset_key'=>$e->assetKey,'debit'=>$e->debit->value(),'credit'=>$e->credit->value(),
+                ],$ledger->entries),
+            ]);
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
+
+            // Settle pre-funded venue balances: cash leaves buy venue, inventory leaves sell venue,
+            // acquired token appears on buy venue, sale proceeds appear on sell venue.
+            $this->repository->consumePaperBalanceReservation($organizationId,$buyCashReservation);
+            $this->repository->consumePaperBalanceReservation($organizationId,$sellInventoryReservation);
+            $this->repository->creditPaperBalance($organizationId,$buyVenue,$buyInstrument,$quantity->value());
+            $sellCash=DecimalMath::subtract($sell['notional'],$sellFee);
+            $this->repository->creditPaperBalance($organizationId,$sellVenue,$quoteAsset,$sellCash->value());
+
+            $this->repository->completeReservation($organizationId,$reservationId,$realized->value());
+            return $payload;
+        }catch(\Throwable $error){
+            // All persistence participates in the outer canonical transaction; this explicit release
+            // also keeps the method correct when reused inside a caller-owned transaction that catches.
+            $this->repository->releasePaperBalanceReservation($organizationId,$sellInventoryReservation);
+            $this->repository->releasePaperBalanceReservation($organizationId,$buyCashReservation);
+            $this->repository->releaseReservation($organizationId,$reservationId);
+            throw $error;
+        }
+    }
+
+    /** @return array{price:Decimal,notional:Decimal} */
+    private function executable(\Domains\CapitalMarkets\Domain\MarketData\MarketState $state,ExecutionSide $side,Decimal $quantity):array
+    {
+        if($state->orderBook!==null){
+            $vwap=$this->prices->vwap($state->orderBook,$side,$quantity);
+            return ['price'=>$vwap['price'],'notional'=>$vwap['notional']];
+        }
+        $quote=$state->bestQuote;
+        $available=$side===ExecutionSide::Buy?$quote->askQuantity->value:$quote->bidQuantity->value;
+        if($available->compareTo($quantity)<0)throw new DomainException('INSUFFICIENT_LIQUIDITY');
+        $price=$side===ExecutionSide::Buy?$quote->askPrice->value:$quote->bidPrice->value;
+        return ['price'=>$price,'notional'=>DecimalMath::multiply($price,$quantity)];
+    }
+
+    /** @return array<string,mixed> */
+    private function fillArray(PaperFill $fill):array
+    {
+        return [
+            'id'=>$fill->id,'venue_id'=>$fill->venueId,'instrument_id'=>$fill->instrumentId,'side'=>$fill->side->value,
+            'quantity'=>$fill->quantity->value(),'price'=>$fill->price->value(),'notional'=>$fill->notional()->value(),
+            'fee'=>$fill->fee->value(),'slippage'=>$fill->slippage->value(),'filled_at'=>$fill->filledAt->format(DATE_ATOM),
+            'idempotency_key'=>$fill->idempotencyKey,
+        ];
+    }
+}

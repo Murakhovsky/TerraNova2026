@@ -131,3 +131,25 @@ pages:
     qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
 
+
+  - id: capital_markets.tokenized_equities
+    route: { name: capital_markets_tokenized_equities, path: /capital-markets/tokenized-equities, methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.opportunity.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Inspect H1/H2 tokenized-equity dislocations, realistic net economics, risk, pre-funded paper inventory and realized paper P&L."
+      page_purpose: "Decision workspace for the first Capital Markets financial vertical slice while live execution remains disabled."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip, EntityList]
+      optional: [Toolbar, EmptyState, ErrorState]
+    primary_action: capital_markets.paper.execute
+    states: [normal, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }

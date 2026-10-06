@@ -20,7 +20,7 @@ generated: true
 
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `capital_markets` | Capital Markets | `0.3.0` | `0.3.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | Capital Markets | `0.4.0` | `0.4.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
@@ -34,13 +34,13 @@ generated: true
 
 ## Capital Markets (`capital_markets`)
 
-**Опис із manifest:** Autonomous Capital Markets bounded context with instrument/venue foundation and provider-neutral Market Intelligence runtime. Trading execution remains disabled and out of scope.
+**Опис із manifest:** Autonomous Capital Markets bounded context with instrument/venue foundation, provider-neutral Market Intelligence and Tokenized Equity H1/H2 research plus guarded paper execution. Live trading remains disabled.
 
 - runtime service модуля: `capitalMarketsDomainModule`;
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261005_000124_capital_markets_foundation.sql`, `app/migrations/20261006_000125_capital_markets_market_sources.sql`, `app/migrations/20261006_000126_capital_markets_market_events.sql`, `app/migrations/20261006_000127_capital_markets_market_state.sql`.
+- міграції: `app/migrations/20261005_000124_capital_markets_foundation.sql`, `app/migrations/20261006_000125_capital_markets_market_sources.sql`, `app/migrations/20261006_000126_capital_markets_market_events.sql`, `app/migrations/20261006_000127_capital_markets_market_state.sql`, `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql`.
 
 ### Задекларовані capabilities
 
@@ -55,6 +55,8 @@ generated: true
 - `capital_markets.market_data.source.manage`;
 - `capital_markets.market_data.source.view`;
 - `capital_markets.market_data.view`;
+- `capital_markets.opportunity.view`;
+- `capital_markets.paper.execute`;
 - `capital_markets.relationship.manage`;
 - `capital_markets.relationship.view`;
 - `capital_markets.venue.manage`;

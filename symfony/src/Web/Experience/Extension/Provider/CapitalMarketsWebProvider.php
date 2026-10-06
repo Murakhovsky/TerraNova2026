@@ -29,6 +29,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new NavigationContribution('capital-markets-relationships','Relationships','/capital-markets/relationships',priority:30,parentKey:'capital-markets'),
             new NavigationContribution('capital-markets-venues','Venues','/capital-markets/venues',priority:40,parentKey:'capital-markets'),
             new NavigationContribution('capital-markets-market-data','Market Data','/capital-markets/market-data',priority:50,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-tokenized-equity','Tokenized Equity','/capital-markets/tokenized-equities',priority:60,parentKey:'capital-markets'),
         ];
     }
 
@@ -40,6 +41,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new SearchResult('capital_markets.search.relationships','Capital Markets Relationships','/capital-markets/relationships','workspace','Economic relationship graph'),
             new SearchResult('capital_markets.search.venues','Capital Markets Venues','/capital-markets/venues','workspace','Venue registry and capabilities'),
             new SearchResult('capital_markets.search.market_data','Capital Markets Market Data','/capital-markets/market-data','workspace','Sources, subscriptions, health and trusted market state'),
+            new SearchResult('capital_markets.search.tokenized_equity','Tokenized Equity','/capital-markets/tokenized-equities','workspace','H1/H2 dislocations, paper execution and P&L'),
         ],$query,$limit);
     }
 
@@ -51,6 +53,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new ShellCommandItem('capital_markets.relationships','Open Relationships','/capital-markets/relationships','navigation','Capital Markets'),
             new ShellCommandItem('capital_markets.venues','Open Venues','/capital-markets/venues','navigation','Capital Markets'),
             new ShellCommandItem('capital_markets.market_data','Open Market Data','/capital-markets/market-data','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.tokenized_equity','Open Tokenized Equity','/capital-markets/tokenized-equities','navigation','Capital Markets'),
         ];
     }
 
@@ -63,6 +66,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new WorkspaceDefinition('capital_markets.relationships','Capital Markets Relationships','/capital-markets/relationships',null,40),
             new WorkspaceDefinition('capital_markets.venues','Capital Markets Venues','/capital-markets/venues',null,50),
             new WorkspaceDefinition('capital_markets.market_data','Capital Markets Market Data','/capital-markets/market-data',null,60),
+            new WorkspaceDefinition('capital_markets.tokenized_equity','Tokenized Equity','/capital-markets/tokenized-equities',null,70),
         ];
     }
 }
