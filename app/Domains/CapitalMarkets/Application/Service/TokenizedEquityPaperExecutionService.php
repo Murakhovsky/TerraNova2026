@@ -62,6 +62,8 @@ final readonly class TokenizedEquityPaperExecutionService
         }
         $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
         if($opportunity===null)throw new DomainException('Opportunity not found.');
+        $existingExecution=$this->repository->getExecutionForOpportunity($organizationId,$opportunityId);
+        if($existingExecution!==null)return $existingExecution;
         if(($opportunity['hypothesis']??null)!=='H2'){
             throw new DomainException('H1 paper execution requires a real executable hedge venue.');
         }
