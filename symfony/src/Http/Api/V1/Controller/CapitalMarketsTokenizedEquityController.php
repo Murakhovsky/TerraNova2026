@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInter
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use App\Security\SessionCsrfValidator;
@@ -30,6 +31,7 @@ final readonly class CapitalMarketsTokenizedEquityController
         private CapitalMarketsAccessControlInterface $access,
         private CapitalMarketsFeatureGate $features,
         private TokenizedEquityVerticalSliceService $verticalSlice,
+        private TokenizedEquityResearchService $research,
         private TokenizedEquityPaperExecutionService $paper,
         private SessionCsrfValidator $csrf,
     ){}
@@ -43,6 +45,18 @@ final readonly class CapitalMarketsTokenizedEquityController
             'research'=>$this->verticalSlice->dashboard($tenant->organizationId()->value()),
             'paper_portfolio'=>$this->paper->portfolio($tenant->organizationId()->value()),
         ]);
+    }
+
+    public function research(Request $request):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::OpportunityView);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->research->report(
+            $tenant->organizationId()->value(),
+            min(100000,max(1,(int)$request->query->get('minimum_observations',30))),
+            min(100000,max(1,(int)$request->query->get('minimum_realized',10))),
+        ));
     }
 
     public function opportunities(Request $request):JsonResponse
