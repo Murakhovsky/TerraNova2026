@@ -19,6 +19,7 @@ use Domains\CapitalMarkets\Domain\MarketData\ReferenceMarketState;
 use Domains\CapitalMarkets\Domain\Opportunity\HypothesisCode;
 use Domains\CapitalMarkets\Domain\Opportunity\SpreadCandidate;
 use Domains\CapitalMarkets\Domain\Opportunity\SpreadDetectorConfig;
+use Domains\CapitalMarkets\Domain\Research\HistoricalBacktestPromotionPolicy;
 use Domains\CapitalMarkets\Domain\Research\HypothesisResearchEngine;
 use Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine;
 use Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector;
@@ -36,6 +37,7 @@ final readonly class TokenizedEquityHistoricalBacktestService
         private TokenizedEquitySpreadDetector $detector,
         private NetEconomicsEngine $economics,
         private HypothesisResearchEngine $research,
+        private HistoricalBacktestPromotionPolicy $promotionPolicy,
     ){}
 
     /**
@@ -75,7 +77,14 @@ final readonly class TokenizedEquityHistoricalBacktestService
 
         $trainSummary=$this->research->summarize($trainObs,$minimumSample,1);
         $oosSummary=$this->research->summarize($oosObs,$minimumSample,1);
-        $promotion=$this->promotion($trainSummary,$oosSummary,$minimumSample);
+        $promotion=$this->promotionPolicy->decide(
+            (int)($trainSummary['sample']['detected_count']??0),
+            (int)($oosSummary['sample']['detected_count']??0),
+            Decimal::fromString((string)($trainSummary['economics']['average_expected_pnl']??'0')),
+            Decimal::fromString((string)($oosSummary['economics']['average_expected_pnl']??'0')),
+            Decimal::fromString((string)($oosSummary['economics']['executable_ratio']??'0')),
+            $minimumSample,
+        );
 
         $datasetEvidence=array_map(static fn(MarketSnapshot $snapshot):array=>[
             'snapshot_id'=>$snapshot->snapshotId,
@@ -238,22 +247,6 @@ final readonly class TokenizedEquityHistoricalBacktestService
             'snapshot_id'=>$snapshotId,
             'candidate_id'=>$candidate->id,
         ];
-    }
-
-    /** @param array<string,mixed> $train @param array<string,mixed> $oos */
-    private function promotion(array $train,array $oos,int $minimumSample):string
-    {
-        $trainDetected=(int)($train['sample']['detected_count']??0);
-        $oosDetected=(int)($oos['sample']['detected_count']??0);
-        if($trainDetected<$minimumSample||$oosDetected<$minimumSample)return 'INSUFFICIENT_OOS_SAMPLE';
-
-        $trainPnl=Decimal::fromString((string)($train['economics']['average_expected_pnl']??'0'));
-        $oosPnl=Decimal::fromString((string)($oos['economics']['average_expected_pnl']??'0'));
-        $oosExecutable=Decimal::fromString((string)($oos['economics']['executable_ratio']??'0'));
-        if(!$trainPnl->isPositive())return 'TRAIN_FAIL';
-        if(!$oosPnl->isPositive())return 'OOS_FAIL';
-        if($oosExecutable->compareTo(Decimal::fromString('0.1'))<0)return 'OOS_NOT_EXECUTABLE';
-        return 'OOS_PASS';
     }
 
     private function marketState(MarketSnapshot $snapshot,string $venue,string $instrument):MarketState
