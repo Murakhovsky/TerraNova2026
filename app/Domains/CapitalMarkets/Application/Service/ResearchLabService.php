@@ -198,6 +198,7 @@ final readonly class ResearchLabService
         $hypotheses=$this->repository->listHypotheses($organizationId,500);
         $experiments=$this->repository->listExperiments($organizationId,null,500);
         $knowledge=$this->repository->listKnowledge($organizationId,500);
+        $results=$this->repository->listResults($organizationId,500);
         $runs=$this->repository->listBacktestRuns($organizationId,500);
         $oosRuns=$this->repository->listOutOfSampleRuns($organizationId,500);
         $scorecards=$this->repository->listScorecards($organizationId,500);
@@ -209,6 +210,7 @@ final readonly class ResearchLabService
             'hypotheses'=>$hypotheses,
             'experiments'=>$experiments,
             'knowledge'=>$knowledge,
+            'results'=>$results,
             'backtest_runs'=>$runs,
             'oos_runs'=>$oosRuns,
             'scorecards'=>$scorecards,
@@ -218,6 +220,7 @@ final readonly class ResearchLabService
                 'hypothesis_count'=>count($hypotheses),
                 'experiment_count'=>count($experiments),
                 'knowledge_count'=>count($knowledge),
+                'result_count'=>count($results),
                 'validated_hypotheses'=>count(array_filter($hypotheses,static fn(array $h):bool=>($h['status']??'')==='VALIDATED')),
                 'rejected_hypotheses'=>count($rejections),
                 'running_experiments'=>count(array_filter($experiments,static fn(array $e):bool=>($e['status']??'')==='RUNNING')),
