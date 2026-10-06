@@ -5,7 +5,7 @@ $root = dirname(__DIR__, 2);
 $store = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php');
 $orchestrator = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringOrchestrator.php');
 
-foreach (['existsByIdempotencyKey', 'inputSnapshot', 'idempotencyKey', 'start(', 'complete('] as $needle) {
+foreach (['existsByIdempotencyKey', 'inputSnapshot', 'idempotencyKey', 'start(', 'complete(', 'persistedTaskId(', 'EngineeringTaskRecord', "'execution_task_id'", "'persisted_task_id'"] as $needle) {
     if (!str_contains($store.$orchestrator, $needle)) {
         throw new RuntimeException('Engineering AgentRun persistence missing '.$needle);
     }
