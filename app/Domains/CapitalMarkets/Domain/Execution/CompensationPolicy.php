@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
-
 namespace Domains\CapitalMarkets\Domain\Execution;
-
 enum CompensationPolicy:string
 {
     case RetrySecondLeg='RETRY_SECOND_LEG';
@@ -15,4 +13,11 @@ enum CompensationPolicy:string
     {
         return in_array($this,[self::RetrySecondLeg,self::EmergencyClose],true);
     }
+
+    public function supportedInVerticalSliceV2():bool
+    {
+        return in_array($this,[self::RetrySecondLeg,self::UseAlternativeMarket,self::ReduceFirstLeg,self::EmergencyClose],true);
+    }
+
+    public function supportedInPaper():bool{return $this!==self::MarkManualIntervention;}
 }
