@@ -112,8 +112,8 @@ final readonly class RelativeValueHistoricalReplayService implements ResearchRep
 
         if($code==='H4'){
             $spotProfile=new SpotProfile(
-                $spot->bestQuote?->askPrice->baseAsset??AssetCode::fromString('UNKNOWN'),
-                $spot->bestQuote?->askPrice->quoteAsset??AssetCode::fromString('USD'),
+                $spot->bestQuote?->askPrice->baseAsset??new AssetCode('UNKNOWN'),
+                $spot->bestQuote?->askPrice->quoteAsset??new AssetCode('USD'),
                 Decimal::fromString('0'),Decimal::fromString('0'),
                 $spot->bestQuote?->askPrice->precision??8,$spot->bestQuote?->askQuantity->precision??8,
                 (bool)($c['spot_margin_capability']??false),
