@@ -3,6 +3,11 @@ declare(strict_types=1);
 
 use Domains\CapitalMarkets\Domain\Execution\CompensationPolicy;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionGroupState;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionLeg;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionPlan;
+use Domains\CapitalMarkets\Domain\Execution\ExecutionSide;
+use Domains\CapitalMarkets\Domain\Execution\PaperOrder;
+use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionModePolicy;
 use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
 use Domains\CapitalMarkets\Domain\Execution\PartialFillPolicy;
@@ -20,6 +25,17 @@ $assert=static function(bool $condition,string $message):void{
 };
 
 $assert(ExecutionGroupState::Completed->terminal(),'Completed execution group must be terminal.');
+$now=new DateTimeImmutable('2026-10-06T12:00:00+00:00');
+$leg1=new ExecutionLeg('leg-1',1,'vm-a','AAPLX',ExecutionSide::Buy,Decimal::fromString('10'),'IOC',null,Decimal::fromString('100'),Decimal::fromString('1'),Decimal::fromString('0.5'));
+$leg2=new ExecutionLeg('leg-2',2,'vm-b','AAPLX',ExecutionSide::Sell,Decimal::fromString('10'),'IOC',null,Decimal::fromString('101'),Decimal::fromString('1'),Decimal::fromString('0.5'));
+$plan=new ExecutionPlan(
+    'plan-1','opp-1','TokenizedEquityRelativeValue-v1',$now,$now->modify('+10 seconds'),
+    [$leg1,$leg2],'SEQUENTIAL',PartialFillPolicy::AbortAndCompensate,CompensationPolicy::EmergencyClose,
+    1000,400,Decimal::fromString('3'),Decimal::fromString('7'),'risk-1',['res-1']
+);
+$assert(count($plan->legs)===2,'Execution plan must preserve both arbitrage legs.');
+$order=new PaperOrder('ord-1','group-1','leg-1','vm-a','AAPLX',ExecutionSide::Buy,Decimal::fromString('10'),Decimal::fromString('6'),PaperOrderState::PartiallyFilled,$now,$now,$now);
+$assert($order->remainingQuantity()->value()==='4','Paper order must preserve remaining quantity after partial fill.');
 $paperOnly=new ExecutionModePolicy();
 $paperOnly->assertPaperOnly();
 $assert(!$paperOnly->allowsLive(),'VS1 must default to paper-only execution.');
