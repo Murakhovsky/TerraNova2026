@@ -3033,3 +3033,14 @@ capital_markets_research_lab:
   path: /capital-markets/research
   controller: App\Web\CapitalMarkets\CapitalMarketsPageController::researchLab
   methods: [GET, HEAD]
+
+
+cos_api_v1_capital_markets_research_backtest_run:
+  path: /api/v1/capital-markets/research/backtests/run
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::runBacktest
+  methods: [POST]
+
+cos_api_v1_capital_markets_research_walk_forward:
+  path: /api/v1/capital-markets/research/walk-forward
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::walkForward
+  methods: [POST]
