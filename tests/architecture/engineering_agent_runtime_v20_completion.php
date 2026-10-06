@@ -63,8 +63,12 @@ foreach (['assertRepositoryMutationAllowed','QA Executor','docs_only'] as $needl
 foreach ([
     'SECURITY_REVIEW_REPORT','MIGRATION_REVIEW_REPORT','PERFORMANCE_REVIEW_REPORT',
     'DEVOPS_REVIEW_REPORT','DOCUMENTATION_REPORT','API_REVIEW_REPORT',
+    'repository.documentation_commit','EngineeringAgentToolPermissionPolicy'
 ] as $needle) {
     if (!str_contains($specialists, $needle)) throw new RuntimeException('Specialist runtime missing '.$needle);
+}
+foreach (['No Self Approval violation','latestCompleted'] as $needle) {
+    if (!str_contains($policy, $needle)) throw new RuntimeException('Identity-level independence policy missing '.$needle);
 }
 foreach (['afterProductRevision','afterArchitectureRevision','afterImplementationRevision'] as $needle) {
     if (!str_contains($invalidation, $needle)) throw new RuntimeException('Artifact invalidation policy missing '.$needle);
