@@ -1910,6 +1910,12 @@ services:
 
   Domains\CapitalMarkets\Application\Service\TrustedConversionRateResolver: ~
 
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityTelemetry:
+    arguments:
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityReadService: ~
+
   Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService: ~
