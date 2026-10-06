@@ -323,6 +323,70 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         )->execute(['org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey,'amount'=>$amount]);
     }
 
+    public function saveHypothesisObservation(
+        string $organizationId,string $observationId,string $hypothesis,string $status,array $payload
+    ):void{
+        $this->connection->prepare(
+            'INSERT INTO tn_capital_market_hypothesis_observations
+             (organization_id,observation_id,hypothesis,status,candidate_count,opportunity_count,executable_count,
+              best_net_edge_bps,best_expected_pnl,observed_at,payload_json)
+             VALUES (:org,:id,:hypothesis,:status,:candidates,:opportunities,:executable,:edge,:pnl,:observed_at,:payload)
+             ON DUPLICATE KEY UPDATE status=VALUES(status),candidate_count=VALUES(candidate_count),
+             opportunity_count=VALUES(opportunity_count),executable_count=VALUES(executable_count),
+             best_net_edge_bps=VALUES(best_net_edge_bps),best_expected_pnl=VALUES(best_expected_pnl),payload_json=VALUES(payload_json)'
+        )->execute([
+            'org'=>$organizationId,'id'=>$observationId,'hypothesis'=>$hypothesis,'status'=>$status,
+            'candidates'=>(int)($payload['candidate_count']??0),
+            'opportunities'=>(int)($payload['opportunity_count']??0),
+            'executable'=>(int)($payload['executable_count']??0),
+            'edge'=>$payload['best_net_edge_bps']??null,
+            'pnl'=>$payload['best_expected_pnl']??null,
+            'observed_at'=>$this->mysqlDate((string)($payload['observed_at']??'')),
+            'payload'=>$this->json($payload),
+        ]);
+    }
+
+    public function researchMetrics(string $organizationId,string $hypothesis):array
+    {
+        $scalar=function(string $sql)use($organizationId,$hypothesis):string{
+            $statement=$this->connection->prepare($sql);
+            $statement->execute(['org'=>$organizationId,'hypothesis'=>$hypothesis]);
+            return (string)$statement->fetchColumn();
+        };
+        return [
+            'observation_count'=>(int)$scalar(
+                'SELECT COUNT(*) FROM tn_capital_market_hypothesis_observations
+                 WHERE organization_id=:org AND hypothesis=:hypothesis'
+            ),
+            'detected_count'=>(int)$scalar(
+                'SELECT COUNT(*) FROM tn_capital_market_spread_candidates
+                 WHERE organization_id=:org AND hypothesis=:hypothesis'
+            ),
+            'executable_count'=>(int)$scalar(
+                'SELECT COUNT(*) FROM tn_capital_market_opportunities
+                 WHERE organization_id=:org AND hypothesis=:hypothesis AND status=\'APPROVED\''
+            ),
+            'realized_count'=>(int)$scalar(
+                'SELECT COUNT(*) FROM tn_capital_market_paper_executions e
+                 INNER JOIN tn_capital_market_opportunities o
+                   ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
+                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis AND e.status=\'COMPLETED\''
+            ),
+            'total_realized_pnl'=>$scalar(
+                'SELECT COALESCE(SUM(e.realized_pnl),0) FROM tn_capital_market_paper_executions e
+                 INNER JOIN tn_capital_market_opportunities o
+                   ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
+                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis AND e.status=\'COMPLETED\''
+            ),
+            'average_edge_capture_ratio'=>$scalar(
+                'SELECT COALESCE(AVG(e.edge_capture_ratio),0) FROM tn_capital_market_paper_executions e
+                 INNER JOIN tn_capital_market_opportunities o
+                   ON o.organization_id=e.organization_id AND o.opportunity_id=e.opportunity_id
+                 WHERE e.organization_id=:org AND o.hypothesis=:hypothesis AND e.status=\'COMPLETED\''
+            ),
+        ];
+    }
+
     public function listOpportunities(string $organizationId,int $limit=200):array
     {
         $limit=max(1,min(1000,$limit));
