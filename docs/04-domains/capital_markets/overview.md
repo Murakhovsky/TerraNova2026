@@ -38,11 +38,13 @@ runtime: Foundation + Market Intelligence core
 persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
 data modes: LIVE / DELAYED / HISTORICAL / REPLAY
-provider adapters: next wave
+provider adapters: Bybit Spot REST + Massive Stocks REST
+provider polling: manual CLI/runtime service
+streaming: disabled / next wave
 execution: none
 ```
 
-Модуль вимкнений за замовчуванням. Market-data master/history flags seed-яться керовано, streaming і provider-specific flags залишаються вимкненими до реального source cutover.
+Модуль вимкнений за замовчуванням. Bybit Spot REST та Massive Stocks REST adapters уже реалізовані за provider-neutral contracts. Provider-specific flags і streaming flag залишаються вимкненими до tenant source configuration та production cutover.
 
 ## Межі
 

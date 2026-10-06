@@ -24,6 +24,7 @@ use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentStatus;
 use Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent;
 use Domains\CapitalMarkets\Domain\MarketData\MarketConnectionState;
+use Domains\CapitalMarkets\Domain\MarketData\MarketDataInstrumentTarget;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataMode;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityPolicy;
@@ -200,6 +201,15 @@ final class CmTestResolver implements MarketInstrumentResolverInterface
     public function resolve(string $organizationId,MarketSourceDescriptor $source,string $externalInstrument):?ResolvedMarketInstrument
     {
         return $this->map[$externalInstrument]??null;
+    }
+
+    public function target(string $organizationId,MarketSourceDescriptor $source,InstrumentId $instrumentId):?MarketDataInstrumentTarget
+    {
+        foreach($this->map as $symbol=>$resolved){
+            if(!$resolved->instrument->id->equals($instrumentId))continue;
+            return new MarketDataInstrumentTarget($resolved->instrument,$resolved->venueInstrument,(string)$symbol);
+        }
+        return null;
     }
 }
 

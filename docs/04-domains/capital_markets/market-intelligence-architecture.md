@@ -221,7 +221,21 @@ Massive U.S. Stocks
 
 Bybit є `TRADING_SOURCE`, Massive — `REFERENCE_SOURCE`.
 
-Provider adapters живуть тільки в `Infrastructure/MarketData/Adapter`. Реальна streaming connectivity та source credentials увімкнені окремими feature flags/config і не потрібні для pure-domain tests.
+Provider adapters живуть тільки в `Infrastructure/MarketData/Adapter`.
+
+Перший read-only provider slice уже реалізує:
+
+```text
+Bybit V5 Spot REST ticker
+  → BBO + 24h Volume RawMarketEvent
+
+Massive Stocks REST /v2/last/nbbo/{ticker}
+  → NBBO RawMarketEvent
+```
+
+Bybit є `TRADING_SOURCE`, Massive — `REFERENCE_SOURCE`. Massive credentials вирішуються через Platform Credential Vault і передаються в Authorization header. Provider payload decoding не потрапляє в Domain Core.
+
+REST polling доступний через generic `MarketSourcePollingService` та CLI `cos:capital-markets:market-data:poll`. Реальна WebSocket streaming connectivity ще не реалізована і захищена вимкненим feature flag.
 
 ## Acceptance core
 

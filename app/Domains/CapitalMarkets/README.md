@@ -115,12 +115,24 @@ Market Source
 
 See `resources/processes/capital-markets-market-data-to-trusted-state.json`.
 
+## Provider slice
+
+The first external read-only connectors are implemented:
+
+- Bybit V5 Spot REST ticker adapter for trading-source BBO + 24h volume;
+- Massive U.S. Stocks REST NBBO reference adapter;
+- tenant-safe credential resolution through Platform Credential Vault;
+- provider-specific decoders behind the generic raw → canonical pipeline;
+- generic polling service and CLI entrypoint.
+
+Provider flags remain disabled by default. Streaming remains disabled until the WebSocket lifecycle/resubscription/recovery wave is implemented.
+
 ## Next packs
 
-1. Bybit xStocks trading-source adapter and Massive U.S. Stocks reference adapter.
-2. Market-data operator API/UI and source health.
-3. Replay/backfill/gap recovery.
-4. Tokenized Equity vertical slice.
+1. Market-data operator API/UI and source health.
+2. Replay/backfill/gap recovery.
+3. Tokenized Equity comparison slice.
+4. Bybit/Massive streaming connectors.
 5. Spot/Perpetual vertical slice.
 6. Research Lab and hypothesis registry.
 7. Portfolio, ledger and governed agents.
