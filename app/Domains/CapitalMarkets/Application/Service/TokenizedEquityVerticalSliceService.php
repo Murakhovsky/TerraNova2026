@@ -7,6 +7,9 @@ use DateTimeImmutable;
 use DomainException;
 use Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface;
+use Domains\CapitalMarkets\Domain\Contract\RelationshipRepository;
+use Domains\CapitalMarkets\Domain\Instrument\EconomicRelationship;
+use Domains\CapitalMarkets\Domain\Instrument\EconomicRelationshipStrength;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
 use Domains\CapitalMarkets\Domain\Opportunity\HypothesisCode;
@@ -27,6 +30,7 @@ final readonly class TokenizedEquityVerticalSliceService
     public function __construct(
         private MarketStateRepositoryInterface $marketStates,
         private TokenizedEquityVerticalSliceRepositoryInterface $repository,
+        private RelationshipRepository $relationships,
         private TokenizedEquitySpreadDetector $detector,
         private NetEconomicsEngine $economics,
         private TokenizedEquityRiskEngine $risk,
@@ -48,6 +52,7 @@ final readonly class TokenizedEquityVerticalSliceService
 
         $now=new DateTimeImmutable();
         $config=$this->config($options);
+        $this->assertEconomicEquivalence($organizationId,$a->instrumentId,$b->instrumentId,$config,$now);
         $candidates=$this->detector->detectCrossVenue($marketPairId,$a,$b,$config,$now,$this->int($options,'ttl_ms',1000));
         return $this->evaluate($organizationId,$candidates,$config,$options,$now,true);
     }
@@ -72,6 +77,7 @@ final readonly class TokenizedEquityVerticalSliceService
 
         $now=new DateTimeImmutable();
         $config=$this->config($options);
+        $this->assertEconomicEquivalence($organizationId,$reference->instrumentId,$token->instrumentId,$config,$now);
         $candidates=$this->detector->detectReferenceDislocation(
             $marketPairId,$reference,$token,$config,$now,$this->int($options,'ttl_ms',1000)
         );
@@ -140,7 +146,9 @@ final readonly class TokenizedEquityVerticalSliceService
             $riskScore=min(100,max(0,20+(100-$candidate->dataQualityScore)));
             $opportunity=new Opportunity(
                 $opportunityId,$candidate,$estimate,$estimate->requiredCapital,$candidate->capitalCapacity,
-                Decimal::fromString((string)max(0,min(100,$candidate->dataQualityScore))),
+                \Domains\CapitalMarkets\Domain\Value\DecimalMath::divide(
+                    Decimal::fromString((string)max(0,min(100,$candidate->dataQualityScore))),Decimal::fromString('100'),6
+                ),
                 $riskScore,$passesEconomics?OpportunityStatus::Valid:OpportunityStatus::Rejected,$now,
                 $passesEconomics?[]:['NO_EXECUTABLE_EDGE'],
             );
@@ -165,7 +173,7 @@ final readonly class TokenizedEquityVerticalSliceService
         }
 
         return [
-            'hypothesis'=>$candidates[0]->hypothesis->value??null,
+            'hypothesis'=>$candidates===[]?null:$candidates[0]->hypothesis->value,
             'candidate_count'=>count($candidates),
             'opportunities'=>$out,
         ];
@@ -216,6 +224,41 @@ final readonly class TokenizedEquityVerticalSliceService
             'approved_quantity'=>$risk->approvedQuantity->value(),'approved_notional'=>$risk->approvedNotional->value(),
             'assessed_at'=>$risk->assessedAt->format(DATE_ATOM),'blocking_reasons'=>$risk->blockingReasons,'warnings'=>$risk->warnings,
         ];
+    }
+
+    private function assertEconomicEquivalence(
+        string $organizationId,
+        InstrumentId $left,
+        InstrumentId $right,
+        SpreadDetectorConfig $config,
+        DateTimeImmutable $at,
+    ):void{
+        if($left->equals($right))return;
+        $matches=array_filter(
+            $this->relationships->forInstrument($organizationId,$left),
+            static fn(EconomicRelationship $r):bool =>
+                $r->activeAt($at)
+                && (($r->sourceInstrument->equals($left)&&$r->targetInstrument->equals($right))
+                    ||($r->sourceInstrument->equals($right)&&$r->targetInstrument->equals($left)))
+        );
+        if($matches===[])throw new DomainException('ECONOMIC_RELATIONSHIP_REQUIRED');
+
+        $best=Decimal::fromString('0');
+        foreach($matches as $relationship){
+            $metadataScore=$relationship->metadata['economic_equivalence_score']??null;
+            $score=$metadataScore!==null
+                ? Decimal::fromString((string)$metadataScore)
+                : match($relationship->strength){
+                    EconomicRelationshipStrength::Exact=>Decimal::fromString('1'),
+                    EconomicRelationshipStrength::Direct=>Decimal::fromString('0.9'),
+                    EconomicRelationshipStrength::Derived=>Decimal::fromString('0.7'),
+                    EconomicRelationshipStrength::Statistical=>Decimal::fromString('0.3'),
+                };
+            if($score->compareTo($best)>0)$best=$score;
+        }
+        if($best->compareTo($config->economicEquivalenceThreshold)<0){
+            throw new DomainException('ECONOMIC_EQUIVALENCE_BELOW_THRESHOLD');
+        }
     }
 
     /** @param array<string,mixed> $options */
