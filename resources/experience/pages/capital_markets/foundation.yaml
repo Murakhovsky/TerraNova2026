@@ -153,3 +153,26 @@ pages:
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
     qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+
+  - id: capital_markets.crypto_spot_perpetual
+    route: { name: capital_markets_crypto_spot_perpetual, path: /capital-markets/crypto-spot-perpetual, methods: [GET] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.opportunity.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "Inspect H4/H5/H6 spot-perpetual basis and funding opportunities, hedge state, funding history and paper execution lifecycle."
+      page_purpose: "Decision workspace for Crypto Spot / Perpetual relative-value research and hedge-aware paper execution while live trading remains disabled."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip, EntityList]
+      optional: [Toolbar, FilterBar, EmptyState, ErrorState]
+    primary_action: capital_markets.paper.execute
+    states: [normal, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
