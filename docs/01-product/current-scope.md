@@ -15,7 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Capital_markets | `0.5.0` | CM-FOUNDATION + Market Intelligence + Tokenized Equity H1/H2 research; immutable hypothesis observations, Edge Funnel, sample-gated deterministic verdicts, research replay, guarded H2 paper execution, asset-aware ledger та realized paper P&L; Live Trading вимкнено |
+| Capital_markets | `0.6.0` | CM-FOUNDATION + Market Intelligence + Tokenized Equity H1/H2 research; immutable observations, Edge Funnel, deterministic verdicts, historical MarketSnapshot train/OOS backtests, guarded H2 paper execution, asset-aware ledger та realized paper P&L; Live Trading вимкнено |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
@@ -31,7 +31,7 @@ kind: product
 
 ## Capital Markets: фундамент і ринкова аналітика
 
-Capital Markets `0.5.0` має три активні шари: структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE` та перший фінансовий vertical slice `CM-TOKENIZED-EQUITY`.
+Capital Markets `0.6.0` має три активні шари: структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE` та перший фінансовий vertical slice `CM-TOKENIZED-EQUITY`.
 
 Канонічний market-data flow:
 
@@ -57,7 +57,7 @@ Bybit Spot REST trading-source adapter і Massive U.S. Stocks REST reference ada
 
 Operator Market Data API/UI уже реалізований: sources створюються disabled, окремо enable/disable, subscriptions керуються по instrument/data type, manual poll показує source health і current state.
 
-Tokenized Equity comparison H1/H2 уже реалізований поверх trusted MarketState: economic relationship gating, quote normalization, explicit costs, deterministic risk, paper portfolio, pre-funded venue balances, two-leg H2 paper execution, asset-aware ledger та realized paper P&L. V0.5 додає immutable Hypothesis Observation Journal, Edge Funnel `SCAN → DETECTED → EXECUTABLE → REALIZED`, sample-size gates, deterministic verdicts `INSUFFICIENT_DATA / EDGE_EXISTS / EDGE_EXISTS_BUT_NOT_EXECUTABLE / PAPER_VALIDATION_REQUIRED / NO_EDGE` та non-mutating research replay із dataset hash. H1 залишається research-only без executable hedge venue. Historical market-state backtest, automated universe scanning, WebSocket streaming, Live Trading та Auto Execution залишаються наступними promotion gates.
+Tokenized Equity comparison H1/H2 уже реалізований поверх trusted MarketState: economic relationship gating, quote normalization, explicit costs, deterministic risk, paper portfolio, pre-funded venue balances, two-leg H2 paper execution, asset-aware ledger та realized paper P&L. V0.5 додає immutable Hypothesis Observation Journal, Edge Funnel `SCAN → DETECTED → EXECUTABLE → REALIZED`, sample-size gates, deterministic verdicts `INSUFFICIENT_DATA / EDGE_EXISTS / EDGE_EXISTS_BUT_NOT_EXECUTABLE / PAPER_VALIDATION_REQUIRED / NO_EDGE` та non-mutating research replay із dataset hash. H1 залишається research-only без executable hedge venue. V0.6 додає deterministic historical MarketSnapshot backtesting із chronological train/out-of-sample split, dataset hash, explicit costs і OOS promotion gate. Automated universe scanning, execution lifecycle/partial-fill hardening, position/exposure lifecycle, WebSocket streaming, Live Trading та Auto Execution залишаються наступними promotion gates.
 
 ## Growth: інтелект можливостей
 
