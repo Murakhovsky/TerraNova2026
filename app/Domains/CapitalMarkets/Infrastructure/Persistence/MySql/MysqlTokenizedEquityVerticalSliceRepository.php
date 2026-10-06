@@ -402,6 +402,17 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         )->execute(['org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey,'amount'=>$amount]);
     }
 
+    public function debitPaperBalance(string $organizationId,string $venueId,string $assetKey,string $amount):void
+    {
+        $statement=$this->connection->prepare(
+            'UPDATE tn_capital_market_paper_balances
+             SET available_amount=available_amount-:amount
+             WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset AND available_amount>=:amount'
+        );
+        $statement->execute(['amount'=>$amount,'org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey]);
+        if($statement->rowCount()!==1)throw new \DomainException('PAPER_BALANCE_DEBIT_FAILED');
+    }
+
     public function listOpportunities(string $organizationId,int $limit=200):array
     {
         $limit=max(1,min(1000,$limit));
