@@ -147,6 +147,55 @@ $promotion=$lab->evaluatePromotion($org,'spot-perp-v2','BACKTEST','OOS',[
 ],'human:acceptance');
 $assert($promotion['status']==='PASSED','H4 must pass deterministic BACKTEST -> OOS gate.');
 
+$lab->createExperiment($org,[
+    'experiment_id'=>'exp-h4-v2-oos','hypothesis_id'=>'hyp-h4','dataset_id'=>'dataset-rv-1',
+    'strategy_version_id'=>'spot-perp-v2','experiment_type'=>'OUT_OF_SAMPLE','status'=>'QUEUED',
+    'parameters'=>['minimum_executable_basis'=>'3'],
+    'success_criteria'=>['validated_rate'=>['min'=>0.6]],'failure_criteria'=>['validated_rate'=>['max'=>0.1]],
+]);
+$oos=$backtests->run($org,[
+    'run_id'=>'run-h4-v2-oos','experiment_id'=>'exp-h4-v2-oos','dataset_id'=>'dataset-rv-1',
+    'strategy_version_id'=>'spot-perp-v2','hypothesis_code'=>'H4','partition_name'=>'OUT_OF_SAMPLE',
+    'reproducibility_fingerprint'=>hash('sha256','run-h4-v2-oos'),
+    'configuration'=>[
+        'from'=>'2025-09-01T00:00:00Z','to'=>'2025-12-01T00:00:00Z',
+        'fees'=>['spot_rate'=>'0.001','perp_rate'=>'0.001'],
+        'slippage'=>['round_trip_bps'=>'2'],
+        'snapshot_limit'=>5000,'parameter_combinations'=>1,'maximum_compute_units'=>10000,
+    ],
+]);
+$assert(($oos['oos_run']['status']??null)==='COMPLETED','H4 OOS run must complete against frozen experiment hashes.');
+$assert($oos['result']['status']==='POSITIVE','H4 OOS result must remain positive in the acceptance fixture.');
+
+$oosReuseBlocked=false;
+$lab->createExperiment($org,[
+    'experiment_id'=>'exp-h4-v2-oos-repeat','hypothesis_id'=>'hyp-h4','dataset_id'=>'dataset-rv-1',
+    'strategy_version_id'=>'spot-perp-v2','experiment_type'=>'OUT_OF_SAMPLE','status'=>'QUEUED',
+    'parameters'=>['minimum_executable_basis'=>'4'],
+    'success_criteria'=>['validated_rate'=>['min'=>0.6]],'failure_criteria'=>['validated_rate'=>['max'=>0.1]],
+]);
+try{
+    $backtests->run($org,[
+        'run_id'=>'run-h4-v2-oos-repeat','experiment_id'=>'exp-h4-v2-oos-repeat','dataset_id'=>'dataset-rv-1',
+        'strategy_version_id'=>'spot-perp-v2','hypothesis_code'=>'H4','partition_name'=>'OUT_OF_SAMPLE',
+        'reproducibility_fingerprint'=>hash('sha256','run-h4-v2-oos-repeat'),
+        'configuration'=>[
+            'from'=>'2025-09-01T00:00:00Z','to'=>'2025-12-01T00:00:00Z',
+            'fees'=>['spot_rate'=>'0.001','perp_rate'=>'0.001'],
+            'slippage'=>['round_trip_bps'=>'2'],
+            'snapshot_limit'=>5000,'parameter_combinations'=>1,'maximum_compute_units'=>10000,
+        ],
+    ]);
+}catch(InvalidArgumentException){$oosReuseBlocked=true;}
+$assert($oosReuseBlocked,'A completed/failed OOS period must not be reused for the same strategy version after tuning.');
+
+$oosPromotion=$lab->evaluatePromotion($org,'spot-perp-v2','OOS','PAPER',[
+    'validated_rate'=>88/120,'sample_count'=>120,'oos_result'=>'POSITIVE',
+],[
+    'validated_rate'=>['min'=>0.6],'sample_count'=>['min'=>100],'oos_result'=>['equals'=>'POSITIVE'],
+],'human:acceptance');
+$assert($oosPromotion['status']==='PASSED','H4 must pass deterministic OOS -> PAPER gate.');
+
 $lab->createHypothesis($org,[
     'hypothesis_id'=>'hyp-h6','code'=>'H6','title'=>'Cross venue funding differential persists',
     'description'=>'Funding differential test','economic_reason'=>'Venue-specific funding imbalance',
