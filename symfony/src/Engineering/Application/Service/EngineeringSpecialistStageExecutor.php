@@ -5,13 +5,17 @@ namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Agent\EngineeringAgentAssignmentService;
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
+use App\Engineering\Application\Agent\EngineeringAgentRunResult;
+use App\Engineering\Application\Agent\EngineeringAgentToolPermissionPolicy;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Agent\EngineeringSpecialistRequirementResolver;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
+use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
+use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
 use App\Engineering\Application\Workflow\WorkflowDirective;
 use App\Engineering\Domain\Agent\AgentRole;
@@ -30,6 +34,9 @@ final readonly class EngineeringSpecialistStageExecutor
         private EngineeringAgentRunnerInterface $agents,
         private EngineeringAgentAssignmentService $assignments,
         private EngineeringSpecialistRequirementResolver $resolver,
+        private EngineeringRepositoryGatewayInterface $repository,
+        private EngineeringExecutionJournal $journal,
+        private EngineeringAgentToolPermissionPolicy $toolPolicy,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private EngineeringWorkflowCoordinator $coordinator = new EngineeringWorkflowCoordinator(),
@@ -204,6 +211,54 @@ final readonly class EngineeringSpecialistStageExecutor
                 throw new RuntimeException($role->value.' Agent did not complete: '.($run->error ?? $run->status));
             }
             $this->validator->validate($role, $run->structuredOutput);
+
+            if ($role === AgentRole::DOCUMENTATION_SPECIALIST && ($run->structuredOutput['status'] ?? null) === 'COMPLETED') {
+                if ($development === null) {
+                    throw new RuntimeException('Documentation Specialist requires completed Developer evidence.');
+                }
+                $changes = is_array($run->structuredOutput['changes'] ?? null) ? $run->structuredOutput['changes'] : [];
+                $this->toolPolicy->assertRepositoryMutationAllowed($role, $changes);
+                $branch = trim((string) ($development['content']['branch'] ?? ''));
+                if ($branch === '') $branch = 'engineering/'.$featureId;
+                $mutation = $this->journal->around(
+                    $featureId,
+                    $workflowId,
+                    'GIT',
+                    'repository.documentation_commit',
+                    'Commit Documentation Specialist change set',
+                    $correlationId,
+                    fn (): array => $this->repository->commitChanges(
+                        baseRevision: $revision,
+                        branch: $branch,
+                        changes: $changes,
+                        message: trim((string) ($run->structuredOutput['commit_message'] ?? 'docs(engineering): update documentation')),
+                    ),
+                    $engineeringRunId,
+                    static fn (array $result): array => [
+                        'branch' => $result['branch'] ?? null,
+                        'revision' => $result['revision'] ?? null,
+                        'changed_files' => $result['changed_files'] ?? [],
+                    ],
+                );
+                $effectiveOutput = array_merge($run->structuredOutput, [
+                    'reviewed_revision' => $mutation['revision'] ?? $revision,
+                    'repository_revision' => $mutation['revision'] ?? $revision,
+                    'branch' => $mutation['branch'] ?? $branch,
+                    'changed_files' => $mutation['changed_files'] ?? [],
+                ]);
+                $run = new EngineeringAgentRunResult(
+                    runId: $run->runId,
+                    role: $run->role,
+                    status: $run->status,
+                    structuredOutput: $effectiveOutput,
+                    provider: $run->provider,
+                    model: $run->model,
+                    usage: $run->usage,
+                    error: $run->error,
+                    technicalRetries: $run->technicalRetries,
+                    steps: $run->steps,
+                );
+            }
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
