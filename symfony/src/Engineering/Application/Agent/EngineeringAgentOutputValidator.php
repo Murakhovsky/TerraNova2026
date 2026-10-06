@@ -30,7 +30,17 @@ final class EngineeringAgentOutputValidator
 
     private function productRequirements(array $output): void
     {
-        $this->manager($output);
+        if (array_key_exists('decision', $output)) {
+            throw new EngineeringAgentOutputValidationException('Product / Requirements Agent must not orchestrate workflow decisions.');
+        }
+
+        $managerCompatible = $output;
+        $managerCompatible['decision'] = [
+            'type' => 'RUN_AGENT',
+            'agent' => null,
+            'reason' => 'Internal validator compatibility only.',
+        ];
+        $this->manager($managerCompatible);
     }
 
     private function qaPlanner(array $output): void
