@@ -1969,6 +1969,11 @@ services:
   Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector: ~
   Domains\CapitalMarkets\Domain\Research\WalkForwardEngine: ~
   Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy: ~
+  Domains\CapitalMarkets\Application\Service\ResearchTelemetry:
+    arguments:
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
   Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
 
   Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService: ~
@@ -1984,6 +1989,7 @@ services:
       $isolation: '@Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy'
       $metrics: '@Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine'
       $confidence: '@Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine'
+      $telemetry: '@Domains\CapitalMarkets\Application\Service\ResearchTelemetry'
 
 
   Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService:
