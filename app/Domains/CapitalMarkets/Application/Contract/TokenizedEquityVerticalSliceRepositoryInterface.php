@@ -20,6 +20,9 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
     /** @param array<string,mixed> $payload */
     public function saveExecution(string $organizationId,string $executionId,string $opportunityId,string $status,array $payload):void;
 
+    /** @return array<string,mixed>|null */
+    public function getExecutionForOpportunity(string $organizationId,string $opportunityId):?array;
+
     /** @param array<string,mixed> $payload */
     public function saveLedgerTransaction(string $organizationId,string $transactionId,string $idempotencyKey,array $payload):void;
 
