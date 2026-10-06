@@ -1539,10 +1539,19 @@ services:
       $policies: '@Kernel\Policy\Service\ActionPolicyService'
       $commands: '@Kernel\Application\Bus\CommandBusInterface'
 
+  App\Infrastructure\Automation\ResearchSearchHypothesesTool: ~
+  App\Infrastructure\Automation\ResearchCreateHypothesisDraftTool: ~
+  App\Infrastructure\Automation\ResearchCreateExperimentDraftTool: ~
+  App\Infrastructure\Automation\ResearchSearchKnowledgeTool: ~
+
   Kernel\Tool\Service\ToolRegistry:
     arguments:
       $tools:
         - '@App\Infrastructure\Automation\SalesActionProposalTool'
+        - '@App\Infrastructure\Automation\ResearchSearchHypothesesTool'
+        - '@App\Infrastructure\Automation\ResearchCreateHypothesisDraftTool'
+        - '@App\Infrastructure\Automation\ResearchCreateExperimentDraftTool'
+        - '@App\Infrastructure\Automation\ResearchSearchKnowledgeTool'
 
   Kernel\Tool\Contract\ToolRegistryInterface:
     alias: Kernel\Tool\Service\ToolRegistry
@@ -1552,8 +1561,18 @@ services:
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $modules: '@Kernel\Module\ActiveModuleResolver'
 
+  App\Infrastructure\Automation\ResearchAgentToolPermissionChecker:
+    arguments:
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  App\Infrastructure\Automation\CompositeToolPermissionChecker:
+    arguments:
+      $checkers:
+        - '@App\Infrastructure\Automation\SalesAgentToolPermissionChecker'
+        - '@App\Infrastructure\Automation\ResearchAgentToolPermissionChecker'
+
   Kernel\Tool\Contract\ToolPermissionCheckerInterface:
-    alias: App\Infrastructure\Automation\SalesAgentToolPermissionChecker
+    alias: App\Infrastructure\Automation\CompositeToolPermissionChecker
 
   Kernel\Tool\Service\JsonSchemaToolInputValidator: ~
 
