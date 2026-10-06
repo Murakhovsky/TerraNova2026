@@ -54,6 +54,16 @@ final readonly class ResearchBacktestService
         $run['cancelled_at']=gmdate('Y-m-d H:i:s');
         $run['cancel_reason']=$reason;
         $this->lab->recordBacktestRun($organizationId,$run);
+        if(strtoupper((string)($run['partition_name']??''))==='OUT_OF_SAMPLE'){
+            $oos=$this->repository->getOutOfSampleRun($organizationId,$runId);
+            if($oos!==null&&!in_array((string)($oos['status']??''),['COMPLETED','FAILED','CANCELLED'],true)){
+                $oos['status']='CANCELLED';
+                $oos['cancelled_at']=$run['cancelled_at'];
+                $oos['cancel_reason']=$reason;
+                $experiment=$this->repository->getExperiment($organizationId,(string)$run['experiment_id']);
+                if($experiment!==null)$this->lab->recordOutOfSampleRun($organizationId,$oos,$experiment);
+            }
+        }
         return $run;
     }
 
