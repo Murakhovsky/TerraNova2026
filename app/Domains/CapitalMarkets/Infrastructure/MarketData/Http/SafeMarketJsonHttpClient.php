@@ -26,8 +26,7 @@ final readonly class SafeMarketJsonHttpClient implements MarketJsonHttpClientInt
         [$host,$ip]=$this->resolveEndpoint($url,$allowedHosts);
         $safeHeaders=['Accept: application/json','User-Agent: COS-Capital-Markets/0.3'];
         foreach($headers as $header){
-            if(!is_string($header)||trim($header)===''||str_contains($header,"")||str_contains($header,"
-")){
+            if(!is_string($header)||trim($header)===''||str_contains($header,chr(13))||str_contains($header,chr(10))){
                 throw new InvalidArgumentException('Market HTTP header is invalid.');
             }
             $safeHeaders[]=trim($header);

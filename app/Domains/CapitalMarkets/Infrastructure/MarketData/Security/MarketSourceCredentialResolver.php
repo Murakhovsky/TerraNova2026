@@ -29,8 +29,7 @@ final readonly class MarketSourceCredentialResolver
         );
         $material=$this->vault->resolve($credential);
         $value=$material['api_key']??$material['token']??'';
-        if($value===''||str_contains($value,"")||str_contains($value,"
-")){
+        if($value===''||str_contains($value,chr(13))||str_contains($value,chr(10))){
             throw new RuntimeException('Market-data credential material does not contain a valid API key.');
         }
         return $value;
