@@ -68,6 +68,82 @@ final readonly class TokenizedEquityExecutionRecoveryService
     }
 
     /** @return array<string,mixed> */
+    public function resumeSettlement(string $organizationId,string $executionId):array
+    {
+        $state=$this->inspect($organizationId,$executionId);
+        $execution=$this->repository->getExecution($organizationId,$executionId);
+        if($execution===null)throw new DomainException('EXECUTION_NOT_FOUND');
+
+        if(($state['settlement_completed']??false)===true)return $execution;
+        if(($state['ledger_posted']??false)!==true)throw new DomainException('RECOVERY_LEDGER_NOT_POSTED');
+
+        $buyFill=$execution['buy_fill']??null;
+        $sellFill=$execution['sell_fill']??null;
+        if(!is_array($buyFill)||!is_array($sellFill)){
+            throw new DomainException('RECOVERY_FILL_CONTEXT_MISSING');
+        }
+
+        $reservationId=$this->required($execution,'reservation_id');
+        $buyCashReservation=$this->required($execution,'buy_cash_reservation_id');
+        $sellInventoryReservation=$this->required($execution,'sell_inventory_reservation_id');
+        $buyVenue=$this->required($execution,'buy_venue_id');
+        $sellVenue=$this->required($execution,'sell_venue_id');
+        $buyInstrument=$this->required($execution,'buy_instrument_id');
+        $quoteAsset=$this->required($execution,'quote_asset');
+
+        $buyQuantity=Decimal::fromString((string)($buyFill['quantity']??'0'));
+        $sellNotional=Decimal::fromString((string)($sellFill['notional']??'0'));
+        $sellFee=Decimal::fromString((string)($sellFill['fee']??'0'));
+        $sellCash=DecimalMath::subtract($sellNotional,$sellFee);
+        $realizedPnl=Decimal::fromString((string)($execution['realized_pnl']??'0'));
+
+        $this->repository->settlePaperExecution(
+            $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
+            $buyVenue,$buyInstrument,$buyQuantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realizedPnl->value()
+        );
+
+        $completed=[
+            ...$execution,
+            'status'=>'COMPLETED',
+            'checkpoint'=>'SETTLED',
+            'recovered'=>true,
+            'recovered_at'=>(new \DateTimeImmutable())->format(DATE_ATOM),
+        ];
+        $opportunityId=$this->required($execution,'opportunity_id');
+        $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$completed);
+
+        $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
+        if(is_array($opportunity)){
+            $candidate=$opportunity['candidate']??[];
+            $fingerprint=hash('sha256',implode('|',[$organizationId,'H2','EXECUTION',$opportunityId,$executionId]));
+            $this->repository->saveHypothesisObservation(
+                $organizationId,'cm_obs_'.substr($fingerprint,0,40),'H2','EXECUTION',
+                (new \DateTimeImmutable())->format(DATE_ATOM),$fingerprint,[
+                    'market_pair_id'=>(string)($candidate['market_pair_id']??''),
+                    'candidate_id'=>(string)($candidate['id']??''),
+                    'opportunity_id'=>$opportunityId,'execution_id'=>$executionId,
+                    'detected'=>true,'executable'=>true,'realized'=>true,
+                    'expected_pnl'=>(string)($opportunity['expected_pnl']??'0'),
+                    'realized_pnl'=>$realizedPnl->value(),
+                    'reason'=>null,
+                    'edge_capture_ratio'=>(string)($execution['edge_capture_ratio']??'0'),
+                    'recovered'=>true,
+                ]
+            );
+        }
+
+        return $completed;
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function required(array $payload,string $key):string
+    {
+        $value=trim((string)($payload[$key]??''));
+        if($value==='')throw new DomainException('RECOVERY_CONTEXT_MISSING: '.$key);
+        return $value;
+    }
+
+    /** @return array<string,mixed> */
     private function decisionArray(ExecutionRecoveryDecision $decision):array
     {
         return [
