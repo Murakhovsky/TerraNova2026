@@ -2882,3 +2882,9 @@ cos_api_v1_capital_markets_tokenized_equity_paper_execute:
   controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::executePaper
   methods: [POST]
   requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+cos_api_v1_capital_markets_tokenized_equity_execution_recovery:
+  path: /api/v1/capital-markets/tokenized-equities/executions/{id}/recovery
+  controller: App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController::executionRecovery
+  methods: [GET]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
