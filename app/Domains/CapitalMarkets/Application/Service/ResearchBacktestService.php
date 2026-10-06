@@ -7,6 +7,8 @@ use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\ResearchReplayAdapterInterface;
 use InvalidArgumentException;
 use RuntimeException;
+use DateTimeImmutable;
+use Domains\CapitalMarkets\Domain\Research\WalkForwardEngine;
 
 final readonly class ResearchBacktestService
 {
@@ -15,6 +17,7 @@ final readonly class ResearchBacktestService
         private iterable $adapters,
         private ResearchLabRepositoryInterface $repository,
         private ResearchLabService $lab,
+        private WalkForwardEngine $walkForward,
     ){}
 
     public function run(string $organizationId,array $specification):array
@@ -95,6 +98,44 @@ final readonly class ResearchBacktestService
         $this->lab->recordBacktestRun($organizationId,$completed);
 
         return ['run'=>$completed,'result'=>$result,'replay'=>$replay];
+    }
+
+    public function walkForward(string $organizationId,array $specification):array
+    {
+        foreach(['hypothesis_code','configuration','from','to','train_days','test_days','step_days'] as $required){
+            if(!array_key_exists($required,$specification))throw new InvalidArgumentException('Missing '.$required);
+        }
+        $adapter=$this->adapter((string)$specification['hypothesis_code']);
+        $windows=$this->walkForward->windows(
+            new DateTimeImmutable((string)$specification['from']),
+            new DateTimeImmutable((string)$specification['to']),
+            (int)$specification['train_days'],
+            (int)$specification['test_days'],
+            (int)$specification['step_days'],
+        );
+
+        $results=[];
+        foreach($windows as $index=>$window){
+            $configuration=(array)$specification['configuration'];
+            $configuration['from']=$window['test']['from'];
+            $configuration['to']=$window['test']['to'];
+            $replay=$adapter->replay($organizationId,(string)$specification['hypothesis_code'],$configuration);
+            $results[]=[
+                'window'=>$index+1,
+                'train'=>$window['train'],
+                'test'=>$window['test'],
+                'score'=>(float)($replay['expected_pnl_average']??0),
+                'sample_count'=>(int)($replay['sample_count']??0),
+                'validated_rate'=>(float)($replay['validated_rate']??0),
+                'replay'=>$replay,
+            ];
+        }
+
+        return [
+            'hypothesis'=>strtoupper((string)$specification['hypothesis_code']),
+            'windows'=>$results,
+            'summary'=>$this->walkForward->summarize($results),
+        ];
     }
 
     private function adapter(string $hypothesis):ResearchReplayAdapterInterface
