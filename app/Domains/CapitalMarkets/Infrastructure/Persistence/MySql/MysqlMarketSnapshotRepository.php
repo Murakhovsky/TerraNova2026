@@ -25,6 +25,22 @@ final readonly class MysqlMarketSnapshotRepository implements MarketSnapshotRepo
         ]);
     }
 
+    public function list(string $organizationId,int $limit=500):array
+    {
+        $limit=max(1,min(5000,$limit));
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_snapshots
+             WHERE organization_id=:organization_id ORDER BY created_at ASC,snapshot_id ASC LIMIT '.$limit
+        );
+        $statement->execute(['organization_id'=>$organizationId]);
+        $out=[];
+        foreach($statement->fetchAll(PDO::FETCH_ASSOC) as $row){
+            $data=json_decode((string)$row['payload_json'],true,flags:JSON_THROW_ON_ERROR);
+            if(is_array($data)&&!array_is_list($data))$out[]=$this->hydrator->snapshot($data);
+        }
+        return $out;
+    }
+
     public function get(string $organizationId,string $snapshotId):?MarketSnapshot
     {
         $statement=$this->connection->prepare(

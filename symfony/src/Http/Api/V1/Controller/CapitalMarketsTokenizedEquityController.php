@@ -7,8 +7,10 @@ use DomainException;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalReplayService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityUniverseScanner;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use App\Security\SessionCsrfValidator;
@@ -33,6 +35,8 @@ final readonly class CapitalMarketsTokenizedEquityController
         private TokenizedEquityVerticalSliceService $verticalSlice,
         private TokenizedEquityPaperExecutionService $paper,
         private TokenizedEquityResearchService $research,
+        private TokenizedEquityUniverseScanner $universeScanner,
+        private TokenizedEquityHistoricalReplayService $historicalReplay,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -112,6 +116,22 @@ final readonly class CapitalMarketsTokenizedEquityController
                 $this->required($p,'hypothesis'),
                 min(10000,max(1,(int)($p['minimum_detected_sample']??30))),
                 min(10000,max(1,(int)($p['minimum_paper_sample']??10))),
+            ));
+    }
+
+    public function scanUniverse(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::OpportunityView,
+            fn(TenantContext $tenant,array $p):array=>$this->universeScanner->scan(
+                $tenant->organizationId()->value(),$this->options($p)
+            ));
+    }
+
+    public function replayMarketStates(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::OpportunityView,
+            fn(TenantContext $tenant,array $p):array=>$this->historicalReplay->replay(
+                $tenant->organizationId()->value(),$this->options($p)
             ));
     }
 

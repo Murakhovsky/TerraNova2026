@@ -9,4 +9,7 @@ interface MarketSnapshotRepositoryInterface
 {
     public function save(string $organizationId,MarketSnapshot $snapshot):void;
     public function get(string $organizationId,string $snapshotId):?MarketSnapshot;
+
+    /** @return list<MarketSnapshot> */
+    public function list(string $organizationId,int $limit=500):array;
 }

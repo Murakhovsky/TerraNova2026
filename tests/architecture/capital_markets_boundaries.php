@@ -52,8 +52,8 @@ foreach([
 }
 
 $manifest=require $domainRoot.'/module.php';
-if(($manifest['version']??null)!=='0.5.0'||($manifest['schema_version']??null)!=='0.5.0'){
-    throw new RuntimeException('Capital Markets module manifest must be V0.5.0.');
+if(($manifest['version']??null)!=='0.6.0'||($manifest['schema_version']??null)!=='0.6.0'){
+    throw new RuntimeException('Capital Markets module manifest must be V0.6.0.');
 }
 if(($manifest['enabled_by_default']??true)!==false){
     throw new RuntimeException('Capital Markets Foundation must remain disabled by default.');
@@ -125,6 +125,8 @@ foreach([
     '/api/v1/capital-markets/venues',
     '/capital-markets/tokenized-equities',
     '/api/v1/capital-markets/tokenized-equities',
+    '/api/v1/capital-markets/tokenized-equities/scan/universe',
+    '/api/v1/capital-markets/tokenized-equities/market-replay',
 ] as $route){
     if(!str_contains($routes,$route))throw new RuntimeException('Capital Markets route missing: '.$route);
 }

@@ -9,7 +9,7 @@ contract: domain-v1
 
 # Огляд домену Capital Markets
 
-Capital Markets `0.5.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
+Capital Markets `0.6.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
 
 ## Призначення
 
@@ -33,7 +33,7 @@ MarketState / ReferenceMarketState
 
 ```text
 id: capital_markets
-version: 0.5.0
+version: 0.6.0
 runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 research evidence/paper
 persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
