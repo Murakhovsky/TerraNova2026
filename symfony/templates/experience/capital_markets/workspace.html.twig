@@ -461,10 +461,20 @@
             <p>No scorecards yet.</p>
           {% else %}
             <div class="table-responsive"><table class="table">
-              <thead><tr><th>Strategy Version</th><th>Score</th><th>Weights</th></tr></thead>
+              <thead><tr><th>Strategy Version</th><th>Score</th><th>Profit</th><th>Consistency</th><th>Risk</th><th>Execution</th><th>Robustness</th><th>Data</th><th>Weights</th></tr></thead>
               <tbody>
               {% for s in scorecards %}
-                <tr><td>{{ s.strategy_version_id|default('—') }}</td><td><strong>{{ s.composite_score|default('—') }}</strong></td><td>{{ s.weight_version|default('—') }}</td></tr>
+                <tr>
+                  <td>{{ s.strategy_version_id|default('—') }}</td>
+                  <td><strong>{{ s.composite_score|default('—') }}</strong></td>
+                  <td>{{ s.dimensions.profitability|default('—') }}</td>
+                  <td>{{ s.dimensions.consistency|default('—') }}</td>
+                  <td>{{ s.dimensions.risk|default('—') }}</td>
+                  <td>{{ s.dimensions.execution_quality|default('—') }}</td>
+                  <td>{{ s.dimensions.robustness|default('—') }}</td>
+                  <td>{{ s.dimensions.data_confidence|default('—') }}</td>
+                  <td>{{ s.weight_version|default('—') }}</td>
+                </tr>
               {% endfor %}
               </tbody>
             </table></div>
