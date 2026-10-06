@@ -7,6 +7,7 @@ use Domains\CapitalMarkets\Domain\Execution\PaperOrderState;
 use Domains\CapitalMarkets\Domain\Execution\PartialFillPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\EconomicExposure;
 use Domains\CapitalMarkets\Domain\Risk\TokenizedSecurityRiskProfile;
+use Domains\CapitalMarkets\Domain\Opportunity\SpreadDetectorConfig;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 
 require dirname(__DIR__,2).'/vendor/autoload.php';
@@ -32,6 +33,12 @@ $exposure=new EconomicExposure('AAPL','USD',[
     'hedge'=>Decimal::fromString('-14000'),
 ]);
 $assert($exposure->net()->value()==='1000','Economic exposure must net physical and hedge components exactly.');
+
+$config=new SpreadDetectorConfig(
+    'vs1',Decimal::fromString('1'),Decimal::fromString('1'),Decimal::fromString('0.01'),
+    2000,500,80,Decimal::fromString('50'),500,Decimal::fromString('0.8'),Decimal::fromString('0.75')
+);
+$assert($config->minimumExecutionProbability?->value()==='0.75','Execution probability threshold must be explicit and configurable.');
 
 $failed=false;
 try{ new TokenizedSecurityRiskProfile(101,0,0,0,0,0,0,0,0); }catch(InvalidArgumentException){$failed=true;}
