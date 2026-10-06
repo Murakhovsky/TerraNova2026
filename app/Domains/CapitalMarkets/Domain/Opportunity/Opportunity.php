@@ -11,10 +11,17 @@ final readonly class Opportunity extends ValueObject
         public Decimal $requiredCapital, public Decimal $capitalCapacity, public Decimal $executionProbability,
         public int $riskScore, public OpportunityStatus $status, public DateTimeImmutable $validatedAt,
         public array $rejectionReasons=[],
+        public ?OpportunityType $type=null,
+        public ?ExpectedEconomics $expectedEconomics=null,
+        public ?string $strategyVersion=null,
+        public array $instruments=[],
+        public array $venues=[],
+        public array $evidence=[],
     ){}
     public function executableAt(DateTimeImmutable $at):bool{
+        $net=$this->expectedEconomics?->expectedNetPnl??$this->economics->expectedNetPnl;
         return !$this->candidate->expiredAt($at)
             && in_array($this->status,[OpportunityStatus::Valid,OpportunityStatus::Approved,OpportunityStatus::Reserved],true)
-            && $this->economics->expectedNetPnl->isPositive();
+            && $net->isPositive();
     }
 }
