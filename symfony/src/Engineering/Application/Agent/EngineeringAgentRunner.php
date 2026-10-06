@@ -25,6 +25,9 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
 
     public function run(EngineeringAgentTask $task, string $organizationId, string $correlationId): EngineeringAgentRunResult
     {
+        if ($task->role === AgentRole::ENGINEERING_MANAGER) {
+            throw new RuntimeException('Engineering Manager is a deterministic orchestration role in Runtime V2 and cannot execute Product work through the LLM runner.');
+        }
         if ($task->role === AgentRole::QA) {
             throw new RuntimeException('Legacy QA role is read-only compatibility state and cannot start a new Engineering Runtime V2 execution.');
         }
