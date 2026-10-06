@@ -51,7 +51,6 @@ final readonly class ResearchBacktestService
             $record['status']='FAILED';
             $record['completed_at']=gmdate('Y-m-d H:i:s');
             $record['error']=$error->getMessage();
-            $record['run_id']=$specification['run_id'].'-failed';
             $this->lab->recordBacktestRun($organizationId,$record);
             throw $error;
         }
@@ -89,7 +88,6 @@ final readonly class ResearchBacktestService
         $this->lab->recordResult($organizationId,$result);
 
         $completed=$specification;
-        $completed['run_id']=$specification['run_id'].'-completed';
         $completed['status']='COMPLETED';
         $completed['started_at']=$startedAt;
         $completed['completed_at']=gmdate('Y-m-d H:i:s');
