@@ -35,6 +35,7 @@ final readonly class TokenizedEquityResearchService
                 'minimum_completion_rate'=>$minimumCompletionRate,
                 'edge_funnel'=>[
                     'observed_scans'=>$metrics['observation_count'],
+                    'unobservable_scans'=>$metrics['unobservable_count'],
                     'detected'=>$metrics['detected_count'],
                     'executable'=>$metrics['executable_count'],
                     'attempted'=>$metrics['execution_attempt_count'],
