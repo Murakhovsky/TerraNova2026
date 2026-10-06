@@ -599,6 +599,18 @@ final readonly class EngineeringFeatureController
         ));
 
         $runs = is_array($data['agent_runs'] ?? null) ? $data['agent_runs'] : [];
+        $persistedRuntimeHealth = strtoupper((string) ($data['workflow']['health_status'] ?? ''));
+        $runtimePauseAt = in_array($persistedRuntimeHealth, ['STALE','STALLED'], true)
+            ? (
+                (is_string($data['workflow']['stalled_at'] ?? null) && trim((string) $data['workflow']['stalled_at']) !== '')
+                    ? (string) $data['workflow']['stalled_at']
+                    : (
+                        is_string($data['workflow']['heartbeat_at'] ?? null) && trim((string) $data['workflow']['heartbeat_at']) !== ''
+                            ? (string) $data['workflow']['heartbeat_at']
+                            : (is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null)
+                    )
+            )
+            : null;
         $roles = [];
         $runDurations = [];
         $agentRuntimeSeconds = 0;
@@ -625,7 +637,9 @@ final readonly class EngineeringFeatureController
 
             $runDuration = $this->durationSeconds(
                 is_string($run['started_at'] ?? null) ? $run['started_at'] : null,
-                is_string($run['finished_at'] ?? null) ? $run['finished_at'] : null,
+                is_string($run['finished_at'] ?? null) && trim((string) $run['finished_at']) !== ''
+                    ? (string) $run['finished_at']
+                    : $runtimePauseAt,
             );
             if ($runDuration !== null) {
                 $runId = trim((string) ($run['id'] ?? ''));
@@ -693,14 +707,14 @@ final readonly class EngineeringFeatureController
             $resolvedHealth,
             count($data['open_human_decisions'] ?? []),
         );
-        $displayStatus = !$terminal && $resolvedHealth === 'STALLED' ? 'STALLED' : $workflowStatus;
+        $displayStatus = !$terminal && in_array($resolvedHealth, ['STALE','STALLED'], true) ? $resolvedHealth : $workflowStatus;
         $stages = $this->stagePipeline($data, $state, $workflowStatus, $resolvedHealth);
         $heartbeatAt = is_string($data['workflow']['heartbeat_at'] ?? null) ? $data['workflow']['heartbeat_at'] : null;
         $lastActivityAt = is_string($data['workflow']['last_activity_at'] ?? null) ? $data['workflow']['last_activity_at'] : null;
         $stalledAt = is_string($data['workflow']['stalled_at'] ?? null) ? $data['workflow']['stalled_at'] : null;
         $durationStopAt = is_string($data['workflow']['finished_at'] ?? null) && trim((string) $data['workflow']['finished_at']) !== ''
             ? (string) $data['workflow']['finished_at']
-            : ($resolvedHealth === 'STALLED' ? ($stalledAt ?: $heartbeatAt ?: $lastActivityAt) : null);
+            : (in_array($resolvedHealth, ['STALE','STALLED'], true) ? ($stalledAt ?: $heartbeatAt ?: $lastActivityAt) : null);
         $durationSeconds = $this->durationSeconds(
             is_string($data['workflow']['started_at'] ?? null) ? $data['workflow']['started_at'] : null,
             $durationStopAt,
@@ -802,6 +816,7 @@ final readonly class EngineeringFeatureController
                     in_array($state, ['FAILED'], true) || $workflowStatus === 'FAILED' => 'FAILED',
                     in_array($state, ['HUMAN_DECISION_REQUIRED','BLOCKED','ESCALATED'], true) => 'WAITING',
                     $runtimeHealth === 'STALLED' => 'STALLED',
+                    $runtimeHealth === 'STALE' => 'STALE',
                     default => 'RUNNING',
                 };
             }
