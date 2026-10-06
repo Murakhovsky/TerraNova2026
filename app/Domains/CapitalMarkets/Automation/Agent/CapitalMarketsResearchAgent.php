@@ -23,8 +23,22 @@ final class CapitalMarketsResearchAgent
             promptVersion:'cm-research-agent-v1',
             schemaVersion:'cm-research-agent-output-v1',
             allowedActionTypes:[],
+
             defaultExecutionMode:'APPROVAL_REQUIRED',
             defaultRiskLevel:'LOW',
+            evidenceSchemas:[
+                'research'=>[
+                    'required'=>[
+                        'summary'=>'string',
+                        'hypothesis'=>'object',
+                        'experiment_plan'=>'object',
+                        'tool_requests'=>'array',
+                        'limitations'=>'array',
+                        'recommendation'=>'string',
+                    ],
+                ],
+            ],
+            resultValidatorClass:CapitalMarketsResearchAgentResultValidator::class,
             domainName:'capital_markets',
             enabled:true,
             profile:'research',
