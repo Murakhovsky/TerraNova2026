@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInter
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalReplayService;
+use Domains\CapitalMarkets\Application\Service\TokenizedEquityExecutionRecoveryService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityUniverseScanner;
@@ -37,6 +38,7 @@ final readonly class CapitalMarketsTokenizedEquityController
         private TokenizedEquityResearchService $research,
         private TokenizedEquityUniverseScanner $universeScanner,
         private TokenizedEquityHistoricalReplayService $historicalReplay,
+        private TokenizedEquityExecutionRecoveryService $executionRecovery,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -166,6 +168,16 @@ final readonly class CapitalMarketsTokenizedEquityController
     {
         return $this->mutation($request,CapitalMarketsCapability::PaperExecute,
             fn(TenantContext $tenant,array $p):array=>$this->paper->execute($tenant->organizationId()->value(),$id),201);
+    }
+
+    public function executionRecovery(string $id):JsonResponse
+    {
+        $context=$this->context(CapitalMarketsCapability::PaperExecute);
+        if($context instanceof JsonResponse)return $context;
+        [$tenant]=$context;
+        return $this->respond(fn():array=>$this->executionRecovery->inspect(
+            $tenant->organizationId()->value(),$id
+        ));
     }
 
     /**

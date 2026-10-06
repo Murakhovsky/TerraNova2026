@@ -24,7 +24,6 @@ use Domains\CapitalMarkets\Domain\Service\PaperPnlEngine;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 use Domains\CapitalMarkets\Domain\Venue\VenueId;
-use Kernel\Transaction\Contract\TransactionManagerInterface;
 
 final readonly class TokenizedEquityPaperExecutionService
 {
@@ -33,7 +32,6 @@ final readonly class TokenizedEquityPaperExecutionService
         private TokenizedEquityVerticalSliceRepositoryInterface $repository,
         private ExecutablePriceCalculator $prices,
         private PaperPnlEngine $pnl,
-        private TransactionManagerInterface $transactions,
     ){}
 
     /** @return array<string,mixed> */
@@ -63,13 +61,14 @@ final readonly class TokenizedEquityPaperExecutionService
     /** @return array<string,mixed> */
     public function execute(string $organizationId,string $opportunityId):array
     {
-        if(!$this->transactions->isActive()){
-            return $this->transactions->transactional(fn():array=>$this->execute($organizationId,$opportunityId));
-        }
         $opportunity=$this->repository->getOpportunity($organizationId,$opportunityId);
         if($opportunity===null)throw new DomainException('Opportunity not found.');
         $existingExecution=$this->repository->getExecutionForOpportunity($organizationId,$opportunityId);
-        if($existingExecution!==null)return $existingExecution;
+        if($existingExecution!==null){
+            $existingStatus=(string)($existingExecution['status']??'');
+            if(in_array($existingStatus,['COMPLETED','INVALIDATED','FAILED','CANCELLED','EXPIRED'],true))return $existingExecution;
+            throw new DomainException('EXECUTION_RECOVERY_REQUIRED');
+        }
         if(($opportunity['hypothesis']??null)!=='H2'){
             throw new DomainException('H1 paper execution requires a real executable hedge venue.');
         }
@@ -196,37 +195,59 @@ final readonly class TokenizedEquityPaperExecutionService
             (string)($risk['id']??'unknown'),[$reservationId,$buyCashReservation,$sellInventoryReservation]
         );
         $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'READY'));
+        $checkpoint=[
+            'id'=>$executionId,'opportunity_id'=>$opportunityId,'status'=>'READY','checkpoint'=>'RESERVATIONS_READY',
+            'executed_at'=>$now->format(DATE_ATOM),'reservation_id'=>$reservationId,
+            'buy_cash_reservation_id'=>$buyCashReservation,'sell_inventory_reservation_id'=>$sellInventoryReservation,
+            'buy_venue_id'=>$buyVenue,'sell_venue_id'=>$sellVenue,
+            'buy_instrument_id'=>$buyInstrument,'sell_instrument_id'=>$sellInstrument,'quote_asset'=>$quoteAsset,
+            'quantity'=>$quantity->value(),'plan_id'=>$plan->id,'realized_pnl'=>'0','edge_capture_ratio'=>'0',
+        ];
+        $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'READY',$checkpoint);
 
+        $firstLegPersisted=false;
         try{
             $buyOrder=new PaperOrder(
                 $executionId.':order:buy',$executionId,$buyLeg->id,$buyLeg->venueMarketId,$buyInstrument,ExecutionSide::Buy,
                 $quantity,$quantity,PaperOrderState::Filled,$now,$now,$now
             );
+            $this->repository->savePaperOrder(
+                $organizationId,$buyOrder->id,$executionId,$buyLeg->id,$buyOrder->state->value,$buyOrder->id,$this->orderArray($buyOrder)
+            );
+            $buyFill=new PaperFill(
+                $executionId.':buy',$executionId,$buyVenue,$buyInstrument,ExecutionSide::Buy,$quantity,$buy['price'],$buyFee,
+                $buySlippage,$now,$executionId.':buy'
+            );
+            $this->repository->savePaperFill(
+                $organizationId,$buyFill->id,$buyOrder->id,$executionId,$buyFill->idempotencyKey,$this->fillArray($buyFill)
+            );
+            $firstLegPersisted=true;
+            $checkpoint=[
+                ...$checkpoint,'status'=>'PARTIALLY_EXECUTED','checkpoint'=>'LEG1_FILLED',
+                'buy_order'=>$this->orderArray($buyOrder),'buy_fill'=>$this->fillArray($buyFill),
+            ];
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'PARTIALLY_EXECUTED',$checkpoint);
+
             $sellOrder=new PaperOrder(
                 $executionId.':order:sell',$executionId,$sellLeg->id,$sellLeg->venueMarketId,$sellInstrument,ExecutionSide::Sell,
                 $quantity,$quantity,PaperOrderState::Filled,$now,$now,$now
             );
             $this->repository->savePaperOrder(
-                $organizationId,$buyOrder->id,$executionId,$buyLeg->id,$buyOrder->state->value,$buyOrder->id,$this->orderArray($buyOrder)
-            );
-            $this->repository->savePaperOrder(
                 $organizationId,$sellOrder->id,$executionId,$sellLeg->id,$sellOrder->state->value,$sellOrder->id,$this->orderArray($sellOrder)
-            );
-
-            $buyFill=new PaperFill(
-                $executionId.':buy',$executionId,$buyVenue,$buyInstrument,ExecutionSide::Buy,$quantity,$buy['price'],$buyFee,
-                $buySlippage,$now,$executionId.':buy'
             );
             $sellFill=new PaperFill(
                 $executionId.':sell',$executionId,$sellVenue,$sellInstrument,ExecutionSide::Sell,$quantity,$sell['price'],$sellFee,
                 $sellSlippage,$now,$executionId.':sell'
             );
             $this->repository->savePaperFill(
-                $organizationId,$buyFill->id,$buyOrder->id,$executionId,$buyFill->idempotencyKey,$this->fillArray($buyFill)
-            );
-            $this->repository->savePaperFill(
                 $organizationId,$sellFill->id,$sellOrder->id,$executionId,$sellFill->idempotencyKey,$this->fillArray($sellFill)
             );
+            $checkpoint=[
+                ...$checkpoint,'status'=>'EXECUTING','checkpoint'=>'LEGS_MATCHED',
+                'sell_order'=>$this->orderArray($sellOrder),'sell_fill'=>$this->fillArray($sellFill),
+            ];
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'EXECUTING',$checkpoint);
+
             $realized=$this->pnl->realized([$buyFill,$sellFill]);
 
             $detectedEdge=Decimal::fromString((string)$candidate['gross_spread']);
@@ -279,6 +300,19 @@ final readonly class TokenizedEquityPaperExecutionService
                     'account'=>$e->account,'asset_key'=>$e->assetKey,'debit'=>$e->debit->value(),'credit'=>$e->credit->value(),
                 ],$ledger->entries),
             ]);
+            $checkpoint=[
+                ...$checkpoint,'status'=>'EXECUTING','checkpoint'=>'LEDGER_POSTED',
+                'realized_pnl'=>$realized->value(),'edge_capture_ratio'=>$performance->edgeCaptureRatio->value(),
+            ];
+            $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'EXECUTING',$checkpoint);
+            $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'ACCOUNTING'));
+            // Settlement is one atomic, idempotent financial transition. A crash can happen
+            // before or after this call without duplicating inventory, cash or realized P&L.
+            $sellCash=DecimalMath::subtract($sell['notional'],$sellFee);
+            $this->repository->settlePaperExecution(
+                $organizationId,$executionId,$reservationId,$buyCashReservation,$sellInventoryReservation,
+                $buyVenue,$buyInstrument,$quantity->value(),$sellVenue,$quoteAsset,$sellCash->value(),$realized->value()
+            );
             $this->repository->saveExecutionPlan($organizationId,$plan->id,$opportunityId,$this->planArray($plan,'COMPLETED'));
             $this->repository->saveExecution($organizationId,$executionId,$opportunityId,'COMPLETED',$payload);
             $observationFingerprint=hash('sha256',implode('|',[
@@ -306,19 +340,23 @@ final readonly class TokenizedEquityPaperExecutionService
                 ]
             );
 
-            // Settle pre-funded venue balances: cash leaves buy venue, inventory leaves sell venue,
-            // acquired token appears on buy venue, sale proceeds appear on sell venue.
-            $this->repository->consumePaperBalanceReservation($organizationId,$buyCashReservation);
-            $this->repository->consumePaperBalanceReservation($organizationId,$sellInventoryReservation);
-            $this->repository->creditPaperBalance($organizationId,$buyVenue,$buyInstrument,$quantity->value());
-            $sellCash=DecimalMath::subtract($sell['notional'],$sellFee);
-            $this->repository->creditPaperBalance($organizationId,$sellVenue,$quoteAsset,$sellCash->value());
-
-            $this->repository->completeReservation($organizationId,$reservationId,$realized->value());
             return $payload;
         }catch(\Throwable $error){
-            // All persistence participates in the outer canonical transaction; this explicit release
-            // also keeps the method correct when reused inside a caller-owned transaction that catches.
+            if($firstLegPersisted){
+                $failedCheckpoint=[
+                    ...$checkpoint,
+                    'status'=>'COMPENSATING',
+                    'checkpoint'=>'RECOVERY_REQUIRED',
+                    'failure_reason'=>$error->getMessage(),
+                    'realized_pnl'=>'0',
+                    'edge_capture_ratio'=>'0',
+                ];
+                $this->repository->saveExecution(
+                    $organizationId,$executionId,$opportunityId,'COMPENSATING',$failedCheckpoint
+                );
+                throw new DomainException('EXECUTION_RECOVERY_REQUIRED: '.$executionId,0,$error);
+            }
+
             $this->repository->releasePaperBalanceReservation($organizationId,$sellInventoryReservation);
             $this->repository->releasePaperBalanceReservation($organizationId,$buyCashReservation);
             $this->repository->releaseReservation($organizationId,$reservationId);

@@ -154,6 +154,51 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         return is_string($json)?$this->object($json):null;
     }
 
+    public function getExecution(string $organizationId,string $executionId):?array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_paper_executions
+             WHERE organization_id=:org AND execution_id=:id LIMIT 1'
+        );
+        $statement->execute(['org'=>$organizationId,'id'=>$executionId]);
+        $json=$statement->fetchColumn();
+        return is_string($json)?$this->object($json):null;
+    }
+
+    public function listPaperOrdersForExecution(string $organizationId,string $executionId):array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT payload_json FROM tn_capital_market_paper_orders
+             WHERE organization_id=:org AND execution_id=:execution ORDER BY id ASC'
+        );
+        $statement->execute(['org'=>$organizationId,'execution'=>$executionId]);
+        return array_map(fn(array $row):array=>$this->object((string)$row['payload_json']),$statement->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function listPaperFillsForExecution(string $organizationId,string $executionId):array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT order_id,payload_json FROM tn_capital_market_paper_fills
+             WHERE organization_id=:org AND execution_id=:execution ORDER BY id ASC'
+        );
+        $statement->execute(['org'=>$organizationId,'execution'=>$executionId]);
+        return array_map(function(array $row):array{
+            $payload=$this->object((string)$row['payload_json']);
+            $payload['_order_id']=(string)$row['order_id'];
+            return $payload;
+        },$statement->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function ledgerTransactionExists(string $organizationId,string $idempotencyKey):bool
+    {
+        $statement=$this->connection->prepare(
+            'SELECT 1 FROM tn_capital_market_ledger_transactions
+             WHERE organization_id=:org AND idempotency_key=:idempotency LIMIT 1'
+        );
+        $statement->execute(['org'=>$organizationId,'idempotency'=>$idempotencyKey]);
+        return $statement->fetchColumn()!==false;
+    }
+
     public function saveLedgerTransaction(string $organizationId,string $transactionId,string $idempotencyKey,array $payload):void
     {
         $this->connection->prepare(
@@ -400,6 +445,109 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
              VALUES (:org,:venue,:asset,:amount,0)
              ON DUPLICATE KEY UPDATE available_amount=available_amount+VALUES(available_amount)'
         )->execute(['org'=>$organizationId,'venue'=>$venueId,'asset'=>$assetKey,'amount'=>$amount]);
+    }
+
+    public function settlePaperExecution(
+        string $organizationId,
+        string $executionId,
+        string $capitalReservationId,
+        string $buyCashReservationId,
+        string $sellInventoryReservationId,
+        string $buyVenueId,
+        string $buyInstrumentId,
+        string $buyQuantity,
+        string $sellVenueId,
+        string $quoteAsset,
+        string $sellCash,
+        string $realizedPnl
+    ):void{
+        $ownsTransaction=!$this->connection->inTransaction();
+        if($ownsTransaction)$this->connection->beginTransaction();
+        try{
+            $capital=$this->connection->prepare(
+                'SELECT amount,status FROM tn_capital_market_capital_reservations
+                 WHERE organization_id=:org AND reservation_id=:id FOR UPDATE'
+            );
+            $capital->execute(['org'=>$organizationId,'id'=>$capitalReservationId]);
+            $capitalRow=$capital->fetch(PDO::FETCH_ASSOC);
+
+            $balance=$this->connection->prepare(
+                'SELECT reservation_id,venue_id,asset_key,amount,status
+                 FROM tn_capital_market_paper_balance_reservations
+                 WHERE organization_id=:org AND reservation_id IN (:buy_id,:sell_id) FOR UPDATE'
+            );
+            $balance->execute([
+                'org'=>$organizationId,'buy_id'=>$buyCashReservationId,'sell_id'=>$sellInventoryReservationId,
+            ]);
+            $rows=$balance->fetchAll(PDO::FETCH_ASSOC);
+            $byId=[];
+            foreach($rows as $row)$byId[(string)$row['reservation_id']]=$row;
+            $buyRow=$byId[$buyCashReservationId]??null;
+            $sellRow=$byId[$sellInventoryReservationId]??null;
+
+            if(is_array($capitalRow)&&$capitalRow['status']==='CONSUMED'
+                &&is_array($buyRow)&&$buyRow['status']==='CONSUMED'
+                &&is_array($sellRow)&&$sellRow['status']==='CONSUMED'){
+                if($ownsTransaction)$this->connection->commit();
+                return;
+            }
+            if(!is_array($capitalRow)||$capitalRow['status']!=='RESERVED'
+                ||!is_array($buyRow)||$buyRow['status']!=='RESERVED'
+                ||!is_array($sellRow)||$sellRow['status']!=='RESERVED'){
+                throw new \DomainException('PAPER_EXECUTION_SETTLEMENT_STATE_INCONSISTENT');
+            }
+
+            foreach([$buyRow,$sellRow] as $row){
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_balance_reservations SET status=\'CONSUMED\'
+                     WHERE organization_id=:org AND reservation_id=:id AND status=\'RESERVED\''
+                )->execute(['org'=>$organizationId,'id'=>(string)$row['reservation_id']]);
+                $this->connection->prepare(
+                    'UPDATE tn_capital_market_paper_balances
+                     SET reserved_amount=reserved_amount-:amount
+                     WHERE organization_id=:org AND venue_id=:venue AND asset_key=:asset'
+                )->execute([
+                    'amount'=>(string)$row['amount'],'org'=>$organizationId,
+                    'venue'=>(string)$row['venue_id'],'asset'=>(string)$row['asset_key'],
+                ]);
+            }
+
+            $this->connection->prepare(
+                'INSERT INTO tn_capital_market_paper_balances
+                 (organization_id,venue_id,asset_key,available_amount,reserved_amount)
+                 VALUES (:org,:venue,:asset,:amount,0)
+                 ON DUPLICATE KEY UPDATE available_amount=available_amount+VALUES(available_amount)'
+            )->execute([
+                'org'=>$organizationId,'venue'=>$buyVenueId,'asset'=>$buyInstrumentId,'amount'=>$buyQuantity,
+            ]);
+            $this->connection->prepare(
+                'INSERT INTO tn_capital_market_paper_balances
+                 (organization_id,venue_id,asset_key,available_amount,reserved_amount)
+                 VALUES (:org,:venue,:asset,:amount,0)
+                 ON DUPLICATE KEY UPDATE available_amount=available_amount+VALUES(available_amount)'
+            )->execute([
+                'org'=>$organizationId,'venue'=>$sellVenueId,'asset'=>$quoteAsset,'amount'=>$sellCash,
+            ]);
+
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_capital_reservations SET status=\'CONSUMED\'
+                 WHERE organization_id=:org AND reservation_id=:id AND status=\'RESERVED\''
+            )->execute(['org'=>$organizationId,'id'=>$capitalReservationId]);
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_paper_portfolios
+                 SET available_capital=available_capital+:amount+:pnl,
+                     reserved_capital=reserved_capital-:amount,
+                     realized_pnl=realized_pnl+:pnl
+                 WHERE organization_id=:org'
+            )->execute([
+                'amount'=>(string)$capitalRow['amount'],'pnl'=>$realizedPnl,'org'=>$organizationId,
+            ]);
+
+            if($ownsTransaction)$this->connection->commit();
+        }catch(\Throwable $error){
+            if($ownsTransaction&&$this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
     }
 
     public function listOpportunities(string $organizationId,int $limit=200):array
