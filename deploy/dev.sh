@@ -146,6 +146,19 @@ fi
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:schema:migrate
 "${COMPOSE[@]}" run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
 
+# Capital Markets stays disabled by default across tenants. The canonical AWS dev
+# organization is explicitly activated through the audited module lifecycle.
+CAPITAL_MARKETS_ACTOR="$("${COMPOSE[@]}" exec -T mysql sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT id FROM tn_users WHERE organization_id=\"default\" AND status=\"active\" ORDER BY (role=\"admin\") DESC,id LIMIT 1"' | tr -d '\r' | tail -n 1)"
+if [[ "$CAPITAL_MARKETS_ACTOR" =~ ^[1-9][0-9]*$ ]]; then
+  "${COMPOSE[@]}" run --rm --no-deps php php bin/console cos:capital-markets:cutover enable \
+    --organization=default \
+    --actor="$CAPITAL_MARKETS_ACTOR" \
+    --confirm=ENABLE_CAPITAL_MARKETS \
+    --reason="AWS dev deployment activation"
+else
+  echo "WARNING: Capital Markets was not activated because no active default-organization actor exists." >&2
+fi
+
 # Replace application and worker containers, but deliberately leave nginx alive.
 mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)$')
 if (( ${#RUNTIME_SERVICES[@]} > 0 )); then

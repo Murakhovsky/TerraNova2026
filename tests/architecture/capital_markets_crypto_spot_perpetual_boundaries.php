@@ -104,6 +104,31 @@ $assert(str_contains($webProvider,'/capital-markets/crypto-spot-perpetual'),'VS2
 $template=(string)file_get_contents($root.'/symfony/templates/experience/capital_markets/workspace.html.twig');
 $assert(str_contains($template,"cmView == 'crypto_spot_perp'"),'VS2 workspace template is missing.');
 
+$security=(string)file_get_contents($root.'/symfony/config/packages/security.yaml');
+$assert(str_contains($security,'capital-markets'),'Capital Markets web routes must be owned by the authenticated Symfony firewall.');
+$assert(str_contains($security,"^/capital-markets(?:/|$)"),'Capital Markets web routes must require an authenticated session.');
+
+$sessionAuthenticator=(string)file_get_contents($root.'/symfony/src/Security/SessionAuthenticator.php');
+$assert(str_contains($sessionAuthenticator,"'/capital-markets'"),
+    'SessionAuthenticator must hydrate authenticated tenant context for Capital Markets web routes.');
+
+$csrfSubscriber=(string)file_get_contents($root.'/symfony/src/Security/AuthenticatedSessionCsrfSubscriber.php');
+$assert(str_contains($csrfSubscriber,"'/capital-markets'"),
+    'Capital Markets web mutations must participate in authenticated session CSRF protection.');
+
+$rateLimiter=(string)file_get_contents($root.'/symfony/src/Security/RequestRateLimitSubscriber.php');
+$assert(str_contains($rateLimiter,"'/capital-markets'"),
+    'Capital Markets web mutations must participate in authenticated write rate limiting.');
+
+$cutover=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsProductionCutoverCommand.php');
+foreach(["name:'cos:capital-markets:cutover'",'ENABLE_CAPITAL_MARKETS','DISABLE_CAPITAL_MARKETS','ModuleControlService'] as $needle){
+    $assert(str_contains($cutover,$needle),'Capital Markets cutover contract missing: '.$needle);
+}
+$runtimeWorkflow=(string)file_get_contents($root.'/.github/workflows/runtime.yml');
+$assert(str_contains($runtimeWorkflow,'cos:capital-markets:cutover enable'),'Runtime browser acceptance must activate Capital Markets explicitly.');
+$devDeploy=(string)file_get_contents($root.'/deploy/dev.sh');
+$assert(str_contains($devDeploy,'cos:capital-markets:cutover enable'),'AWS dev deployment must activate Capital Markets explicitly.');
+
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach([
     'BybitPerpetualMarketDataAdapter','OkxPerpetualMarketDataAdapter',

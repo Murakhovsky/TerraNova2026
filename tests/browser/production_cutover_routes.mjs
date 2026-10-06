@@ -57,6 +57,7 @@ try {
   await expect200('/admin/engineering', '[data-cos-engineering="index"]');
   await expect200('/admin/settings', '[data-cos-archetype]');
   await expect200('/admin/settings/llm', 'form[action="/admin/settings/llm"]');
+  await expect200('/capital-markets/crypto-spot-perpetual', '[aria-label="Crypto Spot Perpetual research state"]');
 
   // Search/filter paths must exercise native PDO prepares, not just empty-state rendering.
   await expect200('/admin/content?q=cutover');

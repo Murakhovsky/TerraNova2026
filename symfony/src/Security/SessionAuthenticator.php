@@ -66,6 +66,7 @@ final class SessionAuthenticator extends AbstractAuthenticator implements Authen
             || str_starts_with($path,'/sales')
             || str_starts_with($path,'/growth')
             || str_starts_with($path,'/client-case')
+            || str_starts_with($path,'/capital-markets')
             || str_starts_with($path,'/cos/architecture')
             || str_starts_with($path,'/cos/control-center')
             || str_starts_with($path,'/cos/action')

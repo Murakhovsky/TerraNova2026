@@ -136,6 +136,7 @@ final readonly class RequestRateLimitSubscriber implements EventSubscriberInterf
             || str_starts_with($path, '/workspace')
             || str_starts_with($path, '/sales')
             || str_starts_with($path, '/client-case')
+            || str_starts_with($path, '/capital-markets')
             || str_starts_with($path, '/cos/')
             || str_starts_with($path, '/admin')
             || preg_match('#^/property/(?:manage|listing|submissions|submission|presentationShare)(?:/|$)#', $path) === 1
