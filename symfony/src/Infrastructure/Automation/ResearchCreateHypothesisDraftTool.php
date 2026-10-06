@@ -21,9 +21,9 @@ final readonly class ResearchCreateHypothesisDraftTool implements ToolInterface
             'Create a measurable Capital Markets ResearchHypothesis draft. This never validates or promotes a strategy.',
             [
                 'type'=>'object',
-                'required'=>['hypothesis_id','code','title','description','economic_reason','edge_source','expected_behavior','required_data','success_criteria','failure_criteria'],
+                'required'=>['agent_name','hypothesis_id','code','title','description','economic_reason','edge_source','expected_behavior','required_data','success_criteria','failure_criteria'],
                 'properties'=>[
-                    'hypothesis_id'=>['type'=>'string'],'code'=>['type'=>'string'],'title'=>['type'=>'string'],'description'=>['type'=>'string'],
+                    'agent_name'=>['type'=>'string'],'hypothesis_id'=>['type'=>'string'],'code'=>['type'=>'string'],'title'=>['type'=>'string'],'description'=>['type'=>'string'],
                     'economic_reason'=>['type'=>'string'],'edge_source'=>['type'=>'string'],'expected_behavior'=>['type'=>'string'],
                     'required_data'=>['type'=>'array'],'success_criteria'=>['type'=>'object'],'failure_criteria'=>['type'=>'object'],
                     'instrument_families'=>['type'=>'array'],'markets'=>['type'=>'array'],'venues'=>['type'=>'array'],
@@ -39,6 +39,7 @@ final readonly class ResearchCreateHypothesisDraftTool implements ToolInterface
     public function invoke(ToolInvocation $invocation):ToolResult
     {
         $input=$invocation->input();
+        unset($input['agent_name']);
         $input['status']='DRAFT';
         $input['priority']=$input['priority']??'P2';
         $input['instrument_families']=$input['instrument_families']??[];
