@@ -294,7 +294,7 @@ export default class extends Controller {
         }
 
         const persisted = String(workflow?.health_status || '').toUpperCase();
-        if (['STALLED', 'WAITING', 'TERMINAL'].includes(persisted)) {
+        if (['STALE', 'STALLED', 'WAITING', 'TERMINAL'].includes(persisted)) {
             return persisted;
         }
 
