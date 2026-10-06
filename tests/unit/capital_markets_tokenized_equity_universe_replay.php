@@ -6,6 +6,10 @@ use Domains\CapitalMarkets\Domain\Service\TokenizedEquitySpreadDetector;
 use Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine;
 use Domains\CapitalMarkets\Application\Contract\MarketSnapshotRepositoryInterface;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSnapshot;
+use Domains\CapitalMarkets\Domain\Contract\RelationshipRepository;
+use Domains\CapitalMarkets\Domain\Instrument\EconomicRelationship;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
+use Domains\CapitalMarkets\Domain\Instrument\RelationshipId;
 
 require dirname(__DIR__,2).'/vendor/autoload.php';
 
@@ -18,7 +22,13 @@ $repo=new class implements MarketSnapshotRepositoryInterface{
     public function list(string $organizationId,int $limit=500):array{return $this->snapshot===null?[]:[$this->snapshot];}
 };
 $repo->snapshot=new MarketSnapshot('snapshot-1',new DateTimeImmutable('2026-10-06T10:00:00+00:00'),[],[],['source-a'=>3]);
-$service=new TokenizedEquityHistoricalReplayService($repo,new TokenizedEquitySpreadDetector(),new NetEconomicsEngine());
+$relationships=new class implements RelationshipRepository{
+    public function save(string $organizationId,EconomicRelationship $relationship):void{}
+    public function get(string $organizationId,RelationshipId $id):?EconomicRelationship{return null;}
+    public function forInstrument(string $organizationId,InstrumentId $instrumentId):array{return [];}
+    public function list(string $organizationId,int $limit=200):array{return [];}
+};
+$service=new TokenizedEquityHistoricalReplayService($repo,new TokenizedEquitySpreadDetector(),new NetEconomicsEngine(),$relationships);
 $options=['buy_fee_rate'=>'0.001','sell_fee_rate'=>'0.001'];
 $a=$service->replay('org',$options);
 $b=$service->replay('org',$options);
