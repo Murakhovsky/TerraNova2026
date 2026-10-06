@@ -97,6 +97,23 @@ final readonly class CapitalMarketsTokenizedEquityController
             ),201);
     }
 
+    public function setPaperBalance(Request $request):JsonResponse
+    {
+        return $this->mutation(
+            $request,
+            CapitalMarketsCapability::PaperExecute,
+            function(TenantContext $tenant,array $payload):array{
+                $this->paper->setVenueBalance(
+                    $tenant->organizationId()->value(),
+                    $this->required($payload,'venue_id'),
+                    $this->required($payload,'asset_key'),
+                    $this->required($payload,'amount')
+                );
+                return ['paper_portfolio'=>$this->paper->portfolio($tenant->organizationId()->value())];
+            }
+        );
+    }
+
     public function executePaper(Request $request,string $id):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::PaperExecute,
