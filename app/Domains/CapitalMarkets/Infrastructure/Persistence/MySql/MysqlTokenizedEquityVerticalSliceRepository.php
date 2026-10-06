@@ -142,6 +142,48 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         return array_map(fn(array $row):array=>$this->object((string)$row['payload_json']),$statement->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    public function listExecutions(string $organizationId,int $limit=500):array
+    {
+        $limit=max(1,min(5000,$limit));
+        $statement=$this->connection->prepare(
+            'SELECT execution_id,opportunity_id,status,realized_pnl,edge_capture_ratio,payload_json,created_at,updated_at
+             FROM tn_capital_market_paper_executions
+             WHERE organization_id=:org ORDER BY updated_at DESC,id DESC LIMIT '.$limit
+        );
+        $statement->execute(['org'=>$organizationId]);
+        return array_map(function(array $row):array{
+            $payload=$this->object((string)$row['payload_json']);
+            return array_replace($payload,[
+                'execution_id'=>(string)$row['execution_id'],
+                'opportunity_id'=>(string)$row['opportunity_id'],
+                'status'=>(string)$row['status'],
+                'realized_pnl'=>(string)$row['realized_pnl'],
+                'edge_capture_ratio'=>(string)$row['edge_capture_ratio'],
+                'created_at'=>(string)$row['created_at'],
+                'updated_at'=>(string)$row['updated_at'],
+            ]);
+        },$statement->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function listLedgerTransactions(string $organizationId,int $limit=500):array
+    {
+        $limit=max(1,min(5000,$limit));
+        $statement=$this->connection->prepare(
+            'SELECT transaction_id,idempotency_key,payload_json,created_at
+             FROM tn_capital_market_ledger_transactions
+             WHERE organization_id=:org ORDER BY created_at DESC,id DESC LIMIT '.$limit
+        );
+        $statement->execute(['org'=>$organizationId]);
+        return array_map(function(array $row):array{
+            $payload=$this->object((string)$row['payload_json']);
+            return array_replace($payload,[
+                'transaction_id'=>(string)$row['transaction_id'],
+                'idempotency_key'=>(string)$row['idempotency_key'],
+                'created_at'=>(string)$row['created_at'],
+            ]);
+        },$statement->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function getExecutionForOpportunity(string $organizationId,string $opportunityId):?array
     {
         $statement=$this->connection->prepare(
@@ -202,7 +244,7 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
     public function saveLedgerTransaction(string $organizationId,string $transactionId,string $idempotencyKey,array $payload):void
     {
         $this->connection->prepare(
-            'INSERT INTO tn_capital_market_ledger_transactions
+            'INSERT IGNORE INTO tn_capital_market_ledger_transactions
              (organization_id,transaction_id,idempotency_key,payload_json)
              VALUES (:org,:id,:idempotency,:payload)'
         )->execute(['org'=>$organizationId,'id'=>$transactionId,'idempotency'=>$idempotencyKey,'payload'=>$this->json($payload)]);
