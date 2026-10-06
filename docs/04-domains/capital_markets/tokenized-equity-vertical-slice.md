@@ -1,5 +1,5 @@
 ---
-title: Tokenized Equity Vertical Slice V0.4
+title: Tokenized Equity Vertical Slice V0.5
 description: "Опис першого фінансового vertical slice Capital Markets для H1/H2 research, deterministic risk та guarded paper execution."
 domain: capital_markets
 status: implemented
@@ -8,7 +8,7 @@ kind: domain
 contract: domain-v1
 ---
 
-# Вертикальний зріз Tokenized Equity V0.4
+# Вертикальний зріз Tokenized Equity V0.5
 
 Цей пакет реалізує детерміноване фінансове ядро для **H1 Tokenized Equity Dislocation** та **H2 Cross-Venue Tokenized Equity Arbitrage**.
 
@@ -24,6 +24,9 @@ MarketState
 → Asset-Aware Ledger
 → Position / P&L
 → Execution Performance
+→ Hypothesis Observation
+→ Edge Funnel
+→ Deterministic Research Verdict
 ```
 
 Реалізація повторно використовує Foundation і Market Intelligence V0.3/V0.4 та не створює паралельний market-data stack.
@@ -46,10 +49,16 @@ MarketState
 - H1 залишається research-only, доки немає реального executable hedge venue;
 - Live Trading і withdrawals залишаються вимкненими.
 
-## Реалізований результат V0.4
+## Реалізований результат V0.5
 
-Система вже вміє зберігати candidates, opportunities, risk assessments, paper executions, paper portfolio, venue balances і immutable ledger transactions; має API та окремий Tokenized Equity workspace; повторно перевіряє ринок перед paper execution та вимірює realized P&L і edge capture.
+Система зберігає candidates, opportunities, risk assessments, paper executions, paper portfolio, venue balances та immutable ledger transactions. Кожен H1/H2 scan тепер також створює окремий hypothesis observation, включно зі спостереженнями без знайденого edge.
+
+Research layer агрегує Edge Funnel `observed scans → detected → executable → realized`, realized P&L та середній edge capture. Детермінована policy повертає один із verdicts: `INSUFFICIENT_SAMPLE`, `EDGE_NOT_OBSERVED`, `EDGE_OBSERVED_NOT_EXECUTABLE`, `EDGE_EXECUTABLE_UNVALIDATED`, `EDGE_VALIDATED`, `EDGE_NOT_VALIDATED`.
+
+За замовчуванням остаточний verdict вимагає щонайменше 30 observations та 10 realized paper executions. Пороги доступні в research API як параметри читання, а не як прихована AI-оцінка.
+
+API: `GET /api/v1/capital-markets/tokenized-equities/research`. Workspace показує funnel, realized evidence та verdict окремо для H1 і H2.
 
 ## Наступний етап
 
-Наступний пакет має розширювати provider coverage, automated scanning universe, historical replay/backtesting та operational observability. Live execution не входить у цей етап.
+Залишаються automated scanning universe, historical deterministic replay/backtesting, richer execution lifecycle/legging failure recovery та operational observability. Live execution не входить у цей етап.
