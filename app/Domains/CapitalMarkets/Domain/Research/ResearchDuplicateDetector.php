@@ -6,7 +6,7 @@ namespace Domains\CapitalMarkets\Domain\Research;
 final class ResearchDuplicateDetector
 {
     /** @param list<array<string,mixed>> $existing @return list<array<string,mixed>> */
-    public function find(array $candidate,array $existing,float $threshold=0.72):array
+    public function find(array $candidate,array $existing,int $thresholdBps=7200):array
     {
         $candidateTokens=$this->tokens($candidate);
         if($candidateTokens===[])return [];
@@ -17,18 +17,19 @@ final class ResearchDuplicateDetector
             if($tokens===[])continue;
             $intersection=count(array_intersect_key($candidateTokens,$tokens));
             $union=count($candidateTokens+$tokens);
-            $score=$union===0?0:$intersection/$union;
-            if($score<$threshold)continue;
+            $similarityBps=$union===0?0:intdiv($intersection*10000,$union);
+            if($similarityBps<$thresholdBps)continue;
             $matches[]=[
                 'hypothesis_id'=>$row['hypothesis_id']??$row['id']??null,
                 'code'=>$row['code']??null,
                 'status'=>$row['status']??null,
-                'similarity'=>$score,
+                'similarity_bps'=>$similarityBps,
+                'similarity'=>$this->ratioString($similarityBps),
                 'title'=>$row['title']??null,
             ];
         }
 
-        usort($matches,static fn(array $a,array $b):int=>$b['similarity']<=>$a['similarity']);
+        usort($matches,static fn(array $a,array $b):int=>$b['similarity_bps']<=>$a['similarity_bps']);
         return $matches;
     }
 
@@ -40,8 +41,8 @@ final class ResearchDuplicateDetector
             (string)($row['economic_reason']??''),
             (string)($row['expected_behavior']??''),
             (string)($row['edge_source']??''),
-            implode(' ',(array)($row['markets']??[])),
-            implode(' ',(array)($row['venues']??[])),
+            implode(' ',array_map('strval',(array)($row['markets']??[]))),
+            implode(' ',array_map('strval',(array)($row['venues']??[]))),
         ]));
         $parts=preg_split('/[^a-z0-9_:-]+/',$text)?:[];
         $tokens=[];
@@ -50,5 +51,12 @@ final class ResearchDuplicateDetector
             $tokens[$part]=true;
         }
         return $tokens;
+    }
+
+    private function ratioString(int $basisPoints):string
+    {
+        $whole=intdiv($basisPoints,10000);
+        $fraction=str_pad((string)($basisPoints%10000),4,'0',STR_PAD_LEFT);
+        return $whole.'.'.$fraction;
     }
 }
