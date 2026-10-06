@@ -102,7 +102,28 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
 
     public function saveBacktestRun(string $organizationId,array $record):void
     {
-        $this->insert('tn_capital_market_backtest_runs',$organizationId,$record,'run_id');
+        $required=['run_id','experiment_id','dataset_id','strategy_version_id','partition_name','status','reproducibility_fingerprint'];
+        foreach($required as $key){
+            if(!array_key_exists($key,$record))throw new RuntimeException('Backtest run missing '.$key);
+        }
+        $statement=$this->connection->prepare(
+            'INSERT INTO tn_capital_market_backtest_runs
+             (organization_id,run_id,experiment_id,dataset_id,strategy_version_id,partition_name,status,reproducibility_fingerprint,record_json,created_at)
+             VALUES (:organization_id,:run_id,:experiment_id,:dataset_id,:strategy_version_id,:partition_name,:status,:fingerprint,:record_json,:created_at)
+             ON DUPLICATE KEY UPDATE status=VALUES(status),record_json=VALUES(record_json),reproducibility_fingerprint=VALUES(reproducibility_fingerprint)'
+        );
+        $statement->execute([
+            'organization_id'=>$organizationId,
+            'run_id'=>(string)$record['run_id'],
+            'experiment_id'=>(string)$record['experiment_id'],
+            'dataset_id'=>(string)$record['dataset_id'],
+            'strategy_version_id'=>(string)$record['strategy_version_id'],
+            'partition_name'=>(string)$record['partition_name'],
+            'status'=>(string)$record['status'],
+            'fingerprint'=>(string)$record['reproducibility_fingerprint'],
+            'record_json'=>json_encode($record,JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION),
+            'created_at'=>$record['created_at']??gmdate('Y-m-d H:i:s'),
+        ]);
     }
 
     public function saveOutOfSampleRun(string $organizationId,array $record):void
