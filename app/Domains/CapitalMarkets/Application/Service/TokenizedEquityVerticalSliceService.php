@@ -32,6 +32,7 @@ final readonly class TokenizedEquityVerticalSliceService
         private TokenizedEquityVerticalSliceRepositoryInterface $repository,
         private RelationshipRepository $relationships,
         private TokenizedEquitySpreadDetector $detector,
+        private TrustedConversionRateResolver $conversionRates,
         private NetEconomicsEngine $economics,
         private TokenizedEquityRiskEngine $risk,
     ){}
@@ -78,8 +79,19 @@ final readonly class TokenizedEquityVerticalSliceService
         $now=new DateTimeImmutable();
         $config=$this->config($options);
         $this->assertEconomicEquivalence($organizationId,$reference->instrumentId,$token->instrumentId,$config,$now);
+        $conversion=null;
+        if($reference->currentQuote!==null&&$token->bestQuote!==null){
+            $referenceQuote=$reference->currentQuote->askPrice->quoteAsset;
+            $tokenQuote=$token->bestQuote->askPrice->quoteAsset;
+            if(!$referenceQuote->equals($tokenQuote)){
+                $conversion=$this->conversionRates->resolve(
+                    $organizationId,$tokenQuote,$referenceQuote,$now,$config->maximumSnapshotAgeMs
+                );
+                if($conversion===null)throw new DomainException('NOT_COMPARABLE: trusted quote conversion rate unavailable.');
+            }
+        }
         $candidates=$this->detector->detectReferenceDislocation(
-            $marketPairId,$reference,$token,$config,$now,$this->int($options,'ttl_ms',1000)
+            $marketPairId,$reference,$token,$config,$now,$this->int($options,'ttl_ms',1000),$conversion
         );
 
         // H1 is research-capable now, but remains execution-closed until a real hedge venue is supplied.
