@@ -34,7 +34,26 @@ async function login(context, email, password) {
 }
 
 async function goto200(page, path, marker = null) {
-  const response = await page.goto(absolute(path), { waitUntil: 'networkidle', timeout: 30000 });
+  const target = absolute(path);
+  let response = null;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      response = await page.goto(target, { waitUntil: 'networkidle', timeout: 30000 });
+      break;
+    } catch (error) {
+      const message = String(error?.message || error);
+      const navigationWasAborted = message.includes('net::ERR_ABORTED');
+      if (!navigationWasAborted || attempt === 3) throw error;
+
+      // Some operational controls intentionally schedule a reload after their API mutation.
+      // If a test starts a canonical navigation inside that tiny window, Chromium aborts
+      // one of the competing navigations even though the application is healthy.
+      await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
+      await page.waitForTimeout(350);
+    }
+  }
+
   assert(response?.status() === 200, path + ' expected HTTP 200, received ' + (response?.status() ?? 'no response'));
   if (marker) {
     await page.locator(marker).first().waitFor({ state: 'visible', timeout: 10000 });
