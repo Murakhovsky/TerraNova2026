@@ -120,3 +120,19 @@ $assert($sim['compensation']['filled_quantity']->value()==='4','Emergency close 
 $assert($sim['residual_unhedged_quantity']->isZero(),'Successful emergency close must leave zero residual exposure.');
 $assert($sim['state']===ExecutionGroupState::Completed,'Fully compensated execution must become completed.');
 
+
+
+$emptySellBook=new MarketOrderBook(MarketEventType::OrderBookSnapshot,'3',
+    [],
+    [new OrderBookLevel(new Price(Decimal::fromString('101.2'),$base,$quote,4),new Quantity(Decimal::fromString('10'),$base,8))]
+);
+$rejectedSecond=$simulator->simulateH2(
+    $buyBook,$emptySellBook,Decimal::fromString('10'),CompensationPolicy::EmergencyClose
+);
+$assert($rejectedSecond['sell']['filled_quantity']->isZero(),'Rejected second leg must record zero fill.');
+$assert($rejectedSecond['sell']['state']===PaperOrderState::Rejected,'Zero-liquidity second leg must be rejected.');
+$assert($rejectedSecond['compensation']['filled_quantity']->value()==='10','Emergency close must unwind full first leg after second-leg rejection.');
+$assert($rejectedSecond['residual_unhedged_quantity']->isZero(),'Rejected second leg must not leave residual exposure after emergency close.');
+$assert($rejectedSecond['state']===ExecutionGroupState::Completed,'Fully compensated rejected second leg must become completed.');
+
+echo "Capital Markets VS1 partial-fill and rejected-leg chaos passed.\n";

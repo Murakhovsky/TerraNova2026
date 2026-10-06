@@ -91,14 +91,16 @@ interface TokenizedEquityVerticalSliceRepositoryInterface
         string $executionId,
         string $capitalReservationId,
         string $buyCashReservationId,
-        string $sellInventoryReservationId,
+        ?string $sellInventoryReservationId,
         string $buyVenueId,
         string $buyInstrumentId,
         string $buyQuantity,
         string $sellVenueId,
         string $quoteAsset,
         string $sellCash,
-        string $realizedPnl
+        string $realizedPnl,
+        ?string $compensationQuantity=null,
+        ?string $compensationCash=null
     ):void;
 
     /** @return list<array<string,mixed>> */

@@ -1888,6 +1888,8 @@ services:
     alias: Domains\CapitalMarkets\Application\Service\CapitalMarketsFoundationService
 
   # Capital Markets CM-TOKENIZED-EQUITY vertical slice runtime
+  Domains\CapitalMarkets\Domain\Service\ExecutionCompensationEngine: ~
+  Domains\CapitalMarkets\Domain\Service\PaperMultiLegExecutionSimulator: ~
   Domains\CapitalMarkets\Domain\Service\ExecutionRecoveryPlanner: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityExecutionRecoveryService: ~
 
