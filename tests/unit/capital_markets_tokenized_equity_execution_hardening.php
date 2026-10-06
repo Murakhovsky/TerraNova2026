@@ -14,6 +14,8 @@ use Domains\CapitalMarkets\Domain\Execution\PartialFillPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\EconomicExposure;
 use Domains\CapitalMarkets\Domain\Execution\ExecutionLegResult;
 use Domains\CapitalMarkets\Domain\Service\ExecutionCompensationEngine;
+use Domains\CapitalMarkets\Domain\Service\PositionProjector;
+use Domains\CapitalMarkets\Domain\Execution\PaperFill;
 use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 use Domains\CapitalMarkets\Domain\Event\TokenizedEquityEventType;
 use Domains\CapitalMarkets\Domain\Risk\TokenizedSecurityRiskProfile;
@@ -46,6 +48,15 @@ $compensation=(new ExecutionCompensationEngine())->decide(
 $assert($compensation->nextState===ExecutionGroupState::Compensating,'Unhedged first-leg fill must enter compensation.');
 $assert($compensation->unhedgedQuantity->value()==='4','Compensation must expose exact unhedged quantity.');
 $assert($compensation->policy===CompensationPolicy::EmergencyClose,'Emergency-close policy must be preserved.');
+
+$position=(new PositionProjector())->project('paper','TokenizedEquityRelativeValue-v1','AAPLX','venue-a',[
+    new PaperFill('pf1','g1','venue-a','AAPLX',ExecutionSide::Buy,Decimal::fromString('10'),Decimal::fromString('100'),Decimal::fromString('1'),Decimal::fromString('0'),$now,'pf1'),
+    new PaperFill('pf2','g1','venue-a','AAPLX',ExecutionSide::Sell,Decimal::fromString('4'),Decimal::fromString('103'),Decimal::fromString('0.4'),Decimal::fromString('0'),$now->modify('+1 second'),'pf2'),
+],Decimal::fromString('102'));
+$assert($position->quantity->value()==='6','Position projector must retain six units after partial close.');
+$assert($position->averageEntryPrice->value()==='100','Average entry price drifted after partial close.');
+$assert($position->realizedPnl->value()==='12','Realized P&L must reflect released cost basis exactly.');
+$assert($position->unrealizedPnl()->value()==='12','Unrealized P&L must use current mark on remaining quantity.');
 $paperOnly=new ExecutionModePolicy();
 $paperOnly->assertPaperOnly();
 $assert(!$paperOnly->allowsLive(),'VS1 must default to paper-only execution.');
