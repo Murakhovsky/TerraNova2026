@@ -87,7 +87,7 @@ final readonly class EngineeringQaStageExecutor
         $featureSpec = $this->requiredArtifact($featureId, ArtifactType::FEATURE_SPEC);
         $contextMap = $this->requiredArtifact($featureId, ArtifactType::CONTEXT_MAP);
         $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
-        $humanDecisionHistory = $this->answeredHumanDecisions($featureId);
+        $humanDecisionHistory = $this->answeredHumanDecisions($featureId, AgentRole::QA_PLANNER);
 
         $task = new EngineeringAgentTask(
             id: EngineeringId::generate(),
@@ -160,14 +160,22 @@ final readonly class EngineeringQaStageExecutor
             throw $error;
         }
 
-        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId): WorkflowDirective {
+        $planningOutput = $this->resolvePlanningHumanDecision(
+            $featureId,
+            $workflowId,
+            $run->structuredOutput,
+            $correlationId,
+            $engineeringRunId,
+        );
+
+        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $planningOutput, $engineeringRunId): WorkflowDirective {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::QA_PLANNING) {
                 throw new WorkflowAlreadyRunningException('Engineering workflow changed while QA Test Plan was running.');
             }
 
             $this->agentRuns->complete($engineeringRunId, $run);
-            $planningStatus = (string) ($run->structuredOutput['status'] ?? '');
+            $planningStatus = (string) ($planningOutput['status'] ?? '');
             $this->tasks->markRole(
                 $featureId,
                 AgentRole::QA_PLANNER,
@@ -178,7 +186,7 @@ final readonly class EngineeringQaStageExecutor
                 $this->artifacts->createVersion(
                     $featureId,
                     ArtifactType::TEST_PLAN,
-                    $run->structuredOutput['test_plan'],
+                    $planningOutput['test_plan'],
                     agentRunId: $engineeringRunId,
                     createdByAgent: AgentRole::QA_PLANNER->value,
                 );
@@ -187,13 +195,13 @@ final readonly class EngineeringQaStageExecutor
             $next = $this->coordinator->acceptAgentResult(
                 $workflow,
                 AgentRole::QA_PLANNER,
-                $run->structuredOutput,
+                $planningOutput,
                 $this->counters($featureId),
             );
             $this->persistTransitions($workflow, $next->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
             if ($next->type === WorkflowDirectiveType::REQUEST_HUMAN_DECISION) {
-                $this->createQaHumanDecision($featureId, $workflow, $run->structuredOutput, 'QA_PLANNING');
+                $this->createQaHumanDecision($featureId, $workflow, $planningOutput, 'QA_PLANNING');
             }
             return $next;
         });
@@ -213,7 +221,7 @@ final readonly class EngineeringQaStageExecutor
         $implementation = $this->requiredArtifact($featureId, ArtifactType::IMPLEMENTATION_PLAN);
         $testPlan = $this->requiredArtifact($featureId, ArtifactType::TEST_PLAN);
         $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
-        $humanDecisionHistory = $this->answeredHumanDecisions($featureId);
+        $humanDecisionHistory = $this->answeredHumanDecisions($featureId, AgentRole::QA_EXECUTOR);
 
         if (($review['content']['status'] ?? null) !== 'APPROVED') {
             throw new RuntimeException('QA execution requires an APPROVED Reviewer report.');
