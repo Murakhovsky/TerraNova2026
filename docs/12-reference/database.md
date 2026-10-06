@@ -49,6 +49,7 @@ generated: true
 | `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_paper_portfolios` |
 | `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_risk_assessments` |
 | `capital_markets` | `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql` | `tn_capital_market_spread_candidates` |
+| `capital_markets` | `app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql` | `tn_capital_market_hypothesis_observations` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
