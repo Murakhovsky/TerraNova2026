@@ -26,9 +26,7 @@ final class TokenizedEquitySpreadDetector
         DateTimeImmutable $now,
         int $ttlMs=1000,
     ):array{
-        if(!$this->usableTradingState($a,$config,$now)||!$this->usableTradingState($b,$config,$now))return [];
-        if($this->skewMs($a->sourceTimestamp,$b->sourceTimestamp)>$config->maximumSnapshotSkewMs)return [];
-        if(!$a->bestQuote->askPrice->quoteAsset->equals($b->bestQuote->bidPrice->quoteAsset))return [];
+        if($this->crossVenueObservationIssues($a,$b,$config,$now,$ttlMs)!==[])return [];
 
         $out=[];
         $this->candidate(
@@ -62,22 +60,14 @@ final class TokenizedEquitySpreadDetector
         int $ttlMs=1000,
         ?ConversionRate $tokenQuoteToReferenceQuote=null,
     ):array{
-        if($ttlMs<$config->minimumOpportunityTtlMs)return [];
-        if(!$reference->quality->status->isUsableForDecision()||$reference->quality->score<$config->minimumDataQuality)return [];
-        if(!$this->usableTradingState($tokenized,$config,$now))return [];
-        if($reference->currentQuote===null)return [];
+        if($this->referenceObservationIssues($reference,$tokenized,$config,$now,$ttlMs,$tokenQuoteToReferenceQuote)!==[])return [];
+
         $referenceTimestamp=$reference->sourceTimestamp??$reference->updatedAt;
-        if($this->ageMs($referenceTimestamp,$now)>$config->maximumSnapshotAgeMs)return [];
-        if($this->skewMs($referenceTimestamp,$tokenized->sourceTimestamp)>$config->maximumSnapshotSkewMs)return [];
         $referenceQuoteAsset=$reference->currentQuote->askPrice->quoteAsset;
         $tokenQuoteAsset=$tokenized->bestQuote->bidPrice->quoteAsset;
         $conversion=Decimal::fromString('1');
         $conversionEvidence=null;
         if(!$referenceQuoteAsset->equals($tokenQuoteAsset)){
-            if($tokenQuoteToReferenceQuote===null||!$tokenQuoteToReferenceQuote->usable())return [];
-            if(!$tokenQuoteToReferenceQuote->sourceAsset->equals($tokenQuoteAsset)
-                ||!$tokenQuoteToReferenceQuote->targetAsset->equals($referenceQuoteAsset))return [];
-            if($this->ageMs($tokenQuoteToReferenceQuote->timestamp,$now)>$config->maximumSnapshotAgeMs)return [];
             $conversion=$tokenQuoteToReferenceQuote->rate;
             $conversionEvidence=$tokenQuoteToReferenceQuote->toArray();
         }
@@ -110,6 +100,71 @@ final class TokenizedEquitySpreadDetector
         return $out;
     }
 
+    /** @return list<string> */
+    public function crossVenueObservationIssues(
+        MarketState $a,
+        MarketState $b,
+        SpreadDetectorConfig $config,
+        DateTimeImmutable $now,
+        int $ttlMs=1000,
+    ):array{
+        $issues=[];
+        if($ttlMs<$config->minimumOpportunityTtlMs)$issues[]='TTL_BELOW_MINIMUM';
+        foreach($this->tradingStateIssues($a,$config,$now,'A') as $issue)$issues[]=$issue;
+        foreach($this->tradingStateIssues($b,$config,$now,'B') as $issue)$issues[]=$issue;
+        if($issues!==[])return array_values(array_unique($issues));
+
+        if($this->skewMs($a->sourceTimestamp,$b->sourceTimestamp)>$config->maximumSnapshotSkewMs){
+            $issues[]='SNAPSHOT_SKEW_EXCEEDED';
+        }
+        if(!$a->bestQuote->askPrice->quoteAsset->equals($b->bestQuote->bidPrice->quoteAsset)){
+            $issues[]='QUOTE_ASSET_NOT_COMPARABLE';
+        }
+        return array_values(array_unique($issues));
+    }
+
+    /** @return list<string> */
+    public function referenceObservationIssues(
+        ReferenceMarketState $reference,
+        MarketState $tokenized,
+        SpreadDetectorConfig $config,
+        DateTimeImmutable $now,
+        int $ttlMs=1000,
+        ?ConversionRate $tokenQuoteToReferenceQuote=null,
+    ):array{
+        $issues=[];
+        if($ttlMs<$config->minimumOpportunityTtlMs)$issues[]='TTL_BELOW_MINIMUM';
+        if(!$reference->quality->status->isUsableForDecision())$issues[]='REFERENCE_UNTRUSTED';
+        if($reference->quality->score<$config->minimumDataQuality)$issues[]='REFERENCE_QUALITY_BELOW_MINIMUM';
+        if($reference->currentQuote===null)$issues[]='REFERENCE_QUOTE_UNAVAILABLE';
+        foreach($this->tradingStateIssues($tokenized,$config,$now,'TOKEN') as $issue)$issues[]=$issue;
+        if($issues!==[])return array_values(array_unique($issues));
+
+        $referenceTimestamp=$reference->sourceTimestamp??$reference->updatedAt;
+        if($this->ageMs($referenceTimestamp,$now)>$config->maximumSnapshotAgeMs)$issues[]='REFERENCE_STALE';
+        if($this->skewMs($referenceTimestamp,$tokenized->sourceTimestamp)>$config->maximumSnapshotSkewMs){
+            $issues[]='SNAPSHOT_SKEW_EXCEEDED';
+        }
+
+        $referenceQuoteAsset=$reference->currentQuote->askPrice->quoteAsset;
+        $tokenQuoteAsset=$tokenized->bestQuote->bidPrice->quoteAsset;
+        if(!$referenceQuoteAsset->equals($tokenQuoteAsset)){
+            if($tokenQuoteToReferenceQuote===null){
+                $issues[]='QUOTE_CONVERSION_UNAVAILABLE';
+            }elseif(!$tokenQuoteToReferenceQuote->usable()){
+                $issues[]='QUOTE_CONVERSION_UNTRUSTED';
+            }elseif(
+                !$tokenQuoteToReferenceQuote->sourceAsset->equals($tokenQuoteAsset)
+                ||!$tokenQuoteToReferenceQuote->targetAsset->equals($referenceQuoteAsset)
+            ){
+                $issues[]='QUOTE_CONVERSION_PAIR_MISMATCH';
+            }elseif($this->ageMs($tokenQuoteToReferenceQuote->timestamp,$now)>$config->maximumSnapshotAgeMs){
+                $issues[]='QUOTE_CONVERSION_STALE';
+            }
+        }
+        return array_values(array_unique($issues));
+    }
+
     /** @deprecated use detectCrossVenue() for H2 */
     public function detect(
         HypothesisCode $hypothesis,
@@ -124,11 +179,17 @@ final class TokenizedEquitySpreadDetector
         return $this->detectCrossVenue($marketPairId,$a,$b,$config,$now,$ttlMs);
     }
 
-    private function usableTradingState(MarketState $state,SpreadDetectorConfig $config,DateTimeImmutable $now):bool
-    {
-        if(!$state->quality->status->isUsableForDecision()||$state->quality->score<$config->minimumDataQuality)return false;
-        if($state->marketStatus!==MarketStatus::Open||$state->bestQuote===null)return false;
-        return $this->ageMs($state->sourceTimestamp,$now)<=$config->maximumSnapshotAgeMs;
+    /** @return list<string> */
+    private function tradingStateIssues(
+        MarketState $state,SpreadDetectorConfig $config,DateTimeImmutable $now,string $label
+    ):array{
+        $issues=[];
+        if(!$state->quality->status->isUsableForDecision())$issues[]=$label.'_UNTRUSTED';
+        if($state->quality->score<$config->minimumDataQuality)$issues[]=$label.'_QUALITY_BELOW_MINIMUM';
+        if($state->marketStatus!==MarketStatus::Open)$issues[]=$label.'_MARKET_NOT_OPEN';
+        if($state->bestQuote===null)$issues[]=$label.'_QUOTE_UNAVAILABLE';
+        if($this->ageMs($state->sourceTimestamp,$now)>$config->maximumSnapshotAgeMs)$issues[]=$label.'_STALE';
+        return $issues;
     }
 
     private function ageMs(DateTimeImmutable $source,DateTimeImmutable $now):int
