@@ -225,7 +225,7 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
             $params[$column]=$record[$column];
         }
 
-        $quoted=implode(',',array_map(static fn(string $c):string=>'\`'.$c.'\`',$columns));
+        $quoted=implode(',',array_map(static fn(string $c):string=>'`'.$c.'`',$columns));
         $values=implode(',',array_map(static fn(string $c):string=>':'.$c,$columns));
         $statement=$this->connection->prepare('INSERT INTO '.$table.' ('.$quoted.') VALUES ('.$values.')');
         $statement->execute($params);
