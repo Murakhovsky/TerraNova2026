@@ -43,8 +43,13 @@ $book=new MarketOrderBook(MarketEventType::OrderBookSnapshot,'1',
         new OrderBookLevel(new Price(Decimal::fromString('100.2'),$base,$quote,4),new Quantity(Decimal::fromString('3'),$base,8)),
     ],
 );
-$vwap=(new ExecutablePriceCalculator())->vwap($book,ExecutionSide::Buy,Decimal::fromString('4'));
+$calculator=new ExecutablePriceCalculator();
+$vwap=$calculator->vwap($book,ExecutionSide::Buy,Decimal::fromString('4'));
 $assert($vwap['price']->value()==='100.1','VWAP must consume multiple levels exactly.');
+$partial=$calculator->executableFill($book,ExecutionSide::Buy,Decimal::fromString('7'));
+$assert($partial['filled_quantity']->value()==='5','Partial fill must consume all available acceptable depth.');
+$assert($partial['remaining_quantity']->value()==='2','Partial fill must preserve remaining quantity.');
+$assert($partial['fully_filled']===false,'Insufficient depth must produce partial fill, not pretend completion.');
 
 $eco=(new NetEconomicsEngine())->estimate(
     Decimal::fromString('100'),Decimal::fromString('100.8'),Decimal::fromString('25'),
