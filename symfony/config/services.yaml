@@ -46,6 +46,10 @@ parameters:
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_RUNTIME_STALE_SECONDS): '600'
   env(COS_ENGINEERING_RUNTIME_STALLED_SECONDS): '1800'
+  env(COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_ENABLED): '0'
+  env(COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_INTERVAL_MINUTES): '5'
+  env(COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_ORGANIZATION_LIMIT): '500'
+  env(COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_TARGET_LIMIT): '500'
   env(MESSENGER_ENGINEERING_IMMEDIATE_TRANSPORT_DSN): 'redis://redis:6379/cos_engineering_immediate'
   env(COS_ENGINEERING_MANAGER_MODEL): ''
   env(COS_ENGINEERING_ARCHITECT_MODEL): ''
@@ -308,6 +312,8 @@ services:
       $growthMarketDiscoveryEnabled: '%env(bool:COS_GROWTH_MARKET_SCHEDULER_ENABLED)%'
       $growthMarketDiscoveryIntervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
       $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
+      $capitalMarketsScannerEnabled: '%env(bool:COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_ENABLED)%'
+      $capitalMarketsScannerIntervalMinutes: '%env(int:COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringAutonomyEnabled: '%env(bool:COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED)%'
       $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringDomainAutonomyEnabled: '%env(bool:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED)%'
@@ -1895,6 +1901,13 @@ services:
   Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityVerticalSliceRepository
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityScannerRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\TokenizedEquityScannerRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlTokenizedEquityScannerRepository
+
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
   Domains\CapitalMarkets\Domain\Service\PaperPnlEngine: ~
@@ -1907,6 +1920,13 @@ services:
   Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService: ~
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityScannerService: ~
+
+  App\Application\CapitalMarkets\Command\RunCapitalMarketsTokenizedEquityScannerCommandHandler:
+    arguments:
+      $intervalMinutes: '%env(int:COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_INTERVAL_MINUTES)%'
+      $organizationLimit: '%env(int:COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_ORGANIZATION_LIMIT)%'
+      $targetLimit: '%env(int:COS_CAPITAL_MARKETS_SCANNER_SCHEDULER_TARGET_LIMIT)%'
 
 
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
