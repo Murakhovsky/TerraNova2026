@@ -87,6 +87,37 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_ledger_transactions (
     UNIQUE KEY uq_cm_ledger_idempotency (organization_id,idempotency_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS tn_capital_market_paper_portfolios (
+    organization_id VARCHAR(190) NOT NULL,
+    currency VARCHAR(32) NOT NULL,
+    initial_capital DECIMAL(30,12) NOT NULL,
+    available_capital DECIMAL(30,12) NOT NULL,
+    reserved_capital DECIMAL(30,12) NOT NULL DEFAULT 0,
+    realized_pnl DECIMAL(30,12) NOT NULL DEFAULT 0,
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (organization_id),
+    CONSTRAINT chk_cm_paper_portfolio_nonnegative CHECK (available_capital >= 0 AND reserved_capital >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tn_capital_market_capital_reservations (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id VARCHAR(190) NOT NULL,
+    reservation_id VARCHAR(190) NOT NULL,
+    opportunity_id VARCHAR(190) NOT NULL,
+    amount DECIMAL(30,12) NOT NULL,
+    status VARCHAR(24) NOT NULL,
+    expires_at DATETIME(6) NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cm_capital_reservation (organization_id,reservation_id),
+    KEY ix_cm_capital_reservation_opportunity (organization_id,opportunity_id,status),
+    CONSTRAINT fk_cm_reservation_opportunity FOREIGN KEY (organization_id,opportunity_id)
+        REFERENCES tn_capital_market_opportunities (organization_id,opportunity_id)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT chk_cm_capital_reservation_amount CHECK (amount > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO cos_feature_flags
     (flag_key,description,enabled,rollout_percentage,rollout_salt)
 VALUES
