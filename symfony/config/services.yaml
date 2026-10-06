@@ -1907,6 +1907,8 @@ services:
   Domains\CapitalMarkets\Application\Service\TokenizedEquityVerticalSliceService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService: ~
   Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService: ~
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityUniverseScanner: ~
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalReplayService: ~
 
 
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
