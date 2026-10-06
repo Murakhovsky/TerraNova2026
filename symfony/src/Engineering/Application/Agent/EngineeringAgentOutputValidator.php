@@ -34,6 +34,16 @@ final class EngineeringAgentOutputValidator
             throw new EngineeringAgentOutputValidationException('Product / Requirements Agent must not orchestrate workflow decisions.');
         }
 
+        $status = (string) ($output['status'] ?? '');
+        if ($status === 'HUMAN_DECISION_REQUIRED') {
+            $this->validateSingleHumanDecisionQuestion($output, 'Product / Requirements Agent');
+        } elseif ($status === 'SPECIFICATION_READY') {
+            $questions = is_array($output['open_questions'] ?? null) ? $output['open_questions'] : [];
+            if ($questions !== []) {
+                throw new EngineeringAgentOutputValidationException('Product SPECIFICATION_READY requires top-level open_questions to be empty; non-blocking questions belong in feature.open_questions.');
+            }
+        }
+
         $managerCompatible = $output;
         $managerCompatible['decision'] = [
             'type' => 'RUN_AGENT',
@@ -162,39 +172,51 @@ final class EngineeringAgentOutputValidator
         }
 
         if ($status === 'HUMAN_DECISION_REQUIRED') {
-            $questions = is_array($output['open_questions'] ?? null) ? $output['open_questions'] : [];
-            if (count($questions) !== 1 || !is_array($questions[0])) {
-                throw new EngineeringAgentOutputValidationException('Manager HUMAN_DECISION_REQUIRED requires exactly one answerable open question.');
-            }
-            $question = $questions[0];
-            $this->required($question, ['id','question','options']);
-            if (trim((string) $question['id']) === '' || trim((string) $question['question']) === '') {
-                throw new EngineeringAgentOutputValidationException('Manager human decision requires stable id and question.');
-            }
-            if (!is_array($question['options']) || $question['options'] === []) {
-                throw new EngineeringAgentOutputValidationException('Manager human decision requires explicit options.');
-            }
-            $optionIds = [];
-            foreach ($question['options'] as $option) {
-                $id = '';
-                if (is_scalar($option)) $id = trim((string) $option);
-                elseif (is_array($option)) {
-                    foreach (['id','value','option'] as $key) {
-                        if (isset($option[$key]) && is_scalar($option[$key])) {
-                            $id = trim((string) $option[$key]);
-                            if ($id !== '') break;
-                        }
+            $this->validateSingleHumanDecisionQuestion($output, 'Manager');
+        }
+    }
+
+    private function validateSingleHumanDecisionQuestion(array $output, string $roleLabel): void
+    {
+        $questions = is_array($output['open_questions'] ?? null) ? $output['open_questions'] : [];
+        if (count($questions) !== 1 || !is_array($questions[0])) {
+            throw new EngineeringAgentOutputValidationException($roleLabel.' HUMAN_DECISION_REQUIRED requires exactly one answerable top-level open question.');
+        }
+
+        $question = $questions[0];
+        $this->required($question, ['id','question','options']);
+        if (trim((string) $question['id']) === '' || trim((string) $question['question']) === '') {
+            throw new EngineeringAgentOutputValidationException($roleLabel.' human decision requires stable id and question.');
+        }
+        if (!is_array($question['options']) || count($question['options']) < 2) {
+            throw new EngineeringAgentOutputValidationException($roleLabel.' human decision requires at least two explicit options.');
+        }
+
+        $optionIds = [];
+        foreach ($question['options'] as $option) {
+            $id = '';
+            if (is_scalar($option)) $id = trim((string) $option);
+            elseif (is_array($option)) {
+                foreach (['id','value','option'] as $key) {
+                    if (isset($option[$key]) && is_scalar($option[$key])) {
+                        $id = trim((string) $option[$key]);
+                        if ($id !== '') break;
                     }
                 }
-                if ($id === '') throw new EngineeringAgentOutputValidationException('Manager human decision options require stable ids.');
-                $normalized = strtoupper($id);
-                if (isset($optionIds[$normalized])) throw new EngineeringAgentOutputValidationException('Manager human decision option ids must be unique.');
-                $optionIds[$normalized] = true;
             }
-            $recommended = trim((string) ($question['recommended_option'] ?? ''));
-            if ($recommended !== '' && !isset($optionIds[strtoupper($recommended)])) {
-                throw new EngineeringAgentOutputValidationException('Manager recommended option must be one of the offered options.');
+            if ($id === '') {
+                throw new EngineeringAgentOutputValidationException($roleLabel.' human decision options require stable ids.');
             }
+            $normalized = strtoupper($id);
+            if (isset($optionIds[$normalized])) {
+                throw new EngineeringAgentOutputValidationException($roleLabel.' human decision option ids must be unique.');
+            }
+            $optionIds[$normalized] = true;
+        }
+
+        $recommended = trim((string) ($question['recommended_option'] ?? ''));
+        if ($recommended !== '' && !isset($optionIds[strtoupper($recommended)])) {
+            throw new EngineeringAgentOutputValidationException($roleLabel.' recommended option must be one of the offered options.');
         }
     }
 
