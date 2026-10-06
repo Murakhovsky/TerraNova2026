@@ -28,12 +28,26 @@ final readonly class MarketState extends ValueObject
         public ?string $lastSequence,
         public string $lastEventFingerprint,
         public MarketDataMode $mode=MarketDataMode::Live,
+        public ?MarketValueObservation $fundingRate=null,
+        public ?MarketValueObservation $openInterest=null,
+        public ?MarketValueObservation $markPrice=null,
+        public ?MarketValueObservation $indexPrice=null,
     ){
         if($this->stateVersion<1)throw new InvalidArgumentException('Market state version must be positive.');
         if($this->lastEventFingerprint===''||strlen($this->lastEventFingerprint)!==64){
             throw new InvalidArgumentException('Market state event fingerprint must be SHA-256.');
         }
         if($this->volume?->isNegative())throw new InvalidArgumentException('Market state volume cannot be negative.');
+        foreach([
+            MarketEventType::FundingRate=>$this->fundingRate,
+            MarketEventType::OpenInterest=>$this->openInterest,
+            MarketEventType::MarkPrice=>$this->markPrice,
+            MarketEventType::IndexPrice=>$this->indexPrice,
+        ] as $type=>$observation){
+            if($observation!==null&&$observation->eventType()->value!==$type){
+                throw new InvalidArgumentException('Market state scalar observation type mismatch.');
+            }
+        }
     }
 
     public function key():string{return $this->venueId->value().'|'.$this->instrumentId->value();}
@@ -52,6 +66,10 @@ final readonly class MarketState extends ValueObject
             'spread_bps'=>$this->bestQuote?->spreadBps()->value(),
             'order_book'=>$this->orderBook?->toArray(),
             'volume'=>$this->volume?->value(),
+            'funding_rate'=>$this->fundingRate?->toArray(),
+            'open_interest'=>$this->openInterest?->toArray(),
+            'mark_price'=>$this->markPrice?->toArray(),
+            'index_price'=>$this->indexPrice?->toArray(),
             'market_status'=>$this->marketStatus->value,
             'source_timestamp'=>$this->sourceTimestamp->format(DATE_ATOM),
             'updated_at'=>$this->updatedAt->format(DATE_ATOM),
