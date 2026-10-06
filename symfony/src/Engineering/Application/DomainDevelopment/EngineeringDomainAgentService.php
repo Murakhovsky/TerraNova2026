@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Engineering\Application\DomainDevelopment;
 
+use App\Engineering\Application\Agent\AgentCapabilityRegistry;
 use App\Engineering\Application\Agent\EngineeringAgentDefinitionFactory;
 use App\Engineering\Application\Persistence\EngineeringDomainStoreInterface;
 use App\Engineering\Domain\Agent\AgentRole;
@@ -21,6 +22,7 @@ final readonly class EngineeringDomainAgentService
         private AgentRuntimeInterface $runtime,
         private EngineeringDomainStoreInterface $domains,
         private EngineeringAgentDefinitionFactory $definitions,
+        private AgentCapabilityRegistry $capabilities,
         private EngineeringDomainAgentOutputValidator $validator,
     ) {}
 
@@ -33,9 +35,17 @@ final readonly class EngineeringDomainAgentService
         array $inputs,
         string $correlationId,
     ): array {
-        if (!in_array($role, [AgentRole::ENGINEERING_MANAGER, AgentRole::PRODUCT_REQUIREMENTS, AgentRole::QA_PLANNER, AgentRole::PRINCIPAL_ARCHITECT, AgentRole::QA_EXECUTOR, AgentRole::INTEGRATION_RELEASE, AgentRole::QA], true)) {
+        if (!in_array($role, [
+            AgentRole::ENGINEERING_MANAGER,
+            AgentRole::PRODUCT_REQUIREMENTS,
+            AgentRole::QA_PLANNER,
+            AgentRole::PRINCIPAL_ARCHITECT,
+            AgentRole::QA_EXECUTOR,
+            AgentRole::INTEGRATION_RELEASE,
+        ], true)) {
             throw new RuntimeException('Unsupported Domain Development agent role: '.$role->value);
         }
+        $this->capabilities->assertAssignable($role, 'DOMAIN', 'HIGH');
 
         $runId = EngineeringId::generate();
         $definition = $this->definitions->createDomainMode($role, $organizationId);
