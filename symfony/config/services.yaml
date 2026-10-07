@@ -2043,6 +2043,7 @@ services:
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $modules: '@Kernel\Module\ActiveModuleResolver'
       $tools: '@Kernel\Tool\Contract\ToolRuntimeInterface'
+      $telemetry: '@Domains\CapitalMarkets\Application\Service\ResearchTelemetry'
 
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
