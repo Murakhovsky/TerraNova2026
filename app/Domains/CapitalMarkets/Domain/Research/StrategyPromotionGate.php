@@ -26,6 +26,7 @@ final class StrategyPromotionGate
         $criteria=[];
         $manual=false;
         foreach($policy as $key=>$threshold){
+            if($key==='policy_version')continue;
             if($key==='manual_review_required'){
                 $manual=(bool)$threshold;
                 continue;
