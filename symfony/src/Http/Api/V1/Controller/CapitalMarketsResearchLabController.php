@@ -150,6 +150,14 @@ final readonly class CapitalMarketsResearchLabController
             ),200);
     }
 
+    public function parameterSearch(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->backtests->queueParameterSearch(
+                $tenant->organizationId()->value(),$payload
+            ),202);
+    }
+
     public function walkForward(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
