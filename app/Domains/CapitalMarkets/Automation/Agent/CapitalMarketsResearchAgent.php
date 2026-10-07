@@ -29,12 +29,9 @@ final class CapitalMarketsResearchAgent
             evidenceSchemas:[
                 'research'=>[
                     'required'=>[
-                        'summary'=>'string',
-                        'hypothesis'=>'object',
-                        'experiment_plan'=>'object',
                         'tool_requests'=>'array',
+                        'findings'=>'array',
                         'limitations'=>'array',
-                        'recommendation'=>'string',
                     ],
                 ],
             ],
@@ -79,6 +76,13 @@ final class CapitalMarketsResearchAgent
                                                         'research.createhypothesis',
                                                         'research.createexperimentdraft',
                                                         'research.searchknowledge',
+                                                        'research.gethypothesis',
+                                                        'research.searchexperiments',
+                                                        'research.getresult',
+                                                        'research.compareresults',
+                                                        'research.recordobservation',
+                                                        'dataset.search',
+                                                        'dataset.describe',
                                                     ],
                                                 ],
                                                 'input_json'=>['type'=>'string'],
