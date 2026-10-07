@@ -15,6 +15,13 @@ final class CapitalMarketsResearchAgentResultValidator implements AgentResultVal
         'research.createhypothesis',
         'research.createexperimentdraft',
         'research.searchknowledge',
+        'research.gethypothesis',
+        'research.searchexperiments',
+        'research.getresult',
+        'research.compareresults',
+        'research.recordobservation',
+        'dataset.search',
+        'dataset.describe',
     ];
 
     public function validate(AgentResult $result,AgentDefinition $agent):void
