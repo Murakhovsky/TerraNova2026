@@ -20,6 +20,7 @@ interface ResearchLabRepositoryInterface
 
     public function saveStrategyVersion(string $organizationId,array $record):void;
     public function listStrategyVersions(string $organizationId,string $strategyId):array;
+    public function listAllStrategyVersions(string $organizationId,int $limit=200):array;
     public function getStrategyVersion(string $organizationId,string $strategyVersionId):?array;
 
     public function saveResult(string $organizationId,array $record):void;
