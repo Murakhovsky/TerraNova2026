@@ -35,6 +35,21 @@ final readonly class ResearchPaperRunService
         if(($experiment['strategy_version_id']??null)!==$record['strategy_version_id']){
             throw new InvalidArgumentException('Paper run strategy version must equal experiment strategy version.');
         }
+        if(strtoupper((string)($experiment['experiment_type']??''))!=='PAPER_FORWARD_TEST'){
+            throw new InvalidArgumentException('Paper run requires a PAPER_FORWARD_TEST experiment.');
+        }
+        $promotionPassed=false;
+        foreach($this->research->listPromotionDecisions($organizationId,(string)$record['strategy_version_id']) as $decision){
+            if(
+                strtoupper((string)($decision['from']??''))==='OOS'
+                &&strtoupper((string)($decision['to']??''))==='PAPER'
+                &&strtoupper((string)($decision['status']??''))==='PASSED'
+            ){
+                $promotionPassed=true;
+                break;
+            }
+        }
+        if(!$promotionPassed)throw new InvalidArgumentException('Paper run requires PASSED OOS -> PAPER promotion gate.');
         if($this->research->getStrategyVersion($organizationId,(string)$record['strategy_version_id'])===null){
             throw new InvalidArgumentException('Paper run requires an existing strategy version.');
         }
