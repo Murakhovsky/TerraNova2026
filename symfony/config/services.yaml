@@ -1980,6 +1980,7 @@ services:
   Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine: ~
   Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine: ~
   Domains\CapitalMarkets\Domain\Research\ParameterSensitivityEngine: ~
+  Domains\CapitalMarkets\Domain\Research\MarketRegimeClassifier: ~
   Domains\CapitalMarkets\Domain\Research\StrategyDemotionPolicy: ~
   Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector: ~
   Domains\CapitalMarkets\Domain\Research\HypothesisLifecyclePolicy: ~
