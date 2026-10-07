@@ -11,6 +11,7 @@ use Domains\CapitalMarkets\Domain\Research\ReplayDataGuard;
 use Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector;
 use Domains\CapitalMarkets\Domain\Research\HypothesisLifecyclePolicy;
 use Domains\CapitalMarkets\Domain\Research\ExperimentLifecyclePolicy;
+use Domains\CapitalMarkets\Domain\Research\StrategyDemotionPolicy;
 use InvalidArgumentException;
 
 final readonly class ResearchLabService
@@ -25,6 +26,7 @@ final readonly class ResearchLabService
         private HypothesisLifecyclePolicy $hypothesisLifecycle,
         private ExperimentLifecyclePolicy $experimentLifecycle,
         private ResearchEventPublisher $events,
+        private StrategyDemotionPolicy $demotionPolicy,
     ){}
 
     public function createHypothesis(string $organizationId,array $record):array
@@ -308,6 +310,47 @@ final readonly class ResearchLabService
         if($record['status']==='PASSED'){
             $this->events->publish($organizationId,'capital_markets.research.strategy_promoted.v1',$strategyVersionId,[
                 'decision_id'=>$record['decision_id'],'from'=>$from,'to'=>$to
+            ]);
+        }
+        return $record;
+    }
+
+    public function evaluateDemotion(
+        string $organizationId,
+        string $strategyVersionId,
+        array $actual,
+        array $policy,
+        string $approver,
+    ):array{
+        if($this->repository->getStrategyVersion($organizationId,$strategyVersionId)===null){
+            throw new InvalidArgumentException('Demotion requires an existing strategy version.');
+        }
+        $policyVersion=trim((string)($policy['policy_version']??''));
+        if($policyVersion==='')throw new InvalidArgumentException('Demotion policy_version is required.');
+        $evaluation=$this->demotionPolicy->evaluate($actual,$policy);
+        $record=[
+            'decision_id'=>'demotion-'.bin2hex(random_bytes(12)),
+            'strategy_version_id'=>$strategyVersionId,
+            'decision_type'=>'DEMOTION',
+            'status'=>$evaluation['action']==='NONE'?'NO_ACTION':'TRIGGERED',
+            'action'=>$evaluation['action'],
+            'reasons'=>$evaluation['reasons'],
+            'policy'=>$policy,
+            'policy_version'=>$policyVersion,
+            'actual'=>$actual,
+            'approver'=>$approver,
+            'created_at'=>gmdate('Y-m-d H:i:s'),
+        ];
+        $this->repository->savePromotionDecision($organizationId,$record);
+        if($record['action']!=='NONE'){
+            $eventType=$record['action']==='REJECT'
+                ? 'capital_markets.research.strategy_rejected.v1'
+                : 'capital_markets.research.strategy_demoted.v1';
+            $this->events->publish($organizationId,$eventType,$strategyVersionId,[
+                'decision_id'=>$record['decision_id'],
+                'action'=>$record['action'],
+                'reasons'=>$record['reasons'],
+                'policy_version'=>$policyVersion,
             ]);
         }
         return $record;
