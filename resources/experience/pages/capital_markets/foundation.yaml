@@ -193,7 +193,7 @@ pages:
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip, EntityList]
-      optional: [FilterBar, Toolbar, EmptyState, ErrorState]
+      optional: [Toolbar, EntityList, EmptyState, ErrorState]
     primary_action: capital_markets.research.manage
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
