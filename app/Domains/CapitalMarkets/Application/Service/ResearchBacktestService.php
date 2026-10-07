@@ -66,6 +66,11 @@ final readonly class ResearchBacktestService
         $record['status']='QUEUED';
         $record['budget']=$this->budget->estimate((array)$specification['configuration']);
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
+        $this->telemetry->metric(
+            $organizationId,'research_compute_cost',
+            (float)($record['budget']['estimated_compute_units']??0),
+            ['cost_unit'=>'compute_unit','phase'=>'backtest']
+        );
         $this->lab->recordBacktestRun($organizationId,$record);
 
         $correlation=trim((string)($specification['correlation_id']??''));
@@ -185,6 +190,9 @@ final readonly class ResearchBacktestService
             'hypothesis'=>(string)$specification['hypothesis_code'],
             'partition'=>$partition,
         ]);
+        $this->telemetry->metric($organizationId,'backtests_running',1.0,[
+            'run_id'=>(string)$specification['run_id']
+        ]);
         $record=$specification;
         $record['status']='RUNNING';
         $record['started_at']=$startedAt;
@@ -197,6 +205,7 @@ final readonly class ResearchBacktestService
                 (array)$specification['configuration']
             );
         }catch(\Throwable $error){
+            $this->telemetry->metric($organizationId,'backtests_running',0.0,['run_id'=>(string)$specification['run_id']]);
             $this->telemetry->failure($organizationId,'backtest_failed',[
                 'run_id'=>(string)$specification['run_id'],
                 'hypothesis'=>(string)$specification['hypothesis_code'],
@@ -272,6 +281,10 @@ final readonly class ResearchBacktestService
         $completed['result_id']=$resultId;
         $this->lab->recordBacktestRun($organizationId,$completed);
         $duration=max(0.0,microtime(true)-$startedClock);
+        $this->telemetry->metric($organizationId,'backtest_duration',$duration,[
+            'hypothesis'=>(string)$specification['hypothesis_code'],
+            'partition'=>$partition,
+        ]);
         $this->telemetry->metric($organizationId,'backtest_duration_seconds',$duration,[
             'hypothesis'=>(string)$specification['hypothesis_code'],
             'partition'=>$partition,
@@ -280,6 +293,7 @@ final readonly class ResearchBacktestService
             'hypothesis'=>(string)$specification['hypothesis_code'],
             'partition'=>$partition,
         ]);
+        $this->telemetry->metric($organizationId,'backtests_running',0.0,['run_id'=>(string)$specification['run_id']]);
         $this->telemetry->metric($organizationId,'backtest_completed_total',1.0,[
             'hypothesis'=>(string)$specification['hypothesis_code'],
             'partition'=>$partition,
