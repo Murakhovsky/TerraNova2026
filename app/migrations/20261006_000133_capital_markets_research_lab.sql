@@ -112,6 +112,22 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_oos_runs (
     KEY idx_cm_oos_experiment (organization_id,experiment_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS tn_capital_market_paper_runs (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    organization_id VARCHAR(190) NOT NULL,
+    run_id VARCHAR(190) NOT NULL,
+    experiment_id VARCHAR(190) NOT NULL,
+    strategy_version_id VARCHAR(190) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    record_json JSON NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_cm_paper_run (organization_id,run_id),
+    KEY idx_cm_paper_run_experiment (organization_id,experiment_id),
+    KEY idx_cm_paper_run_strategy (organization_id,strategy_version_id),
+    KEY idx_cm_paper_run_status (organization_id,status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS tn_capital_market_strategy_scorecards (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     organization_id VARCHAR(190) NOT NULL,
