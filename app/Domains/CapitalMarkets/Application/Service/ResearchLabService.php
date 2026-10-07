@@ -113,8 +113,18 @@ final readonly class ResearchLabService
         foreach(['experiment_id','hypothesis_id','dataset_id','strategy_version_id','experiment_type','status','success_criteria','failure_criteria'] as $required){
             if(!array_key_exists($required,$record))throw new InvalidArgumentException('Missing '.$required);
         }
+        if($this->repository->getHypothesis($organizationId,(string)$record['hypothesis_id'])===null){
+            throw new InvalidArgumentException('Experiment requires an existing research hypothesis.');
+        }
         if($this->repository->getDataset($organizationId,(string)$record['dataset_id'])===null){
             throw new InvalidArgumentException('Experiment requires a frozen dataset.');
+        }
+        if($this->repository->getStrategyVersion($organizationId,(string)$record['strategy_version_id'])===null){
+            throw new InvalidArgumentException('Experiment requires an existing strategy version.');
+        }
+        $record['status']=strtoupper(trim((string)$record['status']));
+        if(!in_array($record['status'],['DRAFT','READY','QUEUED'],true)){
+            throw new InvalidArgumentException('New experiment must start as DRAFT, READY or QUEUED.');
         }
         $record['parameters']=$record['parameters']??[];
         $record['parameters_hash']=hash('sha256',json_encode($this->canonicalize((array)$record['parameters']),JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
@@ -166,6 +176,9 @@ final readonly class ResearchLabService
 
     public function createScorecard(string $organizationId,string $strategyVersionId,array $dimensions,array $weights,string $weightVersion):array
     {
+        if($this->repository->getStrategyVersion($organizationId,$strategyVersionId)===null){
+            throw new InvalidArgumentException('Scorecard requires an existing strategy version.');
+        }
         $scorecard=$this->scorecards->calculate($strategyVersionId,$dimensions,$weights,$weightVersion);
         $record=[
             'scorecard_id'=>'scorecard-'.bin2hex(random_bytes(12)),
