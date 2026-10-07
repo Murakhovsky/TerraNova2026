@@ -318,6 +318,30 @@ final readonly class ResearchBacktestService
         return ['run'=>$completed,'oos_run'=>$oos,'result'=>$result,'replay'=>$replay];
     }
 
+    public function queueParameterSearch(string $organizationId,array $specification):array
+    {
+        $runs=$specification['runs']??null;
+        if(!is_array($runs)||!array_is_list($runs))throw new InvalidArgumentException('Parameter search requires runs array.');
+        $maximumRuns=(int)($specification['maximum_runs']??20);
+        $maximumComputeUnits=(int)($specification['maximum_compute_units']??100000);
+        $this->budget->assertParameterSearch($runs,$maximumRuns,$maximumComputeUnits);
+
+        $queued=[];
+        foreach($runs as $index=>$run){
+            if(!is_array($run))throw new InvalidArgumentException('Parameter search run must be an object.');
+            $run['search_id']=$specification['search_id']??null;
+            $run['parameter_combination_index']=$index;
+            $queued[]=$this->queue($organizationId,$run);
+        }
+        $this->telemetry->metric($organizationId,'parameter_search_runs_queued',(float)count($queued));
+        return [
+            'search_id'=>$specification['search_id']??null,
+            'run_count'=>count($queued),
+            'maximum_runs'=>$maximumRuns,
+            'queued'=>$queued,
+        ];
+    }
+
     public function walkForward(string $organizationId,array $specification):array
     {
         foreach(['hypothesis_code','configuration','from','to','train_days','test_days','step_days'] as $required){
