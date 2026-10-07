@@ -306,6 +306,103 @@
       </div>
     </section>
 
+    {% if canManageResearch|default(false) or canRunResearch|default(false) or canPromoteStrategy|default(false) or canUseResearchAgent|default(false) %}
+    <section class="cos-panel" data-research-action-console>
+      <div class="d-flex justify-content-between gap-3 flex-wrap align-items-start">
+        <div>
+          <h2>Operator Actions</h2>
+          <p>Run Research Lab API operations without leaving the workspace. Choose a preset or edit the endpoint directly, provide a JSON object, then execute.</p>
+        </div>
+        <span class="badge text-bg-secondary">CSRF protected</span>
+      </div>
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <label class="form-label" for="research-action-preset">Operation</label>
+          <select class="form-select" id="research-action-preset" data-research-preset>
+            <option value="/api/v1/capital-markets/research/hypotheses">Create hypothesis</option>
+            <option value="/api/v1/capital-markets/research/datasets">Freeze dataset</option>
+            <option value="/api/v1/capital-markets/strategies/versions">Create strategy version</option>
+            <option value="/api/v1/capital-markets/research/experiments">Create experiment</option>
+            <option value="/api/v1/capital-markets/research/backtests">Queue backtest</option>
+            <option value="/api/v1/capital-markets/research/backtests/run">Run backtest now</option>
+            <option value="/api/v1/capital-markets/research/walk-forward">Walk-forward</option>
+            <option value="/api/v1/capital-markets/research/rejections">Reject hypothesis</option>
+            <option value="/api/v1/capital-markets/research/knowledge">Record knowledge</option>
+            <option value="/api/v1/capital-markets/research/agent/run">Run Research Agent</option>
+          </select>
+        </div>
+        <div class="col-lg-8">
+          <label class="form-label" for="research-action-url">API endpoint</label>
+          <input class="form-control" id="research-action-url" data-research-url value="/api/v1/capital-markets/research/hypotheses">
+          <div class="form-text">For ID-based operations use paths such as <code>/api/v1/capital-markets/research/hypotheses/{id}/revisions</code>, <code>/experiments/{id}/status</code> or <code>/strategies/{id}/promotion-request</code>.</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="research-action-json">JSON payload</label>
+          <textarea class="form-control font-monospace" id="research-action-json" rows="12" data-research-payload>{
+  "hypothesis_id": "h4-demo-001",
+  "code": "H4",
+  "title": "BTC spot/perpetual basis convergence",
+  "description": "Test whether executable basis converges after costs.",
+  "economic_reason": "Temporary dislocation between spot and perpetual markets.",
+  "edge_source": "BASIS",
+  "expected_behavior": "Positive net convergence after fees and slippage.",
+  "required_data": ["spot_quote", "perp_quote", "funding_rate"],
+  "success_criteria": {"minimum_sample": 200},
+  "failure_criteria": {"max_drawdown_ratio": 0.15},
+  "risk_assumptions": {"neutral_hedge": true},
+  "capital_assumptions": {"mode": "paper"},
+  "status": "DRAFT",
+  "priority": "P1"
+}</textarea>
+        </div>
+        <div class="col-12 d-flex gap-2 align-items-center flex-wrap">
+          <button class="btn btn-primary" type="button" data-research-submit>Execute</button>
+          <span class="text-body-secondary" data-research-status>Ready.</span>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="research-action-response">Response</label>
+          <pre class="border rounded p-3 mb-0 overflow-auto" id="research-action-response" data-research-response style="max-height:22rem">No request yet.</pre>
+        </div>
+      </div>
+    </section>
+    <script>
+    (() => {
+      const root=document.querySelector('[data-research-action-console]');
+      if(!root)return;
+      const preset=root.querySelector('[data-research-preset]');
+      const url=root.querySelector('[data-research-url]');
+      const payload=root.querySelector('[data-research-payload]');
+      const submit=root.querySelector('[data-research-submit]');
+      const status=root.querySelector('[data-research-status]');
+      const response=root.querySelector('[data-research-response]');
+      preset?.addEventListener('change',()=>{url.value=preset.value;});
+      submit?.addEventListener('click',async()=>{
+        status.textContent='Running…';
+        submit.disabled=true;
+        try{
+          const body=JSON.parse(payload.value||'{}');
+          body.csrf_token={{ csrfToken|json_encode|raw }};
+          const result=await fetch(url.value,{
+            method:'POST',
+            credentials:'same-origin',
+            headers:{'Content-Type':'application/json','X-CSRF-Token':{{ csrfToken|json_encode|raw }}},
+            body:JSON.stringify(body)
+          });
+          const text=await result.text();
+          try{response.textContent=JSON.stringify(JSON.parse(text),null,2);}catch(_){response.textContent=text;}
+          status.textContent=result.ok?'Completed. Reloading data…':'Request failed ('+result.status+').';
+          if(result.ok)setTimeout(()=>window.location.reload(),700);
+        }catch(error){
+          status.textContent='Invalid payload or request failure.';
+          response.textContent=String(error);
+        }finally{
+          submit.disabled=false;
+        }
+      });
+    })();
+    </script>
+    {% endif %}
+
     {% set stages = ['IDEA','DRAFT','READY_FOR_RESEARCH','RESEARCHING','BACKTESTING','OUT_OF_SAMPLE','PAPER','VALIDATED','REJECTED'] %}
     <section class="cos-panel">
       <h2>Pipeline by stage</h2>
