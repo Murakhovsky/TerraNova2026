@@ -27,6 +27,7 @@ final readonly class ResearchLabService
         private ExperimentLifecyclePolicy $experimentLifecycle,
         private ResearchEventPublisher $events,
         private StrategyDemotionPolicy $demotionPolicy,
+        private ResearchTelemetry $telemetry,
     ){}
 
     public function createHypothesis(string $organizationId,array $record):array
@@ -53,6 +54,7 @@ final readonly class ResearchLabService
         $record['revision']=1;
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->repository->saveHypothesis($organizationId,$record);
+        $this->telemetry->metric($organizationId,'research_hypotheses_total');
         $this->events->publish($organizationId,'capital_markets.research.hypothesis_created.v1',(string)$record['hypothesis_id'],[
             'revision'=>$record['revision'],'status'=>$record['status'],'code'=>$record['code']
         ]);
@@ -152,6 +154,7 @@ final readonly class ResearchLabService
         $record['failure_criteria_hash']=hash('sha256',json_encode($this->canonicalize((array)$record['failure_criteria']),JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->repository->saveExperiment($organizationId,$record);
+        $this->telemetry->metric($organizationId,'experiments_total');
         $this->events->publish($organizationId,'capital_markets.research.experiment_created.v1',(string)$record['experiment_id'],[
             'hypothesis_id'=>$record['hypothesis_id'],'strategy_version_id'=>$record['strategy_version_id'],'dataset_id'=>$record['dataset_id']
         ]);
@@ -177,6 +180,7 @@ final readonly class ResearchLabService
             'INVALIDATED'=>'capital_markets.research.experiment_invalidated.v1',
             default=>null,
         };
+        if($to==='FAILED')$this->telemetry->metric($organizationId,'experiments_failed_total');
         if($eventType!==null)$this->events->publish($organizationId,$eventType,$experimentId,['from_status'=>$from,'to_status'=>$to]);
         return $current;
     }
@@ -304,6 +308,8 @@ final readonly class ResearchLabService
             'created_at'=>gmdate('Y-m-d H:i:s'),
         ];
         $this->repository->savePromotionDecision($organizationId,$record);
+        $this->telemetry->metric($organizationId,'promotion_pass_rate',$record['status']==='PASSED'?1.0:0.0,['from'=>$from,'to'=>$to]);
+        if($record['status']==='PASSED'&&$to==='VALIDATED')$this->telemetry->metric($organizationId,'strategies_validated');
         $this->events->publish($organizationId,'capital_markets.research.strategy_promotion_requested.v1',$strategyVersionId,[
             'decision_id'=>$record['decision_id'],'from'=>$from,'to'=>$to,'status'=>$record['status'],'policy_version'=>$record['policy_version']
         ]);
@@ -342,6 +348,7 @@ final readonly class ResearchLabService
             'created_at'=>gmdate('Y-m-d H:i:s'),
         ];
         $this->repository->savePromotionDecision($organizationId,$record);
+        if($record['action']==='REJECT')$this->telemetry->metric($organizationId,'strategies_rejected');
         if($record['action']!=='NONE'){
             $eventType=$record['action']==='REJECT'
                 ? 'capital_markets.research.strategy_rejected.v1'
