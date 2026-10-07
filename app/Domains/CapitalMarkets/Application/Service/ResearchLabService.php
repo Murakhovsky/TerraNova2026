@@ -360,6 +360,8 @@ final readonly class ResearchLabService
     {
         $hypotheses=$this->repository->listHypotheses($organizationId,500);
         $experiments=$this->repository->listExperiments($organizationId,null,500);
+        $datasets=$this->repository->listDatasets($organizationId,500);
+        $strategyVersions=$this->repository->listAllStrategyVersions($organizationId,500);
         $knowledge=$this->repository->listKnowledge($organizationId,500);
         $results=$this->repository->listResults($organizationId,500);
         $runs=$this->repository->listBacktestRuns($organizationId,500);
@@ -373,6 +375,8 @@ final readonly class ResearchLabService
         return [
             'hypotheses'=>$hypotheses,
             'experiments'=>$experiments,
+            'datasets'=>$datasets,
+            'strategy_versions'=>$strategyVersions,
             'knowledge'=>$knowledge,
             'results'=>$results,
             'backtest_runs'=>$runs,
@@ -384,6 +388,8 @@ final readonly class ResearchLabService
             'metrics'=>[
                 'hypothesis_count'=>count($hypotheses),
                 'experiment_count'=>count($experiments),
+                'dataset_count'=>count($datasets),
+                'strategy_version_count'=>count($strategyVersions),
                 'knowledge_count'=>count($knowledge),
                 'result_count'=>count($results),
                 'validated_hypotheses'=>count(array_filter($hypotheses,static fn(array $h):bool=>($h['status']??'')==='VALIDATED')),
