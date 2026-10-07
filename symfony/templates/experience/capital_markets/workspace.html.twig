@@ -271,6 +271,8 @@
   {% elseif cmView == 'research_lab' %}
     {% set hypotheses = w.hypotheses|default([]) %}
     {% set experiments = w.experiments|default([]) %}
+    {% set datasets = w.datasets|default([]) %}
+    {% set strategyVersions = w.strategy_versions|default([]) %}
     {% set knowledge = w.knowledge|default([]) %}
     {% set results = w.results|default([]) %}
     {% set runs = w.backtest_runs|default([]) %}
@@ -336,7 +338,7 @@
         <div class="col-lg-8">
           <label class="form-label" for="research-action-url">API endpoint</label>
           <input class="form-control" id="research-action-url" data-research-url value="/api/v1/capital-markets/research/hypotheses">
-          <div class="form-text">For ID-based operations use paths such as <code>/api/v1/capital-markets/research/hypotheses/{id}/revisions</code>, <code>/experiments/{id}/status</code> or <code>/strategies/{id}/promotion-request</code>.</div>
+          <div class="form-text">For ID-based operations use paths such as <code>/api/v1/capital-markets/research/hypotheses/{id}/revisions</code>, <code>/experiments/{id}/status</code>, <code>/paper-runs/{id}/complete</code>, <code>/strategies/{id}/promotion-request</code> or <code>/strategies/{id}/demotion-request</code>.</div>
         </div>
         <div class="col-12">
           <label class="form-label" for="research-action-json">JSON payload</label>
@@ -450,6 +452,52 @@
             </tbody>
           </table>
         </div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Frozen Datasets</h2>
+      {% if datasets is empty %}
+        <p>No frozen ResearchDataset snapshots yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Dataset</th><th>Period</th><th>Quality</th><th>Sources</th><th>Instruments</th><th>Snapshot hash</th></tr></thead>
+          <tbody>
+          {% for d in datasets %}
+            <tr>
+              <td><strong>{{ d.name|default(d.dataset_id|default('—')) }}</strong><br><small>{{ d.dataset_id|default('—') }}</small></td>
+              <td>{{ d.from|default('—') }} → {{ d.to|default('—') }}</td>
+              <td>{{ d.quality_status|default('—') }}</td>
+              <td>{{ d.data_sources|default([])|join(', ') }}</td>
+              <td>{{ d.instrument_universe|default([])|join(', ') }}</td>
+              <td><code>{{ d.snapshot_hash|default('—') }}</code></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Strategy Versions</h2>
+      {% if strategyVersions is empty %}
+        <p>No immutable StrategyVersion records yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Strategy</th><th>Version</th><th>Status</th><th>Logic hash</th><th>Parameters</th><th>Created</th></tr></thead>
+          <tbody>
+          {% for v in strategyVersions %}
+            <tr>
+              <td>{{ v.strategy_id|default('—') }}</td>
+              <td><strong>v{{ v.version|default('—') }}</strong><br><small>{{ v.strategy_version_id|default('—') }}</small></td>
+              <td>{{ v.status|default('—') }}</td>
+              <td><code>{{ v.logic_hash|default('—') }}</code></td>
+              <td>{{ v.parameters|default(v.configuration|default({}))|json_encode }}</td>
+              <td>{{ v.created_at|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
       {% endif %}
     </section>
 
