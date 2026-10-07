@@ -1543,6 +1543,14 @@ services:
   App\Infrastructure\Automation\ResearchCreateHypothesisDraftTool: ~
   App\Infrastructure\Automation\ResearchCreateExperimentDraftTool: ~
   App\Infrastructure\Automation\ResearchSearchKnowledgeTool: ~
+  App\Infrastructure\Automation\ResearchGetHypothesisTool: ~
+  App\Infrastructure\Automation\ResearchSearchExperimentsTool: ~
+  App\Infrastructure\Automation\ResearchGetResultTool: ~
+  App\Infrastructure\Automation\ResearchCompareResultsTool: ~
+  App\Infrastructure\Automation\ResearchRecordObservationTool: ~
+  App\Infrastructure\Automation\ResearchDatasetSearchTool: ~
+  App\Infrastructure\Automation\ResearchDatasetDescribeTool: ~
+
 
   Kernel\Tool\Service\ToolRegistry:
     arguments:
@@ -1552,6 +1560,13 @@ services:
         - '@App\Infrastructure\Automation\ResearchCreateHypothesisDraftTool'
         - '@App\Infrastructure\Automation\ResearchCreateExperimentDraftTool'
         - '@App\Infrastructure\Automation\ResearchSearchKnowledgeTool'
+        - '@App\Infrastructure\Automation\ResearchGetHypothesisTool'
+        - '@App\Infrastructure\Automation\ResearchSearchExperimentsTool'
+        - '@App\Infrastructure\Automation\ResearchGetResultTool'
+        - '@App\Infrastructure\Automation\ResearchCompareResultsTool'
+        - '@App\Infrastructure\Automation\ResearchRecordObservationTool'
+        - '@App\Infrastructure\Automation\ResearchDatasetSearchTool'
+        - '@App\Infrastructure\Automation\ResearchDatasetDescribeTool'
 
   Kernel\Tool\Contract\ToolRegistryInterface:
     alias: Kernel\Tool\Service\ToolRegistry
