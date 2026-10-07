@@ -30,6 +30,7 @@ enum CapitalMarketsAuditAction:string
     case ResearchStrategyVersionCreated='capital_markets.research.strategy_version.created';
     case ResearchScorecardCreated='capital_markets.research.scorecard.created';
     case ResearchPromotionEvaluated='capital_markets.research.promotion.evaluated';
+    case ResearchDemotionEvaluated='capital_markets.research.demotion.evaluated';
     case ResearchPaperRunStarted='capital_markets.research.paper_run.started';
     case ResearchPaperRunCompleted='capital_markets.research.paper_run.completed';
     case ResearchPaperRunCancelled='capital_markets.research.paper_run.cancelled';
