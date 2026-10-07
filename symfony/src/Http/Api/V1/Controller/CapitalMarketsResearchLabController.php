@@ -5,6 +5,9 @@ namespace App\Http\Api\V1\Controller;
 
 use App\Security\SessionCsrfValidator;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
+use Domains\CapitalMarkets\Application\Audit\CapitalMarketsAuditTrail;
+use Domains\CapitalMarkets\Application\Audit\CapitalMarketsAuditAction;
+use Domains\CapitalMarkets\Application\Audit\CapitalMarketsAuditResourceType;
 use Domains\CapitalMarkets\Application\Service\ResearchLabService;
 use Domains\CapitalMarkets\Application\Service\ResearchBacktestService;
 use Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService;
@@ -26,6 +29,7 @@ final readonly class CapitalMarketsResearchLabController
         private TenantContextProviderInterface $tenants,
         private ActiveModuleResolver $modules,
         private CapitalMarketsAccessControlInterface $access,
+        private CapitalMarketsAuditTrail $audit,
         private ResearchLabService $lab,
         private ResearchBacktestService $backtests,
         private CapitalMarketsResearchAgentService $researchAgent,
@@ -63,27 +67,41 @@ final readonly class CapitalMarketsResearchLabController
     public function createHypothesis(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->createHypothesis($tenant->organizationId()->value(),$payload),201);
+            function(TenantContext $tenant,array $payload) use($request):array{
+                $result=$this->lab->createHypothesis($tenant->organizationId()->value(),$payload);
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchHypothesisCreated,CapitalMarketsAuditResourceType::ResearchHypothesis,(string)$result['hypothesis_id'],$result);
+                return $result;
+            },201);
     }
 
     public function reviseHypothesis(Request $request,string $id):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->reviseHypothesis(
-                $tenant->organizationId()->value(),$id,$payload
-            ),201);
+            function(TenantContext $tenant,array $payload) use($request,$id):array{
+                $result=$this->lab->reviseHypothesis($tenant->organizationId()->value(),$id,$payload);
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchHypothesisRevised,CapitalMarketsAuditResourceType::ResearchHypothesis,$id,$result);
+                return $result;
+            },201);
     }
 
     public function freezeDataset(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->freezeDataset($tenant->organizationId()->value(),$payload),201);
+            function(TenantContext $tenant,array $payload) use($request):array{
+                $result=$this->lab->freezeDataset($tenant->organizationId()->value(),$payload);
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchDatasetFrozen,CapitalMarketsAuditResourceType::ResearchDataset,(string)$result['dataset_id'],$result);
+                return $result;
+            },201);
     }
 
     public function createExperiment(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->createExperiment($tenant->organizationId()->value(),$payload),201);
+            function(TenantContext $tenant,array $payload) use($request):array{
+                $result=$this->lab->createExperiment($tenant->organizationId()->value(),$payload);
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchExperimentCreated,CapitalMarketsAuditResourceType::ResearchExperiment,(string)$result['experiment_id'],$result);
+                return $result;
+            },201);
     }
 
     public function transitionExperiment(Request $request,string $id):JsonResponse
@@ -97,7 +115,11 @@ final readonly class CapitalMarketsResearchLabController
     public function createStrategyVersion(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::StrategyVersionManage,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->createStrategyVersion($tenant->organizationId()->value(),$payload),201);
+            function(TenantContext $tenant,array $payload) use($request):array{
+                $result=$this->lab->createStrategyVersion($tenant->organizationId()->value(),$payload);
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchStrategyVersionCreated,CapitalMarketsAuditResourceType::ResearchStrategyVersion,(string)$result['strategy_version_id'],$result);
+                return $result;
+            },201);
     }
 
     public function recordResult(Request $request):JsonResponse
@@ -230,6 +252,35 @@ final readonly class CapitalMarketsResearchLabController
             ? CapitalMarketsCapability::View
             : CapitalMarketsCapability::Manage;
         return $this->access->hasCapability($organizationId,$actorId,$broad->value);
+    }
+
+    private function auditResult(
+        Request $request,
+        TenantContext $tenant,
+        CapitalMarketsAuditAction $action,
+        CapitalMarketsAuditResourceType $resourceType,
+        string $resourceId,
+        array $next,
+        array $previous=[],
+    ):void{
+        $actor=$tenant->userId()->value();
+        if(!ctype_digit($actor))return;
+        $this->audit->record(
+            $tenant->organizationId()->value(),
+            (int)$actor,
+            $action,
+            $resourceType,
+            $resourceId,
+            $previous,
+            $next,
+            $this->correlation($request),
+        );
+    }
+
+    private function correlation(Request $request):string
+    {
+        $value=trim((string)$request->headers->get('X-Correlation-Id',''));
+        return $value!==''?substr($value,0,190):'CM-RESEARCH-API-'.strtoupper(bin2hex(random_bytes(6)));
     }
 
     private function payload(Request $request):array
