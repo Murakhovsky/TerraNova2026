@@ -85,6 +85,65 @@ final readonly class RelativeValueEconomicsCalculator
         );
     }
 
+    public function historicalSpotPerp(
+        \Domains\CapitalMarkets\Domain\MarketData\BasisObservation $basis,
+        FundingRateObservation $funding,
+        Decimal $quantity,
+        int $holdingHorizonSeconds,
+        Decimal $spotFeeRate,
+        Decimal $perpFeeRate,
+        Decimal $roundTripSlippageBps,
+        Decimal $leverage,
+        Decimal $targetBasisAbsolute,
+        Decimal $riskAllowance,
+        Decimal $networkCosts,
+        Decimal $emergencyHedgeBuffer,
+        bool $includeBasisConvergence,
+    ):ExpectedEconomics{
+        if(!$quantity->isPositive()||$holdingHorizonSeconds<1||!$leverage->isPositive()){
+            throw new InvalidArgumentException('Historical spot/perpetual economics require positive quantity, horizon and leverage.');
+        }
+        foreach([$spotFeeRate,$perpFeeRate,$roundTripSlippageBps,$riskAllowance,$networkCosts,$emergencyHedgeBuffer] as $cost){
+            if($cost->isNegative())throw new InvalidArgumentException('Historical spot/perpetual cost inputs cannot be negative.');
+        }
+
+        $spotNotional=DecimalMath::multiply($basis->spotAsk,$quantity);
+        $perpPrice=$basis->markPrice??$basis->perpBid;
+        $perpNotional=DecimalMath::multiply($perpPrice,$quantity);
+        $basisMove=$includeBasisConvergence
+            ? DecimalMath::multiply(
+                DecimalMath::subtract($basis->longSpotShortPerpExecutableBasis,$targetBasisAbsolute),
+                $quantity
+            )
+            : Decimal::fromString('0');
+
+        $fundingPerSettlement=$this->funding->calculate($funding,$perpNotional,PositionSide::Short);
+        $settlements=$this->settlementCount($funding,$basis->timestamp,$holdingHorizonSeconds);
+        $fundingPnl=DecimalMath::multiplyInteger($fundingPerSettlement,$settlements);
+
+        $fees=DecimalMath::multiplyInteger(
+            DecimalMath::add(
+                DecimalMath::multiply($spotNotional,$spotFeeRate),
+                DecimalMath::multiply($perpNotional,$perpFeeRate)
+            ),2
+        );
+        $slippage=DecimalMath::multiplyInteger(
+            DecimalMath::divide(
+                DecimalMath::multiply(DecimalMath::add($spotNotional,$perpNotional),$roundTripSlippageBps),
+                Decimal::fromString('10000'),18
+            ),2
+        );
+        $capital=DecimalMath::add(
+            DecimalMath::add($spotNotional,DecimalMath::divide($perpNotional,$leverage,18)),
+            $emergencyHedgeBuffer
+        );
+
+        return new ExpectedEconomics(
+            $basisMove,$fundingPnl,$basisMove,$fees,$slippage,Decimal::fromString('0'),
+            $networkCosts,$riskAllowance,$capital,$holdingHorizonSeconds
+        );
+    }
+
     public function crossVenueFunding(
         FundingRateObservation $longFunding,
         FundingRateObservation $shortFunding,

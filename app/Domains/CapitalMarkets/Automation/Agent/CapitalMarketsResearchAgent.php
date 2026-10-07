@@ -1,0 +1,115 @@
+<?php
+declare(strict_types=1);
+
+namespace Domains\CapitalMarkets\Automation\Agent;
+
+use Kernel\Agent\AgentDefinition;
+
+final class CapitalMarketsResearchAgent
+{
+    public const NAME='capital_markets_research';
+
+    public static function definition():AgentDefinition
+    {
+        return new AgentDefinition(
+            name:self::NAME,
+            version:'1.0.0',
+            systemPrompt:
+                'You are the Capital Markets Research Agent. Your job is to find measurable hypotheses and strategy improvements from formal market, experiment and performance evidence. '.
+                'Always distinguish observation, hypothesis, experiment design, result and decision. Search prior active, rejected and archived research before proposing a new hypothesis. '.
+                'A hypothesis must include WHAT, WHY, EDGE SOURCE, MARKETS, EXPECTED BEHAVIOR, REQUIRED DATA, TEST PLAN, SUCCESS CRITERIA, FAILURE CRITERIA and KNOWN RISKS. '.
+                'You may recommend research progression, but you cannot validate a strategy, override deterministic promotion gates, change risk/capital limits, edit completed results, change frozen datasets or strategy versions, or activate Live Trading. '.
+                'Negative results are first-class knowledge. Never rewrite criteria after observing a bad result. AI proposes; deterministic engines test; data decides.',
+            promptVersion:'cm-research-agent-v1',
+            schemaVersion:'cm-research-agent-output-v1',
+            allowedActionTypes:[],
+
+            defaultExecutionMode:'APPROVAL_REQUIRED',
+            defaultRiskLevel:'LOW',
+            evidenceSchemas:[
+                'research'=>[
+                    'required'=>[
+                        'tool_requests'=>'array',
+                        'findings'=>'array',
+                        'limitations'=>'array',
+                    ],
+                ],
+            ],
+            resultValidatorClass:CapitalMarketsResearchAgentResultValidator::class,
+            domainName:'capital_markets',
+            enabled:true,
+            profile:'research',
+            confidenceThreshold:0.65,
+            maxActionsPerRun:0,
+            configurationManaged:false,
+            outputSchema:[
+                'type'=>'object',
+                'required'=>['decision','reason','confidence','proposed_actions','evidence'],
+                'properties'=>[
+                    'decision'=>['type'=>'string'],
+                    'reason'=>['type'=>'string'],
+                    'confidence'=>['type'=>'number','minimum'=>0,'maximum'=>1],
+                    'proposed_actions'=>[
+                        'type'=>'array',
+                        'maxItems'=>0,
+                        'items'=>['type'=>'object','additionalProperties'=>false],
+                    ],
+                    'evidence'=>[
+                        'type'=>'object',
+                        'required'=>['research'],
+                        'properties'=>[
+                            'research'=>[
+                                'type'=>'object',
+                                'required'=>['tool_requests','findings','hypothesis_candidate_json','limitations'],
+                                'properties'=>[
+                                    'tool_requests'=>[
+                                        'type'=>'array',
+                                        'maxItems'=>4,
+                                        'items'=>[
+                                            'type'=>'object',
+                                            'required'=>['name','input_json'],
+                                            'properties'=>[
+                                                'name'=>[
+                                                    'type'=>'string',
+                                                    'enum'=>[
+                                                        'research.searchhypotheses',
+                                                        'research.createhypothesis',
+                                                        'research.createexperimentdraft',
+                                                        'research.searchknowledge',
+                                                        'research.gethypothesis',
+                                                        'research.searchexperiments',
+                                                        'research.getresult',
+                                                        'research.compareresults',
+                                                        'research.recordobservation',
+                                                        'dataset.search',
+                                                        'dataset.describe',
+                                                    ],
+                                                ],
+                                                'input_json'=>['type'=>'string'],
+                                            ],
+                                            'additionalProperties'=>false,
+                                        ],
+                                    ],
+                                    'findings'=>[
+                                        'type'=>'array',
+                                        'maxItems'=>20,
+                                        'items'=>['type'=>'string'],
+                                    ],
+                                    'hypothesis_candidate_json'=>['type'=>['string','null']],
+                                    'limitations'=>[
+                                        'type'=>'array',
+                                        'maxItems'=>20,
+                                        'items'=>['type'=>'string'],
+                                    ],
+                                ],
+                                'additionalProperties'=>false,
+                            ],
+                        ],
+                        'additionalProperties'=>false,
+                    ],
+                ],
+                'additionalProperties'=>false,
+            ],
+        );
+    }
+}

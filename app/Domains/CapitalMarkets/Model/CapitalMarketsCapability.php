@@ -24,6 +24,15 @@ enum CapitalMarketsCapability:string
     case OpportunityView='capital_markets.opportunity.view';
     case PaperExecute='capital_markets.paper.execute';
 
+    case ResearchView='capital_markets.research.view';
+    case ResearchManage='capital_markets.research.manage';
+    case ResearchExperimentRun='capital_markets.research.experiment.run';
+    case StrategyVersionManage='capital_markets.strategy.version.manage';
+    case StrategyPromote='capital_markets.strategy.promote';
+    case StrategyDemote='capital_markets.strategy.demote';
+    case StrategyReject='capital_markets.strategy.reject';
+    case ResearchAgentUse='capital_markets.research.agent.use';
+
     /** @return list<string> */
     public static function values():array{return array_map(static fn(self $case):string=>$case->value,self::cases());}
 }

@@ -137,7 +137,7 @@ foreach([
 ] as $needle)$assert(str_contains($services,$needle),'VS2 runtime service wiring missing: '.$needle);
 
 $module=require $capitalMarkets.'/module.php';
-$assert(($module['version']??null)==='0.7.0','Capital Markets module version must advance to 0.7.0 for VS2.');
+$assert(($module['version']??null)==='0.8.0','Capital Markets module version must be 0.8.0 after Research Lab pack.');
 $assert(in_array('app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql',$module['contributions']['migration_files']??[],true),
     'VS2 migration must be module-owned.');
 

@@ -17,6 +17,8 @@
       <a class="btn btn-outline-secondary" href="/capital-markets/venues">Venues</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/market-data">Market Data</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/tokenized-equities">Tokenized Equity</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/crypto-spot-perpetual">Crypto Spot / Perpetual</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/research">Research Lab</a>
     </nav>
   </header>
 
@@ -263,6 +265,455 @@
           {% endfor %}
           </tbody>
         </table></div>
+      {% endif %}
+    </section>
+
+  {% elseif cmView == 'research_lab' %}
+    {% set hypotheses = w.hypotheses|default([]) %}
+    {% set experiments = w.experiments|default([]) %}
+    {% set datasets = w.datasets|default([]) %}
+    {% set strategyVersions = w.strategy_versions|default([]) %}
+    {% set knowledge = w.knowledge|default([]) %}
+    {% set results = w.results|default([]) %}
+    {% set runs = w.backtest_runs|default([]) %}
+    {% set oosRuns = w.oos_runs|default([]) %}
+    {% set paperRuns = w.paper_runs|default([]) %}
+    {% set scorecards = w.scorecards|default([]) %}
+    {% set rejections = w.rejections|default([]) %}
+    {% set promotions = w.promotion_decisions|default([]) %}
+    {% set metrics = w.metrics|default({}) %}
+
+    <section class="cos-kpi-strip" aria-label="Research Lab state">
+      <twig:CosMetric label="Hypotheses" value="{{ metrics.hypothesis_count|default(hypotheses|length) }}" hint="formal research objects" />
+      <twig:CosMetric label="Experiments" value="{{ metrics.experiment_count|default(experiments|length) }}" hint="immutable specifications" />
+      <twig:CosMetric label="Backtests" value="{{ metrics.backtest_count|default(runs|length) }}" hint="historical replay runs" />
+      <twig:CosMetric label="OOS" value="{{ metrics.oos_count|default(oosRuns|length) }}" hint="isolated validation runs" />
+      <twig:CosMetric label="Failure rate" value="{{ metrics.backtest_failure_rate|default(0) }}" hint="research runtime health" />
+      <twig:CosMetric label="Knowledge" value="{{ metrics.knowledge_count|default(knowledge|length) }}" hint="validated + rejected findings" />
+      <twig:CosMetric label="Authority" value="GATED" hint="AI cannot promote to Live" />
+    </section>
+
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 flex-wrap">
+        <div>
+          <small>CM-RESEARCH-LAB</small>
+          <h2>Research Pipeline</h2>
+          <p>Idea → Hypothesis → Experiment → Frozen Dataset → Backtest → OOS → Paper → Decision → Knowledge.</p>
+          <p>Positive and negative results are retained. Promotion is deterministic and auditable. Live activation is outside this workspace.</p>
+        </div>
+        <div>
+          <span class="badge text-bg-info">RESEARCH</span>
+          <span class="badge text-bg-warning">PAPER GATED</span>
+          <span class="badge text-bg-danger">LIVE OFF</span>
+        </div>
+      </div>
+    </section>
+
+    {% if canManageResearch|default(false) or canRunResearch|default(false) or canPromoteStrategy|default(false) or canUseResearchAgent|default(false) %}
+    <section class="cos-panel" data-research-action-console>
+      <div class="d-flex justify-content-between gap-3 flex-wrap align-items-start">
+        <div>
+          <h2>Operator Actions</h2>
+          <p>Run Research Lab API operations without leaving the workspace. Choose a preset or edit the endpoint directly, provide a JSON object, then execute.</p>
+        </div>
+        <span class="badge text-bg-secondary">CSRF protected</span>
+      </div>
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <label class="form-label" for="research-action-preset">Operation</label>
+          <select class="form-select" id="research-action-preset" data-research-preset>
+            <option value="/api/v1/capital-markets/research/hypotheses">Create hypothesis</option>
+            <option value="/api/v1/capital-markets/research/datasets">Freeze dataset</option>
+            <option value="/api/v1/capital-markets/strategies/versions">Create strategy version</option>
+            <option value="/api/v1/capital-markets/research/experiments">Create experiment</option>
+            <option value="/api/v1/capital-markets/research/backtests">Queue backtest</option>
+            <option value="/api/v1/capital-markets/research/backtests/run">Run backtest now</option>
+            <option value="/api/v1/capital-markets/research/walk-forward">Walk-forward</option>
+            <option value="/api/v1/capital-markets/research/parameter-search">Queue parameter search</option>
+            <option value="/api/v1/capital-markets/research/paper-runs">Start Paper run</option>
+            <option value="/api/v1/capital-markets/research/rejections">Reject hypothesis</option>
+            <option value="/api/v1/capital-markets/research/knowledge">Record knowledge</option>
+            <option value="/api/v1/capital-markets/research/agent/run">Run Research Agent</option>
+          </select>
+        </div>
+        <div class="col-lg-8">
+          <label class="form-label" for="research-action-url">API endpoint</label>
+          <input class="form-control" id="research-action-url" data-research-url value="/api/v1/capital-markets/research/hypotheses">
+          <div class="form-text">For ID-based operations use paths such as <code>/api/v1/capital-markets/research/hypotheses/{id}/revisions</code>, <code>/experiments/{id}/status</code>, <code>/paper-runs/{id}/complete</code>, <code>/strategies/{id}/promotion-request</code> or <code>/strategies/{id}/demotion-request</code>.</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="research-action-json">JSON payload</label>
+          <textarea class="form-control font-monospace" id="research-action-json" rows="12" data-research-payload>{
+  "hypothesis_id": "h4-demo-001",
+  "code": "H4",
+  "title": "BTC spot/perpetual basis convergence",
+  "description": "Test whether executable basis converges after costs.",
+  "economic_reason": "Temporary dislocation between spot and perpetual markets.",
+  "edge_source": "BASIS",
+  "expected_behavior": "Positive net convergence after fees and slippage.",
+  "required_data": ["spot_quote", "perp_quote", "funding_rate"],
+  "success_criteria": {"minimum_sample": 200},
+  "failure_criteria": {"max_drawdown_ratio": 0.15},
+  "risk_assumptions": {"neutral_hedge": true},
+  "capital_assumptions": {"mode": "paper"},
+  "status": "DRAFT",
+  "priority": "P1"
+}</textarea>
+        </div>
+        <div class="col-12 d-flex gap-2 align-items-center flex-wrap">
+          <button class="btn btn-primary" type="button" data-research-submit>Execute</button>
+          <span class="text-body-secondary" data-research-status>Ready.</span>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="research-action-response">Response</label>
+          <pre class="border rounded p-3 mb-0 overflow-auto" id="research-action-response" data-research-response style="max-height:22rem">No request yet.</pre>
+        </div>
+      </div>
+    </section>
+    <script>
+    (() => {
+      const root=document.querySelector('[data-research-action-console]');
+      if(!root)return;
+      const preset=root.querySelector('[data-research-preset]');
+      const url=root.querySelector('[data-research-url]');
+      const payload=root.querySelector('[data-research-payload]');
+      const submit=root.querySelector('[data-research-submit]');
+      const status=root.querySelector('[data-research-status]');
+      const response=root.querySelector('[data-research-response]');
+      preset?.addEventListener('change',()=>{url.value=preset.value;});
+      submit?.addEventListener('click',async()=>{
+        status.textContent='Running…';
+        submit.disabled=true;
+        try{
+          const body=JSON.parse(payload.value||'{}');
+          body.csrf_token={{ csrfToken|json_encode|raw }};
+          const result=await fetch(url.value,{
+            method:'POST',
+            credentials:'same-origin',
+            headers:{'Content-Type':'application/json','X-CSRF-Token':{{ csrfToken|json_encode|raw }}},
+            body:JSON.stringify(body)
+          });
+          const text=await result.text();
+          try{response.textContent=JSON.stringify(JSON.parse(text),null,2);}catch(_){response.textContent=text;}
+          status.textContent=result.ok?'Completed. Reloading data…':'Request failed ('+result.status+').';
+          if(result.ok)setTimeout(()=>window.location.reload(),700);
+        }catch(error){
+          status.textContent='Invalid payload or request failure.';
+          response.textContent=String(error);
+        }finally{
+          submit.disabled=false;
+        }
+      });
+    })();
+    </script>
+    {% endif %}
+
+    {% set stages = ['IDEA','DRAFT','READY_FOR_RESEARCH','RESEARCHING','BACKTESTING','OUT_OF_SAMPLE','PAPER','VALIDATED','REJECTED'] %}
+    <section class="cos-panel">
+      <h2>Pipeline by stage</h2>
+      <div class="row g-3">
+        {% for stage in stages %}
+          {% set count = 0 %}
+          {% for h in hypotheses %}
+            {% if h.status|default('') == stage %}{% set count = count + 1 %}{% endif %}
+          {% endfor %}
+          <div class="col-md-4 col-xl-2">
+            <div class="border rounded p-3 h-100">
+              <small>{{ stage }}</small>
+              <div class="fs-4 fw-bold">{{ count }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Hypotheses</h2>
+      {% if hypotheses is empty %}
+        <p>No formal ResearchHypothesis records yet. The legacy H1/H2 and H4/H5/H6 evidence remains available in the vertical slices until migrated into the Lab registry.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Code</th><th>Title</th><th>Edge source</th><th>Priority</th><th>Status</th><th>Revision</th><th>Economic thesis</th></tr></thead>
+            <tbody>
+            {% for h in hypotheses %}
+              <tr>
+                <td><strong>{{ h.code|default('—') }}</strong></td>
+                <td>{{ h.title|default('—') }}</td>
+                <td>{{ h.edge_source|default('—') }}</td>
+                <td>{{ h.priority|default('—') }}</td>
+                <td><strong>{{ h.status|default('—') }}</strong></td>
+                <td>v{{ h.revision|default(1) }}</td>
+                <td>{{ h.economic_reason|default('—') }}</td>
+              </tr>
+              <tr>
+                <td colspan="7"><small>Success: {{ h.success_criteria|default({})|json_encode }} · Failure: {{ h.failure_criteria|default({})|json_encode }}</small></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Frozen Datasets</h2>
+      {% if datasets is empty %}
+        <p>No frozen ResearchDataset snapshots yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Dataset</th><th>Period</th><th>Quality</th><th>Sources</th><th>Instruments</th><th>Snapshot hash</th></tr></thead>
+          <tbody>
+          {% for d in datasets %}
+            <tr>
+              <td><strong>{{ d.name|default(d.dataset_id|default('—')) }}</strong><br><small>{{ d.dataset_id|default('—') }}</small></td>
+              <td>{{ d.from|default('—') }} → {{ d.to|default('—') }}</td>
+              <td>{{ d.quality_status|default('—') }}</td>
+              <td>{{ d.data_sources|default([])|join(', ') }}</td>
+              <td>{{ d.instrument_universe|default([])|join(', ') }}</td>
+              <td><code>{{ d.snapshot_hash|default('—') }}</code></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Strategy Versions</h2>
+      {% if strategyVersions is empty %}
+        <p>No immutable StrategyVersion records yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Strategy</th><th>Version</th><th>Status</th><th>Logic hash</th><th>Parameters</th><th>Created</th></tr></thead>
+          <tbody>
+          {% for v in strategyVersions %}
+            <tr>
+              <td>{{ v.strategy_id|default('—') }}</td>
+              <td><strong>v{{ v.version|default('—') }}</strong><br><small>{{ v.strategy_version_id|default('—') }}</small></td>
+              <td>{{ v.status|default('—') }}</td>
+              <td><code>{{ v.logic_hash|default('—') }}</code></td>
+              <td>{{ v.parameters|default(v.configuration|default({}))|json_encode }}</td>
+              <td>{{ v.created_at|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Experiments</h2>
+      {% if experiments is empty %}
+        <p>No experiments have been registered in the Lab yet.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Experiment</th><th>Hypothesis</th><th>Type</th><th>Dataset</th><th>Strategy Version</th><th>Status</th><th>Period</th></tr></thead>
+            <tbody>
+            {% for e in experiments %}
+              <tr>
+                <td><strong>{{ e.title|default(e.experiment_id|default('—')) }}</strong></td>
+                <td>{{ e.hypothesis_id|default('—') }}</td>
+                <td>{{ e.experiment_type|default('—') }}</td>
+                <td>{{ e.dataset_id|default('—') }}</td>
+                <td>{{ e.strategy_version_id|default('—') }}</td>
+                <td><strong>{{ e.status|default('—') }}</strong></td>
+                <td>{{ e.start_period|default('—') }} → {{ e.end_period|default('—') }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Backtest Runtime</h2>
+      {% if runs is empty %}
+        <p>No backtest runs yet. Historical replay is available through the Research API and uses the production Capital Markets economics stack.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Run</th><th>Experiment</th><th>Partition</th><th>Status</th><th>Strategy</th><th>Dataset</th><th>Result</th></tr></thead>
+          <tbody>
+          {% for run in runs %}
+            <tr>
+              <td><strong>{{ run.run_id|default('—') }}</strong></td>
+              <td>{{ run.experiment_id|default('—') }}</td>
+              <td>{{ run.partition_name|default('—') }}</td>
+              <td>{{ run.status|default('—') }}</td>
+              <td>{{ run.strategy_version_id|default('—') }}</td>
+              <td>{{ run.dataset_id|default('—') }}</td>
+              <td>{{ run.result_id|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Experiment Results</h2>
+      {% if results is empty %}
+        <p>No completed research results yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Experiment</th><th>Status</th><th>Confidence</th><th>Fidelity</th><th>Expected P&amp;L</th><th>Max drawdown</th><th>Limitations</th></tr></thead>
+          <tbody>
+          {% for result in results %}
+            <tr>
+              <td><strong>{{ result.experiment_id|default('—') }}</strong></td>
+              <td>{{ result.status|default('—') }}</td>
+              <td>{{ result.confidence|default('—') }}</td>
+              <td>{{ result.execution_fidelity|default(result.execution_metrics.execution_fidelity|default('—')) }}</td>
+              <td>{{ result.financial_metrics.expected_pnl_total|default(result.financial_metrics.pnl_total|default('—')) }}</td>
+              <td>{{ result.risk_metrics.max_drawdown|default('—') }}</td>
+              <td>{{ result.limitations|default([])|join(', ') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Out-of-Sample Runs</h2>
+      {% if oosRuns is empty %}
+        <p>No isolated OOS runs yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Run</th><th>Experiment</th><th>Strategy</th><th>Dataset</th><th>Period</th><th>Status</th><th>Result</th></tr></thead>
+          <tbody>
+          {% for run in oosRuns %}
+            <tr>
+              <td><strong>{{ run.run_id|default('—') }}</strong></td>
+              <td>{{ run.experiment_id|default('—') }}</td>
+              <td>{{ run.strategy_version_id|default('—') }}</td>
+              <td>{{ run.dataset_id|default('—') }}</td>
+              <td>{{ run.from|default('—') }} → {{ run.to|default('—') }}</td>
+              <td><strong>{{ run.status|default('—') }}</strong></td>
+              <td>{{ run.result_id|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Paper Runs</h2>
+      {% if paperRuns is empty %}
+        <p>No research Paper runs yet. Paper executions are linked here only after an OOS-tested strategy enters a forward paper experiment.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Run</th><th>Experiment</th><th>Strategy</th><th>Status</th><th>Executions</th><th>Net P&amp;L</th><th>Drawdown</th><th>Result</th></tr></thead>
+          <tbody>
+          {% for run in paperRuns %}
+            <tr>
+              <td><strong>{{ run.run_id|default('—') }}</strong></td>
+              <td>{{ run.experiment_id|default('—') }}</td>
+              <td>{{ run.strategy_version_id|default('—') }}</td>
+              <td><strong>{{ run.status|default('—') }}</strong></td>
+              <td>{{ run.execution_ids|default([])|join(', ') }}</td>
+              <td>{{ run.performance_snapshot.net_pnl|default(run.performance_snapshot.realized_pnl|default('—')) }}</td>
+              <td>{{ run.performance_snapshot.max_drawdown|default('—') }}</td>
+              <td>{{ run.result_id|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Strategy Scorecards & Promotion</h2>
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <h3>Scorecards</h3>
+          {% if scorecards is empty %}
+            <p>No scorecards yet.</p>
+          {% else %}
+            <div class="table-responsive"><table class="table">
+              <thead><tr><th>Strategy Version</th><th>Score</th><th>Profit</th><th>Consistency</th><th>Risk</th><th>Execution</th><th>Robustness</th><th>Data</th><th>Weights</th></tr></thead>
+              <tbody>
+              {% for s in scorecards %}
+                <tr>
+                  <td>{{ s.strategy_version_id|default('—') }}</td>
+                  <td><strong>{{ s.composite_score|default('—') }}</strong></td>
+                  <td>{{ s.dimensions.profitability|default('—') }}</td>
+                  <td>{{ s.dimensions.consistency|default('—') }}</td>
+                  <td>{{ s.dimensions.risk|default('—') }}</td>
+                  <td>{{ s.dimensions.execution_quality|default('—') }}</td>
+                  <td>{{ s.dimensions.robustness|default('—') }}</td>
+                  <td>{{ s.dimensions.data_confidence|default('—') }}</td>
+                  <td>{{ s.weight_version|default('—') }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table></div>
+          {% endif %}
+        </div>
+        <div class="col-lg-6">
+          <h3>Promotion decisions</h3>
+          {% if promotions is empty %}
+            <p>No promotion decisions yet.</p>
+          {% else %}
+            <div class="table-responsive"><table class="table">
+              <thead><tr><th>Strategy Version</th><th>Transition</th><th>Status</th><th>Approver</th></tr></thead>
+              <tbody>
+              {% for p in promotions %}
+                <tr><td>{{ p.strategy_version_id|default('—') }}</td><td>{{ p.from|default('—') }} → {{ p.to|default('—') }}</td><td><strong>{{ p.status|default('—') }}</strong></td><td>{{ p.approver|default('—') }}</td></tr>
+              {% endfor %}
+              </tbody>
+            </table></div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Rejected Hypotheses</h2>
+      {% if rejections is empty %}
+        <p>No rejected hypotheses recorded yet.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Hypothesis</th><th>Reason</th><th>Evidence</th><th>Review after</th></tr></thead>
+          <tbody>
+          {% for r in rejections %}
+            <tr>
+              <td>{{ r.hypothesis_id|default('—') }}</td>
+              <td><strong>{{ r.reason|default('—') }}</strong></td>
+              <td>{{ r.evidence|default({})|json_encode }}</td>
+              <td>{{ r.review_after|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Research Knowledge</h2>
+      <p>Negative research is retained so future experiments can reuse prior evidence and avoid repeating failed work.</p>
+      {% if knowledge is empty %}
+        <p>No reusable knowledge records yet.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Type</th><th>Finding</th><th>Experiments</th><th>Strategy Versions</th><th>Created</th></tr></thead>
+            <tbody>
+            {% for item in knowledge %}
+              <tr>
+                <td>{{ item.knowledge_type|default(item.type|default('—')) }}</td>
+                <td><strong>{{ item.statement|default('—') }}</strong></td>
+                <td>{{ item.experiment_ids|default([])|join(', ') }}</td>
+                <td>{{ item.strategy_version_ids|default([])|join(', ') }}</td>
+                <td>{{ item.created_at|default('—') }}</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
       {% endif %}
     </section>
 

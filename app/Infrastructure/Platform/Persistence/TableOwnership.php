@@ -80,6 +80,12 @@ final class TableOwnership
             'tn_capital_market_paper_balance_reservations', 'tn_capital_market_hypothesis_observations',
             'tn_capital_market_funding_observations', 'tn_capital_market_basis_observations',
             'tn_capital_market_funding_settlements', 'tn_capital_market_hedge_groups',
+            'tn_capital_market_research_hypotheses', 'tn_capital_market_research_datasets',
+            'tn_capital_market_strategy_versions', 'tn_capital_market_research_experiments',
+            'tn_capital_market_research_results', 'tn_capital_market_strategy_promotion_decisions',
+            'tn_capital_market_backtest_runs', 'tn_capital_market_oos_runs', 'tn_capital_market_paper_runs',
+            'tn_capital_market_strategy_scorecards', 'tn_capital_market_rejected_hypotheses',
+            'tn_capital_market_research_knowledge',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [

@@ -1539,10 +1539,34 @@ services:
       $policies: '@Kernel\Policy\Service\ActionPolicyService'
       $commands: '@Kernel\Application\Bus\CommandBusInterface'
 
+  App\Infrastructure\Automation\ResearchSearchHypothesesTool: ~
+  App\Infrastructure\Automation\ResearchCreateHypothesisDraftTool: ~
+  App\Infrastructure\Automation\ResearchCreateExperimentDraftTool: ~
+  App\Infrastructure\Automation\ResearchSearchKnowledgeTool: ~
+  App\Infrastructure\Automation\ResearchGetHypothesisTool: ~
+  App\Infrastructure\Automation\ResearchSearchExperimentsTool: ~
+  App\Infrastructure\Automation\ResearchGetResultTool: ~
+  App\Infrastructure\Automation\ResearchCompareResultsTool: ~
+  App\Infrastructure\Automation\ResearchRecordObservationTool: ~
+  App\Infrastructure\Automation\ResearchDatasetSearchTool: ~
+  App\Infrastructure\Automation\ResearchDatasetDescribeTool: ~
+
+
   Kernel\Tool\Service\ToolRegistry:
     arguments:
       $tools:
         - '@App\Infrastructure\Automation\SalesActionProposalTool'
+        - '@App\Infrastructure\Automation\ResearchSearchHypothesesTool'
+        - '@App\Infrastructure\Automation\ResearchCreateHypothesisDraftTool'
+        - '@App\Infrastructure\Automation\ResearchCreateExperimentDraftTool'
+        - '@App\Infrastructure\Automation\ResearchSearchKnowledgeTool'
+        - '@App\Infrastructure\Automation\ResearchGetHypothesisTool'
+        - '@App\Infrastructure\Automation\ResearchSearchExperimentsTool'
+        - '@App\Infrastructure\Automation\ResearchGetResultTool'
+        - '@App\Infrastructure\Automation\ResearchCompareResultsTool'
+        - '@App\Infrastructure\Automation\ResearchRecordObservationTool'
+        - '@App\Infrastructure\Automation\ResearchDatasetSearchTool'
+        - '@App\Infrastructure\Automation\ResearchDatasetDescribeTool'
 
   Kernel\Tool\Contract\ToolRegistryInterface:
     alias: Kernel\Tool\Service\ToolRegistry
@@ -1552,8 +1576,18 @@ services:
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $modules: '@Kernel\Module\ActiveModuleResolver'
 
+  App\Infrastructure\Automation\ResearchAgentToolPermissionChecker:
+    arguments:
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  App\Infrastructure\Automation\CompositeToolPermissionChecker:
+    arguments:
+      $checkers:
+        - '@App\Infrastructure\Automation\SalesAgentToolPermissionChecker'
+        - '@App\Infrastructure\Automation\ResearchAgentToolPermissionChecker'
+
   Kernel\Tool\Contract\ToolPermissionCheckerInterface:
-    alias: App\Infrastructure\Automation\SalesAgentToolPermissionChecker
+    alias: App\Infrastructure\Automation\CompositeToolPermissionChecker
 
   Kernel\Tool\Service\JsonSchemaToolInputValidator: ~
 
@@ -1932,6 +1966,87 @@ services:
   Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRelativeValueResearchRepository
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlResearchLabRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlResearchLabRepository
+
+  Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
+  Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy: ~
+  Domains\CapitalMarkets\Domain\Research\ReplayDataGuard: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine: ~
+  Domains\CapitalMarkets\Domain\Research\ParameterSensitivityEngine: ~
+  Domains\CapitalMarkets\Domain\Research\MarketRegimeClassifier: ~
+  Domains\CapitalMarkets\Domain\Research\StrategyDemotionPolicy: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector: ~
+  Domains\CapitalMarkets\Domain\Research\HypothesisLifecyclePolicy: ~
+  Domains\CapitalMarkets\Domain\Research\ExperimentLifecyclePolicy: ~
+  Domains\CapitalMarkets\Domain\Research\WalkForwardEngine: ~
+  Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy: ~
+  Domains\CapitalMarkets\Application\Service\ResearchTelemetry:
+    arguments:
+      $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
+      $logger: '@Kernel\Observability\StructuredLoggerInterface'
+
+  Domains\CapitalMarkets\Application\Service\ResearchEventPublisher:
+    arguments:
+      $events: '@Kernel\Event\EventBus'
+
+  Domains\CapitalMarkets\Application\Service\ResearchPaperRunService:
+    arguments:
+      $research: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $trading: '@Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface'
+      $events: '@Domains\CapitalMarkets\Application\Service\ResearchEventPublisher'
+
+  Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
+
+  Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService: ~
+  Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchReplayAdapter: ~
+
+  Domains\CapitalMarkets\Automation\Job\ResearchBacktestJobHandler:
+    arguments:
+      $backtests: '@Domains\CapitalMarkets\Application\Service\ResearchBacktestService'
+      $repository: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+
+  runtime.capital_markets_research_backtest_job_handler:
+    class: Kernel\Queue\Handler\ModuleAwareJobHandler
+    arguments:
+      $moduleId: 'capital_markets'
+      $inner: '@Domains\CapitalMarkets\Automation\Job\ResearchBacktestJobHandler'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
+  capitalMarketsResearchBacktestJobHandler:
+    alias: runtime.capital_markets_research_backtest_job_handler
+
+  Domains\CapitalMarkets\Application\Service\ResearchBacktestService:
+    arguments:
+      $adapters:
+        - '@Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchReplayAdapter'
+        - '@Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService'
+      $repository: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $lab: '@Domains\CapitalMarkets\Application\Service\ResearchLabService'
+      $walkForward: '@Domains\CapitalMarkets\Domain\Research\WalkForwardEngine'
+      $budget: '@Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy'
+      $isolation: '@Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy'
+      $metrics: '@Domains\CapitalMarkets\Domain\Research\ResearchMetricsEngine'
+      $confidence: '@Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine'
+      $telemetry: '@Domains\CapitalMarkets\Application\Service\ResearchTelemetry'
+      $queue: '@Kernel\Queue\Contract\JobQueueInterface'
+      $events: '@Domains\CapitalMarkets\Application\Service\ResearchEventPublisher'
+
+
+  Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService:
+    arguments:
+      $runtime: '@Kernel\Agent\Service\AgentRuntime'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $tools: '@Kernel\Tool\Contract\ToolRuntimeInterface'
+      $telemetry: '@Domains\CapitalMarkets\Application\Service\ResearchTelemetry'
+
   Domains\CapitalMarkets\Domain\Service\ExecutablePriceCalculator: ~
   Domains\CapitalMarkets\Domain\Service\NetEconomicsEngine: ~
   Domains\CapitalMarkets\Domain\Service\FundingCashflowCalculator: ~
@@ -1972,7 +2087,14 @@ services:
   Domains\CapitalMarkets\Application\Service\TokenizedEquityHistoricalReplayService: ~
 
 
-  Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule: ~
+  Domains\CapitalMarkets\Infrastructure\Research\ResearchAgentContextBuilder:
+    arguments:
+      $research: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $relativeValue: '@Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface'
+
+  Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule:
+    arguments:
+      $researchAgentContext: '@Domains\CapitalMarkets\Infrastructure\Research\ResearchAgentContextBuilder'
 
   App\Web\CapitalMarkets\CapitalMarketsPageController:
     public: true
@@ -1983,6 +2105,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Http\Api\V1\Controller\CapitalMarketsTokenizedEquityController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Http\Api\V1\Controller\CapitalMarketsResearchLabController:
     public: true
     tags: ['controller.service_arguments']
 
@@ -2707,6 +2833,7 @@ services:
         - '@Kernel\Queue\Handler\ActionExecutionJobHandler'
         - '@Kernel\Queue\Handler\AgentRunJobHandler'
         - '@runtime.sales_crm_job_handler'
+        - '@runtime.capital_markets_research_backtest_job_handler'
 
   Kernel\Queue\Service\QueueWorker:
     arguments:

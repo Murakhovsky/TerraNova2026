@@ -1,0 +1,193 @@
+{
+  "schema_version": 4,
+  "id": "capital-markets.research-strategy-lab",
+  "title": "Лабораторія досліджень і стратегій Capital Markets",
+  "domain": "capital_markets",
+  "state": "as-is",
+  "workflow": "02-workflows/capital-markets-research-strategy-lab.md",
+  "trigger": "A formal Capital Markets research hypothesis or strategy improvement proposal is ready for testing",
+  "outcomes": [
+    "Every research decision has immutable hypothesis, dataset, strategy version and experiment lineage",
+    "Historical replay reuses production economics instead of parallel financial math",
+    "TRAIN, VALIDATION and OUT_OF_SAMPLE are isolated and OOS reuse after tuning is blocked",
+    "Promotion is deterministic and auditable",
+    "Rejected hypotheses remain reusable knowledge",
+    "Research Agent can assist with drafts but cannot activate live trading or override risk"
+  ],
+  "actors": [
+    "Capital Markets Research Agent",
+    "Research Backtest runtime",
+    "Capital Markets operator",
+    "Strategy Promotion Gate"
+  ],
+  "steps": [
+    {
+      "id": "hypothesis",
+      "label": "Create or retrieve formal ResearchHypothesis",
+      "kind": "state",
+      "owner": "Capital Markets Research Agent",
+      "domain": "capital_markets",
+      "capability": "capital_markets.research.manage",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php",
+          "symbol": "public function createHypothesis("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Research/ResearchDuplicateDetector.php",
+          "symbol": "public function find("
+        }
+      ]
+    },
+    {
+      "id": "freeze",
+      "label": "Freeze dataset and strategy/experiment specification",
+      "kind": "state",
+      "owner": "Research Backtest runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.research.manage",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php",
+          "symbol": "public function freezeDataset("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php",
+          "symbol": "public function createExperiment("
+        }
+      ]
+    },
+    {
+      "id": "replay",
+      "label": "Run historical replay with production economics",
+      "kind": "operation",
+      "owner": "Research Backtest runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.research.experiment.run",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/ResearchBacktestService.php",
+          "symbol": "public function run("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/RelativeValueHistoricalReplayService.php",
+          "symbol": "public function replay("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Service/RelativeValueEconomicsCalculator.php",
+          "symbol": "public function historicalSpotPerp("
+        }
+      ]
+    },
+    {
+      "id": "oos",
+      "label": "Enforce OUT_OF_SAMPLE isolation",
+      "kind": "decision",
+      "owner": "Research Backtest runtime",
+      "domain": "capital_markets",
+      "capability": "capital_markets.research.experiment.run",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Research/ResearchIsolationPolicy.php",
+          "symbol": "public function assertOosFrozen("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Research/ResearchIsolationPolicy.php",
+          "symbol": "public function assertNewOosPeriod("
+        }
+      ]
+    },
+    {
+      "id": "score",
+      "label": "Calculate StrategyScorecard",
+      "kind": "decision",
+      "owner": "Strategy Promotion Gate",
+      "domain": "capital_markets",
+      "capability": "capital_markets.research.manage",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Research/StrategyScorecardEngine.php",
+          "symbol": "public function calculate("
+        }
+      ]
+    },
+    {
+      "id": "promotion",
+      "label": "Apply deterministic promotion gate",
+      "kind": "decision",
+      "owner": "Strategy Promotion Gate",
+      "domain": "capital_markets",
+      "capability": "capital_markets.strategy.promote",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Domain/Research/StrategyPromotionGate.php",
+          "symbol": "public function evaluate("
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "label": "Persist validated or rejected research knowledge",
+      "kind": "outcome",
+      "owner": "Capital Markets operator",
+      "domain": "capital_markets",
+      "capability": "capital_markets.research.manage",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php",
+          "symbol": "public function recordKnowledge("
+        },
+        {
+          "type": "source",
+          "path": "app/Domains/CapitalMarkets/Application/Service/ResearchLabService.php",
+          "symbol": "public function rejectHypothesis("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "hypothesis",
+      "to": "freeze"
+    },
+    {
+      "from": "freeze",
+      "to": "replay"
+    },
+    {
+      "from": "replay",
+      "to": "oos"
+    },
+    {
+      "from": "oos",
+      "to": "score"
+    },
+    {
+      "from": "score",
+      "to": "promotion"
+    },
+    {
+      "from": "promotion",
+      "to": "knowledge"
+    }
+  ]
+}

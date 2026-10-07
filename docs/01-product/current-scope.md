@@ -15,7 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Capital_markets | `0.7.0` | CM-FOUNDATION + Market Intelligence + Tokenized Equity H1/H2 research; immutable hypothesis observations, Edge Funnel, sample-gated deterministic verdicts, research replay, automated relationship-driven universe scanning, historical MarketState replay, guarded H2 paper execution, asset-aware ledger та realized paper P&L; Live Trading вимкнено |
+| Capital_markets | `0.8.0` | Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto Spot/Perpetual H4/H5/H6 + governed Research & Strategy Lab: immutable hypothesis/experiment/dataset/result lineage, strategy versioning, replay/backtest, TRAIN/VALIDATION/OOS isolation, walk-forward, scorecards, promotion gates, rejected-hypothesis memory and Research Agent; Live Trading вимкнено |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
@@ -31,7 +31,7 @@ kind: product
 
 ## Capital Markets: фундамент і ринкова аналітика
 
-Capital Markets `0.7.0` має три активні шари: структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE` та перший фінансовий vertical slice `CM-TOKENIZED-EQUITY`.
+Capital Markets `0.8.0` має структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE`, два фінансові vertical slices (`CM-TOKENIZED-EQUITY` H1/H2 та Crypto Spot/Perpetual H4/H5/H6) і governed `CM-RESEARCH-LAB`.
 
 Канонічний market-data flow:
 
@@ -58,6 +58,8 @@ Bybit Spot REST та Kraken public Spot REST/xStocks trading-source adapters і 
 Operator Market Data API/UI уже реалізований: sources створюються disabled, окремо enable/disable, subscriptions керуються по instrument/data type, manual poll показує source health і current state.
 
 Tokenized Equity comparison H1/H2 уже реалізований поверх trusted MarketState: economic relationship gating, quote normalization, explicit costs, deterministic risk, paper portfolio, pre-funded venue balances, two-leg H2 paper execution, asset-aware ledger та realized paper P&L. V0.5 додає immutable Hypothesis Observation Journal, Edge Funnel `SCAN → DETECTED → EXECUTABLE → REALIZED`, sample-size gates, deterministic verdicts `INSUFFICIENT_DATA / EDGE_EXISTS / EDGE_EXISTS_BUT_NOT_EXECUTABLE / PAPER_VALIDATION_REQUIRED / NO_EDGE` та non-mutating research replay із dataset hash. H1 залишається research-only без executable hedge venue; з явно заданим executable hedge venue підтримується paper execution. Historical market-state backtest уже підтримується replay-сервісом, automated universe scanning працює через configurable `TokenizedEquityUniverse`; WebSocket streaming, Live Trading та Auto Execution залишаються наступними promotion gates.
+
+Research & Strategy Lab формалізує `ResearchHypothesis → ResearchDataset → ResearchExperiment → StrategyVersion → ResearchResult`, додає H4/H5/H6 historical replay через production relative-value economics, TRAIN/VALIDATION/OOS isolation, walk-forward, deterministic scorecards/promotion gates, rejected-hypothesis memory, reusable ResearchKnowledge та Capital Markets Research Agent із draft-only authority. Операторський workspace: `/capital-markets/research`.
 
 ## Growth: інтелект можливостей
 

@@ -18,7 +18,7 @@ generated: true
 
 | Класифікація | Кількість | Значення |
 | --- | ---: | --- |
-| `both` | 28 | Capability присутня і в runtime catalogue, і в manifest. |
+| `both` | 36 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
 | `manifest-only` | 130 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
@@ -41,6 +41,14 @@ generated: true
 | `capital_markets` | `capital_markets.paper.execute` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.relationship.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.relationship.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.research.agent.use` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.research.experiment.run` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.research.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.research.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.strategy.demote` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.strategy.promote` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.strategy.reject` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.strategy.version.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.venue.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.venue.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
