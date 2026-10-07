@@ -275,6 +275,7 @@
     {% set results = w.results|default([]) %}
     {% set runs = w.backtest_runs|default([]) %}
     {% set oosRuns = w.oos_runs|default([]) %}
+    {% set paperRuns = w.paper_runs|default([]) %}
     {% set scorecards = w.scorecards|default([]) %}
     {% set rejections = w.rejections|default([]) %}
     {% set promotions = w.promotion_decisions|default([]) %}
@@ -326,6 +327,7 @@
             <option value="/api/v1/capital-markets/research/backtests">Queue backtest</option>
             <option value="/api/v1/capital-markets/research/backtests/run">Run backtest now</option>
             <option value="/api/v1/capital-markets/research/walk-forward">Walk-forward</option>
+            <option value="/api/v1/capital-markets/research/paper-runs">Start Paper run</option>
             <option value="/api/v1/capital-markets/research/rejections">Reject hypothesis</option>
             <option value="/api/v1/capital-markets/research/knowledge">Record knowledge</option>
             <option value="/api/v1/capital-markets/research/agent/run">Run Research Agent</option>
@@ -541,6 +543,31 @@
               <td>{{ run.dataset_id|default('—') }}</td>
               <td>{{ run.from|default('—') }} → {{ run.to|default('—') }}</td>
               <td><strong>{{ run.status|default('—') }}</strong></td>
+              <td>{{ run.result_id|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Paper Runs</h2>
+      {% if paperRuns is empty %}
+        <p>No research Paper runs yet. Paper executions are linked here only after an OOS-tested strategy enters a forward paper experiment.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Run</th><th>Experiment</th><th>Strategy</th><th>Status</th><th>Executions</th><th>Net P&amp;L</th><th>Drawdown</th><th>Result</th></tr></thead>
+          <tbody>
+          {% for run in paperRuns %}
+            <tr>
+              <td><strong>{{ run.run_id|default('—') }}</strong></td>
+              <td>{{ run.experiment_id|default('—') }}</td>
+              <td>{{ run.strategy_version_id|default('—') }}</td>
+              <td><strong>{{ run.status|default('—') }}</strong></td>
+              <td>{{ run.execution_ids|default([])|join(', ') }}</td>
+              <td>{{ run.performance_snapshot.net_pnl|default(run.performance_snapshot.realized_pnl|default('—')) }}</td>
+              <td>{{ run.performance_snapshot.max_drawdown|default('—') }}</td>
               <td>{{ run.result_id|default('—') }}</td>
             </tr>
           {% endfor %}
