@@ -45,7 +45,7 @@ foreach([
     "success_criteria_hash",
     "failure_criteria_hash",
     "hash('sha256'",
-    "reproducibility_fingerprint']=$this->fingerprint",
+    "'reproducibility_fingerprint']=\$this->fingerprint",
 ] as $needle){
     $assert(str_contains($backtest,$needle),'Server-side reproducibility contract missing: '.$needle);
 }
