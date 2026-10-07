@@ -84,6 +84,14 @@ final readonly class CapitalMarketsResearchLabController
             fn(TenantContext $tenant,array $payload):array=>$this->lab->createExperiment($tenant->organizationId()->value(),$payload),201);
     }
 
+    public function transitionExperiment(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->lab->transitionExperiment(
+                $tenant->organizationId()->value(),$id,$this->required($payload,'status')
+            ),200);
+    }
+
     public function createStrategyVersion(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::StrategyVersionManage,
