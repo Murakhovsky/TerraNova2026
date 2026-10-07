@@ -29,7 +29,7 @@ $backtest=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Applicati
 foreach([
     'Backtest dataset must equal frozen experiment dataset.',
     'Backtest strategy version must equal experiment strategy version.',
-    'Cancelled backtest run cannot start.',
+    'Terminal backtest run cannot start again.',
     'walkForward(',
     'assertBacktest',
     'assertWalkForward',
