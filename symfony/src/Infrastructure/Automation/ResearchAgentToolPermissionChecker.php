@@ -16,6 +16,13 @@ final readonly class ResearchAgentToolPermissionChecker implements ToolPermissio
         'research.createhypothesis',
         'research.createexperimentdraft',
         'research.searchknowledge',
+        'research.gethypothesis',
+        'research.searchexperiments',
+        'research.getresult',
+        'research.compareresults',
+        'research.recordobservation',
+        'dataset.search',
+        'dataset.describe',
     ];
 
     public function __construct(private ActiveModuleResolver $modules){}
