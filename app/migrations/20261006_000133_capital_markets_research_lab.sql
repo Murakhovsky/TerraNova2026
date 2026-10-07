@@ -153,7 +153,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_research_knowledge (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
-UPDATE tn_modules
+UPDATE cos_module_installations
 SET installed_version='0.8.0',
     schema_version='0.8.0',
     updated_at=CURRENT_TIMESTAMP
