@@ -36,6 +36,11 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         return $this->one('tn_capital_market_research_datasets','dataset_id',$organizationId,$id);
     }
 
+    public function listDatasets(string $organizationId,int $limit=200):array
+    {
+        return $this->many('tn_capital_market_research_datasets',$organizationId,$limit);
+    }
+
     public function saveExperiment(string $organizationId,array $record):void
     {
         $this->insert('tn_capital_market_research_experiments',$organizationId,$record,'experiment_id');
