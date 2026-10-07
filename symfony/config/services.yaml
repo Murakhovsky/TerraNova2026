@@ -1973,6 +1973,22 @@ services:
   Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlResearchLabRepository
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalRiskRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\CapitalRiskRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalRiskRepository
+
+  Domains\CapitalMarkets\Domain\Service\EconomicExposureEngine: ~
+  Domains\CapitalMarkets\Domain\Service\ConcentrationEngine: ~
+  Domains\CapitalMarkets\Domain\Service\CorrelationEngine: ~
+  Domains\CapitalMarkets\Domain\Service\PortfolioRiskEngine: ~
+  Domains\CapitalMarkets\Domain\Service\CapitalAllocationEngine: ~
+  Domains\CapitalMarkets\Domain\Service\PortfolioStressEngine: ~
+  Domains\CapitalMarkets\Domain\Service\PortfolioRebalanceEngine: ~
+  Domains\CapitalMarkets\Application\Service\CapitalRiskService: ~
+
   Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
   Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine: ~
   Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy: ~
@@ -2109,6 +2125,14 @@ services:
     tags: ['controller.service_arguments']
 
   App\Http\Api\V1\Controller\CapitalMarketsResearchLabController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\CapitalMarkets\CapitalRiskPageController:
     public: true
     tags: ['controller.service_arguments']
 
