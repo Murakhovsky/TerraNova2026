@@ -208,21 +208,26 @@ final readonly class CapitalMarketsResearchLabController
     public function promotion(Request $request,string $id):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::StrategyPromote,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->evaluatePromotion(
-                $tenant->organizationId()->value(),
-                $id,
-                $this->required($payload,'from'),
-                $this->required($payload,'to'),
-                $this->object($payload,'actual'),
-                $this->object($payload,'policy'),
-                $tenant->userId()->value(),
-            ),201);
+            function(TenantContext $tenant,array $payload) use($request,$id):array{
+                $result=$this->lab->evaluatePromotion(
+                    $tenant->organizationId()->value(),$id,
+                    $this->required($payload,'from'),$this->required($payload,'to'),
+                    $this->object($payload,'actual'),$this->object($payload,'policy'),
+                    $tenant->userId()->value()
+                );
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchPromotionEvaluated,CapitalMarketsAuditResourceType::ResearchPromotionDecision,(string)$result['decision_id'],$result);
+                return $result;
+            },201);
     }
 
     public function reject(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::StrategyReject,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->rejectHypothesis($tenant->organizationId()->value(),$payload),201);
+            function(TenantContext $tenant,array $payload) use($request):array{
+                $result=$this->lab->rejectHypothesis($tenant->organizationId()->value(),$payload);
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchHypothesisRejected,CapitalMarketsAuditResourceType::ResearchHypothesis,(string)$result['hypothesis_id'],$result);
+                return $result;
+            },201);
     }
 
     public function knowledge(Request $request):JsonResponse
