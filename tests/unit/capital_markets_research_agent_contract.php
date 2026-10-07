@@ -40,6 +40,13 @@ foreach([
     'ResearchCreateHypothesisDraftTool',
     'ResearchCreateExperimentDraftTool',
     'ResearchSearchKnowledgeTool',
+    'ResearchGetHypothesisTool',
+    'ResearchSearchExperimentsTool',
+    'ResearchGetResultTool',
+    'ResearchCompareResultsTool',
+    'ResearchRecordObservationTool',
+    'ResearchDatasetSearchTool',
+    'ResearchDatasetDescribeTool',
     'CompositeToolPermissionChecker',
     'ResearchAgentToolPermissionChecker',
     'CapitalMarketsResearchAgentService',
@@ -89,5 +96,12 @@ foreach([
 
 $permission=(string)file_get_contents($root.'/symfony/src/Infrastructure/Automation/ResearchAgentToolPermissionChecker.php');
 $assert(str_contains($permission,"capital_markets_research"),'Research tools must be bound to Research Agent identity.');
+foreach([
+    'research.gethypothesis','research.searchexperiments','research.getresult','research.compareresults',
+    'research.recordobservation','dataset.search','dataset.describe'
+] as $tool){
+    $assert(str_contains($permission,$tool),'Research Agent permission toolset missing: '.$tool);
+    $assert(str_contains($agent,$tool),'Research Agent strict schema toolset missing: '.$tool);
+}
 
 echo "Capital Markets Research Agent contracts passed.\n";
