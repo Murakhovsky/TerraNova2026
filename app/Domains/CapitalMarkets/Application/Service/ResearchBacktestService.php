@@ -36,7 +36,7 @@ final readonly class ResearchBacktestService
 
     public function queue(string $organizationId,array $specification):array
     {
-        foreach(['run_id','experiment_id','dataset_id','strategy_version_id','hypothesis_code','partition_name','configuration','reproducibility_fingerprint'] as $required){
+        foreach(['run_id','experiment_id','dataset_id','strategy_version_id','hypothesis_code','partition_name','configuration'] as $required){
             if(!array_key_exists($required,$specification))throw new InvalidArgumentException('Missing '.$required);
         }
         $this->budget->assertBacktest((array)$specification['configuration']);
@@ -44,6 +44,16 @@ final readonly class ResearchBacktestService
         if(!in_array($partition,['TRAIN','VALIDATION','OUT_OF_SAMPLE'],true)){
             throw new InvalidArgumentException('Invalid research data partition.');
         }
+        $experiment=$this->repository->getExperiment($organizationId,(string)$specification['experiment_id']);
+        if($experiment===null)throw new InvalidArgumentException('Backtest requires an existing experiment.');
+        if(($experiment['dataset_id']??null)!==$specification['dataset_id']){
+            throw new InvalidArgumentException('Backtest dataset must equal frozen experiment dataset.');
+        }
+        if(($experiment['strategy_version_id']??null)!==$specification['strategy_version_id']){
+            throw new InvalidArgumentException('Backtest strategy version must equal experiment strategy version.');
+        }
+        $specification['reproducibility_fingerprint']=$this->fingerprint($organizationId,$experiment,$specification,$partition);
+
         $existing=$this->repository->getBacktestRun($organizationId,(string)$specification['run_id']);
         if($existing!==null){
             $status=strtoupper((string)($existing['status']??''));
@@ -106,7 +116,7 @@ final readonly class ResearchBacktestService
     {
         foreach([
             'run_id','experiment_id','dataset_id','strategy_version_id','hypothesis_code',
-            'partition_name','configuration','reproducibility_fingerprint'
+            'partition_name','configuration'
         ] as $required){
             if(!array_key_exists($required,$specification))throw new InvalidArgumentException('Missing '.$required);
         }
@@ -128,6 +138,7 @@ final readonly class ResearchBacktestService
         if(($experiment['strategy_version_id']??null)!==$specification['strategy_version_id']){
             throw new InvalidArgumentException('Backtest strategy version must equal experiment strategy version.');
         }
+        $specification['reproducibility_fingerprint']=$this->fingerprint($organizationId,$experiment,$specification,$partition);
 
         $oos=null;
         if($partition==='OUT_OF_SAMPLE'){
@@ -333,6 +344,39 @@ final readonly class ResearchBacktestService
             'windows'=>$results,
             'summary'=>$summary,
         ];
+    }
+
+    private function fingerprint(string $organizationId,array $experiment,array $specification,string $partition):string
+    {
+        $dataset=$this->repository->getDataset($organizationId,(string)$specification['dataset_id']);
+        if($dataset===null)throw new InvalidArgumentException('Backtest requires an existing frozen dataset.');
+        $configuration=(array)$specification['configuration'];
+        $payload=[
+            'dataset_id'=>(string)$specification['dataset_id'],
+            'dataset_snapshot_hash'=>(string)($dataset['snapshot_hash']??''),
+            'strategy_version_id'=>(string)$specification['strategy_version_id'],
+            'experiment_id'=>(string)$specification['experiment_id'],
+            'partition'=>$partition,
+            'execution_model_version'=>(string)($experiment['execution_model_version']??'current-paper'),
+            'risk_configuration_version'=>(string)($experiment['risk_configuration_version']??'current'),
+            'parameters_hash'=>(string)($experiment['parameters_hash']??''),
+            'success_criteria_hash'=>(string)($experiment['success_criteria_hash']??''),
+            'failure_criteria_hash'=>(string)($experiment['failure_criteria_hash']??''),
+            'random_seed'=>(int)($specification['random_seed']??0),
+            'application_build'=>(string)($specification['application_build']??'unspecified'),
+            'commit_reference'=>(string)($specification['commit_reference']??'unspecified'),
+            'configuration'=>$this->canonicalize($configuration),
+        ];
+        return hash('sha256',json_encode($payload,JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
+    }
+
+    private function canonicalize(array $value):array
+    {
+        ksort($value);
+        foreach($value as $key=>$item){
+            if(is_array($item))$value[$key]=$this->canonicalize($item);
+        }
+        return $value;
     }
 
     private function adapter(string $hypothesis):ResearchReplayAdapterInterface
