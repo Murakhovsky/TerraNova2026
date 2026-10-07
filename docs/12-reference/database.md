@@ -63,6 +63,7 @@ generated: true
 | `capital_markets` | `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql` | `tn_capital_market_hypothesis_observations` |
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_backtest_runs` |
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_oos_runs` |
+| `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_paper_runs` |
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_rejected_hypotheses` |
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_research_datasets` |
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_research_experiments` |
