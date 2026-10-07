@@ -21,6 +21,14 @@ description: "Канонічний процес від формальної rese
 
 ResearchHypothesis → Frozen ResearchDataset → StrategyVersion → ResearchExperiment → Backtest / Walk Forward → OUT_OF_SAMPLE → ResearchResult → StrategyScorecard → Promotion / Rejection → ResearchKnowledge
 
+## Учасники
+
+- **Дослідник / аналітик:** формулює гіпотезу, критерії успіху та обмеження.
+- **Оператор Capital Markets:** керує наборами даних, чергою backtest та експериментами.
+- **Research Agent:** аналізує докази й створює чернетки, але не ухвалює рішення про торгівлю.
+- **Детерміновані рушії та Risk Engine:** обчислюють результати й застосовують контрольні умови.
+- **Уповноважений користувач:** переглядає promotion-рішення, які потребують ручного погодження.
+
 ## Ключові правила
 
 - Dataset snapshot immutable після старту experiment.
