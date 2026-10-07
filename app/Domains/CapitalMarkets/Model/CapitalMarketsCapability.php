@@ -29,6 +29,7 @@ enum CapitalMarketsCapability:string
     case ResearchExperimentRun='capital_markets.research.experiment.run';
     case StrategyVersionManage='capital_markets.strategy.version.manage';
     case StrategyPromote='capital_markets.strategy.promote';
+    case StrategyDemote='capital_markets.strategy.demote';
     case StrategyReject='capital_markets.strategy.reject';
     case ResearchAgentUse='capital_markets.research.agent.use';
 
