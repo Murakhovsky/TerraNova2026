@@ -21,4 +21,16 @@ enum CapitalMarketsAuditAction:string
     case MarketDataSourceDisabled='capital_markets.market_data.source.disabled';
     case MarketDataSubscriptionSaved='capital_markets.market_data.subscription.saved';
     case MarketDataPollTriggered='capital_markets.market_data.poll.triggered';
+    case ResearchHypothesisCreated='capital_markets.research.hypothesis.created';
+    case ResearchHypothesisRevised='capital_markets.research.hypothesis.revised';
+    case ResearchHypothesisRejected='capital_markets.research.hypothesis.rejected';
+    case ResearchExperimentCreated='capital_markets.research.experiment.created';
+    case ResearchExperimentStatusChanged='capital_markets.research.experiment.status_changed';
+    case ResearchDatasetFrozen='capital_markets.research.dataset.frozen';
+    case ResearchStrategyVersionCreated='capital_markets.research.strategy_version.created';
+    case ResearchScorecardCreated='capital_markets.research.scorecard.created';
+    case ResearchPromotionEvaluated='capital_markets.research.promotion.evaluated';
+    case ResearchPaperRunStarted='capital_markets.research.paper_run.started';
+    case ResearchPaperRunCompleted='capital_markets.research.paper_run.completed';
+    case ResearchPaperRunCancelled='capital_markets.research.paper_run.cancelled';
 }
