@@ -203,6 +203,39 @@ final readonly class MysqlResearchLabRepository implements ResearchLabRepository
         return $this->one('tn_capital_market_oos_runs','run_id',$organizationId,$runId);
     }
 
+
+    public function savePaperRun(string $organizationId,array $record):void
+    {
+        foreach(['run_id','experiment_id','strategy_version_id','status'] as $key){
+            if(!array_key_exists($key,$record))throw new RuntimeException('Paper run missing '.$key);
+        }
+        $statement=$this->connection->prepare(
+            'INSERT INTO tn_capital_market_paper_runs
+             (organization_id,run_id,experiment_id,strategy_version_id,status,record_json,created_at)
+             VALUES (:organization_id,:run_id,:experiment_id,:strategy_version_id,:status,:record_json,:created_at)
+             ON DUPLICATE KEY UPDATE status=VALUES(status),record_json=VALUES(record_json)'
+        );
+        $statement->execute([
+            'organization_id'=>$organizationId,
+            'run_id'=>(string)$record['run_id'],
+            'experiment_id'=>(string)$record['experiment_id'],
+            'strategy_version_id'=>(string)$record['strategy_version_id'],
+            'status'=>(string)$record['status'],
+            'record_json'=>json_encode($record,JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION),
+            'created_at'=>$record['created_at']??gmdate('Y-m-d H:i:s'),
+        ]);
+    }
+
+    public function getPaperRun(string $organizationId,string $runId):?array
+    {
+        return $this->one('tn_capital_market_paper_runs','run_id',$organizationId,$runId);
+    }
+
+    public function listPaperRuns(string $organizationId,int $limit=200):array
+    {
+        return $this->many('tn_capital_market_paper_runs',$organizationId,$limit);
+    }
+
     public function listOutOfSampleRuns(string $organizationId,int $limit=200):array
     {
         return $this->many('tn_capital_market_oos_runs',$organizationId,$limit);
