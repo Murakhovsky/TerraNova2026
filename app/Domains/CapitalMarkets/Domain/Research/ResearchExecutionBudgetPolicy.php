@@ -35,6 +35,27 @@ final class ResearchExecutionBudgetPolicy
         }
     }
 
+    public function assertParameterSearch(array $runs,int $maximumRuns,int $maximumComputeUnits):void
+    {
+        $count=count($runs);
+        if($count<1||$maximumRuns<1||$count>$maximumRuns){
+            throw new InvalidArgumentException('Parameter search run budget exceeded.');
+        }
+        $total=0;
+        foreach($runs as $run){
+            if(!is_array($run))throw new InvalidArgumentException('Parameter search run must be an object.');
+            $configuration=(array)($run['configuration']??[]);
+            if((int)($configuration['parameter_combinations']??1)!==1){
+                throw new InvalidArgumentException('Each parameter combination must be a separate Experiment/Run.');
+            }
+            $this->assertBacktest($configuration);
+            $total+=max(1,(int)($configuration['snapshot_limit']??5000));
+        }
+        if($maximumComputeUnits<1||$total>$maximumComputeUnits){
+            throw new InvalidArgumentException('Parameter search compute budget exceeded.');
+        }
+    }
+
     public function estimate(array $configuration,int $windows=1):array
     {
         $snapshotLimit=max(1,(int)($configuration['snapshot_limit']??5000));
