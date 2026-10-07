@@ -14,7 +14,7 @@ generated: true
 
 | Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
-| `capital_markets` | `0.8.0` | — | 25 |
+| `capital_markets` | `0.8.0` | — | 26 |
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `1.0.0` | — | 5 |
 | `finance` | `0.1.0` | — | 0 |
@@ -30,7 +30,7 @@ generated: true
 
 - manifest: `app/Domains/CapitalMarkets/module.php`;
 - configuration provisioners: —;
-- capabilities: `capital_markets.view`, `capital_markets.manage`, `capital_markets.instrument.view`, `capital_markets.instrument.manage`, `capital_markets.relationship.view`, `capital_markets.relationship.manage`, `capital_markets.venue.view`, `capital_markets.venue.manage`, `capital_markets.audit.view`, `capital_markets.market_data.view`, `capital_markets.market_data.manage`, `capital_markets.market_data.source.view`, `capital_markets.market_data.source.manage`, `capital_markets.market_data.quality.view`, `capital_markets.market_data.history.view`, `capital_markets.market_data.replay.manage`, `capital_markets.opportunity.view`, `capital_markets.paper.execute`, `capital_markets.research.view`, `capital_markets.research.manage`, `capital_markets.research.experiment.run`, `capital_markets.strategy.version.manage`, `capital_markets.strategy.promote`, `capital_markets.strategy.reject`, `capital_markets.research.agent.use`.
+- capabilities: `capital_markets.view`, `capital_markets.manage`, `capital_markets.instrument.view`, `capital_markets.instrument.manage`, `capital_markets.relationship.view`, `capital_markets.relationship.manage`, `capital_markets.venue.view`, `capital_markets.venue.manage`, `capital_markets.audit.view`, `capital_markets.market_data.view`, `capital_markets.market_data.manage`, `capital_markets.market_data.source.view`, `capital_markets.market_data.source.manage`, `capital_markets.market_data.quality.view`, `capital_markets.market_data.history.view`, `capital_markets.market_data.replay.manage`, `capital_markets.opportunity.view`, `capital_markets.paper.execute`, `capital_markets.research.view`, `capital_markets.research.manage`, `capital_markets.research.experiment.run`, `capital_markets.strategy.version.manage`, `capital_markets.strategy.promote`, `capital_markets.strategy.demote`, `capital_markets.strategy.reject`, `capital_markets.research.agent.use`.
 
 ## `construction`
 
