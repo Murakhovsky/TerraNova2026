@@ -32,6 +32,8 @@ final readonly class TokenizedEquityHistoricalReplayService
         $ttlMs=$this->int($options,'ttl_ms',1000);
         $buyFee=$this->requiredDecimal($options,'buy_fee_rate');
         $sellFee=$this->requiredDecimal($options,'sell_fee_rate');
+        $buySlippageBps=$this->decimal($options,'buy_slippage_bps','0');
+        $sellSlippageBps=$this->decimal($options,'sell_slippage_bps','0');
         $snapshots=$this->snapshots->list($organizationId,$this->int($options,'limit',500));
 
         $observations=[];$detected=0;$executable=0;
@@ -54,7 +56,9 @@ final readonly class TokenizedEquityHistoricalReplayService
                         $detected++;
                         $estimate=$this->economics->estimate(
                             $candidate->buyPrice,$candidate->sellPrice,$candidate->quantity,$buyFee,$sellFee,
-                            Decimal::fromString('0'),Decimal::fromString('0'),Decimal::fromString('0'),
+                            $this->slippageCost($candidate->buyPrice,$candidate->quantity,$buySlippageBps),
+                            $this->slippageCost($candidate->sellPrice,$candidate->quantity,$sellSlippageBps),
+                            Decimal::fromString('0'),
                             Decimal::fromString('0'),Decimal::fromString('0'),Decimal::fromString('0'),
                             Decimal::fromString('0'),Decimal::fromString('0')
                         );
@@ -91,7 +95,9 @@ final readonly class TokenizedEquityHistoricalReplayService
                             $detected++;
                             $estimate=$this->economics->estimate(
                                 $candidate->buyPrice,$candidate->sellPrice,$candidate->quantity,$buyFee,$sellFee,
-                                Decimal::fromString('0'),Decimal::fromString('0'),Decimal::fromString('0'),
+                                $this->slippageCost($candidate->buyPrice,$candidate->quantity,$buySlippageBps),
+                                $this->slippageCost($candidate->sellPrice,$candidate->quantity,$sellSlippageBps),
+                                Decimal::fromString('0'),
                                 Decimal::fromString('0'),Decimal::fromString('0'),Decimal::fromString('0'),
                                 Decimal::fromString('0'),Decimal::fromString('0')
                             );
@@ -207,6 +213,15 @@ final readonly class TokenizedEquityHistoricalReplayService
             $this->int($options,'minimum_opportunity_ttl_ms',500),
             $this->decimal($options,'economic_equivalence_threshold','0.8'),
             $this->decimal($options,'minimum_execution_probability','0'),
+        );
+    }
+
+    private function slippageCost(Decimal $price,Decimal $quantity,Decimal $bps):Decimal
+    {
+        if($bps->isNegative())throw new InvalidArgumentException('Slippage bps cannot be negative.');
+        return DecimalMath::divide(
+            DecimalMath::multiply(DecimalMath::multiply($price,$quantity),$bps),
+            Decimal::fromString('10000'),18
         );
     }
 
