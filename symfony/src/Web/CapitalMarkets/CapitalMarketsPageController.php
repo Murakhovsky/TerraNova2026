@@ -476,6 +476,10 @@ final readonly class CapitalMarketsPageController
             'canManageMarketData'=>$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage),
             'canManageMarketDataSources'=>$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataSourceManage),
             'canPaperExecute'=>$this->allowed($org,$actor,CapitalMarketsCapability::PaperExecute),
+            'canManageResearch'=>$this->allowed($org,$actor,CapitalMarketsCapability::ResearchManage),
+            'canRunResearch'=>$this->allowed($org,$actor,CapitalMarketsCapability::ResearchExperimentRun),
+            'canPromoteStrategy'=>$this->allowed($org,$actor,CapitalMarketsCapability::StrategyPromote),
+            'canUseResearchAgent'=>$this->allowed($org,$actor,CapitalMarketsCapability::ResearchAgentUse),
         ],$extra);
 
         $context=new WebExtensionContext($org,$tenant->role()->value(),'workspace','capital-markets',$active);
