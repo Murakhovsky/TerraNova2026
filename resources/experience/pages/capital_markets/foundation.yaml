@@ -199,3 +199,22 @@ pages:
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
     qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+
+  - id: capital_markets.portfolio
+    route: { name: capital_markets_portfolio, path: /capital-markets/portfolio, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.portfolio.view
+
+  - id: capital_markets.risk
+    route: { name: capital_markets_risk, path: /capital-markets/risk, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.risk.view
+
+  - id: capital_markets.allocation
+    route: { name: capital_markets_allocation, path: /capital-markets/allocation, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.allocation.view
