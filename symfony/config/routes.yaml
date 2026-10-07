@@ -3075,6 +3075,11 @@ cos_api_v1_capital_markets_research_backtest_run:
   controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::runBacktest
   methods: [POST]
 
+cos_api_v1_capital_markets_research_parameter_search:
+  path: /api/v1/capital-markets/research/parameter-search
+  controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::parameterSearch
+  methods: [POST]
+
 cos_api_v1_capital_markets_research_walk_forward:
   path: /api/v1/capital-markets/research/walk-forward
   controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::walkForward
