@@ -21,6 +21,7 @@ final readonly class CapitalMarketsResearchAgentService
         private DomainModuleRegistry $domains,
         private ActiveModuleResolver $modules,
         private ToolRuntimeInterface $tools,
+        private ResearchTelemetry $telemetry,
     ){}
 
     public function run(
@@ -35,6 +36,7 @@ final readonly class CapitalMarketsResearchAgentService
         }
 
         $agentName=CapitalMarketsResearchAgent::NAME;
+        $this->telemetry->metric($organizationId,'research_agent_runs_total');
         if($this->domains->ownerOfAgent($agentName)!=='capital_markets'){
             throw new RuntimeException('Research Agent ownership is invalid.');
         }
@@ -46,6 +48,7 @@ final readonly class CapitalMarketsResearchAgentService
 
         $requests=$first->result->evidence['research']['tool_requests']??[];
         if(!is_array($requests)||$requests===[]){
+            $this->telemetry->metric($organizationId,'research_agent_completed_total');
             return [
                 'initial_run_id'=>$first->runId,
                 'final_run_id'=>$first->runId,
@@ -98,6 +101,8 @@ final readonly class CapitalMarketsResearchAgentService
             throw new RuntimeException('Research Agent requested tools after the final pass.');
         }
 
+        $this->telemetry->metric($organizationId,'research_agent_completed_total');
+        $this->telemetry->metric($organizationId,'research_agent_tool_calls',(float)count($toolResults));
         return [
             'initial_run_id'=>$first->runId,
             'final_run_id'=>$final->runId,
