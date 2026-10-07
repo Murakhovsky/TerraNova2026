@@ -33,6 +33,16 @@ enum CapitalMarketsCapability:string
     case StrategyReject='capital_markets.strategy.reject';
     case ResearchAgentUse='capital_markets.research.agent.use';
 
+    case PortfolioView='capital_markets.portfolio.view';
+    case PortfolioManage='capital_markets.portfolio.manage';
+    case RiskView='capital_markets.risk.view';
+    case RiskManagePolicy='capital_markets.risk.manage_policy';
+    case AllocationView='capital_markets.allocation.view';
+    case AllocationPropose='capital_markets.allocation.propose';
+    case AllocationApprove='capital_markets.allocation.approve';
+    case RebalancePropose='capital_markets.rebalance.propose';
+    case RebalanceApprove='capital_markets.rebalance.approve';
+
     /** @return list<string> */
     public static function values():array{return array_map(static fn(self $case):string=>$case->value,self::cases());}
 }
