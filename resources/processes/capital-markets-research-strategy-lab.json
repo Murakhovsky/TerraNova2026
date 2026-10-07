@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
   "id": "capital-markets.research-strategy-lab",
-  "title": "Research Hypothesis → Strategy Decision → Knowledge",
+  "title": "Лабораторія досліджень і стратегій Capital Markets",
   "domain": "capital_markets",
   "state": "as-is",
   "workflow": "02-workflows/capital-markets-research-strategy-lab.md",
