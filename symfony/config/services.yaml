@@ -1968,6 +1968,7 @@ services:
   Domains\CapitalMarkets\Domain\Research\StrategyDemotionPolicy: ~
   Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector: ~
   Domains\CapitalMarkets\Domain\Research\HypothesisLifecyclePolicy: ~
+  Domains\CapitalMarkets\Domain\Research\ExperimentLifecyclePolicy: ~
   Domains\CapitalMarkets\Domain\Research\WalkForwardEngine: ~
   Domains\CapitalMarkets\Domain\Research\ResearchExecutionBudgetPolicy: ~
   Domains\CapitalMarkets\Application\Service\ResearchTelemetry:
