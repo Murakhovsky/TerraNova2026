@@ -220,6 +220,25 @@ final readonly class CapitalMarketsResearchLabController
             },201);
     }
 
+    public function demotion(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::StrategyDemote,
+            function(TenantContext $tenant,array $payload) use($request,$id):array{
+                $result=$this->lab->evaluateDemotion(
+                    $tenant->organizationId()->value(),$id,
+                    $this->object($payload,'actual'),$this->object($payload,'policy'),
+                    $tenant->userId()->value()
+                );
+                $this->auditResult(
+                    $request,$tenant,
+                    CapitalMarketsAuditAction::ResearchDemotionEvaluated,
+                    CapitalMarketsAuditResourceType::ResearchPromotionDecision,
+                    (string)$result['decision_id'],$result
+                );
+                return $result;
+            },201);
+    }
+
     public function reject(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::StrategyReject,
