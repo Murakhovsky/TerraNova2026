@@ -63,6 +63,7 @@ generated: true
 - `capital_markets.research.experiment.run`;
 - `capital_markets.research.manage`;
 - `capital_markets.research.view`;
+- `capital_markets.strategy.demote`;
 - `capital_markets.strategy.promote`;
 - `capital_markets.strategy.reject`;
 - `capital_markets.strategy.version.manage`;
