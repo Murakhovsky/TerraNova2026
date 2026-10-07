@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInter
 use Domains\CapitalMarkets\Application\Service\ResearchLabService;
 use Domains\CapitalMarkets\Application\Service\ResearchBacktestService;
 use Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService;
+use Domains\CapitalMarkets\Application\Service\ResearchPaperRunService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use InvalidArgumentException;
 use JsonException;
@@ -28,6 +29,7 @@ final readonly class CapitalMarketsResearchLabController
         private ResearchLabService $lab,
         private ResearchBacktestService $backtests,
         private CapitalMarketsResearchAgentService $researchAgent,
+        private ResearchPaperRunService $paperRuns,
         private SessionCsrfValidator $csrf,
     ){}
 
@@ -128,6 +130,31 @@ final readonly class CapitalMarketsResearchLabController
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
             fn(TenantContext $tenant,array $payload):array=>$this->backtests->walkForward($tenant->organizationId()->value(),$payload),200);
+    }
+
+    public function startPaperRun(Request $request):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->paperRuns->start($tenant->organizationId()->value(),$payload),201);
+    }
+
+    public function completePaperRun(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->paperRuns->complete(
+                $tenant->organizationId()->value(),$id,
+                $this->object($payload,'performance_snapshot'),
+                trim((string)($payload['result_id']??'')),
+                trim((string)($payload['decision_id']??''))
+            ),200);
+    }
+
+    public function cancelPaperRun(Request $request,string $id):JsonResponse
+    {
+        return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
+            fn(TenantContext $tenant,array $payload):array=>$this->paperRuns->cancel(
+                $tenant->organizationId()->value(),$id,trim((string)($payload['reason']??'USER_CANCELLED'))
+            ),200);
     }
 
     public function scorecard(Request $request,string $id):JsonResponse
