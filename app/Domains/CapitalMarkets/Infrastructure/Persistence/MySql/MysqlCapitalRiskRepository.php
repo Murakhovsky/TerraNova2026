@@ -17,7 +17,18 @@ final readonly class MysqlCapitalRiskRepository implements CapitalRiskRepository
  public function latestAllocationPolicy(string $o,string $p,string $mode):?array{$s=$this->connection->prepare('SELECT record_json FROM tn_capital_market_allocation_policies WHERE organization_id=:o AND portfolio_id=:p AND mode=:m ORDER BY id DESC LIMIT 1');$s->execute(['o'=>$o,'p'=>$p,'m'=>$mode]);$v=$s->fetchColumn();return $v===false?null:$this->decode((string)$v);}
  public function saveAllocationPlan(string $o,array $r):void{$this->insert('tn_capital_market_allocation_plans',$o,$r,'plan_id');}
  public function latestAllocationPlan(string $o,string $p):?array{return $this->latest('tn_capital_market_allocation_plans',$o,$p);}
- public function approveAllocation(string $o,string $planId,string $actorId,string $approvedAt):bool{$s=$this->connection->prepare("UPDATE tn_capital_market_allocation_plans SET status='APPROVED',approved_by=:a,approved_at=:t WHERE organization_id=:o AND plan_id=:id AND status='PROPOSED'");$s->execute(['a'=>$actorId,'t'=>$approvedAt,'o'=>$o,'id'=>$planId]);return $s->rowCount()===1;}
+ public function approveAllocation(string $o,string $planId,string $actorId,string $approvedAt):bool{
+  $select=$this->connection->prepare("SELECT record_json FROM tn_capital_market_allocation_plans WHERE organization_id=:o AND plan_id=:id AND status='PROPOSED' FOR UPDATE");
+  $this->connection->beginTransaction();
+  try{
+   $select->execute(['o'=>$o,'id'=>$planId]);$json=$select->fetchColumn();
+   if($json===false){$this->connection->rollBack();return false;}
+   $record=$this->decode((string)$json);$record['status']='APPROVED';$record['approved_by']=$actorId;$record['approved_at']=$approvedAt;
+   $s=$this->connection->prepare("UPDATE tn_capital_market_allocation_plans SET status='APPROVED',approved_by=:a,approved_at=:t,record_json=:j WHERE organization_id=:o AND plan_id=:id AND status='PROPOSED'");
+   $s->execute(['a'=>$actorId,'t'=>$approvedAt,'j'=>json_encode($record,JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION),'o'=>$o,'id'=>$planId]);
+   $ok=$s->rowCount()===1;$this->connection->commit();return $ok;
+  }catch(\Throwable $e){if($this->connection->inTransaction())$this->connection->rollBack();throw $e;}
+ }
  public function saveStrategyAllocation(string $o,array $r):void{$this->insert('tn_capital_market_strategy_allocations',$o,$r,'allocation_id');}
  public function listStrategyAllocations(string $o,string $p):array{return $this->many('tn_capital_market_strategy_allocations',$o,$p,500);}
  public function saveRebalancePlan(string $o,array $r):void{$this->insert('tn_capital_market_rebalance_plans',$o,$r,'plan_id');}
