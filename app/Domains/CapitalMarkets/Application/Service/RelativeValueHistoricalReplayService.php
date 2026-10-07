@@ -17,6 +17,7 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketState;
 use Domains\CapitalMarkets\Domain\Opportunity\RelativeValueEvaluation;
 use Domains\CapitalMarkets\Domain\Portfolio\PositionSide;
 use Domains\CapitalMarkets\Domain\Research\ReplayDataGuard;
+use Domains\CapitalMarkets\Domain\Research\MarketRegimeClassifier;
 use Domains\CapitalMarkets\Domain\Service\RelativeValueEconomicsCalculator;
 use Domains\CapitalMarkets\Domain\Service\RelativeValueOpportunityEvaluator;
 use Domains\CapitalMarkets\Domain\Service\SpotPerpetualMarketStateFactory;
@@ -33,6 +34,7 @@ final readonly class RelativeValueHistoricalReplayService implements ResearchRep
         private RelativeValueEconomicsCalculator $economics,
         private RelativeValueOpportunityEvaluator $evaluator,
         private ReplayDataGuard $guard,
+        private MarketRegimeClassifier $regimes,
     ){}
 
     public function supports(string $hypothesisCode):bool
@@ -144,10 +146,12 @@ final readonly class RelativeValueHistoricalReplayService implements ResearchRep
             $evaluation=$this->evaluator->fundingCapture($state,$economics);
         }
 
-        return $this->row($snapshot,$evaluation,$economics->expectedNetPnl->value(),[
+        $evidence=[
             'basis_bps'=>$state->basis->midBasisBps->value(),
             'funding_rate'=>$state->funding->rate->value(),
-        ]);
+        ];
+        $evidence['market_regime']=$this->regimes->classify($evidence,(array)($c['regime_thresholds']??[]))->value;
+        return $this->row($snapshot,$evaluation,$economics->expectedNetPnl->value(),$evidence);
     }
 
     private function replayCrossVenue(MarketSnapshot $snapshot,array $c):?array
@@ -191,11 +195,14 @@ final readonly class RelativeValueHistoricalReplayService implements ResearchRep
         $aLong=$ab->expectedNetPnl->compareTo($ba->expectedNetPnl)>=0;
         $economics=$aLong?$ab:$ba;
         $evaluation=$this->evaluator->crossVenueFunding($aLong?$fa:$fb,$aLong?$fb:$fa,$economics);
-        return $this->row($snapshot,$evaluation,$economics->expectedNetPnl->value(),[
+        $evidence=[
             'long_venue'=>$aLong?$a->venueId->value():$b->venueId->value(),
             'short_venue'=>$aLong?$b->venueId->value():$a->venueId->value(),
             'venue_a_rate'=>$fa->rate->value(),'venue_b_rate'=>$fb->rate->value(),
-        ]);
+            'funding_rate'=>$aLong?$fb->rate->value():$fa->rate->value(),
+        ];
+        $evidence['market_regime']=$this->regimes->classify($evidence,(array)($c['regime_thresholds']??[]))->value;
+        return $this->row($snapshot,$evaluation,$economics->expectedNetPnl->value(),$evidence);
     }
 
     private function state(MarketSnapshot $snapshot,string $venue,string $instrument):?MarketState
