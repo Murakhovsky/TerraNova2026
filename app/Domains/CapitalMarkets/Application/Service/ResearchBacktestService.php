@@ -127,7 +127,7 @@ final readonly class ResearchBacktestService
         }
         $specification['partition_name']=$partition;
         $existing=$this->repository->getBacktestRun($organizationId,(string)$specification['run_id']);
-        if($existing!==null&&in_array((string)($existing['status']??''),['COMPLETED','CANCELLED'],true)){
+        if($existing!==null&&in_array((string)($existing['status']??''),['COMPLETED','FAILED','CANCELLED','INVALIDATED'],true)){
             throw new InvalidArgumentException('Terminal backtest run cannot start again.');
         }
         $experiment=$this->repository->getExperiment($organizationId,(string)$specification['experiment_id']);
