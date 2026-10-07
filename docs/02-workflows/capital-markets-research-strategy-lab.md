@@ -63,6 +63,14 @@ ResearchHypothesis → Frozen ResearchDataset → StrategyVersion → ResearchEx
 
 <ProcessDiagram process-id="capital-markets.research-strategy-lab" />
 
+## Представлення відповідальності
+
+<ProcessDiagram process-id="capital-markets.research-strategy-lab" view="ownership" direction="LR" />
+
+## Представлення можливостей
+
+<ProcessDiagram process-id="capital-markets.research-strategy-lab" view="capability" direction="LR" />
+
 ## Потік
 
 Idea → Duplicate Research Search → ResearchHypothesis → Frozen Dataset → Strategy Version → Experiment → Queue / Budget Gate → Backtest / Replay → Parameter Sensitivity → Walk Forward → OOS → Scorecard → Promotion Gate → Paper → Validate / Reject → ResearchKnowledge
