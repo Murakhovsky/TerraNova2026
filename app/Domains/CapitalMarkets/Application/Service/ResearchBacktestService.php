@@ -230,7 +230,7 @@ final readonly class ResearchBacktestService
             $minimumSample,
             $dataQuality,
             max(0,min(100,(int)$validatedPercent->value())),
-            (int)($specification['regime_diversity_score']??50),
+            $this->regimeDiversityScore((array)($replay['rows']??[])),
             $this->fidelityScore((string)($replay['execution_fidelity']??'LIMITED')),
             (int)($specification['result_stability_score']??50),
         );
@@ -407,6 +407,22 @@ final readonly class ResearchBacktestService
             if($adapter->supports($hypothesis))return $adapter;
         }
         throw new RuntimeException('No ResearchReplayAdapter supports '.$hypothesis.'.');
+    }
+
+    private function regimeDiversityScore(array $rows):int
+    {
+        $regimes=[];
+        foreach($rows as $row){
+            $regime=strtoupper(trim((string)($row['evidence']['market_regime']??'')));
+            if($regime!=='')$regimes[$regime]=true;
+        }
+        return match(count($regimes)){
+            0=>0,
+            1=>35,
+            2=>60,
+            3=>80,
+            default=>100,
+        };
     }
 
     private function fidelityScore(string $fidelity):int
