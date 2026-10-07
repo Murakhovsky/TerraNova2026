@@ -2018,6 +2018,7 @@ services:
       $confidence: '@Domains\CapitalMarkets\Domain\Research\ResearchConfidenceEngine'
       $telemetry: '@Domains\CapitalMarkets\Application\Service\ResearchTelemetry'
       $queue: '@Kernel\Queue\Contract\JobQueueInterface'
+      $events: '@Domains\CapitalMarkets\Application\Service\ResearchEventPublisher'
 
 
   Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService:
