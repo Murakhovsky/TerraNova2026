@@ -406,6 +406,16 @@ final readonly class ResearchLabService
 
     private function assertPromotionEvidence(string $organizationId,string $strategyVersionId,string $from,string $to):void
     {
+        if($from==='RESEARCH'&&$to==='BACKTEST'){
+            foreach($this->repository->listExperiments($organizationId,null,500) as $experiment){
+                if(($experiment['strategy_version_id']??null)!==$strategyVersionId)continue;
+                if(empty($experiment['dataset_id'])||empty($experiment['success_criteria'])||empty($experiment['failure_criteria']))continue;
+                $hypothesis=$this->repository->getHypothesis($organizationId,(string)($experiment['hypothesis_id']??''));
+                if($hypothesis===null||trim((string)($hypothesis['economic_reason']??''))==='')continue;
+                return;
+            }
+            throw new InvalidArgumentException('RESEARCH -> BACKTEST requires an experiment with frozen dataset, measurable criteria and economic rationale.');
+        }
         if($from==='BACKTEST'&&$to==='OOS'){
             foreach($this->repository->listBacktestRuns($organizationId,500) as $run){
                 if(($run['strategy_version_id']??null)===$strategyVersionId&&($run['status']??null)==='COMPLETED')return;
