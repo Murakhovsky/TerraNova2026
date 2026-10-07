@@ -58,15 +58,20 @@ final readonly class ResearchPaperRunService
 
     public function complete(string $organizationId,string $runId,array $performance,string $resultId='',string $decisionId=''):array
     {
+        if(trim($resultId)==='')throw new InvalidArgumentException('Paper completion requires immutable result_id.');
         $run=$this->research->getPaperRun($organizationId,$runId);
         if($run===null)throw new InvalidArgumentException('Paper run not found.');
         if(($run['status']??null)!=='RUNNING')throw new InvalidArgumentException('Only RUNNING paper run can be completed.');
         if($performance===[])throw new InvalidArgumentException('Paper completion requires performance snapshot.');
+        $result=$this->research->getResultForExperiment($organizationId,(string)$run['experiment_id']);
+        if($result===null||(string)($result['result_id']??'')!==$resultId){
+            throw new InvalidArgumentException('Paper result_id must reference the immutable result of this experiment.');
+        }
 
         $run['status']='COMPLETED';
         $run['completed_at']=gmdate('Y-m-d H:i:s');
         $run['performance_snapshot']=$performance;
-        $run['result_id']=$resultId!==''?$resultId:null;
+        $run['result_id']=$resultId;
         $run['decision_id']=$decisionId!==''?$decisionId:null;
         $this->research->savePaperRun($organizationId,$run);
         $this->events->publish(
