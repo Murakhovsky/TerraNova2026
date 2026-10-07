@@ -18,6 +18,11 @@ final class StrategyPromotionGate
             throw new InvalidArgumentException('Unsupported promotion transition.');
         }
 
+        if($policy===[])return ['status'=>'FAILED','criteria'=>[],'reason'=>'PROMOTION_POLICY_REQUIRED'];
+        if($to==='LIMITED_LIVE' && (($policy['manual_review_required']??false)!==true)){
+            return ['status'=>'FAILED','criteria'=>[],'reason'=>'LIMITED_LIVE_REQUIRES_MANUAL_REVIEW'];
+        }
+
         $criteria=[];
         $manual=false;
         foreach($policy as $key=>$threshold){
@@ -30,6 +35,7 @@ final class StrategyPromotionGate
             $criteria[(string)$key]=['actual'=>$value,'threshold'=>$threshold,'passed'=>$passed];
         }
 
+        if($criteria===[])return ['status'=>'FAILED','criteria'=>[],'reason'=>'PROMOTION_CRITERIA_REQUIRED'];
         if($manual)return ['status'=>'MANUAL_REVIEW_REQUIRED','criteria'=>$criteria];
         foreach($criteria as $criterion){
             if(!$criterion['passed'])return ['status'=>'FAILED','criteria'=>$criteria];
