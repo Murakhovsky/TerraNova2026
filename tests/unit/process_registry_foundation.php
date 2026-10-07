@@ -11,7 +11,7 @@ use Kernel\Process\ProcessStep;
 use Kernel\Process\RuntimeMapping;
 
 $registry = new JsonProcessRegistry($root . '/resources/processes');
-if (count($registry->all()) !== 9) throw new RuntimeException('Canonical Process Registry must expose nine current processes.');
+if (count($registry->all()) < 10) throw new RuntimeException('Canonical Process Registry must expose at least ten current processes.');
 
 $capitalMarkets = $registry->get('capital-markets.market-data-to-trusted-state');
 if (!$capitalMarkets instanceof ProcessDefinition || $capitalMarkets->schemaVersion !== 4 || $capitalMarkets->domain !== 'capital_markets' || count($capitalMarkets->steps) !== 5) {
@@ -88,7 +88,7 @@ if ($growth->steps[0]->capability !== 'growth.signal.detect' || $growth->steps[5
     throw new RuntimeException('Growth process capability bridge was not preserved.');
 }
 
-if (!$registry->has('diagnostic.session-to-recommendation') || $registry->has('missing.process')) {
+if (!$registry->has('capital-markets.research-strategy-lab') || !$registry->has('diagnostic.session-to-recommendation') || $registry->has('missing.process')) {
     throw new RuntimeException('Process Registry lookup contract failed.');
 }
 
