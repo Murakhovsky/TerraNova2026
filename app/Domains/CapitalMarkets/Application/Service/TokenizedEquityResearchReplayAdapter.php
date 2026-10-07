@@ -26,9 +26,18 @@ final readonly class TokenizedEquityResearchReplayAdapter implements ResearchRep
         $code=strtoupper(trim($hypothesisCode));
         if(!$this->supports($code))throw new InvalidArgumentException('Tokenized Equity replay supports H1/H2 only.');
         $this->guard->assertTransactionCosts($configuration);
-        foreach(['buy_fee_rate','sell_fee_rate'] as $required){
-            if(!array_key_exists($required,$configuration))throw new InvalidArgumentException($required.' is required for Tokenized Equity replay.');
+        $fees=(array)($configuration['fees']??[]);
+        $slippage=(array)($configuration['slippage']??[]);
+        foreach(['buy_rate','sell_rate'] as $required){
+            if(!array_key_exists($required,$fees))throw new InvalidArgumentException('fees.'.$required.' is required for Tokenized Equity replay.');
         }
+        foreach(['buy_bps','sell_bps'] as $required){
+            if(!array_key_exists($required,$slippage))throw new InvalidArgumentException('slippage.'.$required.' is required for Tokenized Equity replay.');
+        }
+        $configuration['buy_fee_rate']=(string)$fees['buy_rate'];
+        $configuration['sell_fee_rate']=(string)$fees['sell_rate'];
+        $configuration['buy_slippage_bps']=(string)$slippage['buy_bps'];
+        $configuration['sell_slippage_bps']=(string)$slippage['sell_bps'];
 
         $raw=$this->replay->replay($organizationId,$configuration);
         $rows=[];$total=Decimal::fromString('0');$positive=0;$validated=0;
