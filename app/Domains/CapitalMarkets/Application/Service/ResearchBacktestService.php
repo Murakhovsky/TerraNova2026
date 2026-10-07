@@ -160,11 +160,19 @@ final readonly class ResearchBacktestService
                 'status'=>'RUNNING',
                 'started_at'=>gmdate('Y-m-d H:i:s'),
             ];
+            $candidateHypothesis=(string)($experiment['hypothesis_id']??'');
             foreach($this->repository->listOutOfSampleRuns($organizationId,500) as $previous){
                 if(($previous['run_id']??null)===$candidate['run_id'])continue;
-                if(($previous['strategy_version_id']??null)!==$candidate['strategy_version_id'])continue;
                 if(!in_array((string)($previous['status']??''),['FAILED','COMPLETED'],true))continue;
+                $previousExperiment=$this->repository->getExperiment($organizationId,(string)($previous['experiment_id']??''));
+                if($previousExperiment===null||(string)($previousExperiment['hypothesis_id']??'')!==$candidateHypothesis)continue;
                 $this->isolation->assertNewOosPeriod($previous,$candidate);
+                if(
+                    ($previous['status']??null)==='FAILED'
+                    &&($previous['strategy_version_id']??null)===$candidate['strategy_version_id']
+                ){
+                    throw new InvalidArgumentException('Failed OOS requires a new Strategy Version before another OOS run.');
+                }
             }
             $this->lab->recordOutOfSampleRun($organizationId,$candidate,$experiment);
             $oos=$candidate;
