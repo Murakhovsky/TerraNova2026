@@ -1976,6 +1976,16 @@ services:
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
       $logger: '@Kernel\Observability\StructuredLoggerInterface'
 
+  Domains\CapitalMarkets\Application\Service\ResearchEventPublisher:
+    arguments:
+      $events: '@Kernel\Event\EventBus'
+
+  Domains\CapitalMarkets\Application\Service\ResearchPaperRunService:
+    arguments:
+      $research: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $trading: '@Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface'
+      $events: '@Domains\CapitalMarkets\Application\Service\ResearchEventPublisher'
+
   Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
 
   Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService: ~
