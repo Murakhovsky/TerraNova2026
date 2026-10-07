@@ -107,9 +107,11 @@ final readonly class CapitalMarketsResearchLabController
     public function transitionExperiment(Request $request,string $id):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->transitionExperiment(
-                $tenant->organizationId()->value(),$id,$this->required($payload,'status')
-            ),200);
+            function(TenantContext $tenant,array $payload) use($request,$id):array{
+                $result=$this->lab->transitionExperiment($tenant->organizationId()->value(),$id,$this->required($payload,'status'));
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchExperimentStatusChanged,CapitalMarketsAuditResourceType::ResearchExperiment,$id,$result);
+                return $result;
+            },200);
     }
 
     public function createStrategyVersion(Request $request):JsonResponse
@@ -157,38 +159,50 @@ final readonly class CapitalMarketsResearchLabController
     public function startPaperRun(Request $request):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
-            fn(TenantContext $tenant,array $payload):array=>$this->paperRuns->start($tenant->organizationId()->value(),$payload),201);
+            function(TenantContext $tenant,array $payload) use($request):array{
+                $result=$this->paperRuns->start($tenant->organizationId()->value(),$payload);
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchPaperRunStarted,CapitalMarketsAuditResourceType::ResearchPaperRun,(string)$result['run_id'],$result);
+                return $result;
+            },201);
     }
 
     public function completePaperRun(Request $request,string $id):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
-            fn(TenantContext $tenant,array $payload):array=>$this->paperRuns->complete(
-                $tenant->organizationId()->value(),$id,
-                $this->object($payload,'performance_snapshot'),
-                trim((string)($payload['result_id']??'')),
-                trim((string)($payload['decision_id']??''))
-            ),200);
+            function(TenantContext $tenant,array $payload) use($request,$id):array{
+                $result=$this->paperRuns->complete(
+                    $tenant->organizationId()->value(),$id,
+                    $this->object($payload,'performance_snapshot'),
+                    trim((string)($payload['result_id']??'')),
+                    trim((string)($payload['decision_id']??''))
+                );
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchPaperRunCompleted,CapitalMarketsAuditResourceType::ResearchPaperRun,$id,$result);
+                return $result;
+            },200);
     }
 
     public function cancelPaperRun(Request $request,string $id):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchExperimentRun,
-            fn(TenantContext $tenant,array $payload):array=>$this->paperRuns->cancel(
-                $tenant->organizationId()->value(),$id,trim((string)($payload['reason']??'USER_CANCELLED'))
-            ),200);
+            function(TenantContext $tenant,array $payload) use($request,$id):array{
+                $result=$this->paperRuns->cancel($tenant->organizationId()->value(),$id,trim((string)($payload['reason']??'USER_CANCELLED')));
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchPaperRunCancelled,CapitalMarketsAuditResourceType::ResearchPaperRun,$id,$result);
+                return $result;
+            },200);
     }
 
     public function scorecard(Request $request,string $id):JsonResponse
     {
         return $this->mutation($request,CapitalMarketsCapability::ResearchManage,
-            fn(TenantContext $tenant,array $payload):array=>$this->lab->createScorecard(
-                $tenant->organizationId()->value(),
-                $id,
-                $this->object($payload,'dimensions'),
-                $this->object($payload,'weights'),
-                trim((string)($payload['weight_version']??'v1')),
-            ),201);
+            function(TenantContext $tenant,array $payload) use($request,$id):array{
+                $result=$this->lab->createScorecard(
+                    $tenant->organizationId()->value(),$id,
+                    $this->object($payload,'dimensions'),$this->object($payload,'weights'),
+                    trim((string)($payload['weight_version']??'v1'))
+                );
+                $this->auditResult($request,$tenant,CapitalMarketsAuditAction::ResearchScorecardCreated,CapitalMarketsAuditResourceType::ResearchScorecard,(string)$result['scorecard_id'],$result);
+                return $result;
+            },201);
     }
 
     public function promotion(Request $request,string $id):JsonResponse
