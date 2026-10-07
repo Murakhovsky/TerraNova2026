@@ -11,6 +11,7 @@ interface ResearchLabRepositoryInterface
 
     public function saveDataset(string $organizationId,array $record):void;
     public function getDataset(string $organizationId,string $id):?array;
+    public function listDatasets(string $organizationId,int $limit=200):array;
 
     public function saveExperiment(string $organizationId,array $record):void;
     public function getExperiment(string $organizationId,string $id):?array;
