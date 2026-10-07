@@ -10,6 +10,7 @@ use Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy;
 use Domains\CapitalMarkets\Domain\Research\ReplayDataGuard;
 use Domains\CapitalMarkets\Domain\Research\ResearchDuplicateDetector;
 use Domains\CapitalMarkets\Domain\Research\HypothesisLifecyclePolicy;
+use Domains\CapitalMarkets\Domain\Research\ExperimentLifecyclePolicy;
 use InvalidArgumentException;
 
 final readonly class ResearchLabService
@@ -22,6 +23,7 @@ final readonly class ResearchLabService
         private ReplayDataGuard $replayGuard,
         private ResearchDuplicateDetector $duplicates,
         private HypothesisLifecyclePolicy $hypothesisLifecycle,
+        private ExperimentLifecyclePolicy $experimentLifecycle,
     ){}
 
     public function createHypothesis(string $organizationId,array $record):array
@@ -123,8 +125,8 @@ final readonly class ResearchLabService
             throw new InvalidArgumentException('Experiment requires an existing strategy version.');
         }
         $record['status']=strtoupper(trim((string)$record['status']));
-        if(!in_array($record['status'],['DRAFT','READY','QUEUED'],true)){
-            throw new InvalidArgumentException('New experiment must start as DRAFT, READY or QUEUED.');
+        if(!in_array($record['status'],['DRAFT','QUEUED'],true)){
+            throw new InvalidArgumentException('New experiment must start as DRAFT or QUEUED.');
         }
         $record['parameters']=$record['parameters']??[];
         $record['parameters_hash']=hash('sha256',json_encode($this->canonicalize((array)$record['parameters']),JSON_THROW_ON_ERROR|JSON_PRESERVE_ZERO_FRACTION));
@@ -133,6 +135,22 @@ final readonly class ResearchLabService
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->repository->saveExperiment($organizationId,$record);
         return $record;
+    }
+
+    public function transitionExperiment(string $organizationId,string $experimentId,string $to):array
+    {
+        $current=$this->repository->getExperiment($organizationId,$experimentId);
+        if($current===null)throw new InvalidArgumentException('Research experiment not found.');
+        $from=strtoupper(trim((string)($current['status']??'')));
+        $to=strtoupper(trim($to));
+        $this->experimentLifecycle->assertTransition($from,$to);
+        $updatedAt=gmdate('Y-m-d H:i:s');
+        if(!$this->repository->transitionExperimentStatus($organizationId,$experimentId,$from,$to,$updatedAt)){
+            throw new InvalidArgumentException('Research experiment status changed concurrently.');
+        }
+        $current['status']=$to;
+        $current['updated_at']=$updatedAt;
+        return $current;
     }
 
     public function recordResult(string $organizationId,array $record):array
