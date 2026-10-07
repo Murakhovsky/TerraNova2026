@@ -59,6 +59,7 @@ return [
             'capital_markets.research.experiment.run',
             'capital_markets.strategy.version.manage',
             'capital_markets.strategy.promote',
+            'capital_markets.strategy.demote',
             'capital_markets.strategy.reject',
             'capital_markets.research.agent.use',
         ],
