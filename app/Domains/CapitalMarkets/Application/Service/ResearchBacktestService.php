@@ -32,6 +32,7 @@ final readonly class ResearchBacktestService
         private ResearchConfidenceEngine $confidence,
         private ResearchTelemetry $telemetry,
         private JobQueueInterface $queue,
+        private ResearchEventPublisher $events,
     ){}
 
     public function queue(string $organizationId,array $specification):array
@@ -286,11 +287,24 @@ final readonly class ResearchBacktestService
             'duration_seconds'=>$duration,
         ]);
 
+        $this->events->publish($organizationId,'capital_markets.research.backtest_completed.v1',(string)$specification['run_id'],[
+            'experiment_id'=>$specification['experiment_id'],
+            'strategy_version_id'=>$specification['strategy_version_id'],
+            'partition'=>$partition,
+            'result_id'=>$resultId,
+            'result_status'=>$result['status'],
+        ]);
         if($oos!==null){
             $oos['status']='COMPLETED';
             $oos['completed_at']=$completed['completed_at'];
             $oos['result_id']=$resultId;
             $this->lab->recordOutOfSampleRun($organizationId,$oos,$experiment);
+            $this->events->publish($organizationId,'capital_markets.research.oos_completed.v1',(string)$specification['run_id'],[
+                'experiment_id'=>$specification['experiment_id'],
+                'strategy_version_id'=>$specification['strategy_version_id'],
+                'result_id'=>$resultId,
+                'from'=>$oos['from'],'to'=>$oos['to'],
+            ]);
         }
 
         return ['run'=>$completed,'oos_run'=>$oos,'result'=>$result,'replay'=>$replay];
