@@ -65,12 +65,14 @@ final readonly class ResearchLabService
         $next=array_replace($current,$changes);
         $nextStatus=strtoupper(trim((string)($next['status']??'')));
         $currentStatus=strtoupper(trim((string)($current['status']??'')));
+        $next['status']=$nextStatus;
+        $next['edge_source']=strtoupper(trim((string)($next['edge_source']??'UNKNOWN')));
         if($nextStatus!==$currentStatus){
             $this->hypothesisLifecycle->assertTransition($currentStatus,$nextStatus);
         }
 
         if($nextStatus==='READY_FOR_RESEARCH')$this->assertResearchReady($next);
-        if(!in_array($nextStatus,['IDEA','DRAFT'],true) && (string)($next['edge_source']??'UNKNOWN')==='UNKNOWN'){
+        if(!in_array($nextStatus,['IDEA','DRAFT'],true) && $next['edge_source']==='UNKNOWN'){
             throw new InvalidArgumentException('UNKNOWN edge source is allowed only for IDEA/DRAFT.');
         }
 
@@ -220,6 +222,10 @@ final readonly class ResearchLabService
         if(!in_array((string)$record['reason'],$allowed,true))throw new InvalidArgumentException('Invalid rejection reason.');
         $record['created_at']=$record['created_at']??gmdate('Y-m-d H:i:s');
         $this->repository->saveRejectedHypothesis($organizationId,$record);
+        $current=$this->repository->getHypothesis($organizationId,(string)$record['hypothesis_id']);
+        if($current!==null && strtoupper((string)($current['status']??''))!=='REJECTED'){
+            $this->reviseHypothesis($organizationId,(string)$record['hypothesis_id'],['status'=>'REJECTED']);
+        }
         return $record;
     }
 
