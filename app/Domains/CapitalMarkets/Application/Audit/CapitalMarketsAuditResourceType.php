@@ -13,4 +13,11 @@ enum CapitalMarketsAuditResourceType:string
     case FeatureFlag='capital_markets.feature_flag';
     case MarketDataSource='capital_markets.market_data.source';
     case MarketDataSubscription='capital_markets.market_data.subscription';
+    case ResearchHypothesis='capital_markets.research.hypothesis';
+    case ResearchDataset='capital_markets.research.dataset';
+    case ResearchExperiment='capital_markets.research.experiment';
+    case ResearchStrategyVersion='capital_markets.research.strategy_version';
+    case ResearchScorecard='capital_markets.research.scorecard';
+    case ResearchPromotionDecision='capital_markets.research.promotion_decision';
+    case ResearchPaperRun='capital_markets.research.paper_run';
 }
