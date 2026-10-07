@@ -33,6 +33,9 @@ interface ResearchLabRepositoryInterface
     public function listBacktestRuns(string $organizationId,int $limit=200):array;
     public function getBacktestRun(string $organizationId,string $runId):?array;
     public function saveOutOfSampleRun(string $organizationId,array $record):void;
+    public function savePaperRun(string $organizationId,array $record):void;
+    public function getPaperRun(string $organizationId,string $runId):?array;
+    public function listPaperRuns(string $organizationId,int $limit=200):array;
     public function getOutOfSampleRun(string $organizationId,string $runId):?array;
     public function listOutOfSampleRuns(string $organizationId,int $limit=200):array;
     public function saveScorecard(string $organizationId,array $record):void;
