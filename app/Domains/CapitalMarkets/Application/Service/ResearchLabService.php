@@ -248,6 +248,15 @@ final readonly class ResearchLabService
         array $policy,
         string $approver,
     ):array{
+        $from=strtoupper(trim($from));
+        $to=strtoupper(trim($to));
+        if($this->repository->getStrategyVersion($organizationId,$strategyVersionId)===null){
+            throw new InvalidArgumentException('Promotion requires an existing strategy version.');
+        }
+        $this->assertPromotionEvidence($organizationId,$strategyVersionId,$from,$to);
+        if(trim((string)($policy['policy_version']??''))===''){
+            throw new InvalidArgumentException('Promotion policy_version is required.');
+        }
         $evaluation=$this->promotionGate->evaluate($from,$to,$actual,$policy);
         $record=[
             'decision_id'=>'promotion-'.bin2hex(random_bytes(12)),
@@ -257,6 +266,7 @@ final readonly class ResearchLabService
             'status'=>$evaluation['status'],
             'criteria'=>$evaluation['criteria'],
             'policy'=>$policy,
+            'policy_version'=>(string)$policy['policy_version'],
             'actual'=>$actual,
             'approver'=>$approver,
             'created_at'=>gmdate('Y-m-d H:i:s'),
@@ -273,6 +283,7 @@ final readonly class ResearchLabService
         $results=$this->repository->listResults($organizationId,500);
         $runs=$this->repository->listBacktestRuns($organizationId,500);
         $oosRuns=$this->repository->listOutOfSampleRuns($organizationId,500);
+        $paperRuns=$this->repository->listPaperRuns($organizationId,500);
         $scorecards=$this->repository->listScorecards($organizationId,500);
         $rejections=$this->repository->listRejectedHypotheses($organizationId,500);
         $promotion=$this->repository->listAllPromotionDecisions($organizationId,500);
@@ -285,6 +296,7 @@ final readonly class ResearchLabService
             'results'=>$results,
             'backtest_runs'=>$runs,
             'oos_runs'=>$oosRuns,
+            'paper_runs'=>$paperRuns,
             'scorecards'=>$scorecards,
             'rejections'=>$rejections,
             'promotion_decisions'=>$promotion,
@@ -298,6 +310,8 @@ final readonly class ResearchLabService
                 'running_experiments'=>count(array_filter($experiments,static fn(array $e):bool=>($e['status']??'')==='RUNNING')),
                 'backtest_count'=>count($runs),
                 'oos_count'=>count($oosRuns),
+                'paper_count'=>count($paperRuns),
+                'paper_completed'=>count(array_filter($paperRuns,static fn(array $r):bool=>($r['status']??'')==='COMPLETED')),
                 'oos_completed'=>count(array_filter($oosRuns,static fn(array $r):bool=>($r['status']??'')==='COMPLETED')),
                 'oos_failed'=>count(array_filter($oosRuns,static fn(array $r):bool=>($r['status']??'')==='FAILED')),
                 'backtest_completed'=>count($completedRuns),
@@ -307,6 +321,28 @@ final readonly class ResearchLabService
                 'promotion_failed'=>count(array_filter($promotion,static fn(array $p):bool=>($p['status']??'')==='FAILED')),
             ],
         ];
+    }
+
+    private function assertPromotionEvidence(string $organizationId,string $strategyVersionId,string $from,string $to):void
+    {
+        if($from==='BACKTEST'&&$to==='OOS'){
+            foreach($this->repository->listBacktestRuns($organizationId,500) as $run){
+                if(($run['strategy_version_id']??null)===$strategyVersionId&&($run['status']??null)==='COMPLETED')return;
+            }
+            throw new InvalidArgumentException('BACKTEST -> OOS requires a completed backtest run.');
+        }
+        if($from==='OOS'&&$to==='PAPER'){
+            foreach($this->repository->listOutOfSampleRuns($organizationId,500) as $run){
+                if(($run['strategy_version_id']??null)===$strategyVersionId&&($run['status']??null)==='COMPLETED'&&!empty($run['result_id']))return;
+            }
+            throw new InvalidArgumentException('OOS -> PAPER requires a completed OOS run with result.');
+        }
+        if($from==='PAPER'&&$to==='LIMITED_LIVE'){
+            foreach($this->repository->listPaperRuns($organizationId,500) as $run){
+                if(($run['strategy_version_id']??null)===$strategyVersionId&&($run['status']??null)==='COMPLETED')return;
+            }
+            throw new InvalidArgumentException('PAPER -> LIMITED_LIVE requires a completed paper run.');
+        }
     }
 
     private function assertResearchReady(array $record):void
