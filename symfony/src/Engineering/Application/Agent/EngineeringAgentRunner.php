@@ -40,12 +40,15 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
             $result = $this->executeOnce($task, $organizationId, $runCorrelationId, $technicalRetry, $validationFeedback);
 
             if ($result->status !== AgentRunStatus::COMPLETED->value) {
-                $lastError = new EngineeringAgentTechnicalFailureException(
+                // Transport/provider resilience belongs to the LLM adapter. Re-running the
+                // whole Engineering agent here multiplies provider retries, can hold a worker
+                // for 10+ minutes and needlessly trips the cross-request circuit breaker.
+                // Engineering-level retries are reserved for correcting invalid structured
+                // output, where the model receives explicit validation feedback.
+                throw new EngineeringAgentTechnicalFailureException(
                     $result->error ?? 'Engineering Agent runtime failed.',
                     $technicalRetry,
                 );
-                if ($technicalRetry < $this->maxTechnicalRetries) continue;
-                throw $lastError;
             }
 
             try {
