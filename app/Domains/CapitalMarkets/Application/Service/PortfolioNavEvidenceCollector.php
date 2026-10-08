@@ -159,7 +159,7 @@ final readonly class PortfolioNavEvidenceCollector
             ? 'VENUE_BALANCE_RECONCILIATION_UNAVAILABLE'
             : 'VENUE_BALANCE_RECONCILIATION_PENDING';
         $issues = array_values(array_unique($issues));
-        return [
+        $report = [
             'status'=>'BLOCKED',
             'organization_id'=>$organizationId,
             'portfolio_id'=>$portfolioId,
@@ -178,5 +178,7 @@ final readonly class PortfolioNavEvidenceCollector
             'issues'=>$issues,
             'snapshot_written'=>false,
         ];
+        $report['remediation_plan'] = PortfolioNavRemediationPlanner::plan($report);
+        return $report;
     }
 }
