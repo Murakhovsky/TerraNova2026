@@ -2017,6 +2017,8 @@ services:
   Domains\CapitalMarkets\Domain\Service\LiquidityCapacityEngine: ~
   Domains\CapitalMarkets\Domain\Service\DrawdownEngine: ~
   Domains\CapitalMarkets\Domain\Service\CapitalStateEngine: ~
+  Domains\CapitalMarkets\Domain\Service\MarginAggregationEngine: ~
+  Domains\CapitalMarkets\Domain\Service\LiquidationClusterEngine: ~
   Domains\CapitalMarkets\Application\Service\CapitalRiskTelemetry:
     arguments:
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
