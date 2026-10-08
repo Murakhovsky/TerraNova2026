@@ -20,18 +20,58 @@ use Kernel\Agent\Model\AgentInstance;
 use Kernel\Agent\Model\AgentOutput;
 use Kernel\Agent\Model\AgentRun;
 
-$runtime = new class implements AgentRuntimeInterface {
+$runtimeFailure = new class implements AgentRuntimeInterface {
     public int $calls = 0;
 
     public function execute(AgentInstance $instance, AgentContext $context): AgentRun
     {
         ++$this->calls;
-        $run = new AgentRun('retry-run-'.$this->calls, $instance, $context);
+        $run = new AgentRun('transport-failure-'.$this->calls, $instance, $context);
+        $run->queue();
+        $run->start();
+        $run->fail('OpenAI transport error: Operation timed out after 90000 milliseconds');
+        return $run;
+    }
+};
+
+$task = new EngineeringAgentTask(
+    EngineeringId::generate(),
+    EngineeringId::generate(),
+    AgentRole::REVIEWER,
+    'Review revision.',
+    [],
+    [],
+    [],
+    'reviewer-result-v0.1',
+    ['valid output'],
+    'feature:reviewer:1',
+    ['logical_attempt' => 4],
+);
+
+try {
+    (new EngineeringAgentRunner($runtimeFailure))->run($task, 'platform', 'transport-failure-trace');
+    throw new RuntimeException('Runtime/provider failure did not fail the Engineering run.');
+} catch (EngineeringAgentTechnicalFailureException $error) {
+    if ($error->technicalRetries !== 0) throw new RuntimeException('Provider failure must not create Engineering-level technical retries.');
+    if ($runtimeFailure->calls !== 1) throw new RuntimeException('Provider/runtime failure must execute exactly once; provider adapter owns transport retries.');
+}
+
+$invalidThenCorrected = new class implements AgentRuntimeInterface {
+    public int $calls = 0;
+
+    public function execute(AgentInstance $instance, AgentContext $context): AgentRun
+    {
+        ++$this->calls;
+        $run = new AgentRun('validation-retry-'.$this->calls, $instance, $context);
         $run->queue();
         $run->start();
 
         if ($this->calls === 1) {
-            $run->fail('temporary provider failure');
+            $run->complete(new AgentOutput(
+                structured: ['status' => 'APPROVED'],
+                provider: 'fixture',
+                model: 'fixture-reviewer',
+            ));
             return $run;
         }
 
@@ -71,43 +111,8 @@ $runtime = new class implements AgentRuntimeInterface {
     }
 };
 
-$task = new EngineeringAgentTask(
-    EngineeringId::generate(),
-    EngineeringId::generate(),
-    AgentRole::REVIEWER,
-    'Review revision.',
-    [],
-    [],
-    [],
-    'reviewer-result-v0.1',
-    ['valid output'],
-    'feature:reviewer:1',
-    ['logical_attempt' => 4],
-);
-
-$result = (new EngineeringAgentRunner($runtime))->run($task, 'platform', 'retry-trace');
-if ($runtime->calls !== 2) throw new RuntimeException('Technical failure did not retry exactly once.');
-if ($result->technicalRetries !== 1) throw new RuntimeException('Technical retry count was not preserved.');
-
-$alwaysFail = new class implements AgentRuntimeInterface {
-    public int $calls = 0;
-    public function execute(AgentInstance $instance, AgentContext $context): AgentRun
-    {
-        ++$this->calls;
-        $run = new AgentRun('failed-run-'.$this->calls, $instance, $context);
-        $run->queue();
-        $run->start();
-        $run->fail('timeout');
-        return $run;
-    }
-};
-
-try {
-    (new EngineeringAgentRunner($alwaysFail))->run($task, 'platform', 'retry-fail-trace');
-    throw new RuntimeException('Exhausted technical retries did not fail.');
-} catch (EngineeringAgentTechnicalFailureException $error) {
-    if ($error->technicalRetries !== 2) throw new RuntimeException('Technical retry limit must be 2.');
-    if ($alwaysFail->calls !== 3) throw new RuntimeException('Technical retries must be initial attempt plus 2 retries.');
-}
+$result = (new EngineeringAgentRunner($invalidThenCorrected))->run($task, 'platform', 'validation-retry-trace');
+if ($invalidThenCorrected->calls !== 2) throw new RuntimeException('Invalid structured output must receive one correction retry.');
+if ($result->technicalRetries !== 1) throw new RuntimeException('Validation correction retry count was not preserved.');
 
 echo "Engineering technical retry policy passed.\n";
