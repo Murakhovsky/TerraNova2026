@@ -182,7 +182,7 @@ foreach([
 foreach(['aria-label="{{ label }}"','{% for step in steps %}','emptyCopy'] as $needle){
     $assert(str_contains($decisionTraceTemplate,$needle),'Reusable Decision Trace template contract missing: '.$needle);
 }
-$assert(str_contains($uiCatalog,"$this->entry('CosDecisionTrace'"),'CosDecisionTrace must be registered in the canonical UI Catalog.');
+$assert(str_contains($uiCatalog,"\$this->entry('CosDecisionTrace'"),'CosDecisionTrace must be registered in the canonical UI Catalog.');
 $assert(substr_count($template,'<twig:CosDecisionTrace')>=2,'Opportunity and Hypothesis views must reuse the canonical Decision Trace component.');
 
 $provider=(string)file_get_contents($root.'/symfony/src/Web/Experience/Extension/Provider/CapitalMarketsWebProvider.php');
@@ -201,7 +201,7 @@ foreach([
     "'Data Quality','/capital-markets/data-quality'",
     'DecisionWorkspaceReadService $workspace',
     'searchEntities($context->organizationId)',
-    "kind: $entity['kind']",
+    'kind: $entity[\'kind\']',
 ] as $needle){
     $assert(str_contains($provider,$needle),'Primary navigation contract missing: '.$needle);
 }
