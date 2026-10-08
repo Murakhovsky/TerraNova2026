@@ -454,9 +454,27 @@ final readonly class DecisionWorkspaceReadService
             }
         }
 
+        $running = 0;
+        $failed = 0;
+        foreach ($runs as $run) {
+            $status = strtoupper((string)($run['status'] ?? ''));
+            if (in_array($status, ['RUNNING','STARTED'], true)) {
+                $running++;
+            }
+            if ($status === 'FAILED') {
+                $failed++;
+            }
+        }
+
         $page['agents'] = [
             'definitions' => $definitions,
             'runs' => $runs,
+            'metrics' => [
+                'registered' => count($definitions),
+                'recent_runs' => count($runs),
+                'running' => $running,
+                'failed' => $failed,
+            ],
         ];
         $page['partial_errors'] = $errors;
         return $page;
