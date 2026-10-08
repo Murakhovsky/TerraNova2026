@@ -91,6 +91,7 @@ final class TableOwnership
             'tn_capital_market_allocation_plans', 'tn_capital_market_strategy_allocations',
             'tn_capital_market_rebalance_plans', 'tn_capital_market_correlation_snapshots',
             'tn_capital_market_stress_results',
+            'tn_capital_market_portfolio_valuation_snapshots',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [
