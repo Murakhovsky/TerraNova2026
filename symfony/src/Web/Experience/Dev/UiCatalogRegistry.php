@@ -9,6 +9,7 @@ final class UiCatalogRegistry
     /** @var list<string> */
     private const EXPERIMENTAL_COMPONENTS = [
         'CosBulkActionBar',
+        'CosDecisionTrace',
         'CosRealtimeSubscription',
         'CosAIContext',
         'CosAgentRun',
@@ -81,6 +82,7 @@ final class UiCatalogRegistry
             $this->entry('CosOwner', 'Business', 'Compact owner identity presentation.', ['default'], '#phase7-business-heading'),
             $this->entry('CosNextAction', 'Business', 'Operational next-step surface with due state.', ['neutral', 'positive', 'warning', 'danger', 'info'], '#phase7-business-heading'),
             $this->entry('CosRelations', 'Business', 'Typed entity relationship list.', ['default', 'empty'], '#phase7-business-heading'),
+            $this->entry('CosDecisionTrace', 'Business', 'Cross-entity decision lineage from evidence through action and outcome.', ['default', 'empty'], '#phase7-business-heading'),
             $this->entry('CosTimeline', 'Business', 'Chronological business event sequence.', ['default'], '#phase7-business-heading'),
             $this->entry('CosActivityFeed', 'Business', 'Actor/action activity stream with source context.', ['default'], '#phase7-business-heading'),
 
