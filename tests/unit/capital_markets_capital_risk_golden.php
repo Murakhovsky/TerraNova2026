@@ -20,6 +20,15 @@ $btc=(new EconomicExposureEngine())->snapshot('paper-master',[
 ]);
 $assert($btc->netExposure->isZero(),'Perfect validated hedge must net to zero.');
 $assert(!$btc->grossExposure->isZero(),'Perfect hedge must retain gross exposure.');
+
+$venueGross=(new EconomicExposureEngine())->snapshot('paper-master',[
+ ['instrument_id'=>'BTC-LONG','underlying_key'=>'BTC','notional'=>'10000','side'=>'LONG','venue'=>'BYBIT','strategy'=>'S','counterparty'=>'BYBIT','relationship_valid'=>true],
+ ['instrument_id'=>'BTC-SHORT','underlying_key'=>'BTC','notional'=>'10000','side'=>'SHORT','venue'=>'BYBIT','strategy'=>'S','counterparty'=>'BYBIT','relationship_valid'=>true],
+]);
+$assert($venueGross->netExposure->isZero(),'Opposing positions may economically net by validated underlying.');
+$assert($venueGross->byVenue['BYBIT']->value()==='20000','Venue concentration must remain gross when long/short economically net.');
+$assert($venueGross->byCounterparty['BYBIT']->value()==='20000','Counterparty exposure must remain gross when hedge delta is zero.');
+$assert($venueGross->byStrategy['S']->value()==='20000','Strategy concentration must measure gross risk consumed, not signed net.');
 $unknown=(new EconomicExposureEngine())->snapshot('paper-master',[
  ['instrument_id'=>'SYNTH-X','underlying_key'=>'AAPL','notional'=>'5000','side'=>'LONG','relationship_valid'=>false],
 ]);
