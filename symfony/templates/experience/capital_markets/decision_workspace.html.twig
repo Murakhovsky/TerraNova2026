@@ -49,18 +49,16 @@
   </header>
 
   <nav class="cos-growth-actions" aria-label="Capital Markets primary workspace navigation">
-    <a class="btn {{ cmView == 'overview' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets">Overview</a>
-    <a class="btn {{ cmView in ['opportunities','opportunity'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/opportunities">Opportunities</a>
-    <a class="btn {{ cmView == 'markets' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/markets">Markets</a>
-    <a class="btn {{ cmView in ['research','hypothesis'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/research">Research</a>
-    <a class="btn {{ cmView in ['strategies','strategy'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/strategies">Strategies</a>
-    <a class="btn {{ cmView == 'portfolio' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/portfolio">Portfolio</a>
-    <a class="btn {{ cmView == 'allocation' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/allocation">Allocation</a>
-    <a class="btn {{ cmView in ['execution','execution_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/execution">Execution</a>
-    <a class="btn {{ cmView == 'risk' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/risk">Risk</a>
-    <a class="btn {{ cmView == 'performance' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/performance">Performance</a>
-    <a class="btn {{ cmView == 'agents' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/agents">Agents</a>
-    <a class="btn {{ cmView == 'data_quality' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/data-quality">Data Quality</a>
+    {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'overview' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets">Overview</a>{% endif %}
+    {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['opportunities','opportunity'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/opportunities">Opportunities</a>{% endif %}
+    {% if permissions.market_data_view|default(false) %}<a class="btn {{ cmView == 'markets' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/markets">Markets</a>{% endif %}
+    {% if permissions.research_view|default(false) %}<a class="btn {{ cmView in ['research','hypothesis'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/research">Research</a><a class="btn {{ cmView in ['strategies','strategy'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/strategies">Strategies</a>{% endif %}
+    {% if permissions.portfolio_view|default(false) %}<a class="btn {{ cmView == 'portfolio' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/portfolio">Portfolio</a><a class="btn {{ cmView == 'performance' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/performance">Performance</a>{% endif %}
+    {% if permissions.allocation_view|default(false) %}<a class="btn {{ cmView == 'allocation' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/allocation">Allocation</a>{% endif %}
+    {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['execution','execution_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/execution">Execution</a>{% endif %}
+    {% if permissions.risk_view|default(false) %}<a class="btn {{ cmView == 'risk' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/risk">Risk</a>{% endif %}
+    {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'agents' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/agents">Agents</a>{% endif %}
+    {% if permissions.market_data_quality_view|default(false) %}<a class="btn {{ cmView == 'data_quality' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/data-quality">Data Quality</a>{% endif %}
   </nav>
 
   <section class="cos-panel" aria-label="Global Capital Markets status">
@@ -579,6 +577,7 @@
     </section>
     <section class="cos-panel">
       <h2>Scenario Simulator</h2>
+      {% if permissions.portfolio_view|default(false) %}
       <p>Change only proposed capital. All portfolio/risk math runs in the existing deterministic backend engine.</p>
       <form class="row g-3 align-items-end" data-action="submit->capital-markets-workspace#simulateOpportunity">
         <div class="col-lg-5">
@@ -597,6 +596,9 @@
         <div class="col-lg-4"><button class="btn btn-primary" type="submit">Simulate portfolio impact</button></div>
       </form>
       <div class="mt-3" data-capital-markets-workspace-target="simulationOutput" aria-live="polite">Run a simulation to inspect the deterministic portfolio decision.</div>
+      {% else %}
+        <p>Portfolio simulation is hidden because this role does not have Portfolio View authority.</p>
+      {% endif %}
     </section>
     <section class="cos-panel"><h2>Rebalance Recommendation</h2>{% if a.rebalance|default({}) %}<p><strong>{{ a.rebalance.status|default('—') }}</strong> · {{ a.rebalance.reason|default('') }}</p><p>Estimated costs: {{ a.rebalance.estimated_costs|default('—') }} · risk improvement: {{ a.rebalance.expected_risk_improvement_pct|default('—') }}</p>{% else %}<p>No rebalance recommendation.</p>{% endif %}</section>
 
@@ -745,11 +747,11 @@
   <footer class="cos-panel">
     <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
       <small>Decision Workspace principle: WHAT → WHY → MONEY → RISK → ACTION.</small>
-      <div class="d-flex gap-2">
-        <a href="/capital-markets/instruments">Instruments registry</a>
-        <a href="/capital-markets/relationships">Raw relationships</a>
-        <a href="/capital-markets/venues">Venue registry</a>
-        <a href="/capital-markets/market-data">Market data administration</a>
+      <div class="d-flex gap-2 flex-wrap">
+        {% if permissions.instrument_view|default(false) %}<a href="/capital-markets/instruments">Instruments registry</a>{% endif %}
+        {% if permissions.relationship_view|default(false) %}<a href="/capital-markets/relationships">Raw relationships</a>{% endif %}
+        {% if permissions.venue_view|default(false) %}<a href="/capital-markets/venues">Venue registry</a>{% endif %}
+        {% if permissions.market_data_manage|default(false) %}<a href="/capital-markets/market-data">Market data administration</a>{% endif %}
       </div>
     </div>
   </footer>
