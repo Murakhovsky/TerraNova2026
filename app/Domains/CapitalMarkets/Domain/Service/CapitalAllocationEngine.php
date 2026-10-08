@@ -16,7 +16,7 @@ final class CapitalAllocationEngine {
   $remaining=$availableCapital;$ranked=[];
   foreach($opportunities as $o){$o['_score']=$this->score($o,$policy);$ranked[]=$o;}
   usort($ranked,static function(array $a,array $b):int{$cmp=$b['_score']->compareTo($a['_score']);return $cmp!==0?$cmp:strcmp((string)$a['opportunity_id'],(string)$b['opportunity_id']);});
-  $items=[];$expected=Decimal::fromString('0');$priority=1;$strategyRemaining=[];
+  $items=[];$expected=Decimal::fromString('0');$priority=1;$strategyRemaining=[];$selectedStrategies=[];
   foreach($ranked as $o){
    $requested=Decimal::fromString((string)$o['requested_capital']);$capacity=Decimal::fromString((string)$o['capacity']);
    $strategyId=(string)$o['strategy_version_id'];
@@ -31,11 +31,28 @@ final class CapitalAllocationEngine {
    if($blockedReason!==''){$approved=Decimal::fromString('0');$decision='REJECT';$reason=$blockedReason;}
    elseif(!$riskState->allowsNewRisk()){$approved=Decimal::fromString('0');$decision='REJECT';$reason='Portfolio state '.$riskState->value.' blocks new risk.';}
    $cap=$hardCaps[(string)$o['opportunity_id']]??null;if($cap!==null)$approved=$this->minimum($approved,Decimal::fromString((string)$cap));
+
+   if($decision!=='REJECT'&&!$approved->isZero()&&$selectedStrategies!==[]){
+    $correlations=(array)($o['strategy_correlations']??[]);
+    $threshold=Decimal::fromString((string)($policy->constraints['high_correlation_threshold']??'0.80'));
+    $multiplier=Decimal::fromString((string)($policy->constraints['high_correlation_allocation_multiplier']??'0.50'));
+    foreach(array_keys($selectedStrategies) as $selectedStrategy){
+     if(!array_key_exists($selectedStrategy,$correlations))continue;
+     $correlation=DecimalMath::abs(Decimal::fromString((string)$correlations[$selectedStrategy]));
+     if($correlation->compareTo($threshold)>=0){
+      $approved=DecimalMath::multiply($approved,$multiplier);
+      $reason='Reduced by high strategy correlation with '.$selectedStrategy.'.';
+      break;
+     }
+    }
+   }
+
    if($approved->isZero()&&$decision!=='REJECT'){$decision='REJECT';$reason='No available capital or capacity.';}
    elseif($decision!=='REJECT'&&$approved->compareTo($requested)<0){$decision='ACCEPT_REDUCED_SIZE';$reason='Reduced by capacity, hard headroom or available capital.';}
    if(!$approved->isZero()){
     $remaining=DecimalMath::subtract($remaining,$approved);
     if(isset($strategyRemaining[$strategyId]))$strategyRemaining[$strategyId]=DecimalMath::subtract($strategyRemaining[$strategyId],$approved);
+    $selectedStrategies[$strategyId]=true;
     $expected=DecimalMath::add($expected,DecimalMath::multiply($approved,Decimal::fromString((string)$o['expected_net_return'])));
    }
    $items[]=new AllocationItem((string)$o['strategy_version_id'],(string)$o['opportunity_id'],$requested,$approved,$priority++,Decimal::fromString((string)$o['expected_net_return']),Decimal::fromString((string)($o['expected_value']??'0')),$capacity,$decision,$reason,(array)($o['risk_budget']??[]));
