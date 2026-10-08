@@ -2026,6 +2026,13 @@ services:
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
       $logger: '@Kernel\Observability\StructuredLoggerInterface'
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioValuationSnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\PortfolioValuationSnapshotRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioValuationSnapshotRepository
+
   Domains\CapitalMarkets\Application\Service\CapitalRiskService: ~
 
   Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService: ~
