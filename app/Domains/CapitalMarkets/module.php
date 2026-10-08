@@ -7,7 +7,7 @@ return [
     'version'=>'0.9.0',
     'schema_version'=>'0.9.0',
     'kernel_constraint'=>'>=0.11.0 <0.12.0',
-    'description'=>'Autonomous Capital Markets bounded context with shared instrument/venue, Market Intelligence, Tokenized Equity H1/H2, Crypto Spot/Perpetual H4/H5/H6 and governed Research & Strategy Lab with immutable experiments, replay/backtest, OOS, scorecards, promotion gates and Research Agent assistance plus portfolio-aware Capital Allocation & Risk and the canonical Decision Workspace UI/read-model layer. Live trading remains disabled.',
+    'description'=>'Autonomous Capital Markets bounded context with shared instrument/venue, Market Intelligence, Tokenized Equity H1/H2, Crypto Spot/Perpetual H4/H5/H6 and governed Research & Strategy Lab with immutable experiments, replay/backtest, OOS, scorecards, promotion gates and Research Agent assistance plus portfolio-aware Capital Allocation & Risk. Live trading remains disabled.',
     'icon'=>'chart-candlestick',
     'dependencies'=>[],
     'enabled_by_default'=>false,
