@@ -2253,9 +2253,14 @@ services:
   Kernel\Process\ProcessRegistryInterface:
     alias: Infrastructure\Process\JsonProcessRegistry
 
+  Domains\Federation\Bootstrap\FederationDomainModule:
+    arguments:
+      $approvalHandler: '@App\Persistence\Federation\FederationPlanApproveHandler'
+
   Kernel\Module\DomainModuleRegistry:
     arguments:
       $modules:
+        - '@Domains\Federation\Bootstrap\FederationDomainModule'
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
         - '@Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule'
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
