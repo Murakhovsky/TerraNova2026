@@ -3,7 +3,7 @@ declare(strict_types=1);
 $root=dirname(__DIR__,2);$assert=static function(bool $c,string $m):void{if(!$c)throw new RuntimeException($m);};
 $service=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/CapitalRiskService.php');
 foreach([
- 'simulateOpportunityImpact','INSUFFICIENT_AVAILABLE_CAPITAL','STALE_OR_UNTRUSTED_VALUATION',
+ 'simulateOpportunityImpact','maximum_approved_capital','HARD_RISK_HEADROOM','deriveRiskHardCaps','INSUFFICIENT_AVAILABLE_CAPITAL','STALE_OR_UNTRUSTED_VALUATION',
  'INSUFFICIENT_LOCAL_CAPITAL','STRATEGY_NOT_LIVE_VALIDATED','minimum_cash_buffer',
  'emergency_hedge_buffer','settlement_buffer','approveAndReserve','proposeRebalance',
  'Rebalance costs exceed expected benefit.','refreshRisk','Risk envelope is not configured.'
