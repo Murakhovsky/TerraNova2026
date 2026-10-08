@@ -46,6 +46,20 @@ final readonly class GoalPlanValidator
                 $errors[] = 'unavailable_or_unapproved_capability:' . $capabilityId;
                 continue;
             }
+            $input = $step['input'] ?? null;
+            if (in_array($capability->sideEffectLevel, ['external', 'financial', 'irreversible'], true)
+                && $input === null) {
+                $errors[] = 'missing_approved_action_input:' . $capabilityId;
+                continue;
+            }
+            if ($input !== null) {
+                try {
+                    (new CapabilityJsonInputValidator())->validate($capability, $input);
+                } catch (\DomainException $exception) {
+                    $errors[] = 'invalid_action_input:' . $capabilityId . ':' . $exception->getMessage();
+                    continue;
+                }
+            }
             $normalized[] = [
                 'id' => $id,
                 'capability_id' => $capabilityId,
@@ -55,6 +69,10 @@ final readonly class GoalPlanValidator
                 'side_effect_level' => $capability->sideEffectLevel,
                 'approval_policy' => $capability->approvalPolicy,
                 'idempotency' => $capability->idempotency,
+                // Immutable, schema-validated step inputs are included in the
+                // SHA-256 approved plan snapshot; execution must never use
+                // caller-supplied parameters after approval.
+                'input' => $input,
             ];
         }
         if ($normalized === []) {
