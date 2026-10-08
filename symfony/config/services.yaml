@@ -2456,6 +2456,7 @@ services:
         sales.stage-history.v1: '@Domains\Sales\Automation\Event\SalesHistoricalEventConsumer'
         diagnostic.action-outcome.v1: '@Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler'
         platform.async-operations-realtime.v1: '@App\Web\Experience\Async\AsyncOperationRealtimeEventConsumer'
+        capital-markets.decision-workspace-realtime.v1: '@App\Web\CapitalMarkets\CapitalMarketsRealtimeEventConsumer'
         growth.outcome-feedback.v1: '@Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer'
         growth.response-classification.v1: '@Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer'
         growth.conversation-routing.v1: '@Domains\Growth\Automation\Event\GrowthConversationRoutingConsumer'
