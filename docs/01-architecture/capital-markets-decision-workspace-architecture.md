@@ -247,14 +247,14 @@ Density і видимість optional columns зберігаються в brows
 Scenario Simulator викликає існуючий backend endpoint `/api/v1/capital-markets/portfolio/simulate-opportunity`; browser лише передає opportunity + proposed capital і відображає deterministic response.
 
 
-## Completion follow-up — detail views and acceptance
+## Доповнення: детальні екрани та приймання
 
-The Decision Workspace now also includes canonical Market Detail and Relationship Detail read surfaces.
+Decision Workspace також містить канонічні екрани Market Detail та Relationship Detail.
 
-- Market Detail reuses canonical MarketState rows and related instruments/relationships.
-- Relationship Detail exposes relationship semantics and canonical side-by-side price evidence.
-- When both sides do not have enough canonical comparable market evidence, the UI renders `NOT COMPARABLE` instead of fabricating a premium.
-- Strategy Detail exposes a same-family Version Comparison view.
-- A dedicated `capital_markets_decision_workspace_manager_acceptance.php` gate validates the manager-facing WHAT → WHY → MONEY → RISK → ACTION contract and is executed in runtime CI.
+- Market Detail використовує канонічні MarketState, інструменти та зв'язки.
+- Relationship Detail показує семантику зв'язку й порівняння цін на підставі канонічних даних.
+- За відсутності достатніх зіставних ринкових даних інтерфейс показує `NOT COMPARABLE`, а не вигадує премію.
+- Strategy Detail показує порівняння версій однієї стратегії.
+- Окремий тест `capital_markets_decision_workspace_manager_acceptance.php` перевіряє контракт WHAT → WHY → MONEY → RISK → ACTION під час Runtime CI.
 
-Known backend-authority gaps remain explicit rather than being fabricated: canonical Today/30D P&L windows and historical chart series are still unavailable until dedicated backend projections exist.
+Відомі прогалини backend залишаються видимими: канонічні Today/30D P&L та історичні ряди графіків наразі відсутні до появи відповідних backend-проєкцій.
