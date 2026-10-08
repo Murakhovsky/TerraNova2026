@@ -26,6 +26,17 @@ catch (InvalidArgumentException) {}
 $bad=$record;$bad['kind']='LIABILITY_BALANCE';
 try {PortfolioNavFinancialEvidencePolicy::normalize($bad);throw new RuntimeException('Negative liability was accepted');}
 catch (InvalidArgumentException) {}
+$validDebt=$record;
+$validDebt['kind']='LIABILITY_BALANCE';
+$validDebt['amount']='0';
+$validDebt['liability_account_id']='credit-line-a';
+$debt=PortfolioNavFinancialEvidencePolicy::normalize($validDebt);
+$assert($debt['liability_account_id']==='credit-line-a',
+    'Balance snapshots require stable account identity for time-series replacement.');
+unset($validDebt['liability_account_id']);
+try {PortfolioNavFinancialEvidencePolicy::normalize($validDebt);throw new RuntimeException('Unidentified liability account accepted');}
+catch (InvalidArgumentException) {}
+
 $bad=$record;$bad['kind']='VENUE_BALANCE';$bad['amount']='120';
 try {PortfolioNavFinancialEvidencePolicy::normalize($bad);throw new RuntimeException('Venue not identified');}
 catch (InvalidArgumentException) {}
