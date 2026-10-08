@@ -47,7 +47,23 @@ final readonly class FederationExternalActionReceiptReconciler
             throw new DomainException('Receipt is not for a tenant-owned external Federation step.');
         }
         if ($step['state'] === 'completed') {
-            return ['status' => 'completed', 'action_id' => self::actionId($step['result_reference'])];
+            // A historical Step flag is NOT proof of an intact external receipt.
+            // Re-attest it before a dependent step is allowed to start.
+            $id = self::actionId($step['result_reference']);
+            if ($id === null || !preg_match('/^[a-f0-9]{32}$/', $id)) {
+                return ['status' => 'manual_reconciliation_required', 'action_id' => $id];
+            }
+            $action = $this->db->fetchAssociative(
+                'SELECT id, status, type, target_type, target_id, parameters, source_type,
+                        source_id, execution_mode, risk_level, idempotency_key, correlation_id
+                 FROM cos_actions WHERE organization_id = :org AND id = :id AND idempotency_key = :key',
+                ['org' => $org, 'id' => $id, 'key' => 'fed:' . $step['idempotency_key']],
+            );
+            if (!$action || $action['status'] !== 'COMPLETED'
+                || !$this->isAttested($action, $org)) {
+                return ['status' => 'manual_reconciliation_required', 'action_id' => $id];
+            }
+            return ['status' => 'completed', 'action_id' => $id];
         }
         if ($step['state'] !== 'claimed' && $step['state'] !== 'ambiguous') {
             return ['status' => (string) $step['state'], 'action_id' => null];
@@ -69,25 +85,7 @@ final readonly class FederationExternalActionReceiptReconciler
             throw new DomainException('Federation Step receipt references another Action.');
         }
         if ($action['status'] === 'COMPLETED' && $step['state'] === 'claimed') {
-            // A matching idempotency key is not proof that the Action actually
-            // belonged to this immutable Goal plan. Re-check full plan, input,
-            // canonical Policy, independent human Approval and one attempt.
-            try {
-                $params = json_decode((string) $action['parameters'], true, 512, JSON_THROW_ON_ERROR);
-                if (!is_array($params)) {
-                    throw new DomainException('Canonical Action parameters are malformed.');
-                }
-                $completed = new Action(
-                    $id, $org, (string) $action['type'],
-                    $action['target_type'] !== null ? (string) $action['target_type'] : null,
-                    $action['target_id'] !== null ? (string) $action['target_id'] : null,
-                    $params, (string) $action['source_type'], (string) $action['source_id'],
-                    (string) $action['execution_mode'], (string) $action['risk_level'],
-                    (string) $action['idempotency_key'], new \DateTimeImmutable(),
-                    ActionStatus::Completed, (string) $action['correlation_id'],
-                );
-                $this->admission->assertCompletedReceipt($completed);
-            } catch (\Throwable) {
+            if (!$this->isAttested($action, $org)) {
                 return ['status' => 'manual_reconciliation_required', 'action_id' => $id];
             }
             $this->goals->finishStep($actor, $runId, $stepId, 'completed', 'action:' . $id);
@@ -98,6 +96,30 @@ final readonly class FederationExternalActionReceiptReconciler
             return ['status' => 'ambiguous', 'action_id' => $id];
         }
         return ['status' => (string) $action['status'], 'action_id' => $id];
+    }
+
+    /** @param array<string,mixed> $action */
+    private function isAttested(array $action, string $organizationId): bool
+    {
+        try {
+            $params = json_decode((string) $action['parameters'], true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($params)) {
+                return false;
+            }
+            $completed = new Action(
+                (string) $action['id'], $organizationId, (string) $action['type'],
+                $action['target_type'] !== null ? (string) $action['target_type'] : null,
+                $action['target_id'] !== null ? (string) $action['target_id'] : null,
+                $params, (string) $action['source_type'], (string) $action['source_id'],
+                (string) $action['execution_mode'], (string) $action['risk_level'],
+                (string) $action['idempotency_key'], new \DateTimeImmutable(),
+                ActionStatus::Completed, (string) $action['correlation_id'],
+            );
+            $this->admission->assertCompletedReceipt($completed);
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private static function actionId(mixed $receipt): ?string
