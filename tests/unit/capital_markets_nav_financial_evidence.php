@@ -14,6 +14,7 @@ $record=[
 ];
 $flow=PortfolioNavFinancialEvidencePolicy::normalize($record);
 $assert($flow['amount']==='-25.375','Outflows must retain signed exact decimal value.');
+$assert(strlen($flow['source_key_sha256'])===64,'Every accounting observation needs deterministic source identity.');
 $assert($flow['status']==='PENDING_RECONCILIATION' && $flow['reconciled']===false,
     'User-supplied reconciliation or approval must never grant ledger authority.');
 $bad=$record;$bad['amount']='0';
@@ -31,6 +32,9 @@ catch (InvalidArgumentException) {}
 $bad=$record;$bad['kind']='VENUE_BALANCE';$bad['amount']='120';$bad['venue_id']='venue-2';
 $venue=PortfolioNavFinancialEvidencePolicy::normalize($bad);
 $assert($venue['kind']==='VENUE_BALANCE' && $venue['amount']==='120','Venue statement should normalize without asserting matching account balance.');
+$bad=$record;$bad['effective_at']='yesterday';
+try {PortfolioNavFinancialEvidencePolicy::normalize($bad);throw new RuntimeException('Ambiguous effective time accepted');}
+catch (InvalidArgumentException) {}
 $bad=$record;$bad['kind']='EXPENSE';
 try {PortfolioNavFinancialEvidencePolicy::normalize($bad);throw new RuntimeException('Unknown accounting evidence type accepted');}
 catch (InvalidArgumentException) {}
