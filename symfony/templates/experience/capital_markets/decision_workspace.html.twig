@@ -204,8 +204,17 @@
     <section class="cos-panel">
       <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap">
         <div><small>SIGNALS → DECISIONS</small><h2>Opportunity Board</h2><p>Default order follows canonical portfolio allocation priority when it exists.</p></div>
-        <div><a class="btn btn-outline-secondary" href="?view=best">Best</a> <a class="btn btn-outline-secondary" href="?view=low-risk">Low Risk</a> <a class="btn btn-outline-secondary" href="?view=short-ttl">Short TTL</a></div>
+        <div><a class="btn btn-outline-secondary" href="?view=best">Best</a> <a class="btn btn-outline-secondary" href="?view=low-risk">Low Risk</a> <a class="btn btn-outline-secondary" href="?view=high-capacity">High Capacity</a> <a class="btn btn-outline-secondary" href="?view=short-ttl">Short TTL</a> <a class="btn btn-outline-secondary" href="?view=rejected">Rejected by Portfolio</a></div>
       </div>
+      <form class="row g-2 align-items-end mb-3" method="get" action="/capital-markets/opportunities" aria-label="Opportunity filters">
+        <div class="col-md-2"><label class="form-label" for="cm-op-type">Type</label><input id="cm-op-type" class="form-control" name="type" value="{{ query.type|default('') }}"></div>
+        <div class="col-md-2"><label class="form-label" for="cm-op-risk">Risk</label><input id="cm-op-risk" class="form-control" name="risk" value="{{ query.risk|default('') }}"></div>
+        <div class="col-md-2"><label class="form-label" for="cm-op-decision">Decision</label><input id="cm-op-decision" class="form-control" name="decision" value="{{ query.decision|default('') }}"></div>
+        <div class="col-md-2"><label class="form-label" for="cm-op-min-net">Min expected net</label><input id="cm-op-min-net" class="form-control" name="min_net" inputmode="decimal" value="{{ query.min_net|default('') }}"></div>
+        <div class="col-md-2"><label class="form-label" for="cm-op-max-capital">Max capital</label><input id="cm-op-max-capital" class="form-control" name="max_capital" inputmode="decimal" value="{{ query.max_capital|default('') }}"></div>
+        <div class="col-md-2"><button class="btn btn-primary" type="submit">Apply</button> <a class="btn btn-outline-secondary" href="/capital-markets/opportunities">Reset</a></div>
+      </form>
+      <div class="d-flex gap-2 justify-content-end mb-2"><a href="/capital-markets/export/opportunities.csv">Export CSV</a><a href="/capital-markets/export/opportunities.json">Export JSON</a></div>
       <div class="table-responsive">
         <table class="table align-middle">
           <thead><tr><th>Priority</th><th>Opportunity</th><th>Type</th><th>Instruments / Venues</th><th>Expected Net</th><th>Return</th><th>Capital</th><th>Capacity</th><th>Risk</th><th>Portfolio Impact</th><th>TTL</th><th>Status</th></tr></thead>
@@ -412,7 +421,7 @@
       <twig:CosMetric label="Rejected" value="{{ research.metrics.rejected_hypotheses|default(0) }}" hint="negative knowledge remains visible" />
     </section>
     <section class="cos-panel">
-      <h2>Research Pipeline</h2>
+      <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap"><h2>Research Pipeline</h2><div><a href="/capital-markets/export/research-results.csv">Export results CSV</a> · <a href="/capital-markets/export/research-results.json">JSON</a></div></div>
       <div class="row g-3">
       {% for stage, items in w.pipeline|default({}) %}
         <div class="col-xl col-md-4 col-sm-6">
@@ -543,7 +552,7 @@
 
   {% elseif cmView == 'execution' %}
     <section class="cos-panel">
-      <h2>Execution Groups</h2>
+      <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap"><h2>Execution Groups</h2><div><a href="/capital-markets/export/executions.csv">Export CSV</a> · <a href="/capital-markets/export/executions.json">JSON</a></div></div>
       <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Execution</th><th>Strategy</th><th>Opportunity</th><th>Legs</th><th>Capital</th><th>State</th><th>Hedge</th><th>Duration</th><th>P&L</th><th>Updated</th></tr></thead><tbody>
       {% for x in w.executions|default([]) %}
         <tr><td><a href="/capital-markets/execution/{{ x.id|url_encode }}">{{ x.id ?: '—' }}</a></td><td>{{ x.strategy is not null ? x.strategy : '—' }}</td><td>{% if x.opportunity_id %}<a href="/capital-markets/opportunities/{{ x.opportunity_id|url_encode }}">{{ x.opportunity_id }}</a>{% else %}—{% endif %}</td><td>{{ x.legs is iterable ? x.legs|length : '—' }}</td><td>{{ x.capital is not null ? x.capital : '—' }}</td><td><strong>{{ x.state }}</strong></td><td>{{ x.hedge is not null ? x.hedge : '—' }}</td><td>{{ x.duration is not null ? x.duration : '—' }}</td><td>{{ x.pnl is not null ? x.pnl : '—' }}</td><td>{{ x.updated_at is not null ? x.updated_at : '—' }}</td></tr>
@@ -580,6 +589,7 @@
   {% elseif cmView == 'performance' %}
     {% set perf = w.performance|default({}) %}
     {% set attr = perf.attribution|default({}) %}
+    <div class="d-flex justify-content-end gap-2"><a href="/capital-markets/export/performance.csv">Export CSV</a><a href="/capital-markets/export/performance.json">Export JSON</a></div>
     <section class="cos-kpi-strip">
       <twig:CosMoneyMetric label="Net P&L" value="{{ attr.net_pnl|default('—') }}" />
       <twig:CosMoneyMetric label="Gross P&L" value="{{ attr.gross_pnl|default('—') }}" />
