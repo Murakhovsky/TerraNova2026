@@ -129,6 +129,28 @@ try {
       if (!performanceCsv.ok()) {
         throw new Error('desktop: performance CSV export returned ' + performanceCsv.status());
       }
+      const windowsJson = await context.request.get(absolute('/capital-markets/export/realized-windows.json'));
+      if (!windowsJson.ok()) {
+        throw new Error('desktop: realized-window JSON export returned ' + windowsJson.status());
+      }
+      const windowsPayload = await windowsJson.json();
+      if (windowsPayload.dataset !== 'realized-windows' || !Array.isArray(windowsPayload.data)
+        || windowsPayload.data.length !== 2) {
+        throw new Error('desktop: realized-window JSON export must return today and 30d projections.');
+      }
+      for (const row of windowsPayload.data) {
+        if (!['today', '30d'].includes(row.window) || row.scope !== 'REALIZED_EXECUTIONS_ONLY'
+          || !['COMPLETE','PARTIAL','UNAVAILABLE'].includes(row.status)) {
+          throw new Error('desktop: realized-window projection has invalid identity, scope or coverage state.');
+        }
+        if (row.status !== 'COMPLETE' && row.net_pnl !== null) {
+          throw new Error('desktop: incomplete realized-window export must never publish a numeric total.');
+        }
+        if (row.status === 'COMPLETE' && (!row.currency || row.net_pnl === null)) {
+          throw new Error('desktop: complete realized-window export needs a verified currency and net value.');
+        }
+      }
+
       const contentType = performanceCsv.headers()['content-type'] || '';
       if (!contentType.includes('text/csv')) {
         throw new Error('desktop: performance CSV export has unexpected content type: ' + contentType);
