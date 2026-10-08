@@ -110,6 +110,10 @@ $assert(str_contains($collector,'POSITION_MARK_UNTRUSTED'),'NAV collector must r
 $assert(str_contains($collector,'POSITION_MARK_STALE_OR_CLOCK_UNCERTAIN'),'NAV collector must enforce source timestamp freshness.');
 $assert(str_contains($collector,'BALANCE_NEGATIVE_AMOUNT'),'NAV collector must validate venue balance amounts.');
 $assert(str_contains($collector,'PortfolioLedgerIntegrityAudit::inspect'),'NAV collector must independently check trading ledger integrity.');
+$assert(str_contains($collector,'PortfolioNavStatementReconciliationPreview::inspect'),'NAV collector must publish tenant-scoped source-versus-paper statement differences.');
+$assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavStatementReconciliationPreview.php'),'NAV statement reconciliation preview missing.');
+$assert(str_contains($template,'Unreconciled venue cash statement differences'),'Performance must show venue statement mismatches rather than silently certifying cash.');
+
 $assert(str_contains($read,'nav_preflight'),'Performance read model must surface NAV reconciliation diagnostics.');
 $assert(str_contains($template,'NAV source integrity &amp; reconciliation'),'Performance must disclose accounting blockers.');
 $assert(str_contains($collector,"'snapshot_written'=>false"),'NAV preflight must not claim successful persistence.');
