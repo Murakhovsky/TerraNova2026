@@ -701,7 +701,8 @@ final readonly class DecisionWorkspaceReadService
             'economics_status' => $attribution['economics_status'] ?? 'UNAVAILABLE',
             'economics_coverage' => $attribution['economics_coverage'] ?? '0/0',
             'economics_note' => $attribution['economics_note'] ?? 'Canonical execution economics are unavailable.',
-            'time_window_note' => 'Today and 30D P&L remain unavailable until canonical time-window performance read models exist.',
+            'realized_windows' => $attribution['realized_windows'] ?? [],
+            'time_window_note' => 'Realized-only UTC execution windows are shown separately when coverage and currency are complete. Full Today / 30D portfolio Net P&L still requires canonical mark-to-market time series.',
         ];
         $page['partial_errors'] = $errors;
         return $page;
