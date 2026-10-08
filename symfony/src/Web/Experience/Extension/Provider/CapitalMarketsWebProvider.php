@@ -13,10 +13,15 @@ use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
+use Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService;
+use Throwable;
 
 final readonly class CapitalMarketsWebProvider implements NavigationProviderInterface,SearchProviderInterface,CommandProviderInterface,WorkspaceProviderInterface
 {
-    public function __construct(private SearchResultMatcher $matcher){}
+    public function __construct(
+        private SearchResultMatcher $matcher,
+        private DecisionWorkspaceReadService $workspace,
+    ) {}
 
     public function serviceId():string{return 'capitalMarketsNavigationContributor';}
 
@@ -41,7 +46,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
 
     public function search(WebExtensionContext $context,string $query,int $limit=10):array
     {
-        return $this->matcher->match([
+        $items = [
             new SearchResult('capital_markets.search.overview','Capital Markets Overview','/capital-markets','workspace','Capital, profit, risk, opportunities and recommended action'),
             new SearchResult('capital_markets.search.opportunities','Opportunity Board','/capital-markets/opportunities','workspace','Portfolio-adjusted opportunities and expected net economics'),
             new SearchResult('capital_markets.search.markets','Market Explorer','/capital-markets/markets','workspace','Instrument, relationship and venue market views'),
@@ -60,7 +65,23 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new SearchResult('capital-markets-market-data','Market Data Administration','/capital-markets/market-data','workspace','Market source configuration and polling'),
             new SearchResult('capital_markets.search.tokenized_equity','Tokenized Equity Vertical Slice','/capital-markets/tokenized-equities','workspace','H1/H2 operator surface and paper execution'),
             new SearchResult('capital_markets.search.crypto_spot_perpetual','Crypto Spot / Perpetual Vertical Slice','/capital-markets/crypto-spot-perpetual','workspace','H4/H5/H6 operator surface and paper execution'),
-        ],$query,$limit);
+        ];
+
+        try {
+            foreach ($this->workspace->searchEntities($context->organizationId) as $entity) {
+                $items[] = new SearchResult(
+                    id: $entity['id'],
+                    label: $entity['label'],
+                    path: $entity['path'],
+                    kind: $entity['kind'],
+                    subtitle: $entity['subtitle'],
+                );
+            }
+        } catch (Throwable) {
+            // Global search remains usable even when one Capital Markets read source is degraded.
+        }
+
+        return $this->matcher->match($items,$query,$limit);
     }
 
     public function commands(WebExtensionContext $context):array
