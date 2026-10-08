@@ -35,6 +35,7 @@ final class PortfolioNavWindowProjector
                 || ($snapshot['ledger_reconciled'] ?? false) !== true
                 || ($snapshot['marks_reconciled'] ?? false) !== true
                 || ($snapshot['external_flows_reconciled'] ?? false) !== true
+                || !self::verifiedSnapshotEvidence($snapshot)
                 || !is_string($snapshot['equity'] ?? null)
                 || !is_string($snapshot['cumulative_external_net_flow'] ?? null)
                 || !is_string($snapshot['currency'] ?? null)
@@ -107,4 +108,16 @@ final class PortfolioNavWindowProjector
         }
         return $out;
     }
+    /** @param array<string,mixed> $snapshot */
+    private static function verifiedSnapshotEvidence(array $snapshot):bool
+    {
+        if (!is_string($snapshot['provenance_id']??null)
+            || trim($snapshot['provenance_id'])==='') return false;
+        foreach (['ledger_fingerprint','marks_fingerprint','external_flows_fingerprint'] as $field) {
+            if (!is_string($snapshot[$field]??null)
+                || preg_match('/^[a-f0-9]{64}$/',$snapshot[$field])!==1) return false;
+        }
+        return true;
+    }
+
 }
