@@ -697,14 +697,27 @@
     {% set attr = perf.attribution|default({}) %}
     <div class="d-flex justify-content-end gap-2"><a href="/capital-markets/export/performance.csv">Export CSV</a><a href="/capital-markets/export/performance.json">Export JSON</a></div>
     <section class="cos-kpi-strip">
-      <twig:CosMoneyMetric label="Net P&L" value="{{ attr.net_pnl|default('—') }}" />
-      <twig:CosMoneyMetric label="Gross P&L" value="{{ attr.gross_pnl|default('—') }}" />
-      <twig:CosMoneyMetric label="Costs" value="{{ attr.costs|default('—') }}" />
+      <twig:CosMoneyMetric label="Portfolio Net P&L" value="{{ attr.net_pnl|default('—') }}" />
+      <twig:CosMoneyMetric label="Realized Gross P&L" value="{{ attr.realized_gross_pnl is not null ? attr.realized_gross_pnl : '—' }}" />
+      <twig:CosMoneyMetric label="Realized Costs" value="{{ attr.realized_costs is not null ? attr.realized_costs : '—' }}" />
+      <twig:CosMoneyMetric label="Realized Net P&L" value="{{ attr.realized_net_pnl is not null ? attr.realized_net_pnl : '—' }}" />
+      <twig:CosMetric label="Economics Coverage" value="{{ perf.economics_coverage|default('0/0') }}" hint="{{ perf.economics_status|default('UNAVAILABLE') }}" />
       <twig:CosMetric label="Return" value="{{ attr.return|default('—') }}" />
       <twig:CosMetric label="Drawdown" value="{{ attr.drawdown|default('—') }}" />
       <twig:CosMetric label="Profit Factor" value="{{ attr.profit_factor|default('—') }}" hint="unavailable until canonical wins/losses performance model exists" />
       <twig:CosMetric label="Capital Efficiency" value="{{ attr.capital_efficiency|default('—') }}" />
       <twig:CosMetric label="Risk Efficiency" value="{{ attr.risk_efficiency|default('—') }}" />
+    </section>
+    {% set economicsTone = perf.economics_status|default('UNAVAILABLE') == 'COMPLETE' ? 'positive' : (perf.economics_status|default('UNAVAILABLE') == 'PARTIAL' ? 'warning' : 'info') %}
+    <section class="cos-panel" aria-label="Realized performance economics">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <h2>Gross → Costs → Net</h2>
+          <p>Realized economics are aggregated only from completed executions that expose canonical cost decomposition. Open positions remain in Portfolio Net P&L and are not silently mixed into realized economics.</p>
+        </div>
+        <twig:CosStatus label="{{ perf.economics_status|default('UNAVAILABLE') }}" tone="{{ economicsTone }}" />
+      </div>
+      <p><small>{{ perf.economics_note|default('Canonical execution economics are unavailable.') }}</small></p>
     </section>
     <twig:CosAlert title="Canonical time windows" copy="{{ perf.time_window_note|default('') }}" tone="info" />
     {% set perfView = query.view|default('by_strategy') %}
@@ -731,7 +744,17 @@
       </tbody></table></div>
     </section>
     <section class="cos-panel"><h2>Edge Funnel</h2><div class="cos-kpi-strip"><twig:CosMetric label="Detected" value="{{ perf.edge_funnel.detected|default(0) }}" /><twig:CosMetric label="Validated" value="{{ perf.edge_funnel.validated|default(0) }}" /><twig:CosMetric label="Executable" value="{{ perf.edge_funnel.executable|default(0) }}" /><twig:CosMetric label="Executed" value="{{ perf.edge_funnel.executed|default(0) }}" /><twig:CosMetric label="Profitable" value="{{ perf.edge_funnel.profitable|default(0) }}" /></div><p class="mt-2"><strong>Detected / Executable / Realized Edge value:</strong> unavailable until the backend exposes canonical edge-value attribution. Counts remain visible; the UI does not infer money from them.</p></section>
-    <section class="cos-panel"><h2>Cost Breakdown Availability</h2><p>Costs are shown only when canonical records expose them. Missing categories are not assumed to be zero.</p><div class="d-flex gap-2 flex-wrap">{% for key,available in perf.cost_breakdown|default({}) %}<span class="badge text-bg-{{ available ? 'secondary' : 'light' }}">{{ key|upper }} · {{ available ? 'AVAILABLE' : 'UNAVAILABLE' }}</span>{% endfor %}</div></section>
+    <section class="cos-panel">
+      <h2>Cost Breakdown</h2>
+      <p>Missing categories are unavailable, never assumed to be zero. Slippage is not subtracted twice when executable fill prices already contain it.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Category</th><th>Amount</th><th>State</th></tr></thead><tbody>
+      {% for key,item in perf.cost_breakdown|default({}) %}
+        <tr><td>{{ item.label|default(key|upper) }}</td><td>{{ item.value is not null ? item.value : '—' }}</td><td><strong>{{ item.available|default(false) ? 'AVAILABLE' : 'UNAVAILABLE' }}</strong></td></tr>
+      {% else %}
+        <tr><td colspan="3">No canonical cost decomposition is available.</td></tr>
+      {% endfor %}
+      </tbody></table></div>
+    </section>
 
   {% elseif cmView == 'agents' %}
     {% set agents = w.agents|default({}) %}
