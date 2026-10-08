@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['density', 'columnToggle', 'age', 'simulationOutput', 'historyChart'];
+    static targets = ['density', 'columnToggle', 'age', 'simulationOutput', 'historyChart', 'basisChart'];
 
     connect() {
         this.refreshTimer = null;
@@ -26,6 +26,7 @@ export default class extends Controller {
         this.updateAge();
         this.ageTimer = window.setInterval(() => this.updateAge(), 1000);
         this.renderHistoricalCharts();
+        this.renderBasisCharts();
     }
 
     disconnect() {
@@ -36,6 +37,88 @@ export default class extends Controller {
         if (this.ageTimer !== null) {
             window.clearInterval(this.ageTimer);
             this.ageTimer = null;
+        }
+    }
+
+    renderBasisCharts() {
+        for (const host of this.basisChartTargets) {
+            let rows;
+            try {
+                rows = JSON.parse(host.dataset.basisRows || '[]');
+            } catch {
+                host.textContent = 'Historical basis evidence could not be displayed.';
+                continue;
+            }
+            if (!Array.isArray(rows) || rows.length === 0) {
+                host.textContent = 'No comparable historical basis observations are available.';
+                continue;
+            }
+            const groups = new Map();
+            for (const row of rows) {
+                if (!row || typeof row !== 'object') continue;
+                const time = Date.parse(row.source_timestamp);
+                const position = Number(row.basis_bps);
+                if (!Number.isFinite(time) || !Number.isFinite(position)) continue;
+                const key = [row.source_id || '', row.target_source_id || '', row.source_venue || '', row.target_venue || '', row.quote_asset || ''].join('|');
+                if (!groups.has(key)) groups.set(key, { label: key, points: [] });
+                groups.get(key).points.push({ time, position, raw: String(row.basis_bps), timestamp: row.source_timestamp });
+            }
+            const series = [...groups.values()].filter(group => group.points.length >= 2);
+            host.replaceChildren();
+            if (series.length === 0) {
+                host.textContent = 'At least two recorded comparable observations from one source/venue/currency pair are needed.';
+                continue;
+            }
+            const select = document.createElement('select');
+            select.setAttribute('aria-label', 'Historical Basis evidence series');
+            select.className = 'form-select form-select-sm mb-2';
+            series.forEach((group, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = group.label;
+                select.append(option);
+            });
+            const display = document.createElement('div');
+            const redraw = () => {
+                display.replaceChildren();
+                const points = [...series[Number(select.value) || 0].points].sort((a, b) => a.time - b.time).slice(-150);
+                const low = Math.min(...points.map(p => p.position));
+                const high = Math.max(...points.map(p => p.position));
+                const start = points[0].time;
+                const finish = points[points.length - 1].time;
+                const x = p => finish === start ? 360 : 20 + (p.time - start) / (finish - start) * 680;
+                const y = p => high === low ? 90 : 20 + (high - p.position) / (high - low) * 140;
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 720 180');
+                svg.setAttribute('width', '100%');
+                svg.setAttribute('role', 'img');
+                svg.setAttribute('aria-label', 'Historical recorded basis in basis points');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', points.map((p,i) => (i ? 'L' : 'M') + x(p).toFixed(2) + ',' + y(p).toFixed(2)).join(' '));
+                path.setAttribute('fill','none');
+                path.setAttribute('stroke','currentColor');
+                path.setAttribute('stroke-width','2');
+                svg.append(path);
+                for (const p of points) {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+                    circle.setAttribute('cx',x(p).toFixed(2));
+                    circle.setAttribute('cy',y(p).toFixed(2));
+                    circle.setAttribute('r','2.5');
+                    circle.setAttribute('fill','currentColor');
+                    const title = document.createElementNS('http://www.w3.org/2000/svg','title');
+                    title.textContent = p.timestamp + ': ' + p.raw + ' bps';
+                    circle.append(title);
+                    svg.append(circle);
+                }
+                display.append(svg);
+                const caption = document.createElement('p');
+                caption.className = 'small text-muted';
+                caption.textContent = points.length + ' paired canonical observations. Calculations are server-owned; chart coordinates only are computed here.';
+                display.append(caption);
+            };
+            select.addEventListener('change',redraw);
+            host.append(select,display);
+            redraw();
         }
     }
 
