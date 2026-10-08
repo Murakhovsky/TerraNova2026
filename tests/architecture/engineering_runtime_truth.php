@@ -20,6 +20,7 @@ $productStage = (string) file_get_contents($root.'/symfony/src/Engineering/Appli
 $architectStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArchitectStageExecutor.php');
 $engineeringRunner = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/EngineeringAgentRunner.php');
 $openAiClient = (string) file_get_contents($root.'/app/Infrastructure/Llm/OpenAiResponsesStructuredLlmClient.php');
+$engineeringLlmObserver = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Llm/EngineeringStructuredLlmProgressObserver.php');
 
 $continue = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringContinueService.php');
 
@@ -100,6 +101,22 @@ if (!str_contains($engineeringRunner, 'Transport/provider resilience belongs to 
 if (!str_contains($openAiClient, "'OpenAI transport error: '")
     || !str_contains($openAiClient, "'OpenAI request failed with HTTP '")) {
     throw new RuntimeException('OpenAI transport diagnostics are still opaque.');
+}
+
+if (!str_contains($openAiClient, "'background' =")
+    && !str_contains($openAiClient, "\$payload['background'] = true")) {
+    throw new RuntimeException('Engineering OpenAI background mode is missing.');
+}
+foreach (['awaitBackgroundResponse', 'backgroundRequest', 'background_poll_interval_seconds', 'provider_request_id'] as $needle) {
+    if (!str_contains($openAiClient.$engineeringLlmObserver, $needle)) {
+        throw new RuntimeException('Engineering background LLM polling contract missing '.$needle);
+    }
+}
+if (!str_contains($services, '$backgroundPollIntervalSeconds: 20')) {
+    throw new RuntimeException('Engineering background LLM polling must run every 20 seconds.');
+}
+if (!str_contains($engineeringLlmObserver, 'touchRuntime(')) {
+    throw new RuntimeException('Engineering background LLM polling does not refresh workflow heartbeat.');
 }
 
 echo "Engineering runtime truth and observability contract passed.\n";
