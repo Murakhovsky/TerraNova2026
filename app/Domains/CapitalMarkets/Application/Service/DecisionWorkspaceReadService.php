@@ -482,6 +482,18 @@ final readonly class DecisionWorkspaceReadService
         $page['backtest_runs'] = $this->forStrategy($research['backtest_runs'] ?? [], $strategyId);
         $page['oos_runs'] = $this->forStrategy($research['oos_runs'] ?? [], $strategyId);
         $page['paper_runs'] = $this->forStrategy($research['paper_runs'] ?? [], $strategyId);
+
+        $selected = is_array($page['strategy'] ?? null) ? $page['strategy'] : [];
+        $familyId = (string)($selected['strategy_id'] ?? $selected['family_id'] ?? '');
+        $familyName = (string)($selected['strategy_name'] ?? $selected['name'] ?? '');
+        $page['version_comparison'] = array_values(array_filter(
+            $research['strategy_versions'] ?? [],
+            static function(array $row) use ($familyId, $familyName, $strategyId): bool {
+                if ((string)($row['strategy_version_id'] ?? $row['id'] ?? '') === $strategyId) return true;
+                if ($familyId !== '' && (string)($row['strategy_id'] ?? $row['family_id'] ?? '') === $familyId) return true;
+                return $familyName !== '' && (string)($row['strategy_name'] ?? $row['name'] ?? '') === $familyName;
+            },
+        ));
         $errors = $page['partial_errors'] ?? [];
         $page['audit'] = $this->auditRows(
             $organizationId,
