@@ -83,13 +83,22 @@ jobs:
       - name: Capital Markets NAV financial evidence import integration
         run: |
           docker compose cp tests/fixtures/capital_markets_nav_external_flow.json php:/tmp/nav-external-flow.json
+          docker compose cp tests/fixtures/capital_markets_nav_external_flow_source.txt php:/tmp/nav-source.txt
+          docker compose exec -T php sh -c 'printf tampered > /tmp/nav-source-corrupt.txt'
+          if docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json --source-file=/tmp/nav-source-corrupt.txt \
+            > /tmp/nav-source-rejected.json; then
+            echo 'Source-document checksum mismatch was incorrectly accepted.'
+            exit 1
+          fi
+          grep -q '"status":"REJECTED"' /tmp/nav-source-rejected.json
           docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
-            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json --source-file=/tmp/nav-source.txt \
             > /tmp/nav-import.json
           grep -q 'RECORDED_PENDING_RECONCILIATION' /tmp/nav-import.json
           grep -q '"approved":false' /tmp/nav-import.json
           if docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
-            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json --source-file=/tmp/nav-source.txt \
             > /tmp/nav-duplicate.json; then
             echo 'Duplicate source evidence was incorrectly accepted.'
             exit 1
