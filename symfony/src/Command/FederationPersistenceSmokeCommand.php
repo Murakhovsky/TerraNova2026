@@ -156,7 +156,7 @@ final class FederationPersistenceSmokeCommand extends Command
                     'specification_version' => 1, 'plan_hash' => hash('sha256', $planJson),
                 ], JSON_THROW_ON_ERROR),
                 'source_type' => 'USER', 'source_id' => 'user-smoke',
-                'status' => 'QUEUED', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
+                'status' => 'COMPLETED', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
                 'idempotency_key' => 'test-approval:' . $approvalActionId,
                 'correlation_id' => $approvalActionId,
             ]);
@@ -290,7 +290,7 @@ final class FederationPersistenceSmokeCommand extends Command
                     'specification_version' => 1, 'plan_hash' => hash('sha256', $mainJson),
                 ], JSON_THROW_ON_ERROR),
                 'source_type' => 'USER', 'source_id' => 'user-smoke',
-                'status' => 'QUEUED', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
+                'status' => 'COMPLETED', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
                 'idempotency_key' => 'test-approval:' . $mainActionId,
                 'correlation_id' => $mainActionId,
             ]);
