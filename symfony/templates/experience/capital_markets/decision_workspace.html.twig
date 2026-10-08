@@ -909,6 +909,34 @@
           <li>No source blockers reported. Full NAV snapshots still require canonical reconciliation.</li>
         {% endfor %}
       </ul>
+      {% set remediation = navPreflight.remediation_plan|default({}) %}
+      <section aria-label="NAV reconciliation next actions">
+        <h3>Наступні дії для звірки NAV</h3>
+        <p class="small">Це план перевірок, а не фінансове затвердження. Створення snapshot залишається заблокованим до незалежної звірки.</p>
+        <p><strong>Відкриті напрями: {{ remediation.open_workstreams|default(0) }}</strong> · Невирішені коди: {{ remediation.open_issue_codes|default(0) }}</p>
+        <div class="table-responsive">
+          <table class="table" aria-label="NAV remediation checklist">
+            <thead><tr><th>Пріоритет</th><th>Напрям</th><th>Відповідальний</th><th>Дія</th><th>Необхідне підтвердження</th><th>Блокери</th></tr></thead>
+            <tbody>
+              {% for task in remediation.tasks|default([]) %}
+                <tr>
+                  <td>{{ task.priority }}</td>
+                  <td><strong>{{ task.title }}</strong></td>
+                  <td>{{ task.owner_role }}</td>
+                  <td>{{ task.action }}</td>
+                  <td>{{ task.required_evidence }}</td>
+                  <td><code>{{ task.issue_codes|default([])|join(', ') }}</code></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6">Немає сформованого плану. Це не означає, що NAV вже затверджений.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if remediation.unmatched_venues|default([]) is not empty %}
+          <p class="small">Майданчики з невідповідностями: {{ remediation.unmatched_venues|join(', ') }}</p>
+        {% endif %}
+      </section>
       {% set sourcePreview = navPreflight.statement_reconciliation_preview|default({}) %}
       <h3>Unreconciled venue cash statement differences</h3>
       <p class="small">Historical venue statements excluded from current-balance comparison: {{ sourcePreview.historical_venue_statements_ignored|default(0) }}. Historical liability statements excluded: {{ sourcePreview.historical_liability_statements_ignored|default(0) }}. Previous statements remain available in append-only audit history.</p>
