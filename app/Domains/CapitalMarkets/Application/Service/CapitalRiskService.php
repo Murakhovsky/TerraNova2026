@@ -345,6 +345,56 @@ final readonly class CapitalRiskService
   return ['approved'=>true,'idempotent'=>false,'reservations'=>$reservationRows];
  }
 
+ public function assignStrategyAllocation(string $organizationId,array $input,string $portfolioId='paper-master'):array
+ {
+  $strategyVersionId=trim((string)($input['strategy_version_id']??''));
+  if($strategyVersionId==='')throw new RuntimeException('strategy_version_id is required.');
+  $strategy=$this->research->getStrategyVersion($organizationId,$strategyVersionId);
+  if($strategy===null)throw new RuntimeException('Strategy version not found.');
+
+  $allocated=Decimal::fromString((string)($input['allocated_capital']??'0'));
+  if(!$allocated->isPositive())throw new RuntimeException('allocated_capital must be positive.');
+  $capital=$this->capitalState($organizationId,$portfolioId);
+  if($allocated->compareTo(Decimal::fromString((string)($capital['total']??'0')))>0){
+   throw new RuntimeException('STRATEGY_ALLOCATION_EXCEEDS_PORTFOLIO_CAPITAL');
+  }
+
+  $existing=$this->repository->listStrategyAllocations($organizationId,$portfolioId);
+  $other=Decimal::fromString('0');
+  foreach($existing as $row){
+   if((string)($row['strategy_version_id']??'')===$strategyVersionId)continue;
+   if(!in_array((string)($row['status']??''),['ACTIVE','RAMPING'],true))continue;
+   $other=DecimalMath::add($other,Decimal::fromString((string)($row['allocated_capital']??'0')));
+  }
+  if(DecimalMath::add($other,$allocated)->compareTo(Decimal::fromString((string)($capital['total']??'0')))>0){
+   throw new RuntimeException('STRATEGY_ALLOCATIONS_OVERSUBSCRIBE_PORTFOLIO');
+  }
+
+  $riskBudget=(array)($input['risk_budget']??[]);
+  $record=[
+   'allocation_id'=>'strat-alloc-'.substr(hash('sha256',$portfolioId.'|'.$strategyVersionId.'|'.gmdate('YmdHis.u')),0,28),
+   'portfolio_id'=>$portfolioId,
+   'strategy_version_id'=>$strategyVersionId,
+   'allocated_capital'=>$allocated->value(),
+   'reserved'=>(string)($input['reserved']??'0'),
+   'deployed'=>(string)($input['deployed']??'0'),
+   'available'=>$allocated->value(),
+   'risk_budget'=>[
+    'maximum_drawdown'=>(string)($riskBudget['maximum_drawdown']??'0'),
+    'maximum_venue_exposure'=>(string)($riskBudget['maximum_venue_exposure']??$allocated->value()),
+    'maximum_unhedged_exposure'=>(string)($riskBudget['maximum_unhedged_exposure']??$allocated->value()),
+    'daily_loss_budget'=>(string)($riskBudget['daily_loss_budget']??'0'),
+    'weekly_loss_budget'=>(string)($riskBudget['weekly_loss_budget']??'0'),
+   ],
+   'effective_from'=>gmdate('Y-m-d H:i:s'),
+   'status'=>strtoupper((string)($input['status']??'ACTIVE')),
+   'created_at'=>gmdate('Y-m-d H:i:s'),
+  ];
+  $this->repository->saveStrategyAllocation($organizationId,$record);
+  $this->publish($organizationId,$portfolioId,'capital_markets.strategy.allocation_changed.v1',['allocation'=>$record]);
+  return $record;
+ }
+
  public function refreshCorrelation(string $organizationId,array $input,string $portfolioId='paper-master'):array
  {
   $normalSeries=(array)($input['normal_series']??[]);
