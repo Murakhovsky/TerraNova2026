@@ -322,6 +322,70 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @return array<string,mixed> */
+    public function marketDetail(string $organizationId, string $instrumentId): array
+    {
+        $page = $this->markets($organizationId);
+        $instrument = $this->findById($page['instruments'] ?? [], $instrumentId, ['id','instrument_id']);
+        $states = array_values(array_filter(
+            $page['states'] ?? [],
+            static fn(array $row): bool => (string)($row['instrument_id'] ?? '') === $instrumentId,
+        ));
+        $references = array_values(array_filter(
+            $page['reference_states'] ?? [],
+            static fn(array $row): bool => (string)($row['instrument_id'] ?? '') === $instrumentId,
+        ));
+        $relationships = array_values(array_filter(
+            $page['relationships'] ?? [],
+            static fn(array $row): bool =>
+                (string)($row['source_instrument_id'] ?? $row['from_instrument_id'] ?? '') === $instrumentId
+                || (string)($row['target_instrument_id'] ?? $row['to_instrument_id'] ?? '') === $instrumentId,
+        ));
+
+        $page['instrument'] = $instrument;
+        $page['market_states'] = $states;
+        $page['market_references'] = $references;
+        $page['instrument_relationships'] = $relationships;
+        $page['market_detail_rows'] = array_values(array_filter(
+            $page['market_rows'] ?? [],
+            static fn(array $row): bool => (string)($row['instrument_id'] ?? '') === $instrumentId,
+        ));
+        return $page;
+    }
+
+    /** @return array<string,mixed> */
+    public function relationshipDetail(string $organizationId, string $relationshipId): array
+    {
+        $page = $this->markets($organizationId);
+        $relationship = $this->findById($page['relationships'] ?? [], $relationshipId, ['id','relationship_id']);
+        $page['relationship'] = $relationship;
+
+        if ($relationship === null) {
+            $page['relationship_comparison'] = [];
+            $page['comparison_state'] = 'UNAVAILABLE';
+            return $page;
+        }
+
+        $sourceId = (string)($relationship['source_instrument_id'] ?? $relationship['from_instrument_id'] ?? '');
+        $targetId = (string)($relationship['target_instrument_id'] ?? $relationship['to_instrument_id'] ?? '');
+        $comparison = [];
+        foreach ($page['market_rows'] ?? [] as $row) {
+            if (!is_array($row)) continue;
+            $instrumentId = (string)($row['instrument_id'] ?? '');
+            if ($instrumentId !== $sourceId && $instrumentId !== $targetId) continue;
+            $comparison[] = $row;
+        }
+
+        $page['source_instrument'] = $sourceId === '' ? null : $this->findById($page['instruments'] ?? [], $sourceId, ['id','instrument_id']);
+        $page['target_instrument'] = $targetId === '' ? null : $this->findById($page['instruments'] ?? [], $targetId, ['id','instrument_id']);
+        $page['relationship_comparison'] = $comparison;
+        $page['comparison_state'] = ($sourceId !== '' && $targetId !== '' && count($comparison) >= 2)
+            ? 'COMPARABLE'
+            : 'NOT COMPARABLE';
+
+        return $page;
+    }
+
+    /** @return array<string,mixed> */
     public function research(string $organizationId): array
     {
         $errors = [];
