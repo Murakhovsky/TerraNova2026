@@ -5,6 +5,8 @@ namespace App\Persistence\Federation;
 
 use Doctrine\DBAL\Connection;
 use DomainException;
+use Kernel\Action\Action;
+use Kernel\Action\ActionStatus;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 
@@ -18,6 +20,7 @@ final readonly class FederationExternalActionReceiptReconciler
     public function __construct(
         private Connection $db,
         private FederationGoalStore $goals,
+        private FederatedActionAdmission $admission,
     ) {}
 
     /** @return array{status:string,action_id:?string} */
@@ -50,7 +53,9 @@ final readonly class FederationExternalActionReceiptReconciler
             return ['status' => (string) $step['state'], 'action_id' => null];
         }
         $actions = $this->db->fetchAllAssociative(
-            'SELECT id, status FROM cos_actions
+            'SELECT id, status, type, target_type, target_id, parameters, source_type,
+                    source_id, execution_mode, risk_level, idempotency_key, correlation_id
+             FROM cos_actions
              WHERE organization_id = :org AND idempotency_key = :key',
             ['org' => $org, 'key' => 'fed:' . $step['idempotency_key']],
         );
@@ -64,17 +69,29 @@ final readonly class FederationExternalActionReceiptReconciler
             throw new DomainException('Federation Step receipt references another Action.');
         }
         if ($action['status'] === 'COMPLETED' && $step['state'] === 'claimed') {
-            $attempt = $this->db->fetchAllAssociative(
-                'SELECT attempt, status FROM cos_action_attempts
-                 WHERE organization_id = :org AND action_id = :id',
-                ['org' => $org, 'id' => $id],
-            );
-            if (count($attempt) === 1 && (int) $attempt[0]['attempt'] === 1
-                && $attempt[0]['status'] === 'COMPLETED') {
-                $this->goals->finishStep($actor, $runId, $stepId, 'completed', 'action:' . $id);
-                return ['status' => 'completed', 'action_id' => $id];
+            // A matching idempotency key is not proof that the Action actually
+            // belonged to this immutable Goal plan. Re-check full plan, input,
+            // canonical Policy, independent human Approval and one attempt.
+            try {
+                $params = json_decode((string) $action['parameters'], true, 512, JSON_THROW_ON_ERROR);
+                if (!is_array($params)) {
+                    throw new DomainException('Canonical Action parameters are malformed.');
+                }
+                $completed = new Action(
+                    $id, $org, (string) $action['type'],
+                    $action['target_type'] !== null ? (string) $action['target_type'] : null,
+                    $action['target_id'] !== null ? (string) $action['target_id'] : null,
+                    $params, (string) $action['source_type'], (string) $action['source_id'],
+                    (string) $action['execution_mode'], (string) $action['risk_level'],
+                    (string) $action['idempotency_key'], new \DateTimeImmutable(),
+                    ActionStatus::Completed, (string) $action['correlation_id'],
+                );
+                $this->admission->assertCompletedReceipt($completed);
+            } catch (\Throwable) {
+                return ['status' => 'manual_reconciliation_required', 'action_id' => $id];
             }
-            return ['status' => 'manual_reconciliation_required', 'action_id' => $id];
+            $this->goals->finishStep($actor, $runId, $stepId, 'completed', 'action:' . $id);
+            return ['status' => 'completed', 'action_id' => $id];
         }
         if ($action['status'] === 'FAILED' && $step['state'] === 'claimed') {
             $this->goals->finishStep($actor, $runId, $stepId, 'ambiguous', 'action:' . $id);
