@@ -56,6 +56,7 @@ jobs:
         run: |
           php tests/unit/capital_markets_realized_pnl_windows.php
           php tests/unit/capital_markets_historical_basis.php
+          php tests/unit/capital_markets_portfolio_nav_windows.php
           php tests/integration/capital_markets_capital_risk_acceptance.php
           php tests/integration/capital_markets_capital_risk_manager_acceptance.php
           php tests/integration/capital_markets_decision_workspace_acceptance.php
