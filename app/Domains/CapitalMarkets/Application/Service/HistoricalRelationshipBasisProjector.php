@@ -117,15 +117,21 @@ final class HistoricalRelationshipBasisProjector
         $rows = [];
         foreach ($events as $event) {
             if (!$event instanceof CanonicalMarketEvent) continue;
-            if (!in_array($event->eventType()->value, ['QUOTE','BBO'], true)
+            if (!in_array($event->eventType()->value, ['QUOTE','BBO','REFERENCE_PRICE','MARK_PRICE','INDEX_PRICE'], true)
                 || $event->mode->value !== 'LIVE'
                 || $event->marketStatus->value !== 'OPEN'
                 || $event->qualityFlags !== []) continue;
             $payload = $event->observation->toArray();
-            $unit = (string)($payload['ask_price']['quote_asset'] ?? '');
-            $bidUnit = (string)($payload['bid_price']['quote_asset'] ?? '');
-            $mid = $payload['mid_price'] ?? null;
-            if ($unit === '' || $unit !== $bidUnit || !is_string($mid)) continue;
+            if (in_array($event->eventType()->value, ['QUOTE','BBO'], true)) {
+                $unit = (string)($payload['ask_price']['quote_asset'] ?? '');
+                $bidUnit = (string)($payload['bid_price']['quote_asset'] ?? '');
+                $mid = $payload['mid_price'] ?? null;
+                if ($unit === '' || $unit !== $bidUnit || !is_string($mid)) continue;
+            } else {
+                $unit = (string)($payload['unit'] ?? '');
+                $mid = $payload['value'] ?? null;
+                if ($unit === '' || !is_string($mid)) continue;
+            }
             try {
                 $price = Decimal::fromString($mid);
                 if (!$price->isPositive()) continue;
