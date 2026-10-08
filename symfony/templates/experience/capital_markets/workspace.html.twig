@@ -826,7 +826,7 @@
             {% for item in w.opportunities %}
               {% set candidate = item.candidate|default({}) %}
               <tr>
-                <td><strong>{{ item.hypothesis|default('—') }}</strong></td>
+                <td><strong>{{ item.hypothesis|default('—') }}</strong>{% if item.opportunity_id|default('') %}<br><a href="/capital-markets/opportunities/{{ item.opportunity_id|url_encode }}"><small>Portfolio impact</small></a>{% endif %}</td>
                 <td>
                   {{ candidate.buy_instrument_id|default('—') }} @ {{ candidate.buy_venue_id|default('—') }}
                   ↔
@@ -978,7 +978,7 @@
           <tbody>
           {% for item in opportunities %}
             <tr>
-              <td><strong>{{ item.hypothesis|default('—') }}</strong></td>
+              <td><strong>{{ item.hypothesis|default('—') }}</strong>{% if item.opportunity_id|default('') %}<br><a href="/capital-markets/opportunities/{{ item.opportunity_id|url_encode }}"><small>Portfolio impact</small></a>{% endif %}</td>
               <td>{{ item.type|default(item.opportunity_type|default('—')) }}</td>
               <td><strong>{{ item.status|default('—') }}</strong></td>
               <td>{{ item.strategy_version|default('—') }}</td>
