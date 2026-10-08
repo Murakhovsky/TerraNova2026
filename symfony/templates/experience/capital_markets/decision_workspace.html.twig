@@ -888,6 +888,30 @@
       <p><small>{{ perf.economics_note|default('Canonical execution economics are unavailable.') }}</small></p>
     </section>
     <twig:CosAlert title="Canonical time windows" copy="{{ perf.time_window_note|default('') }}" tone="info" />
+    {% set navPreflight = perf.nav_preflight|default({}) %}
+    <section class="cos-panel" aria-label="NAV source integrity and reconciliation">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2>NAV source integrity &amp; reconciliation</h2>
+        <strong>{{ navPreflight.status|default('UNAVAILABLE') }}</strong>
+      </div>
+      <p>Trading ledger journal balance is checked independently of external deposits, liabilities, and venue cash. A balanced trading journal alone never certifies Portfolio NAV.</p>
+      <div class="cos-kpi-strip">
+        <twig:CosMetric label="Journal state" value="{{ navPreflight.trading_ledger_audit.status|default('UNAVAILABLE') }}" />
+        <twig:CosMetric label="Journal transactions" value="{{ navPreflight.trading_ledger_audit.transactions_checked|default(0) }}" />
+        <twig:CosMetric label="Positions inspected" value="{{ navPreflight.sources.positions_examined|default(0) }}" />
+        <twig:CosMetric label="Market marks examined" value="{{ navPreflight.sources.market_marks_examined|default(0) }}" />
+      </div>
+      <h3>Open accounting blockers</h3>
+      <ul>
+        {% for issue in navPreflight.issues|default([]) %}
+          <li>{{ issue }}</li>
+        {% else %}
+          <li>No source blockers reported. Full NAV snapshots still require canonical reconciliation.</li>
+        {% endfor %}
+      </ul>
+      <p class="small">Status is diagnostic only; preflight never writes a snapshot. CLI: <code>cos:capital-markets:nav:collect</code>.</p>
+    </section>
+
     {% set navWindows = perf.portfolio_nav_windows|default({}) %}
     <section class="cos-panel" aria-label="Portfolio NAV performance windows">
       <h2>Portfolio Net P&amp;L Today / 30D · reconciled NAV</h2>
