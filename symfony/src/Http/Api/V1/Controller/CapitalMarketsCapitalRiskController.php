@@ -20,6 +20,9 @@ final readonly class CapitalMarketsCapitalRiskController
  public function setRiskEnvelope(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RiskManagePolicy,fn($o,$p)=>$this->service->saveRiskEnvelope($o,$p),201);}
  public function simulateOpportunity(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::PortfolioView,function($o,$p){return $this->service->simulateOpportunityImpact($o,(string)($p['opportunity_id']??''),(string)($p['capital']??'0'));},200);}
  public function allocation():JsonResponse{return $this->read(CapitalMarketsCapability::AllocationView,fn($o)=>$this->service->workspace($o)['allocation_plan']);}
+ public function allocations():JsonResponse{return $this->read(CapitalMarketsCapability::AllocationView,fn($o)=>$this->service->workspace($o)['strategy_allocations']);}
+ public function riskState():JsonResponse{return $this->read(CapitalMarketsCapability::RiskView,fn($o)=>$this->service->workspace($o)['risk']);}
+ public function rebalanceCurrent():JsonResponse{return $this->read(CapitalMarketsCapability::AllocationView,fn($o)=>$this->service->workspace($o)['rebalance']);}
  public function recalculate(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::AllocationPropose,fn($o,$p)=>$this->service->recalculateAllocation($o,$p),201);}
  public function stress(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RiskView,fn($o,$p)=>$this->service->runStress($o,$p),201);}
  public function correlation(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RiskView,fn($o,$p)=>$this->service->refreshCorrelation($o,$p),201);}
