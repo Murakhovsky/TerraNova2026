@@ -91,6 +91,10 @@ foreach([
     }
     $assert(str_contains($haystack,$needle),'Historical/relationship data boundary missing: '.$needle);
 }
+$assert(str_contains($controller,"CapitalMarketsCapability::RelationshipView"),'Market Explorer must check Relationship View authority.');
+$assert(str_contains($controller,"'comparison_state'] = 'RESTRICTED'"),'Relationship Detail must redact market evidence without Market Data View authority.');
+$assert(str_contains($template,"permissions.relationship_view"),'Relationship UI must hide restricted instrument relationships.');
+$assert(str_contains($template,"permissions.market_data_view"),'Relationship price comparison must require Market Data View.');
 $assert(str_contains($controller,'market_data_history_view'),'Historic-market view permission must be exposed to the Twig screen.');
 $assert(str_contains($template,'Historical Market Evidence · 7D'),'Historical canonical event list must be visible on Market Detail.');
 $assert(str_contains($template,'permissions.market_data_history_view'),'Market historical evidence must remain permission-gated.');
