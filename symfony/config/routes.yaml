@@ -15,6 +15,13 @@ cos_federation_goals_mode:
   controller: App\Web\Federation\GoalsWorkspaceController::selectMode
   methods: [POST]
 
+# Receipt-only manager operation for the adaptive Goal workspace.
+cos_federation_goals_reconcile:
+  path: /workspace/goals/runs/{runId}/reconcile
+  controller: App\Web\Federation\GoalsWorkspaceController::reconcileRun
+  methods: [POST]
+  requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 # COS Federation: manager-triggered sequential orchestration, CSRF protected.
 cos_federation_run_start:
   path: /api/v1/federation/runs/start

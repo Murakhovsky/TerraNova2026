@@ -29,6 +29,7 @@ final readonly class GoalsWorkspaceController
         private FederationGoalStore $goals,
         private FederationExperiencePreferenceStore $experience,
         private SessionCsrfValidator $csrf,
+        private \App\Persistence\Federation\FederationRunRecoveryService $recovery,
     ) {
     }
 
@@ -38,9 +39,22 @@ final readonly class GoalsWorkspaceController
         if ($tenant === null) return self::denied();
 
         $state = $this->experience->workspace($tenant, 'cos.goals');
+        $runs = $this->goals->listRuns($tenant);
+        foreach ($runs as &$run) {
+            try {
+                // A disabled tenant may view its old Run history without
+                // implicitly activating Federation execution or recovery.
+                $run['recovery'] = $this->recovery->inspect($tenant, (string) $run['run_id']);
+            } catch (Throwable) {
+                $run['recovery'] = null;
+            }
+        }
+        unset($run);
         return new Response(
             $this->twig->render('experience/federation/goals.html.twig', [
                 'goals' => $this->goals->listGoals($tenant),
+                'runs' => $runs,
+                'reconciled' => $request->query->getBoolean('reconciled'),
                 'mode' => $state['mode']->value,
                 'csrfToken' => $this->csrf->token($request),
                 'created' => $request->query->getBoolean('created'),
@@ -53,6 +67,26 @@ final readonly class GoalsWorkspaceController
                 'X-Robots-Tag' => 'noindex, nofollow',
             ],
         );
+    }
+
+    /**
+     * Operator-triggered receipt-only recovery from the Goals workspace.
+     * The POST never submits an Action or advances an unapproved Step.
+     */
+    public function reconcileRun(Request $request, string $runId): Response
+    {
+        $actor = $this->manager();
+        if ($actor === null) return self::denied();
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', 400);
+
+        try {
+            $this->recovery->reconcileVerified($actor, $runId);
+            return new RedirectResponse('/workspace/goals?reconciled=1', 303);
+        } catch (DomainException|\LogicException) {
+            return new Response('Federation Run recovery unavailable.', 422);
+        } catch (Throwable) {
+            return new Response('Federation Run recovery failed.', 500);
+        }
     }
 
     public function selectMode(Request $request): Response

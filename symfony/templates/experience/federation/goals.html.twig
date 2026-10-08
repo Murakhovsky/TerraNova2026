@@ -87,6 +87,56 @@
         {% endfor %}
         </div>
     </section>
+    <section class="cos-page__section" aria-labelledby="federation-run-title" data-federation-runs>
+        <h2 id="federation-run-title">Виконання та відновлення</h2>
+        <p class="cos-card__copy">Система не повторює зовнішні дії, якщо результат попередньої спроби невідомий. Тут можна підтвердити лише завершені операції з перевіреними квитанціями.</p>
+        {% if reconciled %}
+            <div class="cos-alert cos-alert--success" role="status">Перевірку квитанцій виконано. Непідтверджені операції залишаються без повторного запуску.</div>
+        {% endif %}
+        <div class="cos-page__stack">
+        {% for run in runs|default([]) %}
+            <article class="cos-card" data-run-id="{{ run.run_id }}" data-recovery-mode="{{ mode }}">
+                <p class="cos-card__eyebrow">Run: {{ run.state }}</p>
+                <h3 class="cos-card__title">Ціль {{ run.goal_id }}</h3>
+                {% if run.recovery %}
+                    <p class="cos-card__copy">Потребують уваги: <strong>{{ run.recovery.attention_count }}</strong>.
+                        Готові до перевірки квитанцій: <strong>{{ run.recovery.recoverable_count }}</strong>.</p>
+                    {% if run.recovery.attention_count > 0 %}
+                        <div class="cos-alert" role="status">Є невизначені або непідтверджені дії. Автоматичний повтор заблокований.</div>
+                    {% endif %}
+                    {% if mode in ['process', 'expert'] %}
+                        <div class="cos-page__stack" data-goal-recovery-process>
+                        {% for step in run.recovery.steps %}
+                            <p class="cos-card__copy">
+                                Крок <strong>{{ step.step_id }}</strong>: {{ step.recovery_state }}
+                                {% if step.attention_required %}(потребує ручної перевірки){% endif %}
+                                {% if mode == 'expert' and step.action_id %}
+                                    <code data-goal-recovery-expert>Action {{ step.action_id }}</code>
+                                {% endif %}
+                            </p>
+                        {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if run.recovery.recoverable_count > 0 %}
+                        <form method="post" action="{{ path('cos_federation_goals_reconcile', {runId: run.run_id}) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <button type="submit" class="cos-button cos-button--ghost">Звірити завершені дії без повторного запуску</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <p class="cos-card__copy">Діагностика виконання недоступна. Перевірте активацію модуля Federation або зверніться до адміністратора.</p>
+                {% endif %}
+                {% if mode == 'expert' %}
+                    <p class="cos-card__copy"><code>Run ID: {{ run.run_id }}</code>,
+                        <code>Plan ID: {{ run.plan_id }}</code>, revision {{ run.revision }}</p>
+                    <a class="cos-button cos-button--ghost" href="{{ path('cos_federation_run_recovery', {runId: run.run_id}) }}">Детальна діагностика JSON</a>
+                {% endif %}
+            </article>
+        {% else %}
+            <div class="cos-card"><p class="cos-card__copy">Запусків поки немає. Визначте бізнес-ціль і погодьте план через управління Federation.</p></div>
+        {% endfor %}
+        </div>
+    </section>
     <aside class="cos-card" aria-label="Обмеження виконання">
         <h2 class="cos-card__title">Увага до ризиків і погоджень</h2>
         <p class="cos-card__copy">Результат роботи агента не дорівнює досягненню бізнес-мети. Для кожної оцінки потрібні перевірені факти. Небезпечні дії потребують окремої політики та погодження.</p>

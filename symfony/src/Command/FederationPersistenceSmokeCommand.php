@@ -126,13 +126,15 @@ final class FederationPersistenceSmokeCommand extends Command
                 'Other tenant leaked Experience preferences.');
 
             foreach ([
-                ExperienceMode::Result->value => ['data-experience-mode="result"', 'Ваші бізнес-цілі', 'csrf_token'],
+                ExperienceMode::Result->value => ['data-experience-mode="result"', 'Ваші бізнес-цілі', 'csrf_token', 'data-federation-runs'],
                 ExperienceMode::Process->value => ['data-experience-mode="process"', 'data-goal-process'],
                 ExperienceMode::Expert->value => ['data-experience-mode="expert"', 'data-goal-expert'],
             ] as $mode => $markers) {
                 $html = $this->twig->render('experience/federation/goals.html.twig', [
                     'mode' => $mode,
                     'goals' => $this->goals->listGoals($actor),
+                    'runs' => [],
+                    'reconciled' => false,
                     'csrfToken' => 'smoke-csrf-token',
                     'created' => false,
                     'error' => false,
@@ -762,6 +764,11 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($this->sequentialOrchestrator->start(
                 $actor, $linearRun, $linearPlan, $linearApprovalId,
             )['state'] === 'pending', 'Linear Federation Run was not durably created.');
+            self::assert(in_array($linearRun,
+                array_column($this->goals->listRuns($actor), 'run_id'), true)
+                && !in_array($linearRun,
+                    array_column($this->goals->listRuns($other), 'run_id'), true),
+                'Tenant-scoped adaptive Run list leaked or lost an execution.');
             self::assert($this->sequentialOrchestrator->advance(
                 $actor, $linearRun, $linearApprovalId,
             )['state'] === 'running', 'Linear Federation Run did not start.');

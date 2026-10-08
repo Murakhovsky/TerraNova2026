@@ -117,6 +117,24 @@ final readonly class FederationGoalStore
     }
 
     /**
+     * Tenant-scoped read model for a bounded operator Run list.
+     * The list never reveals the canonical Action idempotency keys.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function listRuns(TenantContext $viewer, int $limit = 8): array
+    {
+        $this->writer($viewer);
+        $limit = max(1, min(20, $limit));
+        return $this->db->fetchAllAssociative(
+            'SELECT run_id, goal_id, plan_id, state, revision, created_at
+             FROM cos_federation_runs WHERE organization_id = :org
+             ORDER BY created_at DESC, run_id DESC LIMIT ' . $limit,
+            ['org' => $viewer->organizationId()->value()],
+        );
+    }
+
+    /**
      * Stores a proposal only. It does not approve a plan or execute any step.
      * Capability availability checks do not substitute runtime permission/approval enforcement.
      *
