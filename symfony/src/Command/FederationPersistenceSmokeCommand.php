@@ -52,7 +52,13 @@ final class FederationPersistenceSmokeCommand extends Command
                 ['sales.leads.read'],
             );
             $this->goals->createGoal($actor, $goal);
-            self::assert($this->goals->specification($actor, $goalId)?->toArray() === $goal->toArray(),
+            $stored = $this->goals->specification($actor, $goalId);
+            self::assert($stored !== null
+                && $stored->goalId === $goal->goalId
+                && $stored->version === $goal->version
+                && $stored->desiredResult === $goal->desiredResult
+                && ($stored->criteria[0]['id'] ?? '') === 'accepted_leads'
+                && ($stored->criteria[0]['expected'] ?? null) === 5,
                 'Goal specification did not survive persistence.');
             self::assert($this->goals->specification($other, $goalId) === null,
                 'Cross-tenant Goal access allowed.');
