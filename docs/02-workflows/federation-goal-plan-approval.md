@@ -18,6 +18,20 @@ process_state: as-is
 
 <ProcessDiagram process-id="federation.goal-plan-approval" />
 
+## Бізнес-мета
+
+Гарантувати, що жодний міждоменний план не переходить у статус approved
+на підставі одного лише прапорця в базі. Збережена версія плану,
+дія Action, рішення Policy та незалежне людське погодження повинні
+утворювати перевірюваний ланцюг доказів.
+
+## Учасники
+
+- власник Goal і відповідальний менеджер організації;
+- канонічні сервіси Action, Policy та Approval;
+- незалежний користувач, уповноважений прийняти рішення;
+- Federation Approval Action Handler, який змінює лише стан плану.
+
 ## Хто відповідає за рішення
 
 <ProcessDiagram process-id="federation.goal-plan-approval" view="ownership" />
@@ -28,3 +42,14 @@ process_state: as-is
 
 Модуль вимкнений для організацій за замовчуванням. Саме погодження
 не запускає Agent, Tool, зовнішні чи фінансові операції.
+
+## Карта коду
+
+```text
+app/Domains/Federation/Application/Service/GoalPlanApprovalInvariant.php
+app/Domains/Federation/Bootstrap/FederationDomainModule.php
+app/Domains/Federation/module.php
+symfony/src/Persistence/Federation/FederationPlanApproveHandler.php
+symfony/src/Persistence/Federation/FederationPlanApprovalEvidenceReader.php
+symfony/src/Persistence/Federation/FederationPlanApprovalCoordinator.php
+```

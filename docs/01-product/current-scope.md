@@ -19,6 +19,7 @@ kind: product
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
+| Federation | `1.0.0` | Опціональний канонічний обробник погодження Goal Plan через Action/Policy/Approval. Вимкнений за замовчуванням. Реальне міждоменне виконання та підтвердження Goal outcomes ще не завершені. |
 | Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
