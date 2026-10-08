@@ -303,7 +303,7 @@ pages:
       primary_goal: "Find the best current opportunities in portfolio-adjusted priority order."
       page_purpose: "Opportunity Board centered on expected net economics, capital need, risk, TTL and portfolio decision."
     archetype: collection
-    patterns: { required: [PageHeader, KpiStrip, DataGrid, Status], optional: [FilterBar, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, KpiStrip, DataGrid], optional: [FilterBar, SavedViews, EmptyState, ErrorState] }
     primary_action: capital_markets.opportunity.view
     states: [normal, empty, partial, stale, error, permission_denied]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
@@ -323,7 +323,7 @@ pages:
       primary_goal: "Understand current canonical market state through instrument, relationship and venue views."
       page_purpose: "Market Explorer using canonical MarketState, explicit trust/age/mode and economic relationships."
     archetype: collection
-    patterns: { required: [PageHeader, Tabs, DataGrid, Status], optional: [EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, DataGrid], optional: [Toolbar, EmptyState, ErrorState] }
     primary_action: capital_markets.market_data.view
     states: [normal, empty, partial, stale, error, permission_denied]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
@@ -363,7 +363,7 @@ pages:
       primary_goal: "Compare strategy versions, scorecards, capital and promotion state without a spreadsheet."
       page_purpose: "Strategy Lab collection focused on what works and what is eligible for promotion."
     archetype: collection
-    patterns: { required: [PageHeader, DataGrid, Status], optional: [FilterBar, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, DataGrid], optional: [FilterBar, EmptyState, ErrorState] }
     primary_action: capital_markets.strategy.version.manage
     states: [normal, empty, partial, error, permission_denied]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
@@ -383,7 +383,7 @@ pages:
       primary_goal: "Inspect one immutable strategy version, scorecards, backtest/OOS/paper evidence and promotion decisions."
       page_purpose: "Stable deep-link strategy detail workspace."
     archetype: entity_workspace
-    patterns: { required: [EntityHeader, KpiStrip, DataGrid], optional: [Tabs, EmptyState, ErrorState] }
+    patterns: { required: [EntityHeader, KpiStrip, DataGrid], optional: [Toolbar, EmptyState, ErrorState] }
     primary_action: capital_markets.strategy.promote
     states: [normal, partial, error, permission_denied]
     responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
@@ -403,7 +403,7 @@ pages:
       primary_goal: "See what is executing and whether hedge/execution state needs attention."
       page_purpose: "Execution Cockpit for current paper executions with stable detail links."
     archetype: collection
-    patterns: { required: [PageHeader, DataGrid, Status, Alert], optional: [EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, DataGrid], optional: [Timeline, EmptyState, ErrorState] }
     primary_action: capital_markets.paper.execute
     states: [normal, empty, partial, stale, error, permission_denied]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
@@ -423,7 +423,7 @@ pages:
       primary_goal: "Inspect execution state, orders, fills and recovery evidence."
       page_purpose: "Stable deep-link execution detail with explicit partial/recovery warnings."
     archetype: entity_workspace
-    patterns: { required: [EntityHeader, Alert, DataGrid], optional: [Timeline, EmptyState, ErrorState] }
+    patterns: { required: [EntityHeader, DataGrid], optional: [Timeline, ErrorState] }
     primary_action: capital_markets.paper.execute
     states: [normal, partial, error, permission_denied]
     responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
@@ -443,7 +443,7 @@ pages:
       primary_goal: "Understand whether the system makes money after costs and where performance comes from."
       page_purpose: "Performance Center with canonical attribution, explicit unavailable time windows and edge funnel."
     archetype: domain_dashboard
-    patterns: { required: [PageHeader, KpiStrip, DataGrid], optional: [Alert, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, KpiStrip, DataGrid], optional: [ContextPanel, EmptyState, ErrorState] }
     primary_action: capital_markets.portfolio.view
     states: [normal, empty, partial, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: critical_status_stack }
@@ -463,7 +463,7 @@ pages:
       primary_goal: "See Capital Markets agents, their authority and recent governed runtime results."
       page_purpose: "Agent Center showing decision summaries and runtime evidence without hidden chain-of-thought."
     archetype: domain_dashboard
-    patterns: { required: [PageHeader, DataGrid, Status], optional: [EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, DataGrid], optional: [AIRecommendations, EmptyState, ErrorState] }
     primary_action: capital_markets.research.agent.use
     states: [normal, empty, partial, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: horizontal_scroll }
@@ -483,7 +483,7 @@ pages:
       primary_goal: "Know whether current market data is trustworthy, fresh and connected."
       page_purpose: "Data Quality Center separating application health from market-data trust and exposing source/market age."
     archetype: domain_dashboard
-    patterns: { required: [PageHeader, KpiStrip, DataGrid, Status, Alert], optional: [EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, KpiStrip, DataGrid], optional: [ContextPanel, EmptyState, ErrorState] }
     primary_action: capital_markets.market_data.view
     states: [normal, empty, partial, stale, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: horizontal_scroll }
