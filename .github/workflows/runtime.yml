@@ -63,6 +63,7 @@ jobs:
           php tests/unit/capital_markets_nav_financial_evidence.php
           php tests/unit/capital_markets_nav_source_document.php
           php tests/unit/capital_markets_nav_statement_reconciliation.php
+          php tests/unit/capital_markets_nav_remediation_planner.php
           php tests/unit/capital_markets_ledger_integrity_audit.php
           php tests/integration/capital_markets_capital_risk_acceptance.php
           php tests/integration/capital_markets_capital_risk_manager_acceptance.php
