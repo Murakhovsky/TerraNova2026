@@ -40,6 +40,114 @@ final readonly class DecisionWorkspaceReadService
         private DomainModuleRegistry $domains,
     ) {}
 
+    /**
+     * @return list<array{id:string,label:string,path:string,kind:string,subtitle:string}>
+     */
+    public function searchEntities(string $organizationId): array
+    {
+        $errors = [];
+        $instruments = $this->safe(
+            fn(): array => $this->foundation->listInstruments(new ListInstruments($organizationId, ['status'=>'ACTIVE'], 1000)),
+            [],
+            $errors,
+            'search_instruments',
+        );
+        $research = $this->safe(
+            fn(): array => $this->research->workspace($organizationId),
+            [],
+            $errors,
+            'search_research',
+        );
+        $opportunities = $this->safe(
+            fn(): array => $this->trading->listOpportunities($organizationId, 1000),
+            [],
+            $errors,
+            'search_opportunities',
+        );
+        $executions = $this->safe(
+            fn(): array => $this->trading->listExecutions($organizationId, 1000),
+            [],
+            $errors,
+            'search_executions',
+        );
+
+        $items = [];
+        foreach ($instruments as $row) {
+            if (!is_array($row)) continue;
+            $id = (string)($row['id'] ?? $row['instrument_id'] ?? '');
+            if ($id === '') continue;
+            $label = (string)($row['symbol'] ?? $row['name'] ?? $row['asset_code'] ?? $id);
+            $items[] = [
+                'id' => 'capital_markets.instrument.'.$id,
+                'label' => $label,
+                'path' => '/capital-markets/instruments/'.rawurlencode($id),
+                'kind' => 'instrument',
+                'subtitle' => 'Instrument · '.$id,
+            ];
+        }
+
+        foreach (array_merge(
+            is_array($research['hypotheses'] ?? null) ? $research['hypotheses'] : [],
+            is_array($research['rejections'] ?? null) ? $research['rejections'] : [],
+        ) as $row) {
+            if (!is_array($row)) continue;
+            $id = (string)($row['hypothesis_id'] ?? $row['id'] ?? '');
+            if ($id === '') continue;
+            $label = (string)($row['title'] ?? $row['name'] ?? $row['hypothesis'] ?? $id);
+            $items[] = [
+                'id' => 'capital_markets.hypothesis.'.$id,
+                'label' => $label,
+                'path' => '/capital-markets/research/hypotheses/'.rawurlencode($id),
+                'kind' => 'hypothesis',
+                'subtitle' => 'Research Hypothesis · '.$id.' · '.strtoupper((string)($row['status'] ?? 'UNKNOWN')),
+            ];
+        }
+
+        foreach ($research['strategy_versions'] ?? [] as $row) {
+            if (!is_array($row)) continue;
+            $id = (string)($row['strategy_version_id'] ?? $row['id'] ?? '');
+            if ($id === '') continue;
+            $label = (string)($row['name'] ?? $row['strategy_name'] ?? $row['strategy_id'] ?? $id);
+            $items[] = [
+                'id' => 'capital_markets.strategy.'.$id,
+                'label' => $label,
+                'path' => '/capital-markets/strategies/'.rawurlencode($id),
+                'kind' => 'strategy',
+                'subtitle' => 'Strategy · '.$id.' · '.strtoupper((string)($row['status'] ?? $row['stage'] ?? 'UNKNOWN')),
+            ];
+        }
+
+        foreach ($opportunities as $row) {
+            if (!is_array($row)) continue;
+            $id = (string)($row['opportunity_id'] ?? $row['id'] ?? '');
+            if ($id === '') continue;
+            $label = (string)($row['name'] ?? $row['title'] ?? $row['hypothesis'] ?? $row['type'] ?? $id);
+            $items[] = [
+                'id' => 'capital_markets.opportunity.'.$id,
+                'label' => $label,
+                'path' => '/capital-markets/opportunities/'.rawurlencode($id),
+                'kind' => 'opportunity',
+                'subtitle' => 'Opportunity · '.$id.' · '.strtoupper((string)($row['status'] ?? 'UNKNOWN')),
+            ];
+        }
+
+        foreach ($executions as $row) {
+            if (!is_array($row)) continue;
+            $id = (string)($row['execution_id'] ?? $row['id'] ?? '');
+            if ($id === '') continue;
+            $opportunityId = (string)($row['opportunity_id'] ?? '');
+            $items[] = [
+                'id' => 'capital_markets.execution.'.$id,
+                'label' => $id,
+                'path' => '/capital-markets/execution/'.rawurlencode($id),
+                'kind' => 'execution',
+                'subtitle' => 'Execution · '.strtoupper((string)($row['status'] ?? 'UNKNOWN')).($opportunityId !== '' ? ' · Opportunity '.$opportunityId : ''),
+            ];
+        }
+
+        return $items;
+    }
+
     /** @return array<string,mixed> */
     public function overview(string $organizationId): array
     {
