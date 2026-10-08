@@ -827,6 +827,10 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($this->sequentialOrchestrator->advance(
                 $actor, $linearRun, $linearApprovalId,
             )['state'] === 'completed', 'Terminal linear Run caused duplicate execution.');
+            self::assert($this->receiptReconciler->reconcile(
+                $actor, $linearRun, 'z_first',
+            )['status'] === 'completed',
+                'Finalized Run lost read-only completed receipt attestation.');
             try {
                 $this->sequentialOrchestrator->advance($other, $linearRun, $linearApprovalId);
                 throw new \RuntimeException('Foreign tenant advanced Federation Run.');

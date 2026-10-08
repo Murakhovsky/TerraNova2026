@@ -83,7 +83,8 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
              WHERE s.organization_id = :org AND s.idempotency_key = :key',
             ['org' => $org, 'key' => $stepKey],
         );
-        if (!$row || !in_array($row['run_state'], ['running', 'waiting'], true)
+        if (!$row || !in_array($row['run_state'], $completedReceipt
+                ? ['running', 'waiting', 'completed'] : ['running', 'waiting'], true)
             || $row['plan_state'] !== 'approved'
             || !in_array($row['step_state'], $completedReceipt ? ['claimed', 'completed'] : ['claimed'], true)
             || $row['owner_id'] !== $action->sourceId
