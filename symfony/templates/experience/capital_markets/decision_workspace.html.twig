@@ -489,6 +489,40 @@
       {% else %}<tr><td colspan="10">No canonical MarketState is available for this instrument.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
+    <section class="cos-panel" aria-label="Historical Market Evidence">
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <h2>Historical Market Evidence · 7D</h2>
+        <strong>{{ w.history_state|default('UNAVAILABLE') }}</strong>
+      </div>
+      <p>Recorded canonical QUOTE, BBO, CANDLE, REFERENCE, MARK, INDEX and FUNDING observations only. Source, mode and quality are preserved; no synthetic points or currency conversion.</p>
+      {% if not permissions.market_data_history_view|default(false) %}
+        <p>Historical market evidence is restricted to users with Market Data History View authority.</p>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table" aria-label="Canonical market history for last seven days">
+            <thead><tr><th>Source time (UTC)</th><th>Event</th><th>Venue</th><th>Source</th><th>Observed value</th><th>Quote / Unit</th><th>Spread (bps)</th><th>Mode</th><th>Quality flags</th></tr></thead>
+            <tbody>
+              {% for item in w.history_rows|default([])|slice(-150) %}
+                <tr>
+                  <td>{{ item.timestamp }}</td>
+                  <td>{{ item.event_type }}</td>
+                  <td>{{ item.venue_id|default('—') }}</td>
+                  <td>{{ item.source_id }}</td>
+                  <td>{{ item.value }}</td>
+                  <td>{{ item.quote_asset|default('—') }}</td>
+                  <td>{{ item.spread_bps is not null ? item.spread_bps : '—' }}</td>
+                  <td>{{ item.mode }}</td>
+                  <td>{{ item.quality_flags|default([])|join(', ') ?: '—' }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="9">No canonical historical market observations are available in this window.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="small">Most recent 150 of up to 500 matching recorded events. Basis curves and cross-instrument spreads remain unavailable until a time-aligned canonical comparison projection exists.</p>
+      {% endif %}
+    </section>
     <section class="cos-panel">
       <h2>Relationships</h2>
       <div class="table-responsive"><table class="table"><thead><tr><th>Relationship</th><th>Source</th><th>Target</th><th>Reference Mechanism</th><th>Settlement</th><th>Hedgeability</th></tr></thead><tbody>
