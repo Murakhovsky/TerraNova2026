@@ -86,20 +86,49 @@ final class RealizedPnlWindowProjector
                     continue;
                 }
                 $performance = is_array($execution['performance'] ?? null) ? $execution['performance'] : [];
-                $canonical = null;
                 $required = ['spot_price_pnl', 'derivative_price_pnl', 'funding_pnl', 'trading_fees', 'borrow_cost', 'network_costs', 'net_pnl'];
-                if (count(array_diff($required, array_keys($performance))) === 0) {
-                    $canonical = $performance['net_pnl'];
-                } elseif (is_array($execution['fees'] ?? null) && array_key_exists('realized_pnl', $execution)) {
-                    $canonical = $execution['realized_pnl'];
-                }
+                $isDecimal = static fn(mixed $raw): bool =>
+                    is_string($raw) && preg_match('/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/', $raw) === 1;
                 try {
-                    if (!is_scalar($canonical) || !preg_match('/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/', (string)$canonical)) {
+                    $canonical = null;
+                    if (count(array_diff($required, array_keys($performance))) === 0) {
+                        foreach ($required as $field) {
+                            if (!$isDecimal($performance[$field])) {
+                                throw new \InvalidArgumentException('Incomplete relative-value performance field.');
+                            }
+                        }
+                        $gross = DecimalMath::add(
+                            DecimalMath::add(
+                                Decimal::fromString($performance['spot_price_pnl']),
+                                Decimal::fromString($performance['derivative_price_pnl']),
+                            ),
+                            Decimal::fromString($performance['funding_pnl']),
+                        );
+                        $costs = DecimalMath::add(
+                            DecimalMath::add(
+                                DecimalMath::abs(Decimal::fromString($performance['trading_fees'])),
+                                DecimalMath::abs(Decimal::fromString($performance['borrow_cost'])),
+                            ),
+                            DecimalMath::abs(Decimal::fromString($performance['network_costs'])),
+                        );
+                        if (DecimalMath::subtract($gross, $costs)->compareTo(Decimal::fromString($performance['net_pnl'])) !== 0) {
+                            $issues['ECONOMICS_MISMATCH'] = true;
+                            continue;
+                        }
+                        $canonical = $performance['net_pnl'];
+                    } elseif (is_array($execution['fees'] ?? null) && array_key_exists('realized_pnl', $execution)) {
+                        $fees = $execution['fees'];
+                        if (!isset($fees['buy'], $fees['sell']) || !$isDecimal($fees['buy']) || !$isDecimal($fees['sell'])) {
+                            $issues['ECONOMICS_INCOMPLETE'] = true;
+                            continue;
+                        }
+                        $canonical = $execution['realized_pnl'];
+                    }
+                    if (!$isDecimal($canonical)) {
                         $issues['ECONOMICS_INCOMPLETE'] = true;
                         continue;
                     }
-                    $value = Decimal::fromString((string)$canonical);
-                    $total = DecimalMath::add($total, $value);
+                    $total = DecimalMath::add($total, Decimal::fromString($canonical));
                     $currency = $unit;
                     $complete++;
                 } catch (Throwable) {
