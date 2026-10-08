@@ -305,6 +305,18 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         }
     }
 
+    public function getCapitalReservation(string $organizationId,string $reservationId):?array
+    {
+        $statement=$this->connection->prepare(
+            'SELECT reservation_id,opportunity_id,amount,status,expires_at,created_at
+             FROM tn_capital_market_capital_reservations
+             WHERE organization_id=:org AND reservation_id=:id LIMIT 1'
+        );
+        $statement->execute(['org'=>$organizationId,'id'=>$reservationId]);
+        $row=$statement->fetch(PDO::FETCH_ASSOC);
+        return is_array($row)?$row:null;
+    }
+
     public function releaseReservation(string $organizationId,string $reservationId):void
     {
         $ownsTransaction=!$this->connection->inTransaction();
