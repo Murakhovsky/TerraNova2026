@@ -7,6 +7,7 @@ use App\Persistence\Federation\FederationExperiencePreferenceStore;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
+use App\Persistence\Federation\FederationApprovedActionIntentFactory;
 use App\Persistence\Federation\FederationPlanApproveHandler;
 use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
 use App\Web\Experience\Adaptive\ExperienceMode;
@@ -49,6 +50,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly Environment $twig,
         private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
         private readonly FederationCapabilityBindingResolver $capabilityBindings,
+        private readonly FederationApprovedActionIntentFactory $actionIntents,
         private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
@@ -442,6 +444,95 @@ final class FederationPersistenceSmokeCommand extends Command
             );
             self::assert($evaluation['result'] === 'satisfied',
                 'Durable Goal result did not preserve verified evidence.');
+            // Cross-Domain *intent* from a real typed Sales Action, derived only
+            // from immutable approved Plan input. No Action is submitted to a
+            // worker; a future submission adapter must enforce independent
+            // ActionPolicyService APPROVAL_REQUIRED and replay-safe claims.
+            $salesGoalId = 'goal-' . bin2hex(random_bytes(8));
+            $salesPlanId = 'plan-' . bin2hex(random_bytes(8));
+            $salesRunId = 'run-' . bin2hex(random_bytes(8));
+            $this->goals->createGoal($actor, new GoalSpecification(
+                $salesGoalId, $org, 'user-smoke', 'Create an approved CRM follow-up task',
+                [['id' => 'tasks_created', 'operator' => 'at_least', 'expected' => 1]],
+                ['sales.create_task'],
+            ));
+            $approvedInput = [
+                'target_type' => 'deal',
+                'target_id' => '42',
+                'parameters' => ['title' => 'Follow-up approved task', 'due_in_minutes' => 60],
+            ];
+            $salesProposal = $this->goals->proposePlan($actor, $salesPlanId, $salesGoalId, [[
+                'id' => 'sales_task', 'capability_id' => 'sales.create_task',
+                'capability_version' => '1.0.0', 'input' => $approvedInput,
+            ]]);
+            self::assert($salesProposal['status'] === 'proposed',
+                'Sales cross-domain plan was not proposed through typed capability catalog.');
+            $this->db->executeStatement(
+                'UPDATE cos_federation_plans SET state = :state WHERE organization_id = :org AND plan_id = :plan',
+                ['state' => 'approved', 'org' => $org, 'plan' => $salesPlanId],
+            );
+            $salesApprovalActionId = bin2hex(random_bytes(16));
+            $salesPlanJson = (string) $this->db->fetchOne(
+                'SELECT plan_json FROM cos_federation_plans WHERE organization_id = :org AND plan_id = :plan',
+                ['org' => $org, 'plan' => $salesPlanId],
+            );
+            $this->db->insert('cos_actions', [
+                'id' => $salesApprovalActionId, 'organization_id' => $org,
+                'type' => 'cos.federation.plan.approval',
+                'target_type' => 'cos_federation_plan', 'target_id' => $salesPlanId,
+                'parameters' => json_encode([
+                    'goal_id' => $salesGoalId, 'plan_id' => $salesPlanId,
+                    'specification_version' => 1, 'plan_hash' => hash('sha256', $salesPlanJson),
+                ], JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'COMPLETED', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
+                'idempotency_key' => 'approved-sales:' . $salesApprovalActionId,
+                'correlation_id' => $salesApprovalActionId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $salesApprovalActionId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $salesApprovalActionId, 'evaluated_at' => self::now(),
+            ]);
+            $this->db->insert('cos_approvals', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $salesApprovalActionId, 'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'second-reviewer',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'second-reviewer',
+                'decided_at' => self::now(),
+            ]);
+            $this->goals->startApprovedRun($actor, $salesRunId, $salesPlanId, $salesApprovalActionId);
+            $this->goals->transitionRun($actor, $salesRunId, 'pending', 'running', 1);
+            $intent = $this->actionIntents->create(
+                $actor, $salesRunId, 'sales_task', $salesApprovalActionId,
+            );
+            self::assert(
+                $intent->type === 'sales.create_task'
+                && $intent->targetType === 'deal'
+                && $intent->targetId === '42'
+                && $intent->parameters === $approvedInput['parameters']
+                && $intent->executionMode === 'APPROVAL_REQUIRED'
+                && $intent->idempotencyKey === ($this->goals->run($actor, $salesRunId)['steps'][0]['idempotency_key'] ?? null),
+                'Federation intent was not derived from approved immutable Action snapshot.',
+            );
+            self::assert($this->db->fetchOne(
+                'SELECT COUNT(*) FROM cos_actions WHERE organization_id = :org AND type = :type',
+                ['org' => $org, 'type' => 'sales.create_task'],
+            ) == 0, 'Federation intent factory unexpectedly dispatched a real CRM Action.');
+            $this->db->executeStatement(
+                'UPDATE cos_federation_plans SET plan_json = :changed WHERE organization_id = :org AND plan_id = :plan',
+                ['changed' => json_encode(['steps' => []], JSON_THROW_ON_ERROR),
+                    'org' => $org, 'plan' => $salesPlanId],
+            );
+            try {
+                $this->actionIntents->create(
+                    $actor, $salesRunId, 'sales_task', $salesApprovalActionId,
+                );
+                throw new \RuntimeException('Modified approved Sales Action snapshot produced a federated intent.');
+            } catch (DomainException) {
+            }
+
             $output->writeln('<info>COS Federation MySQL persistence smoke passed.</info>');
             return Command::SUCCESS;
         } catch (Throwable $failure) {
