@@ -73,4 +73,44 @@ final readonly class GoalSpecification
             }
         }
     }
+
+    /** @return array<string,mixed> */
+    public function toArray(): array
+    {
+        return [
+            'goal_id' => $this->goalId,
+            'organization_id' => $this->organizationId,
+            'owner_id' => $this->ownerId,
+            'desired_result' => $this->desiredResult,
+            'criteria' => $this->criteria,
+            'allowed_capabilities' => $this->allowedCapabilities,
+            'version' => $this->version,
+            'deadline' => $this->deadline,
+            'budget_minor_units' => $this->budgetMinorUnits,
+            'currency' => $this->currency,
+            'risk_constraints' => $this->riskConstraints,
+            'required_approvals' => $this->requiredApprovals,
+            'human_intervention_policy' => $this->humanInterventionPolicy,
+        ];
+    }
+
+    /** @param array<string,mixed> $data */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            goalId: (string) ($data['goal_id'] ?? ''),
+            organizationId: (string) ($data['organization_id'] ?? ''),
+            ownerId: (string) ($data['owner_id'] ?? ''),
+            desiredResult: (string) ($data['desired_result'] ?? ''),
+            criteria: (array) ($data['criteria'] ?? []),
+            allowedCapabilities: (array) ($data['allowed_capabilities'] ?? []),
+            version: (int) ($data['version'] ?? 0),
+            deadline: isset($data['deadline']) ? (string) $data['deadline'] : null,
+            budgetMinorUnits: isset($data['budget_minor_units']) ? (int) $data['budget_minor_units'] : null,
+            currency: (string) ($data['currency'] ?? ''),
+            riskConstraints: (array) ($data['risk_constraints'] ?? []),
+            requiredApprovals: (array) ($data['required_approvals'] ?? []),
+            humanInterventionPolicy: (string) ($data['human_intervention_policy'] ?? 'required_for_external'),
+        );
+    }
 }
