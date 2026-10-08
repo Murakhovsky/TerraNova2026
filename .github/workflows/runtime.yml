@@ -78,6 +78,30 @@ jobs:
           docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Capital Markets NAV financial evidence import integration
+        run: |
+          docker compose cp tests/fixtures/capital_markets_nav_external_flow.json php:/tmp/nav-external-flow.json
+          docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json \
+            > /tmp/nav-import.json
+          grep -q 'RECORDED_PENDING_RECONCILIATION' /tmp/nav-import.json
+          grep -q '"approved":false' /tmp/nav-import.json
+          if docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json \
+            > /tmp/nav-duplicate.json; then
+            echo 'Duplicate source evidence was incorrectly accepted.'
+            exit 1
+          fi
+          grep -q '"status":"REJECTED"' /tmp/nav-duplicate.json
+          if docker compose exec -T php php bin/console cos:capital-markets:nav:collect \
+            --organization=default --portfolio=paper-master > /tmp/nav-preflight.json; then
+            echo 'Unreconciled NAV preflight was incorrectly accepted.'
+            exit 1
+          fi
+          grep -q '"status":"BLOCKED"' /tmp/nav-preflight.json
+          grep -q 'EXTERNAL_FLOW_RECONCILIATION_PENDING' /tmp/nav-preflight.json
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT COUNT(*) FROM tn_capital_market_nav_financial_evidence WHERE organization_id='default' AND evidence_id='ci-external-flow-20261007'")" = "1"
       - name: Engineering AgentRun FK integration
         run: |
           docker compose cp tests/integration/engineering_agent_run_fk.php php:/tmp/engineering_agent_run_fk.php
