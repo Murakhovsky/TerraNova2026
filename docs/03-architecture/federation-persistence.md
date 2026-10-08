@@ -45,6 +45,14 @@ FederationPlanApprovalEvidenceReader виконує незалежну пере�
 
 GoalPlanApprovalRequestFactory формує детермінований, ідемпотентний
 ActionProposal, але свідомо не передає його в ActionPolicyService.
+FederationPlanApprovalCoordinator містить підключення до ActionPolicyService,
+але перед викликом перевіряє зареєстрованого власника та handler дії,
+активність його модуля в tenant, незмінну поточну версію Goal,
+справжню належність ініціатору та явне рішення Policy Engine
+APPROVAL_REQUIRED. Без виконання цих умов жодного Action не створює.
+Навіть після майбутньої активації handler повинен повторно перевірити
+людське погодження, щоб AUTO-policy ніколи не дала обхід.
+
 
 **Важлива умова активації:** у поточному DomainModuleRegistry ще немає
 власника й handler для типу cos.federation.plan.approval.
