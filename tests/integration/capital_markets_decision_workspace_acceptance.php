@@ -88,6 +88,11 @@ foreach([
     "'reference_age_ms'",
     "'reference_trust'",
     "'book_age_note'",
+    'recentForResource(',
+    'ResearchHypothesis->value',
+    'ResearchStrategyVersion->value',
+    "'type' => 'P&L'",
+    "'href' => '/capital-markets/performance'",
 ] as $needle){
     $assert(str_contains($readModel,$needle),'Decision Workspace read-model contract missing: '.$needle);
 }
@@ -146,6 +151,9 @@ foreach([
     'Reference Age',
     'Why Untrusted?',
     'independent age unavailable',
+    '<h2>Audit</h2>',
+    'No audit activity is recorded for this hypothesis.',
+    'No audit activity is recorded for this strategy version.',
     'PARTIAL DATA',
     'Time-window P&L not fabricated',
     'permissions.opportunity_view',
@@ -218,6 +226,10 @@ foreach([
     "'market_data_quality_view' =>",
     '$this->tenants->current()',
     "new RedirectResponse('/auth/login')",
+    "'opportunity' => ['Opportunities', '/capital-markets/opportunities']",
+    "'hypothesis' => ['Research', '/capital-markets/research']",
+    "'strategy' => ['Strategies', '/capital-markets/strategies']",
+    "'execution_detail' => ['Execution', '/capital-markets/execution']",
 ] as $needle){
     $assert(str_contains($controller,$needle),'Decision Workspace export contract missing: '.$needle);
 }
