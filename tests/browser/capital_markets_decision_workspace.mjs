@@ -44,9 +44,9 @@ try {
     ['/capital-markets/allocation', ['Recommended Allocation', 'Scenario Simulator', 'Simulate portfolio impact']],
     ['/capital-markets/execution', ['Execution Groups']],
     ['/capital-markets/risk', ['Limits / Headroom', 'Top Risks', 'Stress Tests']],
-    ['/capital-markets/performance', ['Profit Factor', 'P&L Attribution', 'Edge Funnel', 'Cost Breakdown Availability']],
+    ['/capital-markets/performance', ['Profit Factor', 'P&L Attribution', 'Edge Funnel', 'Gross → Costs → Net', 'Cost Breakdown']],
     ['/capital-markets/agents', ['Agent Authority', 'Recent Agent Runs']],
-    ['/capital-markets/data-quality', ['Sources Online', 'Market Quality', 'Application health']],
+    ['/capital-markets/data-quality', ['Sources Online', 'Market Quality', 'Quote Age', 'Book Age', 'Reference Age', 'Why Untrusted?', 'Application health']],
   ];
 
   for (const profile of [
@@ -90,6 +90,28 @@ try {
         if (width > viewportWidth * 1.8) {
           throw new Error(profile.name + ': ' + path + ' has uncontrolled page-level horizontal overflow (' + width + 'px).');
         }
+      }
+    }
+
+    if (!profile.mobile) {
+      await page.goto(absolute('/capital-markets/opportunities'), { waitUntil: 'domcontentloaded' });
+      const orderBefore = await page.locator('table[data-cm-table="opportunities"] thead [data-cm-col]').evaluateAll(
+        (cells) => cells.map((cell) => cell.dataset.cmCol),
+      );
+      const statusMoveLeft = page.locator('button[data-cm-table-id="opportunities"][data-cm-column="status"][data-cm-direction="-1"]');
+      await statusMoveLeft.click();
+      const orderAfter = await page.locator('table[data-cm-table="opportunities"] thead [data-cm-col]').evaluateAll(
+        (cells) => cells.map((cell) => cell.dataset.cmCol),
+      );
+      if (orderBefore.join('|') === orderAfter.join('|')) {
+        throw new Error('desktop: Opportunity column order control did not change the table.');
+      }
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      const orderReloaded = await page.locator('table[data-cm-table="opportunities"] thead [data-cm-col]').evaluateAll(
+        (cells) => cells.map((cell) => cell.dataset.cmCol),
+      );
+      if (orderReloaded.join('|') !== orderAfter.join('|')) {
+        throw new Error('desktop: Opportunity column order did not persist across reload.');
       }
     }
 
