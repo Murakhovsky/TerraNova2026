@@ -10,6 +10,7 @@ use Domains\CapitalMarkets\Application\Query\ListRelationships;
 use Domains\CapitalMarkets\Application\Query\ListVenues;
 use Domains\CapitalMarkets\Automation\Agent\CapitalMarketsPortfolioAgent;
 use Domains\CapitalMarkets\Automation\Agent\CapitalMarketsResearchAgent;
+use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Kernel\Module\DomainModuleRegistry;
 use Kernel\Operations\Service\OperationsSectionReader;
 use Throwable;
@@ -71,7 +72,7 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @return array<string,mixed> */
-    public function opportunities(string $organizationId): array
+    public function opportunities(string $organizationId, array $filters = []): array
     {
         $errors = [];
         $core = $this->safe(
@@ -89,7 +90,7 @@ final readonly class DecisionWorkspaceReadService
 
         return [
             'global' => $this->globalState($core, $market, 'PAPER'),
-            'opportunities' => $this->opportunityRows($core),
+            'opportunities' => $this->filterOpportunityRows($this->opportunityRows($core), $filters),
             'filters' => [
                 'types' => ['Tokenized Spread','Cross-Venue Arbitrage','Spot / Perp Basis','Funding Capture','Cross-Venue Funding'],
                 'decisions' => ['ACCEPT','ACCEPT_REDUCED_SIZE','HOLD','REJECT','REBALANCE_FIRST','MANUAL_REVIEW'],
@@ -672,6 +673,59 @@ final readonly class DecisionWorkspaceReadService
         });
 
         return $rows;
+    }
+
+    /** @param list<array<string,mixed>> $rows @param array<string,mixed> $filters @return list<array<string,mixed>> */
+    private function filterOpportunityRows(array $rows, array $filters): array
+    {
+        $view=strtolower(trim((string)($filters['view']??'')));
+        $type=strtoupper(trim((string)($filters['type']??'')));
+        $risk=strtoupper(trim((string)($filters['risk']??'')));
+        $status=strtoupper(trim((string)($filters['status']??'')));
+        $decision=strtoupper(trim((string)($filters['decision']??'')));
+        $strategy=trim((string)($filters['strategy']??''));
+        $instrument=trim((string)($filters['instrument']??''));
+        $venue=trim((string)($filters['venue']??''));
+        $minNet=trim((string)($filters['min_net']??''));
+        $minReturn=trim((string)($filters['min_return']??''));
+        $maxCapital=trim((string)($filters['max_capital']??''));
+
+        return array_values(array_filter($rows, static function(array $row) use(
+            $view,$type,$risk,$status,$decision,$strategy,$instrument,$venue,$minNet,$minReturn,$maxCapital
+        ):bool{
+            if($view==='low-risk' && !in_array(strtoupper((string)($row['risk']??'')),['LOW','MINIMAL'],true))return false;
+            if($view==='rejected' && !in_array(strtoupper((string)($row['decision']??'')),['REJECT','REBALANCE_FIRST'],true))return false;
+            if($view==='short-ttl'){
+                $ttl=$row['ttl']??null;
+                if(!is_numeric($ttl)||(int)$ttl>3600)return false;
+            }
+            if($view==='high-capacity' && ($row['capacity']??null)===null)return false;
+            if($type!=='' && strtoupper((string)($row['type']??''))!==$type)return false;
+            if($risk!=='' && strtoupper((string)($row['risk']??''))!==$risk)return false;
+            if($status!=='' && strtoupper((string)($row['status']??''))!==$status)return false;
+            if($decision!=='' && strtoupper((string)($row['decision']??''))!==$decision)return false;
+            if($strategy!=='' && !str_contains(strtoupper(json_encode($row['raw']??[],JSON_UNESCAPED_SLASHES)?:''),strtoupper($strategy)))return false;
+            if($instrument!=='' && !in_array($instrument,$row['instruments']??[],true))return false;
+            if($venue!=='' && !in_array($venue,$row['venues']??[],true))return false;
+            if($minNet!=='' && !$this->decimalAtLeast($row['expected_net']??null,$minNet))return false;
+            if($minReturn!=='' && !$this->decimalAtLeast($row['expected_return']??null,$minReturn))return false;
+            if($maxCapital!=='' && !$this->decimalAtMost($row['capital']??null,$maxCapital))return false;
+            return true;
+        }));
+    }
+
+    private function decimalAtLeast(mixed $value,string $minimum):bool
+    {
+        if(!is_scalar($value)||!is_numeric((string)$value)||!is_numeric($minimum))return false;
+        try{return Decimal::fromString((string)$value)->compareTo(Decimal::fromString($minimum))>=0;}
+        catch(Throwable){return false;}
+    }
+
+    private function decimalAtMost(mixed $value,string $maximum):bool
+    {
+        if(!is_scalar($value)||!is_numeric((string)$value)||!is_numeric($maximum))return false;
+        try{return Decimal::fromString((string)$value)->compareTo(Decimal::fromString($maximum))<=0;}
+        catch(Throwable){return false;}
     }
 
     /** @param array<string,mixed> $allocation */
