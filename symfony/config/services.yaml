@@ -2757,6 +2757,8 @@ services:
 
   Platform\Orchestration\Goal\GoalWorkflowProjection: ~
 
+  Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory: ~
+
   Kernel\Module\EffectiveModuleContext:
     arguments:
       $modules: '@Kernel\Module\ActiveModuleResolver'
