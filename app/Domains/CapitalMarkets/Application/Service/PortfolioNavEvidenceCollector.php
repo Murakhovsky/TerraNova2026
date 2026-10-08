@@ -145,6 +145,10 @@ final readonly class PortfolioNavEvidenceCollector
                 $issues[] = 'NAV_SOURCE_AUTHORITY_UNEXPECTED';
             }
         }
+        $statementPreview = PortfolioNavStatementReconciliationPreview::inspect(
+            $balances, $sourceEvidence, $currency,
+        );
+        foreach ($statementPreview['issues'] as $issue) $issues[] = $issue;
         $issues[] = $sourceCounts['EXTERNAL_CASH_FLOW'] === 0
             ? 'EXTERNAL_FLOW_LEDGER_UNAVAILABLE'
             : 'EXTERNAL_FLOW_RECONCILIATION_PENDING';
@@ -170,6 +174,7 @@ final readonly class PortfolioNavEvidenceCollector
             'marks'=>$marks,
             'trading_ledger_audit'=>$ledgerAudit,
             'unreconciled_financial_evidence'=>$sourceCounts,
+            'statement_reconciliation_preview'=>$statementPreview,
             'issues'=>$issues,
             'snapshot_written'=>false,
         ];
