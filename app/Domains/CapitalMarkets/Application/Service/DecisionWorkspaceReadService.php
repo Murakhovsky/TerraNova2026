@@ -376,6 +376,7 @@ final readonly class DecisionWorkspaceReadService
         $page['execution'] = $execution;
         $page['orders'] = $orders;
         $page['fills'] = $fills;
+        $page['execution_health'] = $this->executionHealth($execution, $orders, $fills);
         $page['opportunity'] = $opportunity;
         $page['partial_errors'] = $errors;
         return $page;
@@ -1031,7 +1032,7 @@ final readonly class DecisionWorkspaceReadService
                 'legs' => $execution['legs'] ?? $execution['plan']['legs'] ?? [],
                 'capital' => $execution['capital'] ?? $opportunity['required_capital'] ?? $opportunity['capital_required'] ?? null,
                 'state' => strtoupper((string)($execution['status'] ?? 'UNKNOWN')),
-                'hedge' => $execution['hedge_status'] ?? $execution['hedge'] ?? null,
+                'hedge' => $this->hedgeStateFromExecution($execution),
                 'duration' => $execution['duration'] ?? null,
                 'pnl' => $execution['realized_pnl'] ?? $execution['pnl'] ?? null,
                 'updated_at' => $execution['updated_at'] ?? $execution['created_at'] ?? null,
@@ -1039,6 +1040,40 @@ final readonly class DecisionWorkspaceReadService
             ];
         }
         return $rows;
+    }
+
+    /** @param array<string,mixed> $execution @param list<array<string,mixed>> $orders @param list<array<string,mixed>> $fills @return array<string,mixed> */
+    private function executionHealth(array $execution, array $orders, array $fills): array
+    {
+        $status = strtoupper((string)($execution['status'] ?? 'UNKNOWN'));
+        $hedge = $this->hedgeStateFromExecution($execution);
+        return [
+            'status' => $status,
+            'hedge_state' => $hedge,
+            'severity' => in_array($status, ['PARTIALLY_EXECUTED','COMPENSATING','FAILED'], true) ? 'HIGH' : 'NORMAL',
+            'checkpoint' => $execution['checkpoint'] ?? null,
+            'failure_reason' => $execution['failure_reason'] ?? null,
+            'residual_unhedged_quantity' => $execution['residual_unhedged_quantity'] ?? null,
+            'orders' => count($orders),
+            'fills' => count($fills),
+        ];
+    }
+
+    /** @param array<string,mixed> $execution */
+    private function hedgeStateFromExecution(array $execution): string
+    {
+        $explicit = strtoupper((string)($execution['hedge_state'] ?? $execution['hedge_status'] ?? $execution['hedge'] ?? ''));
+        if ($explicit !== '') {
+            return $explicit;
+        }
+
+        return match (strtoupper((string)($execution['status'] ?? ''))) {
+            'PARTIALLY_EXECUTED' => 'PARTIALLY_HEDGED',
+            'COMPENSATING' => 'RECOVERY_REQUIRED',
+            'COMPLETED' => 'HEDGED',
+            'INVALIDATED', 'FAILED' => 'UNHEDGED',
+            default => 'UNKNOWN',
+        };
     }
 
     /** @param array<string,mixed> $opportunity @return array<string,mixed> */
