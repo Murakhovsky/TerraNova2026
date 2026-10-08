@@ -17,8 +17,12 @@ final class EconomicExposureEngine {
    $gross=DecimalMath::add($gross,$abs);$valid=(bool)($p['relationship_valid']??true);$underlying=trim((string)($p['underlying_key']??''));
    if(!$valid||$underlying==='')$unknown[]=['instrument_id'=>(string)$p['instrument_id'],'exposure'=>$signed->value(),'reason'=>'UNKNOWN_EXPOSURE'];
    else{$maps['byUnderlying'][$underlying]=$this->add($maps['byUnderlying'][$underlying]??$zero,$signed);$net=DecimalMath::add($net,$signed);}
+   $concentrationMagnitude=DecimalMath::abs($signed);
    foreach(['asset'=>'byAsset','venue'=>'byVenue','strategy'=>'byStrategy','currency'=>'byCurrency','counterparty'=>'byCounterparty','chain'=>'byChain','liquidity_bucket'=>'byLiquidityBucket','instrument_family'=>'byInstrumentFamily','issuer'=>'byIssuer','sector'=>'bySector','jurisdiction'=>'byJurisdiction','collateral'=>'byCollateral'] as $src=>$dst){
-    $k=trim((string)($p[$src]??''));if($k==='')continue;$maps[$dst][$k]=$this->add($maps[$dst][$k]??$zero,$signed);
+    $k=trim((string)($p[$src]??''));if($k==='')continue;
+    // Concentration/operational dimensions are intentionally gross. A long and
+    // short on the same venue/counterparty must not erase custody/liquidity risk.
+    $maps[$dst][$k]=$this->add($maps[$dst][$k]??$zero,$concentrationMagnitude);
    }
   }
   foreach($maps as &$m)ksort($m);unset($m);
