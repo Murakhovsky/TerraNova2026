@@ -93,7 +93,7 @@ if (str_contains($architectStage, "type: 'EXTERNAL_CREDENTIAL'")) {
     throw new RuntimeException('Architect repository infrastructure still asks the user to confirm runtime configuration.');
 }
 
-if (!str_contains($engineeringRunner, 'provider adapter owns transport retries')
+if (!str_contains($engineeringRunner, 'Transport/provider resilience belongs to the LLM adapter.')
     || !str_contains($engineeringRunner, 'EngineeringAgentOutputValidationException')) {
     throw new RuntimeException('Engineering runner does not separate provider retries from structured-output correction retries.');
 }
