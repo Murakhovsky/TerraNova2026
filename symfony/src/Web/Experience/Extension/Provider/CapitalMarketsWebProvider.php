@@ -14,6 +14,10 @@ use App\Web\Experience\Extension\Model\WorkspaceDefinition;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
 use Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService;
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
+use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Throwable;
 
 final readonly class CapitalMarketsWebProvider implements NavigationProviderInterface,SearchProviderInterface,CommandProviderInterface,WorkspaceProviderInterface
@@ -21,6 +25,9 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
     public function __construct(
         private SearchResultMatcher $matcher,
         private DecisionWorkspaceReadService $workspace,
+        private TenantContextProviderInterface $tenants,
+        private CapitalMarketsAccessControlInterface $access,
+        private ActiveModuleResolver $modules,
     ) {}
 
     public function serviceId():string{return 'capitalMarketsNavigationContributor';}
@@ -67,18 +74,43 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new SearchResult('capital_markets.search.crypto_spot_perpetual','Crypto Spot / Perpetual Vertical Slice','/capital-markets/crypto-spot-perpetual','workspace','H4/H5/H6 operator surface and paper execution'),
         ];
 
-        try {
-            foreach ($this->workspace->searchEntities($context->organizationId) as $entity) {
-                $items[] = new SearchResult(
-                    id: $entity['id'],
-                    label: $entity['label'],
-                    path: $entity['path'],
-                    kind: $entity['kind'],
-                    subtitle: $entity['subtitle'],
-                );
+        // WebExtensionContext has no authenticated actor ID. Do not infer permissions
+        // from its role string: resolve the actual tenant principal and fail closed.
+        $tenant = $this->tenants->current();
+        if (
+            $tenant !== null
+            && $tenant->organizationId()->value() === $context->organizationId
+            && $this->modules->isEnabled($context->organizationId, 'capital_markets')
+        ) {
+            $actorId = (int)$tenant->userId()->value();
+            $can = fn(CapitalMarketsCapability $capability): bool =>
+                $this->access->hasCapability($context->organizationId, $actorId, $capability->value)
+                || $this->access->hasCapability($context->organizationId, $actorId, CapitalMarketsCapability::Manage->value);
+            $entityPermissions = [
+                'instrument' => $can(CapitalMarketsCapability::InstrumentView),
+                'hypothesis' => $can(CapitalMarketsCapability::ResearchView),
+                'strategy' => $can(CapitalMarketsCapability::ResearchView),
+                'opportunity' => $can(CapitalMarketsCapability::OpportunityView) && $can(CapitalMarketsCapability::PortfolioView),
+                'execution' => $can(CapitalMarketsCapability::OpportunityView),
+            ];
+            if (in_array(true, $entityPermissions, true)) {
+                try {
+                    foreach ($this->workspace->searchEntities($context->organizationId) as $entity) {
+                        if (!($entityPermissions[(string)($entity['kind'] ?? '')] ?? false)) {
+                            continue;
+                        }
+                        $items[] = new SearchResult(
+                            id: $entity['id'],
+                            label: $entity['label'],
+                            path: $entity['path'],
+                            kind: $entity['kind'],
+                            subtitle: $entity['subtitle'],
+                        );
+                    }
+                } catch (Throwable) {
+                    // Search stays usable when one allowed read model is degraded.
+                }
             }
-        } catch (Throwable) {
-            // Global search remains usable even when one Capital Markets read source is degraded.
         }
 
         return $this->matcher->match($items,$query,$limit);
