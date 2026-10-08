@@ -44,7 +44,7 @@ try {
     ['/capital-markets/allocation', ['Recommended Allocation', 'Scenario Simulator', 'Simulate portfolio impact']],
     ['/capital-markets/execution', ['Execution Groups']],
     ['/capital-markets/risk', ['Limits / Headroom', 'Top Risks', 'Stress Tests']],
-    ['/capital-markets/performance', ['Profit Factor', 'P&L Attribution', 'Edge Funnel', 'Gross → Costs → Net', 'Cost Breakdown']],
+    ['/capital-markets/performance', ['Profit Factor', 'P&L Attribution', 'Edge Funnel', 'Gross → Costs → Net', 'Cost Breakdown', 'NAV source integrity', 'Unreconciled venue cash statement differences']],
     ['/capital-markets/agents', ['Agent Authority', 'Recent Agent Runs']],
     ['/capital-markets/data-quality', ['Sources Online', 'Market Quality', 'Quote Age', 'Book Age', 'Reference Age', 'Why Untrusted?', 'Application health']],
   ];
