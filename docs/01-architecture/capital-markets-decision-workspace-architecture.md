@@ -318,3 +318,9 @@ Market Detail читає фактичні канонічні події за о�
 Клас PortfolioNavSnapshotProducer тепер записує NAV лише за повного набору звірених складових: cash, marked positions, liabilities і cumulative external flows. Потрібні прапори узгодження ledger, marks та external flows, fingerprints походження кожної групи й provenance ID. Усі валюти повинні відповідати базовій валюті портфеля; автоматичну FX-конвертацію або нуль замість пропущених полів заборонено. Обчислення проводяться через DecimalMath.
 
 **Незакрита інтеграція:** це захищений producer з контрактом вхідних доказів, але ще не автоматична система отримання звірених даних. До повного приймання необхідні автоматичні постачальники account balances, position marks, liabilities, external flow ledger, перевірка їх походження та планувальник формування snapshots. Після цього потрібні перевірки 24-годинного й 30-денного ряду на реальному paper portfolio. Без таких даних показник залишається UNAVAILABLE.
+
+## NAV evidence preflight
+
+Додана CLI-команда `php bin/console cos:capital-markets:nav:collect --organization=<ID> --portfolio=paper-master`. Вона збирає tenant-scoped дані з paper portfolio, venue balances, positions, ledger transactions та актуальних Market State й повертає структурований JSON: статус, перелік джерел і блокери. Команда повертає ненульовий код завершення, якщо фінансова звірка не готова. Snapshot не записується.
+
+Поточні явні блокери: підтверджений ledger зовнішніх поповнень/виведень, облік зобов'язань, підтвердження cash balances на майданчиках, reconciliation позицій і курсів. Ці джерела треба підключити окремо, перш ніж запускати автоматичний NAV writer. Планувальник із періодичним записом COMPLETE valuations без такої звірки заборонений.
