@@ -21,6 +21,13 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
+use Kernel\Workflow\Model\Workflow;
+use Kernel\Workflow\Model\WorkflowDefinition;
+use Kernel\Workflow\Model\WorkflowInstance;
+use Kernel\Workflow\Model\Assignment;
+use Kernel\Workflow\Model\AssignmentType;
+use Kernel\Workflow\Model\Step\HumanStep;
+use Kernel\Shared\Domain\OrganizationId;
 use Twig\Environment;
 
 #[AsCommand(
@@ -34,6 +41,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationGoalStore $goals,
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
+        private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
     ) {
         parent::__construct();
     }
@@ -109,6 +117,41 @@ final class FederationPersistenceSmokeCommand extends Command
                 'plan_json' => json_encode($plan, JSON_THROW_ON_ERROR),
                 'created_at' => self::now(),
             ]);
+            // Independently preflight a read-only, human-gated workflow plan.
+            $safePlanId = 'plan-' . bin2hex(random_bytes(8));
+            $this->db->insert('cos_federation_plans', [
+                'organization_id' => $org, 'plan_id' => $safePlanId, 'goal_id' => $goalId,
+                'spec_version' => 1, 'plan_version' => 2, 'state' => 'approved',
+                'plan_json' => json_encode(['steps' => [
+                    ['id' => 'review', 'capability_id' => 'sales.leads.read', 'capability_version' => '1.0.0',
+                        'side_effect_level' => 'none'],
+                ]], JSON_THROW_ON_ERROR),
+                'created_at' => self::now(),
+            ]);
+            $safeWorkflow = new WorkflowInstance(
+                'workflow-test', OrganizationId::fromString($org),
+                new Workflow('goal.review', new WorkflowDefinition(
+                    'goal.review', '1.0.0', 'Review Goal', 'review',
+                    [new HumanStep('review', 'Manager review',
+                        new Assignment(AssignmentType::ROLE, 'manager'))],
+                )),
+            );
+            $preflight = $this->workflowPreflight->inspect(
+                $actor, $safePlanId, $safeWorkflow, ['sales.leads.read'],
+            );
+            self::assert($preflight['goal_id'] === $goalId && $preflight['step_count'] === 1,
+                'Canonical approved-plan Workflow preflight failed.');
+            try {
+                $this->workflowPreflight->inspect($actor, $safePlanId, $safeWorkflow, []);
+                throw new \RuntimeException('Workflow preflight accepted absent independent authorization.');
+            } catch (DomainException) {
+            }
+            try {
+                $this->workflowPreflight->inspect($other, $safePlanId, $safeWorkflow, ['sales.leads.read']);
+                throw new \RuntimeException('Workflow preflight leaked plan across tenants.');
+            } catch (DomainException) {
+            }
+
             $this->goals->startApprovedRun($actor, $runId, $planId);
             self::assert(count($this->goals->run($actor, $runId)['steps'] ?? []) === 2,
                 'Execution steps not snapshotted.');
