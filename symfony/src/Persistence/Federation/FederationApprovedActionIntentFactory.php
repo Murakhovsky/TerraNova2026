@@ -107,7 +107,7 @@ final readonly class FederationApprovedActionIntentFactory
             $goal->ownerId,
             'APPROVAL_REQUIRED',
             'HIGH',
-            (string) $row['idempotency_key'],
+            'fed:' . (string) $row['idempotency_key'],
             [
                 'federation' => [
                     'goal_id' => $goal->goalId, 'plan_id' => $row['plan_id'],
