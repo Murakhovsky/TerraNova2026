@@ -26,7 +26,6 @@ use Domains\CapitalMarkets\Domain\Service\CorrelationEngine;
 use Domains\CapitalMarkets\Domain\Service\MarginAggregationEngine;
 use Domains\CapitalMarkets\Domain\Service\LiquidationClusterEngine;
 use Domains\CapitalMarkets\Domain\Service\PortfolioPerformanceAttributionEngine;
-use Domains\CapitalMarkets\Domain\Service\CapitalVelocityEngine;
 use Domains\CapitalMarkets\Domain\Risk\LiquidityBudget;
 use Domains\CapitalMarkets\Domain\Stress\PortfolioStressScenario;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -54,7 +53,6 @@ final readonly class CapitalRiskService
   private MarginAggregationEngine $margins,
   private LiquidationClusterEngine $liquidationClusters,
   private PortfolioPerformanceAttributionEngine $performanceAttribution,
-  private CapitalVelocityEngine $capitalVelocity,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
