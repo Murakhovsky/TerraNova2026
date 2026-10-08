@@ -88,6 +88,8 @@ foreach([
     "'reference_age_ms'",
     "'reference_trust'",
     "'book_age_note'",
+    "'explainability'",
+    'private function opportunityExplainability(',
     'recentForResource(',
     'ResearchHypothesis->value',
     'ResearchStrategyVersion->value',
@@ -191,6 +193,19 @@ foreach(['aria-label="{{ label }}"','{% for step in steps %}','emptyCopy'] as $n
 }
 $assert(str_contains($uiCatalog,"\$this->entry('CosDecisionTrace'"),'CosDecisionTrace must be registered in the canonical UI Catalog.');
 $assert(substr_count($template,'<twig:CosDecisionTrace')>=2,'Opportunity and Hypothesis views must reuse the canonical Decision Trace component.');
+
+$explainabilityComponent=(string)file_get_contents($root.'/symfony/src/Web/Experience/Component/CosExplainability.php');
+$explainabilityTemplate=(string)file_get_contents($root.'/symfony/templates/components/experience/cos_explainability.html.twig');
+foreach([
+    "name: 'CosExplainability'",
+    "template: 'components/experience/cos_explainability.html.twig'",
+] as $needle){
+    $assert(str_contains($explainabilityComponent,$needle),'Reusable explainability component contract missing: '.$needle);
+}
+foreach(['What happened','Why system cares','What data supports it','What action is recommended'] as $needle){
+    $assert(str_contains($explainabilityTemplate,$needle),'Explainability format missing: '.$needle);
+}
+$assert(str_contains($uiCatalog,"\$this->entry('CosExplainability'"),'CosExplainability must be registered in the canonical UI Catalog.');
 
 $provider=(string)file_get_contents($root.'/symfony/src/Web/Experience/Extension/Provider/CapitalMarketsWebProvider.php');
 foreach([
