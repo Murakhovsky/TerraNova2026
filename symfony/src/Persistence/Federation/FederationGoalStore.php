@@ -6,8 +6,6 @@ namespace App\Persistence\Federation;
 use Doctrine\DBAL\Connection;
 use DomainException;
 use InvalidArgumentException;
-use Kernel\Module\ActiveModuleResolver;
-use Kernel\Module\CanonicalCapabilityCatalog;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use LogicException;
@@ -24,8 +22,7 @@ final readonly class FederationGoalStore
 {
     public function __construct(
         private Connection $db,
-        private CanonicalCapabilityCatalog $catalog,
-        private ActiveModuleResolver $modules,
+        private FederationCapabilityBindingResolver $bindings,
         private GoalPlanValidator $validator,
         private GoalOutcomeEvaluator $evaluator,
         private FederationPlanApprovalEvidenceReader $approvalEvidence,
@@ -143,12 +140,9 @@ final readonly class FederationGoalStore
         if ($goal === null) {
             throw new DomainException('Goal not found in tenant.');
         }
-        $available = [];
-        foreach ($this->catalog->executables() as $contract) {
-            if ($this->modules->isEnabled($actor->organizationId()->value(), $contract->ownerDomain)) {
-                $available[] = $contract->id;
-            }
-        }
+        // Declared identity is not enough: require a live canonical owning
+        // Action handler, tenant-enabled module and authenticated permission.
+        $available = $this->bindings->available($actor);
         $validated = $this->validator->validate($goal, $steps, $available);
         if (!$validated['valid']) {
             throw new DomainException('Goal plan is not valid: ' . implode(',', $validated['errors']));
