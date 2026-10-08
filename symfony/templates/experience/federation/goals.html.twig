@@ -1,0 +1,95 @@
+{% extends 'experience/portal_shell.html.twig' %}
+
+{% block title %}Цілі COS | Company Operating System{% endblock %}
+
+{% block portal_content %}
+<section class="cos-page__stack" data-cos-federation-goals data-experience-mode="{{ mode }}">
+    <header class="cos-card">
+        <p class="cos-card__eyebrow">COS / Goal to Outcome</p>
+        <h1 class="cos-card__title">Ваші бізнес-цілі</h1>
+        <p class="cos-card__copy">Спочатку визначаємо вимірюваний результат. Виконання між доменами вмикається окремо після перевірки плану та необхідних погоджень.</p>
+        <a class="cos-button cos-button--ghost" href="/cabinet">До кабінету</a>
+    </header>
+
+    <nav class="cos-card" aria-label="Режим перегляду COS">
+        <p class="cos-card__eyebrow">Рівень деталізації</p>
+        <form method="post" action="{{ path('cos_federation_goals_mode') }}" class="cos-pattern-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            {% for option, title in {'result':'Результат', 'process':'Процес', 'expert':'Експерт'} %}
+                <button type="submit" name="mode" value="{{ option }}"
+                    class="cos-button {{ mode == option ? 'cos-button--primary' : 'cos-button--ghost' }}"
+                    aria-pressed="{{ mode == option ? 'true' : 'false' }}">{{ title }}</button>
+            {% endfor %}
+        </form>
+        <p class="cos-card__copy">Ці режими змінюють кількість деталей, але не ваші права та не стан бізнес-операцій.</p>
+    </nav>
+
+    {% if created %}
+        <div class="cos-alert cos-alert--success" role="status">Чернетку цілі збережено.</div>
+    {% endif %}
+    {% if error %}
+        <div class="cos-alert" role="alert">Перевірте опис цілі, код показника та числове значення.</div>
+    {% endif %}
+
+    <section class="cos-card" aria-labelledby="goal-new-title">
+        <p class="cos-card__eyebrow">Нова ціль</p>
+        <h2 id="goal-new-title" class="cos-card__title">Якого результату потрібно досягти?</h2>
+        <form method="post" action="{{ path('cos_federation_goals_create') }}" class="cos-page__stack">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <label class="cos-field"><span>Опишіть бізнес-результат</span>
+                <textarea class="cos-input" name="desired_result" rows="3" maxlength="1200" required
+                    placeholder="Наприклад: отримати п'ять нових кваліфікованих клієнтів за місяць"></textarea>
+            </label>
+            <div class="cos-section-grid">
+                <label class="cos-field"><span>Показник (машинний код)</span>
+                    <input class="cos-input" name="criterion" value="qualified_leads" pattern="[a-z][a-z0-9_.-]*" maxlength="64" required>
+                </label>
+                <label class="cos-field"><span>Цільове значення</span>
+                    <input class="cos-input" type="number" name="target" min="1" max="1000000" value="5" required>
+                </label>
+            </div>
+            <button class="cos-button cos-button--primary" type="submit">Зберегти чернетку Goal</button>
+        </form>
+        <p class="cos-card__copy">Збереження не запускає агентів і не створює зовнішніх операцій.</p>
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="goal-list-title">
+        <h2 id="goal-list-title">Поточні цілі</h2>
+        <div class="cos-page__stack">
+        {% for goal in goals %}
+            <article class="cos-card" data-goal-id="{{ goal.id }}">
+                <p class="cos-card__eyebrow">{{ goal.state == 'draft' ? 'Чернетка' : goal.state }}</p>
+                <h3 class="cos-card__title">{{ goal.desired_result }}</h3>
+                <p class="cos-card__copy">
+                    {% for criterion in goal.criteria %}
+                        {{ criterion.id }}: {{ criterion.operator == 'at_least' ? 'щонайменше' : criterion.operator }} {{ criterion.expected }}{% if not loop.last %}; {% endif %}
+                    {% endfor %}
+                </p>
+
+                {% if mode in ['process', 'expert'] %}
+                    <div class="cos-card__copy" data-goal-process>
+                        <strong>Процес:</strong> специфікацію збережено; план виконання ще не погоджений.
+                        Жоден зовнішній крок не запускається з цієї сторінки.
+                    </div>
+                {% endif %}
+
+                {% if mode == 'expert' %}
+                    <dl class="cos-card__copy" data-goal-expert>
+                        <div><dt>Goal ID</dt><dd><code>{{ goal.id }}</code></dd></div>
+                        <div><dt>Версія специфікації</dt><dd>{{ goal.version }}</dd></div>
+                        <div><dt>Власник</dt><dd>{{ goal.owner }}</dd></div>
+                        <div><dt>Дозволені capabilities</dt><dd>{{ goal.allowed_capabilities is empty ? 'Поки не визначено' : goal.allowed_capabilities|join(', ') }}</dd></div>
+                    </dl>
+                {% endif %}
+            </article>
+        {% else %}
+            <div class="cos-card"><p class="cos-card__copy">Цілей ще немає. Почніть із вимірюваного результату вище.</p></div>
+        {% endfor %}
+        </div>
+    </section>
+    <aside class="cos-card" aria-label="Обмеження виконання">
+        <h2 class="cos-card__title">Увага до ризиків і погоджень</h2>
+        <p class="cos-card__copy">Результат роботи агента не дорівнює досягненню бізнес-мети. Для кожної оцінки потрібні перевірені факти. Небезпечні дії потребують окремої політики та погодження.</p>
+    </aside>
+</section>
+{% endblock %}

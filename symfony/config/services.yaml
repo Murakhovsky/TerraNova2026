@@ -3185,6 +3185,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Federation\GoalsWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\PublicSite\HomeController:
     public: true
     tags: ['controller.service_arguments']

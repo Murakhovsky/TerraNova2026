@@ -1,4 +1,20 @@
 
+# COS Federation Goal/Outcome draft workspace.
+cos_federation_goals_index:
+  path: /workspace/goals
+  controller: App\Web\Federation\GoalsWorkspaceController::index
+  methods: [GET, HEAD]
+
+cos_federation_goals_create:
+  path: /workspace/goals/create
+  controller: App\Web\Federation\GoalsWorkspaceController::create
+  methods: [POST]
+
+cos_federation_goals_mode:
+  path: /workspace/goals/mode
+  controller: App\Web\Federation\GoalsWorkspaceController::selectMode
+  methods: [POST]
+
 # COS Federation: authenticated tenant-scoped adaptive presentation preferences.
 cos_federation_experience_preferences_show:
   path: /api/v1/experience/preferences
