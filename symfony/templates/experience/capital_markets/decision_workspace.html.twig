@@ -123,6 +123,19 @@
       <twig:CosAlert title="Time-window P&L not fabricated" copy="Current backend exposes portfolio Net P&L attribution, but not canonical Today/30D windows yet. The workspace shows unavailable instead of relabeling lifetime P&L." tone="info" />
     {% endif %}
 
+    {% set rw = p.realized_windows|default({}) %}
+    <section class="cos-panel" aria-label="Realized execution time windows">
+      <h2>Realized execution P&amp;L · UTC</h2>
+      <p>Only completed canonical executions with verified settlement currency and complete economics. These numbers exclude unrealized mark-to-market movements and are <strong>not</strong> Today / 30D Portfolio Net P&amp;L.</p>
+      <div class="cos-kpi-strip">
+        <twig:CosMoneyMetric label="Today Realized Net" value="{{ rw.today.net_pnl is defined and rw.today.net_pnl is not null ? rw.today.net_pnl : '—' }}" />
+        <twig:CosMetric label="Today Coverage" value="{{ rw.today.coverage|default('0/0') }}" hint="{{ rw.today.status|default('UNAVAILABLE') }}" />
+        <twig:CosMoneyMetric label="30D Realized Net" value="{{ rw['30d'].net_pnl is defined and rw['30d'].net_pnl is not null ? rw['30d'].net_pnl : '—' }}" />
+        <twig:CosMetric label="30D Coverage" value="{{ rw['30d'].coverage|default('0/0') }}" hint="{{ rw['30d'].status|default('UNAVAILABLE') }}" />
+      </div>
+      <p class="small">Verified currency: {{ rw.today.currency|default('—') }} (today), {{ rw['30d'].currency|default('—') }} (30 days). Unknown timestamps, incomplete costs or mixed currencies suppress the total.</p>
+    </section>
+
     <div class="row g-3">
       <div class="col-xl-8">
         <section class="cos-panel h-100">
@@ -838,6 +851,21 @@
       <p><small>{{ perf.economics_note|default('Canonical execution economics are unavailable.') }}</small></p>
     </section>
     <twig:CosAlert title="Canonical time windows" copy="{{ perf.time_window_note|default('') }}" tone="info" />
+    {% set rw = perf.realized_windows|default({}) %}
+    <section class="cos-panel" aria-label="Realized-only UTC performance windows">
+      <h2>Realized P&amp;L by execution time · UTC</h2>
+      <div class="cos-kpi-strip">
+        <twig:CosMoneyMetric label="Today Realized Net" value="{{ rw.today.net_pnl is defined and rw.today.net_pnl is not null ? rw.today.net_pnl : '—' }}" />
+        <twig:CosMetric label="Today Coverage" value="{{ rw.today.coverage|default('0/0') }}" hint="{{ rw.today.status|default('UNAVAILABLE') }}" />
+        <twig:CosMoneyMetric label="30D Realized Net" value="{{ rw['30d'].net_pnl is defined and rw['30d'].net_pnl is not null ? rw['30d'].net_pnl : '—' }}" />
+        <twig:CosMetric label="30D Coverage" value="{{ rw['30d'].coverage|default('0/0') }}" hint="{{ rw['30d'].status|default('UNAVAILABLE') }}" />
+      </div>
+      <p>These values include completed execution economics only, not unrealized daily mark-to-market. Currency: {{ rw.today.currency|default('—') }} / {{ rw['30d'].currency|default('—') }}.</p>
+      {% if rw.today.status|default('UNAVAILABLE') != 'COMPLETE' or rw['30d'].status|default('UNAVAILABLE') != 'COMPLETE' %}
+        <twig:CosAlert title="Incomplete window evidence" copy="At least one time window is unavailable or partial. Undated execution, mismatched currency, missing cost evidence or paginated history suppresses the displayed total." tone="warning" />
+      {% endif %}
+    </section>
+
     {% set perfView = query.view|default('by_strategy') %}
     {% set perfViews = {
       'by_strategy':'Strategy',
