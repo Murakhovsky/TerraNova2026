@@ -421,7 +421,7 @@ final readonly class FederationGoalStore
         );
         if (!$run) return null;
         $run['steps'] = $this->db->fetchAllAssociative(
-            'SELECT step_id, capability_id, capability_version, state, attempts, idempotency_key, result_reference
+            'SELECT step_id, capability_id, capability_version, side_effect_level, state, attempts, idempotency_key, result_reference
              FROM cos_federation_steps WHERE organization_id = :org AND run_id = :run ORDER BY step_id',
             ['org' => $org, 'run' => $runId],
         );
