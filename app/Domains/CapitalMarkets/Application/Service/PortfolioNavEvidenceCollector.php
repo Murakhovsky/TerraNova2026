@@ -5,6 +5,7 @@ namespace Domains\CapitalMarkets\Application\Service;
 
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\PortfolioNavFinancialEvidenceRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Domain\Venue\VenueId;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -20,6 +21,7 @@ final readonly class PortfolioNavEvidenceCollector
     public function __construct(
         private CapitalMarketsTradingRepositoryInterface $trading,
         private MarketStateRepositoryInterface $marketStates,
+        private PortfolioNavFinancialEvidenceRepositoryInterface $financialEvidence,
     ) {}
 
     /** @return array<string,mixed> */
@@ -118,11 +120,33 @@ final readonly class PortfolioNavEvidenceCollector
                 $issues[] = 'BALANCE_AMOUNT_INVALID';
             }
         }
-        // The paper trading repository does not yet provide certified
-        // external deposit/withdrawal, liability and venue-cash reconciliation.
-        $issues[] = 'EXTERNAL_FLOW_LEDGER_UNAVAILABLE';
-        $issues[] = 'LIABILITY_LEDGER_UNAVAILABLE';
-        $issues[] = 'VENUE_BALANCE_RECONCILIATION_UNAVAILABLE';
+        // Source documents are observations, never automatically certified ledger facts.
+        $sourceEvidence = $this->financialEvidence->forPortfolio($organizationId, $portfolioId);
+        $sourceCounts = [
+            'EXTERNAL_CASH_FLOW' => 0,
+            'LIABILITY_BALANCE' => 0,
+            'VENUE_BALANCE' => 0,
+        ];
+        foreach ($sourceEvidence as $observation) {
+            if (!is_array($observation) || !array_key_exists((string)($observation['kind'] ?? ''), $sourceCounts)) {
+                $issues[] = 'NAV_SOURCE_EVIDENCE_INVALID';
+                continue;
+            }
+            $sourceCounts[(string)$observation['kind']]++;
+            if (($observation['status'] ?? '') !== 'PENDING_RECONCILIATION'
+                || ($observation['reconciled'] ?? null) !== false) {
+                $issues[] = 'NAV_SOURCE_AUTHORITY_UNEXPECTED';
+            }
+        }
+        $issues[] = $sourceCounts['EXTERNAL_CASH_FLOW'] === 0
+            ? 'EXTERNAL_FLOW_LEDGER_UNAVAILABLE'
+            : 'EXTERNAL_FLOW_RECONCILIATION_PENDING';
+        $issues[] = $sourceCounts['LIABILITY_BALANCE'] === 0
+            ? 'LIABILITY_LEDGER_UNAVAILABLE'
+            : 'LIABILITY_RECONCILIATION_PENDING';
+        $issues[] = $sourceCounts['VENUE_BALANCE'] === 0
+            ? 'VENUE_BALANCE_RECONCILIATION_UNAVAILABLE'
+            : 'VENUE_BALANCE_RECONCILIATION_PENDING';
         $issues = array_values(array_unique($issues));
         return [
             'status'=>'BLOCKED',
@@ -138,6 +162,7 @@ final readonly class PortfolioNavEvidenceCollector
             ],
             'marks'=>$marks,
             'trading_ledger_audit'=>$ledgerAudit,
+            'unreconciled_financial_evidence'=>$sourceCounts,
             'issues'=>$issues,
             'snapshot_written'=>false,
         ];
