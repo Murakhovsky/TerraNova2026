@@ -2012,6 +2012,8 @@ services:
   Domains\CapitalMarkets\Domain\Service\CapitalAllocationEngine: ~
   Domains\CapitalMarkets\Domain\Service\PortfolioStressEngine: ~
   Domains\CapitalMarkets\Domain\Service\PortfolioRebalanceEngine: ~
+  Domains\CapitalMarkets\Domain\Service\LiquidityCapacityEngine: ~
+  Domains\CapitalMarkets\Domain\Service\DrawdownEngine: ~
   Domains\CapitalMarkets\Application\Service\CapitalRiskService: ~
 
   Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
