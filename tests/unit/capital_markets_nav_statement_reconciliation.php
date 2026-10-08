@@ -53,6 +53,21 @@ $duplicateReference=$source;$duplicateReference[]=$source[2];
 $dupe=PortfolioNavStatementReconciliationPreview::inspect($paper,$duplicateReference,'USD');
 $assert(in_array('DUPLICATE_SOURCE_REFERENCE',$dupe['issues'],true),'Repeated financial source reference is not new evidence.');
 
+$badFlow=$source;$badFlow[2]['amount']='not-a-decimal';
+$invalidFlow=PortfolioNavStatementReconciliationPreview::inspect($paper,$badFlow,'USD');
+$assert($invalidFlow['candidate_cumulative_external_flow']===null,
+    'Invalid flow evidence must not silently contribute zero to candidate cash movements.');
+
+$badLiability=$source;$badLiability[4]['source_document_sha256']='invalid';
+$invalidLiability=PortfolioNavStatementReconciliationPreview::inspect($paper,$badLiability,'USD');
+$assert($invalidLiability['candidate_liability_balance']===null,
+    'Unverified liability statement must not imply zero debt.');
+
+$repeatedFlow=$source;$repeatedFlow[]=$source[2];
+$duplicateFlow=PortfolioNavStatementReconciliationPreview::inspect($paper,$repeatedFlow,'USD');
+$assert($duplicateFlow['candidate_cumulative_external_flow']===null,
+    'Duplicate external movement source must suppress the candidate aggregate.');
+
 $unknownAsset=[...$paper,['venue_id'=>'venue-1','asset_key'=>'BTC','available_amount'=>'0.5','reserved_amount'=>'0']];
 $assets=PortfolioNavStatementReconciliationPreview::inspect($unknownAsset,$source,'USD');
 $assert(in_array('NONCASH_ASSET_VALUATION_REQUIRED',$assets['issues'],true),'Non-cash balances cannot disappear from NAV.');
