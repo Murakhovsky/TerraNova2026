@@ -65,3 +65,28 @@ APPROVAL_REQUIRED. Без виконання цих умов жодного Acti
 Workflow lifecycle projection не доводить досягнення бізнес-цілі.
 Outcome evidence поки є посиланнями на факти, їх потрібно перевіряти
 в авторитетних read models відповідних Domains.
+
+
+### Canonical read-only Workflow vertical slice
+
+FederationReadOnlyWorkflowRunner now invokes the existing Kernel WorkflowEngine,
+after FederationWorkflowPreflight verifies the approved tenant plan and its
+canonical Action, Policy and independent human Approval receipt.
+
+This first executable slice deliberately accepts only one DecisionStep, without
+transitions or configuration. It refuses HumanStep, AgentStep, ToolStep,
+SystemStep, multi-step workflows and any external or financial side effects.
+The SystemStep handler is independently disabled as defense in depth.
+
+The one-and-only durable Federation run per approved plan moves from pending
+through running to completed. Its single step is claimed before WorkflowEngine
+execution, and successful completion records the workflow execution ID and
+checkpoint atomically in the existing run/step tables. After a crash, a claimed
+run requires manual reconciliation and will not automatically replay.
+A completed workflow is NOT evidence of successful Goal business criteria.
+
+The rollback-only MySQL runtime smoke exercises the actual WorkflowEngine
+execution with verified synthetic approval receipts. It checks completion,
+checkpoint persistence, tenant isolation, replay prevention and denial of
+a non-inert workflow. These test fixtures do not enable the production
+Federation approval Action handler.
