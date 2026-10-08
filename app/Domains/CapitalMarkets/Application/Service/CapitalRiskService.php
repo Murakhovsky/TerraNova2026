@@ -366,7 +366,6 @@ final readonly class CapitalRiskService
    'created_at'=>gmdate('Y-m-d H:i:s'),
   ];
   $this->repository->saveRiskEnvelope($organizationId,$record);
-  $this->publish($organizationId,$portfolioId,'capital_markets.exposure.limit_approaching.v1',['risk_envelope'=>$record]);
   return $record;
  }
 
