@@ -646,11 +646,35 @@
       <twig:CosMoneyMetric label="Costs" value="{{ attr.costs|default('—') }}" />
       <twig:CosMetric label="Return" value="{{ attr.return|default('—') }}" />
       <twig:CosMetric label="Drawdown" value="{{ attr.drawdown|default('—') }}" />
+      <twig:CosMetric label="Profit Factor" value="{{ attr.profit_factor|default('—') }}" hint="unavailable until canonical wins/losses performance model exists" />
       <twig:CosMetric label="Capital Efficiency" value="{{ attr.capital_efficiency|default('—') }}" />
+      <twig:CosMetric label="Risk Efficiency" value="{{ attr.risk_efficiency|default('—') }}" />
     </section>
     <twig:CosAlert title="Canonical time windows" copy="{{ perf.time_window_note|default('') }}" tone="info" />
-    <section class="cos-panel"><h2>P&L Attribution · Strategy</h2><div class="table-responsive"><table class="table"><thead><tr><th>Strategy</th><th>P&L</th><th>Deployed Capital</th><th>Risk Consumed</th></tr></thead><tbody>{% for key,x in attr.by_strategy|default({}) %}<tr><td>{{ key }}</td><td>{{ x.pnl|default('—') }}</td><td>{{ x.deployed_capital|default('—') }}</td><td>{{ x.risk_consumed|default('—') }}</td></tr>{% else %}<tr><td colspan="4">No attributable performance.</td></tr>{% endfor %}</tbody></table></div></section>
-    <section class="cos-panel"><h2>Edge Funnel</h2><div class="cos-kpi-strip"><twig:CosMetric label="Detected" value="{{ perf.edge_funnel.detected|default(0) }}" /><twig:CosMetric label="Validated" value="{{ perf.edge_funnel.validated|default(0) }}" /><twig:CosMetric label="Executable" value="{{ perf.edge_funnel.executable|default(0) }}" /><twig:CosMetric label="Executed" value="{{ perf.edge_funnel.executed|default(0) }}" /><twig:CosMetric label="Profitable" value="{{ perf.edge_funnel.profitable|default(0) }}" /></div></section>
+    {% set perfView = query.view|default('by_strategy') %}
+    {% set perfViews = {
+      'by_strategy':'Strategy',
+      'by_asset':'Instrument / Asset',
+      'by_venue':'Venue',
+      'by_opportunity_type':'Opportunity Type',
+      'by_instrument_family':'Instrument Family',
+      'by_risk_bucket':'Risk Bucket'
+    } %}
+    {% if perfViews[perfView] is not defined %}{% set perfView = 'by_strategy' %}{% endif %}
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div><h2>P&L Attribution · {{ perfViews[perfView] }}</h2><p>Net P&L is shown beside deployed capital and risk consumed so small absolute profit is not mistaken for superior capital efficiency.</p></div>
+        <div class="d-flex gap-2 flex-wrap">
+          {% for key,label in perfViews %}<a class="btn {{ perfView == key ? 'btn-primary' : 'btn-outline-secondary' }}" href="?view={{ key }}">{{ label }}</a>{% endfor %}
+          <span class="btn btn-outline-secondary disabled" aria-disabled="true">Day · unavailable</span>
+          <span class="btn btn-outline-secondary disabled" aria-disabled="true">Market Regime · unavailable</span>
+        </div>
+      </div>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ perfViews[perfView] }}</th><th>Net P&L</th><th>Deployed Capital</th><th>Risk Consumed</th></tr></thead><tbody>
+      {% for key,x in attribute(attr, perfView)|default({}) %}<tr><td>{{ key }}</td><td>{{ x.pnl|default('—') }}</td><td>{{ x.deployed_capital|default('—') }}</td><td>{{ x.risk_consumed|default('—') }}</td></tr>{% else %}<tr><td colspan="4">No attributable performance for this dimension.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel"><h2>Edge Funnel</h2><div class="cos-kpi-strip"><twig:CosMetric label="Detected" value="{{ perf.edge_funnel.detected|default(0) }}" /><twig:CosMetric label="Validated" value="{{ perf.edge_funnel.validated|default(0) }}" /><twig:CosMetric label="Executable" value="{{ perf.edge_funnel.executable|default(0) }}" /><twig:CosMetric label="Executed" value="{{ perf.edge_funnel.executed|default(0) }}" /><twig:CosMetric label="Profitable" value="{{ perf.edge_funnel.profitable|default(0) }}" /></div><p class="mt-2"><strong>Detected / Executable / Realized Edge value:</strong> unavailable until the backend exposes canonical edge-value attribution. Counts remain visible; the UI does not infer money from them.</p></section>
     <section class="cos-panel"><h2>Cost Breakdown Availability</h2><p>Costs are shown only when canonical records expose them. Missing categories are not assumed to be zero.</p><div class="d-flex gap-2 flex-wrap">{% for key,available in perf.cost_breakdown|default({}) %}<span class="badge text-bg-{{ available ? 'secondary' : 'light' }}">{{ key|upper }} · {{ available ? 'AVAILABLE' : 'UNAVAILABLE' }}</span>{% endfor %}</div></section>
 
   {% elseif cmView == 'agents' %}
