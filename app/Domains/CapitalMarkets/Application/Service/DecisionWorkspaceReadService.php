@@ -392,11 +392,11 @@ final readonly class DecisionWorkspaceReadService
             ($row['trust'] ?? '') === 'TRUSTED'
             && ($row['mode'] ?? '') === 'LIVE'
             && is_numeric($row['mid'] ?? null)
-            && (float)$row['mid'] > 0
+            && $row['mid'] > 0
             && isset($row['age_ms'])
             && is_numeric($row['age_ms'])
-            && (float)$row['age_ms'] >= 0
-            && (float)$row['age_ms'] <= 30000;
+            && $row['age_ms'] >= 0
+            && $row['age_ms'] <= 30000;
         $page['comparison_state'] = (
             $sourceId !== ''
             && $targetId !== ''
