@@ -1550,6 +1550,16 @@ services:
   App\Infrastructure\Automation\ResearchRecordObservationTool: ~
   App\Infrastructure\Automation\ResearchDatasetSearchTool: ~
   App\Infrastructure\Automation\ResearchDatasetDescribeTool: ~
+  App\Infrastructure\Automation\PortfolioGetStateTool: ~
+  App\Infrastructure\Automation\PortfolioGetExposureTool: ~
+  App\Infrastructure\Automation\PortfolioGetRiskTool: ~
+  App\Infrastructure\Automation\PortfolioSimulateOpportunityImpactTool: ~
+  App\Infrastructure\Automation\PortfolioSimulateAllocationTool: ~
+  App\Infrastructure\Automation\PortfolioCompareScenariosTool: ~
+  App\Infrastructure\Automation\AllocationProposeTool: ~
+  App\Infrastructure\Automation\RiskRunStressTool: ~
+  App\Infrastructure\Automation\StrategyGetScorecardTool: ~
+  App\Infrastructure\Automation\PerformanceCompareTool: ~
 
 
   Kernel\Tool\Service\ToolRegistry:
@@ -1567,6 +1577,16 @@ services:
         - '@App\Infrastructure\Automation\ResearchRecordObservationTool'
         - '@App\Infrastructure\Automation\ResearchDatasetSearchTool'
         - '@App\Infrastructure\Automation\ResearchDatasetDescribeTool'
+        - '@App\Infrastructure\Automation\PortfolioGetStateTool'
+        - '@App\Infrastructure\Automation\PortfolioGetExposureTool'
+        - '@App\Infrastructure\Automation\PortfolioGetRiskTool'
+        - '@App\Infrastructure\Automation\PortfolioSimulateOpportunityImpactTool'
+        - '@App\Infrastructure\Automation\PortfolioSimulateAllocationTool'
+        - '@App\Infrastructure\Automation\PortfolioCompareScenariosTool'
+        - '@App\Infrastructure\Automation\AllocationProposeTool'
+        - '@App\Infrastructure\Automation\RiskRunStressTool'
+        - '@App\Infrastructure\Automation\StrategyGetScorecardTool'
+        - '@App\Infrastructure\Automation\PerformanceCompareTool'
 
   Kernel\Tool\Contract\ToolRegistryInterface:
     alias: Kernel\Tool\Service\ToolRegistry
@@ -1580,11 +1600,16 @@ services:
     arguments:
       $modules: '@Kernel\Module\ActiveModuleResolver'
 
+  App\Infrastructure\Automation\PortfolioAgentToolPermissionChecker:
+    arguments:
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+
   App\Infrastructure\Automation\CompositeToolPermissionChecker:
     arguments:
       $checkers:
         - '@App\Infrastructure\Automation\SalesAgentToolPermissionChecker'
         - '@App\Infrastructure\Automation\ResearchAgentToolPermissionChecker'
+        - '@App\Infrastructure\Automation\PortfolioAgentToolPermissionChecker'
 
   Kernel\Tool\Contract\ToolPermissionCheckerInterface:
     alias: App\Infrastructure\Automation\CompositeToolPermissionChecker
@@ -2108,9 +2133,22 @@ services:
       $research: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
       $relativeValue: '@Domains\CapitalMarkets\Application\Contract\RelativeValueResearchRepositoryInterface'
 
+  Domains\CapitalMarkets\Infrastructure\Portfolio\PortfolioAgentContextBuilder:
+    arguments:
+      $capitalRisk: '@Domains\CapitalMarkets\Application\Service\CapitalRiskService'
+      $research: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+
+  Domains\CapitalMarkets\Application\Service\CapitalMarketsPortfolioAgentService:
+    arguments:
+      $runtime: '@Kernel\Agent\Service\AgentRuntime'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $tools: '@Kernel\Tool\Contract\ToolRuntimeInterface'
+
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule:
     arguments:
       $researchAgentContext: '@Domains\CapitalMarkets\Infrastructure\Research\ResearchAgentContextBuilder'
+      $portfolioAgentContext: '@Domains\CapitalMarkets\Infrastructure\Portfolio\PortfolioAgentContextBuilder'
 
   App\Web\CapitalMarkets\CapitalMarketsPageController:
     public: true
