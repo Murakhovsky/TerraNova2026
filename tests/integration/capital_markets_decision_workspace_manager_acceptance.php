@@ -75,6 +75,26 @@ foreach([
     $assert(str_contains($template,$needle),'Manager Acceptance UX safety evidence missing: '.$needle);
 }
 
+$controller=(string)file_get_contents($root.'/symfony/src/Web/CapitalMarkets/DecisionWorkspacePageController.php');
+foreach([
+    'CanonicalMarketEventRepositoryInterface',
+    'MarketDataHistoryView',
+    "'history_state' =",
+    "'source_instrument']['id']",
+    "'target_instrument']['id']",
+    "'quote_asset' =>",
+    "in_array(\$sourceCurrency, \$commonQuotes, true)",
+] as $needle) {
+    $haystack = str_contains($needle, 'MarketDataHistoryView') ? $controller : $read;
+    if ($needle === "'history_state' =") {
+        $needle = "'history_state'] =";
+    }
+    $assert(str_contains($haystack,$needle),'Historical/relationship data boundary missing: '.$needle);
+}
+$assert(str_contains($controller,'market_data_history_view'),'Historic-market view permission must be exposed to the Twig screen.');
+$assert(str_contains($template,'Historical Market Evidence · 7D'),'Historical canonical event list must be visible on Market Detail.');
+$assert(str_contains($template,'permissions.market_data_history_view'),'Market historical evidence must remain permission-gated.');
+
 $assert(!str_contains($template,'Execute Live'),'Manager Acceptance: Live execution must remain disabled and absent.');
 $assert(str_contains($browser,"viewport: { width: 390, height: 844 }"),'Manager Acceptance: mobile critical workflow QA missing.');
 $assert(str_contains($browser,'Version Comparison'),'Manager Acceptance: strategy version browser QA missing.');
