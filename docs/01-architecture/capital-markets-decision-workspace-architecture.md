@@ -197,7 +197,7 @@ Desktop залишається primary, але critical views використо
 
 Mobile priority: status → money → risk → action.
 
-## Performance economics
+## Економіка результативності
 
 Performance Center окремо показує Portfolio Net P&L і realized economics: Gross P&L → canonical costs → Net P&L, плюс coverage/status та cost breakdown. Completed executions без повної canonical cost evidence не домислюються: coverage стає PARTIAL/UNAVAILABLE, а missing categories лишаються `—`.
 
