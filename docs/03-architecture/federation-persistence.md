@@ -26,3 +26,34 @@ Doctrine-міграція Version20261008142500 додає лише нові т�
 Схема й модель переходів є підґрунтям для durable execution, але не замінюють
 існуючий Workflow Engine та не забезпечують автоматичну міждоменну диспетчеризацію.
 Фактичне виконання має бути підключене через чинні контракти та підтверджене інтеграційними тестами.
+
+
+## Контроль авторизації ExecutionRun
+
+Міграція Version20261008193000 забезпечує унікальність (organization_id, plan_id)
+у таблиці запусків. Для повторної спроби потрібно відновлювати існуючий run
+із його незмінними idempotency keys, а не створювати другий.
+
+FederationPlanApprovalEvidenceReader виконує незалежну перевірку:
+
+- Action з канонічним типом cos.federation.plan.approval має належати цьому tenant і цьому plan_id.
+- Action має перебувати в QUEUED і вимагати APPROVAL_REQUIRED. Цей стан сам по собі ще не є достатнім.
+- Параметри Action зобов'язані точно збігатися з goal_id, plan_id, версією Goal та SHA-256 *збереженого* plan_json.
+- Останнє рішення Policy evaluation має бути APPROVAL_REQUIRED.
+- Потрібне рівно одне підтверджене людське погодження: без закінчення терміну, від ідентифікованого користувача, не самого ініціатора.
+- FederationWorkflowPreflight і FederationGoalStore.startApprovedRun використовують цей доказ замість списків «дозволених дій» із запиту.
+
+GoalPlanApprovalRequestFactory формує детермінований, ідемпотентний
+ActionProposal, але свідомо не передає його в ActionPolicyService.
+
+**Важлива умова активації:** у поточному DomainModuleRegistry ще немає
+власника й handler для типу cos.federation.plan.approval.
+Наявний ModuleActionExecutionGate правильно блокує такий Action.
+Реальний потік approval → Action handler → approved plan → Workflow можна
+вмикати лише після реєстрації власника, перевірки Policy/Approval authority,
+обробника Action та тестів після збоїв. До того дозволені тільки ізольовані
+тестові записи, які повністю відкочуються.
+
+Workflow lifecycle projection не доводить досягнення бізнес-цілі.
+Outcome evidence поки є посиланнями на факти, їх потрібно перевіряти
+в авторитетних read models відповідних Domains.
