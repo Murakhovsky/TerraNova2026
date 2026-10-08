@@ -17,6 +17,7 @@ generated: true
 | `capital_markets` | — | 0 |
 | `construction` | — | 0 |
 | `diagnostic` | — | 0 |
+| `federation` | — | 0 |
 | `finance` | — | 0 |
 | `growth` | — | 1 |
 | `hr` | — | 0 |

@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 45 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 130 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 131 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -66,6 +66,7 @@ generated: true
 | `diagnostic` | `diagnostic.state.rebuild` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.traceability` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `federation` | `federation.plan.approval` | ні | так | `manifest-only` | — | `app/Domains/Federation/module.php` |
 | `growth` | `growth.account.brief` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.discover` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.enrich` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |

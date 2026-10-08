@@ -17,6 +17,7 @@ generated: true
 | `capital_markets` | `0.9.0` | — | 35 |
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `1.0.0` | — | 5 |
+| `federation` | `1.0.0` | — | 1 |
 | `finance` | `0.1.0` | — | 0 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
@@ -43,6 +44,12 @@ generated: true
 - manifest: `app/Domains/Diagnostic/module.php`;
 - configuration provisioners: —;
 - capabilities: `diagnostic.methodology.compile`, `diagnostic.state.rebuild`, `diagnostic.traceability`, `diagnostic.semantic.v1`, `diagnostic.v1`.
+
+## `federation`
+
+- manifest: `app/Domains/Federation/module.php`;
+- configuration provisioners: —;
+- capabilities: `federation.plan.approval`.
 
 ## `finance`
 
