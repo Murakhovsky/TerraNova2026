@@ -40,6 +40,9 @@ final readonly class WorkspaceCompositionResolver
         if ($experience->organizationId !== $tenant->organizationId()->value()) {
             throw new LogicException('Adaptive experience tenant differs from authenticated context.');
         }
+        if ($experience->userId !== $tenant->userId()->value()) {
+            throw new LogicException('Adaptive experience user differs from authenticated context.');
+        }
         $view = $this->resolve($tenant, $context, $workspaceId, $entity);
         return ($this->adaptive ?? new AdaptiveExperienceResolver())->compose(
             $experience,
