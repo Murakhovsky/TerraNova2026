@@ -122,6 +122,8 @@ $assert(str_contains($command,'cos:capital-markets:nav:collect'),'NAV preflight 
 $assert(str_contains($command,'Command::FAILURE'),'Incomplete NAV must produce a failing scheduler status.');
 $sourceImport=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsNavEvidenceImportCommand.php');
 $assert(str_contains($sourceImport,'PortfolioNavFinancialEvidencePolicy::normalize'),'Financial source imports must validate original evidence.');
+$assert(str_contains($sourceImport,'PortfolioNavSourceDocumentVerifier::verify'),'Source import must verify the underlying statement bytes before saving evidence.');
+$assert(str_contains($sourceImport,"'source-file'"),'NAV evidence source document must be mandatory for independent checksum verification.');
 $assert(str_contains($sourceImport,'RECORDED_PENDING_RECONCILIATION'),'Import cannot grant reconciliation authority.');
 $assert(str_contains($sourceImport,"'nav_snapshot_written'=>false"),'Operator source import must not create NAV snapshots.');
 $assert(str_contains($template,'Unreconciled venue cash statement differences'),'UI must show source statement mismatches.');
