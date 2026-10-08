@@ -105,6 +105,43 @@ final class PortfolioNavStatementReconciliationPreview
             $activeEvidence[] = $evidence;
         }
         $sourceEvidence = $activeEvidence;
+        // Liability statements are account snapshots, not additive history.
+        // Select the latest per stable liability account; ties remain ambiguous.
+        $latestLiabilityTime = [];
+        foreach ($sourceEvidence as $row) {
+            if (!is_array($row) || ($row['kind'] ?? '') !== 'LIABILITY_BALANCE') continue;
+            $account = trim((string)($row['liability_account_id'] ?? ''));
+            if ($account === '' || !is_string($row['effective_at'] ?? null)) continue;
+            try {
+                $instant = new DateTimeImmutable($row['effective_at'], new DateTimeZone('UTC'));
+                if (!isset($latestLiabilityTime[$account]) || $instant > $latestLiabilityTime[$account]) {
+                    $latestLiabilityTime[$account] = $instant;
+                }
+            } catch (Throwable) {
+                // Malformed source remains in the validation pipeline.
+            }
+        }
+        $selectedEvidence = [];
+        $historicalLiabilityStatementsIgnored = 0;
+        foreach ($sourceEvidence as $row) {
+            if (is_array($row) && ($row['kind'] ?? '') === 'LIABILITY_BALANCE') {
+                $account = trim((string)($row['liability_account_id'] ?? ''));
+                if ($account !== '' && isset($latestLiabilityTime[$account])
+                    && is_string($row['effective_at'] ?? null)) {
+                    try {
+                        if (new DateTimeImmutable($row['effective_at'],new DateTimeZone('UTC')) < $latestLiabilityTime[$account]) {
+                            $historicalLiabilityStatementsIgnored++;
+                            continue;
+                        }
+                    } catch (Throwable) {
+                        // Do not suppress invalid source evidence.
+                    }
+                }
+            }
+            $selectedEvidence[] = $row;
+        }
+        $sourceEvidence = $selectedEvidence;
+        $seenLiabilityAccounts = [];
         $seenSources = [];
         foreach ($sourceEvidence as $evidence) {
             if (!is_array($evidence)) {
@@ -180,6 +217,18 @@ final class PortfolioNavStatementReconciliationPreview
                     $externalFlows = DecimalMath::add($externalFlows, $amount);
                     $validCounts[$kind]++;
                 } elseif ($kind === 'LIABILITY_BALANCE') {
+                    $account = trim((string)($evidence['liability_account_id'] ?? ''));
+                    if ($account === '') {
+                        $issues['LIABILITY_ACCOUNT_ID_MISSING'] = true;
+                        $invalidKinds[$kind] = true;
+                        continue;
+                    }
+                    if (isset($seenLiabilityAccounts[$account])) {
+                        $issues['DUPLICATE_LIABILITY_STATEMENT'] = true;
+                        $invalidKinds[$kind] = true;
+                        continue;
+                    }
+                    $seenLiabilityAccounts[$account] = true;
                     $liabilities = DecimalMath::add($liabilities, $amount);
                     $validCounts[$kind]++;
                 } else {
@@ -242,6 +291,7 @@ final class PortfolioNavStatementReconciliationPreview
             'venue_comparison'=>$venueComparison,
             'source_counts'=>$counts,
             'historical_venue_statements_ignored'=>$historicalVenueStatementsIgnored,
+            'historical_liability_statements_ignored'=>$historicalLiabilityStatementsIgnored,
             'validated_source_counts'=>$validCounts,
             'issues'=>array_keys($issues),
             'eligible_for_nav'=>false,
