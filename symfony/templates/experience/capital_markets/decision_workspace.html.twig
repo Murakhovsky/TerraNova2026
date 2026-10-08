@@ -644,11 +644,11 @@
     {% set health = w.execution_health|default({}) %}
     <section class="cos-panel"><twig:CosEntityHeader eyebrow="Execution" identity="{{ x.execution_id|default(x.id|default(entityId|default('—'))) }}" title="{{ x.status|default('Execution') }}" subtitle="Paper execution lifecycle, orders, fills and hedge evidence." statusLabel="{{ x.status|default('UNKNOWN') }}" statusTone="{{ health.severity|default('NORMAL') == 'HIGH' ? 'danger' : 'info' }}" /></section>
     {% if health.severity|default('NORMAL') == 'HIGH' %}
-      <twig:CosAlert title="HIGH RISK · {{ health.hedge_state|default('UNHEDGED') }}" copy="Execution is not in a clean completed state. Review checkpoint, fills and recovery evidence before any further action." tone="danger" />
+      <twig:CosAlert title="HIGH RISK · {{ health.hedge_state|default('UNHEDGED')|replace({'_':' '}) }}" copy="Execution is not in a clean completed state. Review checkpoint, fills and recovery evidence before any further action." tone="danger" />
     {% endif %}
     <section class="cos-kpi-strip">
       <twig:CosMetric label="Execution State" value="{{ health.status|default('UNKNOWN') }}" />
-      <twig:CosMetric label="Hedge State" value="{{ health.hedge_state|default('UNKNOWN') }}" />
+      <twig:CosMetric label="Hedge State" value="{{ health.hedge_state|default('UNKNOWN')|replace({'_':' '}) }}" />
       <twig:CosMetric label="Checkpoint" value="{{ health.checkpoint|default('—') }}" />
       <twig:CosMetric label="Orders" value="{{ health.orders|default(0) }}" />
       <twig:CosMetric label="Fills" value="{{ health.fills|default(0) }}" />
@@ -662,7 +662,7 @@
       <h2>Recovery</h2>
       <p><strong>Checkpoint:</strong> {{ health.checkpoint|default('—') }}</p>
       <p><strong>Failure reason:</strong> {{ health.failure_reason|default('—') }}</p>
-      <p><strong>Hedge state:</strong> {{ health.hedge_state|default('UNKNOWN') }}</p>
+      <p><strong>Hedge state:</strong> {{ health.hedge_state|default('UNKNOWN')|replace({'_':' '}) }}</p>
       <p>Retry / Reduce Position / Emergency Flatten / Manual Review controls remain governed by the existing execution policy and are not synthesized in this read-only workspace.</p>
     </section>
 
