@@ -1932,7 +1932,7 @@ pages:
       required: [WorkspaceHeader, EntityHeader]
       optional: []
     primary_action: capital_markets.navigate
-    states: [normal, empty, error, permission_denied]
+    states: [normal]
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
@@ -1954,7 +1954,7 @@ pages:
       required: [WorkspaceHeader, EntityHeader]
       optional: []
     primary_action: capital_markets.navigate
-    states: [normal, empty, error, permission_denied]
+    states: [normal]
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
