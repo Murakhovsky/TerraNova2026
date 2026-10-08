@@ -62,15 +62,26 @@ final class CapitalAllocationEngine {
  private function score(array $o,AllocationPolicy $p):Decimal {
   $ret=Decimal::fromString((string)$o['expected_net_return']);$confidence=Decimal::fromString((string)$o['confidence']);$execution=Decimal::fromString((string)$o['execution_probability']);
   $risk=Decimal::fromString((string)$o['risk']);if(!$risk->isPositive())$risk=Decimal::fromString('0.000001');
-  $strategy=DecimalMath::divide(Decimal::fromString((string)$o['strategy_score']),Decimal::fromString('100'));
-  $concentration=Decimal::fromString((string)$o['concentration_penalty']);$liquidity=Decimal::fromString((string)$o['liquidity_penalty']);
+  $strategy=$this->unit(DecimalMath::divide(Decimal::fromString((string)$o['strategy_score']),Decimal::fromString('100')));
+  $confidence=$this->unit($confidence);$execution=$this->unit($execution);
+  $concentration=$this->unit(Decimal::fromString((string)$o['concentration_penalty']));
+  $liquidity=$this->unit(Decimal::fromString((string)$o['liquidity_penalty']));
+  $riskImprovement=$this->unit(Decimal::fromString((string)($o['portfolio_risk_improvement']??'0')));
   $one=Decimal::fromString('1');$multiplier=Decimal::fromString((string)($p->weights['score_multiplier']??'1'));
+  $riskImprovementWeight=Decimal::fromString((string)($p->constraints['risk_improvement_weight']??'1'));
+  $riskImprovementMultiplier=DecimalMath::add($one,DecimalMath::multiply($riskImprovement,$riskImprovementWeight));
   $numerator=DecimalMath::multiply($ret,$confidence);
   $numerator=DecimalMath::multiply($numerator,$execution);
   $numerator=DecimalMath::multiply($numerator,$strategy);
   $numerator=DecimalMath::multiply($numerator,DecimalMath::subtract($one,$concentration));
   $numerator=DecimalMath::multiply($numerator,DecimalMath::subtract($one,$liquidity));
+  $numerator=DecimalMath::multiply($numerator,$riskImprovementMultiplier);
   return DecimalMath::multiply(DecimalMath::divide($numerator,$risk),$multiplier);
  }
  private function minimum(Decimal ...$values):Decimal{$m=$values[0];foreach($values as $v)if($v->compareTo($m)<0)$m=$v;return $m;}
+ private function unit(Decimal $value):Decimal
+ {
+  if($value->isNegative())return Decimal::fromString('0');
+  $one=Decimal::fromString('1');return $value->compareTo($one)>0?$one:$value;
+ }
 }
