@@ -280,7 +280,7 @@ final readonly class CapitalRiskService
    $weeklyConsumed=DecimalMath::abs(Decimal::fromString((string)$input['weekly_loss']));
    if($weeklyConsumed->compareTo($weeklyBudget)>=0)$state=PortfolioRiskState::ReduceOnly;
   }
-  $opportunities=$this->prepareOpportunities($organizationId,(array)($input['opportunities']??[]),(string)($input['portfolio_mode']??'PAPER'));
+  $opportunities=$this->prepareOpportunities($organizationId,(array)($input['opportunities']??[]),(string)($input['portfolio_mode']??'PAPER'),$portfolioId);
 
   $plan=$this->allocator->allocate($portfolioId,$available,$opportunities,$policy,$state,(array)($input['hard_caps']??[]));
   $existingPlan=$this->repository->getAllocationPlan($organizationId,$plan->id);
@@ -608,12 +608,12 @@ final readonly class CapitalRiskService
   return $record;
  }
 
- private function prepareOpportunities(string $organizationId,array $opportunities,string $portfolioMode):array
+ private function prepareOpportunities(string $organizationId,array $opportunities,string $portfolioMode,string $portfolioId):array
  {
   $balances=$this->trading->listPaperBalances($organizationId);
   $availableByLocation=[];
   $strategyBudgets=[];
-  foreach($this->repository->listStrategyAllocations($organizationId,'paper-master') as $allocation){
+  foreach($this->repository->listStrategyAllocations($organizationId,$portfolioId) as $allocation){
    $strategyId=(string)($allocation['strategy_version_id']??'');
    if($strategyId===''||isset($strategyBudgets[$strategyId]))continue;
    if(!in_array((string)($allocation['status']??''),['ACTIVE','RAMPING'],true))continue;
