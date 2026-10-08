@@ -7,6 +7,7 @@ use App\Security\SessionCsrfValidator;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
+use App\Web\Experience\Realtime\RealtimeTopicFactory;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
@@ -28,6 +29,7 @@ final readonly class DecisionWorkspacePageController
         private CapitalMarketsAccessControlInterface $access,
         private DecisionWorkspaceReadService $workspace,
         private WorkspaceShellFactory $shells,
+        private RealtimeTopicFactory $realtimeTopics,
         private SessionCsrfValidator $csrf,
     ) {}
 
@@ -279,6 +281,7 @@ final readonly class DecisionWorkspacePageController
             'cmView' => $view,
             'csrfToken' => $this->csrf->token($request),
             'query' => $request->query->all(),
+            'realtimeTopic' => $this->realtimeTopics->workspace($organizationId, 'capital-markets'),
             'permissions' => [
                 'paper_execute' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::PaperExecute),
                 'research_manage' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::ResearchManage),
