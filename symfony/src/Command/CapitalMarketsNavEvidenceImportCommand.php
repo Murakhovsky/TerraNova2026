@@ -5,6 +5,7 @@ namespace App\Command;
 
 use Domains\CapitalMarkets\Application\Contract\PortfolioNavFinancialEvidenceRepositoryInterface;
 use Domains\CapitalMarkets\Application\Service\PortfolioNavFinancialEvidencePolicy;
+use Domains\CapitalMarkets\Application\Service\PortfolioNavSourceDocumentVerifier;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -60,18 +61,7 @@ final class CapitalMarketsNavEvidenceImportCommand extends Command
             }
             // Validate before writing; even an attempted authority escalation is normalized to PENDING.
             $normalized = PortfolioNavFinancialEvidencePolicy::normalize($document);
-            // Never trust a hash supplied inside JSON without checking the original bytes.
-            if (!is_file($sourceFile) || !is_readable($sourceFile) || is_link($sourceFile)) {
-                throw new \InvalidArgumentException('Independent source document unavailable.');
-            }
-            $sourceSize = filesize($sourceFile);
-            if ($sourceSize === false || $sourceSize <= 0 || $sourceSize > 20971520) {
-                throw new \InvalidArgumentException('Independent source document exceeds allowed bounds.');
-            }
-            $sourceDigest = hash_file('sha256', $sourceFile);
-            if (!is_string($sourceDigest) || !hash_equals($normalized['source_document_sha256'], $sourceDigest)) {
-                throw new \InvalidArgumentException('Independent document hash does not match.');
-            }
+            PortfolioNavSourceDocumentVerifier::verify($sourceFile, $normalized['source_document_sha256']);
             $this->evidence->append($organization, $portfolio, $normalized);
             $output->writeln(json_encode([
                 'status'=>'RECORDED_PENDING_RECONCILIATION',
