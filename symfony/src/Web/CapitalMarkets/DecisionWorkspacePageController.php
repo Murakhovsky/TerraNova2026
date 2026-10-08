@@ -340,7 +340,11 @@ final readonly class DecisionWorkspacePageController
 
     private function authorized(CapitalMarketsCapability $capability): TenantContext|Response
     {
-        $tenant = $this->tenants->requireTenant();
+        $tenant = $this->tenants->current();
+        if ($tenant === null) {
+            return new RedirectResponse('/auth/login');
+        }
+
         $organizationId = $tenant->organizationId()->value();
 
         if (!$this->modules->isEnabled($organizationId, 'capital_markets')) {
