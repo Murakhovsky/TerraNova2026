@@ -27,7 +27,6 @@ use Kernel\Workflow\Model\WorkflowInstance;
 use Kernel\Workflow\Model\Assignment;
 use Kernel\Workflow\Model\AssignmentType;
 use Kernel\Workflow\Model\Step\HumanStep;
-use Kernel\Shared\Domain\OrganizationId;
 use Twig\Environment;
 
 #[AsCommand(
