@@ -824,6 +824,10 @@
                   </div>
                 </details>
               {% endfor %}
+              <details class="mt-2">
+                <summary>Structured Result</summary>
+                <pre class="mt-2 mb-0"><code>{{ run.output|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</code></pre>
+              </details>
               <p class="mt-2"><small>Correlation: <code>{{ run.correlation_id }}</code> · Duration {{ run.duration_ms is not null ? run.duration_ms ~ ' ms' : '—' }}</small></p>
             </details>
           </td>
