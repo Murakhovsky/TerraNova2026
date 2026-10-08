@@ -66,6 +66,7 @@ final readonly class PortfolioNavSnapshotProducer
         $valuedAt=(new DateTimeImmutable($evidence['valued_at'],new DateTimeZone('UTC')))
             ->setTimezone(new DateTimeZone('UTC'));
         $marks=Decimal::fromString('0');
+        $seenPositionIds=[];
         foreach ($evidence['marked_positions'] as $position) {
             if (!is_array($position)
                 || ($position['quote_currency'] ?? '') !== $currency
@@ -80,6 +81,11 @@ final readonly class PortfolioNavSnapshotProducer
             ) {
                 throw new InvalidArgumentException('Every position needs a reconciled current mark and provenance in NAV currency.');
             }
+            $positionId=trim($position['position_id']);
+            if ($positionId === '' || isset($seenPositionIds[$positionId])) {
+                throw new InvalidArgumentException('Duplicate or empty portfolio position identity cannot be valued.');
+            }
+            $seenPositionIds[$positionId]=true;
             try {
                 $sourceTime=(new DateTimeImmutable($position['source_timestamp'],new DateTimeZone('UTC')))
                     ->setTimezone(new DateTimeZone('UTC'));
