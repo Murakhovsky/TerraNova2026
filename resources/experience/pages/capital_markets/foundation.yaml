@@ -13,8 +13,8 @@ pages:
       page_purpose: "Canonical Capital Markets Decision Workspace overview. It composes authoritative portfolio, risk, opportunity and market-data read models without frontend finance calculations."
     archetype: domain_dashboard
     patterns:
-      required: [PageHeader, KpiStrip, Status, Alert, EntityList]
-      optional: [ContextPanel, EmptyState, ErrorState]
+      required: [PageHeader, KpiStrip, EntityList]
+      optional: [ContextPanel, AIRecommendations, EmptyState, ErrorState]
     primary_action: capital_markets.opportunity.view
     states: [normal, empty, partial, stale, error, permission_denied]
     responsive: { desktop: decision_workspace, tablet: stacked_dashboard, mobile: critical_status_stack }
