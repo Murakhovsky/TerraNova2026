@@ -337,8 +337,8 @@ final readonly class DecisionWorkspaceReadService
         $relationships = array_values(array_filter(
             $page['relationships'] ?? [],
             static fn(array $row): bool =>
-                (string)($row['source_instrument_id'] ?? $row['from_instrument_id'] ?? '') === $instrumentId
-                || (string)($row['target_instrument_id'] ?? $row['to_instrument_id'] ?? '') === $instrumentId,
+                (string)($row['source_instrument']['id'] ?? $row['source_instrument_id'] ?? $row['from_instrument_id'] ?? '') === $instrumentId
+                || (string)($row['target_instrument']['id'] ?? $row['target_instrument_id'] ?? $row['to_instrument_id'] ?? '') === $instrumentId,
         ));
 
         $page['instrument'] = $instrument;
@@ -365,8 +365,8 @@ final readonly class DecisionWorkspaceReadService
             return $page;
         }
 
-        $sourceId = (string)($relationship['source_instrument_id'] ?? $relationship['from_instrument_id'] ?? '');
-        $targetId = (string)($relationship['target_instrument_id'] ?? $relationship['to_instrument_id'] ?? '');
+        $sourceId = (string)($relationship['source_instrument']['id'] ?? $relationship['source_instrument_id'] ?? $relationship['from_instrument_id'] ?? '');
+        $targetId = (string)($relationship['target_instrument']['id'] ?? $relationship['target_instrument_id'] ?? $relationship['to_instrument_id'] ?? '');
         $comparison = [];
         foreach ($page['market_rows'] ?? [] as $row) {
             if (!is_array($row)) continue;
@@ -386,8 +386,8 @@ final readonly class DecisionWorkspaceReadService
             $comparison,
             static fn(array $row): bool => (string)($row['instrument_id'] ?? '') === $targetId,
         ));
-        $sourceCurrency = strtoupper(trim((string)($page['source_instrument']['quote_currency'] ?? '')));
-        $targetCurrency = strtoupper(trim((string)($page['target_instrument']['quote_currency'] ?? '')));
+        $sourceCurrency = strtoupper(trim((string)($page['source_instrument']['quote_asset'] ?? $page['source_instrument']['currency'] ?? '')));
+        $targetCurrency = strtoupper(trim((string)($page['target_instrument']['quote_asset'] ?? $page['target_instrument']['currency'] ?? '')));
         $trustedQuote = static fn(array $row): bool =>
             ($row['trust'] ?? '') === 'TRUSTED'
             && ($row['mode'] ?? '') === 'LIVE'
@@ -397,6 +397,17 @@ final readonly class DecisionWorkspaceReadService
             && is_numeric($row['age_ms'])
             && $row['age_ms'] >= 0
             && $row['age_ms'] <= 30000;
+        $trustedSource = array_values(array_filter($sourceRows, $trustedQuote));
+        $trustedTarget = array_values(array_filter($targetRows, $trustedQuote));
+        $sourceQuotes = array_unique(array_filter(array_map(
+            static fn(array $row): string => strtoupper(trim((string)($row['quote_asset'] ?? ''))),
+            $trustedSource,
+        )));
+        $targetQuotes = array_unique(array_filter(array_map(
+            static fn(array $row): string => strtoupper(trim((string)($row['quote_asset'] ?? ''))),
+            $trustedTarget,
+        )));
+        $commonQuotes = array_intersect($sourceQuotes, $targetQuotes);
         $page['comparison_state'] = (
             $sourceId !== ''
             && $targetId !== ''
@@ -405,6 +416,7 @@ final readonly class DecisionWorkspaceReadService
             && $sourceCurrency === $targetCurrency
             && count(array_filter($sourceRows, $trustedQuote)) > 0
             && count(array_filter($targetRows, $trustedQuote)) > 0
+            && in_array($sourceCurrency, $commonQuotes, true)
         ) ? 'COMPARABLE' : 'NOT COMPARABLE';
 
         return $page;
@@ -1320,6 +1332,7 @@ final readonly class DecisionWorkspaceReadService
             $rows[] = [
                 'instrument_id' => $state['instrument_id'] ?? null,
                 'venue_id' => $state['venue_id'] ?? null,
+                'quote_asset' => $quote['ask_price']['quote_asset'] ?? $quote['bid_price']['quote_asset'] ?? null,
                 'bid' => $quote['bid_price']['value'] ?? null,
                 'ask' => $quote['ask_price']['value'] ?? null,
                 'mid' => $state['mid_price'] ?? $quote['mid_price'] ?? null,
