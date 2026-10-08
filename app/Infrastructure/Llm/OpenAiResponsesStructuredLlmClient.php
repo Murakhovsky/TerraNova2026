@@ -7,6 +7,7 @@ use Closure;
 use JsonException;
 use Kernel\Llm\LlmProviderException;
 use Kernel\Llm\StructuredLlmClientInterface;
+use Kernel\Llm\StructuredLlmProgressObserverInterface;
 use Kernel\Llm\StructuredLlmRequest;
 use Kernel\Llm\StructuredLlmResponse;
 use Platform\Settings\Contract\PlatformSettingsReaderInterface;
@@ -25,6 +26,10 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
         private readonly string $endpoint = self::DEFAULT_ENDPOINT,
         private readonly ?Closure $transport = null,
         private readonly ?PlatformSettingsReaderInterface $settings = null,
+        private readonly ?StructuredLlmProgressObserverInterface $progressObserver = null,
+        private readonly int $backgroundPollIntervalSeconds = 20,
+        private readonly int $backgroundMaxWaitSeconds = 1800,
+        private readonly ?Closure $backgroundTransport = null,
     ) {}
 
     public function complete(StructuredLlmRequest $request): StructuredLlmResponse
@@ -55,8 +60,35 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             : $this->maxAttempts;
 
         $payload = $this->payload($request, $model);
-        [$status, $raw] = $this->send($payload, $token, $timeoutSeconds, $maxAttempts);
-        $decoded = $this->decode($raw, $status);
+        if ($this->usesBackgroundMode($request)) {
+            $pollIntervalSeconds = $organizationId !== null && $this->settings !== null
+                ? max(5, (int) $this->settings->value($organizationId, 'llm', 'background_poll_interval_seconds', $this->backgroundPollIntervalSeconds))
+                : $this->backgroundPollIntervalSeconds;
+            $maxWaitSeconds = $organizationId !== null && $this->settings !== null
+                ? max($pollIntervalSeconds, (int) $this->settings->value($organizationId, 'llm', 'background_max_wait_seconds', $this->backgroundMaxWaitSeconds))
+                : $this->backgroundMaxWaitSeconds;
+
+            [$status, $raw] = $this->backgroundRequest(
+                'POST',
+                $this->endpoint,
+                $token,
+                json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                min(30, $timeoutSeconds),
+            );
+            $decoded = $this->decode($raw, $status, true);
+            $decoded = $this->awaitBackgroundResponse(
+                $request,
+                $decoded,
+                $token,
+                min(30, $timeoutSeconds),
+                $pollIntervalSeconds,
+                $maxWaitSeconds,
+            );
+            $status = 200;
+        } else {
+            [$status, $raw] = $this->send($payload, $token, $timeoutSeconds, $maxAttempts);
+            $decoded = $this->decode($raw, $status);
+        }
 
         $text = $this->extractOutputText($decoded);
         if ($text === null || trim($text) === '') {
@@ -129,7 +161,226 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             $payload['max_output_tokens'] = $request->maxOutputTokens;
         }
 
+        if ($this->usesBackgroundMode($request)) {
+            $payload['background'] = true;
+            $payload['store'] = true;
+        }
+
         return $payload;
+    }
+
+    private function usesBackgroundMode(StructuredLlmRequest $request): bool
+    {
+        $useCase = trim((string) $request->useCase);
+        return str_starts_with($useCase, 'agent.') && $useCase !== 'agent.run';
+    }
+
+    /** @param array<string,mixed> $decoded
+     *  @return array<string,mixed>
+     */
+    private function awaitBackgroundResponse(
+        StructuredLlmRequest $request,
+        array $decoded,
+        string $token,
+        int $requestTimeoutSeconds,
+        int $pollIntervalSeconds,
+        int $maxWaitSeconds,
+    ): array {
+        $responseId = is_string($decoded['id'] ?? null) ? trim($decoded['id']) : '';
+        if ($responseId === '') {
+            throw new LlmProviderException(self::PROVIDER, false, 'OpenAI background response did not contain a response id.');
+        }
+
+        $status = strtolower(trim((string) ($decoded['status'] ?? '')));
+        if ($status === '') {
+            $status = 'completed';
+        }
+
+        $pollCount = 0;
+        $this->observeProgress($request, $responseId, $status, $pollCount);
+        if ($status === 'completed') {
+            return $decoded;
+        }
+        if (in_array($status, ['failed','cancelled','incomplete'], true)) {
+            throw $this->backgroundTerminalException($decoded, $status);
+        }
+        if (!in_array($status, ['queued','in_progress'], true)) {
+            throw new LlmProviderException(self::PROVIDER, false, 'OpenAI background response returned unsupported status: '.$status.'.');
+        }
+
+        $deadline = microtime(true) + max($pollIntervalSeconds, $maxWaitSeconds);
+        $consecutivePollFailures = 0;
+
+        while (microtime(true) < $deadline) {
+            sleep($pollIntervalSeconds);
+
+            try {
+                [$httpStatus, $raw] = $this->backgroundRequest(
+                    'GET',
+                    rtrim($this->endpoint, '/').'/'.rawurlencode($responseId),
+                    $token,
+                    null,
+                    $requestTimeoutSeconds,
+                );
+                $decoded = $this->decode($raw, $httpStatus, true);
+                $consecutivePollFailures = 0;
+            } catch (LlmProviderException $error) {
+                if (!$error->retryable || ++$consecutivePollFailures >= 3) {
+                    throw $error;
+                }
+                continue;
+            }
+
+            ++$pollCount;
+            $status = strtolower(trim((string) ($decoded['status'] ?? '')));
+            $this->observeProgress($request, $responseId, $status, $pollCount);
+
+            if ($status === 'completed') {
+                return $decoded;
+            }
+            if (in_array($status, ['failed','cancelled','incomplete'], true)) {
+                throw $this->backgroundTerminalException($decoded, $status);
+            }
+            if (!in_array($status, ['queued','in_progress'], true)) {
+                throw new LlmProviderException(self::PROVIDER, false, 'OpenAI background response returned unsupported status: '.$status.'.');
+            }
+        }
+
+        $this->cancelBackgroundResponse($responseId, $token, $requestTimeoutSeconds);
+
+        throw new LlmProviderException(
+            self::PROVIDER,
+            true,
+            sprintf('OpenAI background response %s exceeded the %d second wait budget.', $responseId, $maxWaitSeconds),
+        );
+    }
+
+    private function observeProgress(
+        StructuredLlmRequest $request,
+        string $responseId,
+        string $status,
+        int $pollCount,
+    ): void {
+        $this->progressObserver?->progress(
+            $request,
+            self::PROVIDER,
+            $responseId,
+            $status,
+            $pollCount,
+        );
+    }
+
+    /** @param array<string,mixed> $decoded */
+    private function backgroundTerminalException(array $decoded, string $status): LlmProviderException
+    {
+        $message = '';
+        if (is_array($decoded['error'] ?? null) && is_string($decoded['error']['message'] ?? null)) {
+            $message = trim($decoded['error']['message']);
+        }
+        if ($message === '' && is_array($decoded['incomplete_details'] ?? null)) {
+            $reason = $decoded['incomplete_details']['reason'] ?? null;
+            if (is_string($reason) && trim($reason) !== '') {
+                $message = 'Incomplete reason: '.trim($reason);
+            }
+        }
+        if ($message === '') {
+            $message = 'OpenAI background response ended with status '.$status.'.';
+        }
+
+        return new LlmProviderException(
+            self::PROVIDER,
+            $status === 'failed',
+            mb_substr($message, 0, 300),
+        );
+    }
+
+    private function cancelBackgroundResponse(string $responseId, string $token, int $timeoutSeconds): void
+    {
+        try {
+            $this->backgroundRequest(
+                'POST',
+                rtrim($this->endpoint, '/').'/'.rawurlencode($responseId).'/cancel',
+                $token,
+                '',
+                $timeoutSeconds,
+            );
+        } catch (\Throwable) {
+            // Timeout cleanup is best-effort.
+        }
+    }
+
+    /** @return array{0:int,1:string} */
+    private function backgroundRequest(
+        string $method,
+        string $url,
+        string $token,
+        ?string $body,
+        int $timeoutSeconds,
+    ): array {
+        if ($this->backgroundTransport !== null) {
+            $result = ($this->backgroundTransport)($method, $url, $token, $body, $timeoutSeconds);
+            if (!is_array($result) || !isset($result[0], $result[1])) {
+                throw new RuntimeException('OpenAI background test transport must return [status, body].');
+            }
+            $status = (int) $result[0];
+            $responseBody = (string) $result[1];
+            if ($status >= 200 && $status < 300) {
+                return [$status, $responseBody];
+            }
+
+            throw new LlmProviderException(
+                self::PROVIDER,
+                $status === 0 || $status === 408 || $status === 409 || $status === 429 || $status >= 500,
+                $this->providerErrorMessage($responseBody) ?: 'OpenAI background request failed.',
+                $status > 0 ? $status : null,
+            );
+        }
+
+        $curl = curl_init($url);
+        if ($curl === false) {
+            throw new LlmProviderException(self::PROVIDER, true, 'Unable to initialize OpenAI background transport.');
+        }
+
+        $headers = [
+            'Authorization: Bearer '.$token,
+            'Content-Type: application/json',
+        ];
+        $options = [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => min(10, $timeoutSeconds),
+            CURLOPT_TIMEOUT => max(1, $timeoutSeconds),
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_CUSTOMREQUEST => strtoupper($method),
+        ];
+        if ($body !== null) {
+            $options[CURLOPT_POSTFIELDS] = $body;
+        }
+        curl_setopt_array($curl, $options);
+
+        $raw = curl_exec($curl);
+        $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        $error = trim(curl_error($curl));
+        curl_close($curl);
+
+        $responseBody = is_string($raw) ? $raw : '';
+        if ($status >= 200 && $status < 300 && $responseBody !== '') {
+            return [$status, $responseBody];
+        }
+
+        $retryable = $status === 0 || $status === 408 || $status === 409 || $status === 429 || $status >= 500;
+        $message = $this->providerErrorMessage($responseBody);
+        if ($message === '') {
+            $message = $error !== ''
+                ? 'OpenAI background transport error: '.mb_substr($error, 0, 240)
+                : ($status > 0 ? 'OpenAI background request failed with HTTP '.$status.'.' : 'OpenAI background request failed without an HTTP response.');
+        }
+
+        throw new LlmProviderException(
+            self::PROVIDER,
+            $retryable,
+            $message,
+            $status > 0 ? $status : null,
+        );
     }
 
     /** @return array{0:int,1:string} */
@@ -216,7 +467,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
     }
 
     /** @return array<string,mixed> */
-    private function decode(string $raw, int $status): array
+    private function decode(string $raw, int $status, bool $allowResponseError = false): array
     {
         try {
             $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
@@ -227,7 +478,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             throw new LlmProviderException(self::PROVIDER, false, 'OpenAI response must be a JSON object.', $status);
         }
 
-        if (isset($decoded['error'])) {
+        if (!$allowResponseError && isset($decoded['error'])) {
             throw new LlmProviderException(self::PROVIDER, false, $this->providerErrorMessage($raw) ?: 'OpenAI returned an API error.', $status);
         }
 

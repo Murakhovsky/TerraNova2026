@@ -5,6 +5,7 @@ require dirname(__DIR__, 2).'/vendor/autoload.php';
 
 use Infrastructure\Llm\OpenAiResponsesStructuredLlmClient;
 use Kernel\Llm\LlmProviderException;
+use Kernel\Llm\StructuredLlmProgressObserverInterface;
 use Kernel\Llm\StructuredLlmRequest;
 
 $captured = null;
@@ -93,6 +94,102 @@ $looseRequest = new StructuredLlmRequest(
 $loosePayload = $client->payload($looseRequest, 'gpt-request-model');
 if (($loosePayload['text']['format']['strict'] ?? null) !== false) {
     throw new RuntimeException('OpenAI adapter must downgrade non-strict-compatible schemas instead of sending invalid strict Structured Outputs.');
+}
+
+$backgroundCalls = [];
+$backgroundProgress = new class implements StructuredLlmProgressObserverInterface {
+    public array $events = [];
+
+    public function progress(
+        StructuredLlmRequest $request,
+        string $provider,
+        string $providerRequestId,
+        string $status,
+        int $pollCount,
+    ): void {
+        $this->events[] = [$providerRequestId, $status, $pollCount];
+    }
+};
+$backgroundPoll = 0;
+$backgroundClient = new OpenAiResponsesStructuredLlmClient(
+    token: 'test-token',
+    model: 'gpt-test',
+    settings: null,
+    progressObserver: $backgroundProgress,
+    backgroundPollIntervalSeconds: 0,
+    backgroundMaxWaitSeconds: 5,
+    backgroundTransport: static function (string $method, string $url, string $token, ?string $body, int $timeout) use (&$backgroundCalls, &$backgroundPoll): array {
+        $backgroundCalls[] = [$method, $url, $body];
+
+        if ($method === 'POST' && $url === 'https://api.openai.com/v1/responses') {
+            $payload = json_decode((string) $body, true, 512, JSON_THROW_ON_ERROR);
+            if (($payload['background'] ?? null) !== true || ($payload['store'] ?? null) !== true) {
+                throw new RuntimeException('Engineering background request did not enable background/store.');
+            }
+            return [200, '{"id":"resp_bg_123","status":"queued","model":"gpt-test-2026","output":[]}'];
+        }
+
+        if ($method === 'GET' && str_ends_with($url, '/resp_bg_123')) {
+            ++$backgroundPoll;
+            if ($backgroundPoll === 1) {
+                return [200, '{"id":"resp_bg_123","status":"in_progress","model":"gpt-test-2026","output":[]}'];
+            }
+            return [200, json_encode([
+                'id' => 'resp_bg_123',
+                'status' => 'completed',
+                'model' => 'gpt-test-2026',
+                'usage' => ['input_tokens' => 20, 'output_tokens' => 8],
+                'output' => [[
+                    'type' => 'message',
+                    'content' => [[
+                        'type' => 'output_text',
+                        'text' => '{"decision":"PASS"}',
+                    ]],
+                ]],
+            ], JSON_THROW_ON_ERROR)];
+        }
+
+        throw new RuntimeException('Unexpected background transport call: '.$method.' '.$url);
+    },
+);
+$backgroundRequest = new StructuredLlmRequest(
+    systemPrompt: 'Return only the requested structured result.',
+    userPrompt: 'Design the architecture.',
+    context: [
+        'metadata' => [
+            'engineering_feature_id' => 'feature-1',
+            'engineering_task_id' => 'task-1',
+        ],
+    ],
+    responseSchema: [
+        'type' => 'object',
+        'properties' => [
+            'decision' => ['type' => 'string', 'enum' => ['PASS','FAIL']],
+        ],
+        'required' => ['decision'],
+        'additionalProperties' => false,
+    ],
+    model: 'gpt-request-model',
+    organizationId: 'default',
+    useCase: 'agent.principal_architect',
+    correlationId: 'engineering:immediate:feature-1:test',
+);
+$backgroundResponse = $backgroundClient->complete($backgroundRequest);
+if (($backgroundResponse->output['decision'] ?? null) !== 'PASS') {
+    throw new RuntimeException('Background OpenAI response was not resolved to structured output.');
+}
+if ($backgroundResponse->providerRequestId !== 'resp_bg_123') {
+    throw new RuntimeException('Background provider request id was not preserved.');
+}
+if ($backgroundPoll !== 2) {
+    throw new RuntimeException('Background OpenAI response was not polled until completion.');
+}
+if ($backgroundProgress->events !== [
+    ['resp_bg_123', 'queued', 0],
+    ['resp_bg_123', 'in_progress', 1],
+    ['resp_bg_123', 'completed', 2],
+]) {
+    throw new RuntimeException('Background OpenAI progress observer did not receive the expected status sequence.');
 }
 
 $retryClient = new OpenAiResponsesStructuredLlmClient(

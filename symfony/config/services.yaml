@@ -1263,6 +1263,9 @@ services:
       $token: '%env(LLM_TOKEN)%'
       $model: '%env(LLM_MODEL)%'
       $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
+      $progressObserver: '@App\Engineering\Infrastructure\Llm\EngineeringStructuredLlmProgressObserver'
+      $backgroundPollIntervalSeconds: 20
+      $backgroundMaxWaitSeconds: 1800
 
   Kernel\Llm\LlmProviderRegistry:
     arguments:
