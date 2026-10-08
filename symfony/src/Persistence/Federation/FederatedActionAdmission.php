@@ -26,9 +26,40 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
 
     public function assertAuthorized(Action $action): void
     {
+        $this->verify($action, false);
+    }
+
+    /**
+     * Read-only receipt attestation. A COMPLETED canonical Action is never
+     * re-executed; it must have exactly one successful persisted attempt.
+     */
+    public function assertCompletedReceipt(Action $action): void
+    {
+        if ($action->status !== ActionStatus::Completed) {
+            throw new DomainException('Federation receipt must originate from a completed Action.');
+        }
+        $rows = $this->db->fetchAllAssociative(
+            'SELECT attempt, status FROM cos_action_attempts
+             WHERE organization_id = :org AND action_id = :id',
+            ['org' => $action->organizationId, 'id' => $action->id],
+        );
+        $status = $this->db->fetchOne(
+            'SELECT status FROM cos_actions WHERE organization_id = :org AND id = :id',
+            ['org' => $action->organizationId, 'id' => $action->id],
+        );
+        if ($status !== 'COMPLETED' || count($rows) !== 1
+            || (int) $rows[0]['attempt'] !== 1 || $rows[0]['status'] !== 'COMPLETED') {
+            throw new DomainException('Federation Action receipt has no single successful canonical attempt.');
+        }
+        $this->verify($action, true);
+    }
+
+    private function verify(Action $action, bool $completedReceipt): void
+    {
         if (!is_string($action->idempotencyKey)
             || !preg_match('/^fed:[a-f0-9]{64}$/', $action->idempotencyKey)
-            || !in_array($action->status, [ActionStatus::Queued, ActionStatus::Running], true)
+            || !in_array($action->status, $completedReceipt
+                ? [ActionStatus::Completed] : [ActionStatus::Queued, ActionStatus::Running], true)
             || $action->sourceType !== 'USER'
             || $action->sourceId === ''
             || $action->executionMode !== 'APPROVAL_REQUIRED') {
