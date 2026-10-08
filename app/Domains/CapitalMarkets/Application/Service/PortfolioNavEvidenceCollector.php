@@ -83,7 +83,14 @@ final readonly class PortfolioNavEvidenceCollector
                     $position, $market->toArray(), $currency,
                 );
                 if ($candidate['status'] !== 'CANDIDATE') {
-                    $issues[] = (string)$candidate['reason'];
+                    $reason = (string)$candidate['reason'];
+                    // Expose one explicit NAV blocker for stale timestamps or an
+                    // uncertain clock, regardless of lower-level market flags.
+                    if ($reason === 'MARK_STALE_OR_FUTURE'
+                        || in_array('CLOCK_UNCERTAIN', $market->toArray()['quality_flags'] ?? [], true)) {
+                        $issues[] = 'POSITION_MARK_STALE_OR_CLOCK_UNCERTAIN';
+                    }
+                    $issues[] = $reason;
                     continue;
                 }
                 $marks[] = $candidate;
