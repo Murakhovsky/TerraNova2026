@@ -47,12 +47,26 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             throw new LlmProviderException(self::PROVIDER, false, 'OpenAI model is not configured.');
         }
 
-        $timeoutSeconds = $organizationId !== null && $this->settings !== null
-            ? max(1, (int) $this->settings->value($organizationId, 'llm', 'timeout_seconds', $this->timeoutSeconds))
+        $useCase = trim((string) $request->useCase);
+        $architectRequest = $useCase === 'agent.principal_architect'
+            || str_ends_with($useCase, '.principal_architect');
+
+        $defaultTimeoutSeconds = $architectRequest
+            ? max($this->timeoutSeconds, 240)
             : $this->timeoutSeconds;
-        $maxAttempts = $organizationId !== null && $this->settings !== null
-            ? max(1, (int) $this->settings->value($organizationId, 'llm', 'max_attempts', $this->maxAttempts))
+        $defaultMaxAttempts = $architectRequest
+            ? min($this->maxAttempts, 2)
             : $this->maxAttempts;
+
+        $timeoutKey = $architectRequest ? 'timeout_seconds.principal_architect' : 'timeout_seconds';
+        $attemptsKey = $architectRequest ? 'max_attempts.principal_architect' : 'max_attempts';
+
+        $timeoutSeconds = $organizationId !== null && $this->settings !== null
+            ? max(1, (int) $this->settings->value($organizationId, 'llm', $timeoutKey, $defaultTimeoutSeconds))
+            : $defaultTimeoutSeconds;
+        $maxAttempts = $organizationId !== null && $this->settings !== null
+            ? max(1, (int) $this->settings->value($organizationId, 'llm', $attemptsKey, $defaultMaxAttempts))
+            : $defaultMaxAttempts;
 
         $payload = $this->payload($request, $model);
         [$status, $raw] = $this->send($payload, $token, $timeoutSeconds, $maxAttempts);
