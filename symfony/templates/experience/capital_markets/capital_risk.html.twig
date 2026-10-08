@@ -1,18 +1,173 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 {% block title %}{{ pageTitle }} | Terra Nova COS{% endblock %}
 {% block workspace_content %}
-{% set w=workspace|default({}) %}{% set p=w.portfolio|default({}) %}{% set e=w.exposure|default({}) %}{% set r=w.risk|default({}) %}{% set a=w.allocation_plan|default({}) %}
+{% set w=workspace|default({}) %}
+{% set p=w.portfolio|default({}) %}
+{% set c=w.capital_state|default({}) %}
+{% set e=w.exposure|default({}) %}
+{% set r=w.risk|default({}) %}
+{% set a=w.allocation_plan|default({}) %}
 <div class="cos-page__stack cos-capital-markets" data-csrf="{{ csrfToken }}">
-<header class="cos-growth-header"><div><small>Capital Markets · Capital Allocation & Risk</small><h1>{{ pageTitle }}</h1><p>Portfolio-aware capital decisions with deterministic risk constraints. AI can explain and propose, never override hard limits.</p></div>
-<nav class="cos-growth-actions"><a class="btn btn-outline-secondary" href="/capital-markets">Overview</a><a class="btn btn-outline-secondary" href="/capital-markets/portfolio">Portfolio</a><a class="btn btn-outline-secondary" href="/capital-markets/risk">Risk</a><a class="btn btn-outline-secondary" href="/capital-markets/allocation">Allocation</a><a class="btn btn-outline-secondary" href="/capital-markets/research">Research Lab</a></nav></header>
-<section class="cos-kpi-strip"><twig:CosMetric label="Equity" value="{{ p.equity|default(p.capital|default('—')) }}" hint="portfolio equity" /><twig:CosMetric label="Available" value="{{ p.available_capital|default('—') }}" hint="usable after reservations" /><twig:CosMetric label="Gross exposure" value="{{ e.gross_exposure|default('—') }}" hint="before netting" /><twig:CosMetric label="Net exposure" value="{{ e.net_exposure|default('—') }}" hint="validated economic netting" /><twig:CosMetric label="Risk state" value="{{ r.status|default(r.state|default('NORMAL')) }}" hint="hard limits cannot be bypassed" /></section>
+<header class="cos-growth-header">
+  <div>
+    <small>Capital Markets · Capital Allocation & Risk</small>
+    <h1>{{ pageTitle }}</h1>
+    <p>Portfolio-aware capital decisions with deterministic risk constraints. AI can explain and propose, never override hard limits.</p>
+  </div>
+  <nav class="cos-growth-actions">
+    <a class="btn btn-outline-secondary" href="/capital-markets">Overview</a>
+    <a class="btn btn-outline-secondary" href="/capital-markets/portfolio">Portfolio</a>
+    <a class="btn btn-outline-secondary" href="/capital-markets/risk">Risk</a>
+    <a class="btn btn-outline-secondary" href="/capital-markets/allocation">Allocation</a>
+    <a class="btn btn-outline-secondary" href="/capital-markets/research">Research Lab</a>
+  </nav>
+</header>
+
+<section class="cos-kpi-strip">
+  <twig:CosMetric label="Total capital" value="{{ c.total|default(p.initial_capital|default('—')) }}" hint="financial capital pool" />
+  <twig:CosMetric label="Available" value="{{ c.available|default(p.available_capital|default('—')) }}" hint="after reservations and buffers" />
+  <twig:CosMetric label="Gross exposure" value="{{ e.gross_exposure|default('—') }}" hint="before economic netting" />
+  <twig:CosMetric label="Net exposure" value="{{ e.net_exposure|default('—') }}" hint="validated netting only" />
+  <twig:CosMetric label="Risk state" value="{{ r.status|default('NORMAL') }}" hint="deterministic authority" />
+</section>
+
 {% if cmView=='portfolio' %}
-<section class="cos-panel"><h2>Capital map</h2><div class="table-responsive"><table class="table"><thead><tr><th>State</th><th>Amount</th></tr></thead><tbody><tr><td>Total</td><td>{{ p.equity|default(p.capital|default('—')) }}</td></tr><tr><td>Available</td><td>{{ p.available_capital|default('—') }}</td></tr><tr><td>Reserved</td><td>{{ p.reserved_capital|default('—') }}</td></tr><tr><td>Deployed</td><td>{{ p.deployed_capital|default('—') }}</td></tr></tbody></table></div></section>
-<section class="cos-panel"><h2>Exposure</h2><p>Gross {{ e.gross_exposure|default('—') }} · Net {{ e.net_exposure|default('—') }}</p><div class="row"><div class="col-md-6"><h3>By venue</h3><pre>{{ e.by_venue|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div><div class="col-md-6"><h3>By strategy</h3><pre>{{ e.by_strategy|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div></div></section>
+<section class="cos-panel">
+  <h2>Capital map</h2>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>State</th><th>Amount</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><strong>TOTAL</strong></td><td>{{ c.total|default('—') }}</td><td>Portfolio capital represented by the current paper state.</td></tr>
+      <tr><td>AVAILABLE</td><td>{{ c.available|default('—') }}</td><td>Can compete for new allocation.</td></tr>
+      <tr><td>ALLOCATED</td><td>{{ c.allocated|default('—') }}</td><td>Logical strategy budgets, not a separate bank balance.</td></tr>
+      <tr><td>RESERVED</td><td>{{ c.reserved|default('—') }}</td><td>Approved capital waiting for execution.</td></tr>
+      <tr><td>DEPLOYED</td><td>{{ c.deployed|default('—') }}</td><td>Capital backing open positions.</td></tr>
+      <tr><td>LOCKED</td><td>{{ c.locked|default('—') }}</td><td>Operationally unavailable.</td></tr>
+      <tr><td>MARGINED</td><td>{{ c.margined|default('—') }}</td><td>Margin/collateral commitment.</td></tr>
+      <tr><td>UNSETTLED</td><td>{{ c.unsettled|default('—') }}</td><td>Transient execution / settlement state.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="cos-panel">
+  <h2>Capital by location</h2>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Venue</th><th>Asset</th><th>Available</th><th>Reserved</th></tr></thead>
+    <tbody>
+      {% for x in c.by_location|default([]) %}
+        <tr><td>{{ x.venue_id }}</td><td>{{ x.asset_key }}</td><td>{{ x.available }}</td><td>{{ x.reserved }}</td></tr>
+      {% else %}
+        <tr><td colspan="4">No venue balances are available.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="cos-panel">
+  <h2>Economic exposure</h2>
+  <p>Gross <strong>{{ e.gross_exposure|default('—') }}</strong> · Net <strong>{{ e.net_exposure|default('—') }}</strong>. Unknown economic relationships are intentionally not netted.</p>
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <h3>By venue</h3>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Venue</th><th>Exposure</th></tr></thead><tbody>
+      {% for key,value in e.by_venue|default({}) %}<tr><td>{{ key }}</td><td>{{ value }}</td></tr>{% else %}<tr><td colspan="2">No venue exposure.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+    <div class="col-lg-6">
+      <h3>By strategy</h3>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Strategy</th><th>Exposure</th></tr></thead><tbody>
+      {% for key,value in e.by_strategy|default({}) %}<tr><td>{{ key }}</td><td>{{ value }}</td></tr>{% else %}<tr><td colspan="2">No strategy exposure.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </div>
+  </div>
+  {% if e.unknown_exposure|default([]) is not empty %}
+    <div class="alert alert-warning"><strong>UNKNOWN_EXPOSURE:</strong> {{ e.unknown_exposure|length }} position(s) are excluded from economic netting.</div>
+  {% endif %}
+</section>
+
 {% elseif cmView=='risk' %}
-<section class="cos-panel"><h2>Risk envelope & headroom</h2>{% set env=w.risk_envelope|default({}) %}<pre>{{ env|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></section>
-<section class="cos-panel"><h2>Stress results</h2><div class="table-responsive"><table class="table"><thead><tr><th>Scenario</th><th>Estimated loss</th><th>Capital remaining</th></tr></thead><tbody>{% for x in w.stress_results|default([]) %}<tr><td>{{ x.scenario_id }}</td><td>{{ x.estimated_loss }}</td><td>{{ x.capital_remaining }}</td></tr>{% else %}<tr><td colspan="3">No stress runs yet.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="cos-panel">
+  <div class="d-flex justify-content-between gap-3 flex-wrap">
+    <div><small>PORTFOLIO RISK STATE</small><h2>{{ r.status|default('NOT CALCULATED') }}</h2></div>
+    <div><strong>Gross:</strong> {{ r.gross_exposure|default(e.gross_exposure|default('—')) }} · <strong>Leverage:</strong> {{ r.leverage|default('—') }} · <strong>Drawdown:</strong> {{ r.drawdown|default('—') }}</div>
+  </div>
+</section>
+
+<section class="cos-panel">
+  <h2>Risk headroom</h2>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Metric</th><th>Current</th><th>Limit</th><th>Headroom</th><th>Utilization</th><th>Authority</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for key,x in r.risk_limit_utilization|default({}) %}
+      <tr>
+        <td>{{ x.metric|default(key) }}</td><td>{{ x.current|default('—') }}</td><td>{{ x.limit|default('—') }}</td>
+        <td>{{ x.headroom|default('—') }}</td><td>{{ x.utilization|default('—') }}</td>
+        <td>{{ x.hard|default(false) ? 'HARD' : 'SOFT' }}</td><td>{{ x.breached|default(false) ? 'BREACHED' : 'OK' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">No risk snapshot yet. Configure a Risk Envelope and calculate risk.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="cos-panel">
+  <h2>Stress results</h2>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Scenario</th><th>Estimated loss</th><th>Margin impact</th><th>Affected positions</th><th>Affected venues</th><th>Capital remaining</th></tr></thead>
+    <tbody>
+      {% for x in w.stress_results|default([]) %}
+        <tr><td>{{ x.scenario_id }}</td><td>{{ x.estimated_loss }}</td><td>{{ x.margin_impact|default('0') }}</td><td>{{ x.positions_affected|default([])|length }}</td><td>{{ x.venues_affected|default([])|join(', ') }}</td><td>{{ x.capital_remaining }}</td></tr>
+      {% else %}
+        <tr><td colspan="6">No stress runs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
 {% else %}
-<section class="cos-panel"><h2>Allocation plan</h2>{% if a %}<p><strong>{{ a.status }}</strong> · policy {{ a.policy_version }}</p><p>{{ a.reasoning_summary }}</p><div class="table-responsive"><table class="table"><thead><tr><th>Priority</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Decision</th><th>Reason</th></tr></thead><tbody>{% for x in a.allocations|default([]) %}<tr><td>{{ x.priority }}</td><td>{{ x.opportunity_id }}</td><td>{{ x.requested_capital }}</td><td>{{ x.approved_capital }}</td><td>{{ x.decision }}</td><td>{{ x.reason }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p>No allocation plan has been calculated yet.</p>{% endif %}</section>
+<section class="cos-panel">
+  <h2>Allocation plan</h2>
+  {% if a %}
+    <p><strong>{{ a.status }}</strong> · policy {{ a.policy_version }} · fingerprint <code>{{ a.input_fingerprint|default('—') }}</code></p>
+    <p>{{ a.reasoning_summary }}</p>
+    <div class="table-responsive"><table class="table">
+      <thead><tr><th>Priority</th><th>Strategy</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Decision</th><th>Reason</th></tr></thead>
+      <tbody>
+      {% for x in a.allocations|default([]) %}
+        <tr><td>{{ x.priority }}</td><td>{{ x.strategy_version_id }}</td><td>{{ x.opportunity_id }}</td><td>{{ x.requested_capital }}</td><td>{{ x.approved_capital }}</td><td><strong>{{ x.decision }}</strong></td><td>{{ x.reason }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  {% else %}
+    <p>No allocation plan has been calculated yet.</p>
+  {% endif %}
+</section>
+
+<section class="cos-panel">
+  <h2>Strategy allocations</h2>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Strategy version</th><th>Allocated</th><th>Reserved</th><th>Deployed</th><th>Available</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for x in w.strategy_allocations|default([]) %}
+      <tr><td>{{ x.strategy_version_id }}</td><td>{{ x.allocated_capital|default('—') }}</td><td>{{ x.reserved|default('—') }}</td><td>{{ x.deployed|default('—') }}</td><td>{{ x.available|default('—') }}</td><td>{{ x.status|default('—') }}</td></tr>
+    {% else %}
+      <tr><td colspan="6">No strategy budgets assigned yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="cos-panel">
+  <h2>Rebalance recommendation</h2>
+  {% set rb=w.rebalance|default({}) %}
+  {% if rb %}
+    <p><strong>{{ rb.status|default('—') }}</strong> · {{ rb.reason|default('') }}</p>
+    <p>Estimated cost: {{ rb.estimated_costs|default('—') }} · expected risk improvement: {{ rb.expected_risk_improvement_pct|default('—') }}%</p>
+  {% else %}
+    <p>No rebalance plan has been proposed.</p>
+  {% endif %}
+</section>
 {% endif %}
-</div>{% endblock %}
+</div>
+{% endblock %}
