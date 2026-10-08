@@ -206,7 +206,7 @@ running до completed лише після перевірки, що кожен S
 enablement та фінальне end-to-end приймання.
 
 
-## Recovery Inspector, manual incident escalation and receipt sweep
+## Інспектор відновлення, ручне опрацювання інцидентів і перевірка квитанцій
 
 `FederationRunRecoveryService` has a tenant-scoped, read-only diagnostic
 `inspect()` operation and a **receipt-only** `reconcileVerified()` operation.
