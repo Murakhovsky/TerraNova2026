@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['density', 'table', 'columnToggle'];
+    static targets = ['density', 'columnToggle'];
 
     connect() {
         const storedDensity = window.localStorage.getItem('cos.capital_markets.table_density') || 'comfortable';
@@ -10,7 +10,7 @@ export default class extends Controller {
         }
         this.applyDensity(storedDensity);
 
-        for (const table of this.tableTargets) {
+        for (const table of this.tables()) {
             this.applyStoredColumns(table);
         }
         for (const toggle of this.columnToggleTargets) {
@@ -45,7 +45,7 @@ export default class extends Controller {
         }
         window.localStorage.setItem(this.columnStorageKey(tableId), JSON.stringify(Array.from(hidden)));
 
-        for (const table of this.tableTargets) {
+        for (const table of this.tables()) {
             if ((table.dataset.cmTable || '') === tableId) {
                 this.applyStoredColumns(table);
             }
@@ -53,7 +53,7 @@ export default class extends Controller {
     }
 
     applyDensity(density) {
-        for (const table of this.tableTargets) {
+        for (const table of this.tables()) {
             table.classList.toggle('table-sm', density === 'compact');
         }
     }
@@ -76,6 +76,10 @@ export default class extends Controller {
         } catch {
             return [];
         }
+    }
+
+    tables() {
+        return Array.from(this.element.querySelectorAll('table.table'));
     }
 
     columnStorageKey(tableId) {
