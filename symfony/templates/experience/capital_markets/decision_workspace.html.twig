@@ -909,6 +909,22 @@
           <li>No source blockers reported. Full NAV snapshots still require canonical reconciliation.</li>
         {% endfor %}
       </ul>
+      {% set sourcePreview = navPreflight.statement_reconciliation_preview|default({}) %}
+      <h3>Venue cash statement comparison · observation only</h3>
+      <p>Reported amounts are not accounting approval. Cash differences and missing venue statements prevent automatic NAV recognition.</p>
+      <div class="table-responsive">
+        <table class="table" aria-label="Unreconciled venue cash statement differences">
+          <thead><tr><th>Venue</th><th>Internal cash</th><th>Source statement</th><th>Difference</th><th>Diagnostic</th></tr></thead>
+          <tbody>
+          {% for venue in sourcePreview.venue_comparison|default([]) %}
+            <tr><td>{{ venue.venue_id }}</td><td>{{ venue.paper_cash is not null ? venue.paper_cash : '—' }}</td><td>{{ venue.statement_cash is not null ? venue.statement_cash : '—' }}</td><td>{{ venue.difference is not null ? venue.difference : '—' }}</td><td>{{ venue.same_amount|default(false) ? 'AMOUNTS MATCH · UNRECONCILED' : 'MISSING OR DIFFERENT · UNRECONCILED' }}</td></tr>
+          {% else %}
+            <tr><td colspan="5">No comparable tenant-scoped venue cash statements available.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="small">Candidate external flows: {{ sourcePreview.candidate_cumulative_external_flow is not null ? sourcePreview.candidate_cumulative_external_flow : '—' }}; candidate liabilities: {{ sourcePreview.candidate_liability_balance is not null ? sourcePreview.candidate_liability_balance : '—' }}; authority: {{ sourcePreview.financial_authority|default('OBSERVATION_ONLY') }}. Neither figure enters P&amp;L until independently reconciled.</p>
       <p class="small">Status is diagnostic only; preflight never writes a snapshot. CLI: <code>cos:capital-markets:nav:collect</code>.</p>
     </section>
 
