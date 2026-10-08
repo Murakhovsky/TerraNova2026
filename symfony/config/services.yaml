@@ -2743,6 +2743,14 @@ services:
     arguments:
       $catalog: '@Kernel\Module\ModuleCatalog'
 
+  Kernel\Module\CanonicalCapabilityCatalog:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+
+  Platform\Orchestration\Goal\GoalPlanValidator:
+    arguments:
+      $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'
+
   Kernel\Module\EffectiveModuleContext:
     arguments:
       $modules: '@Kernel\Module\ActiveModuleResolver'
