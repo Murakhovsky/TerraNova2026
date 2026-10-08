@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 use Kernel\Shared\Domain\OrganizationId;
+use Kernel\Workflow\Model\Assignment;
+use Kernel\Workflow\Model\AssignmentType;
 use Kernel\Workflow\Model\Step\HumanStep;
 use Kernel\Workflow\Model\Step\SystemStep;
 use Kernel\Workflow\Model\Workflow;
@@ -20,7 +22,7 @@ $guard = new GoalWorkflowBindingGuard();
 $workflow = new WorkflowInstance(
     'wf-instance', OrganizationId::fromString('tenant-one'),
     new Workflow('goal.guard', new WorkflowDefinition(
-        'goal.guard', '1.0.0', 'Approval-only gate', 'gate', [new HumanStep('gate', 'Review')],
+        'goal.guard', '1.0.0', 'Approval-only gate', 'gate', [new HumanStep('gate', 'Review', new Assignment(AssignmentType::ROLE, 'manager'))],
     )),
 );
 $steps = [['id' => 'gate', 'capability_id' => 'sales.leads.review',
