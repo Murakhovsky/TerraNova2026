@@ -10,7 +10,7 @@
 {% set dataTone = dataState == 'HEALTHY' ? 'positive' : (dataState in ['DEGRADED','STALE'] ? 'warning' : 'danger') %}
 
 <div class="cos-page__stack cos-capital-markets" data-controller="capital-markets-workspace" data-action="cos:realtime-update->capital-markets-workspace#realtimeUpdate" data-csrf="{{ csrfToken }}" data-cm-decision-workspace="{{ cmView }}">
-  {% if cmView in ['overview','opportunities','opportunity','markets','execution','execution_detail','risk'] %}
+  {% if cmView in ['overview','opportunities','opportunity','markets','market_detail','relationship_detail','execution','execution_detail','risk'] %}
     <span id="cos-capital-markets-signal" hidden aria-hidden="true"></span>
     <twig:CosRealtimeSubscription :topic="realtimeTopic" signalTarget="cos-capital-markets-signal" />
   {% endif %}
@@ -22,7 +22,7 @@
       <p>
         {% if cmView == 'overview' %}Що зараз відбувається з нашим капіталом?
         {% elseif cmView in ['opportunities','opportunity'] %}Де є potential profit і чи підходить він поточному Portfolio?
-        {% elseif cmView == 'markets' %}Що відбувається на ринку і чи можна порівнювати ці дані?
+        {% elseif cmView in ['markets','market_detail','relationship_detail'] %}Що відбувається на ринку, як пов'язані інструменти і чи можна коректно порівнювати ці дані?
         {% elseif cmView in ['research','hypothesis'] %}Що ми зараз намагаємося довести або спростувати?
         {% elseif cmView in ['strategies','strategy'] %}Які strategies реально працюють?
         {% elseif cmView == 'portfolio' %}Де знаходяться гроші і який реальний exposure?
@@ -51,7 +51,7 @@
   <nav class="cos-growth-actions" aria-label="Capital Markets primary workspace navigation">
     {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'overview' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets">Overview</a>{% endif %}
     {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['opportunities','opportunity'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/opportunities">Opportunities</a>{% endif %}
-    {% if permissions.market_data_view|default(false) %}<a class="btn {{ cmView == 'markets' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/markets">Markets</a>{% endif %}
+    {% if permissions.market_data_view|default(false) %}<a class="btn {{ cmView in ['markets','market_detail','relationship_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/markets">Markets</a>{% endif %}
     {% if permissions.research_view|default(false) %}<a class="btn {{ cmView in ['research','hypothesis'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/research">Research</a><a class="btn {{ cmView in ['strategies','strategy'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/strategies">Strategies</a>{% endif %}
     {% if permissions.portfolio_view|default(false) %}<a class="btn {{ cmView == 'portfolio' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/portfolio">Portfolio</a><a class="btn {{ cmView == 'performance' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/performance">Performance</a>{% endif %}
     {% if permissions.allocation_view|default(false) %}<a class="btn {{ cmView == 'allocation' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/allocation">Allocation</a>{% endif %}
@@ -438,7 +438,7 @@
           {% for rel in w.relationships|default([]) %}
             <tr>
               <td>{{ rel.source_instrument_id|default(rel.from_instrument_id|default('—')) }}</td>
-              <td>{{ rel.type|default(rel.relationship_type|default('—')) }}</td>
+              <td>{% set rid = rel.id|default(rel.relationship_id|default('')) %}{% if rid %}<a href="/capital-markets/relationships/{{ rid|url_encode }}">{{ rel.type|default(rel.relationship_type|default(rid)) }}</a>{% else %}{{ rel.type|default(rel.relationship_type|default('—')) }}{% endif %}</td>
               <td>{{ rel.target_instrument_id|default(rel.to_instrument_id|default('—')) }}</td>
               <td>{{ rel.strength|default(rel.ratio|default('—')) }}</td>
               <td>{{ rel.reference_mechanism|default(rel.conversion|default('NOT SPECIFIED')) }}</td>
@@ -466,13 +466,58 @@
           <thead><tr><th>Instrument</th><th>Venue</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Spread</th><th>Volume</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead>
           <tbody>
           {% for row in w.market_rows|default([]) %}
-            <tr><td>{{ row.instrument_id }}</td><td>{{ row.venue_id }}</td><td>{{ row.bid is not null ? row.bid : '—' }}</td><td>{{ row.ask is not null ? row.ask : '—' }}</td><td>{{ row.mid is not null ? row.mid : '—' }}</td><td>{{ row.spread_bps is not null ? row.spread_bps ~ ' bps' : '—' }}</td><td>{{ row.volume is not null ? row.volume : '—' }}</td><td>{{ row.age_ms is not null ? row.age_ms ~ ' ms' : '—' }}</td><td><strong>{{ row.trust }}</strong></td><td>{{ row.mode }}</td></tr>
+            <tr><td>{% if row.instrument_id %}<a href="/capital-markets/markets/{{ row.instrument_id|url_encode }}">{{ row.instrument_id }}</a>{% else %}—{% endif %}</td><td>{{ row.venue_id }}</td><td>{{ row.bid is not null ? row.bid : '—' }}</td><td>{{ row.ask is not null ? row.ask : '—' }}</td><td>{{ row.mid is not null ? row.mid : '—' }}</td><td>{{ row.spread_bps is not null ? row.spread_bps ~ ' bps' : '—' }}</td><td>{{ row.volume is not null ? row.volume : '—' }}</td><td>{{ row.age_ms is not null ? row.age_ms ~ ' ms' : '—' }}</td><td><strong>{{ row.trust }}</strong></td><td>{{ row.mode }}</td></tr>
           {% else %}
             <tr><td colspan="10">No canonical MarketState is available.</td></tr>
           {% endfor %}
           </tbody>
         </table></div>
       {% endif %}
+    </section>
+
+  {% elseif cmView == 'market_detail' %}
+    {% set instrument = w.instrument|default({}) %}
+    <section class="cos-panel">
+      <twig:CosEntityHeader eyebrow="Market Detail" identity="{{ instrument.id|default(instrument.instrument_id|default(entityId|default('—'))) }}" title="{{ instrument.symbol|default(instrument.name|default('Instrument')) }}" subtitle="{{ instrument.type|default(instrument.instrument_type|default('')) }}" statusLabel="{{ instrument.status|default('UNKNOWN') }}" statusTone="info" />
+    </section>
+    <section class="cos-panel">
+      <h2>Current Market</h2>
+      <p>Canonical values only. No browser-side price, basis, funding or P&L calculations.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Venue</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Spread</th><th>Volume</th><th>Liquidity</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead><tbody>
+      {% for row in w.market_detail_rows|default([]) %}
+        <tr><td>{{ row.venue_id|default('—') }}</td><td>{{ row.bid is not null ? row.bid : '—' }}</td><td>{{ row.ask is not null ? row.ask : '—' }}</td><td>{{ row.mid is not null ? row.mid : '—' }}</td><td>{{ row.spread_bps is not null ? row.spread_bps ~ ' bps' : '—' }}</td><td>{{ row.volume is not null ? row.volume : '—' }}</td><td>{{ row.liquidity is not null ? row.liquidity : '—' }}</td><td>{{ row.age_ms is not null ? row.age_ms ~ ' ms' : '—' }}</td><td><strong>{{ row.trust }}</strong></td><td>{{ row.mode }}</td></tr>
+      {% else %}<tr><td colspan="10">No canonical MarketState is available for this instrument.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel">
+      <h2>Relationships</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Relationship</th><th>Source</th><th>Target</th><th>Reference Mechanism</th><th>Settlement</th><th>Hedgeability</th></tr></thead><tbody>
+      {% for rel in w.instrument_relationships|default([]) %}
+        {% set rid = rel.id|default(rel.relationship_id|default('')) %}
+        <tr><td>{% if rid %}<a href="/capital-markets/relationships/{{ rid|url_encode }}">{{ rel.type|default(rel.relationship_type|default(rid)) }}</a>{% else %}{{ rel.type|default(rel.relationship_type|default('—')) }}{% endif %}</td><td>{{ rel.source_instrument_id|default(rel.from_instrument_id|default('—')) }}</td><td>{{ rel.target_instrument_id|default(rel.to_instrument_id|default('—')) }}</td><td>{{ rel.reference_mechanism|default('—') }}</td><td>{{ rel.settlement|default('—') }}</td><td>{{ rel.hedgeability|default('—') }}</td></tr>
+      {% else %}<tr><td colspan="6">No economic relationship is registered for this instrument.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+  {% elseif cmView == 'relationship_detail' %}
+    {% set rel = w.relationship|default({}) %}
+    <section class="cos-panel">
+      <twig:CosEntityHeader eyebrow="Relationship Detail" identity="{{ rel.id|default(rel.relationship_id|default(entityId|default('—'))) }}" title="{{ rel.type|default(rel.relationship_type|default('Economic Relationship')) }}" subtitle="How these instruments are economically linked and where dislocation may appear." statusLabel="{{ rel.status|default('UNKNOWN') }}" statusTone="info" />
+    </section>
+    <div class="row g-3">
+      <div class="col-lg-7"><section class="cos-panel h-100"><h2>Relationship Graph</h2><p><strong>{{ rel.source_instrument_id|default(rel.from_instrument_id|default('—')) }}</strong> → {{ rel.type|default(rel.relationship_type|default('RELATED')) }} → <strong>{{ rel.target_instrument_id|default(rel.to_instrument_id|default('—')) }}</strong></p><p>Strength: {{ rel.strength|default('—') }} · Conversion: {{ rel.conversion|default('—') }} · Reference: {{ rel.reference_mechanism|default('—') }}</p></section></div>
+      <div class="col-lg-5"><section class="cos-panel h-100"><h2>Economic Rights / Settlement</h2><p>Economic rights: {{ rel.economic_rights|default('—') }}</p><p>Settlement: {{ rel.settlement|default('—') }}</p><p>Hedgeability: {{ rel.hedgeability|default('—') }}</p></section></div>
+    </div>
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 flex-wrap"><h2>Price Comparison</h2><strong>{{ w.comparison_state|default('UNAVAILABLE') }}</strong></div>
+      {% if w.comparison_state|default('UNAVAILABLE') == 'NOT COMPARABLE' %}
+        <twig:CosAlert title="NOT COMPARABLE" copy="Both sides do not currently have enough canonical comparable MarketState evidence. No fake premium or conversion is shown." tone="warning" />
+      {% endif %}
+      <div class="table-responsive"><table class="table"><thead><tr><th>Instrument</th><th>Venue</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead><tbody>
+      {% for row in w.relationship_comparison|default([]) %}
+        <tr><td><a href="/capital-markets/markets/{{ row.instrument_id|url_encode }}">{{ row.instrument_id }}</a></td><td>{{ row.venue_id|default('—') }}</td><td>{{ row.bid is not null ? row.bid : '—' }}</td><td>{{ row.ask is not null ? row.ask : '—' }}</td><td>{{ row.mid is not null ? row.mid : '—' }}</td><td>{{ row.age_ms is not null ? row.age_ms ~ ' ms' : '—' }}</td><td><strong>{{ row.trust }}</strong></td><td>{{ row.mode }}</td></tr>
+      {% else %}<tr><td colspan="8">No comparable canonical prices are available.</td></tr>{% endfor %}
+      </tbody></table></div>
     </section>
 
   {% elseif cmView == 'research' %}
