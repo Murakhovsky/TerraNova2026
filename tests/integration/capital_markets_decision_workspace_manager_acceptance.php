@@ -98,6 +98,8 @@ $assert(str_contains($template,"permissions.market_data_view"),'Relationship pri
 $assert(str_contains($controller,'market_data_history_view'),'Historic-market view permission must be exposed to the Twig screen.');
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/HistoricalRelationshipBasisProjector.php'),'Canonical historical Basis projector missing.');
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavWindowProjector.php'),'NAV P&L projector missing.');
+$assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSnapshotProducer.php'),'Guarded NAV producer is missing.');
+$assert(str_contains((string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSnapshotProducer.php'),'marks_reconciled'),'NAV producer must block unverified position marks.');
 $assert(is_file($root.'/app/migrations/20261008_000135_capital_markets_portfolio_valuation.sql'),'Canonical NAV snapshot migration missing.');
 $assert(str_contains($read,'PortfolioValuationSnapshotRepositoryInterface'),'Decision read model must consume verified NAV repository.');
 $assert(str_contains($read,'PortfolioNavWindowProjector::project'),'Today/30D Portfolio P&L must come from reconciled NAV projector.');
