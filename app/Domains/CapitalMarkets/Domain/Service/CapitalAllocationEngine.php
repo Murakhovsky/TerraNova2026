@@ -16,17 +16,28 @@ final class CapitalAllocationEngine {
   $remaining=$availableCapital;$ranked=[];
   foreach($opportunities as $o){$o['_score']=$this->score($o,$policy);$ranked[]=$o;}
   usort($ranked,static function(array $a,array $b):int{$cmp=$b['_score']->compareTo($a['_score']);return $cmp!==0?$cmp:strcmp((string)$a['opportunity_id'],(string)$b['opportunity_id']);});
-  $items=[];$expected=Decimal::fromString('0');$priority=1;
+  $items=[];$expected=Decimal::fromString('0');$priority=1;$strategyRemaining=[];
   foreach($ranked as $o){
    $requested=Decimal::fromString((string)$o['requested_capital']);$capacity=Decimal::fromString((string)$o['capacity']);
-   $approved=$this->minimum($requested,$capacity,$remaining);$decision='ACCEPT';$reason='Eligible under deterministic score and constraints.';
+   $strategyId=(string)$o['strategy_version_id'];
+   if(array_key_exists('strategy_capital_headroom',$o)&&!isset($strategyRemaining[$strategyId])){
+    $strategyRemaining[$strategyId]=Decimal::fromString((string)$o['strategy_capital_headroom']);
+   }
+   $approved=isset($strategyRemaining[$strategyId])
+    ?$this->minimum($requested,$capacity,$remaining,$strategyRemaining[$strategyId])
+    :$this->minimum($requested,$capacity,$remaining);
+   $decision='ACCEPT';$reason='Eligible under deterministic score and constraints.';
    $blockedReason=trim((string)($o['blocked_reason']??''));
    if($blockedReason!==''){$approved=Decimal::fromString('0');$decision='REJECT';$reason=$blockedReason;}
    elseif(!$riskState->allowsNewRisk()){$approved=Decimal::fromString('0');$decision='REJECT';$reason='Portfolio state '.$riskState->value.' blocks new risk.';}
    $cap=$hardCaps[(string)$o['opportunity_id']]??null;if($cap!==null)$approved=$this->minimum($approved,Decimal::fromString((string)$cap));
    if($approved->isZero()&&$decision!=='REJECT'){$decision='REJECT';$reason='No available capital or capacity.';}
    elseif($decision!=='REJECT'&&$approved->compareTo($requested)<0){$decision='ACCEPT_REDUCED_SIZE';$reason='Reduced by capacity, hard headroom or available capital.';}
-   if(!$approved->isZero()){$remaining=DecimalMath::subtract($remaining,$approved);$expected=DecimalMath::add($expected,DecimalMath::multiply($approved,Decimal::fromString((string)$o['expected_net_return'])));}
+   if(!$approved->isZero()){
+    $remaining=DecimalMath::subtract($remaining,$approved);
+    if(isset($strategyRemaining[$strategyId]))$strategyRemaining[$strategyId]=DecimalMath::subtract($strategyRemaining[$strategyId],$approved);
+    $expected=DecimalMath::add($expected,DecimalMath::multiply($approved,Decimal::fromString((string)$o['expected_net_return'])));
+   }
    $items[]=new AllocationItem((string)$o['strategy_version_id'],(string)$o['opportunity_id'],$requested,$approved,$priority++,Decimal::fromString((string)$o['expected_net_return']),Decimal::fromString((string)($o['expected_value']??'0')),$capacity,$decision,$reason,(array)($o['risk_budget']??[]));
   }
   return new AllocationPlan('alloc-'.substr($fingerprint,0,20),$portfolioId,new DateTimeImmutable(),$availableCapital,$items,[],$expected,0,100,Decimal::fromString('0'),$hardCaps,'Deterministic constrained allocation; capital cannot be oversubscribed.','PROPOSED',$policy->version,$fingerprint);
