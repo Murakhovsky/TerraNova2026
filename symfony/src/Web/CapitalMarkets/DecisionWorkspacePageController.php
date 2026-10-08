@@ -13,6 +13,7 @@ use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -110,6 +111,85 @@ final readonly class DecisionWorkspacePageController
         return $this->page($request, 'Data Quality Center', 'data_quality', 'capital-markets-data-quality', CapitalMarketsCapability::MarketDataQualityView);
     }
 
+    public function export(Request $request, string $dataset, string $format): Response
+    {
+        $capability=match($dataset){
+            'opportunities'=>CapitalMarketsCapability::OpportunityView,
+            'performance'=>CapitalMarketsCapability::PortfolioView,
+            'research-results'=>CapitalMarketsCapability::ResearchView,
+            'executions'=>CapitalMarketsCapability::OpportunityView,
+            default=>CapitalMarketsCapability::View,
+        };
+        $tenant=$this->authorized($capability);
+        if($tenant instanceof Response)return $tenant;
+
+        $organizationId=$tenant->organizationId()->value();
+        $rows=match($dataset){
+            'opportunities'=>$this->workspace->opportunities($organizationId,$request->query->all())['opportunities']??[],
+            'research-results'=>$this->workspace->research($organizationId)['research']['results']??[],
+            'executions'=>$this->workspace->execution($organizationId)['executions']??[],
+            'performance'=>$this->performanceExportRows($this->workspace->performance($organizationId)),
+            default=>[],
+        };
+        if(!in_array($dataset,['opportunities','performance','research-results','executions'],true)){
+            return new JsonResponse(['error'=>['code'=>'UNSUPPORTED_DATASET']],404);
+        }
+        if($format==='json'){
+            return new JsonResponse(
+                ['dataset'=>$dataset,'data'=>$rows],
+                200,
+                ['Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow'],
+            );
+        }
+        if($format!=='csv'){
+            return new JsonResponse(['error'=>['code'=>'UNSUPPORTED_FORMAT']],400);
+        }
+
+        $stream=fopen('php://temp','w+');
+        if($stream===false)return new Response('Unable to create export.',500);
+        $headers=[];
+        foreach($rows as $row){
+            if(!is_array($row))continue;
+            foreach(array_keys($row) as $key){
+                if(!in_array((string)$key,$headers,true))$headers[]=(string)$key;
+            }
+        }
+        if($headers!==[])fputcsv($stream,$headers);
+        foreach($rows as $row){
+            if(!is_array($row))continue;
+            $line=[];
+            foreach($headers as $header){
+                $value=$row[$header]??null;
+                $line[]=is_array($value)||is_object($value)
+                    ? json_encode($value,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)
+                    : $value;
+            }
+            fputcsv($stream,$line);
+        }
+        rewind($stream);
+        $csv=stream_get_contents($stream);
+        fclose($stream);
+
+        return new Response($csv===false?'':$csv,200,[
+            'Content-Type'=>'text/csv; charset=UTF-8',
+            'Content-Disposition'=>'attachment; filename="capital-markets-'.$dataset.'.csv"',
+            'Cache-Control'=>'no-store, private',
+            'X-Robots-Tag'=>'noindex, nofollow',
+        ]);
+    }
+
+    /** @param array<string,mixed> $page @return list<array<string,mixed>> */
+    private function performanceExportRows(array $page): array
+    {
+        $attribution=$page['performance']['attribution']['by_strategy']??[];
+        $rows=[];
+        foreach($attribution as $strategy=>$row){
+            if(!is_array($row))continue;
+            $rows[]=array_replace(['strategy'=>(string)$strategy],$row);
+        }
+        return $rows;
+    }
+
     private function page(
         Request $request,
         string $title,
@@ -127,7 +207,7 @@ final readonly class DecisionWorkspacePageController
             $organizationId = $tenant->organizationId()->value();
             $data = match ($view) {
                 'overview' => $this->workspace->overview($organizationId),
-                'opportunities' => $this->workspace->opportunities($organizationId),
+                'opportunities' => $this->workspace->opportunities($organizationId, $request->query->all()),
                 'opportunity' => $this->workspace->opportunity($organizationId, (string)$id),
                 'markets' => $this->workspace->markets($organizationId),
                 'research' => $this->workspace->research($organizationId),
