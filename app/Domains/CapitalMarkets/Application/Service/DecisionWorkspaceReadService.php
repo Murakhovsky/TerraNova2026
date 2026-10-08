@@ -413,11 +413,15 @@ final readonly class DecisionWorkspaceReadService
             $errors,
             'ledger',
         );
+        $attribution = is_array($core['performance'] ?? null) ? $core['performance'] : [];
         $page['performance'] = [
-            'attribution' => $core['performance'] ?? [],
+            'attribution' => $attribution,
             'ledger' => $ledger,
             'edge_funnel' => $this->edgeFunnel($core['opportunities'] ?? [], $core['positions'] ?? []),
-            'cost_breakdown' => $this->costBreakdown($core['opportunities'] ?? []),
+            'cost_breakdown' => $this->costBreakdown($attribution, $core['opportunities'] ?? []),
+            'economics_status' => $attribution['economics_status'] ?? 'UNAVAILABLE',
+            'economics_coverage' => $attribution['economics_coverage'] ?? '0/0',
+            'economics_note' => $attribution['economics_note'] ?? 'Canonical execution economics are unavailable.',
             'time_window_note' => 'Today and 30D P&L remain unavailable until canonical time-window performance read models exist.',
         ];
         $page['partial_errors'] = $errors;
@@ -1346,32 +1350,37 @@ final readonly class DecisionWorkspaceReadService
         ];
     }
 
-    /** @param list<array<string,mixed>> $opportunities @return array<string,mixed> */
-    private function costBreakdown(array $opportunities): array
+    /** @param array<string,mixed> $performance @param list<array<string,mixed>> $opportunities @return array<string,mixed> */
+    private function costBreakdown(array $performance, array $opportunities): array
     {
-        $available = ['fees'=>false,'slippage'=>false,'funding'=>false,'borrow'=>false,'network'=>false,'data_api'=>false,'ai'=>false];
-        foreach ($opportunities as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            foreach ([
-                'fees'=>['trading_fees','fees'],
-                'slippage'=>['slippage','slippage_cost'],
-                'funding'=>['funding','funding_pnl'],
-                'borrow'=>['borrow','borrow_cost'],
-                'network'=>['network_cost'],
-                'data_api'=>['data_cost','api_cost'],
-                'ai'=>['ai_cost'],
-            ] as $key=>$fields) {
-                foreach ($fields as $field) {
-                    if (array_key_exists($field, $row)) {
-                        $available[$key] = true;
-                        break;
-                    }
+        $canonical = is_array($performance['costs_by_type'] ?? null) ? $performance['costs_by_type'] : [];
+        $items = [];
+        foreach ([
+            'trading_fees' => 'Trading Fees',
+            'borrow' => 'Borrow',
+            'network' => 'Network',
+            'slippage' => 'Slippage',
+            'data_api' => 'Data / API',
+            'ai' => 'AI',
+        ] as $key => $label) {
+            $value = $canonical[$key] ?? null;
+            $items[$key] = [
+                'label' => $label,
+                'available' => $value !== null,
+                'value' => $value,
+            ];
+        }
+
+        if (($items['slippage']['available'] ?? false) === false) {
+            foreach ($opportunities as $row) {
+                if (is_array($row) && (array_key_exists('slippage', $row) || array_key_exists('slippage_cost', $row))) {
+                    $items['slippage']['source_available'] = true;
+                    break;
                 }
             }
         }
-        return $available;
+
+        return $items;
     }
 
     /** @param array<string,mixed> $source @param list<string> $keys @return list<string> */
