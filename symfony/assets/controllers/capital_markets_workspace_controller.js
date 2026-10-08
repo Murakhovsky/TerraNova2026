@@ -4,6 +4,7 @@ export default class extends Controller {
     static targets = ['density', 'columnToggle'];
 
     connect() {
+        this.refreshTimer = null;
         const storedDensity = window.localStorage.getItem('cos.capital_markets.table_density') || 'comfortable';
         if (this.hasDensityTarget) {
             this.densityTarget.value = storedDensity;
@@ -21,6 +22,20 @@ export default class extends Controller {
             }
             toggle.checked = !this.hiddenColumns(tableId).includes(column);
         }
+    }
+
+    realtimeUpdate() {
+        if (this.refreshTimer !== null) {
+            window.clearTimeout(this.refreshTimer);
+        }
+        this.refreshTimer = window.setTimeout(() => {
+            this.refreshTimer = null;
+            if (window.Turbo && typeof window.Turbo.visit === 'function') {
+                window.Turbo.visit(window.location.href, { action: 'replace' });
+                return;
+            }
+            window.location.reload();
+        }, 450);
     }
 
     changeDensity(event) {
