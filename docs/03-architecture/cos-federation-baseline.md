@@ -1,12 +1,12 @@
 ---
 title: "COS Federation Foundation — baseline"
-description: "Initial architecture reuse and remaining implementation gates."
+description: "Аудит архітектури COS, повторне використання компонентів і перелік відкритих завдань."
 status: active
 updated: 2026-10-08
 kind: architecture
 ---
 
-# AS-IS, Reuse Matrix and Gap Register
+# Поточний стан, матриця повторного використання та прогалини
 
 Baseline inspected: main e110e36b1dfee8ed69a207b61eb2ee3c60b3084d.
 
@@ -21,11 +21,11 @@ Baseline inspected: main e110e36b1dfee8ed69a207b61eb2ee3c60b3084d.
 | Experience | WorkspaceCompositionResolver, UIActionResolver | Adaptive disclosure, three modes, tenant state, UA/EN, mobile |
 | Engineering | Architecture tests and bash bin/verify | PHPStan/AST checks, Impact Gate and production E2E |
 
-## Migration decisions
+## Міграційні рішення
 
 Keep module.php canonical; descriptive capability identities never become executable authority. Add typed capability_contracts as an optional contribution. Introduce CrossDomainContract V2 metadata with non-breaking constructor defaults, migrating each consumer independently. Do not create a new frontend runtime, workflow engine, agent runtime or parallel authorization store.
 
-## Remaining P0 implementation backlog
+## Незавершені завдання пріоритету P0
 
 1. Reconcile registered DI handlers, tools, permissions and module identities with actual evidence.
 2. Consumer-driven schema compatibility and dependency-aware Impact Gate.

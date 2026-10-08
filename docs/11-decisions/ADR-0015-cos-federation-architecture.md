@@ -1,16 +1,16 @@
 ---
 title: "ADR-0015: COS Federation Architecture"
-description: "Governed modular federation with independent domains and adaptive experience."
+description: "Федеративна архітектура COS із незалежними доменами та адаптивним інтерфейсом."
 status: accepted
 updated: 2026-10-08
 kind: adr
 ---
 
-# ADR-0015 — COS Federation Architecture
+# ADR-0015 — Федеративна архітектура COS
 
 **Decision:** Federated Modular Monolith. **Package:** COS-FEDERATION-FOUNDATION.
 
-## Architecture Constitution
+## Архітектурна конституція
 
 Centralized Governance. Decentralized Execution. Observable Everything. Independent Evolution.
 
@@ -21,7 +21,7 @@ Centralized Governance. Decentralized Execution. Observable Everything. Independ
 5. **Architecture Intelligence:** static and runtime evidence remain distinguishable; the graph is not a runtime dispatch broker.
 6. **Engineering:** architecture, compatibility, authorization and impact gates run before acceptance. No self-approval for critical changes.
 
-## Contracts, data and versioning
+## Контракти, дані та версіонування
 
 Manifest contributions in app/Domains/*/module.php are canonical. Executable capability declarations require named owner, semantic version, schema references, binding, permission, policy, idempotency and tests. A capability declaration cannot authorize execution by itself. Public cross-domain contracts include producer/consumer, failure, version and tenant semantics. Compatible minor versions retain prior behavior; breaking changes require additive V2, staged consumer migration and retirement window.
 
@@ -29,7 +29,7 @@ Physical shared MySQL is allowed while logical write ownership stays domain-spec
 
 Separate compile-time, deployment, synchronous, asynchronous and data dependency graphs. Reject unsafe synchronous cycles. Track async causation and deduplicate retries.
 
-## Exceptions, rollout and extraction
+## Винятки, розгортання та винесення сервісів
 
 Machine-readable policy: federation-governance-policy.json. Waivers require issue/owner/expiry/risk/remediation/approval, and are forbidden for critical tenant/authorization rules. Feature flags cannot bypass critical checks. Extract a Domain to its own service only when measured scale/isolation requirements, stable public contracts, proven tenancy and migration/rollback justify it.
 
