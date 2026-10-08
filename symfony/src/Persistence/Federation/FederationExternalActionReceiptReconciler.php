@@ -95,6 +95,11 @@ final readonly class FederationExternalActionReceiptReconciler
             $this->goals->finishStep($actor, $runId, $stepId, 'ambiguous', 'action:' . $id);
             return ['status' => 'ambiguous', 'action_id' => $id];
         }
+        // A rejected Action, unknown state or invalid COMPLETED receipt must
+        // never be treated as an indefinitely active worker.
+        if (!in_array($action['status'], ['PENDING_APPROVAL', 'QUEUED', 'RUNNING'], true)) {
+            return ['status' => 'manual_reconciliation_required', 'action_id' => $id];
+        }
         return ['status' => (string) $action['status'], 'action_id' => $id];
     }
 

@@ -26,6 +26,7 @@ final readonly class FederationRunController
         private SessionCsrfValidator $csrf,
         private FederationGoalStore $goals,
         private FederationSequentialOrchestrator $orchestrator,
+        private \App\Persistence\Federation\FederationRunRecoveryService $recovery,
     ) {}
 
     public function status(string $runId): JsonResponse
@@ -83,6 +84,35 @@ final readonly class FederationRunController
             return self::reply(['error' => 'run_not_executable_or_stale'], 422);
         } catch (Throwable) {
             return self::reply(['error' => 'unable_to_advance_run'], 500);
+        }
+    }
+
+    /** Safe read-only operator diagnostics; never queues or retries an Action. */
+    public function recovery(string $runId): JsonResponse
+    {
+        $actor = $this->manager();
+        if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
+        try {
+            return self::reply($this->recovery->inspect($actor, $runId));
+        } catch (DomainException|LogicException) {
+            return self::reply(['error' => 'recovery_unavailable'], 422);
+        } catch (Throwable) {
+            return self::reply(['error' => 'unable_to_inspect_run'], 500);
+        }
+    }
+
+    /** Reconciles completed receipts only; no submission, worker or retry. */
+    public function reconcileRecovery(Request $request, string $runId): JsonResponse
+    {
+        $actor = $this->manager();
+        if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
+        if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
+        try {
+            return self::reply($this->recovery->reconcileVerified($actor, $runId));
+        } catch (DomainException|LogicException) {
+            return self::reply(['error' => 'reconciliation_unavailable'], 422);
+        } catch (Throwable) {
+            return self::reply(['error' => 'unable_to_reconcile_run'], 500);
         }
     }
 

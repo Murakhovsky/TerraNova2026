@@ -33,6 +33,19 @@ cos_federation_run_advance:
   methods: [POST]
   requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
 
+# COS Federation: recovery diagnostics and receipt-only reconciliation.
+cos_federation_run_recovery:
+  path: /api/v1/federation/runs/{runId}/recovery
+  controller: App\Web\Federation\FederationRunController::recovery
+  methods: [GET, HEAD]
+  requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
+cos_federation_run_reconcile:
+  path: /api/v1/federation/runs/{runId}/reconcile
+  controller: App\Web\Federation\FederationRunController::reconcileRecovery
+  methods: [POST]
+  requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 # COS Federation: authenticated tenant-scoped adaptive presentation preferences.
 cos_federation_experience_preferences_show:
   path: /api/v1/experience/preferences

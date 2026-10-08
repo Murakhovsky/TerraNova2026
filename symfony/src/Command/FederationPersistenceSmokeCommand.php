@@ -59,6 +59,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationExternalActionReceiptReconciler $receiptReconciler,
         private readonly FederationRunFinalizer $runFinalizer,
         private readonly FederationSequentialOrchestrator $sequentialOrchestrator,
+        private readonly \App\Persistence\Federation\FederationRunRecoveryService $recovery,
         private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
@@ -794,6 +795,23 @@ final class FederationPersistenceSmokeCommand extends Command
                     'finished_at' => self::now(),
                 ]);
             };
+            $health = $this->recovery->inspect($actor, $linearRun);
+            self::assert($health['attention_count'] === 0
+                && $health['recoverable_count'] === 0
+                && ($health['steps'][1]['recovery_state'] ?? null) === 'awaiting_human_approval',
+                'Pending Federation Action was misclassified as a recovery incident.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status = 'REJECTED' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $firstAction['action_id']],
+            );
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'manual_reconciliation_required',
+                'Rejected external Action was treated as a healthy waiting worker.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status = 'PENDING_APPROVAL' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $firstAction['action_id']],
+            );
             $completeActionFixture((string) $firstAction['action_id']);
             self::assert($this->sequentialOrchestrator->advance(
                 $actor, $linearRun, $linearApprovalId,
@@ -818,9 +836,21 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $secondAction['action_id'] !== $firstAction['action_id'],
                 'Second sequential Action did not create an independent approval gate.');
             $completeActionFixture((string) $secondAction['action_id']);
-            self::assert($this->sequentialOrchestrator->advance(
-                $actor, $linearRun, $linearApprovalId,
-            )['state'] === 'step_completed', 'Second Action receipt did not reconcile.');
+            $pendingRecovery = $this->recovery->inspect($actor, $linearRun);
+            self::assert($pendingRecovery['recoverable_count'] === 1
+                && $pendingRecovery['attention_count'] === 0,
+                'Completed Federation Action was not eligible for receipt-only reconciliation.');
+            self::assert($this->recovery->reconcileVerified($actor, $linearRun)['reconciled'] === 1,
+                'Federation recovery did not apply the independently verified Action receipt.');
+            self::assert($this->recovery->reconcileVerified($actor, $linearRun)['reconciled'] === 0,
+                'Receipt-only recovery was not idempotent.');
+            self::assert($this->recovery->inspect($actor, $linearRun)['recoverable_count'] === 0,
+                'Reconciled Federation Action remains eligible for duplicate recovery.');
+            try {
+                $this->recovery->inspect($other, $linearRun);
+                throw new \RuntimeException('Foreign tenant inspected Federation recovery.');
+            } catch (DomainException) {
+            }
             self::assert($this->sequentialOrchestrator->advance(
                 $actor, $linearRun, $linearApprovalId,
             )['state'] === 'completed', 'Multi-step Federation Run was not finalized.');
