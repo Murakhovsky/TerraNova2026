@@ -28,6 +28,9 @@ final class PortfolioNavStatementReconciliationPreview
         $externalFlows = Decimal::fromString('0');
         $liabilities = Decimal::fromString('0');
         $counts = ['EXTERNAL_CASH_FLOW'=>0,'LIABILITY_BALANCE'=>0,'VENUE_BALANCE'=>0];
+        $validCounts = $counts;
+        $invalidKinds = [];
+        $invalidUnknownSource = false;
 
         if ($currency === '') $issues['PORTFOLIO_CURRENCY_MISSING'] = true;
         foreach ($paperBalances as $balance) {
@@ -65,17 +68,20 @@ final class PortfolioNavStatementReconciliationPreview
         foreach ($sourceEvidence as $evidence) {
             if (!is_array($evidence)) {
                 $issues['SOURCE_EVIDENCE_ROW_INVALID'] = true;
+                $invalidUnknownSource = true;
                 continue;
             }
             $kind = (string)($evidence['kind'] ?? '');
             if (!array_key_exists($kind, $counts)) {
                 $issues['SOURCE_EVIDENCE_KIND_INVALID'] = true;
+                $invalidUnknownSource = true;
                 continue;
             }
             $counts[$kind]++;
             if (($evidence['status'] ?? '') !== 'PENDING_RECONCILIATION'
                 || ($evidence['reconciled'] ?? null) !== false) {
                 $issues['SOURCE_AUTHORITY_UNEXPECTED'] = true;
+                $invalidKinds[$kind] = true;
                 continue;
             }
             $fingerprint = strtolower(trim((string)($evidence['source_document_sha256'] ?? '')));
@@ -83,41 +89,51 @@ final class PortfolioNavStatementReconciliationPreview
             if (!preg_match('/^[0-9a-f]{64}$/', $fingerprint)
                 || !preg_match('/^[0-9a-f]{64}$/', $sourceKey)) {
                 $issues['SOURCE_PROVENANCE_INCOMPLETE'] = true;
+                $invalidKinds[$kind] = true;
                 continue;
             }
             if (isset($seenSources[$sourceKey])) {
                 $issues['DUPLICATE_SOURCE_REFERENCE'] = true;
+                $invalidKinds[$kind] = true;
                 continue;
             }
             $seenSources[$sourceKey] = true;
             if (strtoupper((string)($evidence['currency'] ?? '')) !== $currency) {
                 $issues['SOURCE_CURRENCY_UNCONVERTED'] = true;
+                $invalidKinds[$kind] = true;
                 continue;
             }
             try {
                 $amount = Decimal::fromString((string)($evidence['amount'] ?? ''));
                 if ($kind !== 'EXTERNAL_CASH_FLOW' && $amount->isNegative()) {
                     $issues['SOURCE_BALANCE_NEGATIVE'] = true;
+                $invalidKinds[$kind] = true;
                     continue;
                 }
                 if ($kind === 'EXTERNAL_CASH_FLOW') {
                     $externalFlows = DecimalMath::add($externalFlows, $amount);
+                    $validCounts[$kind]++;
                 } elseif ($kind === 'LIABILITY_BALANCE') {
                     $liabilities = DecimalMath::add($liabilities, $amount);
+                    $validCounts[$kind]++;
                 } else {
                     $venue = trim((string)($evidence['venue_id'] ?? ''));
                     if ($venue === '') {
                         $issues['SOURCE_VENUE_IDENTITY_MISSING'] = true;
+                $invalidKinds[$kind] = true;
                         continue;
                     }
                     if (isset($statements[$venue])) {
                         $issues['DUPLICATE_VENUE_STATEMENT'] = true;
+                $invalidKinds[$kind] = true;
                         continue;
                     }
                     $statements[$venue] = $amount;
+                    $validCounts[$kind]++;
                 }
             } catch (Throwable) {
                 $issues['SOURCE_AMOUNT_INVALID'] = true;
+                $invalidKinds[$kind] = true;
             }
         }
 
@@ -150,11 +166,16 @@ final class PortfolioNavStatementReconciliationPreview
             'status'=>'PENDING_RECONCILIATION',
             'currency'=>$currency === '' ? null : $currency,
             'candidate_cumulative_external_flow'=>$counts['EXTERNAL_CASH_FLOW'] > 0
+                && $validCounts['EXTERNAL_CASH_FLOW'] === $counts['EXTERNAL_CASH_FLOW']
+                && !isset($invalidKinds['EXTERNAL_CASH_FLOW']) && !$invalidUnknownSource
                 ? $externalFlows->value() : null,
             'candidate_liability_balance'=>$counts['LIABILITY_BALANCE'] > 0
+                && $validCounts['LIABILITY_BALANCE'] === $counts['LIABILITY_BALANCE']
+                && !isset($invalidKinds['LIABILITY_BALANCE']) && !$invalidUnknownSource
                 ? $liabilities->value() : null,
             'venue_comparison'=>$venueComparison,
             'source_counts'=>$counts,
+            'validated_source_counts'=>$validCounts,
             'issues'=>array_keys($issues),
             'eligible_for_nav'=>false,
             'financial_authority'=>'OBSERVATION_ONLY',
