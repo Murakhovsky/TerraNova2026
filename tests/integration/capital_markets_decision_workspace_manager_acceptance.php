@@ -120,6 +120,12 @@ $assert(str_contains($collector,"'snapshot_written'=>false"),'NAV preflight must
 $command=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsNavCollectCommand.php');
 $assert(str_contains($command,'cos:capital-markets:nav:collect'),'NAV preflight command must be available to operators.');
 $assert(str_contains($command,'Command::FAILURE'),'Incomplete NAV must produce a failing scheduler status.');
+$sourceImport=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsNavEvidenceImportCommand.php');
+$assert(str_contains($sourceImport,'PortfolioNavFinancialEvidencePolicy::normalize'),'Financial source imports must validate original evidence.');
+$assert(str_contains($sourceImport,'RECORDED_PENDING_RECONCILIATION'),'Import cannot grant reconciliation authority.');
+$assert(str_contains($sourceImport,"'nav_snapshot_written'=>false"),'Operator source import must not create NAV snapshots.');
+$assert(str_contains($template,'Unreconciled venue cash statement differences'),'UI must show source statement mismatches.');
+
 
 $assert(str_contains((string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSnapshotProducer.php'),'marks_reconciled'),'NAV producer must block unverified position marks.');
 $assert(is_file($root.'/app/migrations/20261008_000135_capital_markets_portfolio_valuation.sql'),'Canonical NAV snapshot migration missing.');
