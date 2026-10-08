@@ -19,6 +19,14 @@ interface EngineeringRepositoryGatewayInterface
     public function filesAtRevision(array $paths, string $revision): array;
 
     /**
+     * Resolve which requested paths exist at a specific revision without downloading file bodies.
+     *
+     * @param list<string> $paths
+     * @return list<string>
+     */
+    public function existingPathsAtRevision(array $paths, string $revision): array;
+
+    /**
      * @return array{base_revision:string,head_revision:string,status:string,ahead_by:int,behind_by:int,files:list<array{path:string,status:string,additions:int,deletions:int,patch:?string}>}
      */
     public function compareRevisions(string $baseRevision, string $headRevision): array;
