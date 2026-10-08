@@ -245,3 +245,16 @@ Density і видимість optional columns зберігаються в brows
 - canonical business state.
 
 Scenario Simulator викликає існуючий backend endpoint `/api/v1/capital-markets/portfolio/simulate-opportunity`; browser лише передає opportunity + proposed capital і відображає deterministic response.
+
+
+## Completion follow-up — detail views and acceptance
+
+The Decision Workspace now also includes canonical Market Detail and Relationship Detail read surfaces.
+
+- Market Detail reuses canonical MarketState rows and related instruments/relationships.
+- Relationship Detail exposes relationship semantics and canonical side-by-side price evidence.
+- When both sides do not have enough canonical comparable market evidence, the UI renders `NOT COMPARABLE` instead of fabricating a premium.
+- Strategy Detail exposes a same-family Version Comparison view.
+- A dedicated `capital_markets_decision_workspace_manager_acceptance.php` gate validates the manager-facing WHAT → WHY → MONEY → RISK → ACTION contract and is executed in runtime CI.
+
+Known backend-authority gaps remain explicit rather than being fabricated: canonical Today/30D P&L windows and historical chart series are still unavailable until dedicated backend projections exist.
