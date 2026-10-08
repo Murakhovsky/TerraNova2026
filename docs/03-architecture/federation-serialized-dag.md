@@ -1,41 +1,54 @@
-# Federation Serialized DAG Execution (P0 incremental slice)
+---
+title: "Федеративне виконання графа залежностей"
+description: "Правила перевірки залежностей, послідовного виконання та безпечного відновлення планів COS."
+status: active
+updated: 2026-10-08
+kind: architecture
+---
 
-This slice extends the existing Goal/Plan/Run/Action lifecycle. It does not
-introduce a second worker, Action runtime, permission model or orchestration engine.
+# Федеративне виконання планів із залежностями
 
-## Approved Plan dependencies
+Цей етап розширює чинний цикл Goal / Plan / Run / Action. Він не вводить
+іншого виконавця операцій, окремої системи дозволів чи нового рушія процесів.
 
-- Each normalized step contains `depends_on: string[]` in the immutable approved
-  Plan JSON. IDs are namespaced-identifier-shaped and unique.
-- An omitted `depends_on` retains the original predecessor in *approved Plan
-  array order* for compatibility with earlier linear Plans. Use an explicit
-  `depends_on: []` to create an independent root.
-- Edges may refer to any known step and are rejected when self-referential,
-  duplicated or cyclic. Plans with more than 100 steps are rejected.
-- Reordering SQL result rows never changes execution precedence.
-- Plans are integrity-protected through the existing independent human-approved
-  plan hash. Dependency modifications require a new Plan approval.
+## Залежності затвердженого плану
 
-## Serialized execution guarantee
+- Кожен нормалізований крок містить `depends_on: string[]` у незмінному
+  описі затвердженого плану. Ідентифікатори кроків унікальні.
+- Якщо поле `depends_on` відсутнє, крок неявно залежить від попереднього
+  кроку **за порядком затвердженого плану**. Так зберігається сумісність
+  з уже створеними лінійними планами.
+- Явне `depends_on: []` означає незалежний початковий крок.
+- Посилання на невідомі кроки, дублікати, залежності на самого себе,
+  цикли та плани з понад 100 кроками відхиляються.
+- Порядок рядків SQL не впливає на вибір наступної операції.
+- Зміна графа залежностей змінює контрольну суму плану та вимагає
+  нового незалежного погодження.
 
-The cursor determines runnable steps using validated dependencies and persisted
-step states. Two independent branches are **not** dispatched in parallel:
-at most one external Action may be claimed at any time. A claimed or ambiguous
-Action blocks the next dispatch. Completed dependencies are re-attested through
-the existing canonical Action receipt reconciler before further submission.
+## Безпека послідовного виконання
 
-Only external Action steps supported by canonical Policy/Approval admission are
-executable through this adapter. Failed or uncertain Action receipts require
-manual reconciliation. No autonomous retry or new financial/live trading
-authority is provided. Goal outcome evidence is separate from step completion.
+Вибір наступного кроку враховує перевірені залежності й фактичні стани
+збережених кроків. Кілька незалежних гілок **не запускаються паралельно**:
+одночасно може існувати лише одна заявлена зовнішня операція.
 
-## Tests and remaining work
+Невизначений результат або вже заявлена операція блокує наступний запуск.
+Завершені залежності додатково перевіряються через чинний механізм
+підтвердження квитанцій Action перед кожним новим запуском.
 
-`bash bin/verify unit` runs:
-- `tests/unit/federation_step_cursor.php` for branches, join, cycle, drift,
-  skipped prerequisites and concurrent-claim rejection.
-- `tests/unit/federation_goal_outcome.php` for normalization and compatibility.
+Через цей адаптер виконуються лише зовнішні операції із канонічним
+Policy / Approval. Повторення невизначених операцій автоматично заборонене.
+Окрема перевірка досягнення бізнес-цілі не підміняється завершенням кроку.
 
-Production P0 acceptance still requires live Domain capability coverage,
-transactional recovery/outbox, worker restart scenarios, outcome observations
-from authoritative Domain state, multi-domain E2E and rollback rehearsal.
+## Перевірки та залишкові обмеження
+
+Команда `bash bin/verify unit` запускає:
+
+- `tests/unit/federation_step_cursor.php`: незалежні гілки, об'єднання,
+  цикли, підміна контракту, порушення залежностей та одночасні операції.
+- `tests/unit/federation_goal_outcome.php`: нормалізація залежностей,
+  сумісність зі старими планами та перевірка бізнес-результату.
+
+Для приймання повної федерації ще потрібні реальні міждоменні контракти,
+відновлення після перезапуску виконавця, підтвердження бізнес-результатів
+даними відповідальних доменів, наскрізні перевірки та відпрацювання
+повернення до попереднього режиму.
