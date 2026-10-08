@@ -8,6 +8,7 @@ use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationApprovedActionIntentFactory;
+use App\Persistence\Federation\FederationExternalActionReceiptReconciler;
 use App\Persistence\Federation\FederatedActionAdmission;
 use App\Persistence\Federation\FederationPlanApproveHandler;
 use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
@@ -53,6 +54,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationCapabilityBindingResolver $capabilityBindings,
         private readonly FederationApprovedActionIntentFactory $actionIntents,
         private readonly FederatedActionAdmission $actionAdmission,
+        private readonly FederationExternalActionReceiptReconciler $receiptReconciler,
         private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
@@ -596,6 +598,56 @@ final class FederationPersistenceSmokeCommand extends Command
                     $actor, $salesRunId, 'sales_task', $salesApprovalActionId,
                 );
                 throw new \RuntimeException('Modified approved Sales Action snapshot produced a federated intent.');
+            } catch (DomainException) {
+            }
+
+            $this->db->executeStatement(
+                'UPDATE cos_federation_plans SET plan_json = :approved WHERE organization_id = :org AND plan_id = :plan',
+                ['approved' => $salesPlanJson, 'org' => $org, 'plan' => $salesPlanId],
+            );
+            // Reconciliation never trusts COMPLETED by itself. An Action with
+            // multiple attempts remains unresolved, not auto-marked complete.
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status = 'COMPLETED' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $salesActionId],
+            );
+            $uncertain = $this->receiptReconciler->reconcile($actor, $salesRunId, 'sales_task');
+            self::assert($uncertain['status'] === 'manual_reconciliation_required'
+                && ($this->goals->run($actor, $salesRunId)['steps'][0]['state'] ?? null) === 'claimed',
+                'Uncertain multi-attempt Action was falsely marked successful.');
+            $this->db->executeStatement(
+                'DELETE FROM cos_action_attempts WHERE organization_id = :org AND action_id = :id',
+                ['org' => $org, 'id' => $salesActionId],
+            );
+            $this->db->insert('cos_action_attempts', [
+                'action_id' => $salesActionId, 'organization_id' => $org,
+                'attempt' => 1, 'worker_id' => 'smoke-worker',
+                'status' => 'COMPLETED', 'started_at' => self::now(), 'finished_at' => self::now(),
+            ]);
+            // A forged completed Action with a mismatched target must never
+            // establish a verified Domain receipt, even with one successful attempt.
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET target_id = 'unapproved-deal' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $salesActionId],
+            );
+            $forged = $this->receiptReconciler->reconcile($actor, $salesRunId, 'sales_task');
+            self::assert($forged['status'] === 'manual_reconciliation_required'
+                && ($this->goals->run($actor, $salesRunId)['steps'][0]['state'] ?? null) === 'claimed',
+                'Unapproved Action target was incorrectly accepted as a completed receipt.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET target_id = '42' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $salesActionId],
+            );
+            $verified = $this->receiptReconciler->reconcile($actor, $salesRunId, 'sales_task');
+            self::assert($verified['status'] === 'completed'
+                && $verified['action_id'] === $salesActionId
+                && ($this->goals->run($actor, $salesRunId)['steps'][0]['state'] ?? null) === 'completed',
+                'Verified single-attempt Action receipt was not durably reconciled.');
+            self::assert($this->receiptReconciler->reconcile($actor, $salesRunId, 'sales_task')['status'] === 'completed',
+                'Completed Action receipt reconciliation is not idempotent.');
+            try {
+                $this->receiptReconciler->reconcile($other, $salesRunId, 'sales_task');
+                throw new \RuntimeException('Foreign tenant reconciled an external Action.');
             } catch (DomainException) {
             }
 
