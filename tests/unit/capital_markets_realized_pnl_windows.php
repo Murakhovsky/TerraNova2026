@@ -23,7 +23,7 @@ $relative = static fn(string $at, string $net, string $currency = 'USD'): array 
     'closed_at' => $at,
     'quote_asset' => $currency,
     'performance' => [
-        'spot_price_pnl' => '10', 'derivative_price_pnl' => '-8',
+        'spot_price_pnl' => '7', 'derivative_price_pnl' => '-8',
         'funding_pnl' => '0', 'trading_fees' => '1',
         'borrow_cost' => '0', 'network_costs' => '0',
         'net_pnl' => $net,
@@ -68,6 +68,18 @@ $costGap = RealizedPnlWindowProjector::project([
     ['status' => 'CLOSED', 'closed_at' => '2026-10-08T07:00:00+00:00', 'quote_asset' => 'USD', 'performance' => ['net_pnl' => '50']],
 ], $at);
 $assert($costGap['today']['net_pnl'] === null && in_array('ECONOMICS_INCOMPLETE', $costGap['today']['issues'], true), 'Missing cost decomposition must not become realized P&L.');
+
+$invalidFeeBreakdown = RealizedPnlWindowProjector::project([
+    ['status' => 'COMPLETED', 'executed_at' => '2026-10-08T07:00:00+00:00',
+     'quote_asset' => 'USD', 'realized_pnl' => '4', 'fees' => []],
+], $at);
+$assert($invalidFeeBreakdown['today']['net_pnl'] === null, 'Missing buy/sell fee evidence must suppress net window totals.');
+
+$mismatch = $relative('2026-10-08T10:00:00+00:00', '100.00');
+$invalidRelative = RealizedPnlWindowProjector::project([$mismatch], $at);
+$assert($invalidRelative['today']['net_pnl'] === null
+    && in_array('ECONOMICS_MISMATCH', $invalidRelative['today']['issues'], true),
+    'Relative-value net must reconcile to recorded price and cost components.');
 
 $empty = RealizedPnlWindowProjector::project([], $at);
 $assert($empty['today']['status'] === 'UNAVAILABLE' && $empty['today']['net_pnl'] === null, 'No evidence must not become zero P&L.');
