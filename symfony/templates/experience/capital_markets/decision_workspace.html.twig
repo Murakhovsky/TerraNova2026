@@ -322,7 +322,7 @@
               <td data-cm-col="type">{{ o.type }}</td>
               <td data-cm-col="market">{{ o.instruments|join(', ') ?: '—' }}<br><small>{{ o.venues|join(', ') ?: '—' }}</small></td>
               <td data-cm-col="expected_net"><strong>{{ o.expected_net is not null ? o.expected_net : '—' }}</strong></td>
-              <td data-cm-col="return">{{ o.expected_return is not null ? o.expected_return : '—' }}</td>
+              <td data-cm-col="return">{{ o.expected_return is not null ? o.expected_return : '—' }}{% if o.expected_return is not null and o.expected_return_unit|default(null) %} {{ o.expected_return_unit }}{% endif %}</td>
               <td data-cm-col="capital">{{ o.capital is not null ? o.capital : '—' }}</td>
               <td data-cm-col="capacity">{{ o.capacity is not null ? o.capacity : '—' }}</td>
               <td data-cm-col="risk">{{ o.risk }}</td>
@@ -348,8 +348,8 @@
       <twig:CosMoneyMetric label="Expected Net" value="{{ econ.expected_net is not null ? econ.expected_net : '—' }}" />
       <twig:CosMoneyMetric label="Required Capital" value="{{ impact.capital_required|default(o.required_capital|default('—')) }}" />
       <twig:CosMoneyMetric label="Approved Capital" value="{{ allocation.approved_capital|default(impact.maximum_approved_capital|default('—')) }}" />
-      <twig:CosMetric label="Expected Return" value="{{ o.expected_return|default(o.net_return|default('—')) }}" hint="canonical opportunity value" />
-      <twig:CosMetric label="Risk" value="{{ o.risk_level|default(o.risk|default('UNASSESSED')) }}" hint="standalone opportunity risk" />
+      <twig:CosMetric label="Expected Return" value="{{ o.expected_return|default(o.net_return|default(o.expected_net_edge_bps|default('—'))) }}" hint="{{ o.expected_net_edge_bps is defined and o.expected_return is not defined and o.net_return is not defined ? 'canonical expected net edge (bps)' : 'canonical opportunity value' }}" />
+      <twig:CosMetric label="Risk" value="{{ o.risk_level|default(o.risk_score|default(o.risk.risk_score|default('UNASSESSED'))) }}" hint="canonical level or score; not a portfolio risk approval" />
       <twig:CosMetric label="TTL" value="{{ o.ttl|default(o.ttl_seconds|default(o.expires_at|default('—'))) }}" hint="opportunity lifetime" />
       <twig:CosMetric label="Execution Probability" value="{{ evidence.execution_probability is not null ? evidence.execution_probability : '—' }}" hint="only when backend provides it" />
       <twig:CosMetric label="Portfolio Decision" value="{{ impact.decision|default(allocation.decision|default('NOT ALLOCATED')) }}" hint="{{ impact.reasons|default([])|join(', ') }}" />
