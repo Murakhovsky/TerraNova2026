@@ -1927,9 +1927,9 @@ pages:
     product:
       primary_goal: "Inspect canonical market state."
       page_purpose: "Read-only market detail."
-    archetype: detail
+    archetype: entity_workspace
     patterns:
-      required: [PageHeader, DetailSection]
+      required: [PageHeader, EntitySummary]
       optional: [EntityList, ErrorState]
     primary_action: capital_markets.navigate
     states: [normal, empty, error, permission_denied]
@@ -1949,9 +1949,9 @@ pages:
     product:
       primary_goal: "Inspect canonical relationship evidence."
       page_purpose: "Read-only instrument relationship detail."
-    archetype: detail
+    archetype: entity_workspace
     patterns:
-      required: [PageHeader, DetailSection]
+      required: [PageHeader, EntitySummary]
       optional: [EntityList, ErrorState]
     primary_action: capital_markets.navigate
     states: [normal, empty, error, permission_denied]
