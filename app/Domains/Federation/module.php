@@ -29,7 +29,7 @@ return [
                 'approval_policy' => 'required',
                 'idempotency' => 'required',
                 'timeout_policy' => ['seconds' => 60],
-                'retry_policy' => ['max_attempts' => 0],
+                'retry_policy' => ['max_attempts' => 1],
                 'failure_contract' => 'Do not start Workflow or retry external operations; failed approval remains observable.',
                 'lifecycle' => 'experimental',
                 'tests' => ['tests/unit/federation_plan_approval_request.php',
