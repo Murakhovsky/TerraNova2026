@@ -103,7 +103,7 @@ foreach([
     'Recommended Allocation',
     'Execution Groups',
     'Limits / Headroom',
-    'P&L Attribution · Strategy',
+    'P&L Attribution ·',
     'Agent Authority',
     'Market Quality',
     'PARTIAL DATA',
