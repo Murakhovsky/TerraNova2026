@@ -784,6 +784,7 @@ final readonly class TokenizedEquityPaperExecutionService
         $payload=[
             'position_id'=>$position->positionId,'portfolio_id'=>$position->portfolioId,'strategy_id'=>$position->strategyId,
             'instrument_id'=>$position->instrumentId,'venue_id'=>$position->venueId,'status'=>$position->status(),
+            'instrument_kind'=>'TOKENIZED_EQUITY','side'=>'LONG',
             'quantity'=>$position->quantity->value(),'average_entry_price'=>$position->averageEntryPrice->value(),
             'mark_price'=>$position->markPrice->value(),'market_value'=>$position->marketValue()->value(),
             'fees'=>$position->fees->value(),'realized_pnl'=>$position->realizedPnl->value(),
