@@ -24,6 +24,13 @@ export default class extends Controller {
         }
     }
 
+    disconnect() {
+        if (this.refreshTimer !== null) {
+            window.clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+    }
+
     realtimeUpdate() {
         if (this.refreshTimer !== null) {
             window.clearTimeout(this.refreshTimer);
