@@ -127,6 +127,40 @@ final class FederationPersistenceSmokeCommand extends Command
                 ]], JSON_THROW_ON_ERROR),
                 'created_at' => self::now(),
             ]);
+            // Canonical decision records are synthetic and isolated inside this rolled-back
+            // transaction. No handler is invoked and the action is never committed to a queue.
+            $approvalActionId = bin2hex(random_bytes(16));
+            $approvalId = bin2hex(random_bytes(16));
+            $planJson = (string) $this->db->fetchOne(
+                'SELECT plan_json FROM cos_federation_plans WHERE organization_id = :org AND plan_id = :plan',
+                ['org' => $org, 'plan' => $safePlanId],
+            );
+            $this->db->insert('cos_actions', [
+                'id' => $approvalActionId, 'organization_id' => $org,
+                'type' => 'cos.federation.plan.approval',
+                'target_type' => 'cos_federation_plan', 'target_id' => $safePlanId,
+                'parameters' => json_encode([
+                    'goal_id' => $goalId, 'plan_id' => $safePlanId,
+                    'specification_version' => 1, 'plan_hash' => hash('sha256', $planJson),
+                ], JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'QUEUED', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
+                'idempotency_key' => 'test-approval:' . $approvalActionId,
+                'correlation_id' => $approvalActionId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $approvalActionId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $approvalActionId, 'evaluated_at' => self::now(),
+            ]);
+            $this->db->insert('cos_approvals', [
+                'id' => $approvalId, 'organization_id' => $org, 'action_id' => $approvalActionId,
+                'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'second-reviewer',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'second-reviewer',
+                'decided_at' => self::now(),
+            ]);
             $safeWorkflow = new WorkflowInstance(
                 'workflow-test', OrganizationId::fromString($org),
                 new Workflow('goal.review', new WorkflowDefinition(
@@ -136,21 +170,45 @@ final class FederationPersistenceSmokeCommand extends Command
                 )),
             );
             $preflight = $this->workflowPreflight->inspect(
-                $actor, $safePlanId, $safeWorkflow, ['sales.leads.read'],
+                $actor, $safePlanId, $safeWorkflow, $approvalActionId,
             );
             self::assert($preflight['goal_id'] === $goalId && $preflight['step_count'] === 1,
                 'Canonical approved-plan Workflow preflight failed.');
             try {
-                $this->workflowPreflight->inspect($actor, $safePlanId, $safeWorkflow, []);
+                $this->workflowPreflight->inspect($actor, $safePlanId, $safeWorkflow, bin2hex(random_bytes(16)));
                 throw new \RuntimeException('Workflow preflight accepted absent independent authorization.');
             } catch (DomainException) {
             }
             try {
-                $this->workflowPreflight->inspect($other, $safePlanId, $safeWorkflow, ['sales.leads.read']);
+                $this->workflowPreflight->inspect($other, $safePlanId, $safeWorkflow, $approvalActionId);
                 throw new \RuntimeException('Workflow preflight leaked plan across tenants.');
             } catch (DomainException) {
             }
 
+            // A changed plan or self-approval MUST fail even while plan.state = approved.
+            $this->db->executeStatement(
+                'UPDATE cos_approvals SET decided_by_id = :user WHERE id = :id AND organization_id = :org',
+                ['user' => 'user-smoke', 'id' => $approvalId, 'org' => $org],
+            );
+            try {
+                $this->workflowPreflight->inspect($actor, $safePlanId, $safeWorkflow, $approvalActionId);
+                throw new \RuntimeException('Self-approved action accepted by Federation.');
+            } catch (DomainException) {
+            }
+            $this->db->executeStatement(
+                'UPDATE cos_approvals SET decided_by_id = :reviewer WHERE id = :id AND organization_id = :org',
+                ['reviewer' => 'second-reviewer', 'id' => $approvalId, 'org' => $org],
+            );
+            $this->db->executeStatement(
+                'UPDATE cos_federation_plans SET plan_json = :changed WHERE organization_id = :org AND plan_id = :plan',
+                ['changed' => json_encode(['steps' => [['id' => 'changed']]], JSON_THROW_ON_ERROR),
+                    'org' => $org, 'plan' => $safePlanId],
+            );
+            try {
+                $this->workflowPreflight->inspect($actor, $safePlanId, $safeWorkflow, $approvalActionId);
+                throw new \RuntimeException('Plan changed after canonical approval was accepted.');
+            } catch (DomainException) {
+            }
             $this->goals->startApprovedRun($actor, $runId, $planId);
             self::assert(count($this->goals->run($actor, $runId)['steps'] ?? []) === 2,
                 'Execution steps not snapshotted.');
