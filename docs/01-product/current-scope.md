@@ -15,7 +15,7 @@ kind: product
 | Компонент | Версія | Поточний стан |
 | --- | --- | --- |
 | Kernel | `0.11.9` | виконуваний контракт платформи |
-| Capital_markets | `0.8.0` | Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto Spot/Perpetual H4/H5/H6 + governed Research & Strategy Lab: immutable hypothesis/experiment/dataset/result lineage, strategy versioning, replay/backtest, TRAIN/VALIDATION/OOS isolation, walk-forward, scorecards, promotion gates, rejected-hypothesis memory and Research Agent; Live Trading вимкнено |
+| Capital_markets | `0.9.0` | Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto Spot/Perpetual H4/H5/H6 + Research & Strategy Lab + Capital Allocation & Risk: portfolio state, economic exposure, risk envelopes/headroom, strategy budgets, deterministic allocation, stress/rebalance and governed Portfolio Agent; Live Trading вимкнено |
 | Sales | `1.0.0` | V1-stable Sales runtime; Symfony API/UI cutover, CRM ingress, automation, historical intelligence and release gates; schema `0.8.6` |
 | Growth | `0.50.0` | Growth Operating System: Market Discovery → Opportunity Intelligence → governed Engagement → Reply/Routing → Sales/Service feedback → Learning; schema `0.50.0`; disabled by default до production cutover |
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
