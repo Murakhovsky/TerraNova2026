@@ -283,6 +283,11 @@ final readonly class CapitalRiskService
   $opportunities=$this->prepareOpportunities($organizationId,(array)($input['opportunities']??[]),(string)($input['portfolio_mode']??'PAPER'));
 
   $plan=$this->allocator->allocate($portfolioId,$available,$opportunities,$policy,$state,(array)($input['hard_caps']??[]));
+  $existingPlan=$this->repository->getAllocationPlan($organizationId,$plan->id);
+  if($existingPlan!==null&&(string)($existingPlan['input_fingerprint']??'')===$plan->inputFingerprint){
+   return $existingPlan;
+  }
+
   $record=[
    'plan_id'=>$plan->id,
    'portfolio_id'=>$portfolioId,
