@@ -70,6 +70,7 @@
         <div class="cos-kpi-strip mt-2">
           <twig:CosMoneyMetric label="Portfolio Equity" value="{{ g.portfolio_equity is not null ? g.portfolio_equity : '—' }}" />
           <twig:CosMoneyMetric label="Available Capital" value="{{ g.available_capital is not null ? g.available_capital : '—' }}" />
+          <twig:CosMoneyMetric label="Today Net P&L" value="{{ g.today_net_pnl is not null ? g.today_net_pnl : '—' }}" />
           <twig:CosMoneyMetric label="Net P&L" value="{{ g.net_pnl is not null ? g.net_pnl : '—' }}" />
           <twig:CosMetric label="Critical Alerts" value="{{ g.critical_alerts|default(0) }}" hint="HIGH + CRITICAL only" />
         </div>
@@ -77,7 +78,10 @@
       <div class="d-flex gap-2 align-items-center flex-wrap">
         <twig:CosStatus label="Risk {{ riskState }}" tone="{{ riskTone }}" />
         <twig:CosStatus label="Data {{ dataState }}" tone="{{ dataTone }}" />
-        <small title="Canonical backend timestamp">Updated: {{ g.last_updated|default('unavailable') }}</small>
+        {% if cmView in ['overview','opportunities','opportunity','markets','execution','execution_detail','risk'] %}
+          <small data-cos-realtime-state data-state="connecting">Transport: <strong data-cos-realtime-state-label>Connecting</strong></small>
+        {% endif %}
+        <small title="Canonical backend timestamp">Updated: {{ g.last_updated|default('unavailable') }} · Age <strong data-capital-markets-workspace-target="age" data-updated-at="{{ g.last_updated|default('') }}">—</strong></small>
       </div>
     </div>
     {% for alert in g.alerts|default([]) %}
@@ -485,9 +489,15 @@
       <div class="col-lg-5"><section class="cos-panel h-100"><h2>Criteria</h2><p><strong>Success:</strong> {{ h.success_criteria is iterable ? h.success_criteria|json_encode : h.success_criteria|default('—') }}</p><p><strong>Failure:</strong> {{ h.failure_criteria is iterable ? h.failure_criteria|json_encode : h.failure_criteria|default('—') }}</p></section></div>
     </div>
     <section class="cos-panel">
-      <h2>Experiments</h2>
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap"><h2>Experiments</h2><strong>Decision: {{ w.research_decision|default('UNAVAILABLE') }}</strong></div>
       <div class="table-responsive"><table class="table"><thead><tr><th>Experiment</th><th>Type</th><th>Strategy Version</th><th>Dataset</th><th>Status</th></tr></thead><tbody>
       {% for x in w.experiments|default([]) %}<tr><td>{{ x.experiment_id|default(x.id|default('—')) }}</td><td>{{ x.type|default('—') }}</td><td>{{ x.strategy_version_id|default('—') }}</td><td>{{ x.dataset_id|default('—') }}</td><td>{{ x.status|default('—') }}</td></tr>{% else %}<tr><td colspan="5">No experiments yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel">
+      <h2>Results</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Result</th><th>Experiment</th><th>Status</th><th>Summary</th></tr></thead><tbody>
+      {% for x in w.results|default([]) %}<tr><td>{{ x.result_id|default(x.id|default('—')) }}</td><td>{{ x.experiment_id|default('—') }}</td><td>{{ x.status|default(x.decision|default('—')) }}</td><td>{{ x.summary|default(x.outcome|default(x.metrics|default({})|json_encode)) }}</td></tr>{% else %}<tr><td colspan="4">No completed result is stored for this hypothesis yet.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
     <section class="cos-panel"><h2>Decision Trace</h2><div class="d-flex gap-2 flex-wrap">{% for step in w.decision_trace|default([]) %}{% if not loop.first %}<span>→</span>{% endif %}<a class="btn btn-outline-secondary" href="{{ step.href }}">{{ step.type }} · {{ step.label }}</a>{% endfor %}</div></section>
@@ -567,7 +577,27 @@
         <p>No allocation plan has been calculated yet.</p>
       {% endif %}
     </section>
-    <section class="cos-panel"><h2>Scenario Simulator</h2><p>The deterministic simulation API already exists. V1 UI deliberately does not reproduce allocation math in the browser.</p><code>POST /api/v1/capital-markets/portfolio/simulate-opportunity</code></section>
+    <section class="cos-panel">
+      <h2>Scenario Simulator</h2>
+      <p>Change only proposed capital. All portfolio/risk math runs in the existing deterministic backend engine.</p>
+      <form class="row g-3 align-items-end" data-action="submit->capital-markets-workspace#simulateOpportunity">
+        <div class="col-lg-5">
+          <label class="form-label" for="cm-sim-opportunity">Opportunity</label>
+          <select class="form-select" id="cm-sim-opportunity" name="opportunity_id" required>
+            <option value="">Select opportunity</option>
+            {% for o in a.simulation_opportunities|default([]) %}
+              <option value="{{ o.id }}">{{ o.opportunity }} · {{ o.decision }} · requested {{ o.capital is not null ? o.capital : '—' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label" for="cm-sim-capital">Proposed capital</label>
+          <input class="form-control" id="cm-sim-capital" name="capital" inputmode="decimal" autocomplete="off" required>
+        </div>
+        <div class="col-lg-4"><button class="btn btn-primary" type="submit">Simulate portfolio impact</button></div>
+      </form>
+      <div class="mt-3" data-capital-markets-workspace-target="simulationOutput" aria-live="polite">Run a simulation to inspect the deterministic portfolio decision.</div>
+    </section>
     <section class="cos-panel"><h2>Rebalance Recommendation</h2>{% if a.rebalance|default({}) %}<p><strong>{{ a.rebalance.status|default('—') }}</strong> · {{ a.rebalance.reason|default('') }}</p><p>Estimated costs: {{ a.rebalance.estimated_costs|default('—') }} · risk improvement: {{ a.rebalance.expected_risk_improvement_pct|default('—') }}</p>{% else %}<p>No rebalance recommendation.</p>{% endif %}</section>
 
   {% elseif cmView == 'execution' %}
@@ -653,7 +683,7 @@
     {% for s in w.sources|default([]) %}{% set h=s.health|default({}) %}<tr><td><strong>{{ s.id|default('—') }}</strong></td><td>{{ s.roles|default([])|join(', ') }}</td><td>{{ h.connection_state|default(s.enabled|default(false) ? 'UNKNOWN' : 'DISABLED') }}</td><td>{{ h.last_event_at|default('—') }}</td><td>{{ h.last_latency_ms is not null ? h.last_latency_ms ~ ' ms' : '—' }}</td><td>{{ h.error_count|default(h.failure_count|default(0)) }}</td><td>{{ h.reconnect_count|default(0) }}</td><td>{{ h.rate_limit_state|default('—') }}</td></tr>{% else %}<tr><td colspan="8">No market data sources configured.</td></tr>{% endfor %}
     </tbody></table></div></section>
     <section class="cos-panel"><h2>Market Quality</h2><div class="table-responsive"><table class="table"><thead><tr><th>Instrument</th><th>Venue</th><th>Quote Age</th><th>Sequence</th><th>Status</th><th>Trust</th><th>Mode</th><th>Last Updated</th></tr></thead><tbody>
-    {% for s in w.states|default([]) %}<tr><td>{{ s.instrument_id|default('—') }}</td><td>{{ s.venue_id|default('—') }}</td><td>{{ s.latency.event_age_ms|default('—') }} ms</td><td>{{ s.last_sequence|default('—') }}</td><td>{{ s.market_status|default('—') }}</td><td><strong>{{ s.trust_status|default(s.quality_status|default('—')) }}</strong></td><td>{{ s.mode|default('—') }}</td><td>{{ s.updated_at|default('—') }}</td></tr>{% else %}<tr><td colspan="8">No current market states.</td></tr>{% endfor %}
+    {% for s in w.states|default([]) %}<tr><td>{{ s.instrument_id|default('—') }}</td><td>{{ s.venue_id|default('—') }}</td><td>{{ s.latency.event_age_ms|default('—') }} ms</td><td>{{ s.last_sequence|default('—') }}</td><td>{{ s.market_status|default('—') }}</td><td><strong>{{ s.trust_status|default(s.quality_status|default('—')) }}</strong><br><small>{{ s.quality_flags|default([])|join(', ') ?: 'No quality flags' }}</small></td><td>{{ s.mode|default('—') }}</td><td>{{ s.updated_at|default('—') }}</td></tr>{% else %}<tr><td colspan="8">No current market states.</td></tr>{% endfor %}
     </tbody></table></div></section>
     <twig:CosAlert title="Application health ≠ Market data health" copy="This screen reports market-data trust and source health. Application/runtime health remains a separate COS concern." tone="info" />
 
