@@ -1,0 +1,42 @@
+/*
+ * Capital Markets Decision Workspace responsive containment.
+ *
+ * Wide financial tables stay locally scrollable on compact screens. Grid/flex
+ * children must be allowed to shrink or their intrinsic table width can expand
+ * the whole page, which makes the mobile decision surface unusable.
+ */
+.cos-capital-markets,
+.cos-capital-markets .cos-panel,
+.cos-capital-markets .row > *,
+.cos-capital-markets .table-responsive {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cos-capital-markets .table-responsive {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cos-capital-markets .cm-saved-views,
+.cos-capital-markets .cm-export-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cos-space-2);
+}
+
+.cos-capital-markets pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 650px) {
+  .cos-capital-markets .cm-saved-views > .btn {
+    flex: 1 1 auto;
+  }
+
+  .cos-capital-markets .table-responsive {
+    width: 100%;
+  }
+}
