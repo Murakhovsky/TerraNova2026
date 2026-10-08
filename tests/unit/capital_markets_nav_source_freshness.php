@@ -23,6 +23,7 @@ $make = static function(string $id,string $kind,string $amount,string $at,?strin
         'collected_by'=>'source-ingestion',
         'effective_at'=>$at,
         'venue_id'=>$venue,
+        'liability_account_id'=>$kind==='LIABILITY_BALANCE'?'loan-account-1':null,
     ]);
 };
 $balances=[[
