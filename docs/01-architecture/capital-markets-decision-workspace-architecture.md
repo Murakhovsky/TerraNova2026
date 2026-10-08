@@ -223,3 +223,19 @@ Pack закритий лише якщо:
 8. Stale data не маскується під Live.
 9. Viewer/role permissions не отримують execution mutation controls.
 10. Live action не виглядає harmless, бо Live execution взагалі не рендериться, доки policy його не дозволяє.
+
+
+## Локальні presentation preferences
+
+Density і видимість optional columns зберігаються в browser `localStorage` тільки як presentation state.
+
+Там не зберігаються:
+
+- financial calculations;
+- risk decisions;
+- allocation decisions;
+- server-owned filters;
+- permissions;
+- canonical business state.
+
+Scenario Simulator викликає існуючий backend endpoint `/api/v1/capital-markets/portfolio/simulate-opportunity`; browser лише передає opportunity + proposed capital і відображає deterministic response.
