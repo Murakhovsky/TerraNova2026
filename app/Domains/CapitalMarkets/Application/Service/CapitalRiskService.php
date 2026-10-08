@@ -612,6 +612,8 @@ final readonly class CapitalRiskService
  {
   $balances=$this->trading->listPaperBalances($organizationId);
   $availableByLocation=[];
+  $correlationSnapshot=$this->repository->latestCorrelationSnapshot($organizationId,$portfolioId);
+  $normalCorrelations=(array)($correlationSnapshot['normal']??[]);
   $strategyBudgets=[];
   foreach($this->repository->listStrategyAllocations($organizationId,$portfolioId) as $allocation){
    $strategyId=(string)($allocation['strategy_version_id']??'');
@@ -643,6 +645,9 @@ final readonly class CapitalRiskService
    if($mode==='LIVE'&&!in_array($strategyStatus,['LIMITED_LIVE','VALIDATED'],true))$blocked='STRATEGY_NOT_LIVE_VALIDATED';
    if($mode==='PAPER'&&!in_array($strategyStatus,['PAPER','LIMITED_LIVE','VALIDATED'],true))$blocked='STRATEGY_NOT_PAPER_VALIDATED';
    $opportunity['resolved_strategy_status']=$strategyStatus;
+   if($strategyVersionId!==''&&isset($normalCorrelations[$strategyVersionId])&&is_array($normalCorrelations[$strategyVersionId])){
+    $opportunity['strategy_correlations']=$normalCorrelations[$strategyVersionId];
+   }
    if($strategyVersionId!==''&&isset($strategyBudgets[$strategyVersionId])){
     $opportunity['strategy_capital_headroom']=$strategyBudgets[$strategyVersionId]['headroom']->value();
     $opportunity['risk_budget']=$strategyBudgets[$strategyVersionId]['risk_budget'];
