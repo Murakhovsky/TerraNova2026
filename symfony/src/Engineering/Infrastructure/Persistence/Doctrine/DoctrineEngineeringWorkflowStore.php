@@ -404,11 +404,37 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             initiatedByType: $context->initiatedByType,
             initiatedById: $context->initiatedById,
             metadata: $context->metadata,
+            sequenceNo: $transition->sequence,
             createdAt: $transition->createdAt,
             agentRunId: $context->agentRunId,
             humanDecisionId: $context->humanDecisionId,
         ));
         $this->entityManager->flush();
+
+        $metadata = is_array($context->metadata) ? $context->metadata : [];
+        $this->events->append(
+            $transition->featureId,
+            $transition->workflowExecutionId,
+            'WORKFLOW',
+            'workflow.transition',
+            'COMPLETED',
+            $transition->from->value.' -> '.$transition->to->value,
+            [
+                'agent_role' => $metadata['agent_role'] ?? null,
+                'state_from' => $transition->from->value,
+                'state_to' => $transition->to->value,
+                'logical_attempt' => $metadata['logical_attempt'] ?? null,
+                'technical_retry' => $metadata['technical_retry'] ?? null,
+                'revision' => $metadata['revision'] ?? $metadata['repository_revision'] ?? null,
+                'provider' => $metadata['provider'] ?? null,
+                'model' => $metadata['model'] ?? null,
+                'cost' => $metadata['cost'] ?? null,
+                'result' => $context->trigger,
+            ],
+            $context->agentRunId,
+            $record->traceId(),
+        );
+
         $this->observer->afterPersisted($transition);
     }
 

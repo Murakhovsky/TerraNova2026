@@ -20,5 +20,6 @@ $directive = (new EngineeringWorkflowCoordinator())->acceptAgentResult($workflow
 if (count($directive->transitions) !== 2) throw new RuntimeException('Product workflow must expose both persisted transitions.');
 if ($directive->transitions[0]->from !== EngineeringWorkflowState::ANALYSIS || $directive->transitions[0]->to !== EngineeringWorkflowState::SPECIFICATION_READY) throw new RuntimeException('First Product transition is incorrect.');
 if ($directive->transitions[1]->from !== EngineeringWorkflowState::SPECIFICATION_READY || $directive->transitions[1]->to !== EngineeringWorkflowState::QA_PLANNING) throw new RuntimeException('Second Product transition must schedule QA planning.');
+if ($directive->transitions[0]->sequence !== 1 || $directive->transitions[1]->sequence !== 2) throw new RuntimeException('Workflow transitions must carry deterministic monotonic sequence numbers.');
 
 echo "Engineering transition capture passed.\n";

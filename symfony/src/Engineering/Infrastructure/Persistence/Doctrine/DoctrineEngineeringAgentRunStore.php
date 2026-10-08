@@ -72,9 +72,16 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
                 $task->role->value.' agent run started',
                 [
                     'role' => $task->role->value,
+                    'agent_role' => $task->role->value,
                     'execution_task_id' => $task->id,
                     'persisted_task_id' => null,
                     'logical_attempt' => max(1, (int) ($task->inputSnapshot['logical_attempt'] ?? 1)),
+                    'technical_retry' => 0,
+                    'revision' => $this->revisionFromSnapshot($task->inputSnapshot),
+                    'provider' => 'pending',
+                    'model' => 'pending',
+                    'cost' => null,
+                    'result' => 'STARTED',
                     'objective' => mb_substr($task->objective, 0, 500),
                 ],
                 $runId,
@@ -121,17 +128,22 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             $record->agentRole().' agent run completed',
             [
                 'role' => $record->agentRole(),
+                'agent_role' => $record->agentRole(),
+                'logical_attempt' => $record->logicalAttempt(),
+                'technical_retry' => $result->technicalRetries,
+                'revision' => $this->revisionFromSnapshot($record->inputSnapshot()),
                 'provider' => $result->provider,
                 'model' => $result->model,
                 'input_tokens' => $usage['input_tokens'] ?? null,
                 'output_tokens' => $usage['output_tokens'] ?? null,
+                'cost' => $usage['cost_amount'] ?? null,
                 'cost_amount' => $usage['cost_amount'] ?? null,
-                'technical_retries' => $result->technicalRetries,
+                'result' => strtoupper($result->status),
                 'runtime_steps' => count($result->steps),
             ],
             $record->id(),
             $record->traceId(),
-            null,
+            $this->durationMs($record),
             $result->error,
         );
         $this->workflows->touchRuntime($record->workflowExecutionId(), $record->id(), $record->taskId());
@@ -152,12 +164,19 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             $record->agentRole().' agent run failed',
             [
                 'role' => $record->agentRole(),
+                'agent_role' => $record->agentRole(),
+                'logical_attempt' => $record->logicalAttempt(),
+                'technical_retry' => $technicalRetry,
+                'revision' => $this->revisionFromSnapshot($record->inputSnapshot()),
+                'provider' => $record->modelProvider(),
+                'model' => $record->model(),
+                'cost' => $record->estimatedCost(),
+                'result' => 'FAILED',
                 'error_type' => $errorType,
-                'technical_retries' => $technicalRetry,
             ],
             $record->id(),
             $record->traceId(),
-            null,
+            $this->durationMs($record),
             $errorMessage,
         );
         $this->workflows->markRuntimeIssue(
@@ -274,6 +293,24 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             'logical_attempt' => $record->logicalAttempt(),
         ];
     }
+    /** @param array<string,mixed> $snapshot */
+    private function revisionFromSnapshot(array $snapshot): ?string
+    {
+        foreach (['repository_revision', 'working_revision', 'base_revision'] as $field) {
+            $value = trim((string) ($snapshot[$field] ?? ''));
+            if ($value !== '') return $value;
+        }
+        return null;
+    }
+
+    private function durationMs(AgentRunRecord $record): ?int
+    {
+        $finished = $record->finishedAt();
+        if ($finished === null) return null;
+        $seconds = (float) $finished->format('U.u') - (float) $record->startedAt()->format('U.u');
+        return max(0, (int) round($seconds * 1000));
+    }
+
     private function runCorrelationId(string $parentCorrelationId, string $taskId): string
     {
         return mb_substr(rtrim($parentCorrelationId, ':').':agent:'.$taskId, 0, 128);

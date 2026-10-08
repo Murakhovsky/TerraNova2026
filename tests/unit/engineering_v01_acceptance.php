@@ -54,7 +54,18 @@ $baseStatus = static function () use ($featureId, $workflowId, $artifact): array
             'DEVELOPMENT_RESULT' => $artifact(['status' => 'COMPLETED', 'repository_revision' => 'rev-2', 'pull_request' => 184]),
             'REVIEW_REPORT' => $artifact(['status' => 'APPROVED', 'reviewed_revision' => 'rev-2', 'pull_request' => 184]),
             'QA_REPORT' => $artifact(['phase' => 'EXECUTION', 'status' => 'PASS', 'tested_revision' => 'rev-2', 'pull_request' => 184]),
-            'FINAL_REPORT' => $artifact(['recommendation' => 'READY_FOR_HUMAN_APPROVAL', 'pull_request' => ['number' => 184]]),
+            'FINAL_REPORT' => $artifact([
+                'recommendation' => 'READY_FOR_HUMAN_APPROVAL',
+                'pull_request' => ['number' => 184],
+                'ci' => [
+                    'state' => 'SUCCESS',
+                    'checks' => [
+                        ['name' => 'CI', 'status' => 'completed', 'conclusion' => 'success'],
+                        ['name' => 'Runtime', 'status' => 'completed', 'conclusion' => 'success'],
+                        ['name' => 'Static Analysis', 'status' => 'completed', 'conclusion' => 'success'],
+                    ],
+                ],
+            ]),
         ],
         'findings' => [],
         'open_human_decisions' => [],
@@ -118,6 +129,31 @@ if (!$recovery['passed']) throw new RuntimeException('Recovery acceptance scenar
 $missingRecovery = $verifier->verify($featureId, 'recovery', $baseStatus(), $baseAudit(), []);
 if ($missingRecovery['passed'] || !in_array('recovery_continue_evidence', $missingRecovery['failures'], true)) {
     throw new RuntimeException('Recovery acceptance must fail without persisted continuation evidence.');
+}
+
+$missingStatic = $baseStatus();
+$missingStatic['artifacts']['FINAL_REPORT']['content']['ci']['checks'] = [
+    ['name' => 'CI', 'status' => 'completed', 'conclusion' => 'success'],
+    ['name' => 'Runtime', 'status' => 'completed', 'conclusion' => 'success'],
+];
+$missingStaticResult = $verifier->verify($featureId, 'success', $missingStatic, $baseAudit(), []);
+if ($missingStaticResult['passed'] || !in_array('static_analysis_success', $missingStaticResult['failures'], true)) {
+    throw new RuntimeException('Acceptance must reject missing explicit static-analysis evidence.');
+}
+
+$nonMandatoryRecovery = $baseStatus();
+$nonMandatoryRecovery['feature']['previous_context'][] = [
+    'engineering_recovery' => [
+        'workflow_id' => $workflowId,
+        'state' => 'ANALYSIS',
+        'correlation_id' => 'analysis-recovery',
+        'attempted_at' => '2026-10-05T10:00:00+03:00',
+        'recovered_stale_runs' => 1,
+    ],
+];
+$nonMandatoryRecoveryResult = $verifier->verify($featureId, 'recovery', $nonMandatoryRecovery, $baseAudit(), []);
+if ($nonMandatoryRecoveryResult['passed'] || !in_array('recovery_required_state', $nonMandatoryRecoveryResult['failures'], true)) {
+    throw new RuntimeException('Recovery acceptance must use one of the mandatory interruption states.');
 }
 
 $duplicate = $baseStatus();

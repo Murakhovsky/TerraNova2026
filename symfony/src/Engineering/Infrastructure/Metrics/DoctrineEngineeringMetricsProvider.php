@@ -25,7 +25,8 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
 
         $agentRuns = (int) $db->fetchOne('SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id', $params);
         $reviewRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='REVIEWER'", $params);
-        $qaRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='QA'", $params);
+        $qaPlanningRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='QA_PLANNER'", $params);
+        $qaRuns = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='QA_EXECUTOR'", $params);
 
         $managerTotal = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status <> 'RUNNING'", $params);
         $managerCompleted = (int) $db->fetchOne("SELECT COUNT(*) FROM cos_engineering_agent_runs r JOIN cos_engineering_features f ON f.id=r.feature_id WHERE f.organization_id=:organization_id AND r.agent_role='ENGINEERING_MANAGER' AND r.status='COMPLETED'", $params);
@@ -42,7 +43,8 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
               AND f.status='DONE'
               AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='DEVELOPER')=1
               AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='REVIEWER')=1
-              AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA')=2
+              AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA_PLANNER')=1
+              AND (SELECT COUNT(*) FROM cos_engineering_agent_runs r WHERE r.feature_id=f.id AND r.agent_role='QA_EXECUTOR')=1
               AND (SELECT COUNT(*) FROM cos_engineering_human_decision_requests h WHERE h.feature_id=f.id)=0
         ", $params);
         $avgTimeToReady = $db->fetchOne("
@@ -65,9 +67,10 @@ final readonly class DoctrineEngineeringMetricsProvider implements EngineeringMe
             'architecture_human_decisions' => $architectureHumanDecisions,
             'average_agent_runs_per_feature' => $featuresStarted > 0 ? round($agentRuns / $featuresStarted, 2) : 0.0,
             'average_review_cycles' => $featuresStarted > 0 ? round($reviewRuns / $featuresStarted, 2) : 0.0,
+            'average_qa_planning_runs' => $featuresStarted > 0 ? round($qaPlanningRuns / $featuresStarted, 2) : 0.0,
             'average_qa_cycles' => $featuresStarted > 0 ? round($qaRuns / $featuresStarted, 2) : 0.0,
             'review_rejection_rate' => $reviewRuns > 0 ? round($reviewRejections / $reviewRuns, 4) : null,
-            'qa_rejection_rate' => max(0, $qaRuns - $featuresStarted) > 0 ? round($qaRejections / max(1, $qaRuns - $featuresStarted), 4) : null,
+            'qa_rejection_rate' => $qaRuns > 0 ? round($qaRejections / $qaRuns, 4) : null,
             'human_interventions' => $humanInterventions,
             'human_interventions_per_task' => $featuresStarted > 0 ? round($humanInterventions / $featuresStarted, 4) : 0.0,
             'cost_per_feature' => $featuresStarted > 0 ? round($totalCost / $featuresStarted, 6) : 0.0,

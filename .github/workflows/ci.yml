@@ -25,6 +25,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: phpstan:2.2.16
+      - name: Install Symfony dependencies
+        working-directory: symfony
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: PHPStan Engineering
+        run: phpstan analyse --no-progress --memory-limit=1G --level=0 --autoload-file=symfony/vendor/autoload.php symfony/src/Engineering
+
   fast:
     runs-on: ubuntu-24.04
     steps:

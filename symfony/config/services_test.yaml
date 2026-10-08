@@ -1,0 +1,33 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  App\Engineering\Infrastructure\Acceptance\DeterministicEngineeringAgentRunner: ~
+
+  App\Engineering\Infrastructure\Acceptance\DeterministicEngineeringRepositoryGateway:
+    public: true
+
+  App\Engineering\Infrastructure\Acceptance\EngineeringV01CrashSupport:
+    public: true
+
+  App\Engineering\Application\Agent\EngineeringAgentRunnerInterface:
+    alias: App\Engineering\Infrastructure\Acceptance\DeterministicEngineeringAgentRunner
+
+  App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface:
+    alias: App\Engineering\Infrastructure\Acceptance\DeterministicEngineeringRepositoryGateway
+
+  App\Engineering\Application\Service\EngineeringOrchestrator:
+    public: true
+
+  App\Engineering\Application\Service\EngineeringHumanDecisionService:
+    public: true
+
+  App\Engineering\Application\Service\EngineeringFinalizeService:
+    public: true
+
+  App\Engineering\Application\Service\EngineeringStatusService:
+    public: true
+
+  App\Engineering\Application\Acceptance\EngineeringV01AcceptanceService:
+    public: true

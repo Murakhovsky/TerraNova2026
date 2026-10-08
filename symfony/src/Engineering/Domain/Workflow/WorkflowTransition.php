@@ -14,10 +14,12 @@ final readonly class WorkflowTransition
         public EngineeringWorkflowState $from,
         public EngineeringWorkflowState $to,
         public WorkflowTransitionContext $context,
+        public int $sequence,
         public DateTimeImmutable $createdAt,
     ) {
         EngineeringId::assert($id);
         EngineeringId::assert($workflowExecutionId);
         EngineeringId::assert($featureId);
+        if ($sequence < 1) throw new \LogicException('Engineering workflow transition sequence must be positive.');
     }
 }

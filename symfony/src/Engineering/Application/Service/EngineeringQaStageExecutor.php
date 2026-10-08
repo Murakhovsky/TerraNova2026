@@ -890,7 +890,7 @@ final readonly class EngineeringQaStageExecutor
     /** @return list<string> */
     private function requiredCiCheckNames(array $testPlan, array $implementation): array
     {
-        $required = ['CI', 'Runtime'];
+        $required = ['CI', 'Runtime', 'Static Analysis'];
         if ((is_array($testPlan['ui_cases'] ?? null) ? $testPlan['ui_cases'] : []) !== []) $required[] = 'Frontend';
         if ((is_array($implementation['documentation_updates'] ?? null) ? $implementation['documentation_updates'] : []) !== []) $required[] = 'Documentation';
         return array_values(array_unique($required));
@@ -905,7 +905,7 @@ final readonly class EngineeringQaStageExecutor
             if (!is_array($check)) continue;
             $status = strtolower((string) ($check['status'] ?? ''));
             $conclusion = strtolower((string) ($check['conclusion'] ?? ''));
-            if ($status !== 'completed' || !in_array($conclusion, ['success','neutral','skipped'], true)) continue;
+            if ($status !== 'completed' || $conclusion !== 'success') continue;
             $name = strtolower(trim((string) ($check['name'] ?? '')));
             if ($name !== '') $passed[$name] = true;
         }
@@ -915,6 +915,7 @@ final readonly class EngineeringQaStageExecutor
             'Runtime' => ['runtime'],
             'Frontend' => ['frontend','build'],
             'Documentation' => ['documentation','validate and build docs'],
+            'Static Analysis' => ['static analysis','phpstan','psalm'],
         ];
 
         foreach ($this->requiredCiCheckNames($testPlan, $implementation) as $required) {
@@ -939,15 +940,15 @@ final readonly class EngineeringQaStageExecutor
             if (!is_array($check)) continue;
             $name = strtolower(trim((string) ($check['name'] ?? '')));
             $conclusion = strtolower((string) ($check['conclusion'] ?? ''));
+            $status = strtolower((string) ($check['status'] ?? ''));
             if (
-                (
-                    str_contains($name, 'static')
+                $status === 'completed'
+                && $conclusion === 'success'
+                && (
+                    str_contains($name, 'static analysis')
                     || str_contains($name, 'phpstan')
                     || str_contains($name, 'psalm')
-                    || $name === 'fast'
-                    || $name === 'ci'
                 )
-                && in_array($conclusion, ['success','neutral','skipped'], true)
             ) return true;
         }
         return false;
