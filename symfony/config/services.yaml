@@ -2044,6 +2044,8 @@ services:
 
   App\Command\CapitalMarketsNavCollectCommand: ~
 
+  App\Command\CapitalMarketsNavEvidenceImportCommand: ~
+
   Domains\CapitalMarkets\Application\Service\CapitalRiskService: ~
 
   Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService: ~
