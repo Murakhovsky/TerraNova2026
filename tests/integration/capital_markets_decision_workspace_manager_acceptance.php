@@ -50,7 +50,7 @@ foreach([
     "'today_net_pnl' => null",
     "'pnl_30d' => null",
     "'live_enabled' => false",
-    "'comparison_state' => 'NOT COMPARABLE'",
+    "'NOT COMPARABLE'",
     "'version_comparison'",
     "'PARTIALLY_HEDGED'",
     "'STALE'",
