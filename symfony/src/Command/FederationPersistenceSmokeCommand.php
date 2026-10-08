@@ -209,7 +209,48 @@ final class FederationPersistenceSmokeCommand extends Command
                 throw new \RuntimeException('Plan changed after canonical approval was accepted.');
             } catch (DomainException) {
             }
-            $this->goals->startApprovedRun($actor, $runId, $planId);
+            // Separate canonical receipt for the second plan. Every run must prove
+            // authorization against its OWN immutable stored plan snapshot.
+            $mainActionId = bin2hex(random_bytes(16));
+            $mainJson = (string) $this->db->fetchOne(
+                'SELECT plan_json FROM cos_federation_plans WHERE organization_id = :org AND plan_id = :plan',
+                ['org' => $org, 'plan' => $planId],
+            );
+            $this->db->insert('cos_actions', [
+                'id' => $mainActionId, 'organization_id' => $org,
+                'type' => 'cos.federation.plan.approval',
+                'target_type' => 'cos_federation_plan', 'target_id' => $planId,
+                'parameters' => json_encode([
+                    'goal_id' => $goalId, 'plan_id' => $planId,
+                    'specification_version' => 1, 'plan_hash' => hash('sha256', $mainJson),
+                ], JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'QUEUED', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
+                'idempotency_key' => 'test-approval:' . $mainActionId,
+                'correlation_id' => $mainActionId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $mainActionId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $mainActionId, 'evaluated_at' => self::now(),
+            ]);
+            $this->db->insert('cos_approvals', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $mainActionId, 'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'second-reviewer',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'second-reviewer',
+                'decided_at' => self::now(),
+            ]);
+            $this->goals->startApprovedRun($actor, $runId, $planId, $mainActionId);
+            try {
+                $this->goals->startApprovedRun(
+                    $actor, 'run-' . bin2hex(random_bytes(8)), $planId, $mainActionId,
+                );
+                throw new \RuntimeException('Duplicate federation plan execution was accepted.');
+            } catch (DomainException) {
+            }
+
             self::assert(count($this->goals->run($actor, $runId)['steps'] ?? []) === 2,
                 'Execution steps not snapshotted.');
             self::assert($this->goals->run($other, $runId) === null, 'Cross-tenant Execution access allowed.');
