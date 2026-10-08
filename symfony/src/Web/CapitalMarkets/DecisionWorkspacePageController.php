@@ -253,7 +253,12 @@ final readonly class DecisionWorkspacePageController
                     (string)$id,
                     $this->allowed($organizationId, (int)$tenant->userId()->value(), CapitalMarketsCapability::MarketDataHistoryView),
                 ),
-                'relationship_detail' => $this->workspace->relationshipDetail($organizationId, (string)$id),
+                'relationship_detail' => $this->workspace->relationshipDetail(
+                    $organizationId,
+                    (string)$id,
+                    $this->allowed($organizationId, (int)$tenant->userId()->value(), CapitalMarketsCapability::MarketDataView)
+                    && $this->allowed($organizationId, (int)$tenant->userId()->value(), CapitalMarketsCapability::MarketDataHistoryView),
+                ),
                 'research' => $this->workspace->research($organizationId),
                 'hypothesis' => $this->workspace->hypothesis($organizationId, (string)$id),
                 'strategies' => $this->workspace->strategies($organizationId),
@@ -281,6 +286,12 @@ final readonly class DecisionWorkspacePageController
             ) {
                 $data['relationship_comparison'] = [];
                 $data['comparison_state'] = 'RESTRICTED';
+                $data['historical_basis'] = [
+                    'status'=>'RESTRICTED',
+                    'reason'=>'INSUFFICIENT_AUTHORITY',
+                    'rows'=>[],
+                    'scope'=>'HISTORICAL_OBSERVATION_ONLY',
+                ];
                 foreach (['market_rows', 'venue_rows', 'states', 'reference_states', 'sources'] as $key) {
                     unset($data[$key]);
                 }
