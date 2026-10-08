@@ -432,16 +432,17 @@
       </div>
 
       {% if marketView == 'relationship' %}
+        {% if permissions.relationship_view|default(false) %}
         <div class="table-responsive"><table class="table">
           <thead><tr><th>Source</th><th>Relationship</th><th>Target</th><th>Strength / Ratio</th><th>Reference / Conversion</th><th>Status</th></tr></thead>
           <tbody>
           {% for rel in w.relationships|default([]) %}
             <tr>
-              <td>{{ rel.source_instrument_id|default(rel.from_instrument_id|default('—')) }}</td>
+              <td>{{ rel.source_instrument.id|default(rel.source_instrument_id|default(rel.from_instrument_id|default('—'))) }}</td>
               <td>{% set rid = rel.id|default(rel.relationship_id|default('')) %}{% if rid %}<a href="/capital-markets/relationships/{{ rid|url_encode }}">{{ rel.type|default(rel.relationship_type|default(rid)) }}</a>{% else %}{{ rel.type|default(rel.relationship_type|default('—')) }}{% endif %}</td>
-              <td>{{ rel.target_instrument_id|default(rel.to_instrument_id|default('—')) }}</td>
+              <td>{{ rel.target_instrument.id|default(rel.target_instrument_id|default(rel.to_instrument_id|default('—'))) }}</td>
               <td>{{ rel.strength|default(rel.ratio|default('—')) }}</td>
-              <td>{{ rel.reference_mechanism|default(rel.conversion|default('NOT SPECIFIED')) }}</td>
+              <td>{{ rel.metadata.reference_mechanism|default(rel.metadata.conversion|default('NOT SPECIFIED')) }}</td>
               <td>{{ rel.status|default('—') }}</td>
             </tr>
           {% else %}
@@ -450,6 +451,7 @@
           </tbody>
         </table></div>
         <twig:CosAlert title="No fake conversion" copy="If two instruments require a currency conversion and no trusted conversion source exists, the workspace must treat them as NOT COMPARABLE rather than inventing a premium." tone="info" />
+        {% else %}<p>Relationship View permission is required.</p>{% endif %}
       {% elseif marketView == 'venue' %}
         <div class="table-responsive"><table class="table">
           <thead><tr><th>Venue</th><th>Markets</th><th>Trusted</th><th>Data Health</th><th>Exposure</th><th>Capital Locations</th></tr></thead>
@@ -524,6 +526,7 @@
         <p class="small">Last 150 displayed from up to 500 fetched events in the seven-day window. Basis curves and cross-instrument spreads remain unavailable until a time-aligned canonical comparison projection exists.</p>
       {% endif %}
     </section>
+    {% if permissions.relationship_view|default(false) %}
     <section class="cos-panel">
       <h2>Relationships</h2>
       <div class="table-responsive"><table class="table"><thead><tr><th>Relationship</th><th>Source</th><th>Target</th><th>Reference Mechanism</th><th>Settlement</th><th>Hedgeability</th></tr></thead><tbody>
@@ -534,7 +537,8 @@
       </tbody></table></div>
     </section>
 
-  {% elseif cmView == 'relationship_detail' %}
+      {% else %}<section class="cos-panel"><h2>Relationships</h2><p>Relationship View permission is required.</p></section>{% endif %}
+{% elseif cmView == 'relationship_detail' %}
     {% set rel = w.relationship|default({}) %}
     <section class="cos-panel">
       <twig:CosEntityHeader eyebrow="Relationship Detail" identity="{{ rel.id|default(rel.relationship_id|default(entityId|default('—'))) }}" title="{{ rel.type|default(rel.relationship_type|default('Economic Relationship')) }}" subtitle="How these instruments are economically linked and where dislocation may appear." statusLabel="{{ rel.status|default('UNKNOWN') }}" statusTone="info" />
@@ -543,6 +547,7 @@
       <div class="col-lg-7"><section class="cos-panel h-100"><h2>Relationship Graph</h2><p><strong>{{ rel.source_instrument.id|default(rel.source_instrument_id|default(rel.from_instrument_id|default('—'))) }}</strong> → {{ rel.type|default(rel.relationship_type|default('RELATED')) }} → <strong>{{ rel.target_instrument.id|default(rel.target_instrument_id|default(rel.to_instrument_id|default('—'))) }}</strong></p><p>Strength: {{ rel.strength|default('—') }} · Conversion: {{ rel.metadata.conversion|default('—') }} · Reference: {{ rel.metadata.reference_mechanism|default('—') }}</p></section></div>
       <div class="col-lg-5"><section class="cos-panel h-100"><h2>Economic Rights / Settlement</h2><p>Economic rights: {{ rel.metadata.economic_rights|default('—') }}</p><p>Settlement: {{ rel.metadata.settlement|default('—') }}</p><p>Hedgeability: {{ rel.metadata.hedgeability|default('—') }}</p></section></div>
     </div>
+    {% if permissions.market_data_view|default(false) %}
     <section class="cos-panel">
       <div class="d-flex justify-content-between gap-3 flex-wrap"><h2>Price Comparison</h2><strong>{{ w.comparison_state|default('UNAVAILABLE') }}</strong></div>
       {% if w.comparison_state|default('UNAVAILABLE') == 'NOT COMPARABLE' %}
@@ -555,7 +560,8 @@
       </tbody></table></div>
     </section>
 
-  {% elseif cmView == 'research' %}
+      {% else %}<section class="cos-panel"><h2>Price Comparison</h2><p>Market Data View permission is required. Quotes are not available to this role.</p></section>{% endif %}
+{% elseif cmView == 'research' %}
     {% set research = w.research|default({}) %}
     <section class="cos-kpi-strip">
       <twig:CosMetric label="Hypotheses" value="{{ research.metrics.hypothesis_count|default(0) }}" hint="formal research objects" />
