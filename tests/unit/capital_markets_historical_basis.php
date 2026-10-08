@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketDataMode;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQualityFlag;
 use Domains\CapitalMarkets\Domain\MarketData\MarketQuote;
+use Domains\CapitalMarkets\Domain\MarketData\MarketValueObservation;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
 use Domains\CapitalMarkets\Domain\MarketData\MarketStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketTimestamps;
@@ -50,6 +51,18 @@ $assert($basis['rows'][0]['basis_bps']==='300','Historical basis must use canoni
 $assert($basis['rows'][1]['basis_bps']==='-1000','Negative historical basis calculation is wrong.');
 $assert($basis['rows'][0]['skew_seconds']===10,'True event timestamp skew is required.');
 $assert($basis['scope']==='HISTORICAL_OBSERVATION_ONLY','Observed price dislocation must not become an executable trade.');
+
+$referenceTime=new DateTimeImmutable('2026-10-08T10:00:12Z');
+$referenceEvent=new CanonicalMarketEvent(
+    'reference-1',MarketSourceId::fromString('reference-feed'),null,
+    InstrumentId::fromString('AAPL'),new MarketTimestamps($referenceTime,$referenceTime,$referenceTime),
+    null,new MarketValueObservation(MarketEventType::ReferencePrice,Decimal::fromString('100'),new AssetCode('USD')),
+    [],1,MarketDataMode::Live,MarketStatus::Open,
+);
+$referenceBasis=HistoricalRelationshipBasisProjector::project([$source[0]],[$referenceEvent],$meta);
+$assert($referenceBasis['status']==='OBSERVATIONS_AVAILABLE'
+    && $referenceBasis['rows'][0]['basis_bps']==='300',
+    'A trusted canonical reference price with matching unit must support tokenized-equity comparison.');
 
 $noRatio=HistoricalRelationshipBasisProjector::project($source,$target,[]);
 $assert($noRatio['status']==='NOT COMPARABLE' && $noRatio['rows']===[],'Never imply a one-to-one economic ratio.');
