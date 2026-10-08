@@ -52,8 +52,8 @@ foreach([
 }
 
 $manifest=require $domainRoot.'/module.php';
-if(($manifest['version']??null)!=='0.8.0'||($manifest['schema_version']??null)!=='0.8.0'){
-    throw new RuntimeException('Capital Markets module manifest must be V0.8.0.');
+if(($manifest['version']??null)!=='0.9.0'||($manifest['schema_version']??null)!=='0.9.0'){
+    throw new RuntimeException('Capital Markets module manifest must be V0.9.0.');
 }
 if(($manifest['enabled_by_default']??true)!==false){
     throw new RuntimeException('Capital Markets Foundation must remain disabled by default.');
@@ -75,6 +75,7 @@ foreach([
     'app/migrations/20261006_000131_capital_markets_kraken_market_data.sql',
     'app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql',
     'app/migrations/20261006_000133_capital_markets_research_lab.sql',
+    'app/migrations/20261008_000134_capital_markets_capital_risk.sql',
 ] as $migrationFile){
     if(!in_array($migrationFile,$manifest['contributions']['migration_files']??[],true)){
         throw new RuntimeException('Capital Markets migration is missing: '.$migrationFile);

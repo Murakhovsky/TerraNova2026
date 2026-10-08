@@ -20,7 +20,7 @@ generated: true
 
 | ID | Назва | Версія | Schema | Обмеження Kernel | За замовчуванням | Залежності | Джерело |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `capital_markets` | Capital Markets | `0.8.0` | `0.8.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | Capital Markets | `0.9.0` | `0.9.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
@@ -34,16 +34,19 @@ generated: true
 
 ## Capital Markets (`capital_markets`)
 
-**Опис із manifest:** Autonomous Capital Markets bounded context with shared instrument/venue, Market Intelligence, Tokenized Equity H1/H2, Crypto Spot/Perpetual H4/H5/H6 and governed Research & Strategy Lab with immutable experiments, replay/backtest, OOS, scorecards, promotion gates and Research Agent assistance. Live trading remains disabled.
+**Опис із manifest:** Autonomous Capital Markets bounded context with shared instrument/venue, Market Intelligence, Tokenized Equity H1/H2, Crypto Spot/Perpetual H4/H5/H6 and governed Research & Strategy Lab with immutable experiments, replay/backtest, OOS, scorecards, promotion gates and Research Agent assistance plus portfolio-aware Capital Allocation & Risk. Live trading remains disabled.
 
 - runtime service модуля: `capitalMarketsDomainModule`;
 - обробники jobs: `capitalMarketsResearchBacktestJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261005_000124_capital_markets_foundation.sql`, `app/migrations/20261006_000125_capital_markets_market_sources.sql`, `app/migrations/20261006_000126_capital_markets_market_events.sql`, `app/migrations/20261006_000127_capital_markets_market_state.sql`, `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql`, `app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql`, `app/migrations/20261006_000130_capital_markets_execution_recovery.sql`, `app/migrations/20261006_000131_capital_markets_kraken_market_data.sql`, `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql`, `app/migrations/20261006_000133_capital_markets_research_lab.sql`.
+- міграції: `app/migrations/20261005_000124_capital_markets_foundation.sql`, `app/migrations/20261006_000125_capital_markets_market_sources.sql`, `app/migrations/20261006_000126_capital_markets_market_events.sql`, `app/migrations/20261006_000127_capital_markets_market_state.sql`, `app/migrations/20261006_000128_capital_markets_tokenized_equity_vertical_slice.sql`, `app/migrations/20261006_000129_capital_markets_tokenized_equity_research.sql`, `app/migrations/20261006_000130_capital_markets_execution_recovery.sql`, `app/migrations/20261006_000131_capital_markets_kraken_market_data.sql`, `app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql`, `app/migrations/20261006_000133_capital_markets_research_lab.sql`, `app/migrations/20261008_000134_capital_markets_capital_risk.sql`.
 
 ### Задекларовані capabilities
 
+- `capital_markets.allocation.approve`;
+- `capital_markets.allocation.propose`;
+- `capital_markets.allocation.view`;
 - `capital_markets.audit.view`;
 - `capital_markets.instrument.manage`;
 - `capital_markets.instrument.view`;
@@ -57,12 +60,18 @@ generated: true
 - `capital_markets.market_data.view`;
 - `capital_markets.opportunity.view`;
 - `capital_markets.paper.execute`;
+- `capital_markets.portfolio.manage`;
+- `capital_markets.portfolio.view`;
+- `capital_markets.rebalance.approve`;
+- `capital_markets.rebalance.propose`;
 - `capital_markets.relationship.manage`;
 - `capital_markets.relationship.view`;
 - `capital_markets.research.agent.use`;
 - `capital_markets.research.experiment.run`;
 - `capital_markets.research.manage`;
 - `capital_markets.research.view`;
+- `capital_markets.risk.manage_policy`;
+- `capital_markets.risk.view`;
 - `capital_markets.strategy.demote`;
 - `capital_markets.strategy.promote`;
 - `capital_markets.strategy.reject`;

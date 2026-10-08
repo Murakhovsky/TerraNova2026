@@ -86,6 +86,11 @@ final class TableOwnership
             'tn_capital_market_backtest_runs', 'tn_capital_market_oos_runs', 'tn_capital_market_paper_runs',
             'tn_capital_market_strategy_scorecards', 'tn_capital_market_rejected_hypotheses',
             'tn_capital_market_research_knowledge',
+            'tn_capital_market_exposure_snapshots', 'tn_capital_market_portfolio_risk_snapshots',
+            'tn_capital_market_risk_envelopes', 'tn_capital_market_allocation_policies',
+            'tn_capital_market_allocation_plans', 'tn_capital_market_strategy_allocations',
+            'tn_capital_market_rebalance_plans', 'tn_capital_market_correlation_snapshots',
+            'tn_capital_market_stress_results',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [

@@ -3102,3 +3102,117 @@ cos_api_v1_capital_markets_research_agent_run:
   path: /api/v1/capital-markets/research/agent/run
   controller: App\Http\Api\V1\Controller\CapitalMarketsResearchLabController::runAgent
   methods: [POST]
+
+
+# Capital Markets Capital Allocation & Risk Pack
+capital_markets_portfolio:
+  path: /capital-markets/portfolio
+  controller: App\Web\CapitalMarkets\CapitalRiskPageController::portfolio
+  methods: [GET, HEAD]
+
+capital_markets_risk:
+  path: /capital-markets/risk
+  controller: App\Web\CapitalMarkets\CapitalRiskPageController::risk
+  methods: [GET, HEAD]
+
+capital_markets_allocation:
+  path: /capital-markets/allocation
+  controller: App\Web\CapitalMarkets\CapitalRiskPageController::allocation
+  methods: [GET, HEAD]
+
+cos_api_v1_capital_markets_portfolio:
+  path: /api/v1/capital-markets/portfolio
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::portfolio
+  methods: [GET]
+
+cos_api_v1_capital_markets_portfolio_exposure:
+  path: /api/v1/capital-markets/portfolio/exposure
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::exposure
+  methods: [GET]
+
+cos_api_v1_capital_markets_allocation_plan:
+  path: /api/v1/capital-markets/allocation/plan
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::allocation
+  methods: [GET]
+
+cos_api_v1_capital_markets_allocation_recalculate:
+  path: /api/v1/capital-markets/allocation/recalculate
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::recalculate
+  methods: [POST]
+
+cos_api_v1_capital_markets_allocation_approve:
+  path: /api/v1/capital-markets/allocation/{id}/approve
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::approve
+  methods: [POST]
+
+cos_api_v1_capital_markets_risk_stress:
+  path: /api/v1/capital-markets/risk/stress
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::stress
+  methods: [POST]
+
+
+cos_api_v1_capital_markets_portfolio_risk:
+  path: /api/v1/capital-markets/portfolio/risk
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::risk
+  methods: [POST]
+
+cos_api_v1_capital_markets_risk_envelope:
+  path: /api/v1/capital-markets/risk/envelope
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::setRiskEnvelope
+  methods: [POST]
+
+cos_api_v1_capital_markets_portfolio_simulate_opportunity:
+  path: /api/v1/capital-markets/portfolio/simulate-opportunity
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::simulateOpportunity
+  methods: [POST]
+
+cos_api_v1_capital_markets_rebalance_plan:
+  path: /api/v1/capital-markets/rebalance/plan
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::rebalance
+  methods: [POST]
+
+
+cos_api_v1_capital_markets_portfolio_agent:
+  path: /api/v1/capital-markets/portfolio/agent
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::runPortfolioAgent
+  methods: [POST]
+
+
+cos_api_v1_capital_markets_portfolio_correlation:
+  path: /api/v1/capital-markets/portfolio/correlation
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::correlation
+  methods: [POST]
+
+
+cos_api_v1_capital_markets_portfolio_risk_read:
+  path: /api/v1/capital-markets/portfolio/risk/current
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::riskState
+  methods: [GET]
+
+cos_api_v1_capital_markets_portfolio_allocations:
+  path: /api/v1/capital-markets/portfolio/allocations
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::allocations
+  methods: [GET]
+
+cos_api_v1_capital_markets_rebalance:
+  path: /api/v1/capital-markets/rebalance
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::rebalanceCurrent
+  methods: [GET]
+
+
+cos_api_v1_capital_markets_strategy_allocation_assign:
+  path: /api/v1/capital-markets/portfolio/allocations
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::assignStrategyAllocation
+  methods: [POST]
+
+
+capital_markets_opportunity_detail:
+  path: /capital-markets/opportunities/{id}
+  controller: App\Web\CapitalMarkets\CapitalRiskPageController::opportunity
+  methods: [GET, HEAD]
+
+
+cos_api_v1_capital_markets_portfolio_performance:
+  path: /api/v1/capital-markets/portfolio/performance
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::performance
+  methods: [GET]

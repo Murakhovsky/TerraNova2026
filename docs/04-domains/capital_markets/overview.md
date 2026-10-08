@@ -5,11 +5,12 @@ status: active
 updated: 2026-10-06
 kind: domain
 contract: domain-v1
+version: 0.9.0
 ---
 
 # Огляд домену Capital Markets
 
-Capital Markets `0.8.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
+Capital Markets `0.9.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
 
 ## Призначення
 
@@ -33,14 +34,14 @@ MarketState / ReferenceMarketState
 
 ```text
 id: capital_markets
-version: 0.8.0
-runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto H4/H5/H6 + Research & Strategy Lab
+version: 0.9.0
+runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto H4/H5/H6 + Research & Strategy Lab + Capital Allocation & Risk
 persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
 data modes: LIVE / DELAYED / HISTORICAL / REPLAY
 provider adapters: Bybit Spot REST + Massive Stocks REST
 provider polling: CLI + operator API/UI
-operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities + /capital-markets/crypto-spot-perpetual + /capital-markets/research
+operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities + /capital-markets/crypto-spot-perpetual + /capital-markets/research + /capital-markets/portfolio + /capital-markets/risk + /capital-markets/allocation
 streaming: disabled / next wave
 execution: guarded H1/H2 paper; H1 requires explicit executable hedge venue; live disabled
 ```
@@ -69,7 +70,7 @@ Market Intelligence сам по собі не створює trading decisions. 
 
 ## Лабораторія досліджень і стратегій
 
-Версія 0.8.0 додає керовану Research & Strategy Lab:
+Версія 0.8.0 додала керовану Research & Strategy Lab. Версія 0.9.0 додає Capital Allocation & Risk Pack: portfolio state, economic exposure, risk envelopes/headroom, constrained allocation, stress/rebalance та governed Portfolio Agent.
 
 - формальний lineage ResearchHypothesis, ResearchExperiment, ResearchDataset та ResearchResult;
 - immutable StrategyVersion;

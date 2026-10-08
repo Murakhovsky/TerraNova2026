@@ -26,6 +26,8 @@ interface CapitalMarketsTradingRepositoryInterface
     public function initializePaperPortfolio(string $organizationId,string $currency,string $initialCapital):array;
     public function paperPortfolio(string $organizationId):?array;
     public function reserveCapital(string $organizationId,string $reservationId,string $opportunityId,string $amount,string $expiresAt):bool;
+    public function getCapitalReservation(string $organizationId,string $reservationId):?array;
+    public function listCapitalReservations(string $organizationId,?string $status=null,int $limit=1000):array;
     public function releaseReservation(string $organizationId,string $reservationId):void;
     public function completeReservation(string $organizationId,string $reservationId,string $realizedPnl):void;
     public function setPaperBalance(string $organizationId,string $venueId,string $assetKey,string $amount):void;

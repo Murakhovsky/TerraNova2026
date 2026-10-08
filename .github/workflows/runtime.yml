@@ -52,6 +52,10 @@ jobs:
       - run: npm run build
       - name: Current verification
         run: bash bin/verify fast
+      - name: Capital Markets Capital Risk acceptance
+        run: |
+          php tests/integration/capital_markets_capital_risk_acceptance.php
+          php tests/integration/capital_markets_capital_risk_manager_acceptance.php
       - name: Compose validation
         run: docker compose config --quiet
       - name: Build runtime

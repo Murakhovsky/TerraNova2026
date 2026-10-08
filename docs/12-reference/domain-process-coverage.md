@@ -23,7 +23,7 @@ generated: true
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| `capital_markets` · Capital Markets | `0.8.0` | `covered` | 3 | 19 | 19/19 | 0 | 0 |
+| `capital_markets` · Capital Markets | `0.9.0` | `covered` | 3 | 19 | 19/19 | 0 | 0 |
 | `construction` · Construction | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `diagnostic` · Diagnostics | `1.0.0` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
