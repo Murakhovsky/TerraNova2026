@@ -6,7 +6,7 @@ updated: 2026-10-08
 kind: architecture
 ---
 
-# CM-DECISION-WORKSPACE
+# Архітектура CM-DECISION-WORKSPACE
 
 Пакет перетворює Capital Markets із набору окремих operator screens у єдиний **Decision Workspace**.
 
@@ -49,7 +49,7 @@ Read model **не перераховує** P&L, risk, allocation, basis, funding
 
 Decision Workspace не перейменовує lifetime/aggregate P&L у Today/30D. Ці поля показуються як unavailable до появи авторитетної часової проєкції.
 
-## UI inventory
+## Інвентаризація інтерфейсу
 
 | Existing surface | Decision |
 | --- | --- |
@@ -90,7 +90,7 @@ Decision Workspace не перейменовує lifetime/aggregate P&L у Today
 
 Advanced registries і vertical-slice execution pages залишаються доступними через global search/commands та context links, але не роздувають primary Capital Markets navigation.
 
-## Global workspace state
+## Глобальний стан робочого простору
 
 Кожний canonical screen отримує:
 
@@ -106,7 +106,7 @@ Advanced registries і vertical-slice execution pages залишаються д�
 
 Color не є єдиним signal. Status завжди має текстову назву.
 
-## Opportunity priority
+## Пріоритет можливостей
 
 Default Opportunity Board order використовує \`priority\`, уже створений детермінованим Allocation Plan.
 
@@ -114,7 +114,7 @@ UI не створює власний “AI score” або фінансовий
 
 Server-side filters дозволяють звужувати view за типом, risk, decision, status, strategy, instrument, venue, мінімальним expected net/return та максимальним capital. Decimal comparison використовує Capital Markets \`Decimal\`, не binary float.
 
-## Data trust
+## Довіра до даних
 
 Data Quality Center і global header розрізняють:
 
@@ -134,7 +134,7 @@ Market rows показують:
 
 Відсутня або stale інформація не підміняється cached value з “live” виглядом.
 
-## Error / partial semantics
+## Семантика помилок і часткових даних
 
 Composition layer ізолює read-side failures. Якщо, наприклад, Market Data недоступна, Portfolio може продовжити рендеритися як partial page.
 
@@ -145,7 +145,7 @@ UI явно показує:
 - відсутні canonical values як \`—\`;
 - execution-sensitive warning, якщо data state не дозволяє довіряти opportunity.
 
-## Paper / Live safety
+## Безпека режимів Paper / Live
 
 Live Trading лишається вимкненим.
 
@@ -157,7 +157,7 @@ Decision Workspace:
 - делегує actual Paper Execution існуючим vertical-slice services;
 - не дублює execution або risk business logic у Twig/JavaScript.
 
-## Agent UX
+## Інтерфейс агентів
 
 Agent Center показує:
 
@@ -169,7 +169,7 @@ Agent Center показує:
 
 Hidden chain-of-thought не показується. UI працює з decision summary, evidence, tool/result telemetry та audit-compatible runtime records.
 
-## Export
+## Експорт
 
 Read-only exports:
 
@@ -195,13 +195,13 @@ Desktop залишається primary, але critical views використо
 
 Mobile priority: status → money → risk → action.
 
-## Performance
+## Продуктивність
 
 SSR отримує coherent read-model payload замість клієнтського складання 20 API calls. Heavy historical charts не є blocking dependency першого viewport.
 
 Таблиці та read-side projections залишаються server-controlled. Майбутня virtualization потрібна лише тоді, коли фактичний dataset перевищить practical SSR page size.
 
-## Realtime boundary
+## Межа realtime-взаємодії
 
 Decision Workspace не створює окремий WebSocket/runtime.
 
@@ -209,7 +209,7 @@ Decision Workspace не створює окремий WebSocket/runtime.
 
 Наступне realtime розширення повинно публікувати **relevant state changes**, а не raw market ticks, у tenant-scoped workspace topic.
 
-## Definition of Done
+## Критерії завершення
 
 Pack закритий лише якщо:
 
