@@ -2033,6 +2033,13 @@ services:
   Domains\CapitalMarkets\Application\Contract\PortfolioValuationSnapshotRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioValuationSnapshotRepository
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioNavFinancialEvidenceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\PortfolioNavFinancialEvidenceRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioNavFinancialEvidenceRepository
+
   Domains\CapitalMarkets\Application\Service\PortfolioNavEvidenceCollector: ~
 
   App\Command\CapitalMarketsNavCollectCommand: ~
