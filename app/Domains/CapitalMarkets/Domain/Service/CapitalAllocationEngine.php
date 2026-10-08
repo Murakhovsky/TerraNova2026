@@ -25,7 +25,7 @@ final class CapitalAllocationEngine {
    elseif(!$riskState->allowsNewRisk()){$approved=Decimal::fromString('0');$decision='REJECT';$reason='Portfolio state '.$riskState->value.' blocks new risk.';}
    $cap=$hardCaps[(string)$o['opportunity_id']]??null;if($cap!==null)$approved=$this->minimum($approved,Decimal::fromString((string)$cap));
    if($approved->isZero()&&$decision!=='REJECT'){$decision='REJECT';$reason='No available capital or capacity.';}
-   elseif($approved->compareTo($requested)<0){$decision='ACCEPT_REDUCED_SIZE';$reason='Reduced by capacity, hard headroom or available capital.';}
+   elseif($decision!=='REJECT'&&$approved->compareTo($requested)<0){$decision='ACCEPT_REDUCED_SIZE';$reason='Reduced by capacity, hard headroom or available capital.';}
    if(!$approved->isZero()){$remaining=DecimalMath::subtract($remaining,$approved);$expected=DecimalMath::add($expected,DecimalMath::multiply($approved,Decimal::fromString((string)$o['expected_net_return'])));}
    $items[]=new AllocationItem((string)$o['strategy_version_id'],(string)$o['opportunity_id'],$requested,$approved,$priority++,Decimal::fromString((string)$o['expected_net_return']),Decimal::fromString((string)($o['expected_value']??'0')),$capacity,$decision,$reason,(array)($o['risk_budget']??[]));
   }
