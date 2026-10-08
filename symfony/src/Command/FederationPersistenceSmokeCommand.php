@@ -6,10 +6,13 @@ namespace App\Command;
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
+use App\Persistence\Federation\FederationPlanApproveHandler;
 use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
 use App\Web\Experience\Adaptive\ExperienceMode;
 use Doctrine\DBAL\Connection;
 use DomainException;
+use Kernel\Action\Action;
+use Kernel\Action\ActionStatus;
 use Kernel\Identity\Model\OrganizationRole;
 use Kernel\Shared\Domain\OrganizationId;
 use Kernel\Shared\Domain\UserId;
@@ -44,6 +47,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
         private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
+        private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
     ) {
@@ -128,6 +132,75 @@ final class FederationPersistenceSmokeCommand extends Command
                 throw new \RuntimeException('Unregistered Federation Action passed activation gate.');
             } catch (DomainException) {
             }
+            // A real canonical Action handler can activate a proposed plan,
+            // but only with a verified independent human decision and immutable hash.
+            // Fixtures are rolled back and do not install/enable the tenant module.
+            $activateId = 'plan-' . bin2hex(random_bytes(8));
+            $this->db->insert('cos_federation_plans', [
+                'organization_id' => $org, 'plan_id' => $activateId, 'goal_id' => $goalId,
+                'spec_version' => 1, 'plan_version' => 3, 'state' => 'proposed',
+                'plan_json' => json_encode(['steps' => [
+                    ['id' => 'checkpoint', 'capability_id' => 'sales.leads.read',
+                        'capability_version' => '1.0.0', 'side_effect_level' => 'none'],
+                ]], JSON_THROW_ON_ERROR),
+                'created_at' => self::now(),
+            ]);
+            $activationJson = (string) $this->db->fetchOne(
+                'SELECT plan_json FROM cos_federation_plans WHERE organization_id = :org AND plan_id = :plan',
+                ['org' => $org, 'plan' => $activateId],
+            );
+            $activationActionId = bin2hex(random_bytes(16));
+            $activationParameters = [
+                'goal_id' => $goalId, 'plan_id' => $activateId, 'specification_version' => 1,
+                'plan_hash' => hash('sha256', $activationJson),
+            ];
+            $this->db->insert('cos_actions', [
+                'id' => $activationActionId, 'organization_id' => $org,
+                'type' => FederationPlanApproveHandler::ACTION_TYPE,
+                'target_type' => 'cos_federation_plan', 'target_id' => $activateId,
+                'parameters' => json_encode($activationParameters, JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'RUNNING', 'execution_mode' => 'APPROVAL_REQUIRED', 'risk_level' => 'LOW',
+                'idempotency_key' => 'activation:' . $activationActionId,
+                'correlation_id' => $activationActionId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $activationActionId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $activationActionId, 'evaluated_at' => self::now(),
+            ]);
+            $this->db->insert('cos_approvals', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $activationActionId, 'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'independent-reviewer',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'independent-reviewer',
+                'decided_at' => self::now(),
+            ]);
+            $activationAction = new Action(
+                $activationActionId, $org, FederationPlanApproveHandler::ACTION_TYPE,
+                'cos_federation_plan', $activateId, $activationParameters,
+                'USER', 'user-smoke', 'APPROVAL_REQUIRED', 'LOW',
+                'activation:' . $activationActionId, new \DateTimeImmutable(),
+                ActionStatus::Running, $activationActionId,
+            );
+            $activated = $this->approvalHandler->execute($activationAction);
+            self::assert($activated->successful
+                && $this->db->fetchOne(
+                    'SELECT state FROM cos_federation_plans WHERE organization_id = :org AND plan_id = :plan',
+                    ['org' => $org, 'plan' => $activateId],
+                ) === 'approved', 'Canonical Action handler failed to approve plan.');
+            self::assert($this->approvalHandler->execute($activationAction)->successful,
+                'Replaying an already-validated internal approval must be idempotent.');
+            $forged = new Action(
+                bin2hex(random_bytes(16)), $org, FederationPlanApproveHandler::ACTION_TYPE,
+                'cos_federation_plan', $activateId, $activationParameters,
+                'SYSTEM', 'forged', 'APPROVAL_REQUIRED', 'HIGH', null,
+                new \DateTimeImmutable(), ActionStatus::Running,
+            );
+            self::assert(!$this->approvalHandler->execute($forged)->successful,
+                'Federation Action handler accepted forged SYSTEM source.');
+
             // Independently preflight a read-only, human-gated workflow plan.
             $safePlanId = 'plan-' . bin2hex(random_bytes(8));
             $this->db->insert('cos_federation_plans', [
