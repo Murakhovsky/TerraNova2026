@@ -77,4 +77,31 @@ $assert($intermediateCurrency['today']['status']==='UNAVAILABLE'
     && $intermediateCurrency['today']['reason']==='INTERMEDIATE_NAV_CURRENCY_MISMATCH',
     'A currency change hidden between boundary NAV valuations must block performance.');
 
+$corruptIntermediate=$snapshot('2026-10-08T06:00:00Z','1210','0');
+$corruptIntermediate['marks_reconciled']=false;
+$intermediateGap=PortfolioNavWindowProjector::project([
+    $rows[1], $corruptIntermediate, $rows[2],
+],$at);
+$assert($intermediateGap['today']['status']==='UNAVAILABLE'
+    && $intermediateGap['today']['reason']==='UNVERIFIED_VALUATION_IN_WINDOW'
+    && $intermediateGap['today']['net_pnl']===null,
+    'A rejected intermediate valuation must not disappear from an otherwise complete Today window.');
+
+$badTimestamp=$snapshot('2026-10-08T06:00:00Z','1210','0');
+$badTimestamp['valued_at']='unknown';
+$undatedGap=PortfolioNavWindowProjector::project([
+    $rows[1],$badTimestamp,$rows[2],
+],$at);
+$assert($undatedGap['today']['reason']==='UNVERIFIED_VALUATION_IN_WINDOW',
+    'A snapshot without a verifiable event time must never be ignored.');
+
+$outsideWindow=$snapshot('2026-09-01T12:00:00Z','900','0');
+$outsideWindow['ledger_reconciled']=false;
+$independentPeriod=PortfolioNavWindowProjector::project([
+    $outsideWindow,...$rows,
+],$at);
+$assert($independentPeriod['today']['status']==='COMPLETE'
+    && $independentPeriod['30d']['status']==='COMPLETE',
+    'Invalid NAV evidence outside the evaluated window must not poison unrelated periods.');
+
 echo "Capital Markets portfolio NAV window projection passed.\n";
