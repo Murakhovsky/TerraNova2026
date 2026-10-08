@@ -503,6 +503,11 @@ final readonly class CapitalRiskService
     'maximum_unhedged_exposure'=>(string)($riskBudget['maximum_unhedged_exposure']??$allocated->value()),
     'daily_loss_budget'=>(string)($riskBudget['daily_loss_budget']??'0'),
     'weekly_loss_budget'=>(string)($riskBudget['weekly_loss_budget']??'0'),
+    'drawdown_consumed'=>(string)($riskBudget['drawdown_consumed']??'0'),
+    'daily_loss_consumed'=>(string)($riskBudget['daily_loss_consumed']??'0'),
+    'weekly_loss_consumed'=>(string)($riskBudget['weekly_loss_consumed']??'0'),
+    'unhedged_exposure_consumed'=>(string)($riskBudget['unhedged_exposure_consumed']??'0'),
+    'venue_exposure_consumed'=>(string)($riskBudget['venue_exposure_consumed']??'0'),
    ],
    'effective_from'=>gmdate('Y-m-d H:i:s'),
    'status'=>strtoupper((string)($input['status']??'ACTIVE')),
@@ -803,8 +808,36 @@ final readonly class CapitalRiskService
    }
    if($strategyVersionId!==''&&isset($strategyBudgets[$strategyVersionId])){
     $opportunity['strategy_capital_headroom']=$strategyBudgets[$strategyVersionId]['headroom']->value();
-    $opportunity['risk_budget']=$strategyBudgets[$strategyVersionId]['risk_budget'];
+    $riskBudget=$strategyBudgets[$strategyVersionId]['risk_budget'];
+    $opportunity['risk_budget']=$riskBudget;
     if($strategyBudgets[$strategyVersionId]['headroom']->isZero())$blocked='STRATEGY_CAPITAL_BUDGET_EXHAUSTED';
+
+    $budgetChecks=[
+     ['maximum_drawdown','drawdown_consumed'],
+     ['daily_loss_budget','daily_loss_consumed'],
+     ['weekly_loss_budget','weekly_loss_consumed'],
+     ['maximum_unhedged_exposure','unhedged_exposure_consumed'],
+     ['maximum_venue_exposure','venue_exposure_consumed'],
+    ];
+    foreach($budgetChecks as [$limitKey,$consumedKey]){
+     $limit=Decimal::fromString((string)($riskBudget[$limitKey]??'0'));
+     $consumed=DecimalMath::abs(Decimal::fromString((string)($riskBudget[$consumedKey]??'0')));
+     if($limit->isPositive()&&$consumed->compareTo($limit)>=0){
+      $blocked='STRATEGY_RISK_BUDGET_EXHAUSTED';
+      break;
+     }
+    }
+
+    if($blocked===''&&isset($opportunity['projected_unhedged_exposure'])){
+     $limit=Decimal::fromString((string)($riskBudget['maximum_unhedged_exposure']??'0'));
+     $projected=DecimalMath::abs(Decimal::fromString((string)$opportunity['projected_unhedged_exposure']));
+     if($limit->isPositive()&&$projected->compareTo($limit)>0)$blocked='STRATEGY_UNHEDGED_RISK_BUDGET_EXCEEDED';
+    }
+    if($blocked===''&&isset($opportunity['projected_strategy_venue_exposure'])){
+     $limit=Decimal::fromString((string)($riskBudget['maximum_venue_exposure']??'0'));
+     $projected=DecimalMath::abs(Decimal::fromString((string)$opportunity['projected_strategy_venue_exposure']));
+     if($limit->isPositive()&&$projected->compareTo($limit)>0)$blocked='STRATEGY_VENUE_RISK_BUDGET_EXCEEDED';
+    }
    }
    if(isset($opportunity['visible_depth'],$opportunity['stress_exit_depth'],$opportunity['estimated_exit_seconds'])){
     $budgetData=(array)($opportunity['liquidity_budget']??[]);
