@@ -174,14 +174,64 @@ export default class extends Controller {
         }
     }
 
+    moveColumn(event) {
+        const control = event.currentTarget;
+        const tableId = control.dataset.cmTableId || '';
+        const column = control.dataset.cmColumn || '';
+        const direction = Number.parseInt(control.dataset.cmDirection || '0', 10);
+        const table = this.tables().find((item) => (item.dataset.cmTable || '') === tableId);
+        if (!table || !column || ![-1, 1].includes(direction)) {
+            return;
+        }
+
+        const order = this.columnOrder(tableId, table);
+        const index = order.indexOf(column);
+        const target = index + direction;
+        if (index < 0 || target < 0 || target >= order.length) {
+            return;
+        }
+        [order[index], order[target]] = [order[target], order[index]];
+        window.localStorage.setItem(this.columnOrderStorageKey(tableId), JSON.stringify(order));
+        this.applyStoredColumns(table);
+    }
+
     applyStoredColumns(table) {
         const tableId = table.dataset.cmTable || '';
         if (!tableId) {
             return;
         }
+
+        const order = this.columnOrder(tableId, table);
+        for (const row of table.rows) {
+            const cells = Array.from(row.cells).filter((cell) => (cell.dataset.cmCol || '') !== '');
+            const byColumn = new Map(cells.map((cell) => [cell.dataset.cmCol, cell]));
+            for (const column of order) {
+                const cell = byColumn.get(column);
+                if (cell) {
+                    row.append(cell);
+                }
+            }
+        }
+
         const hidden = new Set(this.hiddenColumns(tableId));
         for (const cell of table.querySelectorAll('[data-cm-col]')) {
             cell.hidden = hidden.has(cell.dataset.cmCol || '');
+        }
+    }
+
+    columnOrder(tableId, table) {
+        const canonical = Array.from(table.querySelectorAll('thead [data-cm-col]'))
+            .map((cell) => cell.dataset.cmCol || '')
+            .filter((value) => value !== '');
+        try {
+            const parsed = JSON.parse(window.localStorage.getItem(this.columnOrderStorageKey(tableId)) || '[]');
+            if (!Array.isArray(parsed)) {
+                return canonical;
+            }
+            const stored = parsed.filter((value) => typeof value === 'string' && canonical.includes(value));
+            return [...stored, ...canonical.filter((value) => !stored.includes(value))];
+        } catch {
+            return canonical;
         }
     }
 
@@ -200,5 +250,9 @@ export default class extends Controller {
 
     columnStorageKey(tableId) {
         return 'cos.capital_markets.columns.' + tableId;
+    }
+
+    columnOrderStorageKey(tableId) {
+        return 'cos.capital_markets.column_order.' + tableId;
     }
 }
