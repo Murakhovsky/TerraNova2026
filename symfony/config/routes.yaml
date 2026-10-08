@@ -2651,6 +2651,18 @@ capital_markets_markets:
   controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::markets
   methods: [GET, HEAD]
 
+capital_markets_market_detail:
+  path: /capital-markets/markets/{id}
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::marketDetail
+  methods: [GET, HEAD]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+capital_markets_relationship_detail:
+  path: /capital-markets/relationships/{id}
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::relationshipDetail
+  methods: [GET, HEAD]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
 capital_markets_strategies:
   path: /capital-markets/strategies
   controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::strategies
