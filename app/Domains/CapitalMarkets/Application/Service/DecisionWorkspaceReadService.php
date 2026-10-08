@@ -5,6 +5,7 @@ namespace Domains\CapitalMarkets\Application\Service;
 
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface;
+use Domains\CapitalMarkets\Application\Audit\CapitalMarketsAuditResourceType;
 use Domains\CapitalMarkets\Application\Query\ListInstruments;
 use Domains\CapitalMarkets\Application\Query\ListRelationships;
 use Domains\CapitalMarkets\Application\Query\ListVenues;
@@ -17,6 +18,7 @@ use Kernel\Module\DomainModuleRegistry;
 use Kernel\Shared\Domain\OrganizationId;
 use Platform\Audit\Contract\ActivityHistoryRepositoryInterface;
 use Platform\Audit\Model\ActivityHistoryEntry;
+use Platform\Audit\Model\ResourceReference;
 use Throwable;
 
 /**
@@ -372,6 +374,12 @@ final readonly class DecisionWorkspaceReadService
         );
         $page['decision_trace'] = $this->hypothesisTrace($hypothesisId, $research, $opportunities, $executions);
         $page['research_decision'] = $this->researchDecision($hypothesis);
+        $page['audit'] = $this->auditRows(
+            $organizationId,
+            CapitalMarketsAuditResourceType::ResearchHypothesis->value,
+            $hypothesisId,
+            $errors,
+        );
         $page['partial_errors'] = $errors;
 
         return $page;
@@ -408,6 +416,14 @@ final readonly class DecisionWorkspaceReadService
         $page['backtest_runs'] = $this->forStrategy($research['backtest_runs'] ?? [], $strategyId);
         $page['oos_runs'] = $this->forStrategy($research['oos_runs'] ?? [], $strategyId);
         $page['paper_runs'] = $this->forStrategy($research['paper_runs'] ?? [], $strategyId);
+        $errors = $page['partial_errors'] ?? [];
+        $page['audit'] = $this->auditRows(
+            $organizationId,
+            CapitalMarketsAuditResourceType::ResearchStrategyVersion->value,
+            $strategyId,
+            $errors,
+        );
+        $page['partial_errors'] = $errors;
         return $page;
     }
 
@@ -1719,6 +1735,29 @@ final readonly class DecisionWorkspaceReadService
             $rows,
             static fn(array $row): bool => (string)($row['strategy_version_id'] ?? '') === $strategyId,
         ));
+    }
+
+    /** @param list<array{source:string,message:string}> $errors @return list<array<string,mixed>> */
+    private function auditRows(string $organizationId, string $resourceType, string $resourceId, array &$errors): array
+    {
+        $entries = $this->safe(
+            fn(): array => $this->activityHistory->recentForResource(
+                OrganizationId::fromString($organizationId),
+                new ResourceReference($resourceType, $resourceId),
+                100,
+            ),
+            [],
+            $errors,
+            'audit_history',
+        );
+
+        $rows = [];
+        foreach ($entries as $entry) {
+            if ($entry instanceof ActivityHistoryEntry) {
+                $rows[] = $entry->toArray();
+            }
+        }
+        return $rows;
     }
 
     /**
