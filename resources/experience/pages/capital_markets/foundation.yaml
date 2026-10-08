@@ -216,7 +216,7 @@ pages:
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip, EntityList]
-      optional: [Toolbar, ContextPanel, EmptyState, ErrorState]
+      optional: [Toolbar, EmptyState, ErrorState]
     primary_action: capital_markets.portfolio.manage
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
@@ -238,7 +238,7 @@ pages:
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip, EntityList]
-      optional: [Toolbar, ContextPanel, EmptyState, ErrorState]
+      optional: [Toolbar, EmptyState, ErrorState]
     primary_action: capital_markets.risk.manage_policy
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
@@ -260,7 +260,7 @@ pages:
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip, EntityList]
-      optional: [Toolbar, ContextPanel, EmptyState, ErrorState]
+      optional: [Toolbar, EmptyState, ErrorState]
     primary_action: capital_markets.allocation.propose
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
