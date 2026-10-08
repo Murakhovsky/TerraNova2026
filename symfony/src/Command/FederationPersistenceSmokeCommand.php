@@ -21,6 +21,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Throwable;
+use Twig\Environment;
 
 #[AsCommand(
     name: 'cos:federation:persistence:smoke',
@@ -32,6 +33,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly Connection $db,
         private readonly FederationGoalStore $goals,
         private readonly FederationExperiencePreferenceStore $preferences,
+        private readonly Environment $twig,
     ) {
         parent::__construct();
     }
@@ -75,6 +77,23 @@ final class FederationPersistenceSmokeCommand extends Command
                 'Workspace Experience preferences not durable.');
             self::assert($this->preferences->defaultMode($other) === ExperienceMode::Result,
                 'Other tenant leaked Experience preferences.');
+
+            foreach ([
+                ExperienceMode::Result->value => ['data-experience-mode="result"', 'Ваші бізнес-цілі', 'csrf_token'],
+                ExperienceMode::Process->value => ['data-experience-mode="process"', 'data-goal-process'],
+                ExperienceMode::Expert->value => ['data-experience-mode="expert"', 'data-goal-expert'],
+            ] as $mode => $markers) {
+                $html = $this->twig->render('experience/federation/goals.html.twig', [
+                    'mode' => $mode,
+                    'goals' => $this->goals->listGoals($actor),
+                    'csrfToken' => 'smoke-csrf-token',
+                    'created' => false,
+                    'error' => false,
+                ]);
+                foreach ($markers as $marker) {
+                    self::assert(str_contains($html, $marker), 'Goal Workspace SSR missing: ' . $marker);
+                }
+            }
 
             // Test fixture inserts a synthetic approved plan to exercise storage only.
             // This command DOES NOT test or bypass production Policy/Approval integration.
