@@ -344,10 +344,18 @@ final readonly class CapitalRiskService
   }
   $envelope=new RiskEnvelope((string)$envelopeRecord['envelope_id'],$portfolioId,(string)$envelopeRecord['version'],$limits);
   $metrics=[
+   'equity'=>$equity,'capital'=>$equity,
    'gross_exposure'=>$gross,'net_exposure'=>DecimalMath::abs($net),'leverage'=>$leverage,
    'drawdown'=>$drawdown,'daily_loss'=>$dailyLoss,'margin_utilization'=>$margin,
    'available_capital'=>Decimal::fromString((string)($portfolio['available_capital']??'0')),
+   'dynamic_limit_multiplier'=>Decimal::fromString((string)($input['dynamic_limit_multiplier']??'1')),
   ];
+  foreach((array)($exposure['by_venue']??[]) as $key=>$value)$metrics['venue_exposure:'.$key]=DecimalMath::abs(Decimal::fromString((string)$value));
+  foreach((array)($exposure['by_asset']??[]) as $key=>$value)$metrics['asset_exposure:'.$key]=DecimalMath::abs(Decimal::fromString((string)$value));
+  foreach((array)($exposure['by_strategy']??[]) as $key=>$value)$metrics['strategy_exposure:'.$key]=DecimalMath::abs(Decimal::fromString((string)$value));
+  foreach((array)($exposure['by_currency']??[]) as $key=>$value)$metrics['currency_exposure:'.$key]=DecimalMath::abs(Decimal::fromString((string)$value));
+  foreach((array)($exposure['by_counterparty']??[]) as $key=>$value)$metrics['counterparty_exposure:'.$key]=DecimalMath::abs(Decimal::fromString((string)$value));
+  foreach((array)($exposure['by_chain']??[]) as $key=>$value)$metrics['chain_exposure:'.$key]=DecimalMath::abs(Decimal::fromString((string)$value));
   $assessment=$this->portfolioRisk->assess($envelope,$metrics,PortfolioRiskState::tryFrom(strtoupper((string)($input['current_state']??'NORMAL')))??PortfolioRiskState::Normal);
   $headroom=[];foreach($assessment['headroom'] as $key=>$h)$headroom[$key]=['metric'=>$h->metric,'current'=>$h->current->value(),'limit'=>$h->limit->value(),'headroom'=>$h->headroom->value(),'utilization'=>$h->utilization->value(),'hard'=>$h->hard,'breached'=>$h->breached];
 
