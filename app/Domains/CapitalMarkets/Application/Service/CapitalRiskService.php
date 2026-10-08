@@ -25,6 +25,8 @@ use Domains\CapitalMarkets\Domain\Service\CapitalStateEngine;
 use Domains\CapitalMarkets\Domain\Service\CorrelationEngine;
 use Domains\CapitalMarkets\Domain\Service\MarginAggregationEngine;
 use Domains\CapitalMarkets\Domain\Service\LiquidationClusterEngine;
+use Domains\CapitalMarkets\Domain\Service\PortfolioPerformanceAttributionEngine;
+use Domains\CapitalMarkets\Domain\Service\CapitalVelocityEngine;
 use Domains\CapitalMarkets\Domain\Risk\LiquidityBudget;
 use Domains\CapitalMarkets\Domain\Stress\PortfolioStressScenario;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -51,6 +53,8 @@ final readonly class CapitalRiskService
   private CapitalMarketsEventPublisherInterface $events,
   private MarginAggregationEngine $margins,
   private LiquidationClusterEngine $liquidationClusters,
+  private PortfolioPerformanceAttributionEngine $performanceAttribution,
+  private CapitalVelocityEngine $capitalVelocity,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -75,7 +79,67 @@ final readonly class CapitalRiskService
    'rebalance'=>$this->repository->latestRebalancePlan($organizationId,$portfolioId),
    'correlation'=>$this->repository->latestCorrelationSnapshot($organizationId,$portfolioId),
    'stress_results'=>$this->repository->listStressResults($organizationId,$portfolioId,20),
+   'performance'=>$this->performanceAttribution($organizationId,$portfolioId),
   ];
+ }
+
+ public function performanceAttribution(string $organizationId,string $portfolioId='paper-master'):array
+ {
+  $positions=$this->trading->listPositions($organizationId,5000);
+  $executions=$this->trading->listExecutions($organizationId,5000);
+  $opportunities=$this->trading->listOpportunities($organizationId,5000);
+
+  $opportunityById=[];
+  foreach($opportunities as $opportunity){
+   $id=(string)($opportunity['opportunity_id']??$opportunity['id']??'');
+   if($id!=='')$opportunityById[$id]=$opportunity;
+  }
+  $opportunityByExecution=[];
+  foreach($executions as $execution){
+   $executionId=(string)($execution['execution_id']??'');
+   if($executionId!=='')$opportunityByExecution[$executionId]=(string)($execution['opportunity_id']??'');
+  }
+
+  $records=[];
+  $capitalTime=Decimal::fromString('0');
+  foreach($positions as $position){
+   if((string)($position['portfolio_id']??'')!==''&&!str_contains((string)$position['portfolio_id'],'paper:')&&(string)$position['portfolio_id']!==$portfolioId)continue;
+   $realized=Decimal::fromString((string)($position['realized_pnl']??'0'));
+   $unrealized=Decimal::fromString((string)($position['unrealized_pnl']??'0'));
+   $pnl=DecimalMath::add($realized,$unrealized);
+   $deployed=DecimalMath::abs(Decimal::fromString((string)($position['market_value']??'0')));
+   $executionId=(string)($position['execution_id']??'');
+   $opportunityId=$opportunityByExecution[$executionId]??'';
+   $opportunity=$opportunityId!==''?($opportunityById[$opportunityId]??[]):[];
+
+   $riskConsumed=DecimalMath::abs(Decimal::fromString((string)($position['risk_consumed']??$position['initial_margin']??'0')));
+   $records[]=[
+    'pnl'=>$pnl->value(),
+    'deployed_capital'=>$deployed->value(),
+    'risk_consumed'=>$riskConsumed->value(),
+    'strategy'=>(string)($position['strategy_id']??'UNKNOWN'),
+    'asset'=>(string)($position['asset']??$position['symbol']??$position['instrument_id']??'UNKNOWN'),
+    'venue'=>(string)($position['venue_id']??'UNKNOWN'),
+    'opportunity_type'=>(string)($opportunity['type']??$opportunity['opportunity_type']??$opportunity['hypothesis']??'UNKNOWN'),
+    'instrument_family'=>(string)($position['instrument_family']??$position['instrument_kind']??'UNKNOWN'),
+    'risk_bucket'=>(string)($position['risk_bucket']??'UNKNOWN'),
+   ];
+
+   $openedAt=$this->timestamp((string)($position['opened_at']??''));
+   $endAt=$this->timestamp((string)($position['closed_at']??$position['updated_at']??''));
+   if($openedAt!==null){
+    $endAt??=time();$holding=max(1,$endAt-$openedAt);
+    if($deployed->isPositive())$capitalTime=DecimalMath::add($capitalTime,DecimalMath::multiply($deployed,Decimal::fromString((string)$holding)));
+   }
+  }
+
+  $attribution=$this->performanceAttribution->attribute($records);
+  $result=$this->serializeDecimals($attribution);
+  $netPnl=$attribution['net_pnl'];
+  $result['return_on_capital_time']=$capitalTime->isZero()?'0':DecimalMath::divide($netPnl,$capitalTime,18)->value();
+  $result['capital_time']=$capitalTime->value();
+  $result['record_count']=count($records);
+  return $result;
  }
 
  public function capitalState(string $organizationId,string $portfolioId='paper-master',array $buffers=[]):array
@@ -755,6 +819,19 @@ final readonly class CapitalRiskService
  private function publish(string $organizationId,string $aggregateId,string $type,array $payload):void
  {
   $this->events->publish(new CapitalRiskLifecycleEvent($type,'cmcr_'.bin2hex(random_bytes(12)),new DateTimeImmutable(),$organizationId,$aggregateId,$payload));
+ }
+
+ private function timestamp(string $value):?int
+ {
+  if(trim($value)==='')return null;
+  $timestamp=strtotime($value);return $timestamp===false?null:$timestamp;
+ }
+
+ private function serializeDecimals(mixed $value):mixed
+ {
+  if($value instanceof Decimal)return $value->value();
+  if(!is_array($value))return $value;
+  $out=[];foreach($value as $key=>$item)$out[$key]=$this->serializeDecimals($item);return $out;
  }
 
  private function decimalMap(array $values):array
