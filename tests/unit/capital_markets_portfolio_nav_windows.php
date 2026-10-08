@@ -53,4 +53,9 @@ $malformed=PortfolioNavWindowProjector::project([
        'ledger_reconciled'=>true,'marks_reconciled'=>true,'external_flows_reconciled'=>true],
 ],$at);
 $assert($malformed['today']['net_pnl']===null,'Invalid decimal money evidence must be unavailable.');
+$unproven=$snapshot('2026-10-08T12:00:00Z','1250','100');
+unset($unproven['marks_fingerprint']);
+$missingProvenance=PortfolioNavWindowProjector::project([$rows[1],$unproven],$at);
+$assert($missingProvenance['today']['net_pnl']===null,'NAV records without source fingerprints must never contribute to financial totals.');
+
 echo "Capital Markets portfolio NAV window projection passed.\n";
