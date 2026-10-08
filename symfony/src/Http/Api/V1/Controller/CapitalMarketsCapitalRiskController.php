@@ -22,6 +22,7 @@ final readonly class CapitalMarketsCapitalRiskController
  public function allocation():JsonResponse{return $this->read(CapitalMarketsCapability::AllocationView,fn($o)=>$this->service->workspace($o)['allocation_plan']);}
  public function recalculate(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::AllocationPropose,fn($o,$p)=>$this->service->recalculateAllocation($o,$p),201);}
  public function stress(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RiskView,fn($o,$p)=>$this->service->runStress($o,$p),201);}
+ public function correlation(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RiskView,fn($o,$p)=>$this->service->refreshCorrelation($o,$p),201);}
  public function rebalance(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RebalancePropose,fn($o,$p)=>$this->service->proposeRebalance($o,$p),201);}
  public function runPortfolioAgent(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::AllocationPropose,function($o,$p){
   $correlation=trim((string)($p['correlation_id']??''));if($correlation==='')$correlation='CM-PORTFOLIO-'.strtoupper(bin2hex(random_bytes(6)));
