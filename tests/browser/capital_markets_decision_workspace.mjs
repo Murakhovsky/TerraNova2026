@@ -98,6 +98,8 @@ try {
       const orderBefore = await page.locator('table[data-cm-table="opportunities"] thead [data-cm-col]').evaluateAll(
         (cells) => cells.map((cell) => cell.dataset.cmCol),
       );
+      const columnsPanel = page.locator('details').filter({ has: page.locator('summary', { hasText: 'Columns / order' }) });
+      await columnsPanel.locator('summary').click();
       const statusMoveLeft = page.locator('button[data-cm-table-id="opportunities"][data-cm-column="status"][data-cm-direction="-1"]');
       await statusMoveLeft.click();
       const orderAfter = await page.locator('table[data-cm-table="opportunities"] thead [data-cm-col]').evaluateAll(
