@@ -297,6 +297,8 @@ foreach([
     "Execute Live",
     "keyboard",
     "column order did not persist across reload",
+    "/capital-markets/export/opportunities.json",
+    "/capital-markets/export/performance.csv",
 ] as $needle){
     $assert(str_contains($browser,$needle),'Decision Workspace browser QA contract missing: '.$needle);
 }
