@@ -688,7 +688,7 @@
         </div>
       </div>
       <div class="table-responsive"><table class="table"><thead><tr><th>{{ perfViews[perfView] }}</th><th>Net P&L</th><th>Deployed Capital</th><th>Risk Consumed</th></tr></thead><tbody>
-      {% for key,x in attribute(attr, perfView)|default({}) %}<tr><td>{{ key }}</td><td>{{ x.pnl|default('—') }}</td><td>{{ x.deployed_capital|default('—') }}</td><td>{{ x.risk_consumed|default('—') }}</td></tr>{% else %}<tr><td colspan="4">No attributable performance for this dimension.</td></tr>{% endfor %}
+      {% for key,x in attr[perfView]|default({}) %}<tr><td>{{ key }}</td><td>{{ x.pnl|default('—') }}</td><td>{{ x.deployed_capital|default('—') }}</td><td>{{ x.risk_consumed|default('—') }}</td></tr>{% else %}<tr><td colspan="4">No attributable performance for this dimension.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
     <section class="cos-panel"><h2>Edge Funnel</h2><div class="cos-kpi-strip"><twig:CosMetric label="Detected" value="{{ perf.edge_funnel.detected|default(0) }}" /><twig:CosMetric label="Validated" value="{{ perf.edge_funnel.validated|default(0) }}" /><twig:CosMetric label="Executable" value="{{ perf.edge_funnel.executable|default(0) }}" /><twig:CosMetric label="Executed" value="{{ perf.edge_funnel.executed|default(0) }}" /><twig:CosMetric label="Profitable" value="{{ perf.edge_funnel.profitable|default(0) }}" /></div><p class="mt-2"><strong>Detected / Executable / Realized Edge value:</strong> unavailable until the backend exposes canonical edge-value attribution. Counts remain visible; the UI does not infer money from them.</p></section>
@@ -696,9 +696,18 @@
 
   {% elseif cmView == 'agents' %}
     {% set agents = w.agents|default({}) %}
+    {% set failedRuns = agents.runs|default([])|filter(run => run.status|default('') == 'FAILED') %}
+    {% set runningRuns = agents.runs|default([])|filter(run => run.status|default('') in ['RUNNING','STARTED']) %}
+    <section class="cos-kpi-strip">
+      <twig:CosMetric label="Registered Agents" value="{{ agents.definitions|default([])|length }}" hint="Capital Markets governed agents" />
+      <twig:CosMetric label="Recent Runs" value="{{ agents.runs|default([])|length }}" hint="tenant-scoped runtime projection" />
+      <twig:CosMetric label="Running" value="{{ runningRuns|length }}" hint="current runtime state" />
+      <twig:CosMetric label="Failed" value="{{ failedRuns|length }}" hint="recent failures" />
+    </section>
     <section class="cos-panel">
       <h2>Agent Authority</h2>
-      <p>UI exposes decision summary, evidence, tool use and result. Hidden internal reasoning is not displayed.</p>
+      <p>UI exposes governed authority and the runtime evidence actually present in the canonical read model. Hidden internal reasoning is not displayed.</p>
+      <twig:CosAlert title="Tool trace boundary" copy="The current Agent Run projection does not expose per-tool inputs/outputs or cost details for this screen. Missing telemetry is shown as unavailable rather than invented." tone="info" />
       <div class="table-responsive"><table class="table"><thead><tr><th>Agent</th><th>Profile</th><th>Version</th><th>Authority</th><th>Execution Mode</th><th>Max autonomous actions</th><th>State</th></tr></thead><tbody>
       {% for a in agents.definitions|default([]) %}<tr><td><strong>{{ a.name }}</strong></td><td>{{ a.profile }}</td><td>{{ a.version }}</td><td>{{ a.authority }}</td><td>{{ a.execution_mode }}</td><td>{{ a.max_actions_per_run }}</td><td>{{ a.enabled ? 'ENABLED' : 'DISABLED' }}</td></tr>{% else %}<tr><td colspan="7">No Capital Markets agents registered.</td></tr>{% endfor %}
       </tbody></table></div>
