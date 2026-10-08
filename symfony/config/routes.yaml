@@ -1,4 +1,15 @@
 
+# COS Federation: authenticated tenant-scoped adaptive presentation preferences.
+cos_federation_experience_preferences_show:
+  path: /api/v1/experience/preferences
+  controller: App\Http\Api\V1\Controller\FederationExperiencePreferenceController::show
+  methods: [GET]
+
+cos_federation_experience_preferences_update:
+  path: /api/v1/experience/preferences
+  controller: App\Http\Api\V1\Controller\FederationExperiencePreferenceController::update
+  methods: [POST]
+
 # Engineering Manager V0.1 API
 cos_engineering_feature_create:
   path: /api/engineering/features
