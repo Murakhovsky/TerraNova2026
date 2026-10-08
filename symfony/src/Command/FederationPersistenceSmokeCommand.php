@@ -807,6 +807,31 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $health['recoverable_count'] === 0
                 && ($health['steps'][1]['recovery_state'] ?? null) === 'awaiting_human_approval',
                 'Pending Federation Action was misclassified as a recovery incident.');
+            $runView = [
+                'run_id' => $linearRun, 'goal_id' => $linearGoal,
+                'plan_id' => $linearPlan, 'state' => 'running',
+                'revision' => 2, 'recovery' => $health,
+            ];
+            foreach ([
+                'result' => [false, false],
+                'process' => [true, false],
+                'expert' => [true, true],
+            ] as $mode => [$showSteps, $showActionId]) {
+                $html = $this->twig->render('experience/federation/goals.html.twig', [
+                    'mode' => $mode, 'runs' => [$runView],
+                    'goals' => $this->goals->listGoals($actor),
+                    'csrfToken' => 'smoke-csrf-token',
+                    'created' => false, 'error' => false, 'reconciled' => false,
+                ]);
+                self::assert(str_contains($html, 'data-run-id="' . $linearRun . '"')
+                    && str_contains($html, 'data-federation-runs')
+                    && str_contains($html, 'Потребують уваги:'),
+                    'Adaptive Federation recovery list failed to render.');
+                self::assert(str_contains($html, 'data-goal-recovery-process') === $showSteps,
+                    'Recovery Process details leaked into another Experience mode.');
+                self::assert(str_contains($html, 'data-goal-recovery-expert') === $showActionId,
+                    'Recovery Action identifier visibility ignores Expert mode.');
+            }
             $this->db->executeStatement(
                 "UPDATE cos_actions SET status = 'REJECTED' WHERE organization_id = :org AND id = :id",
                 ['org' => $org, 'id' => $firstAction['action_id']],
@@ -849,6 +874,21 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($pendingRecovery['recoverable_count'] === 1
                 && $pendingRecovery['attention_count'] === 0,
                 'Completed Federation Action was not eligible for receipt-only reconciliation.');
+            $recoveryHtml = $this->twig->render('experience/federation/goals.html.twig', [
+                'mode' => 'process',
+                'runs' => [[
+                    'run_id' => $linearRun, 'goal_id' => $linearGoal,
+                    'plan_id' => $linearPlan, 'state' => 'running', 'revision' => 2,
+                    'recovery' => $pendingRecovery,
+                ]],
+                'goals' => $this->goals->listGoals($actor),
+                'csrfToken' => 'smoke-csrf-token',
+                'created' => false, 'error' => false, 'reconciled' => false,
+            ]);
+            self::assert(str_contains($recoveryHtml, 'Звірити завершені дії без повторного запуску')
+                && str_contains($recoveryHtml, '/workspace/goals/runs/' . $linearRun . '/reconcile')
+                && str_contains($recoveryHtml, 'smoke-csrf-token'),
+                'Recovery action is not accessible through CSRF-protected adaptive Workspace.');
             self::assert($this->recovery->reconcileVerified($actor, $linearRun)['reconciled'] === 1,
                 'Federation recovery did not apply the independently verified Action receipt.');
             self::assert($this->recovery->reconcileVerified($actor, $linearRun)['reconciled'] === 0,

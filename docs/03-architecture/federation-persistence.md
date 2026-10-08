@@ -248,3 +248,27 @@ stale workers, duplicate attempts and attempted requeue.
 an autonomous watchdog or a full recovery workflow with audited human
 decisions. There is no implied permission to reissue failed external
 business actions.
+
+
+## Операційний інтерфейс відновлення
+
+На `/workspace/goals` додано обмежений tenant-список останніх
+Run і станів відновлення. Він доступний менеджеру в тих самих
+`Result`, `Process`, `Expert` режимах:
+
+- **Result:** стан Run, кількість кроків, що потребують уваги,
+  та кількість завершених Action для звірки.
+- **Process:** стан кожного кроку та причина, чому він очікує.
+- **Expert:** додатково ідентифікатори Action, Run/Plan, revision
+  і посилання на JSON-діагностику.
+
+Кнопка «Звірити завершені дії без повторного запуску» з'являється
+лише тоді, коли є підтверджений Action-кандидат. Зміна даних
+проходить через окремий CSRF-захищений POST
+`/workspace/goals/runs/{runId}/reconcile`. Вона не схвалює
+нові Action і не запускає наступний крок плану.
+
+Доступність різних режимів деталізації не збільшує повноваження
+користувача. SSR-тести перевіряють, що Action ID видно лише
+в Expert, Process-деталі не потрапляють у Result, а кнопка
+звірки прив'язана до наявної квитанції та CSRF.
