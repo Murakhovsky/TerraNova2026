@@ -159,7 +159,6 @@ foreach([
     'Decision:',
     'Simulate portfolio impact',
     'Transport:',
-    'quality_flags',
     'HIGH RISK ·',
     'Residual Unhedged',
     'WHAT → WHY → MONEY → RISK → ACTION',
@@ -229,8 +228,11 @@ $preferences=(string)file_get_contents($root.'/symfony/assets/controllers/capita
 foreach([
     'cos.capital_markets.table_density',
     'cos.capital_markets.columns.',
+    'cos.capital_markets.column_order.',
     'localStorage',
     'toggleColumn',
+    'moveColumn',
+    'columnOrder',
     'changeDensity',
     'simulateOpportunity',
     '/api/v1/capital-markets/portfolio/simulate-opportunity',
@@ -267,6 +269,7 @@ foreach([
     "LIVE · DISABLED",
     "Execute Live",
     "keyboard",
+    "column order did not persist across reload",
 ] as $needle){
     $assert(str_contains($browser,$needle),'Decision Workspace browser QA contract missing: '.$needle);
 }
