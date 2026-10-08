@@ -85,6 +85,46 @@
   {% endif %}
 </section>
 
+{% set perf=w.performance|default({}) %}
+<section class="cos-panel">
+  <h2>Portfolio performance & efficiency</h2>
+  <div class="cos-kpi-strip">
+    <twig:CosMetric label="Net P&L" value="{{ perf.net_pnl|default('0') }}" hint="realized + unrealized position contribution" />
+    <twig:CosMetric label="Deployed capital" value="{{ perf.deployed_capital|default('0') }}" hint="capital represented by positions" />
+    <twig:CosMetric label="Capital efficiency" value="{{ perf.capital_efficiency|default('0') }}" hint="Net P&L / deployed capital" />
+    <twig:CosMetric label="Risk efficiency" value="{{ perf.risk_efficiency|default('0') }}" hint="uses actual risk evidence only" />
+    <twig:CosMetric label="Return / capital-time" value="{{ perf.return_on_capital_time|default('0') }}" hint="not annualized or presented as APY" />
+  </div>
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <h3>By strategy</h3>
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Strategy</th><th>P&L</th><th>Capital</th><th>Risk consumed</th></tr></thead>
+        <tbody>
+        {% for key,x in perf.by_strategy|default({}) %}
+          <tr><td>{{ key }}</td><td>{{ x.pnl|default('0') }}</td><td>{{ x.deployed_capital|default('0') }}</td><td>{{ x.risk_consumed|default('0') }}</td></tr>
+        {% else %}
+          <tr><td colspan="4">No attributable position performance yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+    <div class="col-lg-6">
+      <h3>By venue</h3>
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Venue</th><th>P&L</th><th>Capital</th><th>Risk consumed</th></tr></thead>
+        <tbody>
+        {% for key,x in perf.by_venue|default({}) %}
+          <tr><td>{{ key }}</td><td>{{ x.pnl|default('0') }}</td><td>{{ x.deployed_capital|default('0') }}</td><td>{{ x.risk_consumed|default('0') }}</td></tr>
+        {% else %}
+          <tr><td colspan="4">No venue attribution yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
 {% elseif cmView=='opportunity' %}
 {% set o=w.opportunity|default({}) %}
 {% set impact=w.portfolio_impact|default({}) %}
