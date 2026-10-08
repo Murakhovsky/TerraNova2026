@@ -125,6 +125,11 @@ final readonly class CapitalRiskService
     'counterparty'=>(string)($payload['counterparty']??$p['venue_id']??''),
     'chain'=>(string)($payload['chain']??''),
     'liquidity_bucket'=>(string)($payload['liquidity_bucket']??'UNKNOWN'),
+    'instrument_family'=>(string)($payload['instrument_family']??$payload['family']??''),
+    'issuer'=>(string)($payload['issuer']??$payload['issuer_reference']??''),
+    'sector'=>(string)($payload['sector']??''),
+    'jurisdiction'=>(string)($payload['jurisdiction']??$payload['country']??''),
+    'collateral'=>(string)($payload['collateral']??$payload['collateral_asset']??''),
     'relationship_valid'=>(bool)($payload['relationship_valid']??($payload['underlying_key']??null)!==null),
     'delta'=>(string)($payload['delta']??'1'),
    ];
@@ -144,6 +149,11 @@ final readonly class CapitalRiskService
    'by_counterparty'=>$this->decimalMap($snapshot->byCounterparty),
    'by_chain'=>$this->decimalMap($snapshot->byChain),
    'by_liquidity_bucket'=>$this->decimalMap($snapshot->byLiquidityBucket),
+   'by_instrument_family'=>$this->decimalMap($snapshot->byInstrumentFamily),
+   'by_issuer'=>$this->decimalMap($snapshot->byIssuer),
+   'by_sector'=>$this->decimalMap($snapshot->bySector),
+   'by_jurisdiction'=>$this->decimalMap($snapshot->byJurisdiction),
+   'by_collateral'=>$this->decimalMap($snapshot->byCollateral),
    'unknown_exposure'=>$snapshot->unknownExposure,
   ];
   $this->repository->saveExposureSnapshot($organizationId,$record);
