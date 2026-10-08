@@ -2753,6 +2753,10 @@ services:
 
   Platform\Orchestration\Goal\GoalOutcomeEvaluator: ~
 
+  Platform\Orchestration\Goal\GoalWorkflowBindingGuard: ~
+
+  Platform\Orchestration\Goal\GoalWorkflowProjection: ~
+
   Kernel\Module\EffectiveModuleContext:
     arguments:
       $modules: '@Kernel\Module\ActiveModuleResolver'
