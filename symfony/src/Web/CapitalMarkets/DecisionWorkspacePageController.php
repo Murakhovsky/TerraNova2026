@@ -129,6 +129,7 @@ final readonly class DecisionWorkspacePageController
         $capability=match($dataset){
             'opportunities'=>CapitalMarketsCapability::OpportunityView,
             'performance'=>CapitalMarketsCapability::PortfolioView,
+            'realized-windows'=>CapitalMarketsCapability::PortfolioView,
             'research-results'=>CapitalMarketsCapability::ResearchView,
             'executions'=>CapitalMarketsCapability::OpportunityView,
             default=>CapitalMarketsCapability::View,
@@ -142,9 +143,10 @@ final readonly class DecisionWorkspacePageController
             'research-results'=>$this->workspace->research($organizationId)['research']['results']??[],
             'executions'=>$this->workspace->execution($organizationId)['executions']??[],
             'performance'=>$this->performanceExportRows($this->workspace->performance($organizationId)),
+            'realized-windows'=>$this->realizedWindowExportRows($this->workspace->performance($organizationId)),
             default=>[],
         };
-        if(!in_array($dataset,['opportunities','performance','research-results','executions'],true)){
+        if(!in_array($dataset,['opportunities','performance','realized-windows','research-results','executions'],true)){
             return new JsonResponse(['error'=>['code'=>'UNSUPPORTED_DATASET']],404);
         }
         if($format==='json'){
@@ -199,6 +201,29 @@ final readonly class DecisionWorkspacePageController
         foreach($attribution as $strategy=>$row){
             if(!is_array($row))continue;
             $rows[]=array_replace(['strategy'=>(string)$strategy],$row);
+        }
+        return $rows;
+    }
+
+    /** @param array<string,mixed> $page @return list<array<string,mixed>> */
+    private function realizedWindowExportRows(array $page): array
+    {
+        $windows=$page['performance']['realized_windows']??[];
+        $rows=[];
+        foreach (['today','30d'] as $name) {
+            $w=is_array($windows[$name]??null)?$windows[$name]:[];
+            $rows[]=[
+                'window'=>$name,
+                'scope'=>$w['scope']??'REALIZED_EXECUTIONS_ONLY',
+                'status'=>$w['status']??'UNAVAILABLE',
+                'net_pnl'=>$w['net_pnl']??null,
+                'currency'=>$w['currency']??null,
+                'coverage'=>$w['coverage']??'0/0',
+                'unknown_timestamp_count'=>$w['unknown_timestamp_count']??null,
+                'issues'=>implode('; ',is_array($w['issues']??null)?$w['issues']:[]),
+                'from_utc'=>$w['from_utc']??null,
+                'to_utc'=>$w['to_utc']??null,
+            ];
         }
         return $rows;
     }
