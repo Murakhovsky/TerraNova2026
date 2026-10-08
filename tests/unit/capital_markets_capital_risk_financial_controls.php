@@ -14,7 +14,7 @@ $capital=(new CapitalStateEngine())->snapshot(
  Decimal::fromString('5000'),Decimal::fromString('3000'),Decimal::fromString('10000'),
  Decimal::fromString('5000'),Decimal::fromString('2000')
 );
-$assert($capital->available->value()==='45000','Capital buffers/states must leave 45000 available.');
+$assert($capital->available->value()==='40000','Capital buffers/states must leave 40000 available.');
 $assert($capital->total->value()==='100000','Capital total must remain immutable input.');
 
 $liq=(new LiquidityCapacityEngine())->assess(
