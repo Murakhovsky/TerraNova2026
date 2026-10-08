@@ -10,6 +10,7 @@ use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationApprovedActionIntentFactory;
 use App\Persistence\Federation\FederationExternalActionReceiptReconciler;
 use App\Persistence\Federation\FederationRunFinalizer;
+use App\Persistence\Federation\FederationSequentialOrchestrator;
 use App\Persistence\Federation\FederatedActionAdmission;
 use App\Persistence\Federation\FederationPlanApproveHandler;
 use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
@@ -57,6 +58,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederatedActionAdmission $actionAdmission,
         private readonly FederationExternalActionReceiptReconciler $receiptReconciler,
         private readonly FederationRunFinalizer $runFinalizer,
+        private readonly FederationSequentialOrchestrator $sequentialOrchestrator,
         private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
@@ -672,6 +674,162 @@ final class FederationPersistenceSmokeCommand extends Command
             try {
                 $this->receiptReconciler->reconcile($other, $salesRunId, 'sales_task');
                 throw new \RuntimeException('Foreign tenant reconciled an external Action.');
+            } catch (DomainException) {
+            }
+
+            // End-to-end deterministic two-step orchestration via live
+            // ActionPolicyService. Transaction fixture never reaches real CRM
+            // handlers; canonical worker completion is represented by receipts.
+            $linearGoal = 'goal-' . bin2hex(random_bytes(8));
+            $linearPlan = 'plan-' . bin2hex(random_bytes(8));
+            $linearRun = 'run-' . bin2hex(random_bytes(8));
+            $this->goals->createGoal($actor, new GoalSpecification(
+                $linearGoal, $org, 'user-smoke', 'Create two approved follow-up tasks in order',
+                [['id' => 'tasks_created', 'operator' => 'at_least', 'expected' => 2]],
+                ['sales.create_task'],
+            ));
+            $this->goals->proposePlan($actor, $linearPlan, $linearGoal, [
+                ['id' => 'z_first', 'capability_id' => 'sales.create_task',
+                    'capability_version' => '1.0.0',
+                    'input' => ['target_type' => 'deal', 'target_id' => '42',
+                        'parameters' => ['title' => 'First approved task']]],
+                ['id' => 'a_second', 'capability_id' => 'sales.create_task',
+                    'capability_version' => '1.0.0',
+                    'input' => ['target_type' => 'deal', 'target_id' => '43',
+                        'parameters' => ['title' => 'Second approved task']]],
+            ]);
+            try {
+                $this->sequentialOrchestrator->start($actor, $linearRun, $linearPlan, $salesApprovalActionId);
+                throw new \RuntimeException('Disabled Federation tenant started a real orchestrated Run.');
+            } catch (DomainException) {
+            }
+            // An organization must explicitly opt into Federation.
+            $this->db->insert('cos_organization_modules', [
+                'organization_id' => $org, 'module_id' => 'federation', 'enabled' => 1,
+            ]);
+            $linearJson = (string) $this->db->fetchOne(
+                'SELECT plan_json FROM cos_federation_plans WHERE organization_id = :org AND plan_id = :plan',
+                ['org' => $org, 'plan' => $linearPlan],
+            );
+            $linearApprovalId = bin2hex(random_bytes(16));
+            $linearApprovalParams = [
+                'goal_id' => $linearGoal, 'plan_id' => $linearPlan,
+                'specification_version' => 1, 'plan_hash' => hash('sha256', $linearJson),
+            ];
+            $this->db->insert('cos_actions', [
+                'id' => $linearApprovalId, 'organization_id' => $org,
+                'type' => FederationPlanApproveHandler::ACTION_TYPE,
+                'target_type' => 'cos_federation_plan', 'target_id' => $linearPlan,
+                'parameters' => json_encode($linearApprovalParams, JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'RUNNING', 'execution_mode' => 'APPROVAL_REQUIRED',
+                'risk_level' => 'LOW', 'idempotency_key' => 'linear:' . $linearApprovalId,
+                'correlation_id' => $linearApprovalId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $linearApprovalId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $linearApprovalId, 'evaluated_at' => self::now(),
+            ]);
+            $this->db->insert('cos_approvals', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $linearApprovalId, 'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'independent-reviewer',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'independent-reviewer',
+                'decided_at' => self::now(),
+            ]);
+            $linearAction = new Action(
+                $linearApprovalId, $org, FederationPlanApproveHandler::ACTION_TYPE,
+                'cos_federation_plan', $linearPlan, $linearApprovalParams,
+                'USER', 'user-smoke', 'APPROVAL_REQUIRED', 'LOW',
+                'linear:' . $linearApprovalId, new \DateTimeImmutable(),
+                ActionStatus::Running, $linearApprovalId,
+            );
+            self::assert($this->approvalHandler->execute($linearAction)->successful,
+                'Linear Federation Plan did not activate through canonical Action handler.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status = 'COMPLETED' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $linearApprovalId],
+            );
+            $this->db->insert('cos_policies', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'code' => 'linear-sales-review', 'name' => 'Linear federation human review',
+                'action_type' => 'sales.create_task', 'conditions' => '[]',
+                'decision' => 'APPROVAL_REQUIRED', 'priority' => 10, 'status' => 'ACTIVE',
+            ]);
+            self::assert($this->sequentialOrchestrator->start(
+                $actor, $linearRun, $linearPlan, $linearApprovalId,
+            )['state'] === 'pending', 'Linear Federation Run was not durably created.');
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'running', 'Linear Federation Run did not start.');
+            $firstAction = $this->sequentialOrchestrator->advance($actor, $linearRun, $linearApprovalId);
+            self::assert($firstAction['state'] === 'awaiting_human_approval'
+                && $firstAction['step_id'] === 'z_first',
+                'Federation order must follow approved Plan, not alphabetic Step IDs.');
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'awaiting_action', 'Federation Action awaiting human approval was replayed.');
+            self::assert((int) $this->db->fetchOne(
+                "SELECT COUNT(*) FROM cos_actions WHERE organization_id = :org AND type = 'sales.create_task'",
+                ['org' => $org],
+            ) === 2, 'Federation scheduled unapproved subsequent Action.');
+            $completeActionFixture = function (string $actionId) use ($org): void {
+                $this->db->executeStatement(
+                    "UPDATE cos_approvals SET status = 'APPROVED',
+                        decided_by_type = 'USER', decided_by_id = 'independent-reviewer',
+                        decided_at = NOW(6) WHERE organization_id = :org AND action_id = :id",
+                    ['org' => $org, 'id' => $actionId],
+                );
+                $this->db->executeStatement(
+                    "UPDATE cos_actions SET status = 'COMPLETED'
+                     WHERE organization_id = :org AND id = :id",
+                    ['org' => $org, 'id' => $actionId],
+                );
+                $this->db->insert('cos_action_attempts', [
+                    'action_id' => $actionId, 'organization_id' => $org,
+                    'attempt' => 1, 'worker_id' => 'smoke-worker',
+                    'status' => 'COMPLETED', 'started_at' => self::now(),
+                    'finished_at' => self::now(),
+                ]);
+            };
+            $completeActionFixture((string) $firstAction['action_id']);
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'step_completed', 'First externally approved Step was not reconciled.');
+            // Tampering a completed predecessor must block the next external
+            // Action. The receipt is independently checked at every tick.
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET target_id = 'forged' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $firstAction['action_id']],
+            );
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'manual_reconciliation_required',
+                'Forged predecessor receipt authorized a dependent Action.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET target_id = '42' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $firstAction['action_id']],
+            );
+            $secondAction = $this->sequentialOrchestrator->advance($actor, $linearRun, $linearApprovalId);
+            self::assert($secondAction['state'] === 'awaiting_human_approval'
+                && $secondAction['step_id'] === 'a_second'
+                && $secondAction['action_id'] !== $firstAction['action_id'],
+                'Second sequential Action did not create an independent approval gate.');
+            $completeActionFixture((string) $secondAction['action_id']);
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'step_completed', 'Second Action receipt did not reconcile.');
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'completed', 'Multi-step Federation Run was not finalized.');
+            self::assert($this->sequentialOrchestrator->advance(
+                $actor, $linearRun, $linearApprovalId,
+            )['state'] === 'completed', 'Terminal linear Run caused duplicate execution.');
+            try {
+                $this->sequentialOrchestrator->advance($other, $linearRun, $linearApprovalId);
+                throw new \RuntimeException('Foreign tenant advanced Federation Run.');
             } catch (DomainException) {
             }
 
