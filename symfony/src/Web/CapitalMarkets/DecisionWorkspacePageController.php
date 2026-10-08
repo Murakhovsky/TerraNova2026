@@ -54,6 +54,16 @@ final readonly class DecisionWorkspacePageController
         return $this->page($request, 'Market Explorer', 'markets', 'capital-markets-markets', CapitalMarketsCapability::MarketDataView);
     }
 
+    public function marketDetail(Request $request, string $id): Response
+    {
+        return $this->page($request, 'Market Detail', 'market_detail', 'capital-markets-markets', CapitalMarketsCapability::MarketDataView, $id);
+    }
+
+    public function relationshipDetail(Request $request, string $id): Response
+    {
+        return $this->page($request, 'Relationship Detail', 'relationship_detail', 'capital-markets-markets', CapitalMarketsCapability::RelationshipView, $id);
+    }
+
     public function research(Request $request): Response
     {
         return $this->page($request, 'Research', 'research', 'capital-markets-research', CapitalMarketsCapability::ResearchView);
@@ -213,6 +223,8 @@ final readonly class DecisionWorkspacePageController
                 'opportunities' => $this->workspace->opportunities($organizationId, $request->query->all()),
                 'opportunity' => $this->workspace->opportunity($organizationId, (string)$id),
                 'markets' => $this->workspace->markets($organizationId),
+                'market_detail' => $this->workspace->marketDetail($organizationId, (string)$id),
+                'relationship_detail' => $this->workspace->relationshipDetail($organizationId, (string)$id),
                 'research' => $this->workspace->research($organizationId),
                 'hypothesis' => $this->workspace->hypothesis($organizationId, (string)$id),
                 'strategies' => $this->workspace->strategies($organizationId),
@@ -233,6 +245,8 @@ final readonly class DecisionWorkspacePageController
                 || ($view === 'hypothesis' && ($data['hypothesis'] ?? null) === null)
                 || ($view === 'strategy' && ($data['strategy'] ?? null) === null)
                 || ($view === 'execution_detail' && ($data['execution'] ?? []) === [])
+                || ($view === 'market_detail' && ($data['instrument'] ?? null) === null)
+                || ($view === 'relationship_detail' && ($data['relationship'] ?? null) === null)
             ) {
                 return $this->render($request, $tenant, 'Capital Markets entity not found', $active, 'not_found', [
                     'workspace' => $data,
