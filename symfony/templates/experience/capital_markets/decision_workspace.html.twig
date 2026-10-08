@@ -540,6 +540,14 @@
       </tbody></table></div>
     </section>
     <twig:CosDecisionTrace :steps="w.decision_trace|default([])" emptyCopy="No downstream research decision is traceable yet." />
+    <section class="cos-panel">
+      <h2>Audit</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Reason</th><th>Correlation</th></tr></thead><tbody>
+      {% for a in w.audit|default([]) %}
+        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
+      {% else %}<tr><td colspan="5">No audit activity is recorded for this hypothesis.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
 
   {% elseif cmView == 'strategies' %}
     <section class="cos-panel">
@@ -571,6 +579,14 @@
       <div class="col-lg-4"><section class="cos-panel h-100"><h2>Paper</h2><p>{{ w.paper_runs|default([])|length }} run(s)</p></section></div>
     </div>
     <section class="cos-panel"><h2>Promotion Gate</h2>{% for x in w.promotion_decisions|default([]) %}<p><strong>{{ x.status|default('—') }}</strong> · {{ x.from_stage|default('—') }} → {{ x.to_stage|default('—') }} · {{ x.reason|default('') }}</p>{% else %}<p>No promotion decision yet.</p>{% endfor %}</section>
+    <section class="cos-panel">
+      <h2>Audit</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Reason</th><th>Correlation</th></tr></thead><tbody>
+      {% for a in w.audit|default([]) %}
+        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
+      {% else %}<tr><td colspan="5">No audit activity is recorded for this strategy version.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
 
   {% elseif cmView == 'portfolio' %}
     {% set p = w.portfolio|default({}) %}
