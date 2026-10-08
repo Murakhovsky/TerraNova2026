@@ -20,7 +20,9 @@ final class CapitalAllocationEngine {
   foreach($ranked as $o){
    $requested=Decimal::fromString((string)$o['requested_capital']);$capacity=Decimal::fromString((string)$o['capacity']);
    $approved=$this->minimum($requested,$capacity,$remaining);$decision='ACCEPT';$reason='Eligible under deterministic score and constraints.';
-   if(!$riskState->allowsNewRisk()){$approved=Decimal::fromString('0');$decision='REJECT';$reason='Portfolio state '.$riskState->value.' blocks new risk.';}
+   $blockedReason=trim((string)($o['blocked_reason']??''));
+   if($blockedReason!==''){$approved=Decimal::fromString('0');$decision='REJECT';$reason=$blockedReason;}
+   elseif(!$riskState->allowsNewRisk()){$approved=Decimal::fromString('0');$decision='REJECT';$reason='Portfolio state '.$riskState->value.' blocks new risk.';}
    $cap=$hardCaps[(string)$o['opportunity_id']]??null;if($cap!==null)$approved=$this->minimum($approved,Decimal::fromString((string)$cap));
    if($approved->isZero()&&$decision!=='REJECT'){$decision='REJECT';$reason='No available capital or capacity.';}
    elseif($approved->compareTo($requested)<0){$decision='ACCEPT_REDUCED_SIZE';$reason='Reduced by capacity, hard headroom or available capital.';}
