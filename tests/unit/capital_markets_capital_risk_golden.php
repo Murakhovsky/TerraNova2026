@@ -64,4 +64,29 @@ $hedgePriority=[
 $hedgePlan=$engine->allocate('paper-master',Decimal::fromString('10000'),$hedgePriority,new AllocationPolicy('hedge','v1','SCORE_BASED','BALANCED',['score_multiplier'=>1],['risk_improvement_weight'=>'1']));
 $assert($hedgePlan->allocations[0]->opportunityId==='HEDGE','Risk-reducing opportunity should outrank higher standalone return when risk-adjusted portfolio score is better.');
 $assert($hedgePlan->allocations[0]->approvedCapital->value()==='10000','Risk-reducing opportunity should receive scarce capital first.');
+
+$cautionPlan=$engine->allocate(
+ 'paper-master',
+ Decimal::fromString('50000'),
+ [[
+  'opportunity_id'=>'CAUTION-A','strategy_version_id'=>'CAUTION-STRAT','requested_capital'=>'10000',
+  'expected_net_return'=>'0.01','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'10000',
+  'risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>90
+ ]],
+ new AllocationPolicy('caution','v1','SCORE_BASED','BALANCED',['score_multiplier'=>1],['caution_multiplier'=>'0.70']),
+ PortfolioRiskState::Caution
+);
+$assert($cautionPlan->allocations[0]->approvedCapital->value()==='7000','CAUTION must reduce allocation by configured risk-state multiplier.');
+
+$conservativePlan=$engine->allocate(
+ 'paper-master',
+ Decimal::fromString('50000'),
+ [[
+  'opportunity_id'=>'CONS-A','strategy_version_id'=>'CONS-STRAT','requested_capital'=>'10000',
+  'expected_net_return'=>'0.01','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'10000',
+  'risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>90
+ ]],
+ new AllocationPolicy('conservative','v1','SCORE_BASED','CONSERVATIVE',['score_multiplier'=>1],['conservative_multiplier'=>'0.70'])
+);
+$assert($conservativePlan->allocations[0]->approvedCapital->value()==='7000','CONSERVATIVE mode must reduce allocation without bypassing hard limits.');
 echo "Capital Markets Capital Risk golden financial tests passed.\n";
