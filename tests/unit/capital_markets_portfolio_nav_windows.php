@@ -13,6 +13,8 @@ $snapshot = static fn(string $stamp,string $equity,string $flows,string $currenc
     'valued_at'=>$stamp, 'equity'=>$equity, 'cumulative_external_net_flow'=>$flows,
     'currency'=>$currency, 'valuation_status'=>'COMPLETE',
     'ledger_reconciled'=>true,'marks_reconciled'=>true,'external_flows_reconciled'=>true,
+    'provenance_id'=>'verified-accounting-run','ledger_fingerprint'=>str_repeat('a',64),
+    'marks_fingerprint'=>str_repeat('b',64),'external_flows_fingerprint'=>str_repeat('c',64),
 ];
 $rows = [
     $snapshot('2026-09-08T12:00:00Z','1000','0'),
