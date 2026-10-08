@@ -737,22 +737,55 @@
     {% set agents = w.agents|default({}) %}
     <section class="cos-kpi-strip">
       <twig:CosMetric label="Registered Agents" value="{{ agents.metrics.registered|default(0) }}" hint="Capital Markets governed agents" />
-      <twig:CosMetric label="Recent Runs" value="{{ agents.metrics.recent_runs|default(0) }}" hint="tenant-scoped runtime projection" />
+      <twig:CosMetric label="Recent Runs" value="{{ agents.metrics.recent_runs|default(0) }}" hint="tenant-scoped canonical AgentRun projection" />
       <twig:CosMetric label="Running" value="{{ agents.metrics.running|default(0) }}" hint="current runtime state" />
       <twig:CosMetric label="Failed" value="{{ agents.metrics.failed|default(0) }}" hint="recent failures" />
+      <twig:CosMetric label="Tool Calls" value="{{ agents.metrics.tool_calls|default(0) }}" hint="audited tool.execute records linked by correlation" />
     </section>
     <section class="cos-panel">
       <h2>Agent Authority</h2>
-      <p>UI exposes governed authority and the runtime evidence actually present in the canonical read model. Hidden internal reasoning is not displayed.</p>
-      <twig:CosAlert title="Tool trace boundary" copy="The current Agent Run projection does not expose per-tool inputs/outputs or cost details for this screen. Missing telemetry is shown as unavailable rather than invented." tone="info" />
+      <p>Authority is explicit. Decision summaries, evidence, tool calls and results are visible; hidden chain-of-thought is not exposed.</p>
       <div class="table-responsive"><table class="table"><thead><tr><th>Agent</th><th>Profile</th><th>Version</th><th>Authority</th><th>Execution Mode</th><th>Max autonomous actions</th><th>State</th></tr></thead><tbody>
       {% for a in agents.definitions|default([]) %}<tr><td><strong>{{ a.name }}</strong></td><td>{{ a.profile }}</td><td>{{ a.version }}</td><td>{{ a.authority }}</td><td>{{ a.execution_mode }}</td><td>{{ a.max_actions_per_run }}</td><td>{{ a.enabled ? 'ENABLED' : 'DISABLED' }}</td></tr>{% else %}<tr><td colspan="7">No Capital Markets agents registered.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
     <section class="cos-panel">
       <h2>Recent Agent Runs</h2>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Run</th><th>Agent</th><th>State</th><th>Subject</th><th>Decision / Result</th><th>Cost</th><th>Errors</th></tr></thead><tbody>
-      {% for run in agents.runs|default([]) %}<tr><td>{{ run.id|default(run.run_id|default('—')) }}</td><td>{{ run.agent_name|default('—') }}</td><td>{{ run.status|default('—') }}</td><td>{{ run.subject_type|default('—') }} · {{ run.subject_id|default('—') }}</td><td>{{ run.decision|default(run.result|default('—')) }}</td><td>{{ run.cost_amount|default('—') }}</td><td>{{ run.error|default('—') }}</td></tr>{% else %}<tr><td colspan="7">No recent Capital Markets agent runs.</td></tr>{% endfor %}
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Run / Task</th><th>Agent</th><th>State</th><th>Decision</th><th>Recommendation</th><th>Tools Used</th><th>Cost</th><th>Errors</th></tr></thead><tbody>
+      {% for run in agents.runs|default([]) %}
+        <tr>
+          <td><strong>{{ run.id }}</strong><br><small>{{ run.current_task|default('—') }}</small></td>
+          <td>{{ run.agent_name|default('—') }}</td>
+          <td>{{ run.status|default('—') }}</td>
+          <td><strong>{{ run.decision|default('—') }}</strong>{% if run.confidence is not null %}<br><small>confidence {{ run.confidence }}</small>{% endif %}</td>
+          <td>{{ run.recommendation|default('—') }}</td>
+          <td>{% for tool in run.tools|default([]) %}<code>{{ tool.name }}</code>{% if not loop.last %}<br>{% endif %}{% else %}<span>—</span>{% endfor %}</td>
+          <td>{{ run.cost_amount is not null ? run.cost_amount ~ ' ' ~ run.cost_currency|default('') : '—' }}{% if run.input_tokens is not null or run.output_tokens is not null %}<br><small>{{ run.input_tokens|default(0) }} in / {{ run.output_tokens|default(0) }} out</small>{% endif %}</td>
+          <td>{{ run.error|default('—') }}</td>
+        </tr>
+        <tr>
+          <td colspan="8">
+            <details>
+              <summary>Run evidence · {{ run.audit_event_count|default(0) }} audit event(s)</summary>
+              <div class="row g-3 mt-1">
+                <div class="col-lg-4"><strong>Findings</strong><ul>{% for finding in run.findings|default([]) %}<li>{{ finding }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul></div>
+                <div class="col-lg-4"><strong>Limitations</strong><ul>{% for limitation in run.limitations|default([]) %}<li>{{ limitation }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul></div>
+                <div class="col-lg-4"><strong>Requested Tools</strong><ul>{% for tool in run.requested_tools|default([]) %}<li><code>{{ tool }}</code></li>{% else %}<li>None requested in this pass.</li>{% endfor %}</ul></div>
+              </div>
+              {% for tool in run.tools|default([]) %}
+                <details class="mt-2">
+                  <summary><code>{{ tool.name }}</code> · audited tool call</summary>
+                  <div class="row g-3 mt-1">
+                    <div class="col-lg-6"><strong>Input</strong><pre>{{ tool.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+                    <div class="col-lg-6"><strong>Output</strong><pre>{{ tool.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+                  </div>
+                </details>
+              {% endfor %}
+              <p class="mt-2"><small>Correlation: <code>{{ run.correlation_id }}</code> · Duration {{ run.duration_ms is not null ? run.duration_ms ~ ' ms' : '—' }}</small></p>
+            </details>
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="8">No recent Capital Markets agent runs.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
 
