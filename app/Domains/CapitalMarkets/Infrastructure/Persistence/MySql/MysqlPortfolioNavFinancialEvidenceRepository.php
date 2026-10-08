@@ -21,13 +21,14 @@ final readonly class MysqlPortfolioNavFinancialEvidenceRepository implements Por
         $record=PortfolioNavFinancialEvidencePolicy::normalize($observation);
         $statement=$this->connection->prepare(
             'INSERT INTO tn_capital_market_nav_financial_evidence
-             (organization_id,portfolio_id,evidence_id,kind,source_document_sha256,effective_at,record_json)
-             VALUES (:org,:portfolio,:id,:kind,:digest,:effective,:payload)'
+             (organization_id,portfolio_id,evidence_id,kind,source_key_sha256,source_document_sha256,effective_at,record_json)
+             VALUES (:org,:portfolio,:id,:kind,:source_key,:digest,:effective,:payload)'
         );
         // No update on duplicate: preserve the original primary source account.
         $statement->execute([
             'org'=>$organizationId,'portfolio'=>$portfolioId,'id'=>$record['evidence_id'],
-            'kind'=>$record['kind'],'digest'=>$record['source_document_sha256'],
+            'kind'=>$record['kind'],'source_key'=>$record['source_key_sha256'],
+            'digest'=>$record['source_document_sha256'],
             'effective'=>(new \DateTimeImmutable($record['effective_at']))
                 ->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u'),
             'payload'=>json_encode($record,JSON_THROW_ON_ERROR),
