@@ -47,6 +47,7 @@ final readonly class DecisionWorkspaceReadService
         private DomainModuleRegistry $domains,
         private CanonicalMarketEventRepositoryInterface $canonicalEvents,
         private PortfolioValuationSnapshotRepositoryInterface $portfolioValuations,
+        private PortfolioNavEvidenceCollector $navEvidence,
     ) {}
 
     /**
@@ -737,10 +738,17 @@ final readonly class DecisionWorkspaceReadService
         );
         $attribution = is_array($core['performance'] ?? null) ? $core['performance'] : [];
         $portfolioWindows = $this->portfolioNavWindows($organizationId, $errors);
+        $navPreflight = $this->safe(
+            fn(): array => $this->navEvidence->inspect($organizationId),
+            ['status'=>'UNAVAILABLE','issues'=>['NAV_PREFLIGHT_UNAVAILABLE'],'sources'=>[]],
+            $errors,
+            'nav_preflight',
+        );
         $page['global']['today_net_pnl'] = $portfolioWindows['today']['net_pnl'] ?? null;
         $page['global']['pnl_30d'] = $portfolioWindows['30d']['net_pnl'] ?? null;
         $page['performance'] = [
             'portfolio_nav_windows' => $portfolioWindows,
+            'nav_preflight' => $navPreflight,
             'attribution' => $attribution,
             'ledger' => $ledger,
             'edge_funnel' => $this->edgeFunnel($core['opportunities'] ?? [], $core['positions'] ?? []),
