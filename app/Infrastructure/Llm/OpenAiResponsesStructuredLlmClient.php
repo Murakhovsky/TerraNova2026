@@ -198,7 +198,13 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
         $retryable = $lastStatus === 0 || $lastStatus === 408 || $lastStatus === 409 || $lastStatus === 429 || $lastStatus >= 500;
         $message = $this->providerErrorMessage($lastBody);
         if ($message === '') {
-            $message = $lastError !== '' ? 'OpenAI transport error.' : 'OpenAI request failed.';
+            if ($lastError !== '') {
+                $message = 'OpenAI transport error: '.mb_substr(trim($lastError), 0, 240);
+            } elseif ($lastStatus > 0) {
+                $message = 'OpenAI request failed with HTTP '.$lastStatus.'.';
+            } else {
+                $message = 'OpenAI request failed without an HTTP response.';
+            }
         }
 
         throw new LlmProviderException(
