@@ -227,6 +227,73 @@ final readonly class FederationGoalStore
         });
     }
 
+    /**
+     * Atomically records one inert DecisionStep executed by canonical WorkflowEngine.
+     * Never use for Tool/Agent/System side effects. A claimed run cannot auto-replay.
+     *
+     * @param array<string,mixed> $projection Trusted WorkflowEngine projection
+     */
+    public function completeReadOnlyWorkflowRun(
+        TenantContext $actor,
+        string $runId,
+        string $stepId,
+        array $projection,
+    ): void {
+        $this->writer($actor);
+        $this->identifier($runId);
+        $this->identifier($stepId);
+        $workflowId = $projection['workflow_id'] ?? null;
+        if (!is_string($workflowId) || !preg_match('/^[a-zA-Z0-9_-]{1,100}$/', $workflowId)
+            || ($projection['run_state'] ?? null) !== 'completed'
+            || !is_array($projection['steps'] ?? null)
+            || count($projection['steps']) !== 1
+            || ($projection['steps'][0]['step_id'] ?? null) !== $stepId
+            || ($projection['steps'][0]['state'] ?? null) !== 'completed') {
+            throw new DomainException('Unverifiable read-only Workflow completion projection.');
+        }
+        $org = $actor->organizationId()->value();
+        $this->db->transactional(function () use ($org, $runId, $stepId, $workflowId, $projection): void {
+            $run = $this->db->fetchAssociative(
+                'SELECT state, revision FROM cos_federation_runs
+                 WHERE organization_id = :org AND run_id = :run FOR UPDATE',
+                ['org' => $org, 'run' => $runId],
+            );
+            if (!$run || $run['state'] !== 'running' || (int) $run['revision'] !== 2) {
+                throw new LogicException('Read-only Workflow run was modified or already finished.');
+            }
+            $step = $this->db->fetchAssociative(
+                'SELECT state, side_effect_level FROM cos_federation_steps
+                 WHERE organization_id = :org AND run_id = :run AND step_id = :step FOR UPDATE',
+                ['org' => $org, 'run' => $runId, 'step' => $stepId],
+            );
+            if (!$step || $step['state'] !== 'claimed' || $step['side_effect_level'] !== 'none') {
+                throw new DomainException('Completion requires an exclusively claimed inert step.');
+            }
+            $changed = $this->db->executeStatement(
+                'UPDATE cos_federation_steps
+                 SET state = :completed, result_reference = :receipt, checkpoint_json = :checkpoint, updated_at = :now
+                 WHERE organization_id = :org AND run_id = :run AND step_id = :step AND state = :claimed',
+                [
+                    'completed' => 'completed', 'receipt' => 'workflow:' . $workflowId . ':' . $stepId,
+                    'checkpoint' => self::json($projection), 'now' => self::now(),
+                    'org' => $org, 'run' => $runId, 'step' => $stepId, 'claimed' => 'claimed',
+                ],
+            );
+            $updated = $this->db->executeStatement(
+                'UPDATE cos_federation_runs
+                 SET state = :completed, revision = revision + 1, checkpoint_id = :workflow, updated_at = :now
+                 WHERE organization_id = :org AND run_id = :run AND state = :running AND revision = 2',
+                [
+                    'completed' => 'completed', 'workflow' => $workflowId, 'now' => self::now(),
+                    'org' => $org, 'run' => $runId, 'running' => 'running',
+                ],
+            );
+            if ($changed !== 1 || $updated !== 1) {
+                throw new LogicException('Concurrent read-only Workflow completion rejected.');
+            }
+        });
+    }
+
     /** Optimistic lock: no stale worker may overwrite a concurrent run transition. */
     public function transitionRun(
         TenantContext $actor,
