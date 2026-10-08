@@ -379,11 +379,17 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @return array<string,mixed> */
-    public function relationshipDetail(string $organizationId, string $relationshipId): array
+    public function relationshipDetail(string $organizationId, string $relationshipId, bool $mayViewHistoricalBasis = false): array
     {
         $page = $this->markets($organizationId);
         $relationship = $this->findById($page['relationships'] ?? [], $relationshipId, ['id','relationship_id']);
         $page['relationship'] = $relationship;
+        $page['historical_basis'] = [
+            'status' => $mayViewHistoricalBasis ? 'NOT COMPARABLE' : 'RESTRICTED',
+            'reason' => $mayViewHistoricalBasis ? 'NO_RELATIONSHIP' : 'INSUFFICIENT_AUTHORITY',
+            'rows' => [],
+            'scope' => 'HISTORICAL_OBSERVATION_ONLY',
+        ];
 
         if ($relationship === null) {
             $page['relationship_comparison'] = [];
@@ -444,6 +450,37 @@ final readonly class DecisionWorkspaceReadService
             && count(array_filter($targetRows, $trustedQuote)) > 0
             && in_array($sourceCurrency, $commonQuotes, true)
         ) ? 'COMPARABLE' : 'NOT COMPARABLE';
+
+        if ($mayViewHistoricalBasis && $sourceId !== '' && $targetId !== '' && $sourceId !== $targetId
+            && strtoupper((string)($relationship['status'] ?? '')) === 'ACTIVE') {
+            $meta = is_array($relationship['metadata'] ?? null) ? $relationship['metadata'] : [];
+            $until = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+            $from = $until->modify('-7 days');
+            $errors = $page['partial_errors'] ?? [];
+            $left = $this->safe(
+                fn(): array => $this->canonicalEvents->history(
+                    $organizationId, InstrumentId::fromString($sourceId), $from, $until, 500,
+                ),
+                [], $errors, 'historical_basis_source',
+            );
+            $right = $this->safe(
+                fn(): array => $this->canonicalEvents->history(
+                    $organizationId, InstrumentId::fromString($targetId), $from, $until, 500,
+                ),
+                [], $errors, 'historical_basis_target',
+            );
+            $basis = HistoricalRelationshipBasisProjector::project($left, $right, $meta);
+            if (count($left) >= 500 || count($right) >= 500) {
+                $basis = [
+                    ...$basis,
+                    'status' => 'NOT COMPARABLE',
+                    'reason' => 'INCOMPLETE_HISTORY_PAGE',
+                    'rows' => [],
+                ];
+            }
+            $page['historical_basis'] = $basis;
+            $page['partial_errors'] = $errors;
+        }
 
         return $page;
     }
