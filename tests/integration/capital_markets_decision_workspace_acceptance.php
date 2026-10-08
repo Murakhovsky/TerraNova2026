@@ -178,7 +178,7 @@ foreach([
     "capital_markets.allocation.",
     "capital_markets.research.",
     "capital_markets.execution.",
-    "workspace($event->organizationId, self::WORKSPACE_ID)",
+    'workspace($event->organizationId, self::WORKSPACE_ID)',
 ] as $needle){
     $assert(str_contains($realtime,$needle),'Decision Workspace realtime contract missing: '.$needle);
 }
