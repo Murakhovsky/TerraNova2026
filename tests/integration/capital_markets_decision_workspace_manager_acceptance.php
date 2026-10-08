@@ -99,6 +99,11 @@ $assert(str_contains($controller,'market_data_history_view'),'Historic-market vi
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/HistoricalRelationshipBasisProjector.php'),'Canonical historical Basis projector missing.');
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavWindowProjector.php'),'NAV P&L projector missing.');
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSnapshotProducer.php'),'Guarded NAV producer is missing.');
+$assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSpotMarkEvidence.php'),'Strict spot asset mark evidence service must exist.');
+$spot=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSpotMarkEvidence.php');
+$assert(str_contains($spot,'DERIVATIVE_OR_UNCLASSIFIED_POSITION_REQUIRES_MARGIN_ACCOUNTING'),'NAV must reject unclassified perpetual and derivative valuation as cash inventory.');
+$assert(str_contains($spot,"'mark_reconciled'=>false"),'Spot market value candidate must never assert independent reconciliation.');
+
 $collector=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavEvidenceCollector.php');
 $assert(str_contains($collector,'EXTERNAL_FLOW_LEDGER_UNAVAILABLE'),'NAV collector must block absent certified flow ledger.');
 $assert(str_contains($collector,'POSITION_MARK_UNTRUSTED'),'NAV collector must reject untrusted market marks.');
