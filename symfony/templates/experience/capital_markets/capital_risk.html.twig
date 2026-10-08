@@ -3,7 +3,7 @@
 {% block workspace_content %}
 {% set w=workspace|default({}) %}
 {% set p=w.portfolio|default({}) %}
-{% set c=w.capital_state|default({}) %}
+{% set c=w.capital_state|default(w.portfolio_state|default({})) %}
 {% set e=w.exposure|default({}) %}
 {% set r=w.risk|default({}) %}
 {% set a=w.allocation_plan|default({}) %}
@@ -82,6 +82,81 @@
   </div>
   {% if e.unknown_exposure|default([]) is not empty %}
     <div class="alert alert-warning"><strong>UNKNOWN_EXPOSURE:</strong> {{ e.unknown_exposure|length }} position(s) are excluded from economic netting.</div>
+  {% endif %}
+</section>
+
+{% elseif cmView=='opportunity' %}
+{% set o=w.opportunity|default({}) %}
+{% set impact=w.portfolio_impact|default({}) %}
+{% set item=w.allocation_item|default({}) %}
+<section class="cos-panel">
+  <div class="d-flex justify-content-between gap-3 flex-wrap">
+    <div>
+      <small>OPPORTUNITY</small>
+      <h2>{{ o.hypothesis|default(o.type|default(o.opportunity_type|default('Opportunity'))) }}</h2>
+      <p><code>{{ o.opportunity_id|default('—') }}</code> · standalone status <strong>{{ o.status|default('—') }}</strong></p>
+    </div>
+    <div>
+      <strong>Portfolio decision:</strong>
+      {{ impact.decision|default(item.decision|default('NOT ALLOCATED')) }}
+    </div>
+  </div>
+</section>
+
+<section class="cos-panel">
+  <h2>PORTFOLIO IMPACT</h2>
+  {% if impact %}
+    <div class="table-responsive"><table class="table">
+      <tbody>
+        <tr><th>Capital required</th><td>{{ impact.capital_required|default('—') }}</td></tr>
+        <tr><th>Capital after</th><td>{{ impact.capital_after|default('—') }}</td></tr>
+        <tr><th>Gross exposure change</th><td>{{ impact.gross_exposure_change|default('—') }}</td></tr>
+        <tr><th>Net exposure change</th><td>{{ impact.net_exposure_change|default('—') }}</td></tr>
+        <tr><th>Margin change</th><td>{{ impact.margin_change|default('—') }}</td></tr>
+        <tr><th>Liquidity change</th><td>{{ impact.liquidity_change|default('—') }}</td></tr>
+        <tr><th>Risk score change</th><td>{{ impact.risk_score_change|default('—') }}</td></tr>
+        <tr><th>Correlation effect</th><td>{{ impact.correlation_effect|default('—') }}</td></tr>
+        <tr><th>Decision</th><td><strong>{{ impact.decision|default('—') }}</strong></td></tr>
+        <tr><th>Reasons</th><td>{{ impact.reasons|default([])|join(', ') ?: '—' }}</td></tr>
+      </tbody>
+    </table></div>
+    <div class="row g-3">
+      <div class="col-lg-6"><h3>Venue exposure after</h3><pre>{{ impact.venue_exposure_after|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+      <div class="col-lg-6"><h3>Strategy exposure after</h3><pre>{{ impact.strategy_exposure_after|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+    </div>
+  {% else %}
+    <div class="alert alert-warning">Portfolio impact cannot be projected because this opportunity has no positive capital requirement.</div>
+  {% endif %}
+</section>
+
+<section class="cos-panel">
+  <h2>Allocation decision</h2>
+  {% if item %}
+    <p><strong>{{ item.decision }}</strong> · requested {{ item.requested_capital|default('—') }} · approved {{ item.approved_capital|default('—') }}</p>
+    <p>{{ item.reason|default('') }}</p>
+    <p><small>Allocation Plan: <code>{{ w.allocation_plan_id|default('—') }}</code></small></p>
+  {% else %}
+    <p>This opportunity is not present in the latest Allocation Plan.</p>
+  {% endif %}
+</section>
+
+<section class="cos-panel">
+  <h2>Execution cockpit handoff</h2>
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Reservation</th><th>Amount</th><th>Status</th><th>Expires</th></tr></thead>
+    <tbody>
+    {% for reservation in w.reservations|default([]) %}
+      <tr><td><code>{{ reservation.reservation_id }}</code></td><td>{{ reservation.amount }}</td><td>{{ reservation.status }}</td><td>{{ reservation.expires_at|default('—') }}</td></tr>
+    {% else %}
+      <tr><td colspan="4">No capital reservation yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% set execution=w.execution|default({}) %}
+  {% if execution %}
+    <p><strong>Execution:</strong> <code>{{ execution.execution_id|default(execution.id|default('—')) }}</code> · {{ execution.status|default('—') }}</p>
+  {% else %}
+    <p>No execution has been created. Allocator does not execute orders itself.</p>
   {% endif %}
 </section>
 
