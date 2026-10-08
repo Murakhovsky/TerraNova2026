@@ -15,9 +15,11 @@ final readonly class FederationStepCursor
     /**
      * @param list<array<string,mixed>> $planSteps
      * @param list<array<string,mixed>> $persistedSteps
+     * @param bool $allowReadOnly Support existing inert Workflow checkpoints
+     *     only for persistence admission, never for external Action dispatch.
      * @return array{state:string,step_id:?string,completed:list<string>}
      */
-    public function select(array $planSteps, array $persistedSteps): array
+    public function select(array $planSteps, array $persistedSteps, bool $allowReadOnly = false): array
     {
         $dependencies = (new FederationStepDependencyGraph())->resolve($planSteps);
         if (count($planSteps) !== count($persistedSteps)) {
@@ -43,7 +45,8 @@ final readonly class FederationStepCursor
                 || ($approved['capability_id'] ?? null) !== ($stored['capability_id'] ?? null)
                 || ($approved['capability_version'] ?? null) !== ($stored['capability_version'] ?? null)
                 || ($approved['side_effect_level'] ?? null) !== ($stored['side_effect_level'] ?? null)
-                || ($approved['side_effect_level'] ?? null) !== 'external') {
+                || !in_array(($approved['side_effect_level'] ?? null),
+                    $allowReadOnly ? ['external', 'none'] : ['external'], true)) {
                 throw new DomainException('Federation Action topology/capability snapshot drift.');
             }
             $state = $stored['state'] ?? null;

@@ -772,6 +772,13 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($this->sequentialOrchestrator->advance(
                 $actor, $linearRun, $linearApprovalId,
             )['state'] === 'running', 'Linear Federation Run did not start.');
+            // A direct persistence caller cannot jump past the first
+            // approved Step, even if it bypasses the API orchestrator.
+            try {
+                $this->goals->claimStep($actor, $linearRun, 'a_second');
+                throw new \RuntimeException('Direct Step claim skipped an uncompleted DAG predecessor.');
+            } catch (DomainException) {
+            }
             $firstAction = $this->sequentialOrchestrator->advance($actor, $linearRun, $linearApprovalId);
             self::assert($firstAction['state'] === 'awaiting_human_approval'
                 && $firstAction['step_id'] === 'z_first',
@@ -779,6 +786,16 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($this->sequentialOrchestrator->advance(
                 $actor, $linearRun, $linearApprovalId,
             )['state'] === 'awaiting_action', 'Federation Action awaiting human approval was replayed.');
+            try {
+                $this->goals->claimStep($actor, $linearRun, 'a_second');
+                throw new \RuntimeException('Direct Step claim overlapped an active external Action.');
+            } catch (DomainException) {
+            }
+            self::assert((int) $this->db->fetchOne(
+                "SELECT attempts FROM cos_federation_steps
+                 WHERE organization_id = :org AND run_id = :run AND step_id = 'a_second'",
+                ['org' => $org, 'run' => $linearRun],
+            ) === 0, 'Denied competing claim still incremented attempts.');
             self::assert((int) $this->db->fetchOne(
                 "SELECT COUNT(*) FROM cos_actions WHERE organization_id = :org AND type = 'sales.create_task'",
                 ['org' => $org],

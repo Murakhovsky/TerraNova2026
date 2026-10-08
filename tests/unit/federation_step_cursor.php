@@ -136,4 +136,31 @@ try {
     throw new RuntimeException('Action intent gate accepted a second external claim.');
 } catch (DomainException) {
 }
-echo "Federation serialized DAG admission passed: immutable order, phases and worker enforcement.\n";
+// Transactional claim preflight also supports legacy inert Workflow
+// checkpoints, but external Action dispatch remains external-only.
+$checkpoint = [
+    ['id' => 'review', 'capability_id' => 'sales.leads.read',
+        'capability_version' => '1.0.0', 'side_effect_level' => 'none'],
+    ['id' => 'publish', 'capability_id' => 'sales.create_task',
+        'capability_version' => '1.0.0', 'side_effect_level' => 'external'],
+];
+$checkpointRows = [
+    ['step_id' => 'publish', 'capability_id' => 'sales.create_task',
+        'capability_version' => '1.0.0', 'side_effect_level' => 'external', 'state' => 'pending'],
+    ['step_id' => 'review', 'capability_id' => 'sales.leads.read',
+        'capability_version' => '1.0.0', 'side_effect_level' => 'none', 'state' => 'pending'],
+];
+$reject($checkpoint, $checkpointRows, 'inert checkpoint accidentally exposed to Action scheduler');
+$checkpointResult = $cursor->select($checkpoint, $checkpointRows, true);
+if ($checkpointResult['step_id'] !== 'review' || $checkpointResult['state'] !== 'pending') {
+    throw new RuntimeException('Legacy read-only checkpoint admission did not respect Plan order.');
+}
+$checkpointRows[1]['state'] = 'completed';
+if ($cursor->select($checkpoint, $checkpointRows, true)['step_id'] !== 'publish') {
+    throw new RuntimeException('External claim bypassed unfinished inert predecessor.');
+}
+$checkpointRows[0]['state'] = 'claimed';
+if ($cursor->select($checkpoint, $checkpointRows, true)['step_id'] !== 'publish') {
+    throw new RuntimeException('Claimed external Step vanished from transactional preflight.');
+}
+echo "Federation serialized DAG admission passed: immutable order, phases, mixed read-only steps and worker enforcement.\n";

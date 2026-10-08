@@ -10,6 +10,7 @@ use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use LogicException;
 use Platform\Orchestration\Goal\ExecutionRunPolicy;
+use Platform\Orchestration\Goal\FederationStepCursor;
 use Platform\Orchestration\Goal\GoalOutcomeEvaluator;
 use Platform\Orchestration\Goal\GoalPlanValidator;
 use Platform\Orchestration\Goal\GoalSpecification;
@@ -336,28 +337,57 @@ final readonly class FederationGoalStore
         $this->identifier($stepId);
         $org = $actor->organizationId()->value();
         return $this->db->transactional(function () use ($org, $runId, $stepId): string {
-            $run = $this->db->fetchOne(
-                'SELECT state FROM cos_federation_runs WHERE organization_id = :org AND run_id = :run FOR UPDATE',
+            // The owning Run row is the serialization lock for every claim,
+            // even when concurrent callers selected different independent roots.
+            // Resolve topology only AFTER acquiring the lock, inside this
+            // transaction; read-only preflight is not authority to claim.
+            $run = $this->db->fetchAssociative(
+                'SELECT r.state AS run_state, p.state AS plan_state, p.plan_json
+                 FROM cos_federation_runs r
+                 INNER JOIN cos_federation_plans p
+                   ON p.organization_id = r.organization_id AND p.plan_id = r.plan_id
+                 WHERE r.organization_id = :org AND r.run_id = :run FOR UPDATE',
                 ['org' => $org, 'run' => $runId],
             );
-            if ($run !== 'running') {
-                throw new DomainException('Step can only be claimed in a running execution.');
+            if (!$run || $run['run_state'] !== 'running' || $run['plan_state'] !== 'approved') {
+                throw new DomainException('Step can only be claimed in an approved, running execution.');
             }
-            $row = $this->db->fetchAssociative(
-                'SELECT state, idempotency_key FROM cos_federation_steps
-                 WHERE organization_id = :org AND run_id = :run AND step_id = :step FOR UPDATE',
-                ['org' => $org, 'run' => $runId, 'step' => $stepId],
+            $approved = self::decode((string) $run['plan_json']);
+            if (!is_array($approved['steps'] ?? null)) {
+                throw new DomainException('Approved Federation Plan has invalid steps.');
+            }
+            $stored = $this->db->fetchAllAssociative(
+                'SELECT step_id, state, idempotency_key, capability_id, capability_version,
+                        side_effect_level
+                 FROM cos_federation_steps
+                 WHERE organization_id = :org AND run_id = :run
+                 ORDER BY step_id FOR UPDATE',
+                ['org' => $org, 'run' => $runId],
             );
-            if (!$row || $row['state'] !== 'pending') {
-                throw new LogicException('Step is not pending; automatic replay is blocked.');
+            $selection = (new FederationStepCursor())->select($approved['steps'], $stored, true);
+            if ($selection['state'] !== 'pending' || $selection['step_id'] !== $stepId) {
+                throw new DomainException('Step claim denied: another Action is active or DAG prerequisites are incomplete.');
             }
-            $this->db->executeStatement(
+            $key = null;
+            foreach ($stored as $row) {
+                if ($row['step_id'] === $stepId) {
+                    $key = (string) $row['idempotency_key'];
+                    break;
+                }
+            }
+            if ($key === null || !preg_match('/^[a-f0-9]{64}$/', $key)) {
+                throw new DomainException('Federation Step has no canonical idempotency key.');
+            }
+            $changed = $this->db->executeStatement(
                 'UPDATE cos_federation_steps SET state = :claimed, attempts = attempts + 1, updated_at = :now
                  WHERE organization_id = :org AND run_id = :run AND step_id = :step AND state = :pending',
                 ['claimed' => 'claimed', 'now' => self::now(), 'org' => $org, 'run' => $runId,
                     'step' => $stepId, 'pending' => 'pending'],
             );
-            return (string) $row['idempotency_key'];
+            if ($changed !== 1) {
+                throw new LogicException('Concurrent Federation Step claim was rejected.');
+            }
+            return $key;
         });
     }
 
