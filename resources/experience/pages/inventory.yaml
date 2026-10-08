@@ -1914,3 +1914,47 @@ pages:
     responsive: { desktop: control_surface, tablet: control_surface, mobile: stacked_control_surface }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: capital.markets.market.detail
+    route: { name: capital_markets_market_detail, path: "/capital-markets/markets/{id}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: CapitalMarkets
+    capability: capital_markets.market.view
+    owner: CapitalMarkets
+    priority: P0
+    status: CONTRACTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Inspect canonical market state."
+      page_purpose: "Read-only market detail."
+    archetype: detail
+    patterns:
+      required: [PageHeader, DetailSection]
+      optional: [EntityList, ErrorState]
+    primary_action: capital_markets.navigate
+    states: [normal, empty, error, permission_denied]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: capital.markets.relationship.detail
+    route: { name: capital_markets_relationship_detail, path: "/capital-markets/relationships/{id}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: CapitalMarkets
+    capability: capital_markets.relationship.view
+    owner: CapitalMarkets
+    priority: P0
+    status: CONTRACTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Inspect canonical relationship evidence."
+      page_purpose: "Read-only instrument relationship detail."
+    archetype: detail
+    patterns:
+      required: [PageHeader, DetailSection]
+      optional: [EntityList, ErrorState]
+    primary_action: capital_markets.navigate
+    states: [normal, empty, error, permission_denied]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
