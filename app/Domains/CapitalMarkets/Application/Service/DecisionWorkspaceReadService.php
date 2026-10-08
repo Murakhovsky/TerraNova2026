@@ -692,8 +692,118 @@ final readonly class DecisionWorkspaceReadService
             'sources' => $market['sources'] ?? [],
             'states' => $market['states'] ?? [],
             'reference_states' => $market['reference_states'] ?? [],
+            'quality_rows' => $this->qualityRows($market),
             'partial_errors' => $errors,
         ];
+    }
+
+    /** @param array<string,mixed> $market @return list<array<string,mixed>> */
+    private function qualityRows(array $market): array
+    {
+        $referencesByInstrument = [];
+        foreach ($market['reference_states'] ?? [] as $reference) {
+            if (!is_array($reference)) {
+                continue;
+            }
+            $instrumentId = (string)($reference['instrument_id'] ?? '');
+            if ($instrumentId === '') {
+                continue;
+            }
+            $existing = $referencesByInstrument[$instrumentId] ?? null;
+            if (
+                !is_array($existing)
+                || strcmp((string)($reference['updated_at'] ?? ''), (string)($existing['updated_at'] ?? '')) > 0
+            ) {
+                $referencesByInstrument[$instrumentId] = $reference;
+            }
+        }
+
+        $rows = [];
+        $seenInstruments = [];
+        foreach ($market['states'] ?? [] as $state) {
+            if (!is_array($state)) {
+                continue;
+            }
+            $instrumentId = (string)($state['instrument_id'] ?? '');
+            if ($instrumentId === '') {
+                continue;
+            }
+
+            $reference = is_array($referencesByInstrument[$instrumentId] ?? null)
+                ? $referencesByInstrument[$instrumentId]
+                : [];
+            $referenceQuality = is_array($reference['quality'] ?? null) ? $reference['quality'] : [];
+            $marketFlags = array_values(array_filter(
+                is_array($state['quality_flags'] ?? null) ? $state['quality_flags'] : [],
+                static fn(mixed $flag): bool => is_scalar($flag) && trim((string)$flag) !== '',
+            ));
+            $referenceFlags = array_values(array_filter(
+                is_array($referenceQuality['flags'] ?? null) ? $referenceQuality['flags'] : [],
+                static fn(mixed $flag): bool => is_scalar($flag) && trim((string)$flag) !== '',
+            ));
+            $reasons = [];
+            foreach ($marketFlags as $flag) {
+                $reasons[] = 'Market: '.(string)$flag;
+            }
+            foreach ($referenceFlags as $flag) {
+                $reasons[] = 'Reference: '.(string)$flag;
+            }
+
+            $rows[] = [
+                'instrument_id' => $instrumentId,
+                'venue_id' => $state['venue_id'] ?? null,
+                'source_id' => $state['source_id'] ?? null,
+                'quote_age_ms' => is_array($state['best_quote'] ?? null) ? ($state['latency']['event_age_ms'] ?? null) : null,
+                // Canonical MarketOrderBook does not store an independent observation timestamp yet.
+                // Showing the MarketState age as book age would falsely imply freshness we do not possess.
+                'book_age_ms' => null,
+                'reference_age_ms' => $reference['reference_age_ms'] ?? null,
+                'sequence' => $state['last_sequence'] ?? null,
+                'book_sequence' => is_array($state['order_book'] ?? null) ? ($state['order_book']['sequence'] ?? null) : null,
+                'status' => strtoupper((string)($state['market_status'] ?? 'UNKNOWN')),
+                'trust' => strtoupper((string)($state['trust_status'] ?? $state['quality_status'] ?? 'UNAVAILABLE')),
+                'reference_trust' => strtoupper((string)($referenceQuality['status'] ?? 'UNAVAILABLE')),
+                'mode' => strtoupper((string)($state['mode'] ?? 'HISTORICAL')),
+                'updated_at' => $state['updated_at'] ?? null,
+                'reference_updated_at' => $reference['updated_at'] ?? null,
+                'reasons' => array_values(array_unique($reasons)),
+                'book_age_note' => is_array($state['order_book'] ?? null)
+                    ? 'Order book exists, but canonical MarketOrderBook has no independent observation timestamp.'
+                    : 'No canonical order book is present for this market state.',
+            ];
+            $seenInstruments[$instrumentId] = true;
+        }
+
+        foreach ($referencesByInstrument as $instrumentId => $reference) {
+            if (isset($seenInstruments[$instrumentId])) {
+                continue;
+            }
+            $referenceQuality = is_array($reference['quality'] ?? null) ? $reference['quality'] : [];
+            $referenceFlags = array_values(array_filter(
+                is_array($referenceQuality['flags'] ?? null) ? $referenceQuality['flags'] : [],
+                static fn(mixed $flag): bool => is_scalar($flag) && trim((string)$flag) !== '',
+            ));
+            $rows[] = [
+                'instrument_id' => $instrumentId,
+                'venue_id' => null,
+                'source_id' => $reference['source_id'] ?? null,
+                'quote_age_ms' => null,
+                'book_age_ms' => null,
+                'reference_age_ms' => $reference['reference_age_ms'] ?? null,
+                'sequence' => $reference['last_sequence'] ?? null,
+                'book_sequence' => null,
+                'status' => strtoupper((string)($reference['session'] ?? 'REFERENCE_ONLY')),
+                'trust' => 'REFERENCE_ONLY',
+                'reference_trust' => strtoupper((string)($referenceQuality['status'] ?? 'UNAVAILABLE')),
+                'mode' => strtoupper((string)($reference['mode'] ?? 'HISTORICAL')),
+                'updated_at' => null,
+                'reference_updated_at' => $reference['updated_at'] ?? null,
+                'reasons' => array_map(static fn(mixed $flag): string => 'Reference: '.(string)$flag, $referenceFlags),
+                'book_age_note' => 'Reference-only state has no canonical order book.',
+            ];
+        }
+
+        return $rows;
     }
 
     /** @param array<string,mixed> $core @param array<string,mixed> $market @return array<string,mixed> */
