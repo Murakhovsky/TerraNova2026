@@ -151,6 +151,8 @@ final readonly class CapitalRiskService
   $result['economics_executions']=$economics['executions'];
   $result['economics_complete_executions']=$economics['complete_executions'];
   $result['economics_note']=$economics['note'];
+  // Realized-only UTC windows are separate from portfolio mark-to-market P&L.
+  $result['realized_windows']=RealizedPnlWindowProjector::project($executions);
   return $result;
  }
 
