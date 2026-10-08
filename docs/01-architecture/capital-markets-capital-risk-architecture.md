@@ -1,56 +1,85 @@
-# CM-CAPITAL-RISK Architecture Packet
+---
+title: CM-CAPITAL-RISK — архітектура розподілу капіталу та портфельного ризику
+description: Архітектурний пакет для портфельного стану, економічної експозиції, ризикових лімітів, детермінованого розподілу капіталу, стрес-тестів і керованого Portfolio Agent.
+status: implementation
+updated: 2026-10-08
+kind: architecture
+---
 
-Status: implementation architecture  
-Package: `CM-CAPITAL-RISK`  
-Flow: Manager → Architect → Developer → Reviewer → QA → Manager Acceptance
+# Архітектура CM-CAPITAL-RISK
 
-## Reuse matrix
+Пакет переводить Capital Markets від оцінки окремої угоди до керування спільним портфелем. Потік розробки: Manager → Architect → Developer → Reviewer → QA → Manager Acceptance.
 
-| Capability | Existing | Decision |
+## Матриця повторного використання
+
+| Можливість | Існувала | Архітектурне рішення |
 | --- | --- | --- |
-| Portfolio / positions | YES | Extend as derived portfolio state |
-| Ledger | YES | Keep financial source of truth |
-| Capital reservation | YES | Reuse after allocation approval |
-| Trade risk | YES | Extend with portfolio risk, do not fork a V2 engine |
-| Economic exposure | PARTIAL | Extend with validated netting + immutable snapshots |
-| Strategy scorecards | YES | Consume as allocator input |
-| Promotion gates | YES | Live allocation only for eligible strategy lifecycle |
-| Allocation | NO | New deterministic constrained allocator |
-| Stress | PARTIAL/NO | New deterministic portfolio stress foundation |
-| AI Research runtime | YES | Portfolio Agent comes after deterministic simulation |
+| Portfolio / positions | так | розширити як похідний операційний стан |
+| Ledger | так | залишити фінансовим джерелом істини |
+| Capital reservation | так | повторно використати після схвалення allocation |
+| Trade risk | так | розширити портфельним ризиком, не створювати окремий V2 engine |
+| Economic exposure | частково | додати перевірене netting і незмінні snapshots |
+| Strategy scorecards | так | використовувати як вхід allocator |
+| Promotion gates | так | Live allocation лише для дозволеного lifecycle |
+| Allocation | ні | новий детермінований constrained allocator |
+| Stress | частково | детермінована портфельна stress foundation |
+| AI Research runtime | так | Portfolio Agent працює поверх детермінованої simulation |
 
-## Ownership
+## Володіння станом
 
-Ledger owns financial truth. Portfolio owns operational derived state. Risk owns envelopes and deterministic enforcement. Allocation owns proposals and plans, never execution. Execution consumes approved capital reservations. AI can read, simulate, explain and propose but cannot alter hard limits, approve itself, move live capital or mutate Ledger.
+Ledger володіє фінансовою істиною. Portfolio володіє похідним операційним станом. Risk відповідає за envelopes і детерміноване enforcement. Allocation створює proposals та plans, але не виконує orders. Execution споживає схвалені capital reservations.
 
-## Netting rules
+AI може читати, моделювати, пояснювати й пропонувати. Він не може змінювати hard limits, схвалювати власну пропозицію, переміщати Live capital або змінювати Ledger.
 
-Gross exposure is always preserved. Net exposure is allowed only through a validated economic relationship. Unknown or invalid equivalence becomes `UNKNOWN_EXPOSURE` and is never netted. Derivatives may apply delta equivalence; absence of a trustworthy mapping is conservative, not zero-risk.
+## Правила економічного netting
 
-## Capital rules
+Gross exposure завжди зберігається. Net exposure дозволяється лише через підтверджений economic relationship. Невідома або непідтверджена еквівалентність стає `UNKNOWN_EXPOSURE` і не бере участі в netting.
 
-Available capital is not raw cash. Reserved, deployed, locked, margined, unsettled, settlement and emergency buffers are excluded by policy. Capital location is explicit. Cross-venue strategies must have usable capital at every required location.
+Для derivatives допускається delta equivalent. Якщо надійного mapping немає, система використовує консервативний стан, а не нульовий ризик.
 
-## Risk hierarchy
+## Правила капіталу
 
-SYSTEM → PORTFOLIO → STRATEGY → VENUE → ASSET → INSTRUMENT → POSITION. A lower level may tighten but never weaken a hard upper-level limit. Hard limits are deterministic and non-overridable by AI.
+Available capital не дорівнює raw cash. Reserved, deployed, locked, margined, unsettled capital, settlement buffer та emergency hedge buffer не можуть повторно використовуватися allocator.
 
-## Allocation V1
+Capital location є явною частиною стану. Cross-venue strategy повинна мати доступний капітал у кожному необхідному location.
 
-V1 is deterministic RULE_BASED / SCORE_BASED constrained allocation. Ranking uses expected net return, confidence, execution probability, strategy quality, capacity, risk, concentration and liquidity penalties. Approved size is constrained by available capital, market capacity and hard risk headroom. Same portfolio snapshot + opportunity set + policy version produces the same plan fingerprint and allocation order.
+## Ієрархія ризикових політик
 
-## State machine
+`SYSTEM → PORTFOLIO → STRATEGY → VENUE → ASSET → INSTRUMENT → POSITION`.
 
-NORMAL → CAUTION → RESTRICTED → REDUCE_ONLY → HALTED → EMERGENCY. REDUCE_ONLY and stronger states reject all new risk while allowing reduce/close execution paths.
+Нижчий рівень може посилити обмеження, але не може послабити hard limit верхнього рівня. Hard limits виконуються детерміновано й не можуть бути overridden AI.
+
+## Детермінований Allocation V1
+
+V1 підтримує `RULE_BASED` та `SCORE_BASED` policies. Ranking враховує expected net return, confidence, execution probability, strategy quality, capacity, risk, concentration та liquidity penalties.
+
+Approved size обмежується available capital, market capacity, physical capital location і hard risk headroom. Однакові Portfolio Snapshot, Opportunity Set і Policy Version повинні давати однаковий allocation fingerprint та однаковий порядок рішень.
+
+## Машина станів ризику
+
+`NORMAL → CAUTION → RESTRICTED → REDUCE_ONLY → HALTED → EMERGENCY`.
+
+`REDUCE_ONLY` та сильніші стани блокують new risk, але дозволяють reduce/close paths. Drawdown, loss budgets, reconciliation mismatch і hard-limit breaches можуть переводити Portfolio у більш суворий стан.
 
 ## Rebalance
 
-Rebalance is a plan, not an immediate trade. Hysteresis and cooldown prevent allocation thrashing. Costs must be compared with expected risk/return improvement.
+Rebalance створює план, а не негайну угоду. Hysteresis і cooldown запобігають allocation thrashing. Estimated costs порівнюються з очікуваним покращенням risk/return; якщо витрати перевищують benefit, рішенням стає `HOLD`.
 
-## Concurrency and idempotency
+## Конкурентність та idempotency
 
-Allocation plans have a deterministic input fingerprint with a uniqueness constraint. Approval changes only `PROPOSED → APPROVED` and therefore repeated approval cannot duplicate the transition. Capital reservation remains the execution-side anti-oversubscription authority.
+Allocation Plan має детермінований input fingerprint з unique constraint. Approval переходить лише `PROPOSED → APPROVED`. Повторне схвалення не створює другу reservation.
 
-## AI authority boundary
+Reservation ID детерміновано формується з Allocation Plan та Opportunity. Після restart система може знайти вже створену reservation і продовжити процес без повторного використання capital.
 
-Portfolio Agent may call read/simulation/recommendation tools. It cannot override hard risk, modify envelopes, approve its own proposal, disable a kill switch, mutate Ledger, or directly move live capital.
+## Межі повноважень AI
+
+Portfolio Agent має тільки read, simulation і proposal tools. Він не отримує tools для:
+
+- зміни hard risk limits;
+- approval власного proposal;
+- відключення kill switch;
+- прямого Live execution;
+- зміни Ledger;
+- довільного переміщення capital.
+
+Детерміновані Risk Engine та Capital Allocation Engine залишаються фінансовою authority.
