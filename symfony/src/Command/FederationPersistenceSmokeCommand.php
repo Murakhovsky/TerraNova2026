@@ -826,6 +826,8 @@ final class FederationPersistenceSmokeCommand extends Command
                 $actor, $linearRun, $linearApprovalId,
             )['state'] === 'manual_reconciliation_required',
                 'Forged predecessor receipt authorized a dependent Action.');
+            self::assert($this->recovery->inspect($actor, $linearRun)['attention_count'] === 1,
+                'Recovery Inspector failed to flag tampered predecessor evidence.');
             $this->db->executeStatement(
                 "UPDATE cos_actions SET target_id = '42' WHERE organization_id = :org AND id = :id",
                 ['org' => $org, 'id' => $firstAction['action_id']],
@@ -861,6 +863,23 @@ final class FederationPersistenceSmokeCommand extends Command
                 $actor, $linearRun, 'z_first',
             )['status'] === 'completed',
                 'Finalized Run lost read-only completed receipt attestation.');
+            // A late worker cannot change Step state after Run finalization.
+            $this->db->executeStatement(
+                "UPDATE cos_federation_steps SET state = 'claimed'
+                 WHERE organization_id = :org AND run_id = :run AND step_id = 'a_second'",
+                ['org' => $org, 'run' => $linearRun],
+            );
+            try {
+                $this->goals->finishStep($actor, $linearRun, 'a_second', 'completed',
+                    'action:' . $secondAction['action_id']);
+                throw new \RuntimeException('Late worker mutated a finalized Federation Run.');
+            } catch (DomainException) {
+            }
+            $this->db->executeStatement(
+                "UPDATE cos_federation_steps SET state = 'completed'
+                 WHERE organization_id = :org AND run_id = :run AND step_id = 'a_second'",
+                ['org' => $org, 'run' => $linearRun],
+            );
             try {
                 $this->sequentialOrchestrator->advance($other, $linearRun, $linearApprovalId);
                 throw new \RuntimeException('Foreign tenant advanced Federation Run.');

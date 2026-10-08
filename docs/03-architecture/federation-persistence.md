@@ -204,3 +204,47 @@ running до completed лише після перевірки, що кожен S
 інші Domain capabilities, довірена верифікація Goal Outcome
 за бізнесовими read models, повний Adaptive Workspace, production
 enablement та фінальне end-to-end приймання.
+
+
+## Recovery Inspector, manual incident escalation and receipt sweep
+
+`FederationRunRecoveryService` has a tenant-scoped, read-only diagnostic
+`inspect()` operation and a **receipt-only** `reconcileVerified()` operation.
+An opted-in tenant manager can use:
+
+- `GET /api/v1/federation/runs/{runId}/recovery` to see per-step recovery
+  classification and attention/recoverable counts.
+- `POST /api/v1/federation/runs/{runId}/reconcile`, with the normal session
+  CSRF token, to apply **only** already-completed, independently attested
+  canonical Action receipts.
+
+`FederationRecoveryClassifier` classifies pending, claimed, completed,
+ambiguous, orphaned and failed states, including missing Action after
+the Step claim, independent human approval pending, queued, running,
+stale execution, rejected Action, multiple attempts, and an Action marked
+COMPLETED without one successful attempt. No guess is considered a receipt.
+`started_at` on the canonical Action is used for RUNNING worker age;
+a long queue/approval wait is not mistaken for worker execution time.
+
+**Hard stop:** the recovery sweep never creates, resubmits, requeues or
+executes an Action, and never advances to the next Plan Step.
+A claimed Step with no durable Action can reflect a crash between Step
+claim and Action submission, so it stays reserved. An Action with more
+than one execution attempt, forged input, an expired human approval or
+an uncertain outcome requires manual incident reconciliation.
+
+Step completion now locks the owning Run before mutation and rejects
+late execution reports after terminal Run transitions. Independently,
+the receipt reconciler checks that claimed Steps belong to a running
+Run; it can still re-attest historical completed receipts read-only.
+
+Integration smoke covers expected human waiting, rejected Action
+escalation, tampered predecessor detection, completed Action
+reconciliation (exactly once), terminal Step write denial and tenant
+isolation. The pure classifier unit suite also covers orphaned claims,
+stale workers, duplicate attempts and attempted requeue.
+
+**Limit:** this is bounded, manager-triggered reconciliation, not yet
+an autonomous watchdog or a full recovery workflow with audited human
+decisions. There is no implied permission to reissue failed external
+business actions.
