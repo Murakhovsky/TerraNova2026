@@ -297,3 +297,18 @@ Market Detail читає фактичні канонічні події за о�
 Підтримуються QUOTE, BBO, REFERENCE_PRICE, MARK_PRICE, INDEX_PRICE у режимі LIVE, зі статусом OPEN і без quality flags. Різниця source timestamps не більше 30 секунд, quote assets однакові. Значення Basis і bps розраховуються через DecimalMath на сервері; браузер розміщує готові точки на графіку.
 
 За невідомої валюти, відсутньої економічної еквівалентності, некоректних чи несинхронізованих даних або обрізаної історії результат NOT COMPARABLE. Спостереження не вважаються торговим сигналом чи дозволом на виконання угоди.
+
+
+## Архітектура повного Portfolio NAV Today / 30D
+
+Фінансовий backend отримав окремий механізм повного NAV P&L:
+- PortfolioNavWindowProjector виводить результат із двох підтверджених оцінок вартості портфеля та зміни накопичених зовнішніх грошових потоків.
+- MysqlPortfolioValuationSnapshotRepository зберігає append-only записи з окремим organization_id / portfolio_id, валютою, часовою міткою та provenance_id.
+- Для допуску snapshot до розрахунку обов'язкові valuation_status COMPLETE, ledger_reconciled, marks_reconciled та external_flows_reconciled.
+- Немає початкової оцінки, кінцевого NAV, підтвердженої валюти або узгодженої історії: результат UNAVAILABLE, а не вигаданий нуль.
+- Вкладеність часового вікна Today і 30D перевіряється за UTC; гранична давність оцінок наразі 900 секунд, фактичні часові мітки показуються разом із результатом.
+
+Формула: Net Portfolio P&L = NAV_close - NAV_open - (CumulativeExternalFlows_close - CumulativeExternalFlows_open).
+Формула застосовується тільки до підтверджених valuation snapshots, які враховують переоцінку відкритих позицій. Окремий Realized Execution P&L не може підміняти Portfolio NAV P&L.
+
+Важливе обмеження поточного пакета: система має канонічні сховище, projection, DI, UI та перевірки, але **регулярний producing workflow повністю звірених NAV snapshots з даними broker/ledger/position mark-to-market ще необхідно підключити**. До цього Today/30D Portfolio NAV P&L можуть показувати UNAVAILABLE; повну готовність фінансового циклу на підставі самого сховища не підтверджуємо.
