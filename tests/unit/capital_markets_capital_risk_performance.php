@@ -20,8 +20,8 @@ $result=$engine->attribute([
 $assert($result['net_pnl']->value()==='400','Portfolio net P&L attribution must sum strategy contributions.');
 $assert($result['deployed_capital']->value()==='15000','Portfolio deployed capital attribution must sum absolute capital.');
 $assert($result['risk_consumed']->value()==='1500','Risk-consumed attribution must use supplied evidence.');
-$assert($result['capital_efficiency']->value()==='0.026666666667','Capital efficiency must be Net P&L / deployed capital.');
-$assert($result['risk_efficiency']->value()==='0.266666666667','Risk efficiency must be Net P&L / risk consumed.');
+$assert($result['capital_efficiency']->value()==='0.026666666666','Capital efficiency must be Net P&L / deployed capital.');
+$assert($result['risk_efficiency']->value()==='0.266666666666','Risk efficiency must be Net P&L / risk consumed.');
 $assert($result['by_strategy']['A']['pnl']->value()==='500','Strategy attribution A is wrong.');
 $assert($result['by_venue']['OKX']['pnl']->value()==='-100','Venue attribution OKX is wrong.');
 
