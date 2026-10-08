@@ -61,7 +61,7 @@ Approved size обмежується available capital, market capacity, physica
 
 `REDUCE_ONLY` та сильніші стани блокують new risk, але дозволяють reduce/close paths. Drawdown, loss budgets, reconciliation mismatch і hard-limit breaches можуть переводити Portfolio у більш суворий стан.
 
-## Rebalance
+## Перебалансування
 
 Rebalance створює план, а не негайну угоду. Hysteresis і cooldown запобігають allocation thrashing. Estimated costs порівнюються з очікуваним покращенням risk/return; якщо витрати перевищують benefit, рішенням стає `HOLD`.
 
