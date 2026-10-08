@@ -498,6 +498,7 @@
       {% if not permissions.market_data_history_view|default(false) %}
         <p>Historical market evidence is restricted to users with Market Data History View authority.</p>
       {% else %}
+        <div data-capital-markets-workspace-target="historyChart" data-history-rows="{{ w.history_rows|default([])|json_encode|e('html_attr') }}" role="group" aria-label="Canonical historical market series chart"></div>
         <div class="table-responsive">
           <table class="table" aria-label="Canonical market history for last seven days">
             <thead><tr><th>Source time (UTC)</th><th>Event</th><th>Venue</th><th>Source</th><th>Observed value</th><th>Quote / Unit</th><th>Spread (bps)</th><th>Mode</th><th>Quality flags</th></tr></thead>
@@ -520,7 +521,7 @@
             </tbody>
           </table>
         </div>
-        <p class="small">Most recent 150 of up to 500 matching recorded events. Basis curves and cross-instrument spreads remain unavailable until a time-aligned canonical comparison projection exists.</p>
+        <p class="small">Last 150 displayed from up to 500 fetched events in the seven-day window. Basis curves and cross-instrument spreads remain unavailable until a time-aligned canonical comparison projection exists.</p>
       {% endif %}
     </section>
     <section class="cos-panel">
