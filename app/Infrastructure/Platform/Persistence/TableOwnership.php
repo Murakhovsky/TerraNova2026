@@ -117,6 +117,9 @@ final class TableOwnership
             'cos_document_templates', 'cos_document_signatures', 'cos_document_operation_receipts',
             'tn_notification_outbox', 'tn_analytics_events',
             'tn_integration_outbox', 'tn_webhook_deliveries', 'tn_migrations',
+            'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
+            'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
+            'cos_experience_profiles', 'cos_workspace_experience_states',
         ],
     ];
 
