@@ -1929,7 +1929,7 @@ pages:
       page_purpose: "Read-only market detail."
     archetype: entity_workspace
     patterns:
-      required: [PageHeader, EntitySummary]
+      required: [WorkspaceHeader, EntityHeader]
       optional: [EntityList, ErrorState]
     primary_action: capital_markets.navigate
     states: [normal, empty, error, permission_denied]
@@ -1951,7 +1951,7 @@ pages:
       page_purpose: "Read-only instrument relationship detail."
     archetype: entity_workspace
     patterns:
-      required: [PageHeader, EntitySummary]
+      required: [WorkspaceHeader, EntityHeader]
       optional: [EntityList, ErrorState]
     primary_action: capital_markets.navigate
     states: [normal, empty, error, permission_denied]
