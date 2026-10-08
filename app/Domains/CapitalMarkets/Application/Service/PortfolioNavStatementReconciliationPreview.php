@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Domains\CapitalMarkets\Application\Service;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
 use Throwable;
@@ -19,9 +21,11 @@ final class PortfolioNavStatementReconciliationPreview
      * @param list<array<string,mixed>> $sourceEvidence
      * @return array<string,mixed>
      */
-    public static function inspect(array $paperBalances, array $sourceEvidence, string $currency): array
+    public static function inspect(array $paperBalances, array $sourceEvidence, string $currency, ?DateTimeImmutable $at = null): array
     {
         $currency = strtoupper(trim($currency));
+        $now = ($at ?? new DateTimeImmutable('now', new DateTimeZone('UTC')))->setTimezone(new DateTimeZone('UTC'));
+        $maxBalanceAgeSeconds = 900;
         $issues = [];
         $paper = [];
         $statements = [];
@@ -78,6 +82,31 @@ final class PortfolioNavStatementReconciliationPreview
                 continue;
             }
             $counts[$kind]++;
+            $effective = $evidence['effective_at'] ?? null;
+            if (!is_string($effective) || trim($effective) === '') {
+                $issues['SOURCE_EFFECTIVE_TIME_MISSING'] = true;
+                $invalidKinds[$kind] = true;
+                continue;
+            }
+            try {
+                $observedAt = (new DateTimeImmutable($effective, new DateTimeZone('UTC')))
+                    ->setTimezone(new DateTimeZone('UTC'));
+                $age = $now->getTimestamp() - $observedAt->getTimestamp();
+                if ($age < 0) {
+                    $issues['SOURCE_EFFECTIVE_TIME_FUTURE'] = true;
+                    $invalidKinds[$kind] = true;
+                    continue;
+                }
+                if ($kind !== 'EXTERNAL_CASH_FLOW' && $age > $maxBalanceAgeSeconds) {
+                    $issues['BALANCE_STATEMENT_STALE'] = true;
+                    $invalidKinds[$kind] = true;
+                    continue;
+                }
+            } catch (Throwable) {
+                $issues['SOURCE_EFFECTIVE_TIME_INVALID'] = true;
+                $invalidKinds[$kind] = true;
+                continue;
+            }
             if (($evidence['status'] ?? '') !== 'PENDING_RECONCILIATION'
                 || ($evidence['reconciled'] ?? null) !== false) {
                 $issues['SOURCE_AUTHORITY_UNEXPECTED'] = true;
