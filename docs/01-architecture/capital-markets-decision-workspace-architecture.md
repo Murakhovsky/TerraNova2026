@@ -360,3 +360,7 @@ PortfolioNavStatementReconciliationPreview порівнює баланси гр�
 Вхідний файл містить один об'єкт JSON із типом EXTERNAL_CASH_FLOW, LIABILITY_BALANCE або VENUE_BALANCE, числовим значенням у форматі десяткового рядка, валютою, часом спостереження, provider_id, source_reference, source_document_sha256, collected_by та evidence_id. Система перевіряє документ через PortfolioNavFinancialEvidencePolicy, записує його append-only із tenant scope та повертає RECORDED_PENDING_RECONCILIATION. Повторне використання source identity відхиляється. Команда не змінює Ledger, не підтверджує залишки й не створює NAV snapshot.
 
 Runtime-тест виконує імпорт, повторний імпорт того самого запису та NAV preflight: перший запис мусить пройти, дублікат мусить бути відхилений, а невиконана незалежна бухгалтерська звірка залишає статус BLOCKED. Первинний документ є доказом для перевірки, але не автоматичним правом записати Portfolio P&L.
+
+## Повнота історичних NAV-вікон
+
+При обчисленні Today / 30D Portfolio NAV розрахунок має fail-closed семантику не лише на кінцевих точках. Якщо всередині періоду є snapshot із непідтвердженим Ledger, відсутнім provenance, неповним mark-to-market чи некоректним значенням, він не вилучається мовчки: весь відповідний період отримує `UNAVAILABLE` з причиною `UNVERIFIED_VALUATION_IN_WINDOW`. Snapshot із невідомим часом блокує будь-яке вікно, оскільки неможливо довести, що він поза ним. Недостовірний запис, який точно старший за межі періоду, не псує незалежний результат. Вимога покрита регресійними unit-тестами.
