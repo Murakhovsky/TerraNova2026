@@ -5,6 +5,7 @@ namespace App\Persistence\Federation;
 
 use Doctrine\DBAL\Connection;
 use DomainException;
+use Domains\Federation\Application\Service\GoalPlanApprovalInvariant;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\ActionHandlerInterface;
@@ -34,15 +35,10 @@ final readonly class FederationPlanApproveHandler implements ActionHandlerInterf
 
     public function execute(Action $action): ExecutionResult
     {
-        if (!$this->supports($action->type)
-            || $action->status !== ActionStatus::Running
-            || $action->sourceType !== 'USER'
-            || $action->sourceId === ''
-            || $action->executionMode !== 'APPROVAL_REQUIRED'
-            || $action->targetType !== 'cos_federation_plan'
-            || !is_string($action->targetId)
-            || !preg_match('/^[a-z0-9][a-z0-9_:-]{0,63}$/', $action->targetId)) {
-            return ExecutionResult::failure('Federation approval Action is not a trusted running user approval.');
+        try {
+            GoalPlanApprovalInvariant::assertAction($action);
+        } catch (DomainException $error) {
+            return ExecutionResult::failure($error->getMessage());
         }
 
         try {
@@ -56,13 +52,10 @@ final readonly class FederationPlanApproveHandler implements ActionHandlerInterf
                      WHERE p.organization_id = :org AND p.plan_id = :plan FOR UPDATE',
                     ['org' => $action->organizationId, 'plan' => $action->targetId],
                 );
-                if (!$plan || !in_array($plan['state'], ['proposed', 'approved'], true)) {
-                    throw new DomainException('Federation plan cannot be approved from its current state.');
+                if (!$plan) {
+                    throw new DomainException('Federation plan is not present in this tenant.');
                 }
-                if ((int) $plan['spec_version'] !== (int) $plan['current_spec_version']
-                    || $plan['owner_id'] !== $action->sourceId) {
-                    throw new DomainException('Federation Goal version or owner changed after proposal.');
-                }
+                GoalPlanApprovalInvariant::assertPlan($action, $plan);
                 $receipt = $this->evidence->requireForOrganization(
                     $action->organizationId, $action->id, (string) $plan['goal_id'],
                     (string) $action->targetId, (int) $plan['spec_version'],
