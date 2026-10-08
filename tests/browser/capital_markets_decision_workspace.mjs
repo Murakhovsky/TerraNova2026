@@ -189,8 +189,19 @@ try {
         const response = await page.goto(absolute(href), { waitUntil: 'domcontentloaded' });
         await assertOk(response, 'desktop: relationship detail');
         const text = await page.locator('[data-cm-decision-workspace]').innerText();
-        for (const marker of ['Relationship Detail', 'Relationship Graph', 'Price Comparison']) {
+        for (const marker of ['Relationship Detail', 'Relationship Graph', 'Price Comparison', 'Historical Basis · 7D']) {
           if (!text.includes(marker)) throw new Error('desktop: relationship detail missing marker "' + marker + '"');
+        }
+        const basisRegion = page.locator('[aria-label="Historical Relationship Basis"]');
+        if (await basisRegion.count() !== 1) {
+          throw new Error('desktop: relationship detail must show historical comparison authority state.');
+        }
+        const basisText = await basisRegion.innerText();
+        if (basisText.includes('RESTRICTED') && await basisRegion.locator('[data-basis-rows]').count() !== 0) {
+          throw new Error('desktop: unpermitted historical basis data must never reach the DOM.');
+        }
+        if (basisText.includes('NOT COMPARABLE') && await basisRegion.locator('svg[role="img"]').count() > 0) {
+          throw new Error('desktop: untrusted historical basis cannot be plotted.');
         }
       }
 
