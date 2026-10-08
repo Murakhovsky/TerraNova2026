@@ -7,6 +7,7 @@ use Domains\CapitalMarkets\Application\Contract\CapitalRiskRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Allocation\AllocationPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\PortfolioRiskState;
+use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 use Domains\CapitalMarkets\Domain\Risk\RiskEnvelope;
 use Domains\CapitalMarkets\Domain\Risk\RiskEnvelopeLevel;
 use Domains\CapitalMarkets\Domain\Risk\RiskLimit;
@@ -42,12 +43,17 @@ final readonly class CapitalRiskService
   private CapitalStateEngine $capitalStates,
   private TokenizedEquityReadService $tokenizedRead,
   private CorrelationEngine $correlations,
+  private CapitalRiskTelemetry $telemetry,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
  {
   $portfolio=$this->trading->paperPortfolio($organizationId)??[];
   $capitalState=$this->capitalState($organizationId,$portfolioId);
+  $this->telemetry->metric($organizationId,'portfolio_equity',(string)($capitalState['total']??'0'));
+  $this->telemetry->metric($organizationId,'available_capital',(string)($capitalState['available']??'0'));
+  $this->telemetry->metric($organizationId,'deployed_capital',(string)($capitalState['deployed']??'0'));
+  $this->telemetry->metric($organizationId,'reserved_capital',(string)($capitalState['reserved']??'0'));
   return [
    'portfolio'=>$portfolio,
    'capital_state'=>$capitalState,
@@ -272,6 +278,10 @@ final readonly class CapitalRiskService
    ],
   ];
   $this->repository->saveAllocationPlan($organizationId,$record);
+  $rejections=0;$reductions=0;
+  foreach($record['allocations'] as $item){if(($item['decision']??'')==='REJECT')$rejections++;if(($item['decision']??'')==='ACCEPT_REDUCED_SIZE')$reductions++;}
+  $this->telemetry->metric($organizationId,'allocation_rejections',$rejections);
+  $this->telemetry->metric($organizationId,'allocation_reductions',$reductions);
   return $record;
  }
 
@@ -401,6 +411,14 @@ final readonly class CapitalRiskService
    'status'=>$assessment['state']->value,'valuation_quality'=>(string)($input['valuation_quality']??'TRUSTED'),
   ];
   $this->repository->saveRiskSnapshot($organizationId,$record);
+  $this->telemetry->metric($organizationId,'gross_exposure',$gross->value());
+  $this->telemetry->metric($organizationId,'net_exposure',$net->value());
+  $this->telemetry->metric($organizationId,'portfolio_leverage',$leverage->value());
+  $this->telemetry->metric($organizationId,'drawdown',$drawdown->value());
+  $this->telemetry->metric($organizationId,'risk_utilization',count($headroom));
+  if($assessment['breaches']!==[])$this->telemetry->alert($organizationId,CapitalMarketsAlertType::RiskEnvelopeBreached,['breaches'=>$assessment['breaches'],'portfolio_id'=>$portfolioId]);
+  elseif($assessment['warnings']!==[])$this->telemetry->alert($organizationId,CapitalMarketsAlertType::RiskEnvelopeApproaching,['warnings'=>$assessment['warnings'],'portfolio_id'=>$portfolioId]);
+  if($margin->compareTo(Decimal::fromString('0.8'))>=0)$this->telemetry->alert($organizationId,CapitalMarketsAlertType::MarginUtilizationHigh,['utilization'=>$margin->value()]);
   return $record;
  }
 
@@ -452,6 +470,7 @@ final readonly class CapitalRiskService
    'capital_remaining'=>$result->capitalRemaining->value()
   ];
   $this->repository->saveStressResult($organizationId,$record);
+  $this->telemetry->metric($organizationId,'stress_estimated_loss',$result->estimatedLoss->value(),['scenario'=>$result->scenarioId]);
   return $record;
  }
 
