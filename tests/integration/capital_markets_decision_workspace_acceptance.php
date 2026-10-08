@@ -53,6 +53,7 @@ foreach([
     'CapitalMarketsTradingRepositoryInterface $trading',
     'AgentRunReadModelInterface $agentRuns',
     'ActivityHistoryRepositoryInterface $activityHistory',
+    'public function searchEntities(',
     'public function overview(',
     'public function opportunities(',
     'public function opportunity(',
@@ -81,6 +82,12 @@ foreach([
     "'economics_status'",
     "'economics_coverage'",
     "'costs_by_type'",
+    "'quality_rows'",
+    'private function qualityRows(',
+    "'book_age_ms' => null",
+    "'reference_age_ms'",
+    "'reference_trust'",
+    "'book_age_note'",
 ] as $needle){
     $assert(str_contains($readModel,$needle),'Decision Workspace read-model contract missing: '.$needle);
 }
@@ -134,6 +141,12 @@ foreach([
     'Cost Breakdown',
     'Agent Authority',
     'Market Quality',
+    'Quote / Book / Reference freshness',
+    'Quote Age',
+    'Book Age',
+    'Reference Age',
+    'Why Untrusted?',
+    'independent age unavailable',
     'PARTIAL DATA',
     'Time-window P&L not fabricated',
     'permissions.opportunity_view',
@@ -157,6 +170,21 @@ $assert(!str_contains($template,'Execute Live'),'Live execution action must not 
 $assert(str_contains($template,'table-responsive'),'Large Decision Workspace tables must remain usable on narrow screens.');
 $assert(str_contains($template,'aria-label'),'Critical Decision Workspace surfaces need accessible labels.');
 
+$decisionTraceComponent=(string)file_get_contents($root.'/symfony/src/Web/Experience/Component/CosDecisionTrace.php');
+$decisionTraceTemplate=(string)file_get_contents($root.'/symfony/templates/components/experience/cos_decision_trace.html.twig');
+$uiCatalog=(string)file_get_contents($root.'/symfony/src/Web/Experience/Dev/UiCatalogRegistry.php');
+foreach([
+    "name: 'CosDecisionTrace'",
+    "template: 'components/experience/cos_decision_trace.html.twig'",
+] as $needle){
+    $assert(str_contains($decisionTraceComponent,$needle),'Reusable Decision Trace component contract missing: '.$needle);
+}
+foreach(['aria-label="{{ label }}"','{% for step in steps %}','emptyCopy'] as $needle){
+    $assert(str_contains($decisionTraceTemplate,$needle),'Reusable Decision Trace template contract missing: '.$needle);
+}
+$assert(str_contains($uiCatalog,"$this->entry('CosDecisionTrace'"),'CosDecisionTrace must be registered in the canonical UI Catalog.');
+$assert(substr_count($template,'<twig:CosDecisionTrace')>=2,'Opportunity and Hypothesis views must reuse the canonical Decision Trace component.');
+
 $provider=(string)file_get_contents($root.'/symfony/src/Web/Experience/Extension/Provider/CapitalMarketsWebProvider.php');
 foreach([
     "'Overview','/capital-markets'",
@@ -171,6 +199,9 @@ foreach([
     "'Performance','/capital-markets/performance'",
     "'Agents','/capital-markets/agents'",
     "'Data Quality','/capital-markets/data-quality'",
+    'DecisionWorkspaceReadService $workspace',
+    'searchEntities($context->organizationId)',
+    "kind: $entity['kind']",
 ] as $needle){
     $assert(str_contains($provider,$needle),'Primary navigation contract missing: '.$needle);
 }
