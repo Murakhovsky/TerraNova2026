@@ -614,6 +614,8 @@ final readonly class CapitalRiskService
   $availableByLocation=[];
   $correlationSnapshot=$this->repository->latestCorrelationSnapshot($organizationId,$portfolioId);
   $normalCorrelations=(array)($correlationSnapshot['normal']??[]);
+  $currentExposure=$this->repository->latestExposureSnapshot($organizationId,$portfolioId);
+  $currentNetExposure=Decimal::fromString((string)($currentExposure['net_exposure']??'0'));
   $strategyBudgets=[];
   foreach($this->repository->listStrategyAllocations($organizationId,$portfolioId) as $allocation){
    $strategyId=(string)($allocation['strategy_version_id']??'');
@@ -644,6 +646,14 @@ final readonly class CapitalRiskService
    $mode=strtoupper($portfolioMode);
    if($mode==='LIVE'&&!in_array($strategyStatus,['LIMITED_LIVE','VALIDATED'],true))$blocked='STRATEGY_NOT_LIVE_VALIDATED';
    if($mode==='PAPER'&&!in_array($strategyStatus,['PAPER','LIMITED_LIVE','VALIDATED'],true))$blocked='STRATEGY_NOT_PAPER_VALIDATED';
+   if(array_key_exists('net_exposure_change',$opportunity)&&!$currentNetExposure->isZero()){
+    $projectedNet=DecimalMath::add($currentNetExposure,Decimal::fromString((string)$opportunity['net_exposure_change']));
+    $currentAbs=DecimalMath::abs($currentNetExposure);$projectedAbs=DecimalMath::abs($projectedNet);
+    if($projectedAbs->compareTo($currentAbs)<0){
+     $improvement=DecimalMath::divide(DecimalMath::subtract($currentAbs,$projectedAbs),$currentAbs,12);
+     $opportunity['portfolio_risk_improvement']=$improvement->value();
+    }
+   }
    $opportunity['resolved_strategy_status']=$strategyStatus;
    if($strategyVersionId!==''&&isset($normalCorrelations[$strategyVersionId])&&is_array($normalCorrelations[$strategyVersionId])){
     $opportunity['strategy_correlations']=$normalCorrelations[$strategyVersionId];
