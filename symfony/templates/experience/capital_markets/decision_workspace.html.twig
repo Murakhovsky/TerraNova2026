@@ -265,31 +265,45 @@
       </form>
       <div class="d-flex gap-2 justify-content-between align-items-center mb-2 flex-wrap">
         <details>
-          <summary>Columns</summary>
+          <summary>Columns / order</summary>
+          {% set cmOpportunityColumns = {
+            'priority':'Priority','opportunity':'Opportunity','type':'Type','market':'Instruments / Venues',
+            'expected_net':'Expected Net','return':'Return','capital':'Capital','capacity':'Capacity',
+            'risk':'Risk','portfolio_impact':'Portfolio Impact','ttl':'TTL','status':'Status'
+          } %}
           <div class="d-flex gap-2 flex-wrap mt-2">
-            {% for key,label in {'return':'Return','capacity':'Capacity','ttl':'TTL','status':'Status'} %}
-              <label><input type="checkbox" checked data-capital-markets-workspace-target="columnToggle" data-action="change->capital-markets-workspace#toggleColumn" data-cm-table-id="opportunities" data-cm-column="{{ key }}"> {{ label }}</label>
+            {% for key,label in cmOpportunityColumns %}
+              <span class="d-inline-flex align-items-center gap-1 border rounded px-2 py-1">
+                {% if key in ['return','capacity','ttl','status'] %}
+                  <label class="mb-0"><input type="checkbox" checked data-capital-markets-workspace-target="columnToggle" data-action="change->capital-markets-workspace#toggleColumn" data-cm-table-id="opportunities" data-cm-column="{{ key }}"> {{ label }}</label>
+                {% else %}
+                  <span>{{ label }}</span>
+                {% endif %}
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="click->capital-markets-workspace#moveColumn" data-cm-table-id="opportunities" data-cm-column="{{ key }}" data-cm-direction="-1" aria-label="Move {{ label }} left">←</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="click->capital-markets-workspace#moveColumn" data-cm-table-id="opportunities" data-cm-column="{{ key }}" data-cm-direction="1" aria-label="Move {{ label }} right">→</button>
+              </span>
             {% endfor %}
           </div>
+          <small>Critical money, risk and portfolio-fit columns remain visible; optional detail columns can be hidden.</small>
         </details>
         <div class="cm-export-links"><a href="/capital-markets/export/opportunities.csv">Export CSV</a><a href="/capital-markets/export/opportunities.json">Export JSON</a></div>
       </div>
       <div class="table-responsive">
         <table class="table align-middle" data-cm-table="opportunities">
-          <thead><tr><th>Priority</th><th>Opportunity</th><th>Type</th><th>Instruments / Venues</th><th>Expected Net</th><th data-cm-col="return">Return</th><th>Capital</th><th data-cm-col="capacity">Capacity</th><th>Risk</th><th>Portfolio Impact</th><th data-cm-col="ttl">TTL</th><th data-cm-col="status">Status</th></tr></thead>
+          <thead><tr><th data-cm-col="priority">Priority</th><th data-cm-col="opportunity">Opportunity</th><th data-cm-col="type">Type</th><th data-cm-col="market">Instruments / Venues</th><th data-cm-col="expected_net">Expected Net</th><th data-cm-col="return">Return</th><th data-cm-col="capital">Capital</th><th data-cm-col="capacity">Capacity</th><th data-cm-col="risk">Risk</th><th data-cm-col="portfolio_impact">Portfolio Impact</th><th data-cm-col="ttl">TTL</th><th data-cm-col="status">Status</th></tr></thead>
           <tbody>
           {% for o in w.opportunities|default([]) %}
             <tr>
-              <td>{{ o.priority < 999999 ? o.priority : '—' }}</td>
-              <td>{% if permissions.portfolio_view|default(false) %}<a href="/capital-markets/opportunities/{{ o.id|url_encode }}"><strong>{{ o.opportunity }}</strong></a>{% else %}<strong>{{ o.opportunity }}</strong>{% endif %}<br><small>{{ o.decision }}</small></td>
-              <td>{{ o.type }}</td>
-              <td>{{ o.instruments|join(', ') ?: '—' }}<br><small>{{ o.venues|join(', ') ?: '—' }}</small></td>
-              <td><strong>{{ o.expected_net is not null ? o.expected_net : '—' }}</strong></td>
+              <td data-cm-col="priority">{{ o.priority < 999999 ? o.priority : '—' }}</td>
+              <td data-cm-col="opportunity">{% if permissions.portfolio_view|default(false) %}<a href="/capital-markets/opportunities/{{ o.id|url_encode }}"><strong>{{ o.opportunity }}</strong></a>{% else %}<strong>{{ o.opportunity }}</strong>{% endif %}<br><small>{{ o.decision }}</small></td>
+              <td data-cm-col="type">{{ o.type }}</td>
+              <td data-cm-col="market">{{ o.instruments|join(', ') ?: '—' }}<br><small>{{ o.venues|join(', ') ?: '—' }}</small></td>
+              <td data-cm-col="expected_net"><strong>{{ o.expected_net is not null ? o.expected_net : '—' }}</strong></td>
               <td data-cm-col="return">{{ o.expected_return is not null ? o.expected_return : '—' }}</td>
-              <td>{{ o.capital is not null ? o.capital : '—' }}</td>
+              <td data-cm-col="capital">{{ o.capital is not null ? o.capital : '—' }}</td>
               <td data-cm-col="capacity">{{ o.capacity is not null ? o.capacity : '—' }}</td>
-              <td>{{ o.risk }}</td>
-              <td><strong>{{ o.portfolio_impact }}</strong><br><small>{{ o.reason }}</small></td>
+              <td data-cm-col="risk">{{ o.risk }}</td>
+              <td data-cm-col="portfolio_impact"><strong>{{ o.portfolio_impact }}</strong><br><small>{{ o.reason }}</small></td>
               <td data-cm-col="ttl">{{ o.ttl is not null ? o.ttl : '—' }}</td>
               <td data-cm-col="status">{{ o.status }}</td>
             </tr>
