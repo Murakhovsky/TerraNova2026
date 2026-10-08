@@ -26,7 +26,10 @@ final readonly class MysqlPortfolioValuationSnapshotRepository implements Portfo
             || ($snapshot['ledger_reconciled']??false)!==true
             || ($snapshot['marks_reconciled']??false)!==true
             || ($snapshot['external_flows_reconciled']??false)!==true
-            || trim((string)($snapshot['provenance_id']??''))==='') {
+            || trim((string)($snapshot['provenance_id']??''))===''
+            || !self::validDigest($snapshot['ledger_fingerprint']??null)
+            || !self::validDigest($snapshot['marks_fingerprint']??null)
+            || !self::validDigest($snapshot['external_flows_fingerprint']??null)) {
             throw new InvalidArgumentException('Only fully reconciled, provenance-linked NAV may be persisted.');
         }
         $equity=Decimal::fromString((string)($snapshot['equity']??''));
@@ -47,6 +50,9 @@ final readonly class MysqlPortfolioValuationSnapshotRepository implements Portfo
             'marks_reconciled'=>true,
             'external_flows_reconciled'=>true,
             'provenance_id'=>(string)$snapshot['provenance_id'],
+            'ledger_fingerprint'=>$snapshot['ledger_fingerprint'],
+            'marks_fingerprint'=>$snapshot['marks_fingerprint'],
+            'external_flows_fingerprint'=>$snapshot['external_flows_fingerprint'],
         ];
         $json=json_encode($record,JSON_THROW_ON_ERROR);
         $stmt=$this->connection->prepare(
@@ -83,4 +89,9 @@ final readonly class MysqlPortfolioValuationSnapshotRepository implements Portfo
         }
         return $out;
     }
+    private static function validDigest(mixed $value):bool
+    {
+        return is_string($value) && preg_match('/^[a-f0-9]{64}$/', $value)===1;
+    }
+
 }
