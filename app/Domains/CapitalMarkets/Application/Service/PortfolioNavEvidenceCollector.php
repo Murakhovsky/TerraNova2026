@@ -33,6 +33,8 @@ final readonly class PortfolioNavEvidenceCollector
         $balances = $this->trading->listPaperBalances($organizationId);
         $positions = $this->trading->listPositions($organizationId, 5000);
         $ledger = $this->trading->listLedgerTransactions($organizationId, 5000);
+        $ledgerAudit = PortfolioLedgerIntegrityAudit::inspect($ledger);
+        foreach ($ledgerAudit['issues'] as $issue) $issues[] = $issue;
         $marks = [];
         $scopedPositionCount = 0;
         if (count($positions) >= 5000) $issues[] = 'POSITIONS_PAGE_TRUNCATED';
@@ -111,6 +113,7 @@ final readonly class PortfolioNavEvidenceCollector
                 'market_marks_examined'=>count($marks),
             ],
             'marks'=>$marks,
+            'trading_ledger_audit'=>$ledgerAudit,
             'issues'=>$issues,
             'snapshot_written'=>false,
         ];
