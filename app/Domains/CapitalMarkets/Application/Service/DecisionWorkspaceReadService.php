@@ -357,8 +357,22 @@ final readonly class DecisionWorkspaceReadService
             $research['results'] ?? [],
             static fn(array $row): bool => (string)($row['hypothesis_id'] ?? '') === $hypothesisId,
         ));
-        $page['decision_trace'] = $this->hypothesisTrace($hypothesisId, $research);
+        $errors = $page['partial_errors'] ?? [];
+        $opportunities = $this->safe(
+            fn(): array => $this->trading->listOpportunities($organizationId, 1000),
+            [],
+            $errors,
+            'hypothesis_opportunities',
+        );
+        $executions = $this->safe(
+            fn(): array => $this->trading->listExecutions($organizationId, 1000),
+            [],
+            $errors,
+            'hypothesis_executions',
+        );
+        $page['decision_trace'] = $this->hypothesisTrace($hypothesisId, $research, $opportunities, $executions);
         $page['research_decision'] = $this->researchDecision($hypothesis);
+        $page['partial_errors'] = $errors;
 
         return $page;
     }
@@ -1545,9 +1559,11 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @param array<string,mixed>|null $hypothesis @param array<string,mixed> $research @return list<array<string,mixed>> */
-    private function hypothesisTrace(string $hypothesisId, array $research): array
+    private function hypothesisTrace(string $hypothesisId, array $research, array $opportunities, array $executions): array
     {
         $trace = [['type'=>'Hypothesis','label'=>$hypothesisId,'href'=>'/capital-markets/research/hypotheses/'.rawurlencode($hypothesisId)]];
+        $strategyIds = [];
+
         foreach ($research['experiments'] ?? [] as $experiment) {
             if (!is_array($experiment) || (string)($experiment['hypothesis_id'] ?? '') !== $hypothesisId) {
                 continue;
@@ -1555,14 +1571,63 @@ final readonly class DecisionWorkspaceReadService
             $trace[] = ['type'=>'Experiment','label'=>(string)($experiment['experiment_id'] ?? $experiment['id'] ?? 'Experiment'),'href'=>'/capital-markets/research'];
             $strategy = (string)($experiment['strategy_version_id'] ?? '');
             if ($strategy !== '') {
+                $strategyIds[] = $strategy;
                 $trace[] = ['type'=>'Strategy','label'=>$strategy,'href'=>'/capital-markets/strategies/'.rawurlencode($strategy)];
             }
             break;
         }
+
+        $opportunity = null;
+        foreach ($opportunities as $candidate) {
+            if (!is_array($candidate)) {
+                continue;
+            }
+            $candidateHypothesis = (string)($candidate['hypothesis'] ?? $candidate['hypothesis_id'] ?? '');
+            $candidateStrategy = (string)($candidate['strategy_version_id'] ?? $candidate['strategy_id'] ?? '');
+            if ($candidateHypothesis === $hypothesisId || ($candidateStrategy !== '' && in_array($candidateStrategy, $strategyIds, true))) {
+                $opportunity = $candidate;
+                break;
+            }
+        }
+
+        if (is_array($opportunity)) {
+            $opportunityId = (string)($opportunity['opportunity_id'] ?? $opportunity['id'] ?? '');
+            if ($opportunityId !== '') {
+                $trace[] = [
+                    'type' => 'Opportunity',
+                    'label' => $opportunityId,
+                    'href' => '/capital-markets/opportunities/'.rawurlencode($opportunityId),
+                ];
+
+                foreach ($executions as $execution) {
+                    if (!is_array($execution) || (string)($execution['opportunity_id'] ?? '') !== $opportunityId) {
+                        continue;
+                    }
+                    $executionId = (string)($execution['execution_id'] ?? $execution['id'] ?? '');
+                    $trace[] = [
+                        'type' => 'Execution',
+                        'label' => $executionId !== '' ? $executionId : (string)($execution['status'] ?? 'EXECUTION'),
+                        'href' => $executionId !== '' ? '/capital-markets/execution/'.rawurlencode($executionId) : '/capital-markets/execution',
+                    ];
+                    $performance = is_array($execution['performance'] ?? null) ? $execution['performance'] : [];
+                    $netPnl = $performance['net_pnl'] ?? $execution['realized_pnl'] ?? $execution['pnl'] ?? null;
+                    if ($netPnl !== null && is_scalar($netPnl) && trim((string)$netPnl) !== '') {
+                        $trace[] = [
+                            'type' => 'P&L',
+                            'label' => 'Net P&L',
+                            'value' => (string)$netPnl,
+                            'href' => '/capital-markets/performance',
+                        ];
+                    }
+                    break;
+                }
+            }
+        }
+
         return $trace;
     }
 
-    /** @param list<array<string,mixed>> $opportunities @param list<array<string,mixed>> $positions @return array<string,int> */
+        /** @param list<array<string,mixed>> $opportunities @param list<array<string,mixed>> $positions @return array<string,int> */
     private function edgeFunnel(array $opportunities, array $positions): array
     {
         $detected = count($opportunities);
