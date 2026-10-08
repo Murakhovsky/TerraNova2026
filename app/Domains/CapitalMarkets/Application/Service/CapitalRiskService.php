@@ -39,6 +39,7 @@ final readonly class CapitalRiskService
   private LiquidityCapacityEngine $liquidity,
   private DrawdownEngine $drawdowns,
   private CapitalStateEngine $capitalStates,
+  private TokenizedEquityReadService $tokenizedRead,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -214,6 +215,8 @@ final readonly class CapitalRiskService
   $version=(string)($input['policy_version']??'v1');
   $policy=new AllocationPolicy('policy-'.$mode.'-'.$version,$version,'SCORE_BASED',$mode,['score_multiplier'=>'1'],(array)($input['constraints']??[]));
   $state=PortfolioRiskState::tryFrom(strtoupper((string)($input['risk_state']??'NORMAL')))??PortfolioRiskState::Normal;
+  $reconciliation=$this->tokenizedRead->reconcile($organizationId);
+  if(($reconciliation['ok']??false)!==true)$state=PortfolioRiskState::ReduceOnly;
   if(isset($input['equity'],$input['peak_equity'])){
    $dd=$this->drawdowns->drawdown(Decimal::fromString((string)$input['equity']),Decimal::fromString((string)$input['peak_equity']));
    $ddState=$this->drawdowns->state($dd,(array)($input['drawdown_thresholds']??[]));
@@ -263,6 +266,7 @@ final readonly class CapitalRiskService
     'opportunities'=>$opportunities,
     'policy'=>['id'=>$policy->id,'version'=>$policy->version,'type'=>$policy->type,'mode'=>$policy->mode,'weights'=>$policy->weights,'constraints'=>$policy->constraints],
     'risk_state'=>$state->value,
+    'reconciliation'=>$reconciliation,
    ],
   ];
   $this->repository->saveAllocationPlan($organizationId,$record);
