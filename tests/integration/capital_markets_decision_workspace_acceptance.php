@@ -144,6 +144,7 @@ foreach([
     'Economics Coverage',
     'Cost Breakdown',
     'Agent Authority',
+    'Structured Result',
     'Market Quality',
     'Quote / Book / Reference freshness',
     'Quote Age',
