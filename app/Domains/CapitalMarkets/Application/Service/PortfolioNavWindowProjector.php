@@ -109,6 +109,10 @@ final class PortfolioNavWindowProjector
                 $out[$name] = $base;
                 continue;
             }
+            if ($closing['timestamp'] <= $opening['timestamp']) {
+                $out[$name] = [...$base, 'reason'=>'INSUFFICIENT_DISTINCT_NAV_VALUATIONS'];
+                continue;
+            }
             $openingLag = $start->getTimestamp() - $opening['timestamp']->getTimestamp();
             $closingLag = $at->getTimestamp() - $closing['timestamp']->getTimestamp();
             if ($openingLag > $maxSkewSeconds || $closingLag > $maxSkewSeconds) {
