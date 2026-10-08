@@ -23,7 +23,8 @@ $evidence=[
     'liabilities_by_currency'=>[['currency'=>'USD','amount'=>'60']],
     'external_flows_by_currency'=>[['currency'=>'USD','amount'=>'300']],
     'marked_positions'=>[['position_id'=>'BTC-1','quote_currency'=>'USD','market_value'=>'240.50',
-        'mark_reconciled'=>true,'mark_source_fingerprint'=>'mark-1']],
+        'mark_reconciled'=>true,'mark_source_fingerprint'=>str_repeat('a',64),
+        'source_timestamp'=>'2026-10-08T11:59:55Z','market_state_version'=>7]],
 ];
 $evidence['ledger_fingerprint']=hash('sha256',json_encode(['cash'=>$evidence['cash_by_currency'],'liabilities'=>$evidence['liabilities_by_currency']],JSON_THROW_ON_ERROR));
 $evidence['marks_fingerprint']=hash('sha256',json_encode($evidence['marked_positions'],JSON_THROW_ON_ERROR));
@@ -44,6 +45,10 @@ try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeExceptio
 catch (InvalidArgumentException) {}
 $unsafe=$evidence;unset($unsafe['external_flows_fingerprint']);
 try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Missing ledger provenance was accepted');}
+catch (InvalidArgumentException) {}
+$unsafe=$evidence;$unsafe['marked_positions'][0]['source_timestamp']='2026-10-08T11:50:00Z';
+$unsafe['marks_fingerprint']=hash('sha256',json_encode($unsafe['marked_positions'],JSON_THROW_ON_ERROR));
+try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Stale historical mark was accepted');}
 catch (InvalidArgumentException) {}
 $unsafe=$evidence;$unsafe['marked_positions'][0]['market_value']='999999';
 try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Tampered mark value was accepted');}
