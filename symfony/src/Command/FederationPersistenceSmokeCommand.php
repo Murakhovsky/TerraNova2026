@@ -6,6 +6,7 @@ namespace App\Command;
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
+use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationPlanApproveHandler;
 use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
 use App\Web\Experience\Adaptive\ExperienceMode;
@@ -47,6 +48,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
         private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
+        private readonly FederationCapabilityBindingResolver $capabilityBindings,
         private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
@@ -70,6 +72,24 @@ final class FederationPersistenceSmokeCommand extends Command
                 ['sales.leads.read'],
             );
             $this->goals->createGoal($actor, $goal);
+            // A canonical Sales Action can be discovered as a typed federation
+            // capability only if the owning live handler, tenant module and
+            // manager permission are all available.
+            $salesAction = $this->capabilityBindings->requireExecutable($actor, 'sales.create_task');
+            self::assert(
+                $salesAction->executionBinding === 'action:sales.create_task'
+                && $salesAction->ownerDomain === 'sales'
+                && $salesAction->sideEffectLevel === 'external'
+                && $salesAction->approvalPolicy === 'required'
+                && in_array('sales.create_task', $this->capabilityBindings->available($actor), true),
+                'Sales Action capability is not backed by live canonical handler/tenant authority.',
+            );
+            try {
+                $this->capabilityBindings->requireExecutable($actor, 'federation.plan.approval');
+                throw new \RuntimeException('Internal Federation governance Action offered as Goal capability.');
+            } catch (DomainException) {
+            }
+
             $stored = $this->goals->specification($actor, $goalId);
             self::assert($stored !== null
                 && $stored->goalId === $goal->goalId
