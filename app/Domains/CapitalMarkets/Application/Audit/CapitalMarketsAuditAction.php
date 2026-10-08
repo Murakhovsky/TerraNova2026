@@ -34,4 +34,11 @@ enum CapitalMarketsAuditAction:string
     case ResearchPaperRunStarted='capital_markets.research.paper_run.started';
     case ResearchPaperRunCompleted='capital_markets.research.paper_run.completed';
     case ResearchPaperRunCancelled='capital_markets.research.paper_run.cancelled';
+    case RiskEnvelopeUpdated='capital_markets.risk.envelope.updated';
+    case PortfolioRiskSnapshotCreated='capital_markets.portfolio.risk_snapshot.created';
+    case AllocationPlanCreated='capital_markets.allocation.plan.created';
+    case AllocationApproved='capital_markets.allocation.approved';
+    case RebalancePlanCreated='capital_markets.rebalance.plan.created';
+    case StressTestRun='capital_markets.risk.stress.run';
+    case PortfolioAgentRun='capital_markets.portfolio.agent.run';
 }
