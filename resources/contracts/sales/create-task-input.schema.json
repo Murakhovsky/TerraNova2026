@@ -10,7 +10,8 @@
   ],
   "properties": {
     "target_type": {
-      "const": "deal"
+      "const": "deal",
+      "type": "string"
     },
     "target_id": {
       "type": "string",
