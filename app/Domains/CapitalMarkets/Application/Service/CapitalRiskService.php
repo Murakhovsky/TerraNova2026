@@ -488,15 +488,22 @@ final readonly class CapitalRiskService
    throw new RuntimeException('STRATEGY_ALLOCATIONS_OVERSUBSCRIBE_PORTFOLIO');
   }
 
+  $reserved=Decimal::fromString((string)($input['reserved']??'0'));
+  $deployed=Decimal::fromString((string)($input['deployed']??'0'));
+  if($reserved->isNegative()||$deployed->isNegative())throw new RuntimeException('Strategy reserved/deployed capital cannot be negative.');
+  $committed=DecimalMath::add($reserved,$deployed);
+  if($committed->compareTo($allocated)>0)throw new RuntimeException('STRATEGY_COMMITTED_CAPITAL_EXCEEDS_ALLOCATION');
+  $strategyAvailable=DecimalMath::subtract($allocated,$committed);
+
   $riskBudget=(array)($input['risk_budget']??[]);
   $record=[
    'allocation_id'=>'strat-alloc-'.substr(hash('sha256',$portfolioId.'|'.$strategyVersionId.'|'.gmdate('YmdHis.u')),0,28),
    'portfolio_id'=>$portfolioId,
    'strategy_version_id'=>$strategyVersionId,
    'allocated_capital'=>$allocated->value(),
-   'reserved'=>(string)($input['reserved']??'0'),
-   'deployed'=>(string)($input['deployed']??'0'),
-   'available'=>$allocated->value(),
+   'reserved'=>$reserved->value(),
+   'deployed'=>$deployed->value(),
+   'available'=>$strategyAvailable->value(),
    'risk_budget'=>[
     'maximum_drawdown'=>(string)($riskBudget['maximum_drawdown']??'0'),
     'maximum_venue_exposure'=>(string)($riskBudget['maximum_venue_exposure']??$allocated->value()),
