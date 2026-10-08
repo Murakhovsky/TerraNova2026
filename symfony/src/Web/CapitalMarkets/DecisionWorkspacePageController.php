@@ -244,6 +244,23 @@ final readonly class DecisionWorkspacePageController
                 default => throw new \LogicException('Unknown Capital Markets Decision Workspace view.'),
             };
 
+            // Protect independently governed market and relationship data on mixed surfaces.
+            // Access to one detail route never grants access to the other capability.
+            $actorId = (int)$tenant->userId()->value();
+            if (!$this->allowed($organizationId, $actorId, CapitalMarketsCapability::RelationshipView)) {
+                $data['relationships'] = [];
+                $data['instrument_relationships'] = [];
+            }
+            if ($view === 'relationship_detail'
+                && !$this->allowed($organizationId, $actorId, CapitalMarketsCapability::MarketDataView)
+            ) {
+                $data['relationship_comparison'] = [];
+                $data['comparison_state'] = 'RESTRICTED';
+                foreach (['market_rows', 'venue_rows', 'states', 'reference_states', 'sources'] as $key) {
+                    unset($data[$key]);
+                }
+            }
+
             if (
                 ($view === 'opportunity' && ($data['opportunity'] ?? []) === [])
                 || ($view === 'hypothesis' && ($data['hypothesis'] ?? null) === null)
