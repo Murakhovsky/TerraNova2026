@@ -58,7 +58,7 @@ try {
     const page = await context.newPage();
 
     for (const [path, markers] of profile.paths) {
-      const response = await page.goto(absolute(path), { waitUntil: 'networkidle' });
+      const response = await page.goto(absolute(path), { waitUntil: 'domcontentloaded' });
       assertOk(response, profile.name + ': ' + path);
       await page.locator('[data-cm-decision-workspace]').waitFor({ state: 'visible' });
 
@@ -89,7 +89,7 @@ try {
       }
     }
 
-    await page.goto(absolute('/capital-markets'), { waitUntil: 'networkidle' });
+    await page.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' });
     await page.keyboard.press('Tab');
     const focused = await page.evaluate(() => {
       const el = document.activeElement;
