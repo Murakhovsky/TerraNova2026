@@ -690,7 +690,7 @@ final readonly class DecisionWorkspaceReadService
         $minReturn=trim((string)($filters['min_return']??''));
         $maxCapital=trim((string)($filters['max_capital']??''));
 
-        return array_values(array_filter($rows, static function(array $row) use(
+        return array_values(array_filter($rows, function(array $row) use(
             $view,$type,$risk,$status,$decision,$strategy,$instrument,$venue,$minNet,$minReturn,$maxCapital
         ):bool{
             if($view==='low-risk' && !in_array(strtoupper((string)($row['risk']??'')),['LOW','MINIMAL'],true))return false;
