@@ -110,6 +110,10 @@ foreach([
     'Market Quality',
     'PARTIAL DATA',
     'Time-window P&L not fabricated',
+    'permissions.opportunity_view',
+    'permissions.portfolio_view',
+    'permissions.market_data_quality_view',
+    'Portfolio simulation is hidden because this role does not have Portfolio View authority.',
     'Results',
     'Decision:',
     'Simulate portfolio impact',
@@ -152,6 +156,9 @@ foreach([
     "'performance'",
     "fputcsv(",
     "new JsonResponse(",
+    "'portfolio_view' =>",
+    "'opportunity_view' =>",
+    "'market_data_quality_view' =>",
 ] as $needle){
     $assert(str_contains($controller,$needle),'Decision Workspace export contract missing: '.$needle);
 }
