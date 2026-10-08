@@ -56,7 +56,16 @@ final readonly class GoalWorkflowBindingGuard
             if ($step === null) {
                 throw new DomainException('Workflow step not declared in approved snapshot: ' . $actual->id);
             }
-            if ($actual instanceof ToolStep || $actual instanceof AgentStep || $actual instanceof SystemStep) {
+            if ($actual instanceof SystemStep) {
+                // The only System operation admitted here is a literal,
+                // zero-input, side-effect-free checkpoint marker.
+                if ($actual->operation !== 'federation.read_only.checkpoint'
+                    || $actual->payload !== []
+                    || ($step['side_effect_level'] ?? null) !== 'none') {
+                    throw new DomainException('System execution requires verified domain Action/Policy adapter.');
+                }
+            }
+            if ($actual instanceof ToolStep || $actual instanceof AgentStep) {
                 // No production binding registry verified these handlers or their side effects yet.
                 throw new DomainException('Executable workflow steps require a verified binding and action-policy adapter.');
             }

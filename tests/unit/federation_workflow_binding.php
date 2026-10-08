@@ -36,6 +36,11 @@ $reject(fn () => $guard->assertCompatible($goal, $steps, $workflow, []), 'missin
 $reject(fn () => $guard->assertCompatible($goal, $steps, new WorkflowInstance(
     'foreign', OrganizationId::fromString('tenant-two'), $workflow->workflow,
 ), ['sales.leads.review']), 'other tenant');
+$guard->assertCompatible($goal, $steps, new WorkflowInstance(
+    'read_only_system', OrganizationId::fromString('tenant-one'),
+    new Workflow('goal.guard', new WorkflowDefinition('goal.guard', '1.0.0',
+        'Safe checkpoint', 'gate', [new SystemStep('gate', 'Checkpoint', 'federation.read_only.checkpoint')])),
+), ['sales.leads.review']);
 $reject(fn () => $guard->assertCompatible($goal, $steps, new WorkflowInstance(
     'system', OrganizationId::fromString('tenant-one'),
     new Workflow('goal.guard', new WorkflowDefinition('goal.guard', '1.0.0',

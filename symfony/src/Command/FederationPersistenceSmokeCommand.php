@@ -29,7 +29,7 @@ use Kernel\Workflow\Model\WorkflowInstance;
 use Kernel\Workflow\Model\Assignment;
 use Kernel\Workflow\Model\AssignmentType;
 use Kernel\Workflow\Model\Step\HumanStep;
-use Kernel\Workflow\Model\Step\DecisionStep;
+use Kernel\Workflow\Model\Step\SystemStep;
 use Twig\Environment;
 
 #[AsCommand(
@@ -202,7 +202,7 @@ final class FederationPersistenceSmokeCommand extends Command
                 'decision-workflow', OrganizationId::fromString($org),
                 new Workflow('goal.inert.decision', new WorkflowDefinition(
                     'goal.inert.decision', '1.0.0', 'Inert decision', 'review',
-                    [new DecisionStep('review', 'Read-only evaluation')],
+                    [new SystemStep('review', 'Read-only checkpoint', 'federation.read_only.checkpoint')],
                 )),
             );
             $decisionRunId = 'run-' . bin2hex(random_bytes(8));

@@ -9,7 +9,6 @@ use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tool\Contract\ToolRuntimeInterface;
 use Kernel\Workflow\Contract\SystemStepHandlerInterface;
 use Kernel\Workflow\Contract\WorkflowStateManagerInterface;
-use Kernel\Workflow\Model\Step\DecisionStep;
 use Kernel\Workflow\Model\Step\SystemStep;
 use Kernel\Workflow\Model\WorkflowExecution;
 use Kernel\Workflow\Model\WorkflowInstance;
@@ -19,7 +18,7 @@ use Platform\Orchestration\Goal\GoalWorkflowProjection;
 
 /**
  * Audited canonical WorkflowEngine vertical slice. Only a single inert
- * DecisionStep with no transitions or config can run, never Agent/Tool/System.
+ * checkpoint SystemStep with no transitions or config can run, never Agent/Tool/external System.
  * Completion does NOT imply that business Goal success criteria were met.
  */
 final readonly class FederationReadOnlyWorkflowRunner
@@ -42,10 +41,12 @@ final readonly class FederationReadOnlyWorkflowRunner
         $definition = $workflow->workflow->definition;
         $step = $definition->steps[0] ?? null;
         if (count($definition->steps) !== 1
-            || !$step instanceof DecisionStep
+            || !$step instanceof SystemStep
+            || $step->operation !== 'federation.read_only.checkpoint'
+            || $step->payload !== []
             || $definition->transitions !== []
             || $workflow->configuration !== []) {
-            throw new DomainException('Read-only runner requires one inert DecisionStep and no transitions or configuration.');
+            throw new DomainException('Read-only runner requires a single literal checkpoint SystemStep and no transitions/config.');
         }
         $verified = $this->preflight->inspect($actor, $planId, $workflow, $approvalActionId);
         $goal = $this->goals->specification($actor, $verified['goal_id']);
@@ -77,7 +78,10 @@ final readonly class FederationReadOnlyWorkflowRunner
         $systems = new class implements SystemStepHandlerInterface {
             public function execute(SystemStep $step, array $payload, WorkflowExecution $execution): array
             {
-                throw new DomainException('System steps are disabled in read-only Federation.');
+                if ($step->operation !== 'federation.read_only.checkpoint' || $payload !== []) {
+                    throw new DomainException('Only the inert Federation checkpoint operation is supported.');
+                }
+                return ['checkpoint' => true];
             }
         };
         $engine = new WorkflowEngine(
