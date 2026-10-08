@@ -23,6 +23,8 @@ use Domains\CapitalMarkets\Domain\Service\LiquidityCapacityEngine;
 use Domains\CapitalMarkets\Domain\Service\DrawdownEngine;
 use Domains\CapitalMarkets\Domain\Service\CapitalStateEngine;
 use Domains\CapitalMarkets\Domain\Service\CorrelationEngine;
+use Domains\CapitalMarkets\Domain\Service\MarginAggregationEngine;
+use Domains\CapitalMarkets\Domain\Service\LiquidationClusterEngine;
 use Domains\CapitalMarkets\Domain\Risk\LiquidityBudget;
 use Domains\CapitalMarkets\Domain\Stress\PortfolioStressScenario;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -47,6 +49,8 @@ final readonly class CapitalRiskService
   private CorrelationEngine $correlations,
   private CapitalRiskTelemetry $telemetry,
   private CapitalMarketsEventPublisherInterface $events,
+  private MarginAggregationEngine $margins,
+  private LiquidationClusterEngine $liquidationClusters,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -379,7 +383,22 @@ final readonly class CapitalRiskService
   $leverage=$equity->isZero()?Decimal::fromString('0'):DecimalMath::divide($gross,$equity);
   $dailyLoss=DecimalMath::abs(Decimal::fromString((string)($input['daily_loss']??'0')));
   $drawdown=Decimal::fromString((string)($input['drawdown']??'0'));
-  $margin=Decimal::fromString((string)($input['margin_utilization']??'0'));
+  $positionsForMargin=[];
+  foreach($this->trading->listPositions($organizationId,1000) as $position){
+   $payload=is_array($position['payload']??null)?$position['payload']:$position;
+   $positionsForMargin[]=[
+    'position_id'=>(string)($position['position_id']??$payload['position_id']??''),
+    'venue_id'=>(string)($position['venue_id']??$payload['venue_id']??''),
+    'initial_margin'=>(string)($payload['initial_margin']??'0'),
+    'maintenance_margin'=>(string)($payload['maintenance_margin']??'0'),
+    'available_margin'=>(string)($payload['available_margin']??'0'),
+    'mark_price'=>(string)($payload['mark_price']??'0'),
+    'estimated_liquidation_price'=>$payload['estimated_liquidation_price']??null,
+   ];
+  }
+  $marginSnapshot=$this->margins->aggregate($positionsForMargin);
+  $margin=isset($input['margin_utilization'])?Decimal::fromString((string)$input['margin_utilization']):$marginSnapshot->marginUtilization;
+  $clusters=$this->liquidationClusters->detect($positionsForMargin,Decimal::fromString((string)($input['liquidation_cluster_gap']??'0.03')));
 
   $limits=[];
   foreach((array)($envelopeRecord['limits']??[]) as $row){
@@ -414,6 +433,9 @@ final readonly class CapitalRiskService
    'snapshot_id'=>'risk-'.bin2hex(random_bytes(10)),'portfolio_id'=>$portfolioId,'created_at'=>gmdate('Y-m-d H:i:s'),
    'equity'=>$equity->value(),'gross_exposure'=>$gross->value(),'net_exposure'=>$net->value(),'leverage'=>$leverage->value(),
    'drawdown'=>$drawdown->value(),'daily_pnl'=>(string)($input['daily_pnl']??'0'),'margin_utilization'=>$margin->value(),
+   'initial_margin'=>$marginSnapshot->initialMargin->value(),'maintenance_margin'=>$marginSnapshot->maintenanceMargin->value(),
+   'available_margin'=>$marginSnapshot->availableMargin->value(),'margin_by_venue'=>$marginSnapshot->byVenue,
+   'liquidation_clusters'=>$clusters,
    'risk_limit_utilization'=>$headroom,'breaches'=>$assessment['breaches'],'warnings'=>$assessment['warnings'],
    'status'=>$assessment['state']->value,'valuation_quality'=>(string)($input['valuation_quality']??'TRUSTED'),
   ];
