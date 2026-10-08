@@ -225,7 +225,8 @@ foreach([
     'capital_markets.performance',
     'capital_markets.agents',
     'capital_markets.data_quality',
-    'states: [normal, empty, partial, stale, error, permission_denied]',
+    'states: [normal, loading, empty, error, permission_denied]',
+    'states: [normal, empty, error]',
 ] as $needle){
     $assert(str_contains($pages,$needle),'Decision Workspace page contract missing: '.$needle);
 }
