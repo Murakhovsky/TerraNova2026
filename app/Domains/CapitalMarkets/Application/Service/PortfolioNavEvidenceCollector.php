@@ -7,6 +7,7 @@ use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryI
 use Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Domain\Venue\VenueId;
+use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Throwable;
 
 /**
@@ -51,6 +52,16 @@ final readonly class PortfolioNavEvidenceCollector
                 continue;
             }
             $scopedPositionCount++;
+            if (strtoupper((string)($position['status'] ?? '')) === 'CLOSED') {
+                try {
+                    if (!Decimal::fromString((string)($position['quantity'] ?? '0'))->isZero()) {
+                        $issues[] = 'CLOSED_POSITION_NONZERO_QUANTITY';
+                    }
+                } catch (Throwable) {
+                    $issues[] = 'CLOSED_POSITION_QUANTITY_INVALID';
+                }
+                continue;
+            }
             $instrument = (string)($position['instrument_id'] ?? '');
             $venue = (string)($position['venue_id'] ?? '');
             $id = (string)($position['position_id'] ?? '');
@@ -64,8 +75,15 @@ final readonly class PortfolioNavEvidenceCollector
                 );
                 if ($market === null || $market->bestQuote === null
                     || $market->mode->value !== 'LIVE' || $market->marketStatus->value !== 'OPEN'
-                    || !$market->quality->status->isUsableForDecision()) {
+                    || !$market->quality->status->isUsableForDecision()
+                    || $market->quality->flags !== []) {
                     $issues[] = 'POSITION_MARK_UNTRUSTED';
+                    continue;
+                }
+                $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+                $ageSeconds = $now->getTimestamp() - $market->sourceTimestamp->getTimestamp();
+                if ($ageSeconds < 0 || $ageSeconds > 30) {
+                    $issues[] = 'POSITION_MARK_STALE_OR_CLOCK_UNCERTAIN';
                     continue;
                 }
                 $quoteAsset = $market->bestQuote->bidPrice->quoteAsset->value();
@@ -89,9 +107,31 @@ final readonly class PortfolioNavEvidenceCollector
                 $issues[] = 'POSITION_MARK_LOOKUP_FAILED';
             }
         }
+        $balanceKeys = [];
+        if ($balances === []) $issues[] = 'VENUE_BALANCES_MISSING';
         foreach ($balances as $balance) {
-            if (!is_array($balance) || strtoupper((string)($balance['asset_key'] ?? '')) !== $currency) {
-                $issues[] = 'BALANCE_FX_OR_ASSET_RECONCILIATION_REQUIRED';
+            if (!is_array($balance)) {
+                $issues[] = 'BALANCE_ROW_INVALID';
+                continue;
+            }
+            $asset = strtoupper(trim((string)($balance['asset_key'] ?? '')));
+            $venue = (string)($balance['venue_id'] ?? '');
+            if ($venue === '' || $asset === '') {
+                $issues[] = 'BALANCE_IDENTITY_MISSING';
+                continue;
+            }
+            $key = $venue.'|'.$asset;
+            if (isset($balanceKeys[$key])) $issues[] = 'BALANCE_DUPLICATE';
+            $balanceKeys[$key] = true;
+            if ($asset !== $currency) $issues[] = 'BALANCE_FX_OR_ASSET_RECONCILIATION_REQUIRED';
+            try {
+                $available = Decimal::fromString((string)($balance['available_amount'] ?? ''));
+                $reserved = Decimal::fromString((string)($balance['reserved_amount'] ?? ''));
+                if ($available->isNegative() || $reserved->isNegative()) {
+                    $issues[] = 'BALANCE_NEGATIVE_AMOUNT';
+                }
+            } catch (Throwable) {
+                $issues[] = 'BALANCE_AMOUNT_INVALID';
             }
         }
         // The paper trading repository does not yet provide certified
