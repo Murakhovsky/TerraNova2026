@@ -85,7 +85,7 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
         );
         if (!$row || !in_array($row['run_state'], ['running', 'waiting'], true)
             || $row['plan_state'] !== 'approved'
-            || $row['step_state'] !== 'claimed'
+            || !in_array($row['step_state'], $completedReceipt ? ['claimed', 'completed'] : ['claimed'], true)
             || $row['owner_id'] !== $action->sourceId
             || (int) $row['current_spec_version'] !== (int) $row['spec_version']) {
             throw new DomainException('Federation Action has no active approved and claimed tenant step.');
