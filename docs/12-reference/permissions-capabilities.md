@@ -18,7 +18,7 @@ generated: true
 
 | Класифікація | Кількість | Значення |
 | --- | ---: | --- |
-| `both` | 36 | Capability присутня і в runtime catalogue, і в manifest. |
+| `both` | 45 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
 | `manifest-only` | 130 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
