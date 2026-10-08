@@ -288,3 +288,12 @@ Market Detail читає фактичні канонічні події за о�
 Тому глобальні поля \`today_net_pnl\` і \`pnl_30d\` залишаються \`null\`,
 доки окрема canonical portfolio valuation + cashflow snapshot projection
 не пройде reconciliation і Manager Acceptance.
+
+
+## Історичний Basis
+
+Клас HistoricalRelationshipBasisProjector бере канонічні події двох інструментів із CanonicalMarketEventRepositoryInterface. Доступ можливий тільки за наявності MarketDataView та MarketDataHistoryView. Порівняння допускається для активного економічного зв'язку лише з явною metadata.conversion_verified = true і позитивним metadata.target_units_per_source_unit. Співвідношення 1:1 не припускається автоматично.
+
+Підтримуються QUOTE, BBO, REFERENCE_PRICE, MARK_PRICE, INDEX_PRICE у режимі LIVE, зі статусом OPEN і без quality flags. Різниця source timestamps не більше 30 секунд, quote assets однакові. Значення Basis і bps розраховуються через DecimalMath на сервері; браузер розміщує готові точки на графіку.
+
+За невідомої валюти, відсутньої економічної еквівалентності, некоректних чи несинхронізованих даних або обрізаної історії результат NOT COMPARABLE. Спостереження не вважаються торговим сигналом чи дозволом на виконання угоди.
