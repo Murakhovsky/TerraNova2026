@@ -90,6 +90,27 @@ final class PortfolioNavWindowProjector
                 $out[$name] = [...$base, 'reason'=>'NAV_CURRENCY_MISMATCH'];
                 continue;
             }
+            $seenTimestamps = [];
+            $duplicateValuation = false;
+            $intermediateCurrencyMismatch = false;
+            foreach ($valid as $observation) {
+                if ($observation['timestamp'] < $opening['timestamp']
+                    || $observation['timestamp'] > $closing['timestamp']) continue;
+                $stamp = $observation['timestamp']->format('Y-m-d H:i:s.u');
+                if (isset($seenTimestamps[$stamp])) $duplicateValuation = true;
+                $seenTimestamps[$stamp] = true;
+                if ($observation['currency'] !== $opening['currency']) {
+                    $intermediateCurrencyMismatch = true;
+                }
+            }
+            if ($duplicateValuation) {
+                $out[$name] = [...$base, 'reason'=>'CONFLICTING_VALUATION_TIMESTAMPS'];
+                continue;
+            }
+            if ($intermediateCurrencyMismatch) {
+                $out[$name] = [...$base, 'reason'=>'INTERMEDIATE_NAV_CURRENCY_MISMATCH'];
+                continue;
+            }
             // Net return = NAV change - external contributions + external withdrawals.
             // Flows are cumulative since portfolio inception, in the valuation currency.
             $navChange = DecimalMath::subtract($closing['equity'], $opening['equity']);
