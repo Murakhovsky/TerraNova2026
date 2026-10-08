@@ -5,6 +5,7 @@ namespace App\Command;
 
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
 use App\Persistence\Federation\FederationGoalStore;
+use App\Persistence\Federation\FederationPlanApprovalCoordinator;
 use App\Web\Experience\Adaptive\ExperienceMode;
 use Doctrine\DBAL\Connection;
 use DomainException;
@@ -40,6 +41,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationGoalStore $goals,
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
+        private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
     ) {
         parent::__construct();
@@ -116,6 +118,13 @@ final class FederationPersistenceSmokeCommand extends Command
                 'plan_json' => json_encode($plan, JSON_THROW_ON_ERROR),
                 'created_at' => self::now(),
             ]);
+            // Fail closed before canonical Action submission: no owning Action handler
+            // currently registered for cos.federation.plan.approval.
+            try {
+                $this->approvalCoordinator->requestApproval($actor, $planId, 'fed-smoke-correlation');
+                throw new \RuntimeException('Unregistered Federation Action passed activation gate.');
+            } catch (DomainException) {
+            }
             // Independently preflight a read-only, human-gated workflow plan.
             $safePlanId = 'plan-' . bin2hex(random_bytes(8));
             $this->db->insert('cos_federation_plans', [
