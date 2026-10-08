@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Persistence\Federation;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use Doctrine\DBAL\Connection;
 use DomainException;
 use InvalidArgumentException;
@@ -26,6 +28,7 @@ final readonly class FederationGoalStore
         private FederationCapabilityBindingResolver $bindings,
         private GoalPlanValidator $validator,
         private GoalOutcomeEvaluator $evaluator,
+        private FederationTrustedOutcomeEvidenceResolver $outcomes,
         private FederationPlanApprovalEvidenceReader $approvalEvidence,
     ) {
     }
@@ -443,28 +446,57 @@ final readonly class FederationGoalStore
         });
     }
 
-    /** @param array<string,array{value:mixed,evidence:list<string>}> $observations */
+    /**
+     * A persisted outcome can ONLY be derived from an already finalized Run
+     * and independently read Domain-owned data. No caller-provided observation,
+     * numeric value or evidence reference crosses this trust boundary.
+     *
+     * @return array<string,mixed>
+     */
     public function recordEvaluation(
         TenantContext $actor,
         string $evaluationId,
-        string $goalId,
-        array $observations,
+        string $runId,
     ): array {
         $this->writer($actor);
         $this->identifier($evaluationId);
-        $this->identifier($goalId);
-        $spec = $this->specification($actor, $goalId);
-        if ($spec === null) {
-            throw new DomainException('Goal not found in tenant.');
-        }
-        $evaluation = $this->evaluator->evaluate($spec, $observations);
-        $this->db->insert('cos_federation_evaluations', [
-            'organization_id' => $actor->organizationId()->value(),
-            'evaluation_id' => $evaluationId, 'goal_id' => $goalId,
-            'spec_version' => $spec->version, 'result' => $evaluation['result'],
-            'evaluation_json' => self::json($evaluation), 'evaluated_at' => self::now(),
-        ]);
-        return $evaluation;
+        $this->identifier($runId);
+        $org = $actor->organizationId()->value();
+        return $this->db->transactional(function () use ($actor, $org, $evaluationId, $runId): array {
+            $row = $this->db->fetchAssociative(
+                'SELECT r.goal_id, r.created_at, r.state AS run_state,
+                        p.spec_version, p.state AS plan_state
+                 FROM cos_federation_runs r
+                 INNER JOIN cos_federation_plans p
+                   ON p.organization_id = r.organization_id AND p.plan_id = r.plan_id
+                 WHERE r.organization_id = :org AND r.run_id = :run FOR UPDATE',
+                ['org' => $org, 'run' => $runId],
+            );
+            if (!$row || $row['run_state'] !== 'completed' || $row['plan_state'] !== 'approved') {
+                throw new DomainException('Goal outcomes require a finalized, approved tenant Run.');
+            }
+            $spec = $this->specification($actor, (string) $row['goal_id']);
+            if ($spec === null || $spec->version !== (int) $row['spec_version']) {
+                throw new DomainException('Goal specification has changed since approved execution.');
+            }
+            $from = new DateTimeImmutable((string) $row['created_at'], new DateTimeZone('UTC'));
+            $to = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+            $observations = $this->outcomes->collect($spec, $from, $to);
+            $evaluation = $this->evaluator->evaluate($spec, $observations);
+            $evaluation['run_id'] = $runId;
+            $evaluation['evidence_policy'] = 'domain_read_model_v1';
+            $evaluation['evidence_window'] = [
+                'from' => $from->format('Y-m-d\TH:i:s.uP'),
+                'to' => $to->format('Y-m-d\TH:i:s.uP'),
+            ];
+            $this->db->insert('cos_federation_evaluations', [
+                'organization_id' => $org,
+                'evaluation_id' => $evaluationId, 'goal_id' => $spec->goalId,
+                'spec_version' => $spec->version, 'result' => $evaluation['result'],
+                'evaluation_json' => self::json($evaluation), 'evaluated_at' => self::now(),
+            ]);
+            return $evaluation;
+        });
     }
 
     /** @return array<string,mixed>|null */

@@ -87,6 +87,26 @@ final readonly class FederationRunController
         }
     }
 
+    /**
+     * An operator can request a fresh Domain-derived outcome after Run
+     * finalization. The request accepts no outcome value or evidence reference.
+     */
+    public function evaluate(Request $request, string $runId): JsonResponse
+    {
+        $actor = $this->manager();
+        if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
+        if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
+        try {
+            return self::reply($this->goals->recordEvaluation(
+                $actor, 'eval-' . bin2hex(random_bytes(12)), $runId,
+            ), 201);
+        } catch (DomainException|\InvalidArgumentException|LogicException) {
+            return self::reply(['error' => 'outcome_not_evaluable'], 422);
+        } catch (Throwable) {
+            return self::reply(['error' => 'unable_to_evaluate_outcome'], 500);
+        }
+    }
+
     /** Safe read-only operator diagnostics; never queues or retries an Action. */
     public function recovery(string $runId): JsonResponse
     {

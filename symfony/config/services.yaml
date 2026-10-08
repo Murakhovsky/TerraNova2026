@@ -3204,6 +3204,15 @@ services:
   Platform\Orchestration\Goal\FederationStepCursor: ~
   Platform\Orchestration\Goal\FederationRecoveryClassifier: ~
 
+  Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Domains\Sales\Application\Contract\SalesHistoricalMetricsReadModelInterface'
+
+  App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver:
+    arguments:
+      $providers:
+        - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
+
   App\Web\Federation\FederationRunController:
     public: true
     tags: ['controller.service_arguments']

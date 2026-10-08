@@ -47,6 +47,9 @@ final readonly class GoalOutcomeEvaluator
                 'expected' => $criterion['expected'],
                 'observed' => $observed,
                 'evidence' => is_array($evidence) ? $evidence : [],
+                'source' => $observations[$id]['source'] ?? null,
+                'window_start' => $observations[$id]['window_start'] ?? null,
+                'window_end' => $observations[$id]['window_end'] ?? null,
                 'result' => $state,
             ];
         }

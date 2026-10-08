@@ -40,6 +40,13 @@ cos_federation_run_advance:
   methods: [POST]
   requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
 
+# Domain-trusted Goal outcomes; no caller-supplied values or evidence.
+cos_federation_run_evaluate:
+  path: /api/v1/federation/runs/{runId}/evaluate
+  controller: App\Web\Federation\FederationRunController::evaluate
+  methods: [POST]
+  requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 # COS Federation: recovery diagnostics and receipt-only reconciliation.
 cos_federation_run_recovery:
   path: /api/v1/federation/runs/{runId}/recovery
