@@ -30,7 +30,31 @@ final readonly class FederationPlanApprovalEvidenceReader
         string $storedPlanJson,
         string $goalOwnerId,
     ): array {
-        $org = $actor->organizationId()->value();
+        return $this->requireForOrganization(
+            $actor->organizationId()->value(), $actionId, $goalId, $planId,
+            $specVersion, $storedPlanJson, $goalOwnerId, 'COMPLETED',
+        );
+    }
+
+    /**
+     * Internal action-handler entrypoint. The Action is already canonically
+     * claimed RUNNING and may only activate its exact approved plan.
+     *
+     * @return array{action_id:string,approval_id:string,approved_capabilities:list<string>}
+     */
+    public function requireForOrganization(
+        string $org,
+        string $actionId,
+        string $goalId,
+        string $planId,
+        int $specVersion,
+        string $storedPlanJson,
+        string $goalOwnerId,
+        string $expectedStatus = 'COMPLETED',
+    ): array {
+        if (!in_array($expectedStatus, ['RUNNING', 'COMPLETED'], true)) {
+            throw new DomainException('Only running handler or completed Action may authorize a Goal plan.');
+        }
         if (!preg_match('/^[a-f0-9]{32}$/', $actionId)) {
             throw new DomainException('Approval Action identifier must be a canonical 32-character id.');
         }
@@ -43,7 +67,7 @@ final readonly class FederationPlanApprovalEvidenceReader
         if (!$action || $action['type'] !== 'cos.federation.plan.approval'
             || $action['target_type'] !== 'cos_federation_plan'
             || $action['target_id'] !== $planId
-            || $action['status'] !== 'QUEUED'
+            || $action['status'] !== $expectedStatus
             || $action['execution_mode'] !== 'APPROVAL_REQUIRED'
             || $action['source_type'] !== 'USER'
             || $action['source_id'] !== $goalOwnerId) {
