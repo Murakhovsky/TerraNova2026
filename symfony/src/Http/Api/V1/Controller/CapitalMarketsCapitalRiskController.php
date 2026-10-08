@@ -18,6 +18,7 @@ final readonly class CapitalMarketsCapitalRiskController
 {
  public function __construct(private TenantContextProviderInterface $tenants,private ActiveModuleResolver $modules,private CapitalMarketsAccessControlInterface $access,private CapitalRiskService $service,private CapitalMarketsPortfolioAgentService $portfolioAgent,private CapitalMarketsAuditTrail $audit,private SessionCsrfValidator $csrf){}
  public function portfolio():JsonResponse{return $this->read(CapitalMarketsCapability::PortfolioView,fn($o)=>$this->service->workspace($o));}
+ public function performance():JsonResponse{return $this->read(CapitalMarketsCapability::PortfolioView,fn($o)=>$this->service->performanceAttribution($o));}
  public function exposure():JsonResponse{return $this->read(CapitalMarketsCapability::PortfolioView,fn($o)=>$this->service->refreshExposure($o));}
  public function risk(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RiskView,fn($o,$p)=>$this->service->refreshRisk($o,$p),200);}
  public function setRiskEnvelope(Request $r):JsonResponse{return $this->write($r,CapitalMarketsCapability::RiskManagePolicy,function($o,$p,$actor)use($r){$v=$this->service->saveRiskEnvelope($o,$p);$this->audit($r,$o,$actor,CapitalMarketsAuditAction::RiskEnvelopeUpdated,CapitalMarketsAuditResourceType::RiskEnvelope,(string)$v['envelope_id'],$v);return $v;},201,true);}
