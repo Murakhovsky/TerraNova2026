@@ -47,4 +47,13 @@ $sameStrategy=[
 $strategyPlan=$engine->allocate('paper-master',Decimal::fromString('50000'),$sameStrategy,$policy);
 $strategyTotal=0.0;foreach($strategyPlan->allocations as $i)$strategyTotal+=(float)$i->approvedCapital->value();
 $assert($strategyTotal===5000.0,'Two opportunities of one strategy must share the same strategy capital headroom.');
+
+$correlated=[
+ ['opportunity_id'=>'C-A','strategy_version_id'=>'STRAT-A','requested_capital'=>'10000','expected_net_return'=>'0.02','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'10000','risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>95,'strategy_correlations'=>['STRAT-B'=>'0.95']],
+ ['opportunity_id'=>'C-B','strategy_version_id'=>'STRAT-B','requested_capital'=>'10000','expected_net_return'=>'0.01','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'10000','risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>90,'strategy_correlations'=>['STRAT-A'=>'0.95']],
+];
+$correlatedPlan=$engine->allocate('paper-master',Decimal::fromString('50000'),$correlated,new AllocationPolicy('corr','v1','SCORE_BASED','BALANCED',['score_multiplier'=>1],['high_correlation_threshold'=>'0.80','high_correlation_allocation_multiplier'=>'0.50']));
+$correlatedBy=[];foreach($correlatedPlan->allocations as $i)$correlatedBy[$i->opportunityId]=$i;
+$assert($correlatedBy['C-A']->approvedCapital->value()==='10000','Higher-ranked correlated strategy should retain its requested capital.');
+$assert($correlatedBy['C-B']->approvedCapital->value()==='5000','Second highly correlated strategy must be reduced by correlation policy.');
 echo "Capital Markets Capital Risk golden financial tests passed.\n";
