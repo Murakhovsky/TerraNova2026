@@ -73,36 +73,20 @@ final readonly class PortfolioNavEvidenceCollector
                 $market = $this->marketStates->get(
                     $organizationId, VenueId::fromString($venue), InstrumentId::fromString($instrument),
                 );
-                if ($market === null || $market->bestQuote === null
-                    || $market->mode->value !== 'LIVE' || $market->marketStatus->value !== 'OPEN'
-                    || !$market->quality->status->isUsableForDecision()
-                    || $market->quality->flags !== []) {
+                if ($market === null) {
                     $issues[] = 'POSITION_MARK_UNTRUSTED';
                     continue;
                 }
-                $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
-                $ageSeconds = $now->getTimestamp() - $market->sourceTimestamp->getTimestamp();
-                if ($ageSeconds < 0 || $ageSeconds > 30) {
-                    $issues[] = 'POSITION_MARK_STALE_OR_CLOCK_UNCERTAIN';
+                $candidate = PortfolioNavSpotMarkEvidence::inspect(
+                    $position, $market->toArray(), $currency,
+                );
+                if ($candidate['status'] !== 'CANDIDATE') {
+                    $issues[] = (string)$candidate['reason'];
                     continue;
                 }
-                $quoteAsset = $market->bestQuote->bidPrice->quoteAsset->value();
-                if ($quoteAsset !== $currency) {
-                    $issues[] = 'POSITION_FX_CONVERSION_REQUIRED';
-                    continue;
-                }
-                $marks[] = [
-                    'position_id'=>$id,
-                    'instrument_id'=>$instrument,
-                    'venue_id'=>$venue,
-                    'quote_currency'=>$quoteAsset,
-                    'source_timestamp'=>$market->sourceTimestamp->format(DATE_ATOM),
-                    'market_state_version'=>$market->stateVersion,
-                    'mark_source_fingerprint'=>$market->lastEventFingerprint,
-                    'mark_mid'=>$market->bestQuote->midPrice()->value(),
-                    // Value and accounting treatment require reconciled positions.
-                    'mark_reconciled'=>false,
-                ];
+                $marks[] = $candidate;
+                // Candidate values are diagnostics only, never approved assets.
+                $issues[] = 'POSITION_AND_VENUE_RECONCILIATION_REQUIRED';
             } catch (Throwable) {
                 $issues[] = 'POSITION_MARK_LOOKUP_FAILED';
             }
