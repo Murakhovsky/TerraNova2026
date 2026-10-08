@@ -13,6 +13,7 @@ interface CapitalRiskRepositoryInterface
  public function latestAllocationPolicy(string $organizationId,string $portfolioId,string $mode):?array;
  public function saveAllocationPlan(string $organizationId,array $record):void;
  public function latestAllocationPlan(string $organizationId,string $portfolioId):?array;
+ public function getAllocationPlan(string $organizationId,string $planId):?array;
  public function approveAllocation(string $organizationId,string $planId,string $actorId,string $approvedAt):bool;
  public function saveStrategyAllocation(string $organizationId,array $record):void;
  public function listStrategyAllocations(string $organizationId,string $portfolioId):array;
