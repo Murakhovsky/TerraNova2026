@@ -36,7 +36,7 @@ final readonly class FederationExternalActionReceiptReconciler
         }
         $org = $actor->organizationId()->value();
         $step = $this->db->fetchAssociative(
-            'SELECT s.state, s.side_effect_level, s.idempotency_key, s.result_reference
+            'SELECT s.state, s.side_effect_level, s.idempotency_key, s.result_reference, r.state AS run_state
              FROM cos_federation_steps s
              INNER JOIN cos_federation_runs r
                ON r.organization_id = s.organization_id AND r.run_id = s.run_id
@@ -64,6 +64,9 @@ final readonly class FederationExternalActionReceiptReconciler
                 return ['status' => 'manual_reconciliation_required', 'action_id' => $id];
             }
             return ['status' => 'completed', 'action_id' => $id];
+        }
+        if ($step['run_state'] !== 'running') {
+            return ['status' => 'manual_reconciliation_required', 'action_id' => null];
         }
         if ($step['state'] !== 'claimed' && $step['state'] !== 'ambiguous') {
             return ['status' => (string) $step['state'], 'action_id' => null];

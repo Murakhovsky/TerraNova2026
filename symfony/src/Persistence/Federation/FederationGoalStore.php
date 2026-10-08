@@ -365,6 +365,15 @@ final readonly class FederationGoalStore
         }
         $org = $actor->organizationId()->value();
         $this->db->transactional(function () use ($org, $runId, $stepId, $outcome, $receiptReference): void {
+            // Serialize against terminal transitions and reject delayed workers.
+            $runState = $this->db->fetchOne(
+                'SELECT state FROM cos_federation_runs
+                 WHERE organization_id = :org AND run_id = :run FOR UPDATE',
+                ['org' => $org, 'run' => $runId],
+            );
+            if ($runState !== 'running') {
+                throw new DomainException('Cannot finish a Federation Step outside a running Run.');
+            }
             $step = $this->db->fetchAssociative(
                 'SELECT state, side_effect_level FROM cos_federation_steps
                  WHERE organization_id = :org AND run_id = :run AND step_id = :step FOR UPDATE',

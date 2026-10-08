@@ -62,7 +62,7 @@ final readonly class FederationRunRecoveryService
                     'action_id' => null];
             } else {
                 $actions = $this->db->fetchAllAssociative(
-                    'SELECT id, status FROM cos_actions
+                    'SELECT id, status, started_at FROM cos_actions
                      WHERE organization_id = :org AND idempotency_key = :key',
                     ['org' => $org, 'key' => 'fed:' . $step['idempotency_key']],
                 );
@@ -78,6 +78,13 @@ final readonly class FederationRunRecoveryService
                 }
                 $then = strtotime((string) $step['updated_at'] . ' UTC');
                 $age = $then === false ? 86400 : max(0, $now - $then);
+                if (count($actions) === 1 && $actions[0]['status'] === 'RUNNING'
+                    && $actions[0]['started_at'] !== null) {
+                    // A long approval queue is not a stale worker; measure
+                    // execution age from the canonical worker start timestamp.
+                    $workerStart = strtotime((string) $actions[0]['started_at'] . ' UTC');
+                    if ($workerStart !== false) $age = max(0, $now - $workerStart);
+                }
                 $diagnostic = $this->classifier->classify(
                     (string) $step['state'],
                     $step['result_reference'] !== null ? (string) $step['result_reference'] : null,
