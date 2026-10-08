@@ -25,8 +25,12 @@ $evidence=[
     'marked_positions'=>[['position_id'=>'BTC-1','quote_currency'=>'USD','market_value'=>'240.50',
         'mark_reconciled'=>true,'mark_source_fingerprint'=>'mark-1']],
 ];
+$evidence['ledger_fingerprint']=hash('sha256',json_encode(['cash'=>$evidence['cash_by_currency'],'liabilities'=>$evidence['liabilities_by_currency']],JSON_THROW_ON_ERROR));
+$evidence['marks_fingerprint']=hash('sha256',json_encode($evidence['marked_positions'],JSON_THROW_ON_ERROR));
+$evidence['external_flows_fingerprint']=hash('sha256',json_encode($evidence['external_flows_by_currency'],JSON_THROW_ON_ERROR));
 $result=$producer->record('org-a','paper-master',$evidence);
 $assert($result['equity']==='1280.5','NAV must sum cash and marks net of liabilities with Decimal.');
+$assert($result['marks_fingerprint']===$evidence['marks_fingerprint'],'NAV snapshot must retain the exact mark evidence digest.');
 $assert($result['cumulative_external_net_flow']==='300','External deposit ledger must be preserved.');
 $assert($repository->saved[0]['tenant']==='org-a','Snapshot must remain tenant-scoped.');
 $unsafe=$evidence;$unsafe['marks_reconciled']=false;
@@ -40,6 +44,12 @@ try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeExceptio
 catch (InvalidArgumentException) {}
 $unsafe=$evidence;unset($unsafe['external_flows_fingerprint']);
 try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Missing ledger provenance was accepted');}
+catch (InvalidArgumentException) {}
+$unsafe=$evidence;$unsafe['marked_positions'][0]['market_value']='999999';
+try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Tampered mark value was accepted');}
+catch (InvalidArgumentException) {}
+$unsafe=$evidence;$unsafe['cash_by_currency'][0]['amount']='999999';
+try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Tampered cash value was accepted');}
 catch (InvalidArgumentException) {}
 $assert(count($repository->saved)===1,'Invalid snapshots must never persist.');
 echo "Capital Markets guarded NAV producer acceptance passed.\n";
