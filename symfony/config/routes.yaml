@@ -15,6 +15,24 @@ cos_federation_goals_mode:
   controller: App\Web\Federation\GoalsWorkspaceController::selectMode
   methods: [POST]
 
+# COS Federation: manager-triggered sequential orchestration, CSRF protected.
+cos_federation_run_start:
+  path: /workspace/goals/runs/start
+  controller: App\Web\Federation\FederationRunController::start
+  methods: [POST]
+
+cos_federation_run_status:
+  path: /workspace/goals/runs/{runId}
+  controller: App\Web\Federation\FederationRunController::status
+  methods: [GET, HEAD]
+  requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
+cos_federation_run_advance:
+  path: /workspace/goals/runs/{runId}/advance
+  controller: App\Web\Federation\FederationRunController::advance
+  methods: [POST]
+  requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 # COS Federation: authenticated tenant-scoped adaptive presentation preferences.
 cos_federation_experience_preferences_show:
   path: /api/v1/experience/preferences
