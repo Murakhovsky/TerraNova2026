@@ -96,6 +96,15 @@ $assert(str_contains($controller,"'comparison_state'] = 'RESTRICTED'"),'Relation
 $assert(str_contains($template,"permissions.relationship_view"),'Relationship UI must hide restricted instrument relationships.');
 $assert(str_contains($template,"permissions.market_data_view"),'Relationship price comparison must require Market Data View.');
 $assert(str_contains($controller,'market_data_history_view'),'Historic-market view permission must be exposed to the Twig screen.');
+$assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/HistoricalRelationshipBasisProjector.php'),'Canonical historical Basis projector missing.');
+$assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavWindowProjector.php'),'NAV P&L projector missing.');
+$assert(is_file($root.'/app/migrations/20261008_000135_capital_markets_portfolio_valuation.sql'),'Canonical NAV snapshot migration missing.');
+$assert(str_contains($read,'PortfolioValuationSnapshotRepositoryInterface'),'Decision read model must consume verified NAV repository.');
+$assert(str_contains($read,'PortfolioNavWindowProjector::project'),'Today/30D Portfolio P&L must come from reconciled NAV projector.');
+$assert(str_contains($controller,'MarketDataHistoryView'),'Relationship historical Basis must require history permission.');
+$assert(str_contains($template,'Historical Basis · 7D'),'Relationship Detail must show historical Basis status.');
+$assert(str_contains($template,'Portfolio NAV performance windows'),'Performance page must expose reconciled Portfolio NAV evidence.');
+$assert(str_contains($template,'Portfolio NAV PnL evidence'),'Overview must expose valuation completeness.');
 $assert(str_contains($template,'Historical Market Evidence · 7D'),'Historical canonical event list must be visible on Market Detail.');
 $assert(str_contains($template,'permissions.market_data_history_view'),'Market historical evidence must remain permission-gated.');
 
