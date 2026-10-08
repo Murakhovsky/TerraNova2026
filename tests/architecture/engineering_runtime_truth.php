@@ -94,7 +94,7 @@ if (str_contains($architectStage, "type: 'EXTERNAL_CREDENTIAL'")) {
 }
 
 if (!str_contains($engineeringRunner, 'provider adapter owns transport retries')
-    || !str_contains($engineeringRunner, 'invalid structured')) {
+    || !str_contains($engineeringRunner, 'EngineeringAgentOutputValidationException')) {
     throw new RuntimeException('Engineering runner does not separate provider retries from structured-output correction retries.');
 }
 if (!str_contains($openAiClient, "'OpenAI transport error: '")
