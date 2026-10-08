@@ -111,6 +111,9 @@ $assert(str_contains($collector,'POSITION_MARK_STALE_OR_CLOCK_UNCERTAIN'),'NAV c
 $assert(str_contains($collector,'BALANCE_NEGATIVE_AMOUNT'),'NAV collector must validate venue balance amounts.');
 $assert(str_contains($collector,'PortfolioLedgerIntegrityAudit::inspect'),'NAV collector must independently check trading ledger integrity.');
 $assert(str_contains($collector,'PortfolioNavStatementReconciliationPreview::inspect'),'NAV collector must publish tenant-scoped source-versus-paper statement differences.');
+$assert(str_contains($collector,'PortfolioNavRemediationPlanner::plan'),'NAV preflight must include a deterministic operator remediation plan.');
+$assert(str_contains($template,'NAV reconciliation next actions'),'Performance must expose source blockers as operator tasks.');
+$assert(str_contains($template,'NAV remediation checklist'),'NAV operator checklist must have an accessible table.');
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavStatementReconciliationPreview.php'),'NAV statement reconciliation preview missing.');
 $assert(str_contains($template,'Unreconciled venue cash statement differences'),'Performance must show venue statement mismatches rather than silently certifying cash.');
 
