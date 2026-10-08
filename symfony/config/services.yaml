@@ -2028,6 +2028,8 @@ services:
 
   Domains\CapitalMarkets\Application\Service\CapitalRiskService: ~
 
+  Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService: ~
+
   Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
   Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine: ~
   Domains\CapitalMarkets\Domain\Research\ResearchIsolationPolicy: ~
@@ -2185,6 +2187,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\CapitalMarkets\CapitalRiskPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\CapitalMarkets\DecisionWorkspacePageController:
     public: true
     tags: ['controller.service_arguments']
 
