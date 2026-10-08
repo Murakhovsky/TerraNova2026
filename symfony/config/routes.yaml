@@ -3198,3 +3198,9 @@ cos_api_v1_capital_markets_rebalance:
   path: /api/v1/capital-markets/rebalance
   controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::rebalanceCurrent
   methods: [GET]
+
+
+cos_api_v1_capital_markets_strategy_allocation_assign:
+  path: /api/v1/capital-markets/portfolio/allocations
+  controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::assignStrategyAllocation
+  methods: [POST]
