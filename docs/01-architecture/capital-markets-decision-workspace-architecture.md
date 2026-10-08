@@ -355,9 +355,9 @@ PortfolioNavStatementReconciliationPreview порівнює баланси гр�
 
 Для первинної інтеграції виписок доступна консольна команда:
 
-`php bin/console cos:capital-markets:nav:evidence:import --organization=ORG --portfolio=paper-master --file=/path/to/source.json`
+`php bin/console cos:capital-markets:nav:evidence:import --organization=ORG --portfolio=paper-master --file=/path/to/source.json --source-file=/path/to/original-statement.pdf`
 
-Вхідний файл містить один об'єкт JSON із типом EXTERNAL_CASH_FLOW, LIABILITY_BALANCE або VENUE_BALANCE, числовим значенням у форматі десяткового рядка, валютою, часом спостереження, provider_id, source_reference, source_document_sha256, collected_by та evidence_id. Система перевіряє документ через PortfolioNavFinancialEvidencePolicy, записує його append-only із tenant scope та повертає RECORDED_PENDING_RECONCILIATION. Повторне використання source identity відхиляється. Команда не змінює Ledger, не підтверджує залишки й не створює NAV snapshot.
+Вхідний файл містить один об'єкт JSON із типом EXTERNAL_CASH_FLOW, LIABILITY_BALANCE або VENUE_BALANCE, числовим значенням у форматі десяткового рядка, валютою, часом спостереження, provider_id, source_reference, source_document_sha256, collected_by та evidence_id. Параметр `--source-file` обов'язковий: COS перевіряє SHA-256 **фактичних байтів** незалежної виписки проти `source_document_sha256` із JSON. Відсутній, порожній, підмінений або надто великий файл (понад 20 МБ) відхиляється до запису в базу. Збіг хешів доводить відповідність байтів, але **не доводить справжності виписки та не є фінансовим погодженням**. Система перевіряє JSON через PortfolioNavFinancialEvidencePolicy, записує його append-only із tenant scope та повертає RECORDED_PENDING_RECONCILIATION. Повторне використання source identity відхиляється. Команда не змінює Ledger, не підтверджує залишки й не створює NAV snapshot.
 
 Runtime-тест виконує імпорт, повторний імпорт того самого запису та NAV preflight: перший запис мусить пройти, дублікат мусить бути відхилений, а невиконана незалежна бухгалтерська звірка залишає статус BLOCKED. Первинний документ є доказом для перевірки, але не автоматичним правом записати Portfolio P&L.
 
