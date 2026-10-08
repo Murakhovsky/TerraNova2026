@@ -924,7 +924,7 @@
           </tbody>
         </table>
       </div>
-      <p class="small">Candidate external flows: {{ sourcePreview.candidate_cumulative_external_flow is not null ? sourcePreview.candidate_cumulative_external_flow : '—' }}; candidate liabilities: {{ sourcePreview.candidate_liability_balance is not null ? sourcePreview.candidate_liability_balance : '—' }}; authority: {{ sourcePreview.financial_authority|default('OBSERVATION_ONLY') }}. Neither figure enters P&amp;L until independently reconciled.</p>
+      <p class="small">Candidate external flows: {{ sourcePreview.candidate_cumulative_external_flow is defined and sourcePreview.candidate_cumulative_external_flow is not null ? sourcePreview.candidate_cumulative_external_flow : '—' }}; candidate liabilities: {{ sourcePreview.candidate_liability_balance is defined and sourcePreview.candidate_liability_balance is not null ? sourcePreview.candidate_liability_balance : '—' }}; authority: {{ sourcePreview.financial_authority|default('OBSERVATION_ONLY') }}. Neither figure enters P&amp;L until independently reconciled.</p>
       <p class="small">Status is diagnostic only; preflight never writes a snapshot. CLI: <code>cos:capital-markets:nav:collect</code>.</p>
     </section>
 
