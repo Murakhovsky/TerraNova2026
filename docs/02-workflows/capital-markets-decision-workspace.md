@@ -8,6 +8,30 @@ kind: workflow
 
 # Робочий процес Capital Markets Decision Workspace
 
+## Бізнес-мета
+
+Дати оператору одну канонічну точку для швидкого рішення щодо капіталу: побачити гроші, чистий результат, головний ризик, найкращу можливість, стан даних і наступну дію без ручного складання картини з технічних екранів.
+
+## Учасники
+
+- користувач Capital Markets читає загальний стан і можливості;
+- дослідник веде hypotheses, experiments і strategy evidence;
+- Portfolio Manager аналізує allocation та portfolio impact;
+- Risk Manager контролює limits, headroom і stress;
+- Executor працює з дозволеними Paper execution flows;
+- AI agents можуть читати, рекомендувати й пропонувати в межах наданої authority;
+- backend engines залишаються фінансовим джерелом істини.
+
+## Карта коду
+
+- `app/Domains/CapitalMarkets/Application/Service/DecisionWorkspaceReadService.php` — композиція канонічних read models;
+- `symfony/src/Web/CapitalMarkets/DecisionWorkspacePageController.php` — tenant/capability guarded web surface та exports;
+- `symfony/templates/experience/capital_markets/decision_workspace.html.twig` — Decision Workspace presentation;
+- `symfony/assets/controllers/capital_markets_workspace_controller.js` — presentation-only table preferences;
+- `symfony/config/routes.yaml` — stable workspace/deep-link/export routes;
+- `resources/experience/pages/capital_markets/foundation.yaml` — Page Contracts;
+- `tests/integration/capital_markets_decision_workspace_acceptance.php` — acceptance contract.
+
 ## Ранкова перевірка
 
 \`\`\`text
