@@ -612,6 +612,18 @@ final readonly class CapitalRiskService
  {
   $balances=$this->trading->listPaperBalances($organizationId);
   $availableByLocation=[];
+  $strategyBudgets=[];
+  foreach($this->repository->listStrategyAllocations($organizationId,'paper-master') as $allocation){
+   $strategyId=(string)($allocation['strategy_version_id']??'');
+   if($strategyId===''||isset($strategyBudgets[$strategyId]))continue;
+   if(!in_array((string)($allocation['status']??''),['ACTIVE','RAMPING'],true))continue;
+   $allocated=Decimal::fromString((string)($allocation['allocated_capital']??'0'));
+   $reserved=Decimal::fromString((string)($allocation['reserved']??'0'));
+   $deployed=Decimal::fromString((string)($allocation['deployed']??'0'));
+   $headroom=DecimalMath::subtract($allocated,DecimalMath::add($reserved,$deployed));
+   if($headroom->isNegative())$headroom=Decimal::fromString('0');
+   $strategyBudgets[$strategyId]=['headroom'=>$headroom,'risk_budget'=>(array)($allocation['risk_budget']??[])];
+  }
   foreach($balances as $row)$availableByLocation[(string)$row['venue_id'].'|'.(string)$row['asset_key']]=Decimal::fromString((string)($row['available_amount']??'0'));
 
   foreach($opportunities as &$opportunity){
@@ -631,6 +643,11 @@ final readonly class CapitalRiskService
    if($mode==='LIVE'&&!in_array($strategyStatus,['LIMITED_LIVE','VALIDATED'],true))$blocked='STRATEGY_NOT_LIVE_VALIDATED';
    if($mode==='PAPER'&&!in_array($strategyStatus,['PAPER','LIMITED_LIVE','VALIDATED'],true))$blocked='STRATEGY_NOT_PAPER_VALIDATED';
    $opportunity['resolved_strategy_status']=$strategyStatus;
+   if($strategyVersionId!==''&&isset($strategyBudgets[$strategyVersionId])){
+    $opportunity['strategy_capital_headroom']=$strategyBudgets[$strategyVersionId]['headroom']->value();
+    $opportunity['risk_budget']=$strategyBudgets[$strategyVersionId]['risk_budget'];
+    if($strategyBudgets[$strategyVersionId]['headroom']->isZero())$blocked='STRATEGY_CAPITAL_BUDGET_EXHAUSTED';
+   }
    if(isset($opportunity['visible_depth'],$opportunity['stress_exit_depth'],$opportunity['estimated_exit_seconds'])){
     $budgetData=(array)($opportunity['liquidity_budget']??[]);
     $budget=new LiquidityBudget(
