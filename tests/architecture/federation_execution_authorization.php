@@ -11,6 +11,8 @@ $preflight = (string) file_get_contents($root . '/symfony/src/Persistence/Federa
 $reader = (string) file_get_contents($root . '/symfony/src/Persistence/Federation/FederationPlanApprovalEvidenceReader.php');
 $migration = (string) file_get_contents($root . '/symfony/migrations/Version20261008193000.php');
 $factory = (string) file_get_contents($root . '/app/Platform/Orchestration/Goal/GoalPlanApprovalRequestFactory.php');
+$docker = (string) file_get_contents($root . '/docker/symfony/php/Dockerfile');
+$receipts = (string) file_get_contents($root . '/symfony/src/Persistence/Federation/FederationExternalActionReceiptReconciler.php');
 foreach ([
     [$store, 'private FederationPlanApprovalEvidenceReader $approvalEvidence'],
     [$store, '$this->approvalEvidence->requireApproval('],
@@ -24,6 +26,8 @@ foreach ([
     [$migration, 'uq_federation_plan_run'],
     [$factory, "'APPROVAL_REQUIRED'"],
     [$factory, "'cos.federation.plan.approval'"],
+    [$docker, 'COPY resources/contracts/ /var/www/html/resources/contracts/'],
+    [$receipts, 'assertCompletedReceipt('],
 ] as [$content, $marker]) {
     if (!str_contains($content, $marker)) {
         throw new RuntimeException('Federation governance invariant missing: ' . $marker);
