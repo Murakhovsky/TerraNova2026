@@ -3204,3 +3204,9 @@ cos_api_v1_capital_markets_strategy_allocation_assign:
   path: /api/v1/capital-markets/portfolio/allocations
   controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::assignStrategyAllocation
   methods: [POST]
+
+
+capital_markets_opportunity_detail:
+  path: /capital-markets/opportunities/{id}
+  controller: App\Web\CapitalMarkets\CapitalRiskPageController::opportunity
+  methods: [GET, HEAD]
