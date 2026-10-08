@@ -67,26 +67,30 @@ Outcome evidence поки є посиланнями на факти, їх пот
 в авторитетних read models відповідних Domains.
 
 
-### Canonical read-only Workflow vertical slice
+## Безпечне виконання Workflow без побічних дій
 
-FederationReadOnlyWorkflowRunner now invokes the existing Kernel WorkflowEngine,
-after FederationWorkflowPreflight verifies the approved tenant plan and its
-canonical Action, Policy and independent human Approval receipt.
+FederationReadOnlyWorkflowRunner викликає наявний Kernel WorkflowEngine
+після того, як FederationWorkflowPreflight перевіряє погоджений план
+конкретної організації, канонічну дію Action, рішення Policy та незалежне
+погодження людиною через Approval.
 
-This first executable slice deliberately accepts only one DecisionStep, without
-transitions or configuration. It refuses HumanStep, AgentStep, ToolStep,
-SystemStep, multi-step workflows and any external or financial side effects.
-The SystemStep handler is independently disabled as defense in depth.
+Перший виконуваний сценарій підтримує **лише один DecisionStep** без переходів
+і конфігурації. HumanStep, AgentStep, ToolStep, SystemStep, багатокрокові
+процеси, зовнішні та фінансові операції блокуються. Обробник системних кроків
+додатково заборонений як окремий захисний механізм.
 
-The one-and-only durable Federation run per approved plan moves from pending
-through running to completed. Its single step is claimed before WorkflowEngine
-execution, and successful completion records the workflow execution ID and
-checkpoint atomically in the existing run/step tables. After a crash, a claimed
-run requires manual reconciliation and will not automatically replay.
-A completed workflow is NOT evidence of successful Goal business criteria.
+Для кожного погодженого плану може існувати лише один збережений запуск.
+Перед викликом WorkflowEngine система переводить запуск у стан running
+і ексклюзивно резервує крок. Успішне завершення атомарно записує ідентифікатор
+виконання Workflow, стан кроку та контрольну точку до таблиць Федерації.
+Якщо процес перервався після резервування кроку, автоматичний повторний запуск
+заборонено: необхідна ручна перевірка.
 
-The rollback-only MySQL runtime smoke exercises the actual WorkflowEngine
-execution with verified synthetic approval receipts. It checks completion,
-checkpoint persistence, tenant isolation, replay prevention and denial of
-a non-inert workflow. These test fixtures do not enable the production
-Federation approval Action handler.
+**Завершений Workflow не означає досягнення бізнес-цілі.** Підтвердження
+критеріїв Goal та перевірка доказів залишаються окремими операціями.
+
+Транзакційний MySQL smoke-тест перевіряє справжній WorkflowEngine на
+штучних записах погодження, які після тесту відкочуються. Він охоплює
+запис контрольної точки, ізоляцію організацій, заборону повторного запуску
+та відхилення небезпечних типів кроків. Цей тест не активує production
+Action handler для погодження планів Федерації.
