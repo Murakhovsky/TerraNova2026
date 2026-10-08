@@ -281,10 +281,10 @@ pages:
       page_purpose: "Portfolio-aware opportunity workspace with projected impact, allocation decision, capital reservation and execution handoff."
     archetype: entity_workspace
     patterns:
-      required: [WorkspaceHeader, EntityHeader, KpiStrip]
-      optional: [ContextPanel, EntityList, EmptyState, ErrorState]
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [KpiStrip, ContextPanel, ActionBar, ErrorState]
     primary_action: capital_markets.allocation.propose
-    states: [normal, error, permission_denied]
+    states: [normal, error]
     responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
     qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 1, responsive: 1, accessibility: 1, content: 2 }
