@@ -144,7 +144,11 @@
                   Approved <strong>{{ bestOpportunity.approved_capital is not null ? bestOpportunity.approved_capital : '—' }}</strong> ·
                   Risk <strong>{{ bestOpportunity.risk }}</strong>
                 </div>
-                <a class="btn btn-primary" href="/capital-markets/opportunities/{{ bestOpportunity.id|url_encode }}">Review decision</a>
+                {% if permissions.portfolio_view|default(false) %}
+                  <a class="btn btn-primary" href="/capital-markets/opportunities/{{ bestOpportunity.id|url_encode }}">Review decision</a>
+                {% else %}
+                  <span class="small">Portfolio-aware detail unavailable to this role.</span>
+                {% endif %}
               </div>
             </article>
           {% endif %}
@@ -160,7 +164,7 @@
                   <td>{{ o.approved_capital is not null ? o.approved_capital : '—' }}</td>
                   <td>{{ o.risk }}</td>
                   <td><strong>{{ o.decision }}</strong><br><small>{{ o.portfolio_impact }}</small></td>
-                  <td><a href="/capital-markets/opportunities/{{ o.id|url_encode }}">View details</a></td>
+                  <td>{% if permissions.portfolio_view|default(false) %}<a href="/capital-markets/opportunities/{{ o.id|url_encode }}">View details</a>{% else %}<span class="small">Restricted</span>{% endif %}</td>
                 </tr>
               {% else %}
                 <tr><td colspan="7">No current opportunities. The absence of a signal is not converted into fake activity.</td></tr>
@@ -175,11 +179,21 @@
           <small>DECISIONS</small>
           <h2>Recommended Actions</h2>
           <ol>
+            {% set visibleActionCount = 0 %}
             {% for action in w.recommended_actions|default([]) %}
-              <li class="mb-2"><a href="{{ action.href }}"><strong>{{ action.label }}</strong></a><br><small>{{ action.reason }}</small></li>
-            {% else %}
-              <li>No action required. Portfolio is within the currently available configured evidence.</li>
+              {% set actionAllowed = true %}
+              {% if action.href starts with '/capital-markets/opportunities/' and not permissions.portfolio_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/allocation' and not permissions.allocation_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/risk' and not permissions.risk_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/data-quality' and not permissions.market_data_quality_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if actionAllowed %}
+                {% set visibleActionCount = visibleActionCount + 1 %}
+                <li class="mb-2"><a href="{{ action.href }}"><strong>{{ action.label }}</strong></a><br><small>{{ action.reason }}</small></li>
+              {% endif %}
             {% endfor %}
+            {% if visibleActionCount == 0 %}
+              <li>No currently authorized action requires attention.</li>
+            {% endif %}
           </ol>
         </section>
       </div>
