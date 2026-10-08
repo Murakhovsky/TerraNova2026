@@ -124,7 +124,6 @@ foreach([
     'Expected Net',
     'Portfolio Impact',
     'Economics Waterfall',
-    'Decision Trace',
     'Market Explorer',
     'Research Pipeline',
     'Strategy Lab',
