@@ -17,6 +17,7 @@ final readonly class MysqlCapitalRiskRepository implements CapitalRiskRepository
  public function latestAllocationPolicy(string $o,string $p,string $mode):?array{$s=$this->connection->prepare('SELECT record_json FROM tn_capital_market_allocation_policies WHERE organization_id=:o AND portfolio_id=:p AND mode=:m ORDER BY id DESC LIMIT 1');$s->execute(['o'=>$o,'p'=>$p,'m'=>$mode]);$v=$s->fetchColumn();return $v===false?null:$this->decode((string)$v);}
  public function saveAllocationPlan(string $o,array $r):void{$this->insert('tn_capital_market_allocation_plans',$o,$r,'plan_id');}
  public function latestAllocationPlan(string $o,string $p):?array{return $this->latest('tn_capital_market_allocation_plans',$o,$p);}
+ public function getAllocationPlan(string $o,string $id):?array{$s=$this->connection->prepare('SELECT record_json FROM tn_capital_market_allocation_plans WHERE organization_id=:o AND plan_id=:id LIMIT 1');$s->execute(['o'=>$o,'id'=>$id]);$v=$s->fetchColumn();return $v===false?null:$this->decode((string)$v);}
  public function approveAllocation(string $o,string $planId,string $actorId,string $approvedAt):bool{
   $select=$this->connection->prepare("SELECT record_json FROM tn_capital_market_allocation_plans WHERE organization_id=:o AND plan_id=:id AND status='PROPOSED' FOR UPDATE");
   $this->connection->beginTransaction();
