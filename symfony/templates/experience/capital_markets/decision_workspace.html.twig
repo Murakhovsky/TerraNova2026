@@ -612,13 +612,30 @@
 
   {% elseif cmView == 'execution_detail' %}
     {% set x = w.execution|default({}) %}
-    <section class="cos-panel"><twig:CosEntityHeader eyebrow="Execution" identity="{{ x.execution_id|default(x.id|default(entityId|default('—'))) }}" title="{{ x.status|default('Execution') }}" subtitle="Paper execution lifecycle, orders, fills and hedge evidence." statusLabel="{{ x.status|default('UNKNOWN') }}" statusTone="{{ x.status|default('') in ['FAILED','RECOVERY'] ? 'danger' : (x.status|default('') in ['PARTIAL','PARTIALLY_EXECUTED'] ? 'warning' : 'info') }}" /></section>
-    {% if x.status|default('') in ['PARTIAL','PARTIALLY_EXECUTED','RECOVERY','FAILED'] %}<twig:CosAlert title="{{ x.status|default('EXECUTION PROBLEM') }}" copy="Execution is not in a clean completed state. Review hedge and recovery evidence before any further action." tone="danger" />{% endif %}
+    {% set health = w.execution_health|default({}) %}
+    <section class="cos-panel"><twig:CosEntityHeader eyebrow="Execution" identity="{{ x.execution_id|default(x.id|default(entityId|default('—'))) }}" title="{{ x.status|default('Execution') }}" subtitle="Paper execution lifecycle, orders, fills and hedge evidence." statusLabel="{{ x.status|default('UNKNOWN') }}" statusTone="{{ health.severity|default('NORMAL') == 'HIGH' ? 'danger' : 'info' }}" /></section>
+    {% if health.severity|default('NORMAL') == 'HIGH' %}
+      <twig:CosAlert title="HIGH RISK · {{ health.hedge_state|default('UNHEDGED') }}" copy="Execution is not in a clean completed state. Review checkpoint, fills and recovery evidence before any further action." tone="danger" />
+    {% endif %}
+    <section class="cos-kpi-strip">
+      <twig:CosMetric label="Execution State" value="{{ health.status|default('UNKNOWN') }}" />
+      <twig:CosMetric label="Hedge State" value="{{ health.hedge_state|default('UNKNOWN') }}" />
+      <twig:CosMetric label="Checkpoint" value="{{ health.checkpoint|default('—') }}" />
+      <twig:CosMetric label="Orders" value="{{ health.orders|default(0) }}" />
+      <twig:CosMetric label="Fills" value="{{ health.fills|default(0) }}" />
+      <twig:CosMetric label="Residual Unhedged" value="{{ health.residual_unhedged_quantity is not null ? health.residual_unhedged_quantity : '—' }}" />
+    </section>
     <div class="row g-3">
       <div class="col-lg-6"><section class="cos-panel h-100"><h2>Orders</h2><div class="table-responsive"><table class="table"><thead><tr><th>Order</th><th>Leg</th><th>State</th></tr></thead><tbody>{% for o in w.orders|default([]) %}<tr><td>{{ o.order_id|default(o.id|default('—')) }}</td><td>{{ o.leg_id|default('—') }}</td><td>{{ o.state|default(o.status|default('—')) }}</td></tr>{% else %}<tr><td colspan="3">No orders.</td></tr>{% endfor %}</tbody></table></div></section></div>
       <div class="col-lg-6"><section class="cos-panel h-100"><h2>Fills</h2><div class="table-responsive"><table class="table"><thead><tr><th>Fill</th><th>Order</th><th>Quantity</th><th>Price</th></tr></thead><tbody>{% for f in w.fills|default([]) %}<tr><td>{{ f.fill_id|default(f.id|default('—')) }}</td><td>{{ f.order_id|default('—') }}</td><td>{{ f.quantity|default('—') }}</td><td>{{ f.price|default('—') }}</td></tr>{% else %}<tr><td colspan="4">No fills.</td></tr>{% endfor %}</tbody></table></div></section></div>
     </div>
-    <section class="cos-panel"><h2>Recovery</h2><p>Retry / Reduce Position / Emergency Flatten / Manual Review controls remain governed by the existing execution policy and are not synthesized in this read-only workspace.</p></section>
+    <section class="cos-panel">
+      <h2>Recovery</h2>
+      <p><strong>Checkpoint:</strong> {{ health.checkpoint|default('—') }}</p>
+      <p><strong>Failure reason:</strong> {{ health.failure_reason|default('—') }}</p>
+      <p><strong>Hedge state:</strong> {{ health.hedge_state|default('UNKNOWN') }}</p>
+      <p>Retry / Reduce Position / Emergency Flatten / Manual Review controls remain governed by the existing execution policy and are not synthesized in this read-only workspace.</p>
+    </section>
 
   {% elseif cmView == 'risk' %}
     {% set rr = w.risk|default({}) %}
