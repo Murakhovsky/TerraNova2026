@@ -3201,6 +3201,8 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  Platform\Orchestration\Goal\FederationStepCursor: ~
+
   App\Web\Federation\FederationRunController:
     public: true
     tags: ['controller.service_arguments']
