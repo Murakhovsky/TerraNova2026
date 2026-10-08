@@ -31,7 +31,7 @@ kind: product
 
 ## Capital Markets: фундамент і ринкова аналітика
 
-Capital Markets `0.8.0` має структурний `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE`, два фінансові vertical slices (`CM-TOKENIZED-EQUITY` H1/H2 та Crypto Spot/Perpetual H4/H5/H6) і governed `CM-RESEARCH-LAB`.
+Capital Markets `0.9.0` має `CM-FOUNDATION`, executable `CM-MARKET-INTELLIGENCE`, два фінансові vertical slices, governed `CM-RESEARCH-LAB` та `CM-CAPITAL-RISK`: portfolio-aware exposure/risk, deterministic capital allocation, stress/rebalance і governed Portfolio Agent.
 
 Канонічний market-data flow:
 
