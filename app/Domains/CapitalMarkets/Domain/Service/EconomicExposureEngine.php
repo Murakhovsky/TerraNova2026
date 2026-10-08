@@ -9,7 +9,7 @@ final class EconomicExposureEngine {
  /** @param list<array<string,mixed>> $positions */
  public function snapshot(string $portfolioId,array $positions,?DateTimeImmutable $at=null):PortfolioExposureSnapshot {
   $zero=Decimal::fromString('0');$gross=$zero;$net=$zero;
-  $maps=['byUnderlying'=>[],'byAsset'=>[],'byVenue'=>[],'byStrategy'=>[],'byCurrency'=>[],'byCounterparty'=>[],'byChain'=>[],'byLiquidityBucket'=>[]];$unknown=[];
+  $maps=['byUnderlying'=>[],'byAsset'=>[],'byVenue'=>[],'byStrategy'=>[],'byCurrency'=>[],'byCounterparty'=>[],'byChain'=>[],'byLiquidityBucket'=>[],'byInstrumentFamily'=>[],'byIssuer'=>[],'bySector'=>[],'byJurisdiction'=>[],'byCollateral'=>[]];$unknown=[];
   foreach($positions as $p){
    $raw=Decimal::fromString((string)$p['notional']);$abs=DecimalMath::abs($raw);
    $signed=strtoupper((string)($p['side']??'LONG'))==='SHORT'?DecimalMath::negate($abs):$abs;
@@ -17,12 +17,12 @@ final class EconomicExposureEngine {
    $gross=DecimalMath::add($gross,$abs);$valid=(bool)($p['relationship_valid']??true);$underlying=trim((string)($p['underlying_key']??''));
    if(!$valid||$underlying==='')$unknown[]=['instrument_id'=>(string)$p['instrument_id'],'exposure'=>$signed->value(),'reason'=>'UNKNOWN_EXPOSURE'];
    else{$maps['byUnderlying'][$underlying]=$this->add($maps['byUnderlying'][$underlying]??$zero,$signed);$net=DecimalMath::add($net,$signed);}
-   foreach(['asset'=>'byAsset','venue'=>'byVenue','strategy'=>'byStrategy','currency'=>'byCurrency','counterparty'=>'byCounterparty','chain'=>'byChain','liquidity_bucket'=>'byLiquidityBucket'] as $src=>$dst){
+   foreach(['asset'=>'byAsset','venue'=>'byVenue','strategy'=>'byStrategy','currency'=>'byCurrency','counterparty'=>'byCounterparty','chain'=>'byChain','liquidity_bucket'=>'byLiquidityBucket','instrument_family'=>'byInstrumentFamily','issuer'=>'byIssuer','sector'=>'bySector','jurisdiction'=>'byJurisdiction','collateral'=>'byCollateral'] as $src=>$dst){
     $k=trim((string)($p[$src]??''));if($k==='')continue;$maps[$dst][$k]=$this->add($maps[$dst][$k]??$zero,$signed);
    }
   }
   foreach($maps as &$m)ksort($m);unset($m);
-  return new PortfolioExposureSnapshot($portfolioId,$at??new DateTimeImmutable(),$gross,$net,$maps['byUnderlying'],$maps['byAsset'],$maps['byVenue'],$maps['byStrategy'],$maps['byCurrency'],$maps['byCounterparty'],$maps['byChain'],$maps['byLiquidityBucket'],$unknown);
+  return new PortfolioExposureSnapshot($portfolioId,$at??new DateTimeImmutable(),$gross,$net,$maps['byUnderlying'],$maps['byAsset'],$maps['byVenue'],$maps['byStrategy'],$maps['byCurrency'],$maps['byCounterparty'],$maps['byChain'],$maps['byLiquidityBucket'],$maps['byInstrumentFamily'],$maps['byIssuer'],$maps['bySector'],$maps['byJurisdiction'],$maps['byCollateral'],$unknown);
  }
  private function add(Decimal $a,Decimal $b):Decimal{return DecimalMath::add($a,$b);}
 }
