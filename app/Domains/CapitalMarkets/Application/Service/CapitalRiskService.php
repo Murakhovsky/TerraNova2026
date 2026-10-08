@@ -4,6 +4,8 @@ namespace Domains\CapitalMarkets\Application\Service;
 use DateTimeImmutable;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\CapitalRiskRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsEventPublisherInterface;
+use Domains\CapitalMarkets\Domain\Event\CapitalRiskLifecycleEvent;
 use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Allocation\AllocationPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\PortfolioRiskState;
@@ -44,6 +46,7 @@ final readonly class CapitalRiskService
   private TokenizedEquityReadService $tokenizedRead,
   private CorrelationEngine $correlations,
   private CapitalRiskTelemetry $telemetry,
+  private CapitalMarketsEventPublisherInterface $events,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -278,6 +281,7 @@ final readonly class CapitalRiskService
    ],
   ];
   $this->repository->saveAllocationPlan($organizationId,$record);
+  $this->publish($organizationId,$portfolioId,'capital_markets.allocation.plan_created.v1',['plan_id'=>$record['plan_id'],'policy_version'=>$record['policy_version'],'input_fingerprint'=>$record['input_fingerprint']]);
   $rejections=0;$reductions=0;
   foreach($record['allocations'] as $item){if(($item['decision']??'')==='REJECT')$rejections++;if(($item['decision']??'')==='ACCEPT_REDUCED_SIZE')$reductions++;}
   $this->telemetry->metric($organizationId,'allocation_rejections',$rejections);
@@ -315,12 +319,14 @@ final readonly class CapitalRiskService
    }
    $created[]=$reservationId;
    $reservationRows[]=['reservation_id'=>$reservationId,'opportunity_id'=>$opportunityId,'amount'=>$amount->value(),'status'=>'RESERVED','expires_at'=>$expires];
+   $this->publish($organizationId,(string)($plan['portfolio_id']??'paper-master'),'capital_markets.capital.reservation_created.v1',['reservation_id'=>$reservationId,'opportunity_id'=>$opportunityId,'amount'=>$amount->value(),'plan_id'=>$planId]);
   }
 
   if(!$this->repository->approveAllocation($organizationId,$planId,$actorId,gmdate('Y-m-d H:i:s'))){
    $fresh=$this->repository->getAllocationPlan($organizationId,$planId);
    if((string)($fresh['status']??'')!=='APPROVED')throw new RuntimeException('Allocation approval race detected.');
   }
+  $this->publish($organizationId,(string)($plan['portfolio_id']??'paper-master'),'capital_markets.allocation.approved.v1',['plan_id'=>$planId,'approved_by'=>$actorId,'reservations'=>$reservationRows]);
   return ['approved'=>true,'idempotent'=>false,'reservations'=>$reservationRows];
  }
 
@@ -356,6 +362,7 @@ final readonly class CapitalRiskService
    'created_at'=>gmdate('Y-m-d H:i:s'),
   ];
   $this->repository->saveRiskEnvelope($organizationId,$record);
+  $this->publish($organizationId,$portfolioId,'capital_markets.exposure.limit_approaching.v1',['risk_envelope'=>$record]);
   return $record;
  }
 
@@ -410,7 +417,9 @@ final readonly class CapitalRiskService
    'risk_limit_utilization'=>$headroom,'breaches'=>$assessment['breaches'],'warnings'=>$assessment['warnings'],
    'status'=>$assessment['state']->value,'valuation_quality'=>(string)($input['valuation_quality']??'TRUSTED'),
   ];
+  $previous=$this->repository->latestRiskSnapshot($organizationId,$portfolioId);
   $this->repository->saveRiskSnapshot($organizationId,$record);
+  if(($previous['status']??null)!==$record['status'])$this->publish($organizationId,$portfolioId,'capital_markets.portfolio.risk_state_changed.v1',['from'=>$previous['status']??null,'to'=>$record['status'],'snapshot_id'=>$record['snapshot_id']]);
   $this->telemetry->metric($organizationId,'gross_exposure',$gross->value());
   $this->telemetry->metric($organizationId,'net_exposure',$net->value());
   $this->telemetry->metric($organizationId,'portfolio_leverage',$leverage->value());
@@ -436,7 +445,9 @@ final readonly class CapitalRiskService
    }
   }
   $record=['plan_id'=>$plan->id,'portfolio_id'=>$portfolioId,'current_allocation'=>$plan->currentAllocation,'target_allocation'=>$plan->targetAllocation,'actions'=>$plan->actions,'estimated_costs'=>$plan->estimatedCosts->value(),'expected_risk_improvement_pct'=>$plan->expectedRiskImprovementPct,'expected_return_impact'=>$plan->expectedReturnImpact->value(),'status'=>$plan->decision,'reason'=>$plan->reason,'created_at'=>gmdate('Y-m-d H:i:s')];
-  $this->repository->saveRebalancePlan($organizationId,$record);return $record;
+  $this->repository->saveRebalancePlan($organizationId,$record);
+  $this->publish($organizationId,$portfolioId,'capital_markets.rebalance.plan_created.v1',['plan_id'=>$record['plan_id'],'status'=>$record['status'],'reason'=>$record['reason']]);
+  return $record;
  }
 
  public function runStress(string $organizationId,array $input,string $portfolioId='paper-master'):array
@@ -525,6 +536,11 @@ final readonly class CapitalRiskService
   }
   unset($opportunity);
   return $opportunities;
+ }
+
+ private function publish(string $organizationId,string $aggregateId,string $type,array $payload):void
+ {
+  $this->events->publish(new CapitalRiskLifecycleEvent($type,'cmcr_'.bin2hex(random_bytes(12)),new DateTimeImmutable(),$organizationId,$aggregateId,$payload));
  }
 
  private function decimalMap(array $values):array
