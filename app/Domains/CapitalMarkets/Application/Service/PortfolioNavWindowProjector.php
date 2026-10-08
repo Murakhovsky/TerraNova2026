@@ -29,7 +29,20 @@ final class PortfolioNavWindowProjector
             '30d' => $at->modify('-30 days'),
         ];
         $valid = [];
+        // Invalid records are evidence gaps, not silently removable observations.
+        // A snapshot without a usable timestamp may belong to any window.
+        $rejected = [];
         foreach ($snapshots as $snapshot) {
+            $timestamp = null;
+            if (is_array($snapshot) && is_string($snapshot['valued_at'] ?? null)) {
+                try {
+                    if (preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/', $snapshot['valued_at']) === 1) {
+                        $timestamp = (new DateTimeImmutable($snapshot['valued_at'], $utc))->setTimezone($utc);
+                    }
+                } catch (Throwable) {
+                    // Unparseable source time must fail closed.
+                }
+            }
             if (!is_array($snapshot)
                 || ($snapshot['valuation_status'] ?? '') !== 'COMPLETE'
                 || ($snapshot['ledger_reconciled'] ?? false) !== true
@@ -39,14 +52,20 @@ final class PortfolioNavWindowProjector
                 || !is_string($snapshot['equity'] ?? null)
                 || !is_string($snapshot['cumulative_external_net_flow'] ?? null)
                 || !is_string($snapshot['currency'] ?? null)
-                || !is_string($snapshot['valued_at'] ?? null)
-            ) continue;
+                || $timestamp === null
+            ) {
+                $rejected[] = $timestamp;
+                continue;
+            }
             try {
-                $timestamp = (new DateTimeImmutable($snapshot['valued_at'], $utc))->setTimezone($utc);
                 $equity = Decimal::fromString($snapshot['equity']);
                 $flow = Decimal::fromString($snapshot['cumulative_external_net_flow']);
                 $currency = strtoupper(trim($snapshot['currency']));
-                if ($currency === '' || $timestamp > $at || $equity->isNegative()) continue;
+                if ($timestamp > $at) continue;
+                if ($currency === '' || $equity->isNegative()) {
+                    $rejected[] = $timestamp;
+                    continue;
+                }
                 $valid[] = [
                     'timestamp' => $timestamp,
                     'equity' => $equity,
@@ -54,7 +73,7 @@ final class PortfolioNavWindowProjector
                     'currency' => $currency,
                 ];
             } catch (Throwable) {
-                continue;
+                $rejected[] = $timestamp;
             }
         }
         usort($valid, static fn(array $a,array $b):int => $a['timestamp'] <=> $b['timestamp']);
@@ -70,6 +89,16 @@ final class PortfolioNavWindowProjector
                 'to_utc' => $at->format(DATE_ATOM),
                 'scope' => 'PORTFOLIO_NAV_REALIZED_AND_UNREALIZED',
             ];
+            foreach ($rejected as $unverifiedTime) {
+                if ($unverifiedTime === null || ($unverifiedTime >= $start && $unverifiedTime <= $at)) {
+                    $base['reason'] = 'UNVERIFIED_VALUATION_IN_WINDOW';
+                    break;
+                }
+            }
+            if ($base['reason'] === 'UNVERIFIED_VALUATION_IN_WINDOW') {
+                $out[$name] = $base;
+                continue;
+            }
             $opening = null;
             $closing = null;
             foreach ($valid as $row) {
