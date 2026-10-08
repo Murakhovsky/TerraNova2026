@@ -449,12 +449,15 @@ final class FederationPersistenceSmokeCommand extends Command
             $this->goals->finishStep($actor, $runId, 'notify', 'ambiguous', null);
             $this->goals->transitionRun($actor, $runId, 'running', 'ambiguous', 2);
 
-            $evaluation = $this->goals->recordEvaluation(
-                $actor, 'eval-' . bin2hex(random_bytes(8)), $goalId,
-                ['accepted_leads' => ['value' => 5, 'evidence' => ['sales:accepted-leads:5']]],
-            );
-            self::assert($evaluation['result'] === 'satisfied',
-                'Durable Goal result did not preserve verified evidence.');
+            // Unfinished Runs cannot claim an achieved Goal even when a caller
+            // knows the target or supplies an invented proof string.
+            try {
+                $this->goals->recordEvaluation(
+                    $actor, 'eval-' . bin2hex(random_bytes(8)), $runId,
+                );
+                throw new \RuntimeException('Incomplete Run received a Goal evaluation.');
+            } catch (DomainException) {
+            }
             // Cross-Domain *intent* from a real typed Sales Action, derived only
             // from immutable approved Plan input. No Action is submitted to a
             // worker; a future submission adapter must enforce independent
@@ -663,6 +666,23 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $finished['revision'] === 3
                 && ($this->goals->run($actor, $salesRunId)['state'] ?? null) === 'completed',
                 'Cross-domain Federation Run did not finalize on attested Action receipt.');
+            // Action completion is NOT a CRM outcome metric. Unsupported
+            // tasks_created must remain unverifiable, not fabricated success.
+            $unknown = $this->goals->recordEvaluation(
+                $actor, 'eval-' . bin2hex(random_bytes(8)), $salesRunId,
+            );
+            self::assert($unknown['result'] === 'unverifiable'
+                && ($unknown['criteria'][0]['observed'] ?? 'MISSING') === null
+                && $unknown['run_id'] === $salesRunId
+                && $unknown['evidence_policy'] === 'domain_read_model_v1',
+                'A completed Action was misrepresented as a business outcome.');
+            try {
+                $this->goals->recordEvaluation(
+                    $other, 'eval-' . bin2hex(random_bytes(8)), $salesRunId,
+                );
+                throw new \RuntimeException('Foreign tenant evaluated a Goal.');
+            } catch (DomainException) {
+            }
             try {
                 $this->runFinalizer->finalize($actor, $salesRunId, 2);
                 throw new \RuntimeException('Terminal Federation Run was finalized twice.');
