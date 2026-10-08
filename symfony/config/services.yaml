@@ -2014,6 +2014,7 @@ services:
   Domains\CapitalMarkets\Domain\Service\PortfolioRebalanceEngine: ~
   Domains\CapitalMarkets\Domain\Service\LiquidityCapacityEngine: ~
   Domains\CapitalMarkets\Domain\Service\DrawdownEngine: ~
+  Domains\CapitalMarkets\Domain\Service\CapitalStateEngine: ~
   Domains\CapitalMarkets\Application\Service\CapitalRiskService: ~
 
   Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
