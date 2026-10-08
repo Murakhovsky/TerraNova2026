@@ -13,10 +13,10 @@ pages:
       page_purpose: "Canonical Capital Markets Decision Workspace overview. It composes authoritative portfolio, risk, opportunity and market-data read models without frontend finance calculations."
     archetype: domain_dashboard
     patterns:
-      required: [PageHeader, KpiStrip, EntityList]
-      optional: [ContextPanel, AIRecommendations, EmptyState, ErrorState]
+      required: [PageHeader, KpiStrip]
+      optional: [EntityList, Toolbar, EmptyState, ErrorState]
     primary_action: capital_markets.opportunity.view
-    states: [normal, empty, partial, stale, error, permission_denied]
+    states: [normal, loading, empty, error, permission_denied]
     responsive: { desktop: decision_workspace, tablet: stacked_dashboard, mobile: critical_status_stack }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -303,9 +303,9 @@ pages:
       primary_goal: "Find the best current opportunities in portfolio-adjusted priority order."
       page_purpose: "Opportunity Board centered on expected net economics, capital need, risk, TTL and portfolio decision."
     archetype: collection
-    patterns: { required: [PageHeader, KpiStrip, DataGrid], optional: [FilterBar, SavedViews, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, DataGrid], optional: [FilterBar, SavedViews, EmptyState, ErrorState] }
     primary_action: capital_markets.opportunity.view
-    states: [normal, empty, partial, stale, error, permission_denied]
+    states: [normal, empty, error]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -325,7 +325,7 @@ pages:
     archetype: collection
     patterns: { required: [PageHeader, DataGrid], optional: [Toolbar, EmptyState, ErrorState] }
     primary_action: capital_markets.market_data.view
-    states: [normal, empty, partial, stale, error, permission_denied]
+    states: [normal, empty, error]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -343,9 +343,9 @@ pages:
       primary_goal: "Understand one hypothesis, its economic thesis, criteria, experiments and decision trace."
       page_purpose: "Stable deep-link research hypothesis workspace."
     archetype: entity_workspace
-    patterns: { required: [EntityHeader, ContextPanel], optional: [DataGrid, EmptyState, ErrorState] }
+    patterns: { required: [WorkspaceHeader, EntityHeader], optional: [ContextPanel, Timeline, EmptyState, ErrorState] }
     primary_action: capital_markets.research.manage
-    states: [normal, partial, error, permission_denied]
+    states: [normal, error]
     responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -365,7 +365,7 @@ pages:
     archetype: collection
     patterns: { required: [PageHeader, DataGrid], optional: [FilterBar, EmptyState, ErrorState] }
     primary_action: capital_markets.strategy.version.manage
-    states: [normal, empty, partial, error, permission_denied]
+    states: [normal, empty, error]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -383,9 +383,9 @@ pages:
       primary_goal: "Inspect one immutable strategy version, scorecards, backtest/OOS/paper evidence and promotion decisions."
       page_purpose: "Stable deep-link strategy detail workspace."
     archetype: entity_workspace
-    patterns: { required: [EntityHeader, KpiStrip, DataGrid], optional: [Toolbar, EmptyState, ErrorState] }
+    patterns: { required: [WorkspaceHeader, EntityHeader], optional: [KpiStrip, ContextPanel, Timeline, ActionBar, EmptyState, ErrorState] }
     primary_action: capital_markets.strategy.promote
-    states: [normal, partial, error, permission_denied]
+    states: [normal, error]
     responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -403,9 +403,9 @@ pages:
       primary_goal: "See what is executing and whether hedge/execution state needs attention."
       page_purpose: "Execution Cockpit for current paper executions with stable detail links."
     archetype: collection
-    patterns: { required: [PageHeader, DataGrid], optional: [Timeline, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, DataGrid], optional: [Toolbar, EmptyState, ErrorState] }
     primary_action: capital_markets.paper.execute
-    states: [normal, empty, partial, stale, error, permission_denied]
+    states: [normal, empty, error]
     responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -423,9 +423,9 @@ pages:
       primary_goal: "Inspect execution state, orders, fills and recovery evidence."
       page_purpose: "Stable deep-link execution detail with explicit partial/recovery warnings."
     archetype: entity_workspace
-    patterns: { required: [EntityHeader, DataGrid], optional: [Timeline, ErrorState] }
+    patterns: { required: [WorkspaceHeader, EntityHeader], optional: [KpiStrip, Timeline, ActionBar, ErrorState] }
     primary_action: capital_markets.paper.execute
-    states: [normal, partial, error, permission_denied]
+    states: [normal, error]
     responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -443,9 +443,9 @@ pages:
       primary_goal: "Understand whether the system makes money after costs and where performance comes from."
       page_purpose: "Performance Center with canonical attribution, explicit unavailable time windows and edge funnel."
     archetype: domain_dashboard
-    patterns: { required: [PageHeader, KpiStrip, DataGrid], optional: [ContextPanel, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, KpiStrip], optional: [EntityList, Toolbar, EmptyState, ErrorState] }
     primary_action: capital_markets.portfolio.view
-    states: [normal, empty, partial, error, permission_denied]
+    states: [normal, loading, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: critical_status_stack }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -463,9 +463,9 @@ pages:
       primary_goal: "See Capital Markets agents, their authority and recent governed runtime results."
       page_purpose: "Agent Center showing decision summaries and runtime evidence without hidden chain-of-thought."
     archetype: domain_dashboard
-    patterns: { required: [PageHeader, DataGrid], optional: [AIRecommendations, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, KpiStrip], optional: [EntityList, Toolbar, EmptyState, ErrorState] }
     primary_action: capital_markets.research.agent.use
-    states: [normal, empty, partial, error, permission_denied]
+    states: [normal, loading, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: horizontal_scroll }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
@@ -483,9 +483,9 @@ pages:
       primary_goal: "Know whether current market data is trustworthy, fresh and connected."
       page_purpose: "Data Quality Center separating application health from market-data trust and exposing source/market age."
     archetype: domain_dashboard
-    patterns: { required: [PageHeader, KpiStrip, DataGrid], optional: [ContextPanel, EmptyState, ErrorState] }
+    patterns: { required: [PageHeader, KpiStrip], optional: [EntityList, Toolbar, EmptyState, ErrorState] }
     primary_action: capital_markets.market_data.view
-    states: [normal, empty, partial, stale, error, permission_denied]
+    states: [normal, loading, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: horizontal_scroll }
     qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
