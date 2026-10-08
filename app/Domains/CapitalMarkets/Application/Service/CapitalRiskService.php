@@ -225,12 +225,28 @@ final readonly class CapitalRiskService
   $strategies[$strategy]=DecimalMath::add(Decimal::fromString((string)($strategies[$strategy]??'0')),$amount)->value();
   $decision=$after->isNegative()?'REJECT':'ACCEPT';
   $reasons=$after->isNegative()?['INSUFFICIENT_AVAILABLE_CAPITAL']:[];
+  $maximumApproved=$amount;
+  $strategyVersionId=(string)($opportunity['strategy_version_id']??$opportunity['strategy_version']??$opportunity['strategy_id']??'');
+  $simulationOpportunity=array_replace($opportunity,[
+   'opportunity_id'=>$opportunityId,
+   'requested_capital'=>$amount->value(),
+   'strategy_version_id'=>$strategyVersionId,
+  ]);
+  $caps=$this->deriveRiskHardCaps($organizationId,$portfolioId,[$simulationOpportunity]);
+  if(isset($caps[$opportunityId])){
+   $maximumApproved=Decimal::fromString((string)$caps[$opportunityId]);
+   if($maximumApproved->compareTo($amount)<0){
+    $decision=$maximumApproved->isZero()?'REJECT':'ACCEPT_REDUCED_SIZE';
+    $reasons[]='HARD_RISK_HEADROOM';
+   }
+  }
   if(strtoupper((string)($opportunity['valuation_quality']??'TRUSTED'))!=='TRUSTED'){
    $decision='MANUAL_REVIEW';$reasons[]='VALUATION_QUALITY_DEGRADED';
   }
   return [
    'opportunity_id'=>$opportunityId,
    'capital_required'=>$amount->value(),
+   'maximum_approved_capital'=>$maximumApproved->value(),
    'capital_after'=>$after->value(),
    'gross_exposure_change'=>$amount->value(),
    'net_exposure_change'=>(string)($opportunity['net_exposure_change']??$amount->value()),
