@@ -2361,6 +2361,7 @@ services:
     arguments:
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $modules: '@Kernel\Module\ActiveModuleResolver'
+      $federation: '@App\Persistence\Federation\FederatedActionAdmission'
 
   Kernel\Action\Service\ActionExecutor:
     arguments:
