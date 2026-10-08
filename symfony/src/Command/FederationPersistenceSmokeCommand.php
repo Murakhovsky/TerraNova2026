@@ -147,8 +147,8 @@ final class FederationPersistenceSmokeCommand extends Command
                 'plan_json' => json_encode($plan, JSON_THROW_ON_ERROR),
                 'created_at' => self::now(),
             ]);
-            // Fail closed before canonical Action submission: no owning Action handler
-            // currently registered for cos.federation.plan.approval.
+            // Fail closed before Action submission: Federation owns this handler,
+            // but is disabled by default for this synthetic organization.
             try {
                 $this->approvalCoordinator->requestApproval($actor, $planId, 'fed-smoke-correlation');
                 throw new \RuntimeException('Unregistered Federation Action passed activation gate.');

@@ -54,13 +54,15 @@ APPROVAL_REQUIRED. Без виконання цих умов жодного Acti
 людське погодження, щоб AUTO-policy ніколи не дала обхід.
 
 
-**Важлива умова активації:** у поточному DomainModuleRegistry ще немає
-власника й handler для типу cos.federation.plan.approval.
-Наявний ModuleActionExecutionGate правильно блокує такий Action.
-Реальний потік approval → Action handler → approved plan → Workflow можна
-вмикати лише після реєстрації власника, перевірки Policy/Approval authority,
-обробника Action та тестів після збоїв. До того дозволені тільки ізольовані
-тестові записи, які повністю відкочуються.
+**Умова активації:** `FederationDomainModule` тепер зареєстрований
+у DomainModuleRegistry разом з `FederationPlanApproveHandler`, але має
+`enabled_by_default=false`. `ModuleActionExecutionGate` забороняє запуск
+для tenant без явної активації. Навіть після активації
+`FederationPlanApprovalCoordinator` допускає створення дії лише за
+наявності явної політики `APPROVAL_REQUIRED`; обробник ще раз перевіряє
+незмінний план, власника, рішення Policy та незалежне людське погодження.
+Реальні tenant не активувалися в рамках цього PR. Виробниче
+міждоменне виконання залишається за окремим release gate.
 
 Workflow lifecycle projection не доводить досягнення бізнес-цілі.
 Outcome evidence поки є посиланнями на факти, їх потрібно перевіряти
@@ -96,3 +98,27 @@ FederationReadOnlyWorkflowRunner викликає наявний Kernel Workflow
 запис контрольної точки, ізоляцію організацій, заборону повторного запуску
 та відхилення небезпечних типів кроків. Цей тест не активує production
 Action handler для погодження планів Федерації.
+
+## Типізоване виконання між доменами
+
+Перший Domain-owned бізнес-контракт: `sales.create_task`. Він посилається
+на вже існуючий `Sales` Action handler `sales.create_task`, а не вводить
+нового виконавця. `FederationCapabilityBindingResolver` перевіряє власника
+дії, наявність обробника, активність модуля Sales у tenant та дозвіл
+поточного менеджера. Службова дія `federation.plan.approval` не може
+бути кроком бізнес-плану.
+
+Для зовнішньої дії `GoalPlanValidator` вимагає `input`,
+перевіряє його за локальною версіонованою JSON-схемою з обмеженим
+набором підтримуваних правил та вміщує у незмінний `plan_json`.
+Схвалення захищає також SHA-256 саме цього знімка. Некоректні,
+завеликі або незадекларовані параметри відхиляються.
+
+`FederationApprovedActionIntentFactory` ізольовано створює
+`ActionProposal` з уже погодженого кроку і детермінованого
+ключа ідемпотентності. Він перевіряє повторно Action/Policy/Approval,
+активну capability та стан Run/Step, але **не ставить дію в чергу**.
+Окремий безпечний submit/reconciliation adapter ще необхідний:
+він повинен гарантувати незалежне погодження конкретної Sales-дії,
+перевірку дійсної політики перед виконанням і недопущення
+автоматичного повторного зовнішнього ефекту після невизначеного результату.
