@@ -7,3 +7,8 @@ exemptions:
     path: "/property/pdf/{slug}"
     reason: redirect_alias
     description: "Legacy PDF route redirects to the canonical property presentation print mode."
+
+  - route: capital_markets_decision_export
+    path: "/capital-markets/export/{dataset}.{format}"
+    reason: data_export
+    description: "Authenticated CSV/JSON export endpoint; it returns data rather than an HTML page surface."
