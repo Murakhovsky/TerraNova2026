@@ -281,8 +281,9 @@ final readonly class CapitalRiskService
    if($weeklyConsumed->compareTo($weeklyBudget)>=0)$state=PortfolioRiskState::ReduceOnly;
   }
   $opportunities=$this->prepareOpportunities($organizationId,(array)($input['opportunities']??[]),(string)($input['portfolio_mode']??'PAPER'),$portfolioId);
+  $hardCaps=$this->deriveRiskHardCaps($organizationId,$portfolioId,$opportunities,(array)($input['hard_caps']??[]));
 
-  $plan=$this->allocator->allocate($portfolioId,$available,$opportunities,$policy,$state,(array)($input['hard_caps']??[]));
+  $plan=$this->allocator->allocate($portfolioId,$available,$opportunities,$policy,$state,$hardCaps);
   $existingPlan=$this->repository->getAllocationPlan($organizationId,$plan->id);
   if($existingPlan!==null&&(string)($existingPlan['input_fingerprint']??'')===$plan->inputFingerprint){
    return $existingPlan;
@@ -606,6 +607,48 @@ final readonly class CapitalRiskService
   $this->repository->saveStressResult($organizationId,$record);
   $this->telemetry->metric($organizationId,'stress_estimated_loss',$result->estimatedLoss->value(),['scenario'=>$result->scenarioId]);
   return $record;
+ }
+
+ private function deriveRiskHardCaps(string $organizationId,string $portfolioId,array $opportunities,array $explicitCaps=[]):array
+ {
+  $caps=[];
+  foreach($explicitCaps as $opportunityId=>$value)$caps[(string)$opportunityId]=Decimal::fromString((string)$value);
+
+  $risk=$this->repository->latestRiskSnapshot($organizationId,$portfolioId);
+  $headroomRows=(array)($risk['risk_limit_utilization']??[]);
+  if($headroomRows===[])return array_map(static fn(Decimal $value):string=>$value->value(),$caps);
+
+  foreach($opportunities as $opportunity){
+   if(!is_array($opportunity))continue;
+   $opportunityId=(string)($opportunity['opportunity_id']??'');
+   if($opportunityId==='')continue;
+
+   $dimensions=[
+    'gross_exposure'=>null,
+    'venue_exposure'=>(string)($opportunity['venue_id']??$opportunity['buy_venue_id']??$opportunity['venue']??''),
+    'asset_exposure'=>(string)($opportunity['asset']??$opportunity['symbol']??$opportunity['underlying_key']??''),
+    'strategy_exposure'=>(string)($opportunity['strategy_version_id']??$opportunity['strategy_version']??$opportunity['strategy_id']??''),
+    'counterparty_exposure'=>(string)($opportunity['counterparty']??$opportunity['venue_id']??''),
+    'currency_exposure'=>(string)($opportunity['currency']??$opportunity['quote_asset']??''),
+    'chain_exposure'=>(string)($opportunity['chain']??''),
+   ];
+
+   foreach($headroomRows as $key=>$row){
+    if(!is_array($row)||($row['hard']??false)!==true)continue;
+    $metric=(string)($row['metric']??'');
+    if(!array_key_exists($metric,$dimensions))continue;
+
+    $parts=explode(':',(string)$key,3);
+    $scope=$parts[2]??'*';
+    $expectedScope=$dimensions[$metric];
+    if($scope!=='*'&&($expectedScope===null||$expectedScope===''||$scope!==$expectedScope))continue;
+
+    $headroom=Decimal::fromString((string)($row['headroom']??'0'));
+    if(!isset($caps[$opportunityId])||$headroom->compareTo($caps[$opportunityId])<0)$caps[$opportunityId]=$headroom;
+   }
+  }
+
+  return array_map(static fn(Decimal $value):string=>$value->value(),$caps);
  }
 
  private function prepareOpportunities(string $organizationId,array $opportunities,string $portfolioMode,string $portfolioId):array
