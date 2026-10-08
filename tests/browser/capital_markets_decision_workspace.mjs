@@ -133,6 +133,42 @@ try {
       if (!contentType.includes('text/csv')) {
         throw new Error('desktop: performance CSV export has unexpected content type: ' + contentType);
       }
+
+      await page.goto(absolute('/capital-markets/markets'), { waitUntil: 'domcontentloaded' });
+      const firstMarketLink = page.locator('a[href^="/capital-markets/markets/"]').first();
+      if (await firstMarketLink.count()) {
+        const href = await firstMarketLink.getAttribute('href');
+        const response = await page.goto(absolute(href), { waitUntil: 'domcontentloaded' });
+        await assertOk(response, 'desktop: market detail');
+        const text = await page.locator('[data-cm-decision-workspace]').innerText();
+        for (const marker of ['Market Detail', 'Current Market', 'Relationships']) {
+          if (!text.includes(marker)) throw new Error('desktop: market detail missing marker "' + marker + '"');
+        }
+      }
+
+      await page.goto(absolute('/capital-markets/markets?view=relationship'), { waitUntil: 'domcontentloaded' });
+      const firstRelationshipLink = page.locator('a[href^="/capital-markets/relationships/"]').first();
+      if (await firstRelationshipLink.count()) {
+        const href = await firstRelationshipLink.getAttribute('href');
+        const response = await page.goto(absolute(href), { waitUntil: 'domcontentloaded' });
+        await assertOk(response, 'desktop: relationship detail');
+        const text = await page.locator('[data-cm-decision-workspace]').innerText();
+        for (const marker of ['Relationship Detail', 'Relationship Graph', 'Price Comparison']) {
+          if (!text.includes(marker)) throw new Error('desktop: relationship detail missing marker "' + marker + '"');
+        }
+      }
+
+      await page.goto(absolute('/capital-markets/strategies'), { waitUntil: 'domcontentloaded' });
+      const firstStrategyLink = page.locator('a[href^="/capital-markets/strategies/"]').first();
+      if (await firstStrategyLink.count()) {
+        const href = await firstStrategyLink.getAttribute('href');
+        const response = await page.goto(absolute(href), { waitUntil: 'domcontentloaded' });
+        await assertOk(response, 'desktop: strategy detail');
+        const text = await page.locator('[data-cm-decision-workspace]').innerText();
+        if (!text.includes('Version Comparison')) {
+          throw new Error('desktop: strategy detail missing Version Comparison');
+        }
+      }
     }
 
     await page.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' });
