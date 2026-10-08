@@ -239,6 +239,17 @@ final readonly class CapitalRiskService
    elseif($ddState->value==='REDUCED_RISK'&&$state===PortfolioRiskState::Normal)$state=PortfolioRiskState::Restricted;
    elseif($ddState->value==='CAUTION'&&$state===PortfolioRiskState::Normal)$state=PortfolioRiskState::Caution;
   }
+  if(isset($input['daily_loss_budget'],$input['daily_loss'])){
+   $dailyBudget=Decimal::fromString((string)$input['daily_loss_budget']);
+   $dailyConsumed=DecimalMath::abs(Decimal::fromString((string)$input['daily_loss']));
+   if($dailyConsumed->compareTo($dailyBudget)>=0)$state=PortfolioRiskState::ReduceOnly;
+   elseif(!$dailyBudget->isZero()&&DecimalMath::divide($dailyConsumed,$dailyBudget)->compareTo(Decimal::fromString('0.8'))>=0&&$state===PortfolioRiskState::Normal)$state=PortfolioRiskState::Caution;
+  }
+  if(isset($input['weekly_loss_budget'],$input['weekly_loss'])){
+   $weeklyBudget=Decimal::fromString((string)$input['weekly_loss_budget']);
+   $weeklyConsumed=DecimalMath::abs(Decimal::fromString((string)$input['weekly_loss']));
+   if($weeklyConsumed->compareTo($weeklyBudget)>=0)$state=PortfolioRiskState::ReduceOnly;
+  }
   $opportunities=$this->prepareOpportunities($organizationId,(array)($input['opportunities']??[]),(string)($input['portfolio_mode']??'PAPER'));
 
   $plan=$this->allocator->allocate($portfolioId,$available,$opportunities,$policy,$state,(array)($input['hard_caps']??[]));
