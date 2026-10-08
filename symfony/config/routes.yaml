@@ -2638,8 +2638,43 @@ cos_api_engineering_domain_approve:
 # Capital Markets CM-FOUNDATION UI
 capital_markets_overview:
   path: /capital-markets
-  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::overview
-  methods: [GET]
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::overview
+  methods: [GET, HEAD]
+
+capital_markets_opportunities:
+  path: /capital-markets/opportunities
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::opportunities
+  methods: [GET, HEAD]
+
+capital_markets_markets:
+  path: /capital-markets/markets
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::markets
+  methods: [GET, HEAD]
+
+capital_markets_strategies:
+  path: /capital-markets/strategies
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::strategies
+  methods: [GET, HEAD]
+
+capital_markets_execution:
+  path: /capital-markets/execution
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::execution
+  methods: [GET, HEAD]
+
+capital_markets_performance:
+  path: /capital-markets/performance
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::performance
+  methods: [GET, HEAD]
+
+capital_markets_agents:
+  path: /capital-markets/agents
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::agents
+  methods: [GET, HEAD]
+
+capital_markets_data_quality:
+  path: /capital-markets/data-quality
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::dataQuality
+  methods: [GET, HEAD]
 
 capital_markets_instruments:
   path: /capital-markets/instruments
@@ -3066,8 +3101,20 @@ cos_api_v1_capital_markets_research_knowledge:
 
 capital_markets_research_lab:
   path: /capital-markets/research
-  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::researchLab
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::research
   methods: [GET, HEAD]
+
+capital_markets_research_hypothesis:
+  path: /capital-markets/research/hypotheses/{id}
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::hypothesis
+  methods: [GET, HEAD]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+capital_markets_strategy_detail:
+  path: /capital-markets/strategies/{id}
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::strategy
+  methods: [GET, HEAD]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
 
 
 cos_api_v1_capital_markets_research_backtest_run:
@@ -3107,17 +3154,17 @@ cos_api_v1_capital_markets_research_agent_run:
 # Capital Markets Capital Allocation & Risk Pack
 capital_markets_portfolio:
   path: /capital-markets/portfolio
-  controller: App\Web\CapitalMarkets\CapitalRiskPageController::portfolio
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::portfolio
   methods: [GET, HEAD]
 
 capital_markets_risk:
   path: /capital-markets/risk
-  controller: App\Web\CapitalMarkets\CapitalRiskPageController::risk
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::risk
   methods: [GET, HEAD]
 
 capital_markets_allocation:
   path: /capital-markets/allocation
-  controller: App\Web\CapitalMarkets\CapitalRiskPageController::allocation
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::allocation
   methods: [GET, HEAD]
 
 cos_api_v1_capital_markets_portfolio:
@@ -3208,8 +3255,15 @@ cos_api_v1_capital_markets_strategy_allocation_assign:
 
 capital_markets_opportunity_detail:
   path: /capital-markets/opportunities/{id}
-  controller: App\Web\CapitalMarkets\CapitalRiskPageController::opportunity
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::opportunity
   methods: [GET, HEAD]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+capital_markets_execution_detail:
+  path: /capital-markets/execution/{id}
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::executionDetail
+  methods: [GET, HEAD]
+  requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
 
 
 cos_api_v1_capital_markets_portfolio_performance:
