@@ -130,6 +130,24 @@
             <div><small>SIGNALS</small><h2>Top Opportunities</h2></div>
             <a href="/capital-markets/opportunities">Open board</a>
           </div>
+          {% set bestOpportunity = w.top_opportunities|default([])|first %}
+          {% if bestOpportunity %}
+            <article class="cos-card mb-3">
+              <small>BEST CURRENT OPPORTUNITY · portfolio priority {{ bestOpportunity.priority < 999999 ? bestOpportunity.priority : '—' }}</small>
+              <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mt-2">
+                <div>
+                  <strong>{{ bestOpportunity.opportunity }}</strong><br>
+                  <small>{{ bestOpportunity.type }} · {{ bestOpportunity.portfolio_impact }}</small>
+                </div>
+                <div>
+                  Expected Net <strong>{{ bestOpportunity.expected_net is not null ? bestOpportunity.expected_net : '—' }}</strong> ·
+                  Approved <strong>{{ bestOpportunity.approved_capital is not null ? bestOpportunity.approved_capital : '—' }}</strong> ·
+                  Risk <strong>{{ bestOpportunity.risk }}</strong>
+                </div>
+                <a class="btn btn-primary" href="/capital-markets/opportunities/{{ bestOpportunity.id|url_encode }}">Review decision</a>
+              </div>
+            </article>
+          {% endif %}
           <div class="table-responsive">
             <table class="table align-middle">
               <thead><tr><th>Opportunity</th><th>Expected Net</th><th>Capital</th><th>Approved</th><th>Risk</th><th>Portfolio</th><th>Action</th></tr></thead>
