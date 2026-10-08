@@ -332,3 +332,9 @@ Trading Ledger проходить окремий аудит збалансова
 Для формування NAV Snapshot Producer звіряє SHA-256 fingerprints із фактичними наборами cash/liabilities, position marks і зовнішніх flows. Відбитки разом із provenance ID зберігаються в append-only snapshot. Portfolio NAV time-window projector не використовує історичні записи, у яких немає валідного provenance та fingerprints. Це перевірка **цілісності переданих доказів**, а не автоматичне підтвердження їхньої зовнішньої достовірності: інтеграції з фінансовими контрагентами та reconciliation, як і раніше, обов'язкові.
 
 Performance Workspace показує поточні блокери NAV, статус перевірки Ledger, обсяг перевірених позицій та ринкових оцінок. Для mark потрібні LIVE/OPEN, чисті quality flags та актуальна source timestamp не старіша за 30 секунд; неправильні суми, дублікати залишків та некоректні закриті позиції блокують подальшу сертифікацію.
+
+## Оцінка активів для NAV
+
+Розрахунок кандидатної ринкової вартості spot-позиції винесено до PortfolioNavSpotMarkEvidence. Для підтвердженого LONG SPOT або TOKENIZED_EQUITY потрібні коректна кількість, валюта, TRUSTED/LIVE/OPEN BBO, стан без quality flags, SHA-256 fingerprint та ринкова мітка не старша за 30 секунд. Арифметика quantity × mid виконується через DecimalMath. Для SHORT, PERPETUAL, невідомого instrument_kind і контрактів із нестандартним multiplier розрахунок відхиляється: їм потрібна окрема модель маржі, застави та зобов'язань.
+
+Результат має статус CANDIDATE, а прапор mark_reconciled завжди false: він не є підтвердженим NAV. Collector не пише snapshot, доки незалежно не звірено position/venue balances, зовнішні потоки й зобов'язання. У нових токенізованих equity-позиціях зберігається явний instrument_kind, щоб legacy-записи не проходили valuation за припущенням.
