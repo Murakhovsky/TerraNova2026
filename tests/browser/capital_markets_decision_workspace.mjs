@@ -141,8 +141,22 @@ try {
         const response = await page.goto(absolute(href), { waitUntil: 'domcontentloaded' });
         await assertOk(response, 'desktop: market detail');
         const text = await page.locator('[data-cm-decision-workspace]').innerText();
-        for (const marker of ['Market Detail', 'Current Market', 'Relationships']) {
+        for (const marker of ['Market Detail', 'Current Market', 'Historical Market Evidence · 7D', 'Relationships']) {
           if (!text.includes(marker)) throw new Error('desktop: market detail missing marker "' + marker + '"');
+        }
+        const history = page.locator('[aria-label="Historical Market Evidence"]');
+        if (await history.count() !== 1) {
+          throw new Error('desktop: market detail must expose exactly one historical evidence region.');
+        }
+        const historyText = await history.innerText();
+        if (historyText.includes('RESTRICTED') && await history.locator('[data-history-rows]').count() !== 0) {
+          throw new Error('desktop: unauthorized historical event payload must not be rendered in the DOM.');
+        }
+        if (await history.locator('svg[role="img"]').count() > 0) {
+          const selected = history.locator('select[aria-label="Select canonical historical market series"]');
+          if (await selected.count() !== 1) {
+            throw new Error('desktop: historical chart must identify its canonical series.');
+          }
         }
       }
 
