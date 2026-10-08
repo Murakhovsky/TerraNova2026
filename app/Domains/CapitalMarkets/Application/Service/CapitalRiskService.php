@@ -7,7 +7,10 @@ use Domains\CapitalMarkets\Application\Contract\CapitalRiskRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsEventPublisherInterface;
 use Domains\CapitalMarkets\Domain\Event\CapitalRiskLifecycleEvent;
 use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Allocation\AllocationPolicy;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
+use Domains\CapitalMarkets\Domain\Venue\VenueId;
 use Domains\CapitalMarkets\Domain\Portfolio\PortfolioRiskState;
 use Domains\CapitalMarkets\Domain\Observability\CapitalMarketsAlertType;
 use Domains\CapitalMarkets\Domain\Risk\RiskEnvelope;
@@ -53,6 +56,7 @@ final readonly class CapitalRiskService
   private MarginAggregationEngine $margins,
   private LiquidationClusterEngine $liquidationClusters,
   private PortfolioPerformanceAttributionEngine $performanceAttribution,
+  private MarketStateRepositoryInterface $marketStates,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -755,7 +759,25 @@ final readonly class CapitalRiskService
    if(!is_array($opportunity))continue;
    $blocked='';
    $valuation=strtoupper((string)($opportunity['valuation_quality']??'TRUSTED'));
-   if(in_array($valuation,['STALE','UNKNOWN','DEGRADED'],true))$blocked='STALE_OR_UNTRUSTED_VALUATION';
+   $valuationSource='OPPORTUNITY_PAYLOAD';
+
+   $valuationVenue=trim((string)($opportunity['venue_id']??$opportunity['buy_venue_id']??$opportunity['venue']??''));
+   $valuationInstrument=trim((string)($opportunity['instrument_id']??$opportunity['buy_instrument_id']??''));
+   if($valuationVenue!==''&&$valuationInstrument!==''){
+    $marketState=$this->marketStates->get($organizationId,VenueId::fromString($valuationVenue),InstrumentId::fromString($valuationInstrument));
+    if($marketState===null){
+     $valuation='UNAVAILABLE';$valuationSource='MARKET_STATE';
+    }else{
+     $valuation=$marketState->quality->status->value;$valuationSource='MARKET_STATE';
+     $opportunity['market_state_version']=$marketState->stateVersion;
+     $opportunity['market_state_updated_at']=$marketState->updatedAt->format(DATE_ATOM);
+     $opportunity['market_quality_score']=$marketState->quality->score;
+    }
+   }
+
+   $opportunity['valuation_quality']=$valuation;
+   $opportunity['valuation_quality_source']=$valuationSource;
+   if(in_array($valuation,['STALE','UNKNOWN','DEGRADED','UNTRUSTED','UNAVAILABLE'],true))$blocked='STALE_OR_UNTRUSTED_VALUATION';
    $strategyVersionId=trim((string)($opportunity['strategy_version_id']??$opportunity['strategy_version']??''));
    $strategyStatus=strtoupper((string)($opportunity['strategy_status']??''));
    if($strategyVersionId!==''){
