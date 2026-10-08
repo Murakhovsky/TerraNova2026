@@ -9,6 +9,7 @@ use Kernel\Action\ActionProposal;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
+use Platform\Orchestration\Goal\FederationActionSequenceGate;
 
 /**
  * Derives an immutable, tenant-authorized canonical Action intent.
@@ -86,6 +87,18 @@ final readonly class FederationApprovedActionIntentFactory
                 $approvedStep = $step;
             }
         }
+        // Direct callers of the Action intent factory must obey the same
+        // serialized DAG gate as the orchestrator. A pending step elsewhere
+        // is not authority to leap over prerequisites or an active Action.
+        $storedSteps = $this->db->fetchAllAssociative(
+            'SELECT step_id, capability_id, capability_version, side_effect_level, state
+             FROM cos_federation_steps WHERE organization_id = :org AND run_id = :run
+             ORDER BY step_id',
+            ['org' => $org, 'run' => $runId],
+        );
+        (new FederationActionSequenceGate())->assertSelectable(
+            $plan['steps'], $storedSteps, $stepId, 'pending',
+        );
         if (!is_array($approvedStep)
             || ($approvedStep['capability_id'] ?? null) !== $contract->id
             || ($approvedStep['capability_version'] ?? null) !== $contract->version

@@ -10,6 +10,7 @@ use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\FederatedActionAdmissionInterface;
 use Kernel\Module\CanonicalCapabilityCatalog;
 use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
+use Platform\Orchestration\Goal\FederationActionSequenceGate;
 
 /**
  * Last-moment worker admission for external Federation Actions.
@@ -68,7 +69,7 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
         $org = $action->organizationId;
         $stepKey = substr($action->idempotencyKey, 4);
         $row = $this->db->fetchAssociative(
-            'SELECT r.goal_id, r.plan_id, r.state AS run_state,
+            'SELECT r.run_id, r.goal_id, r.plan_id, r.state AS run_state,
                     p.state AS plan_state, p.spec_version, p.plan_json,
                     g.owner_id, g.current_spec_version,
                     s.step_id, s.state AS step_state,
@@ -94,6 +95,20 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
         $plan = json_decode((string) $row['plan_json'], true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($plan) || !is_array($plan['steps'] ?? null)) {
             throw new DomainException('Federation approved Plan JSON is invalid.');
+        }
+        if (!$completedReceipt) {
+            // Independently repeat the DAG admission at the moment the worker
+            // reaches the Domain handler. This prevents bypassing the normal
+            // Orchestrator/Intent Factory via a manually queued canonical Action.
+            $storedSteps = $this->db->fetchAllAssociative(
+                'SELECT step_id, capability_id, capability_version, side_effect_level, state
+                 FROM cos_federation_steps WHERE organization_id = :org AND run_id = :run
+                 ORDER BY step_id',
+                ['org' => $org, 'run' => $row['run_id']],
+            );
+            (new FederationActionSequenceGate())->assertSelectable(
+                $plan['steps'], $storedSteps, (string) $row['step_id'], 'claimed',
+            );
         }
         $step = null;
         foreach ($plan['steps'] as $part) {

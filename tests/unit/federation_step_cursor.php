@@ -112,4 +112,28 @@ $reject($selfEdge, $dagSteps, 'self prerequisite');
 $malformed = $dagPlan;
 $malformed[1]['depends_on'] = 'alpha';
 $reject($malformed, $dagSteps, 'untyped DAG edge');
-echo "Federation serialized DAG cursor passed: legacy order, independent branches, join, cycles and unsafe concurrency.\n";
+// Both Action submission and worker execution use an independent phase gate.
+$gate = new \Platform\Orchestration\Goal\FederationActionSequenceGate();
+$unclaimed = $dagSteps;
+$unclaimed[0]['state'] = 'pending';
+$unclaimed[1]['state'] = 'pending';
+$unclaimed[2]['state'] = 'pending';
+$gate->assertSelectable($dagPlan, $unclaimed, 'alpha', 'pending');
+try {
+    $gate->assertSelectable($dagPlan, $unclaimed, 'join', 'pending');
+    throw new RuntimeException('Action intent gate accepted a skipped DAG join.');
+} catch (DomainException) {
+}
+$unclaimed[2]['state'] = 'claimed';
+$gate->assertSelectable($dagPlan, $unclaimed, 'alpha', 'claimed');
+try {
+    $gate->assertSelectable($dagPlan, $unclaimed, 'beta', 'claimed');
+    throw new RuntimeException('Worker gate accepted a different claimed Action.');
+} catch (DomainException) {
+}
+try {
+    $gate->assertSelectable($dagPlan, $unclaimed, 'alpha', 'pending');
+    throw new RuntimeException('Action intent gate accepted a second external claim.');
+} catch (DomainException) {
+}
+echo "Federation serialized DAG admission passed: immutable order, phases and worker enforcement.\n";
