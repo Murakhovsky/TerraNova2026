@@ -75,7 +75,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
                 json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                 min(30, $timeoutSeconds),
             );
-            $decoded = $this->decode($raw, $status);
+            $decoded = $this->decode($raw, $status, true);
             $decoded = $this->awaitBackgroundResponse(
                 $request,
                 $decoded,
@@ -222,7 +222,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
                     null,
                     $requestTimeoutSeconds,
                 );
-                $decoded = $this->decode($raw, $httpStatus);
+                $decoded = $this->decode($raw, $httpStatus, true);
                 $consecutivePollFailures = 0;
             } catch (LlmProviderException $error) {
                 if (!$error->retryable || ++$consecutivePollFailures >= 3) {
@@ -467,7 +467,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
     }
 
     /** @return array<string,mixed> */
-    private function decode(string $raw, int $status): array
+    private function decode(string $raw, int $status, bool $allowResponseError = false): array
     {
         try {
             $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
@@ -478,7 +478,7 @@ final class OpenAiResponsesStructuredLlmClient implements StructuredLlmClientInt
             throw new LlmProviderException(self::PROVIDER, false, 'OpenAI response must be a JSON object.', $status);
         }
 
-        if (isset($decoded['error'])) {
+        if (!$allowResponseError && isset($decoded['error'])) {
             throw new LlmProviderException(self::PROVIDER, false, $this->providerErrorMessage($raw) ?: 'OpenAI returned an API error.', $status);
         }
 
