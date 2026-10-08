@@ -56,5 +56,14 @@ catch (InvalidArgumentException) {}
 $unsafe=$evidence;$unsafe['cash_by_currency'][0]['amount']='999999';
 try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Tampered cash value was accepted');}
 catch (InvalidArgumentException) {}
+$unsafe=$evidence;
+$unsafe['marked_positions'][]=$unsafe['marked_positions'][0];
+$unsafe['marks_fingerprint']=hash('sha256',json_encode($unsafe['marked_positions'],JSON_THROW_ON_ERROR));
+try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Duplicate position inflated NAV');}
+catch (InvalidArgumentException) {}
+$unsafe=$evidence;$unsafe['marked_positions'][0]['position_id']='';
+$unsafe['marks_fingerprint']=hash('sha256',json_encode($unsafe['marked_positions'],JSON_THROW_ON_ERROR));
+try {$producer->record('org-a','paper-master',$unsafe);throw new RuntimeException('Empty position ID was accepted');}
+catch (InvalidArgumentException) {}
 $assert(count($repository->saved)===1,'Invalid snapshots must never persist.');
 echo "Capital Markets guarded NAV producer acceptance passed.\n";
