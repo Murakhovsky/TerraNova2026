@@ -625,6 +625,16 @@
       <div class="col-lg-4"><section class="cos-panel h-100"><h2>OOS</h2><p>{{ w.oos_runs|default([])|length }} run(s)</p></section></div>
       <div class="col-lg-4"><section class="cos-panel h-100"><h2>Paper</h2><p>{{ w.paper_runs|default([])|length }} run(s)</p></section></div>
     </div>
+    <section class="cos-panel">
+      <h2>Version Comparison</h2>
+      <p>Compare canonical strategy versions side-by-side. Missing evidence remains unavailable rather than being inferred.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Version</th><th>Mode / Stage</th><th>Status</th><th>Logic / Parameters</th><th>Created</th><th>Open</th></tr></thead><tbody>
+      {% for v in w.version_comparison|default([]) %}
+        {% set vid = v.strategy_version_id|default(v.id|default('')) %}
+        <tr><td><strong>{{ v.version|default(v.version_number|default(vid ?: '—')) }}</strong></td><td>{{ v.mode|default(v.stage|default('—')) }}</td><td>{{ v.status|default('—') }}</td><td>{{ v.parameters|default(v.logic|default({})) is iterable ? v.parameters|default(v.logic|default({}))|json_encode : v.parameters|default(v.logic|default('—')) }}</td><td>{{ v.created_at|default('—') }}</td><td>{% if vid %}<a href="/capital-markets/strategies/{{ vid|url_encode }}">Details</a>{% else %}—{% endif %}</td></tr>
+      {% else %}<tr><td colspan="6">No sibling strategy versions are available for comparison.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
     <section class="cos-panel"><h2>Promotion Gate</h2>{% for x in w.promotion_decisions|default([]) %}<p><strong>{{ x.status|default('—') }}</strong> · {{ x.from_stage|default('—') }} → {{ x.to_stage|default('—') }} · {{ x.reason|default('') }}</p>{% else %}<p>No promotion decision yet.</p>{% endfor %}</section>
     <section class="cos-panel">
       <h2>Audit</h2>
