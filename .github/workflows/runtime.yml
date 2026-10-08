@@ -68,6 +68,8 @@ jobs:
           docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Federation tenant-persistence smoke
+        run: docker compose exec -T php php bin/console cos:federation:persistence:smoke
       - name: Engineering AgentRun FK integration
         run: |
           docker compose cp tests/integration/engineering_agent_run_fk.php php:/tmp/engineering_agent_run_fk.php
