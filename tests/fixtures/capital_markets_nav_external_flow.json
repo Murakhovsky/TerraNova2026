@@ -1,0 +1,11 @@
+{
+  "evidence_id": "ci-external-flow-20261007",
+  "kind": "EXTERNAL_CASH_FLOW",
+  "amount": "100.25",
+  "currency": "USD",
+  "provider_id": "ci-independent-statement",
+  "source_reference": "ci-statement:2026-10-07:cash:1",
+  "source_document_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "collected_by": "ci-source-fixture",
+  "effective_at": "2026-10-07T14:00:00Z"
+}
