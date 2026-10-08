@@ -58,4 +58,23 @@ unset($unproven['marks_fingerprint']);
 $missingProvenance=PortfolioNavWindowProjector::project([$rows[1],$unproven],$at);
 $assert($missingProvenance['today']['net_pnl']===null,'NAV records without source fingerprints must never contribute to financial totals.');
 
+$duplicate=PortfolioNavWindowProjector::project([
+    $rows[1],
+    $snapshot('2026-10-08T12:00:00Z','1250','100'),
+    $snapshot('2026-10-08T12:00:00Z','1300','100'),
+],$at);
+$assert($duplicate['today']['status']==='UNAVAILABLE'
+    && $duplicate['today']['net_pnl']===null
+    && $duplicate['today']['reason']==='CONFLICTING_VALUATION_TIMESTAMPS',
+    'Conflicting same-timestamp NAV evidence must never produce an arbitrary profit.');
+
+$intermediateCurrency=PortfolioNavWindowProjector::project([
+    $rows[1],
+    $snapshot('2026-10-08T06:00:00Z','1200','0','EUR'),
+    $snapshot('2026-10-08T12:00:00Z','1250','100'),
+],$at);
+$assert($intermediateCurrency['today']['status']==='UNAVAILABLE'
+    && $intermediateCurrency['today']['reason']==='INTERMEDIATE_NAV_CURRENCY_MISMATCH',
+    'A currency change hidden between boundary NAV valuations must block performance.');
+
 echo "Capital Markets portfolio NAV window projection passed.\n";
