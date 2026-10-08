@@ -378,9 +378,34 @@ final readonly class DecisionWorkspaceReadService
         $page['source_instrument'] = $sourceId === '' ? null : $this->findById($page['instruments'] ?? [], $sourceId, ['id','instrument_id']);
         $page['target_instrument'] = $targetId === '' ? null : $this->findById($page['instruments'] ?? [], $targetId, ['id','instrument_id']);
         $page['relationship_comparison'] = $comparison;
-        $page['comparison_state'] = ($sourceId !== '' && $targetId !== '' && count($comparison) >= 2)
-            ? 'COMPARABLE'
-            : 'NOT COMPARABLE';
+        $sourceRows = array_values(array_filter(
+            $comparison,
+            static fn(array $row): bool => (string)($row['instrument_id'] ?? '') === $sourceId,
+        ));
+        $targetRows = array_values(array_filter(
+            $comparison,
+            static fn(array $row): bool => (string)($row['instrument_id'] ?? '') === $targetId,
+        ));
+        $sourceCurrency = strtoupper(trim((string)($page['source_instrument']['quote_currency'] ?? '')));
+        $targetCurrency = strtoupper(trim((string)($page['target_instrument']['quote_currency'] ?? '')));
+        $trustedQuote = static fn(array $row): bool =>
+            ($row['trust'] ?? '') === 'TRUSTED'
+            && ($row['mode'] ?? '') === 'LIVE'
+            && is_numeric($row['mid'] ?? null)
+            && (float)$row['mid'] > 0
+            && isset($row['age_ms'])
+            && is_numeric($row['age_ms'])
+            && (float)$row['age_ms'] >= 0
+            && (float)$row['age_ms'] <= 30000;
+        $page['comparison_state'] = (
+            $sourceId !== ''
+            && $targetId !== ''
+            && $sourceId !== $targetId
+            && $sourceCurrency !== ''
+            && $sourceCurrency === $targetCurrency
+            && count(array_filter($sourceRows, $trustedQuote)) > 0
+            && count(array_filter($targetRows, $trustedQuote)) > 0
+        ) ? 'COMPARABLE' : 'NOT COMPARABLE';
 
         return $page;
     }
