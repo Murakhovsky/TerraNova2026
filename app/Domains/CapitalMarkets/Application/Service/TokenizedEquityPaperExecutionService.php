@@ -300,7 +300,7 @@ final readonly class TokenizedEquityPaperExecutionService
 
             $payload=[
                 'id'=>$executionId,'opportunity_id'=>$opportunityId,'status'=>'COMPLETED',
-                'executed_at'=>$now->format(DATE_ATOM),'reservation_id'=>$reservationId,
+                'executed_at'=>$now->format(DATE_ATOM),'quote_asset'=>$quoteAsset,'reservation_id'=>$reservationId,
                 'quantity'=>$quantity->value(),'buy_fill'=>$this->fillArray($buyFill),'sell_fill'=>$this->fillArray($sellFill),
                 'detected_edge'=>$detectedEdge->value(),'executable_edge'=>$executableEdge->value(),
                 'realized_edge'=>$realizedEdge->value(),'expected_pnl'=>$opportunity['expected_pnl'],
