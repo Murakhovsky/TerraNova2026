@@ -56,4 +56,12 @@ $correlatedPlan=$engine->allocate('paper-master',Decimal::fromString('50000'),$c
 $correlatedBy=[];foreach($correlatedPlan->allocations as $i)$correlatedBy[$i->opportunityId]=$i;
 $assert($correlatedBy['C-A']->approvedCapital->value()==='10000','Higher-ranked correlated strategy should retain its requested capital.');
 $assert($correlatedBy['C-B']->approvedCapital->value()==='5000','Second highly correlated strategy must be reduced by correlation policy.');
+
+$hedgePriority=[
+ ['opportunity_id'=>'RETURN','strategy_version_id'=>'RET','requested_capital'=>'10000','expected_net_return'=>'0.02','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'10000','risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>90,'portfolio_risk_improvement'=>'0'],
+ ['opportunity_id'=>'HEDGE','strategy_version_id'=>'HEDGE','requested_capital'=>'10000','expected_net_return'=>'0.012','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'10000','risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>90,'portfolio_risk_improvement'=>'1'],
+];
+$hedgePlan=$engine->allocate('paper-master',Decimal::fromString('10000'),$hedgePriority,new AllocationPolicy('hedge','v1','SCORE_BASED','BALANCED',['score_multiplier'=>1],['risk_improvement_weight'=>'1']));
+$assert($hedgePlan->allocations[0]->opportunityId==='HEDGE','Risk-reducing opportunity should outrank higher standalone return when risk-adjusted portfolio score is better.');
+$assert($hedgePlan->allocations[0]->approvedCapital->value()==='10000','Risk-reducing opportunity should receive scarce capital first.');
 echo "Capital Markets Capital Risk golden financial tests passed.\n";
