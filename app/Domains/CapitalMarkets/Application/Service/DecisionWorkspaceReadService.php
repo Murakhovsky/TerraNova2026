@@ -1197,14 +1197,15 @@ final readonly class DecisionWorkspaceReadService
                 'id' => $id,
                 'opportunity' => (string)($opportunity['name'] ?? $opportunity['title'] ?? $opportunity['hypothesis'] ?? $opportunity['type'] ?? 'Opportunity'),
                 'type' => (string)($opportunity['opportunity_type'] ?? $opportunity['type'] ?? $opportunity['hypothesis'] ?? 'UNKNOWN'),
-                'instruments' => $this->strings($opportunity, ['instrument_id','instrument_ids','buy_instrument_id','sell_instrument_id','spot_instrument_id','perpetual_instrument_id']),
-                'venues' => $this->strings($opportunity, ['venue_id','venue_ids','buy_venue_id','sell_venue_id','spot_venue_id','perpetual_venue_id']),
-                'expected_net' => $opportunity['expected_net_pnl'] ?? $opportunity['expected_net'] ?? $opportunity['net_pnl'] ?? null,
-                'expected_return' => $opportunity['expected_return'] ?? $opportunity['net_return'] ?? $opportunity['return'] ?? null,
+                'instruments' => $this->opportunityMarketIds($opportunity, 'instrument'),
+                'venues' => $this->opportunityMarketIds($opportunity, 'venue'),
+                'expected_net' => $opportunity['expected_net_pnl'] ?? $opportunity['economics']['expected_net_pnl'] ?? $opportunity['expected_pnl'] ?? $opportunity['expected_net'] ?? $opportunity['net_pnl'] ?? null,
+                'expected_return' => $opportunity['expected_return'] ?? $opportunity['net_return'] ?? $opportunity['return'] ?? $opportunity['expected_net_edge_bps'] ?? null,
+                'expected_return_unit' => isset($opportunity['expected_return']) || isset($opportunity['net_return']) || isset($opportunity['return']) ? null : (isset($opportunity['expected_net_edge_bps']) ? 'bps' : null),
                 'capital' => $opportunity['required_capital'] ?? $opportunity['capital_required'] ?? $opportunity['expected_capital'] ?? null,
                 'approved_capital' => $allocation['approved_capital'] ?? null,
-                'capacity' => $opportunity['capacity'] ?? $opportunity['maximum_capacity'] ?? null,
-                'risk' => strtoupper((string)($opportunity['risk_level'] ?? $opportunity['risk'] ?? 'UNASSESSED')),
+                'capacity' => $opportunity['capital_capacity'] ?? $opportunity['capacity'] ?? $opportunity['maximum_capacity'] ?? null,
+                'risk' => isset($opportunity['risk_level']) && is_scalar($opportunity['risk_level']) ? strtoupper((string)$opportunity['risk_level']) : (isset($opportunity['risk_score']) ? 'SCORE '.(string)$opportunity['risk_score'] : 'UNASSESSED'),
                 'portfolio_impact' => $this->portfolioImpactLabel($allocation),
                 'ttl' => $opportunity['ttl'] ?? $opportunity['ttl_seconds'] ?? $opportunity['expires_at'] ?? null,
                 'status' => strtoupper((string)($opportunity['status'] ?? 'UNKNOWN')),
@@ -1248,7 +1249,18 @@ final readonly class DecisionWorkspaceReadService
             if($view==='rejected' && !in_array(strtoupper((string)($row['decision']??'')),['REJECT','REBALANCE_FIRST'],true))return false;
             if($view==='short-ttl'){
                 $ttl=$row['ttl']??null;
-                if(!is_numeric($ttl)||(int)$ttl>3600)return false;
+                if (is_numeric($ttl)) {
+                    if ((int)$ttl <= 0 || (int)$ttl > 3600) return false;
+                } elseif (is_string($ttl)) {
+                    try {
+                        $remaining = (new DateTimeImmutable($ttl))->getTimestamp() - time();
+                        if ($remaining <= 0 || $remaining > 3600) return false;
+                    } catch (Throwable) {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
             }
             if($view==='high-capacity' && ($row['capacity']??null)===null)return false;
             if($type!=='' && strtoupper((string)($row['type']??''))!==$type)return false;
@@ -1547,7 +1559,7 @@ final readonly class DecisionWorkspaceReadService
             }
             $utilization = $row['utilization'] ?? null;
             $breached = ($row['breached'] ?? false) === true;
-            $interesting = $breached || (is_numeric($utilization) && (int)$utilization >= 80);
+            $interesting = $breached || (is_scalar($utilization) && $this->decimalAtLeast($utilization, '0.8'));
             if (!$interesting) {
                 continue;
             }
@@ -1713,14 +1725,14 @@ final readonly class DecisionWorkspaceReadService
             'funding' => $opportunity['funding'] ?? $opportunity['funding_pnl'] ?? null,
             'borrow' => $opportunity['borrow'] ?? $opportunity['borrow_cost'] ?? null,
             'other' => $opportunity['other_costs'] ?? null,
-            'expected_net' => $opportunity['expected_net_pnl'] ?? $opportunity['expected_net'] ?? $opportunity['net_pnl'] ?? null,
+            'expected_net' => $opportunity['expected_net_pnl'] ?? $opportunity['economics']['expected_net_pnl'] ?? $opportunity['expected_pnl'] ?? $opportunity['expected_net'] ?? $opportunity['net_pnl'] ?? null,
         ];
     }
 
     /** @param array<string,mixed> $opportunity @param array<string,mixed> $market @return array<string,mixed> */
     private function opportunityEvidence(array $opportunity, array $market): array
     {
-        $instrumentIds = $this->strings($opportunity, ['instrument_id','instrument_ids','buy_instrument_id','sell_instrument_id','spot_instrument_id','perpetual_instrument_id']);
+        $instrumentIds = $this->opportunityMarketIds($opportunity, 'instrument');
         $states = array_values(array_filter(
             $market['states'] ?? [],
             static fn(array $state): bool => in_array((string)($state['instrument_id'] ?? ''), $instrumentIds, true),
@@ -1984,6 +1996,26 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @param array<string,mixed> $source @param list<string> $keys @return list<string> */
+    /** Canonical opportunities may refer to markets via top-level IDs, tokenized candidate or crypto legs.
+     * @param array<string,mixed> $opportunity
+     * @return list<string>
+     */
+    private function opportunityMarketIds(array $opportunity, string $type): array
+    {
+        $keys = $type === 'instrument'
+            ? ['instrument_id','instrument_ids','buy_instrument_id','sell_instrument_id','spot_instrument_id','perpetual_instrument_id']
+            : ['venue_id','venue_ids','buy_venue_id','sell_venue_id','spot_venue_id','perpetual_venue_id'];
+        $ids = $this->strings($opportunity, $keys);
+        $candidate = is_array($opportunity['candidate'] ?? null) ? $opportunity['candidate'] : [];
+        $ids = array_merge($ids, $this->strings($candidate, $keys));
+        foreach ($opportunity['legs'] ?? [] as $leg) {
+            if (is_array($leg)) {
+                $ids = array_merge($ids, $this->strings($leg, [$type.'_id']));
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
     private function strings(array $source, array $keys): array
     {
         $values = [];
