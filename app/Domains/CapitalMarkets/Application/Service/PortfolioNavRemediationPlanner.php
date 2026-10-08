@@ -20,7 +20,8 @@ final class PortfolioNavRemediationPlanner
                 $issues[$issue] = true;
             }
         }
-        if (($preflight['status'] ?? 'UNAVAILABLE') !== 'READY' && $issues === []) {
+        if ($issues === []) {
+            // Even a clean preflight still requires an independent financial sign-off.
             $issues['NAV_ACCOUNTING_CERTIFICATION_REQUIRED'] = true;
         }
         $workstreams = [
@@ -76,8 +77,9 @@ final class PortfolioNavRemediationPlanner
         $venues = array_keys($unmatchedVenues);
         sort($venues, SORT_STRING);
         return [
-            'status'=>$issues === [] && ($preflight['status'] ?? '') === 'READY'
-                ? 'AWAITING_INDEPENDENT_ACCEPTANCE' : 'BLOCKED',
+            'status'=>($preflight['status'] ?? '') === 'READY'
+                && array_keys($issues) === ['NAV_ACCOUNTING_CERTIFICATION_REQUIRED']
+                    ? 'AWAITING_INDEPENDENT_ACCEPTANCE' : 'BLOCKED',
             'tasks'=>$tasks,
             'open_workstreams'=>count($tasks),
             'open_issue_codes'=>count($issues),
