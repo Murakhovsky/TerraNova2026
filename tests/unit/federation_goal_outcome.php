@@ -11,6 +11,8 @@ use Kernel\Module\ModuleContributions;
 use Kernel\Module\ModuleDefinition;
 use Kernel\Module\ModuleManifest;
 use Platform\Orchestration\Goal\GoalSpecification;
+use Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider;
+use Domains\Sales\Application\Contract\SalesHistoricalMetricsReadModelInterface;
 use Platform\Orchestration\Goal\GoalOutcomeEvaluator;
 use Platform\Orchestration\Goal\GoalPlanValidator;
 
@@ -65,4 +67,43 @@ if (($validator->validate($spec, $implicit, ['sales.lead.qualify'])['steps'][1][
     !== ['research']) {
     throw new RuntimeException('Goal Plan validator broke legacy implicit dependency order.');
 }
-echo "Federation GoalSpecification, safe planning, DAG normalization and deterministic outcomes passed.\n";
+// A Domain-owned read model supplies measured facts; Action receipts or
+// free-form user input are not an authoritative business metric.
+$fake = new class implements SalesHistoricalMetricsReadModelInterface {
+    public ?string $tenant = null;
+    public function pipelineMoney(string $organizationId, ?string $pipelineId = null): array { return []; }
+    public function closedOutcomes(string $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to, ?string $pipelineId = null): array {
+        $this->tenant = $organizationId;
+        return ['won' => 3, 'closed' => 5];
+    }
+    public function createdCohortOutcomes(string $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to, ?string $pipelineId = null): array { return ['won' => 0, 'created' => 0]; }
+    public function transitionFlow(string $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to, ?string $pipelineId = null): array { return []; }
+    public function cohortFunnel(string $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to, ?string $pipelineId = null): array { return ['created' => 0, 'stages' => []]; }
+    public function stageDurationSamples(string $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to, ?string $pipelineId = null): array { return []; }
+    public function salesCycleSamples(string $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to, ?string $pipelineId = null): array { return []; }
+    public function openDealRiskFacts(string $organizationId, \DateTimeImmutable $asOf, ?string $pipelineId = null): array { return []; }
+};
+$provider = new SalesClosedOutcomeEvidenceProvider($fake);
+$from = new \DateTimeImmutable('2026-10-01T00:00:00+00:00');
+$to = new \DateTimeImmutable('2026-10-08T00:00:00+00:00');
+$won = $provider->observe('tenant-1', 'sales.won_deals', $from, $to);
+$closed = $provider->observe('tenant-1', 'sales.closed_deals', $from, $to);
+if ($fake->tenant !== 'tenant-1' || $won['value'] !== 3 || $closed['value'] !== 5
+    || $won['source'] !== 'sales.cos_events.closed_outcomes.v1'
+    || count($won['evidence']) !== 1
+    || $won['window_start'] !== $from->format('Y-m-d\TH:i:s.uP')) {
+    throw new RuntimeException('Sales Goal evidence provider lost tenant scope or provenance.');
+}
+$trustedGoal = new GoalSpecification('goal-2', 'tenant-1', 'user-1', 'Win three deals',
+    [['id' => 'sales.won_deals', 'operator' => 'at_least', 'expected' => 3]], []);
+$trusted = $evaluator->evaluate($trustedGoal, ['sales.won_deals' => $won]);
+if ($trusted['result'] !== 'satisfied'
+    || $trusted['criteria'][0]['source'] !== $won['source']) {
+    throw new RuntimeException('Domain evidence was not preserved in Goal evaluation.');
+}
+try {
+    $provider->observe('tenant-1', 'tasks_created', $from, $to);
+    throw new RuntimeException('Unverified CRM task count advertised as trusted.');
+} catch (\DomainException) {
+}
+echo "Federation GoalSpecification, DAG planning and trusted Sales outcomes passed.\n";
