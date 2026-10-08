@@ -42,6 +42,10 @@ final class PortfolioNavFinancialEvidencePolicy
         if ($kind!=='EXTERNAL_CASH_FLOW' && $amount->isNegative()) {
             throw new InvalidArgumentException('Balance and liability evidence cannot be negative.');
         }
+        $liabilityAccount=trim((string)($input['liability_account_id']??''));
+        if ($kind==='LIABILITY_BALANCE' && ($liabilityAccount==='' || strlen($liabilityAccount)>190)) {
+            throw new InvalidArgumentException('Liability statements require a stable liability_account_id.');
+        }
         $venue=trim((string)($input['venue_id']??''));
         if ($kind==='VENUE_BALANCE' && $venue==='') {
             throw new InvalidArgumentException('Venue statement requires venue identity.');
@@ -64,6 +68,7 @@ final class PortfolioNavFinancialEvidencePolicy
             'currency'=>$currency,
             'amount'=>$amount->value(),
             'venue_id'=>$venue?:null,
+            'liability_account_id'=>$kind==='LIABILITY_BALANCE'?$liabilityAccount:null,
             'provider_id'=>$provider,
             'source_reference'=>$reference,
             'source_document_sha256'=>$digest,
