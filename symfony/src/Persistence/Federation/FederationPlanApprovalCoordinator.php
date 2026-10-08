@@ -9,6 +9,10 @@ use Kernel\Action\ActionStatus;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\DomainModuleRegistry;
 use Kernel\Policy\Service\ActionPolicyService;
+use Kernel\Policy\Service\PolicyContextBuilder;
+use Kernel\Policy\Service\PolicyEngine;
+use Kernel\Policy\Contract\PolicyRepositoryInterface;
+use Kernel\Policy\PolicyDecision;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory;
@@ -32,6 +36,9 @@ final readonly class FederationPlanApprovalCoordinator
         private ActiveModuleResolver $modules,
         private GoalPlanApprovalRequestFactory $factory,
         private ActionPolicyService $policies,
+        private PolicyRepositoryInterface $policyRepository,
+        private PolicyContextBuilder $policyContexts,
+        private PolicyEngine $policyEngine,
     ) {}
 
     /** @return array{action_id:string,status:string} */
@@ -74,6 +81,17 @@ final readonly class FederationPlanApprovalCoordinator
         $proposal = $this->factory->create(
             $goal, $planId, (string) $row['plan_json'], $actor->userId()->value(),
         );
+        // Never submit an Action that Policy would queue without human approval.
+        // The eventual handler must still independently re-check the Approval,
+        // because policy could change between preflight and Action submission.
+        $decision = $this->policyEngine->evaluate(
+            $proposal->type,
+            $this->policyContexts->build($org, $proposal),
+            $this->policyRepository->activeFor($org, $proposal->type),
+        );
+        if ($decision->decision !== PolicyDecision::ApprovalRequired) {
+            throw new DomainException('An explicit APPROVAL_REQUIRED tenant policy is mandatory.');
+        }
         $action = $this->policies->submit($org, $proposal, $correlationId);
         if ($action->status !== ActionStatus::PendingApproval) {
             // Never consider AUTO, PROPOSED or REJECTED sufficient to approve the plan.
