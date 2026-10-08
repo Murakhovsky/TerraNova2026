@@ -119,4 +119,15 @@ if (!str_contains($engineeringLlmObserver, 'touchRuntime(')) {
     throw new RuntimeException('Engineering background LLM polling does not refresh workflow heartbeat.');
 }
 
+$repositoryGateway = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Repository/GitHubEngineeringRepositoryGateway.php');
+if (!str_contains($repositoryGateway, 'existingPathsAtRevision')
+    || !str_contains($repositoryGateway, '/git/trees/')) {
+    throw new RuntimeException('Engineering repository path existence lookup is not bounded to a tree query.');
+}
+if (!str_contains($architectStage, 'repository.verify_documentation_targets')
+    || !str_contains($architectStage, 'existingPathsAtRevision')
+    || !str_contains($architectStage, 'touchRuntime($workflowId)')) {
+    throw new RuntimeException('Architect post-LLM documentation verification can still become an unobservable stall.');
+}
+
 echo "Engineering runtime truth and observability contract passed.\n";

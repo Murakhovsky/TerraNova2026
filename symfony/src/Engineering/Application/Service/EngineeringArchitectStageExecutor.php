@@ -282,6 +282,9 @@ final readonly class EngineeringArchitectStageExecutor
                     : [],
                 $repositoryFiles,
                 $repositoryRevision,
+                $featureId,
+                $workflowId,
+                $correlationId,
             );
 
             $structured = $this->enrichOutput(
@@ -491,8 +494,14 @@ final readonly class EngineeringArchitectStageExecutor
      * @param list<array<string,mixed>> $changes
      * @param list<array{path:string,content:string,complete:bool,size:int,sha256:string}> $inputEvidence
      */
-    private function assertDocumentationEvidence(array $changes, array $inputEvidence, string $revision): void
-    {
+    private function assertDocumentationEvidence(
+        array $changes,
+        array $inputEvidence,
+        string $revision,
+        string $featureId,
+        string $workflowId,
+        string $correlationId,
+    ): void {
         if ($changes === []) return;
 
         $seenByArchitect = [];
@@ -508,27 +517,40 @@ final readonly class EngineeringArchitectStageExecutor
             $path = trim((string) ($change['path'] ?? ''));
             if ($path !== '') $paths[] = $path;
         }
+        $paths = array_values(array_unique($paths));
 
-        $currentTargets = [];
-        foreach ($this->repository->filesAtRevision(array_values(array_unique($paths)), $revision) as $file) {
-            if (isset($file['path']) && is_string($file['path'])) {
-                $currentTargets[$file['path']] = $file;
-            }
-        }
+        $this->workflows->touchRuntime($workflowId);
+        $existingPaths = $this->journal->around(
+            $featureId,
+            $workflowId,
+            'REPOSITORY',
+            'repository.verify_documentation_targets',
+            'Verify Architect documentation targets at repository revision',
+            $correlationId,
+            fn (): array => $this->repository->existingPathsAtRevision($paths, $revision),
+            details: static fn (array $existing): array => [
+                'revision' => $revision,
+                'requested_paths' => $paths,
+                'existing_paths' => $existing,
+            ],
+        );
+        $this->workflows->touchRuntime($workflowId);
+
+        $existing = array_fill_keys($existingPaths, true);
 
         foreach ($changes as $change) {
             $path = trim((string) ($change['path'] ?? ''));
             $operation = (string) ($change['operation'] ?? '');
 
             if ($operation === 'CREATE') {
-                if (isset($currentTargets[$path])) {
+                if (isset($existing[$path])) {
                     throw new RuntimeException('Principal Architect cannot CREATE existing documentation file: '.$path);
                 }
                 continue;
             }
 
             if ($operation === 'UPDATE') {
-                if (!isset($currentTargets[$path])) {
+                if (!isset($existing[$path])) {
                     throw new RuntimeException('Principal Architect cannot UPDATE missing documentation file: '.$path);
                 }
                 if (!isset($seenByArchitect[$path]) || ($seenByArchitect[$path]['complete'] ?? false) !== true) {
