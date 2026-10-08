@@ -28,8 +28,6 @@ final readonly class FederationReadOnlyWorkflowRunner
         private FederationWorkflowPreflight $preflight,
         private FederationGoalStore $goals,
         private GoalWorkflowProjection $projection,
-        private AgentRuntimeInterface $agents,
-        private ToolRuntimeInterface $tools,
         private WorkflowStateManagerInterface $states,
     ) {}
 
@@ -60,6 +58,22 @@ final readonly class FederationReadOnlyWorkflowRunner
         $this->goals->transitionRun($actor, $runId, 'pending', 'running', 1);
         $this->goals->claimStep($actor, $runId, $step->id);
 
+        // Defense in depth: even a future graph-validation regression cannot
+        // accidentally call production LLM/Tool runtimes from this executor.
+        $agents = new class implements AgentRuntimeInterface {
+            public function execute(
+                \Kernel\Agent\Model\AgentInstance $instance,
+                \Kernel\Agent\Model\AgentContext $context,
+            ): \Kernel\Agent\Model\AgentRun {
+                throw new DomainException('Agent dispatch is disabled in read-only Federation.');
+            }
+        };
+        $tools = new class implements ToolRuntimeInterface {
+            public function execute(\Kernel\Tool\Model\ToolInvocation $invocation): \Kernel\Tool\Model\ToolExecution
+            {
+                throw new DomainException('Tool dispatch is disabled in read-only Federation.');
+            }
+        };
         $systems = new class implements SystemStepHandlerInterface {
             public function execute(SystemStep $step, array $payload, WorkflowExecution $execution): array
             {
@@ -67,7 +81,7 @@ final readonly class FederationReadOnlyWorkflowRunner
             }
         };
         $engine = new WorkflowEngine(
-            $this->agents, $this->tools, new PathConditionEvaluator(), $systems, $this->states,
+            $agents, $tools, new PathConditionEvaluator(), $systems, $this->states,
         );
         $execution = $engine->start($workflow, [
             'goal_id' => $goal->goalId,
