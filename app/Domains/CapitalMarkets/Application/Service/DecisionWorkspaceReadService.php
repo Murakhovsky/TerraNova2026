@@ -711,7 +711,7 @@ final readonly class DecisionWorkspaceReadService
         $minReturn=trim((string)($filters['min_return']??''));
         $maxCapital=trim((string)($filters['max_capital']??''));
 
-        return array_values(array_filter($rows, function(array $row) use(
+        $filtered = array_values(array_filter($rows, function(array $row) use(
             $view,$type,$risk,$status,$decision,$strategy,$instrument,$venue,$minNet,$minReturn,$maxCapital
         ):bool{
             if($view==='low-risk' && !in_array(strtoupper((string)($row['risk']??'')),['LOW','MINIMAL'],true))return false;
@@ -733,6 +733,29 @@ final readonly class DecisionWorkspaceReadService
             if($maxCapital!=='' && !$this->decimalAtMost($row['capital']??null,$maxCapital))return false;
             return true;
         }));
+
+        if ($view === 'high-capacity') {
+            usort($filtered, function(array $left, array $right): int {
+                return $this->decimalCompareNullable($right['capacity'] ?? null, $left['capacity'] ?? null);
+            });
+        }
+
+        return $filtered;
+    }
+
+    private function decimalCompareNullable(mixed $left, mixed $right): int
+    {
+        if (!is_scalar($left) || !is_numeric((string)$left)) {
+            return (!is_scalar($right) || !is_numeric((string)$right)) ? 0 : -1;
+        }
+        if (!is_scalar($right) || !is_numeric((string)$right)) {
+            return 1;
+        }
+        try {
+            return Decimal::fromString((string)$left)->compareTo(Decimal::fromString((string)$right));
+        } catch (Throwable) {
+            return 0;
+        }
     }
 
     private function decimalAtLeast(mixed $value,string $minimum):bool
