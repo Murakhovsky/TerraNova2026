@@ -2751,6 +2751,8 @@ services:
     arguments:
       $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'
 
+  Platform\Orchestration\Goal\GoalOutcomeEvaluator: ~
+
   Kernel\Module\EffectiveModuleContext:
     arguments:
       $modules: '@Kernel\Module\ActiveModuleResolver'
