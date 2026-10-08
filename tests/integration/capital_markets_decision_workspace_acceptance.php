@@ -23,6 +23,7 @@ foreach([
     '/capital-markets/research/hypotheses/{id}',
     '/capital-markets/strategies/{id}',
     '/capital-markets/execution/{id}',
+    '/capital-markets/export/{dataset}.{format}',
 ] as $path){
     $assert(str_contains($routes,$path),'Decision Workspace route missing: '.$path);
 }
@@ -95,7 +96,7 @@ foreach([
     'Market Explorer',
     'Research Pipeline',
     'Strategy Lab',
-    'Portfolio Command Center',
+    'Capital Map',
     'Allocation Workspace',
     'Execution Cockpit',
     'Risk Center',
@@ -129,6 +130,31 @@ foreach([
 ] as $needle){
     $assert(str_contains($provider,$needle),'Primary navigation contract missing: '.$needle);
 }
+
+$controller=(string)file_get_contents($root.'/symfony/src/Web/CapitalMarkets/DecisionWorkspacePageController.php');
+foreach([
+    'public function export(',
+    "'opportunities'",
+    "'research-results'",
+    "'executions'",
+    "'performance'",
+    "fputcsv(",
+    "new JsonResponse(",
+] as $needle){
+    $assert(str_contains($controller,$needle),'Decision Workspace export contract missing: '.$needle);
+}
+
+$preferences=(string)file_get_contents($root.'/symfony/assets/controllers/capital_markets_workspace_controller.js');
+foreach([
+    'cos.capital_markets.table_density',
+    'cos.capital_markets.columns.',
+    'localStorage',
+    'toggleColumn',
+    'changeDensity',
+] as $needle){
+    $assert(str_contains($preferences,$needle),'Decision Workspace presentation preference contract missing: '.$needle);
+}
+$assert(!preg_match('/\bprice\s*[+\-*\/]\s*|\bpnl\s*[+\-*\/]\s*|\brisk\s*[+\-*\/]\s*/i',$preferences),'Presentation controller must not calculate finance.');
 
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach([
