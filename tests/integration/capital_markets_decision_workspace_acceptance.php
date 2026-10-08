@@ -78,10 +78,29 @@ foreach([
     "'RESEARCH'",
     "'STALE'",
     "'UNAVAILABLE'",
+    "'economics_status'",
+    "'economics_coverage'",
+    "'costs_by_type'",
 ] as $needle){
     $assert(str_contains($readModel,$needle),'Decision Workspace read-model contract missing: '.$needle);
 }
 $assert(!preg_match('/\bfloat\b|\(float\)|floatval\s*\(/i',$readModel),'Decision Workspace read model must not introduce floating-point finance semantics.');
+
+$capitalRisk=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/CapitalRiskService.php');
+foreach([
+    'realizedExecutionEconomics',
+    "'realized_gross_pnl'",
+    "'realized_costs'",
+    "'realized_net_pnl'",
+    "'economics_coverage'",
+    "'economics_status'",
+    "'costs_by_type'",
+    "['COMPLETED','COMPLETED_COMPENSATED','CLOSED']",
+    'Slippage is already embedded in executable fill prices',
+] as $needle){
+    $assert(str_contains($capitalRisk,$needle),'Capital Markets canonical performance economics contract missing: '.$needle);
+}
+$assert(!preg_match('/\(float\)|floatval\s*\(/i',$capitalRisk),'Capital Markets performance economics must not use floating-point money arithmetic.');
 
 $template=(string)file_get_contents($root.'/symfony/templates/experience/capital_markets/decision_workspace.html.twig');
 foreach([
@@ -107,6 +126,12 @@ foreach([
     'Execution Groups',
     'Limits / Headroom',
     'P&L Attribution ·',
+    'Gross → Costs → Net',
+    'Realized Gross P&L',
+    'Realized Costs',
+    'Realized Net P&L',
+    'Economics Coverage',
+    'Cost Breakdown',
     'Agent Authority',
     'Market Quality',
     'PARTIAL DATA',
