@@ -5,6 +5,7 @@ status: active
 updated: 2026-10-06
 kind: domain
 contract: domain-v1
+version: 0.9.0
 ---
 
 # Огляд домену Capital Markets
@@ -33,14 +34,14 @@ MarketState / ReferenceMarketState
 
 ```text
 id: capital_markets
-version: 0.8.0
-runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto H4/H5/H6 + Research & Strategy Lab
+version: 0.9.0
+runtime: Foundation + Market Intelligence + Tokenized Equity H1/H2 + Crypto H4/H5/H6 + Research & Strategy Lab + Capital Allocation & Risk
 persistence: tenant-scoped structural + raw/canonical/current-state data
 process: capital-markets.market-data-to-trusted-state
 data modes: LIVE / DELAYED / HISTORICAL / REPLAY
 provider adapters: Bybit Spot REST + Massive Stocks REST
 provider polling: CLI + operator API/UI
-operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities + /capital-markets/crypto-spot-perpetual + /capital-markets/research
+operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities + /capital-markets/crypto-spot-perpetual + /capital-markets/research + /capital-markets/portfolio + /capital-markets/risk + /capital-markets/allocation
 streaming: disabled / next wave
 execution: guarded H1/H2 paper; H1 requires explicit executable hedge venue; live disabled
 ```
