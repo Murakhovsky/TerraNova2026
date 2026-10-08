@@ -7,6 +7,7 @@ use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationSequentialOrchestrator;
 use App\Security\SessionCsrfValidator;
 use DomainException;
+use LogicException;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;

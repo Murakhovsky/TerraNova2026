@@ -17,18 +17,18 @@ cos_federation_goals_mode:
 
 # COS Federation: manager-triggered sequential orchestration, CSRF protected.
 cos_federation_run_start:
-  path: /workspace/goals/runs/start
+  path: /api/v1/federation/runs/start
   controller: App\Web\Federation\FederationRunController::start
   methods: [POST]
 
 cos_federation_run_status:
-  path: /workspace/goals/runs/{runId}
+  path: /api/v1/federation/runs/{runId}
   controller: App\Web\Federation\FederationRunController::status
   methods: [GET, HEAD]
   requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
 
 cos_federation_run_advance:
-  path: /workspace/goals/runs/{runId}/advance
+  path: /api/v1/federation/runs/{runId}/advance
   controller: App\Web\Federation\FederationRunController::advance
   methods: [POST]
   requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
