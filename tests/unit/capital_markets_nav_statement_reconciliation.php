@@ -14,6 +14,7 @@ $paper=[
 ];
 $observation=static fn(string $kind,string $id,string $value,?string $venue=null,string $currency='USD'):array => [
     'kind'=>$kind,'evidence_id'=>$id,'amount'=>$value,'venue_id'=>$venue,
+    'liability_account_id'=>$kind==='LIABILITY_BALANCE'?'loan-account-1':null,
     'currency'=>$currency,'status'=>'PENDING_RECONCILIATION','reconciled'=>false,
     'source_key_sha256'=>hash('sha256','source:'.$id),
     'source_document_sha256'=>hash('sha256','file:'.$id),
@@ -61,6 +62,25 @@ $assert($historyPreview['historical_venue_statements_ignored']===1,
     'The reconciler must report ignored historical venue statement count.');
 $assert(!in_array('DUPLICATE_VENUE_STATEMENT',$historyPreview['issues'],true),
     'Different-time venue statements must not be a duplicate-current-statement error.');
+
+$historicalDebt=$source;
+$oldDebt=$observation('LIABILITY_BALANCE','loan-old','999');
+$oldDebt['effective_at']=(new DateTimeImmutable('now',new DateTimeZone('UTC')))->modify('-5 minutes')->format(DATE_ATOM);
+$historicalDebt[]=$oldDebt;
+$debtPreview=PortfolioNavStatementReconciliationPreview::inspect($paper,$historicalDebt,'USD');
+$assert($debtPreview['candidate_liability_balance']==='0',
+    'Earlier liability snapshots must not be added to a current loan balance.');
+$assert($debtPreview['historical_liability_statements_ignored']===1,
+    'Historical liability statement selection must be auditable.');
+$assert(!in_array('DUPLICATE_LIABILITY_STATEMENT',$debtPreview['issues'],true),
+    'Different-time liability statements are history, not conflicting simultaneous balances.');
+
+$duplicateDebt=$source;
+$duplicateDebt[]=$observation('LIABILITY_BALANCE','loan-same-time','99');
+$dupeDebt=PortfolioNavStatementReconciliationPreview::inspect($paper,$duplicateDebt,'USD');
+$assert($dupeDebt['candidate_liability_balance']===null
+    && in_array('DUPLICATE_LIABILITY_STATEMENT',$dupeDebt['issues'],true),
+    'Tied latest loan statements for one account must block liability certification.');
 
 $duplicateReference=$source;$duplicateReference[]=$source[2];
 $dupe=PortfolioNavStatementReconciliationPreview::inspect($paper,$duplicateReference,'USD');
