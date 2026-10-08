@@ -1,0 +1,5 @@
+CI ONLY - synthetic independent cash statement
+Date: 2026-10-07
+Currency: USD
+Signed flow: 100.25
+Reference: ci-statement:2026-10-07:cash:1
