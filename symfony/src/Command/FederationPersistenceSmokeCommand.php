@@ -6,6 +6,7 @@ namespace App\Command;
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
+use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
 use App\Web\Experience\Adaptive\ExperienceMode;
 use Doctrine\DBAL\Connection;
 use DomainException;
@@ -28,6 +29,7 @@ use Kernel\Workflow\Model\WorkflowInstance;
 use Kernel\Workflow\Model\Assignment;
 use Kernel\Workflow\Model\AssignmentType;
 use Kernel\Workflow\Model\Step\HumanStep;
+use Kernel\Workflow\Model\Step\DecisionStep;
 use Twig\Environment;
 
 #[AsCommand(
@@ -42,6 +44,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
         private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
+        private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
     ) {
         parent::__construct();
@@ -191,6 +194,46 @@ final class FederationPersistenceSmokeCommand extends Command
             try {
                 $this->workflowPreflight->inspect($other, $safePlanId, $safeWorkflow, $approvalActionId);
                 throw new \RuntimeException('Workflow preflight leaked plan across tenants.');
+            } catch (DomainException) {
+            }
+
+            // Fully run the canonical engine for a decision step that cannot mutate a domain.
+            $decisionWorkflow = new WorkflowInstance(
+                'decision-workflow', OrganizationId::fromString($org),
+                new Workflow('goal.inert.decision', new WorkflowDefinition(
+                    'goal.inert.decision', '1.0.0', 'Inert decision', 'review',
+                    [new DecisionStep('review', 'Read-only evaluation')],
+                )),
+            );
+            $decisionRunId = 'run-' . bin2hex(random_bytes(8));
+            $decisionResult = $this->readOnlyWorkflow->run(
+                $actor, $decisionRunId, $safePlanId, $decisionWorkflow, $approvalActionId,
+            );
+            $persistedDecision = $this->goals->run($actor, $decisionRunId);
+            self::assert(
+                $decisionResult['run_state'] === 'completed'
+                && $persistedDecision !== null && $persistedDecision['state'] === 'completed'
+                && (int) $persistedDecision['revision'] === 3
+                && $persistedDecision['checkpoint_id'] === $decisionResult['workflow_id']
+                && ($persistedDecision['steps'][0]['state'] ?? null) === 'completed',
+                'Canonical read-only Workflow failed to persist its Federation checkpoint.',
+            );
+            self::assert($this->goals->run($other, $decisionRunId) === null,
+                'Read-only Workflow result leaked across tenant.');
+            try {
+                $this->readOnlyWorkflow->run(
+                    $actor, 'run-' . bin2hex(random_bytes(8)),
+                    $safePlanId, $decisionWorkflow, $approvalActionId,
+                );
+                throw new \RuntimeException('Read-only Workflow plan replay was accepted.');
+            } catch (DomainException) {
+            }
+            try {
+                $this->readOnlyWorkflow->run(
+                    $actor, 'run-' . bin2hex(random_bytes(8)),
+                    $safePlanId, $safeWorkflow, $approvalActionId,
+                );
+                throw new \RuntimeException('Human Workflow passed inert-execution gate.');
             } catch (DomainException) {
             }
 
