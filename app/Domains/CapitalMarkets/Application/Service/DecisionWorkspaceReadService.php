@@ -1485,6 +1485,17 @@ final readonly class DecisionWorkspaceReadService
         if ($execution !== []) {
             $executionId = (string)($execution['execution_id'] ?? $execution['id'] ?? '');
             $trace[] = ['type'=>'Execution','label'=>$executionId === '' ? (string)($execution['status'] ?? 'EXECUTION') : $executionId,'href'=>$executionId === '' ? '/capital-markets/execution' : '/capital-markets/execution/'.rawurlencode($executionId)];
+
+            $performance = is_array($execution['performance'] ?? null) ? $execution['performance'] : [];
+            $netPnl = $performance['net_pnl'] ?? $execution['realized_pnl'] ?? $execution['pnl'] ?? null;
+            if ($netPnl !== null && is_scalar($netPnl) && trim((string)$netPnl) !== '') {
+                $trace[] = [
+                    'type' => 'P&L',
+                    'label' => 'Net P&L',
+                    'value' => (string)$netPnl,
+                    'href' => '/capital-markets/performance',
+                ];
+            }
         }
         return $trace;
     }
