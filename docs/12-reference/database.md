@@ -73,6 +73,15 @@ generated: true
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_strategy_promotion_decisions` |
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_strategy_scorecards` |
 | `capital_markets` | `app/migrations/20261006_000133_capital_markets_research_lab.sql` | `tn_capital_market_strategy_versions` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_allocation_plans` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_allocation_policies` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_correlation_snapshots` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_exposure_snapshots` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_portfolio_risk_snapshots` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_rebalance_plans` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_risk_envelopes` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_strategy_allocations` |
+| `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_stress_results` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
