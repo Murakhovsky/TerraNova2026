@@ -494,8 +494,14 @@ final readonly class CapitalRiskService
    $positions[]=[
     'position_id'=>(string)($p['position_id']??''),
     'asset'=>(string)($payload['asset']??$payload['symbol']??''),
-    'venue'=>(string)($p['venue_id']??''),
-    'notional'=>DecimalMath::multiply($q,$m)->value()
+    'venue'=>(string)($p['venue_id']??$payload['venue_id']??''),
+    'side'=>(string)($payload['side']??$p['side']??'LONG'),
+    'notional'=>DecimalMath::multiply($q,$m)->value(),
+    'initial_margin'=>(string)($payload['initial_margin']??'0'),
+    'maintenance_margin'=>(string)($payload['maintenance_margin']??'0'),
+    'available_margin'=>(string)($payload['available_margin']??'0'),
+    'collateral_asset'=>(string)($payload['collateral_asset']??$payload['collateral']??''),
+    'collateral_value'=>(string)($payload['collateral_value']??'0'),
    ];
   }
   $scenario=new PortfolioStressScenario((string)($input['scenario_id']??'custom'),(string)($input['name']??'Custom scenario'),(array)($input['shocks']??[]));
