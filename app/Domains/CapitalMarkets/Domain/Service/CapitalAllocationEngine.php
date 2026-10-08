@@ -27,6 +27,12 @@ final class CapitalAllocationEngine {
     ?$this->minimum($requested,$capacity,$remaining,$strategyRemaining[$strategyId])
     :$this->minimum($requested,$capacity,$remaining);
    $decision='ACCEPT';$reason='Eligible under deterministic score and constraints.';
+
+   $allocationMultiplier=$this->allocationMultiplier($policy,$riskState);
+   if($allocationMultiplier->compareTo(Decimal::fromString('1'))<0&&!$approved->isZero()){
+    $approved=DecimalMath::multiply($approved,$allocationMultiplier);
+    $reason='Reduced by portfolio mode / risk-state policy.';
+   }
    $blockedReason=trim((string)($o['blocked_reason']??''));
    if($blockedReason!==''){$approved=Decimal::fromString('0');$decision='REJECT';$reason=$blockedReason;}
    elseif(!$riskState->allowsNewRisk()){$approved=Decimal::fromString('0');$decision='REJECT';$reason='Portfolio state '.$riskState->value.' blocks new risk.';}
@@ -83,5 +89,21 @@ final class CapitalAllocationEngine {
  {
   if($value->isNegative())return Decimal::fromString('0');
   $one=Decimal::fromString('1');return $value->compareTo($one)>0?$one:$value;
+ }
+
+ private function allocationMultiplier(AllocationPolicy $policy,PortfolioRiskState $state):Decimal
+ {
+  $modeMultiplier=match($policy->mode){
+   'CONSERVATIVE'=>Decimal::fromString((string)($policy->constraints['conservative_multiplier']??'0.70')),
+   'AGGRESSIVE'=>Decimal::fromString((string)($policy->constraints['aggressive_multiplier']??'1')),
+   default=>Decimal::fromString((string)($policy->constraints['balanced_multiplier']??'1')),
+  };
+  $stateMultiplier=match($state){
+   PortfolioRiskState::Caution=>Decimal::fromString((string)($policy->constraints['caution_multiplier']??'0.70')),
+   PortfolioRiskState::Restricted=>Decimal::fromString((string)($policy->constraints['restricted_multiplier']??'0.35')),
+   PortfolioRiskState::ReduceOnly,PortfolioRiskState::Halted,PortfolioRiskState::Emergency=>Decimal::fromString('0'),
+   default=>Decimal::fromString('1'),
+  };
+  return $this->unit(DecimalMath::multiply($modeMultiplier,$stateMultiplier));
  }
 }
