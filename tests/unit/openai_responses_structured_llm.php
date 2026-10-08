@@ -95,6 +95,46 @@ if (($loosePayload['text']['format']['strict'] ?? null) !== false) {
     throw new RuntimeException('OpenAI adapter must downgrade non-strict-compatible schemas instead of sending invalid strict Structured Outputs.');
 }
 
+$architectCapturedTimeout = null;
+$architectClient = new OpenAiResponsesStructuredLlmClient(
+    token: 'test-token',
+    model: 'gpt-test',
+    transport: static function (string $endpoint, string $token, string $body, int $timeout) use (&$architectCapturedTimeout): array {
+        $architectCapturedTimeout = $timeout;
+        return [200, json_encode([
+            'model' => 'gpt-test-2026',
+            'usage' => ['input_tokens' => 12, 'output_tokens' => 7],
+            'output' => [[
+                'type' => 'message',
+                'content' => [[
+                    'type' => 'output_text',
+                    'text' => '{"decision":"PASS"}',
+                ]],
+            ]],
+        ], JSON_THROW_ON_ERROR)];
+    },
+);
+$architectRequest = new StructuredLlmRequest(
+    systemPrompt: 'Return only the requested structured result.',
+    userPrompt: 'Design the architecture.',
+    context: ['feature_id' => 'COS-ARCH'],
+    responseSchema: [
+        'type' => 'object',
+        'properties' => [
+            'decision' => ['type' => 'string', 'enum' => ['PASS','FAIL']],
+        ],
+        'required' => ['decision'],
+        'additionalProperties' => false,
+    ],
+    model: 'gpt-request-model',
+    organizationId: 'default',
+    useCase: 'agent.principal_architect',
+);
+$architectClient->complete($architectRequest);
+if ($architectCapturedTimeout !== 240) {
+    throw new RuntimeException('Principal Architect must receive the extended 240 second OpenAI timeout budget.');
+}
+
 $retryClient = new OpenAiResponsesStructuredLlmClient(
     token: 'test-token',
     model: 'gpt-test',
