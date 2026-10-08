@@ -8,6 +8,7 @@ use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationApprovedActionIntentFactory;
+use App\Persistence\Federation\FederatedActionAdmission;
 use App\Persistence\Federation\FederationPlanApproveHandler;
 use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
 use App\Web\Experience\Adaptive\ExperienceMode;
@@ -51,6 +52,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
         private readonly FederationCapabilityBindingResolver $capabilityBindings,
         private readonly FederationApprovedActionIntentFactory $actionIntents,
+        private readonly FederatedActionAdmission $actionAdmission,
         private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
@@ -513,13 +515,77 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $intent->targetId === '42'
                 && $intent->parameters === $approvedInput['parameters']
                 && $intent->executionMode === 'APPROVAL_REQUIRED'
-                && $intent->idempotencyKey === ($this->goals->run($actor, $salesRunId)['steps'][0]['idempotency_key'] ?? null),
+                && $intent->idempotencyKey === 'fed:' . ($this->goals->run($actor, $salesRunId)['steps'][0]['idempotency_key'] ?? ''),
                 'Federation intent was not derived from approved immutable Action snapshot.',
             );
             self::assert($this->db->fetchOne(
                 'SELECT COUNT(*) FROM cos_actions WHERE organization_id = :org AND type = :type',
                 ['org' => $org, 'type' => 'sales.create_task'],
             ) == 0, 'Federation intent factory unexpectedly dispatched a real CRM Action.');
+            // Worker admission: two independently approved canonical Actions,
+            // immutable Sales input and no prior uncertain attempt are mandatory.
+            $this->goals->claimStep($actor, $salesRunId, 'sales_task');
+            $salesActionId = bin2hex(random_bytes(16));
+            $this->db->insert('cos_actions', [
+                'id' => $salesActionId, 'organization_id' => $org,
+                'type' => 'sales.create_task',
+                'target_type' => 'deal', 'target_id' => '42',
+                'parameters' => json_encode($approvedInput['parameters'], JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'QUEUED', 'execution_mode' => 'APPROVAL_REQUIRED',
+                'risk_level' => 'HIGH', 'idempotency_key' => $intent->idempotencyKey,
+                'correlation_id' => $salesActionId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $salesActionId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $salesActionId, 'evaluated_at' => self::now(),
+            ]);
+            $salesReviewId = bin2hex(random_bytes(16));
+            $this->db->insert('cos_approvals', [
+                'id' => $salesReviewId, 'organization_id' => $org,
+                'action_id' => $salesActionId, 'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'external-reviewer',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'external-reviewer',
+                'decided_at' => self::now(),
+            ]);
+            $salesAction = new Action(
+                $salesActionId, $org, 'sales.create_task', 'deal', '42',
+                $approvedInput['parameters'], 'USER', 'user-smoke', 'APPROVAL_REQUIRED',
+                'HIGH', $intent->idempotencyKey, new \DateTimeImmutable(),
+                ActionStatus::Queued, $salesActionId,
+            );
+            $this->actionAdmission->assertAuthorized($salesAction);
+            $this->db->executeStatement(
+                'UPDATE cos_approvals SET decided_by_id = :user
+                 WHERE organization_id = :org AND id = :approval',
+                ['user' => 'user-smoke', 'org' => $org, 'approval' => $salesReviewId],
+            );
+            try {
+                $this->actionAdmission->assertAuthorized($salesAction);
+                throw new \RuntimeException('Self-approved external Federation Action passed worker admission.');
+            } catch (DomainException) {
+            }
+            $this->db->executeStatement(
+                'UPDATE cos_approvals SET decided_by_id = :reviewer
+                 WHERE organization_id = :org AND id = :approval',
+                ['reviewer' => 'external-reviewer', 'org' => $org, 'approval' => $salesReviewId],
+            );
+            $this->actionAdmission->assertAuthorized($salesAction);
+            // Two attempts imply an uncertain prior external effect. No replay.
+            foreach ([1, 2] as $attempt) {
+                $this->db->insert('cos_action_attempts', [
+                    'action_id' => $salesActionId, 'organization_id' => $org,
+                    'attempt' => $attempt, 'worker_id' => 'smoke-worker',
+                    'status' => 'FAILED', 'started_at' => self::now(),
+                ]);
+            }
+            try {
+                $this->actionAdmission->assertAuthorized($salesAction);
+                throw new \RuntimeException('Stale external Federation Action was re-executed.');
+            } catch (DomainException) {
+            }
             $this->db->executeStatement(
                 'UPDATE cos_federation_plans SET plan_json = :changed WHERE organization_id = :org AND plan_id = :plan',
                 ['changed' => json_encode(['steps' => []], JSON_THROW_ON_ERROR),
