@@ -1930,7 +1930,7 @@ pages:
     archetype: entity_workspace
     patterns:
       required: [WorkspaceHeader, EntityHeader]
-      optional: [EntityList, ErrorState]
+      optional: []
     primary_action: capital_markets.navigate
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
@@ -1952,7 +1952,7 @@ pages:
     archetype: entity_workspace
     patterns:
       required: [WorkspaceHeader, EntityHeader]
-      optional: [EntityList, ErrorState]
+      optional: []
     primary_action: capital_markets.navigate
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
