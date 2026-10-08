@@ -401,17 +401,7 @@
       </table></div>
     </section>
 
-    <section class="cos-panel">
-      <h2>Decision Trace</h2>
-      <div class="d-flex gap-2 flex-wrap align-items-center">
-      {% for step in w.decision_trace|default([]) %}
-        {% if not loop.first %}<span aria-hidden="true">→</span>{% endif %}
-        <a class="btn btn-outline-secondary" href="{{ step.href }}">{{ step.type }} · {{ step.label }}{% if step.value is defined and step.value is not null %} · {{ step.value }}{% endif %}</a>
-      {% else %}
-        <p>No traceable downstream decision exists yet.</p>
-      {% endfor %}
-      </div>
-    </section>
+    <twig:CosDecisionTrace :steps="w.decision_trace|default([])" />
 
   {% elseif cmView == 'markets' %}
     {% set marketView = query.view|default('instrument') %}
@@ -535,7 +525,7 @@
       {% for x in w.results|default([]) %}<tr><td>{{ x.result_id|default(x.id|default('—')) }}</td><td>{{ x.experiment_id|default('—') }}</td><td>{{ x.status|default(x.decision|default('—')) }}</td><td>{{ x.summary|default(x.outcome|default(x.metrics|default({})|json_encode)) }}</td></tr>{% else %}<tr><td colspan="4">No completed result is stored for this hypothesis yet.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
-    <section class="cos-panel"><h2>Decision Trace</h2><div class="d-flex gap-2 flex-wrap">{% for step in w.decision_trace|default([]) %}{% if not loop.first %}<span>→</span>{% endif %}<a class="btn btn-outline-secondary" href="{{ step.href }}">{{ step.type }} · {{ step.label }}</a>{% endfor %}</div></section>
+    <twig:CosDecisionTrace :steps="w.decision_trace|default([])" emptyCopy="No downstream research decision is traceable yet." />
 
   {% elseif cmView == 'strategies' %}
     <section class="cos-panel">
