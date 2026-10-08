@@ -2676,6 +2676,14 @@ capital_markets_data_quality:
   controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::dataQuality
   methods: [GET, HEAD]
 
+capital_markets_decision_export:
+  path: /capital-markets/export/{dataset}.{format}
+  controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::export
+  methods: [GET, HEAD]
+  requirements:
+    dataset: 'opportunities|performance|research-results|executions'
+    format: 'json|csv'
+
 capital_markets_instruments:
   path: /capital-markets/instruments
   controller: App\Web\CapitalMarkets\CapitalMarketsPageController::instruments
