@@ -209,6 +209,19 @@ final class FederationPersistenceSmokeCommand extends Command
                 ['reviewer' => 'second-reviewer', 'id' => $approvalId, 'org' => $org],
             );
             $this->db->executeStatement(
+                "UPDATE cos_actions SET source_type = 'SYSTEM' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $approvalActionId],
+            );
+            try {
+                $this->workflowPreflight->inspect($actor, $safePlanId, $safeWorkflow, $approvalActionId);
+                throw new \RuntimeException('Forged SYSTEM-sourced Goal approval accepted.');
+            } catch (DomainException) {
+            }
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET source_type = 'USER' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $approvalActionId],
+            );
+            $this->db->executeStatement(
                 'UPDATE cos_federation_plans SET plan_json = :changed WHERE organization_id = :org AND plan_id = :plan',
                 ['changed' => json_encode(['steps' => [['id' => 'changed']]], JSON_THROW_ON_ERROR),
                     'org' => $org, 'plan' => $safePlanId],
