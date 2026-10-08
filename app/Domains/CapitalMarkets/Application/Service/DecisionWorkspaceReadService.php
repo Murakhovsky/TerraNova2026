@@ -11,8 +11,12 @@ use Domains\CapitalMarkets\Application\Query\ListVenues;
 use Domains\CapitalMarkets\Automation\Agent\CapitalMarketsPortfolioAgent;
 use Domains\CapitalMarkets\Automation\Agent\CapitalMarketsResearchAgent;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
+use Kernel\Agent\AgentRunProjection;
+use Kernel\Agent\Contract\AgentRunReadModelInterface;
 use Kernel\Module\DomainModuleRegistry;
-use Kernel\Operations\Service\OperationsSectionReader;
+use Kernel\Shared\Domain\OrganizationId;
+use Platform\Audit\Contract\ActivityHistoryRepositoryInterface;
+use Platform\Audit\Model\ActivityHistoryEntry;
 use Throwable;
 
 /**
@@ -31,7 +35,8 @@ final readonly class DecisionWorkspaceReadService
         private MarketDataAdministrationService $marketData,
         private CapitalMarketsTradingRepositoryInterface $trading,
         private CapitalMarketsFoundationBoundary $foundation,
-        private OperationsSectionReader $operations,
+        private AgentRunReadModelInterface $agentRuns,
+        private ActivityHistoryRepositoryInterface $activityHistory,
         private DomainModuleRegistry $domains,
     ) {}
 
@@ -424,17 +429,90 @@ final readonly class DecisionWorkspaceReadService
     {
         $page = $this->portfolio($organizationId);
         $errors = $page['partial_errors'] ?? [];
-        $runs = $this->safe(
-            fn(): array => $this->operations->section($organizationId, 'agent_runs', 300),
+        $allowed = [CapitalMarketsResearchAgent::NAME, CapitalMarketsPortfolioAgent::NAME];
+
+        $projections = $this->safe(
+            fn(): array => $this->agentRuns->recentForOrganization($organizationId, 100),
             [],
             $errors,
             'agent_runs',
         );
-        $allowed = [CapitalMarketsResearchAgent::NAME, CapitalMarketsPortfolioAgent::NAME];
-        $runs = array_values(array_filter(
-            $runs,
-            static fn(array $row): bool => in_array((string)($row['agent_name'] ?? ''), $allowed, true),
-        ));
+        $audit = $this->safe(
+            fn(): array => $this->activityHistory->recent(OrganizationId::fromString($organizationId), 250),
+            [],
+            $errors,
+            'agent_activity',
+        );
+
+        $runs = [];
+        foreach ($projections as $projection) {
+            if (!$projection instanceof AgentRunProjection || !in_array($projection->agentName, $allowed, true)) {
+                continue;
+            }
+
+            $baseCorrelation = str_ends_with($projection->correlationId, ':final')
+                ? substr($projection->correlationId, 0, -strlen(':final'))
+                : $projection->correlationId;
+            $tools = [];
+            $auditCount = 0;
+            foreach ($audit as $entry) {
+                if (!$entry instanceof ActivityHistoryEntry) {
+                    continue;
+                }
+                if ($entry->correlationId === $projection->correlationId || str_starts_with($entry->correlationId, $baseCorrelation.':')) {
+                    $auditCount++;
+                }
+                if (
+                    $entry->action === 'tool.execute'
+                    && str_starts_with($entry->correlationId, $baseCorrelation.':tool:')
+                ) {
+                    $tools[] = [
+                        'name' => $entry->resource->id,
+                        'status' => strtoupper((string)($entry->metadata['status'] ?? 'RECORDED')),
+                        'input' => $entry->input,
+                        'output' => $entry->result,
+                        'correlation_id' => $entry->correlationId,
+                    ];
+                }
+            }
+
+            $output = $projection->output;
+            $profileKey = $projection->agentName === CapitalMarketsResearchAgent::NAME ? 'research' : 'portfolio';
+            $evidence = is_array($output['evidence'][$profileKey] ?? null) ? $output['evidence'][$profileKey] : [];
+            $requestedTools = [];
+            foreach ($evidence['tool_requests'] ?? [] as $request) {
+                if (is_array($request) && trim((string)($request['name'] ?? '')) !== '') {
+                    $requestedTools[] = (string)$request['name'];
+                }
+            }
+
+            $runs[] = [
+                'id' => $projection->id,
+                'agent_name' => $projection->agentName,
+                'status' => $projection->status->value,
+                'subject_type' => $projection->subjectType,
+                'subject_id' => $projection->subjectId,
+                'current_task' => trim(implode(' · ', array_filter([$projection->subjectType, $projection->subjectId]))) ?: '—',
+                'decision' => $output['decision'] ?? null,
+                'recommendation' => $output['reason'] ?? null,
+                'confidence' => $projection->confidence,
+                'findings' => is_array($evidence['findings'] ?? null) ? $evidence['findings'] : [],
+                'limitations' => is_array($evidence['limitations'] ?? null) ? $evidence['limitations'] : [],
+                'requested_tools' => array_values(array_unique($requestedTools)),
+                'tools' => $tools,
+                'output' => $output,
+                'context_reference' => $projection->contextReference,
+                'cost_amount' => $projection->costAmount,
+                'cost_currency' => $projection->costCurrency,
+                'input_tokens' => $projection->inputTokens,
+                'output_tokens' => $projection->outputTokens,
+                'duration_ms' => $projection->durationMs,
+                'error' => $projection->error,
+                'correlation_id' => $projection->correlationId,
+                'audit_event_count' => $auditCount,
+                'created_at' => $projection->createdAt->format(DATE_ATOM),
+            ];
+        }
 
         $definitions = [];
         foreach ($allowed as $name) {
@@ -456,6 +534,7 @@ final readonly class DecisionWorkspaceReadService
 
         $running = 0;
         $failed = 0;
+        $toolCalls = 0;
         foreach ($runs as $run) {
             $status = strtoupper((string)($run['status'] ?? ''));
             if (in_array($status, ['RUNNING','STARTED'], true)) {
@@ -464,6 +543,7 @@ final readonly class DecisionWorkspaceReadService
             if ($status === 'FAILED') {
                 $failed++;
             }
+            $toolCalls += count($run['tools'] ?? []);
         }
 
         $page['agents'] = [
@@ -474,6 +554,7 @@ final readonly class DecisionWorkspaceReadService
                 'recent_runs' => count($runs),
                 'running' => $running,
                 'failed' => $failed,
+                'tool_calls' => $toolCalls,
             ],
         ];
         $page['partial_errors'] = $errors;
