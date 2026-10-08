@@ -9,6 +9,7 @@ use App\Persistence\Federation\FederationPlanApprovalCoordinator;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationApprovedActionIntentFactory;
 use App\Persistence\Federation\FederationExternalActionReceiptReconciler;
+use App\Persistence\Federation\FederationRunFinalizer;
 use App\Persistence\Federation\FederatedActionAdmission;
 use App\Persistence\Federation\FederationPlanApproveHandler;
 use App\Persistence\Federation\FederationReadOnlyWorkflowRunner;
@@ -55,6 +56,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationApprovedActionIntentFactory $actionIntents,
         private readonly FederatedActionAdmission $actionAdmission,
         private readonly FederationExternalActionReceiptReconciler $receiptReconciler,
+        private readonly FederationRunFinalizer $runFinalizer,
         private readonly FederationPlanApproveHandler $approvalHandler,
         private readonly FederationReadOnlyWorkflowRunner $readOnlyWorkflow,
         private readonly \App\Persistence\Federation\FederationWorkflowPreflight $workflowPreflight,
@@ -645,6 +647,23 @@ final class FederationPersistenceSmokeCommand extends Command
                 'Verified single-attempt Action receipt was not durably reconciled.');
             self::assert($this->receiptReconciler->reconcile($actor, $salesRunId, 'sales_task')['status'] === 'completed',
                 'Completed Action receipt reconciliation is not idempotent.');
+            $finished = $this->runFinalizer->finalize($actor, $salesRunId, 2);
+            self::assert($finished['state'] === 'completed'
+                && $finished['steps'] === 1
+                && $finished['revision'] === 3
+                && ($this->goals->run($actor, $salesRunId)['state'] ?? null) === 'completed',
+                'Cross-domain Federation Run did not finalize on attested Action receipt.');
+            try {
+                $this->runFinalizer->finalize($actor, $salesRunId, 2);
+                throw new \RuntimeException('Terminal Federation Run was finalized twice.');
+            } catch (LogicException) {
+            }
+            try {
+                $this->runFinalizer->finalize($other, $salesRunId, 2);
+                throw new \RuntimeException('Foreign tenant finalized Federation Run.');
+            } catch (LogicException) {
+            }
+
             try {
                 $this->receiptReconciler->reconcile($other, $salesRunId, 'sales_task');
                 throw new \RuntimeException('Foreign tenant reconciled an external Action.');
