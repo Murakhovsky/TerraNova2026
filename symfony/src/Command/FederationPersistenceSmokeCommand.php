@@ -886,6 +886,47 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $secondAction['step_id'] === 'a_second'
                 && $secondAction['action_id'] !== $firstAction['action_id'],
                 'Second sequential Action did not create an independent approval gate.');
+            // Verify the actual worker-side DAG gate, not only the API
+            // orchestrator. Approval is independent and existing canonical
+            // Policy evidence remains mandatory.
+            $this->db->executeStatement(
+                "UPDATE cos_approvals SET status = 'APPROVED',
+                    decided_by_type = 'USER', decided_by_id = 'independent-reviewer',
+                    decided_at = NOW(6) WHERE organization_id = :org AND action_id = :id",
+                ['org' => $org, 'id' => $secondAction['action_id']],
+            );
+            $pendingWorker = $this->db->fetchAssociative(
+                'SELECT id, type, target_type, target_id, parameters, source_type, source_id,
+                        execution_mode, risk_level, idempotency_key, correlation_id
+                 FROM cos_actions WHERE organization_id = :org AND id = :id',
+                ['org' => $org, 'id' => $secondAction['action_id']],
+            );
+            self::assert(is_array($pendingWorker), 'Second canonical Action vanished before worker admission.');
+            $workerAction = new Action(
+                (string) $pendingWorker['id'], $org, (string) $pendingWorker['type'],
+                $pendingWorker['target_type'] !== null ? (string) $pendingWorker['target_type'] : null,
+                $pendingWorker['target_id'] !== null ? (string) $pendingWorker['target_id'] : null,
+                json_decode((string) $pendingWorker['parameters'], true, 512, JSON_THROW_ON_ERROR),
+                (string) $pendingWorker['source_type'], (string) $pendingWorker['source_id'],
+                (string) $pendingWorker['execution_mode'], (string) $pendingWorker['risk_level'],
+                (string) $pendingWorker['idempotency_key'], new \DateTimeImmutable(),
+                ActionStatus::Queued, (string) $pendingWorker['correlation_id'],
+            );
+            $this->actionAdmission->assertAuthorized($workerAction);
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET target_id = 'forged' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $firstAction['action_id']],
+            );
+            try {
+                $this->actionAdmission->assertAuthorized($workerAction);
+                throw new \RuntimeException('Worker accepted a corrupted predecessor Action receipt.');
+            } catch (DomainException) {
+            }
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET target_id = '42' WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => $firstAction['action_id']],
+            );
+            $this->actionAdmission->assertAuthorized($workerAction);
             $completeActionFixture((string) $secondAction['action_id']);
             $pendingRecovery = $this->recovery->inspect($actor, $linearRun);
             self::assert($pendingRecovery['recoverable_count'] === 1

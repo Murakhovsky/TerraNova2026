@@ -101,7 +101,8 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
             // reaches the Domain handler. This prevents bypassing the normal
             // Orchestrator/Intent Factory via a manually queued canonical Action.
             $storedSteps = $this->db->fetchAllAssociative(
-                'SELECT step_id, capability_id, capability_version, side_effect_level, state
+                'SELECT step_id, capability_id, capability_version, side_effect_level, state,
+                        idempotency_key, result_reference
                  FROM cos_federation_steps WHERE organization_id = :org AND run_id = :run
                  ORDER BY step_id',
                 ['org' => $org, 'run' => $row['run_id']],
@@ -109,6 +110,14 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
             (new FederationActionSequenceGate())->assertSelectable(
                 $plan['steps'], $storedSteps, (string) $row['step_id'], 'claimed',
             );
+            // A completed Step flag is not evidence. If the caller bypasses
+            // the orchestrator, the worker independently re-attests every
+            // prior canonical external Action before any Domain mutation.
+            foreach ($storedSteps as $completedStep) {
+                if ($completedStep['state'] === 'completed') {
+                    $this->assertPredecessorReceipt($org, $completedStep);
+                }
+            }
         }
         $step = null;
         foreach ($plan['steps'] as $part) {
@@ -193,6 +202,49 @@ final readonly class FederatedActionAdmission implements FederatedActionAdmissio
         if ($attempts > 1) {
             throw new DomainException('Second external Federation Action worker attempt is forbidden.');
         }
+    }
+
+    /**
+     * Read-only proof of a completed predecessor. Uses the same canonical
+     * Action/Policy/Approval/immutable-input verification as normal receipt
+     * reconciliation, without dispatch or retry.
+     *
+     * @param array<string,mixed> $step
+     */
+    private function assertPredecessorReceipt(string $organizationId, array $step): void
+    {
+        $reference = $step['result_reference'] ?? null;
+        $key = $step['idempotency_key'] ?? null;
+        if (($step['side_effect_level'] ?? null) !== 'external'
+            || !is_string($reference)
+            || !preg_match('/^action:([a-f0-9]{32})$/', $reference, $matched)
+            || !is_string($key) || !preg_match('/^[a-f0-9]{64}$/', $key)) {
+            throw new DomainException('Completed Federation predecessor has no verifiable Action reference.');
+        }
+        $action = $this->db->fetchAssociative(
+            'SELECT id, status, type, target_type, target_id, parameters, source_type,
+                    source_id, execution_mode, risk_level, idempotency_key, correlation_id
+             FROM cos_actions WHERE organization_id = :org AND id = :id
+               AND idempotency_key = :key',
+            ['org' => $organizationId, 'id' => $matched[1], 'key' => 'fed:' . $key],
+        );
+        if (!$action || $action['status'] !== 'COMPLETED') {
+            throw new DomainException('Completed Federation predecessor has no canonical Action.');
+        }
+        $parameters = json_decode((string) $action['parameters'], true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($parameters)) {
+            throw new DomainException('Completed Federation predecessor has invalid Action parameters.');
+        }
+        $receipt = new Action(
+            (string) $action['id'], $organizationId, (string) $action['type'],
+            $action['target_type'] !== null ? (string) $action['target_type'] : null,
+            $action['target_id'] !== null ? (string) $action['target_id'] : null,
+            $parameters, (string) $action['source_type'], (string) $action['source_id'],
+            (string) $action['execution_mode'], (string) $action['risk_level'],
+            (string) $action['idempotency_key'], new \DateTimeImmutable(),
+            ActionStatus::Completed, (string) $action['correlation_id'],
+        );
+        $this->assertCompletedReceipt($receipt);
     }
 
     private static function canonical(array $input): string
