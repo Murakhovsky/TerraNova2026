@@ -22,17 +22,17 @@ final readonly class FederationWorkflowPreflight
         private Connection $connection,
         private FederationGoalStore $goals,
         private GoalWorkflowBindingGuard $guard,
+        private FederationPlanApprovalEvidenceReader $approvalEvidence,
     ) {}
 
     /**
-     * @param list<string> $independentlyApprovedCapabilities Server-trusted authorization decisions
-     * @return array{goal_id:string,plan_id:string,specification_version:int,workflow_id:string,step_count:int}
+     * @return array{goal_id:string,plan_id:string,specification_version:int,workflow_id:string,step_count:int,approval_action_id:string,approval_id:string}
      */
     public function inspect(
         TenantContext $actor,
         string $planId,
         WorkflowInstance $workflow,
-        array $independentlyApprovedCapabilities,
+        string $approvalActionId,
     ): array {
         if (!$actor->isManager() || !$actor->allows(TenantPermissions::MANAGE)) {
             throw new DomainException('Only tenant managers can inspect Goal workflow binding.');
@@ -57,13 +57,18 @@ final readonly class FederationWorkflowPreflight
         if (!is_array($data) || !is_array($data['steps'] ?? null)) {
             throw new DomainException('Persisted plan is not a valid snapshot.');
         }
-        $this->guard->assertCompatible($goal, $data['steps'], $workflow, $independentlyApprovedCapabilities);
+        $evidence = $this->approvalEvidence->requireApproval(
+            $actor, $approvalActionId, $goal->goalId, $planId, $goal->version, (string) $row['plan_json'],
+        );
+        $this->guard->assertCompatible($goal, $data['steps'], $workflow, $evidence['approved_capabilities']);
         return [
             'goal_id' => $goal->goalId,
             'plan_id' => (string) $row['plan_id'],
             'specification_version' => $goal->version,
             'workflow_id' => $workflow->workflow->id,
             'step_count' => count($data['steps']),
+            'approval_action_id' => $evidence['action_id'],
+            'approval_id' => $evidence['approval_id'],
         ];
     }
 }
