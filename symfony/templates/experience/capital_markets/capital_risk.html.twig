@@ -109,6 +109,7 @@
     <div class="table-responsive"><table class="table">
       <tbody>
         <tr><th>Capital required</th><td>{{ impact.capital_required|default('—') }}</td></tr>
+        <tr><th>Maximum approved capital</th><td>{{ impact.maximum_approved_capital|default(impact.capital_required|default('—')) }}</td></tr>
         <tr><th>Capital after</th><td>{{ impact.capital_after|default('—') }}</td></tr>
         <tr><th>Gross exposure change</th><td>{{ impact.gross_exposure_change|default('—') }}</td></tr>
         <tr><th>Net exposure change</th><td>{{ impact.net_exposure_change|default('—') }}</td></tr>
