@@ -225,7 +225,7 @@ Pack закритий лише якщо:
 10. Live action не виглядає harmless, бо Live execution взагалі не рендериться, доки policy його не дозволяє.
 
 
-## Локальні presentation preferences
+## Локальні налаштування відображення
 
 Density і видимість optional columns зберігаються в browser `localStorage` тільки як presentation state.
 
