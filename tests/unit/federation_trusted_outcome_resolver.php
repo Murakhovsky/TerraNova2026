@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
+require dirname(__DIR__, 2) . '/symfony/src/Persistence/Federation/FederationTrustedOutcomeEvidenceResolver.php';
 
 use App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver;
 use Kernel\Module\ActiveModuleResolver;
