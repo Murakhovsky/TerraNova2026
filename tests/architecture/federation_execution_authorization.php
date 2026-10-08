@@ -16,7 +16,7 @@ foreach ([
     [$store, '$this->approvalEvidence->requireApproval('],
     [$store, 'Plan already has an execution run; replay is blocked.'],
     [$preflight, '$this->approvalEvidence->requireApproval('],
-    [$preflight, "$evidence['approved_capabilities']"],
+    [$preflight, "'approved_capabilities'"],
     [$reader, 'cos_policy_evaluations'],
     [$reader, 'cos_approvals'],
     [$reader, 'hash_equals('],
