@@ -50,6 +50,18 @@ $duplicate=$source;$duplicate[]=$observation('VENUE_BALANCE','venue-1-second','1
 $dupe=PortfolioNavStatementReconciliationPreview::inspect($paper,$duplicate,'USD');
 $assert(in_array('DUPLICATE_VENUE_STATEMENT',$dupe['issues'],true),'Ambiguous venue coverage must fail closed.');
 
+$history=$source;
+$historicalVenue=$observation('VENUE_BALANCE','venue-1-old','999','venue-1');
+$historicalVenue['effective_at']=(new DateTimeImmutable('now',new DateTimeZone('UTC')))->modify('-5 minutes')->format(DATE_ATOM);
+$history[]=$historicalVenue;
+$historyPreview=PortfolioNavStatementReconciliationPreview::inspect($paper,$history,'USD');
+$assert($historyPreview['venue_comparison'][0]['same_amount']===true,
+    'An earlier venue balance is historical, not another current balance to sum.');
+$assert($historyPreview['historical_venue_statements_ignored']===1,
+    'The reconciler must report ignored historical venue statement count.');
+$assert(!in_array('DUPLICATE_VENUE_STATEMENT',$historyPreview['issues'],true),
+    'Different-time venue statements must not be a duplicate-current-statement error.');
+
 $duplicateReference=$source;$duplicateReference[]=$source[2];
 $dupe=PortfolioNavStatementReconciliationPreview::inspect($paper,$duplicateReference,'USD');
 $assert(in_array('DUPLICATE_SOURCE_REFERENCE',$dupe['issues'],true),'Repeated financial source reference is not new evidence.');
