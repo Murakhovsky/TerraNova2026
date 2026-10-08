@@ -176,6 +176,36 @@ final readonly class CapitalRiskService
   return $record;
  }
 
+ public function opportunityDetail(string $organizationId,string $opportunityId,string $portfolioId='paper-master'):array
+ {
+  $opportunity=$this->trading->getOpportunity($organizationId,$opportunityId)??throw new RuntimeException('Opportunity not found.');
+  $capital=(string)($opportunity['required_capital']??$opportunity['capital_required']??$opportunity['expected_capital']??'0');
+  $impact=null;
+  if(Decimal::fromString($capital)->isPositive())$impact=$this->simulateOpportunityImpact($organizationId,$opportunityId,$capital,$portfolioId);
+
+  $plan=$this->repository->latestAllocationPlan($organizationId,$portfolioId);
+  $allocationItem=null;
+  foreach((array)($plan['allocations']??[]) as $item){
+   if((string)($item['opportunity_id']??'')===$opportunityId){$allocationItem=$item;break;}
+  }
+  $reservations=array_values(array_filter(
+   $this->trading->listCapitalReservations($organizationId,null,5000),
+   static fn(array $row):bool=>(string)($row['opportunity_id']??'')===$opportunityId
+  ));
+
+  return [
+   'opportunity'=>$opportunity,
+   'portfolio_impact'=>$impact,
+   'allocation_plan_id'=>$plan['plan_id']??null,
+   'allocation_item'=>$allocationItem,
+   'reservations'=>$reservations,
+   'execution'=>$this->trading->getExecutionForOpportunity($organizationId,$opportunityId),
+   'portfolio_state'=>$this->capitalState($organizationId,$portfolioId),
+   'risk'=>$this->repository->latestRiskSnapshot($organizationId,$portfolioId),
+   'exposure'=>$this->repository->latestExposureSnapshot($organizationId,$portfolioId),
+  ];
+ }
+
  public function simulateOpportunityImpact(string $organizationId,string $opportunityId,string $capital,string $portfolioId='paper-master'):array
  {
   $opportunity=$this->trading->getOpportunity($organizationId,$opportunityId)??throw new RuntimeException('Opportunity not found.');
