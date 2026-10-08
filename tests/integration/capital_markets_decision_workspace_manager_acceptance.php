@@ -99,6 +99,14 @@ $assert(str_contains($controller,'market_data_history_view'),'Historic-market vi
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/HistoricalRelationshipBasisProjector.php'),'Canonical historical Basis projector missing.');
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavWindowProjector.php'),'NAV P&L projector missing.');
 $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSnapshotProducer.php'),'Guarded NAV producer is missing.');
+$collector=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavEvidenceCollector.php');
+$assert(str_contains($collector,'EXTERNAL_FLOW_LEDGER_UNAVAILABLE'),'NAV collector must block absent certified flow ledger.');
+$assert(str_contains($collector,'POSITION_MARK_UNTRUSTED'),'NAV collector must reject untrusted market marks.');
+$assert(str_contains($collector,"'snapshot_written'=>false"),'NAV preflight must not claim successful persistence.');
+$command=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsNavCollectCommand.php');
+$assert(str_contains($command,'cos:capital-markets:nav:collect'),'NAV preflight command must be available to operators.');
+$assert(str_contains($command,'Command::FAILURE'),'Incomplete NAV must produce a failing scheduler status.');
+
 $assert(str_contains((string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavSnapshotProducer.php'),'marks_reconciled'),'NAV producer must block unverified position marks.');
 $assert(is_file($root.'/app/migrations/20261008_000135_capital_markets_portfolio_valuation.sql'),'Canonical NAV snapshot migration missing.');
 $assert(str_contains($read,'PortfolioValuationSnapshotRepositoryInterface'),'Decision read model must consume verified NAV repository.');
