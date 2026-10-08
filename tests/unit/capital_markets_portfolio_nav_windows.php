@@ -95,6 +95,13 @@ $undatedGap=PortfolioNavWindowProjector::project([
 $assert($undatedGap['today']['reason']==='UNVERIFIED_VALUATION_IN_WINDOW',
     'A snapshot without a verifiable event time must never be ignored.');
 
+$samePoint=PortfolioNavWindowProjector::project([
+    $snapshot('2026-10-08T00:00:00Z','1000','0'),
+],new DateTimeImmutable('2026-10-08T00:05:00Z'));
+$assert($samePoint['today']['net_pnl']===null
+    && $samePoint['today']['reason']==='INSUFFICIENT_DISTINCT_NAV_VALUATIONS',
+    'One opening NAV snapshot must not fabricate zero current-day PnL.');
+
 $outsideWindow=$snapshot('2026-09-01T12:00:00Z','900','0');
 $outsideWindow['ledger_reconciled']=false;
 $independentPeriod=PortfolioNavWindowProjector::project([
