@@ -2008,6 +2008,8 @@ services:
   Domains\CapitalMarkets\Domain\Service\EconomicExposureEngine: ~
   Domains\CapitalMarkets\Domain\Service\ConcentrationEngine: ~
   Domains\CapitalMarkets\Domain\Service\CorrelationEngine: ~
+  Domains\CapitalMarkets\Domain\Service\RiskLimitEvaluator: ~
+  Domains\CapitalMarkets\Domain\Service\RiskPolicyHierarchy: ~
   Domains\CapitalMarkets\Domain\Service\PortfolioRiskEngine: ~
   Domains\CapitalMarkets\Domain\Service\CapitalAllocationEngine: ~
   Domains\CapitalMarkets\Domain\Service\PortfolioStressEngine: ~
