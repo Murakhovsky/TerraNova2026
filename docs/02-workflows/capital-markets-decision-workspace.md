@@ -6,9 +6,9 @@ updated: 2026-10-08
 kind: workflow
 ---
 
-# Capital Markets Decision Workspace workflow
+# Робочий процес Capital Markets Decision Workspace
 
-## Morning check
+## Ранкова перевірка
 
 \`\`\`text
 /capital-markets
@@ -23,7 +23,7 @@ Recommended Action
 
 Якщо жодної дії немає, система показує no-action state. Вона не створює штучні alerts заради “живого dashboard”.
 
-## Opportunity decision
+## Рішення щодо можливості
 
 \`\`\`text
 Opportunity Board
@@ -43,7 +43,7 @@ Paper execution handoff або reject/hold
 
 Portfolio decision має пріоритет над standalone attractiveness. Profitable opportunity може бути \`REJECT\` або \`ACCEPT_REDUCED_SIZE\`, якщо hard headroom, concentration чи capital location не дозволяють повний size.
 
-## Research decision
+## Рішення щодо дослідження
 
 \`\`\`text
 Hypothesis
@@ -61,7 +61,7 @@ Scorecard / Promotion Gate
 
 Rejected result не ховається. Він залишається research knowledge.
 
-## Execution problem
+## Проблема виконання
 
 \`\`\`text
 Execution
@@ -77,7 +77,7 @@ existing governed recovery policy
 
 Decision Workspace не створює паралельний execution engine.
 
-## Data failure
+## Збій даних
 
 \`\`\`text
 Source / Market State becomes DEGRADED / STALE / UNAVAILABLE
@@ -91,7 +91,7 @@ Execution-sensitive handoff is not presented as safe
 
 Application Health і Market Data Health залишаються різними поняттями.
 
-## Traceability
+## Простежуваність
 
 Stable links дозволяють пройти:
 
