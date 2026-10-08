@@ -38,6 +38,7 @@ enum CapitalMarketsAuditAction:string
     case PortfolioRiskSnapshotCreated='capital_markets.portfolio.risk_snapshot.created';
     case AllocationPlanCreated='capital_markets.allocation.plan.created';
     case AllocationApproved='capital_markets.allocation.approved';
+    case StrategyAllocationChanged='capital_markets.strategy.allocation.changed';
     case RebalancePlanCreated='capital_markets.rebalance.plan.created';
     case StressTestRun='capital_markets.risk.stress.run';
     case PortfolioAgentRun='capital_markets.portfolio.agent.run';
