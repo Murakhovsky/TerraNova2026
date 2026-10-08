@@ -28,6 +28,7 @@ final readonly class FederationGoalStore
         private ActiveModuleResolver $modules,
         private GoalPlanValidator $validator,
         private GoalOutcomeEvaluator $evaluator,
+        private FederationPlanApprovalEvidenceReader $approvalEvidence,
     ) {
     }
 
@@ -170,20 +171,36 @@ final readonly class FederationGoalStore
      * Called only after existing Policy/Approval runtime changes a plan to approved.
      * Until that integration, plans remain proposed and cannot run.
      */
-    public function startApprovedRun(TenantContext $actor, string $runId, string $planId): void
+    public function startApprovedRun(TenantContext $actor, string $runId, string $planId, string $approvalActionId): void
     {
         $this->writer($actor);
         $this->identifier($runId);
         $this->identifier($planId);
         $org = $actor->organizationId()->value();
-        $this->db->transactional(function () use ($org, $runId, $planId): void {
+        $this->db->transactional(function () use ($actor, $org, $runId, $planId, $approvalActionId): void {
             $plan = $this->db->fetchAssociative(
-                'SELECT goal_id, state, plan_json FROM cos_federation_plans
+                'SELECT goal_id, spec_version, state, plan_json FROM cos_federation_plans
                  WHERE organization_id = :org AND plan_id = :plan FOR UPDATE',
                 ['org' => $org, 'plan' => $planId],
             );
             if (!$plan || $plan['state'] !== 'approved') {
                 throw new DomainException('Only an approved tenant-owned plan can start an execution.');
+            }
+            $specification = $this->specification($actor, (string) $plan['goal_id']);
+            if ($specification === null || $specification->version !== (int) $plan['spec_version']) {
+                throw new DomainException('Plan belongs to a stale or unavailable Goal specification.');
+            }
+            $this->approvalEvidence->requireApproval(
+                $actor, $approvalActionId, $specification->goalId, $planId,
+                $specification->version, (string) $plan['plan_json'],
+            );
+            $existing = $this->db->fetchOne(
+                'SELECT run_id FROM cos_federation_runs
+                 WHERE organization_id = :org AND plan_id = :plan LIMIT 1 FOR UPDATE',
+                ['org' => $org, 'plan' => $planId],
+            );
+            if ($existing !== false) {
+                throw new DomainException('Plan already has an execution run; replay is blocked.');
             }
             $steps = self::decode($plan['plan_json'])['steps'] ?? [];
             if (!is_array($steps) || $steps === []) {
