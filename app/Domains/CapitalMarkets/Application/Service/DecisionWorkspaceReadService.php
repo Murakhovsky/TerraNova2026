@@ -259,10 +259,12 @@ final readonly class DecisionWorkspaceReadService
             }
         }
 
+        $evidence = $this->opportunityEvidence($opportunity, $market);
         return array_replace($detail, [
             'global' => $this->globalState($core, $market, 'PAPER'),
             'economics' => $this->economics($opportunity),
-            'evidence' => $this->opportunityEvidence($opportunity, $market),
+            'evidence' => $evidence,
+            'explainability' => $this->opportunityExplainability($detail, $evidence),
             'decision_trace' => $this->decisionTrace($detail),
             'orders' => $orders,
             'fills' => $fills,
@@ -1483,6 +1485,43 @@ final readonly class DecisionWorkspaceReadService
             'why' => $opportunity['reason'] ?? $opportunity['thesis'] ?? $opportunity['edge_reason'] ?? null,
             'liquidity' => $opportunity['liquidity'] ?? null,
             'execution_probability' => $opportunity['execution_probability'] ?? null,
+        ];
+    }
+
+    /** @param array<string,mixed> $detail @param array<string,mixed> $evidence @return array<string,mixed> */
+    private function opportunityExplainability(array $detail, array $evidence): array
+    {
+        $facts = [];
+        foreach ($evidence['market_states'] ?? [] as $state) {
+            if (!is_array($state)) {
+                continue;
+            }
+            $instrument = (string)($state['instrument_id'] ?? 'Instrument');
+            $venue = (string)($state['venue_id'] ?? $state['source_id'] ?? 'source');
+            $trust = strtoupper((string)($state['trust_status'] ?? $state['quality_status'] ?? 'UNAVAILABLE'));
+            $age = $state['latency']['event_age_ms'] ?? null;
+            $facts[] = $instrument.' @ '.$venue.' · '.$trust.($age !== null ? ' · age '.$age.' ms' : '');
+        }
+        foreach ($evidence['reference_states'] ?? [] as $state) {
+            if (!is_array($state)) {
+                continue;
+            }
+            $quality = is_array($state['quality'] ?? null) ? $state['quality'] : [];
+            $instrument = (string)($state['instrument_id'] ?? 'Instrument');
+            $source = (string)($state['source_id'] ?? 'reference');
+            $trust = strtoupper((string)($quality['status'] ?? 'UNAVAILABLE'));
+            $age = $state['reference_age_ms'] ?? null;
+            $facts[] = $instrument.' reference @ '.$source.' · '.$trust.($age !== null ? ' · age '.$age.' ms' : '');
+        }
+
+        $impact = is_array($detail['portfolio_impact'] ?? null) ? $detail['portfolio_impact'] : [];
+        $allocation = is_array($detail['allocation_item'] ?? null) ? $detail['allocation_item'] : [];
+
+        return [
+            'what' => (string)($evidence['why'] ?? ''),
+            'why' => 'The opportunity is evaluated against canonical available capital, portfolio exposure, market-data trust and deterministic risk headroom, not standalone edge alone.',
+            'evidence' => array_slice(array_values(array_unique($facts)), 0, 12),
+            'recommended_action' => (string)($impact['decision'] ?? $allocation['decision'] ?? 'HOLD'),
         ];
     }
 
