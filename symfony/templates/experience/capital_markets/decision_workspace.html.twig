@@ -911,7 +911,7 @@
       </ul>
       {% set sourcePreview = navPreflight.statement_reconciliation_preview|default({}) %}
       <h3>Unreconciled venue cash statement differences</h3>
-      <p class="small">Historical venue statements excluded from current-balance comparison: {{ sourcePreview.historical_venue_statements_ignored|default(0) }}. Previous statements remain available in append-only audit history.</p>
+      <p class="small">Historical venue statements excluded from current-balance comparison: {{ sourcePreview.historical_venue_statements_ignored|default(0) }}. Historical liability statements excluded: {{ sourcePreview.historical_liability_statements_ignored|default(0) }}. Previous statements remain available in append-only audit history.</p>
       <p>Venue cash statement comparison · observation only.</p>
       <p>Reported amounts are not accounting approval. Cash differences and missing venue statements prevent automatic NAV recognition.</p>
       <div class="table-responsive">
