@@ -17,6 +17,7 @@ $observation=static fn(string $kind,string $id,string $value,?string $venue=null
     'currency'=>$currency,'status'=>'PENDING_RECONCILIATION','reconciled'=>false,
     'source_key_sha256'=>hash('sha256','source:'.$id),
     'source_document_sha256'=>hash('sha256','file:'.$id),
+    'effective_at'=>(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format(DATE_ATOM),
 ];
 $source=[
     $observation('VENUE_BALANCE','venue-1-proof','110','venue-1'),
