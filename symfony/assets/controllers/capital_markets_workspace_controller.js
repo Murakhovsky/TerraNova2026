@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['density', 'columnToggle', 'age', 'simulationOutput'];
+    static targets = ['density', 'columnToggle', 'age', 'simulationOutput', 'historyChart'];
 
     connect() {
         this.refreshTimer = null;
@@ -25,6 +25,7 @@ export default class extends Controller {
         }
         this.updateAge();
         this.ageTimer = window.setInterval(() => this.updateAge(), 1000);
+        this.renderHistoricalCharts();
     }
 
     disconnect() {
@@ -35,6 +36,105 @@ export default class extends Controller {
         if (this.ageTimer !== null) {
             window.clearInterval(this.ageTimer);
             this.ageTimer = null;
+        }
+    }
+
+    renderHistoricalCharts() {
+        for (const host of this.historyChartTargets) {
+            let rows;
+            try {
+                rows = JSON.parse(host.dataset.historyRows || '[]');
+            } catch {
+                host.textContent = 'Historical chart data could not be read.';
+                continue;
+            }
+            if (!Array.isArray(rows)) {
+                host.textContent = 'Historical chart data is unavailable.';
+                continue;
+            }
+            const groups = new Map();
+            for (const row of rows) {
+                if (!row || typeof row !== 'object') continue;
+                const type = String(row.event_type || '');
+                const metric = type === 'FUNDING_RATE' ? 'Funding rate'
+                    : ['QUOTE', 'BBO'].includes(type) ? 'Price'
+                    : ['CANDLE', 'REFERENCE_PRICE', 'MARK_PRICE', 'INDEX_PRICE'].includes(type) ? 'Price'
+                    : null;
+                if (!metric) continue;
+                const variants = metric === 'Price' && ['QUOTE', 'BBO'].includes(type)
+                    ? [['Price', row.value], ['Quoted spread (bps)', row.spread_bps]]
+                    : [[metric, row.value]];
+                for (const [label, raw] of variants) {
+                    if (raw === null || raw === undefined || raw === '') continue;
+                    const number = Number(raw);
+                    const timestamp = Date.parse(row.timestamp);
+                    if (!Number.isFinite(number) || !Number.isFinite(timestamp)) continue;
+                    const key = [label, type, row.source_id || '', row.venue_id || '', row.quote_asset || '', row.mode || ''].join('|');
+                    if (!groups.has(key)) {
+                        groups.set(key, { label: [label, type, row.venue_id || 'No venue', row.quote_asset || 'No unit', row.mode || 'Unknown mode'].join(' · '), points: [] });
+                    }
+                    groups.get(key).points.push({ timestamp, number, raw: String(raw), sourceTime: row.timestamp });
+                }
+            }
+            const viable = [...groups.values()].filter(group => group.points.length >= 2);
+            host.replaceChildren();
+            if (viable.length === 0) {
+                host.textContent = 'At least two recorded observations of the same series are required for a historical chart.';
+                continue;
+            }
+            const select = document.createElement('select');
+            select.className = 'form-select form-select-sm mb-2';
+            select.setAttribute('aria-label', 'Select canonical historical market series');
+            viable.forEach((series, index) => {
+                const option = document.createElement('option');
+                option.value = String(index);
+                option.textContent = series.label;
+                select.append(option);
+            });
+            const graphic = document.createElement('div');
+            const draw = () => {
+                graphic.replaceChildren();
+                const series = viable[Number(select.value) || 0];
+                const points = [...series.points].sort((a, b) => a.timestamp - b.timestamp).slice(-150);
+                const min = Math.min(...points.map(p => p.number));
+                const max = Math.max(...points.map(p => p.number));
+                const earliest = points[0].timestamp;
+                const latest = points[points.length - 1].timestamp;
+                const width = 720;
+                const height = 180;
+                const x = p => latest === earliest ? width / 2 : 20 + (p.timestamp - earliest) / (latest - earliest) * (width - 40);
+                const y = p => max === min ? height / 2 : 20 + (max - p.number) / (max - min) * (height - 40);
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 720 180');
+                svg.setAttribute('width', '100%');
+                svg.setAttribute('role', 'img');
+                svg.setAttribute('aria-label', 'Recorded historical observations for ' + series.label);
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', points.map((point, index) => (index === 0 ? 'M' : 'L') + x(point).toFixed(2) + ',' + y(point).toFixed(2)).join(' '));
+                path.setAttribute('stroke', 'currentColor');
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke-width', '2');
+                svg.append(path);
+                for (const point of points) {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', x(point).toFixed(2));
+                    circle.setAttribute('cy', y(point).toFixed(2));
+                    circle.setAttribute('r', '2.5');
+                    circle.setAttribute('fill', 'currentColor');
+                    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                    title.textContent = point.sourceTime + ': ' + point.raw;
+                    circle.append(title);
+                    svg.append(circle);
+                }
+                graphic.append(svg);
+                const caption = document.createElement('p');
+                caption.className = 'small text-muted';
+                caption.textContent = points.length + ' observed points · ' + points[0].sourceTime + ' to ' + points[points.length - 1].sourceTime + '. Axis positioning is presentation-only; values and metrics remain canonical.';
+                graphic.append(caption);
+            };
+            select.addEventListener('change', draw);
+            host.append(select, graphic);
+            draw();
         }
     }
 
