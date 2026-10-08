@@ -115,6 +115,24 @@ try {
       if (orderReloaded.join('|') !== orderAfter.join('|')) {
         throw new Error('desktop: Opportunity column order did not persist across reload.');
       }
+
+      const opportunitiesJson = await context.request.get(absolute('/capital-markets/export/opportunities.json'));
+      if (!opportunitiesJson.ok()) {
+        throw new Error('desktop: opportunities JSON export returned ' + opportunitiesJson.status());
+      }
+      const opportunitiesPayload = await opportunitiesJson.json();
+      if (opportunitiesPayload.dataset !== 'opportunities' || !Array.isArray(opportunitiesPayload.data)) {
+        throw new Error('desktop: opportunities JSON export has invalid canonical payload.');
+      }
+
+      const performanceCsv = await context.request.get(absolute('/capital-markets/export/performance.csv'));
+      if (!performanceCsv.ok()) {
+        throw new Error('desktop: performance CSV export returned ' + performanceCsv.status());
+      }
+      const contentType = performanceCsv.headers()['content-type'] || '';
+      if (!contentType.includes('text/csv')) {
+        throw new Error('desktop: performance CSV export has unexpected content type: ' + contentType);
+      }
     }
 
     await page.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' });
