@@ -529,6 +529,11 @@ final class FederationPersistenceSmokeCommand extends Command
             // Worker admission: two independently approved canonical Actions,
             // immutable Sales input and no prior uncertain attempt are mandatory.
             $this->goals->claimStep($actor, $salesRunId, 'sales_task');
+            try {
+                $this->runFinalizer->finalize($actor, $salesRunId, 2);
+                throw new \RuntimeException('Federation Run finalized before its external Step completed.');
+            } catch (DomainException) {
+            }
             $salesActionId = bin2hex(random_bytes(16));
             $this->db->insert('cos_actions', [
                 'id' => $salesActionId, 'organization_id' => $org,
