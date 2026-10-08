@@ -20,4 +20,10 @@ enum CapitalMarketsAuditResourceType:string
     case ResearchScorecard='capital_markets.research.scorecard';
     case ResearchPromotionDecision='capital_markets.research.promotion_decision';
     case ResearchPaperRun='capital_markets.research.paper_run';
+    case RiskEnvelope='capital_markets.risk.envelope';
+    case PortfolioRiskSnapshot='capital_markets.portfolio.risk_snapshot';
+    case AllocationPlan='capital_markets.allocation.plan';
+    case RebalancePlan='capital_markets.rebalance.plan';
+    case StressResult='capital_markets.risk.stress_result';
+    case PortfolioAgentRun='capital_markets.portfolio.agent_run';
 }
