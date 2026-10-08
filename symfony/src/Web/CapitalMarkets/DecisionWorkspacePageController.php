@@ -241,7 +241,7 @@ final readonly class DecisionWorkspacePageController
                 ], 404);
             }
 
-            return $this->render($request, $tenant, $title, $active, $view, ['workspace'=>$data]);
+            return $this->render($request, $tenant, $title, $active, $view, ['workspace'=>$data, 'entityId'=>$id]);
         } catch (Throwable $error) {
             error_log('capital_markets.decision_workspace.read_failed ['.$view.'] '.$error->getMessage());
             return $this->render($request, $tenant, 'Capital Markets unavailable', $active, 'failure', [
@@ -323,7 +323,20 @@ final readonly class DecisionWorkspacePageController
             new ShellBreadcrumb('Workspace', '/admin'),
             new ShellBreadcrumb('Capital Markets', '/capital-markets'),
         ];
-        if ($title !== 'Capital Markets') {
+        $entityId = isset($variables['entityId']) && is_scalar($variables['entityId'])
+            ? trim((string)$variables['entityId'])
+            : '';
+        $detailParent = match ($view) {
+            'opportunity' => ['Opportunities', '/capital-markets/opportunities'],
+            'hypothesis' => ['Research', '/capital-markets/research'],
+            'strategy' => ['Strategies', '/capital-markets/strategies'],
+            'execution_detail' => ['Execution', '/capital-markets/execution'],
+            default => null,
+        };
+        if (is_array($detailParent) && $entityId !== '') {
+            $breadcrumbs[] = new ShellBreadcrumb($detailParent[0], $detailParent[1]);
+            $breadcrumbs[] = new ShellBreadcrumb($entityId);
+        } elseif ($title !== 'Capital Markets') {
             $breadcrumbs[] = new ShellBreadcrumb($title);
         }
         $shell = $this->shells->create($tenant, $context, $title, $breadcrumbs);
