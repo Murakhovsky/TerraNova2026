@@ -68,6 +68,43 @@ final class PortfolioNavStatementReconciliationPreview
                 $issues['PAPER_CASH_BALANCE_INVALID'] = true;
             }
         }
+        // Balance statements are point-in-time snapshots: historical observations
+        // are retained in storage, but never summed or treated as duplicate
+        // current venue balances. Tied latest timestamps remain ambiguous.
+        $latestVenueTime = [];
+        foreach ($sourceEvidence as $evidence) {
+            if (!is_array($evidence) || ($evidence['kind'] ?? '') !== 'VENUE_BALANCE') continue;
+            $venue = trim((string)($evidence['venue_id'] ?? ''));
+            if ($venue === '' || !is_string($evidence['effective_at'] ?? null)) continue;
+            try {
+                $instant = new DateTimeImmutable($evidence['effective_at'],new DateTimeZone('UTC'));
+                if (!isset($latestVenueTime[$venue]) || $instant > $latestVenueTime[$venue]) {
+                    $latestVenueTime[$venue] = $instant;
+                }
+            } catch (Throwable) {
+                // Preserve invalid rows for the normal fail-closed source validation.
+            }
+        }
+        $activeEvidence = [];
+        $historicalVenueStatementsIgnored = 0;
+        foreach ($sourceEvidence as $evidence) {
+            if (is_array($evidence) && ($evidence['kind'] ?? '') === 'VENUE_BALANCE') {
+                $venue = trim((string)($evidence['venue_id'] ?? ''));
+                if ($venue !== '' && isset($latestVenueTime[$venue]) && is_string($evidence['effective_at'] ?? null)) {
+                    try {
+                        $instant = new DateTimeImmutable($evidence['effective_at'],new DateTimeZone('UTC'));
+                        if ($instant < $latestVenueTime[$venue]) {
+                            $historicalVenueStatementsIgnored++;
+                            continue;
+                        }
+                    } catch (Throwable) {
+                        // An invalid current-source record is still evaluated below.
+                    }
+                }
+            }
+            $activeEvidence[] = $evidence;
+        }
+        $sourceEvidence = $activeEvidence;
         $seenSources = [];
         foreach ($sourceEvidence as $evidence) {
             if (!is_array($evidence)) {
@@ -204,6 +241,7 @@ final class PortfolioNavStatementReconciliationPreview
                 ? $liabilities->value() : null,
             'venue_comparison'=>$venueComparison,
             'source_counts'=>$counts,
+            'historical_venue_statements_ignored'=>$historicalVenueStatementsIgnored,
             'validated_source_counts'=>$validCounts,
             'issues'=>array_keys($issues),
             'eligible_for_nav'=>false,
