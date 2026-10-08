@@ -574,6 +574,33 @@
     </section>
 
       {% else %}<section class="cos-panel"><h2>Price Comparison</h2><p>Market Data View permission is required. Quotes are not available to this role.</p></section>{% endif %}
+    <section class="cos-panel" aria-label="Historical Relationship Basis">
+      {% set basis = w.historical_basis|default({}) %}
+      <div class="d-flex gap-3 flex-wrap justify-content-between align-items-center">
+        <h2>Historical Basis · 7D</h2>
+        <strong>{{ basis.status|default('NOT COMPARABLE') }}</strong>
+      </div>
+      <p>Canonical, time-aligned observations only. Up to 30 seconds of skew; comparable quoted currency and an explicitly verified economic conversion are mandatory. This chart is not an executable arbitrage signal.</p>
+      {% if not permissions.market_data_view|default(false) or not permissions.market_data_history_view|default(false) %}
+        <p>Market Data View and Market Data History View permissions are required.</p>
+      {% elseif basis.status|default('NOT COMPARABLE') != 'OBSERVATIONS_AVAILABLE' %}
+        <twig:CosAlert title="NOT COMPARABLE" copy="{{ basis.reason|default('Canonical comparable history unavailable') }}. No historical basis or synthetic price is invented." tone="warning" />
+      {% else %}
+        <div data-capital-markets-workspace-target="basisChart" data-basis-rows="{{ basis.rows|default([])|json_encode|e('html_attr') }}" role="group" aria-label="Canonical historical basis chart"></div>
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Source UTC</th><th>Target UTC</th><th>Source Venue</th><th>Target Venue</th><th>Source Mid</th><th>Target Mid</th><th>Ratio</th><th>Basis bps</th><th>Quote</th><th>Skew</th></tr></thead>
+            <tbody>
+            {% for obs in basis.rows|default([])|slice(-150) %}
+              <tr><td>{{ obs.source_timestamp }}</td><td>{{ obs.target_timestamp }}</td><td>{{ obs.source_venue|default('—') }}</td><td>{{ obs.target_venue|default('—') }}</td><td>{{ obs.source_mid }}</td><td>{{ obs.target_mid }}</td><td>{{ obs.target_units_per_source_unit }}</td><td>{{ obs.basis_bps }}</td><td>{{ obs.quote_asset }}</td><td>{{ obs.skew_seconds }} s</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="small">Recorded evidence only, grouped by source/venue/currency. Current pair validity and execution economics must be evaluated independently.</p>
+      {% endif %}
+    </section>
+
 {% elseif cmView == 'research' %}
     {% set research = w.research|default({}) %}
     <section class="cos-kpi-strip">
