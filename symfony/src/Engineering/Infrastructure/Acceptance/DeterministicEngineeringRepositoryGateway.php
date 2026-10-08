@@ -69,6 +69,20 @@ final class DeterministicEngineeringRepositoryGateway implements EngineeringRepo
         return $result;
     }
 
+    public function existingPathsAtRevision(array $paths, string $revision): array
+    {
+        $state = $this->read();
+        $files = is_array($state['revisions'][$revision]['files'] ?? null)
+            ? $state['revisions'][$revision]['files']
+            : [];
+
+        $existing = [];
+        foreach (array_values(array_unique(array_map('strval', $paths))) as $path) {
+            if (array_key_exists($path, $files)) $existing[] = $path;
+        }
+        return $existing;
+    }
+
     public function compareRevisions(string $baseRevision, string $headRevision): array
     {
         $state = $this->read();
