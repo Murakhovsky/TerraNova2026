@@ -63,6 +63,8 @@ final readonly class PortfolioNavSnapshotProducer
         if ($cash->isNegative() || $liabilities->isNegative()) {
             throw new InvalidArgumentException('Cash and liabilities must use nonnegative asset balances.');
         }
+        $valuedAt=(new DateTimeImmutable($evidence['valued_at'],new DateTimeZone('UTC')))
+            ->setTimezone(new DateTimeZone('UTC'));
         $marks=Decimal::fromString('0');
         foreach ($evidence['marked_positions'] as $position) {
             if (!is_array($position)
@@ -70,10 +72,23 @@ final readonly class PortfolioNavSnapshotProducer
                 || ($position['mark_reconciled'] ?? false) !== true
                 || !is_string($position['market_value'] ?? null)
                 || !is_string($position['mark_source_fingerprint'] ?? null)
-                || trim($position['mark_source_fingerprint']) === ''
+                || preg_match('/^[a-f0-9]{64}$/', $position['mark_source_fingerprint']) !== 1
+                || !is_string($position['source_timestamp'] ?? null)
+                || !is_int($position['market_state_version'] ?? null)
+                || $position['market_state_version'] < 1
                 || !is_string($position['position_id'] ?? null)
             ) {
                 throw new InvalidArgumentException('Every position needs a reconciled current mark and provenance in NAV currency.');
+            }
+            try {
+                $sourceTime=(new DateTimeImmutable($position['source_timestamp'],new DateTimeZone('UTC')))
+                    ->setTimezone(new DateTimeZone('UTC'));
+            } catch (\Throwable) {
+                throw new InvalidArgumentException('NAV position mark timestamp is invalid.');
+            }
+            $age=$valuedAt->getTimestamp()-$sourceTime->getTimestamp();
+            if ($age < 0 || $age > 30) {
+                throw new InvalidArgumentException('NAV position mark is stale or has uncertain clock.');
             }
             $marks=DecimalMath::add($marks,Decimal::fromString($position['market_value']));
         }
@@ -81,8 +96,6 @@ final readonly class PortfolioNavSnapshotProducer
         if ($nav->isNegative()) {
             throw new InvalidArgumentException('Negative NAV is unsupported by this valuation policy.');
         }
-        $valuedAt=(new DateTimeImmutable($evidence['valued_at'],new DateTimeZone('UTC')))
-            ->setTimezone(new DateTimeZone('UTC'));
         $snapshot=[
             'snapshot_id'=>$evidence['snapshot_id'],
             'valued_at'=>$valuedAt->format(DATE_ATOM),
