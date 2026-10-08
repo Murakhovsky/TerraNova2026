@@ -161,9 +161,12 @@ foreach([
     "'portfolio_view' =>",
     "'opportunity_view' =>",
     "'market_data_quality_view' =>",
+    '$this->tenants->current()',
+    "new RedirectResponse('/auth/login')",
 ] as $needle){
     $assert(str_contains($controller,$needle),'Decision Workspace export contract missing: '.$needle);
 }
+$assert(!str_contains($controller,'->requireTenant()'),'Decision Workspace must use the canonical TenantContextProviderInterface::current() contract.');
 
 $preferences=(string)file_get_contents($root.'/symfony/assets/controllers/capital_markets_workspace_controller.js');
 foreach([
