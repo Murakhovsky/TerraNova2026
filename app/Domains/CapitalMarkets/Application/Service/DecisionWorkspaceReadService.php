@@ -6,6 +6,7 @@ namespace Domains\CapitalMarkets\Application\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use Domains\CapitalMarkets\Application\Contract\CanonicalMarketEventRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\PortfolioValuationSnapshotRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface;
@@ -45,6 +46,7 @@ final readonly class DecisionWorkspaceReadService
         private ActivityHistoryRepositoryInterface $activityHistory,
         private DomainModuleRegistry $domains,
         private CanonicalMarketEventRepositoryInterface $canonicalEvents,
+        private PortfolioValuationSnapshotRepositoryInterface $portfolioValuations,
     ) {}
 
     /**
@@ -172,6 +174,10 @@ final readonly class DecisionWorkspaceReadService
             'market_data',
         );
         $global = $this->globalState($core, $market, 'PAPER');
+        $portfolioWindows = $this->portfolioNavWindows($organizationId, $errors);
+        $global['today_net_pnl'] = $portfolioWindows['today']['net_pnl'] ?? null;
+        $global['pnl_30d'] = $portfolioWindows['30d']['net_pnl'] ?? null;
+        $global['portfolio_nav_windows'] = $portfolioWindows;
         $opportunities = $this->opportunityRows($core);
         $strategies = $this->strategyAllocationRows($core);
         $actions = $this->recommendedActions($global, $opportunities, $core);
@@ -730,7 +736,11 @@ final readonly class DecisionWorkspaceReadService
             'ledger',
         );
         $attribution = is_array($core['performance'] ?? null) ? $core['performance'] : [];
+        $portfolioWindows = $this->portfolioNavWindows($organizationId, $errors);
+        $page['global']['today_net_pnl'] = $portfolioWindows['today']['net_pnl'] ?? null;
+        $page['global']['pnl_30d'] = $portfolioWindows['30d']['net_pnl'] ?? null;
         $page['performance'] = [
+            'portfolio_nav_windows' => $portfolioWindows,
             'attribution' => $attribution,
             'ledger' => $ledger,
             'edge_funnel' => $this->edgeFunnel($core['opportunities'] ?? [], $core['positions'] ?? []),
@@ -1424,6 +1434,19 @@ final readonly class DecisionWorkspaceReadService
             ];
         }
         return $rows;
+    }
+
+    /** @param list<array<string,string>> $errors @return array<string,array<string,mixed>> */
+    private function portfolioNavWindows(string $organizationId, array &$errors): array
+    {
+        $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $snapshots = $this->safe(
+            fn(): array => $this->portfolioValuations->history(
+                $organizationId, 'paper-master', $now->modify('-31 days'), $now,
+            ),
+            [], $errors, 'portfolio_nav_history',
+        );
+        return PortfolioNavWindowProjector::project($snapshots, $now);
     }
 
     /** @param array<string,mixed> $market @return list<array<string,mixed>> */
