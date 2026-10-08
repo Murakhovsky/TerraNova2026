@@ -56,6 +56,10 @@ final readonly class PortfolioNavSnapshotProducer
                 throw new InvalidArgumentException('NAV evidence fingerprint mismatch: '.$key);
             }
         }
+        // Empty cash evidence is not proof of a zero cash balance.
+        if ($evidence['cash_by_currency'] === []) {
+            throw new InvalidArgumentException('A certified cash-balance observation is required for NAV.');
+        }
         $currency=strtoupper(trim($evidence['currency']));
         $cash=$this->sumCurrency($evidence['cash_by_currency'],$currency);
         $liabilities=$this->sumCurrency($evidence['liabilities_by_currency'],$currency);
@@ -129,7 +133,8 @@ final readonly class PortfolioNavSnapshotProducer
                 || !is_string($record['amount'] ?? null)) {
                 throw new InvalidArgumentException('NAV basket contains an unconverted or unsupported currency.');
             }
-            $sum=DecimalMath::add($sum,Decimal::fromString($record['amount']));
+            $amount=Decimal::fromString($record['amount']);
+            $sum=DecimalMath::add($sum,$amount);
         }
         return $sum;
     }
