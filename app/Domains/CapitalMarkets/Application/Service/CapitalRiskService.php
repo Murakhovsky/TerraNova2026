@@ -19,6 +19,7 @@ use Domains\CapitalMarkets\Domain\Service\PortfolioRebalanceEngine;
 use Domains\CapitalMarkets\Domain\Service\LiquidityCapacityEngine;
 use Domains\CapitalMarkets\Domain\Service\DrawdownEngine;
 use Domains\CapitalMarkets\Domain\Service\CapitalStateEngine;
+use Domains\CapitalMarkets\Domain\Service\CorrelationEngine;
 use Domains\CapitalMarkets\Domain\Risk\LiquidityBudget;
 use Domains\CapitalMarkets\Domain\Stress\PortfolioStressScenario;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -40,6 +41,7 @@ final readonly class CapitalRiskService
   private DrawdownEngine $drawdowns,
   private CapitalStateEngine $capitalStates,
   private TokenizedEquityReadService $tokenizedRead,
+  private CorrelationEngine $correlations,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -310,6 +312,24 @@ final readonly class CapitalRiskService
    if((string)($fresh['status']??'')!=='APPROVED')throw new RuntimeException('Allocation approval race detected.');
   }
   return ['approved'=>true,'idempotent'=>false,'reservations'=>$reservationRows];
+ }
+
+ public function refreshCorrelation(string $organizationId,array $input,string $portfolioId='paper-master'):array
+ {
+  $normalSeries=(array)($input['normal_series']??[]);
+  if($normalSeries===[])throw new RuntimeException('Correlation calculation requires normal_series.');
+  $normal=$this->correlations->matrix($normalSeries);
+  $stressSeries=(array)($input['stress_series']??[]);
+  $stress=$stressSeries===[]?[]:$this->correlations->matrix($stressSeries);
+  $encode=static function(array $matrix):array{
+   $out=[];foreach($matrix as $a=>$row){foreach($row as $b=>$value)$out[$a][$b]=$value instanceof Decimal?$value->value():(string)$value;}return $out;
+  };
+  $record=[
+   'snapshot_id'=>'corr-'.bin2hex(random_bytes(10)),'portfolio_id'=>$portfolioId,'created_at'=>gmdate('Y-m-d H:i:s'),
+   'window'=>(string)($input['window']??'configurable'),'normal'=>$encode($normal),'stress'=>$encode($stress),
+   'series_type'=>(string)($input['series_type']??'STRATEGY_RETURNS'),
+  ];
+  $this->repository->saveCorrelationSnapshot($organizationId,$record);return $record;
  }
 
  public function saveRiskEnvelope(string $organizationId,array $input,string $portfolioId='paper-master'):array
