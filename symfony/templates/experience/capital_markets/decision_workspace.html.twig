@@ -696,13 +696,11 @@
 
   {% elseif cmView == 'agents' %}
     {% set agents = w.agents|default({}) %}
-    {% set failedRuns = agents.runs|default([])|filter(run => run.status|default('') == 'FAILED') %}
-    {% set runningRuns = agents.runs|default([])|filter(run => run.status|default('') in ['RUNNING','STARTED']) %}
     <section class="cos-kpi-strip">
-      <twig:CosMetric label="Registered Agents" value="{{ agents.definitions|default([])|length }}" hint="Capital Markets governed agents" />
-      <twig:CosMetric label="Recent Runs" value="{{ agents.runs|default([])|length }}" hint="tenant-scoped runtime projection" />
-      <twig:CosMetric label="Running" value="{{ runningRuns|length }}" hint="current runtime state" />
-      <twig:CosMetric label="Failed" value="{{ failedRuns|length }}" hint="recent failures" />
+      <twig:CosMetric label="Registered Agents" value="{{ agents.metrics.registered|default(0) }}" hint="Capital Markets governed agents" />
+      <twig:CosMetric label="Recent Runs" value="{{ agents.metrics.recent_runs|default(0) }}" hint="tenant-scoped runtime projection" />
+      <twig:CosMetric label="Running" value="{{ agents.metrics.running|default(0) }}" hint="current runtime state" />
+      <twig:CosMetric label="Failed" value="{{ agents.metrics.failed|default(0) }}" hint="recent failures" />
     </section>
     <section class="cos-panel">
       <h2>Agent Authority</h2>
