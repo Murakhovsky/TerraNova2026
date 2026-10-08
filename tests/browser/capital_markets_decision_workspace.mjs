@@ -11,16 +11,20 @@ if (!baseUrl || !email || !password) {
 
 const browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
 const absolute = (path) => new URL(path, baseUrl).toString();
-const assertOk = (response, label) => {
+const assertOk = async (response, label) => {
   if (!response || response.status() >= 400) {
-    throw new Error(label + ' returned ' + (response?.status() ?? 'no response'));
+    let body = '';
+    try {
+      body = response ? (await response.text()).slice(0, 4000) : '';
+    } catch {}
+    throw new Error(label + ' returned ' + (response?.status() ?? 'no response') + (body ? '\n' + body : ''));
   }
 };
 
 try {
   const loginContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const login = await loginContext.newPage();
-  assertOk(await login.goto(absolute('/auth/login'), { waitUntil: 'domcontentloaded' }), 'login');
+  await assertOk(await login.goto(absolute('/auth/login'), { waitUntil: 'domcontentloaded' }), 'login');
   await login.locator('input[name="email"]').fill(email);
   await login.locator('input[name="password"]').fill(password);
   await Promise.all([
@@ -59,7 +63,7 @@ try {
 
     for (const [path, markers] of profile.paths) {
       const response = await page.goto(absolute(path), { waitUntil: 'domcontentloaded' });
-      assertOk(response, profile.name + ': ' + path);
+      await assertOk(response, profile.name + ': ' + path);
       await page.locator('[data-cm-decision-workspace]').waitFor({ state: 'visible' });
 
       const text = await page.locator('[data-cm-decision-workspace]').innerText();
