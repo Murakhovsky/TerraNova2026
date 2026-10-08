@@ -5,12 +5,12 @@ status: active
 updated: 2026-10-06
 kind: domain
 contract: domain-v1
-version: 0.10.0
+version: 0.9.0
 ---
 
 # Огляд домену Capital Markets
 
-Capital Markets `0.10.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
+Capital Markets `0.9.0` поєднує **CM-FOUNDATION**, executable **CM-MARKET-INTELLIGENCE** та перший фінансовий vertical slice **CM-TOKENIZED-EQUITY**. Домен уже вміє не тільки зберігати структуру фінансових інструментів і venues, а й приймати raw market observations, нормалізувати їх, оцінювати якість та підтримувати current MarketState.
 
 ## Призначення
 
@@ -72,7 +72,7 @@ Market Intelligence сам по собі не створює trading decisions. 
 
 ## Лабораторія досліджень і стратегій
 
-Версія 0.8.0 додала керовану Research & Strategy Lab. Версія 0.9.0 додала Capital Allocation & Risk Pack. Версія 0.10.0 додає canonical Decision Workspace: portfolio state, economic exposure, risk envelopes/headroom, constrained allocation, stress/rebalance та governed Portfolio Agent.
+Версія 0.8.0 додала керовану Research & Strategy Lab. Версія 0.9.0 включає Capital Allocation & Risk Pack і schema-neutral canonical Decision Workspace: portfolio state, economic exposure, risk envelopes/headroom, constrained allocation, stress/rebalance та governed Portfolio Agent.
 
 - формальний lineage ResearchHypothesis, ResearchExperiment, ResearchDataset та ResearchResult;
 - immutable StrategyVersion;
