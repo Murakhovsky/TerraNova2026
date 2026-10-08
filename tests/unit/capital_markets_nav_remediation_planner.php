@@ -59,5 +59,8 @@ $apparentlyReady=PortfolioNavRemediationPlanner::plan(['status'=>'READY','issues
 $assert($apparentlyReady['status']==='AWAITING_INDEPENDENT_ACCEPTANCE'
     && $apparentlyReady['snapshot_write_allowed']===false,
     'Preflight readiness does not substitute independent financial approval.');
+$assert($apparentlyReady['open_workstreams']===1
+    && $apparentlyReady['tasks'][0]['id']==='CERTIFICATION',
+    'A clean NAV preflight still requires visible independent financial certification.');
 
 echo "Capital Markets NAV remediation planning passed.\n";
