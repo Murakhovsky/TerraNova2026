@@ -24,7 +24,7 @@ generated: true
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 20 |
 | `real_estate` | `1.0.0` | — | 6 |
-| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 10 |
+| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 11 |
 | `service` | `1.0.0` | — | 7 |
 
 ## `capital_markets`
@@ -91,7 +91,7 @@ generated: true
 
 - manifest: `app/Domains/Sales/module.php`;
 - configuration provisioners: `salesModuleConfigurationProvisioner`;
-- capabilities: `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
+- capabilities: `sales.create_task`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
 
 ## `service`
 

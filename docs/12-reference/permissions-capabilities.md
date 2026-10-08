@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 45 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 131 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 132 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -195,6 +195,7 @@ generated: true
 | `sales` | `sales.admin.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.approval.any_team` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.approval.decide` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
+| `sales` | `sales.create_task` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.deal.assign` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.director.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.workspace.use` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
