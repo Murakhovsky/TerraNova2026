@@ -248,7 +248,7 @@
     <section class="cos-panel">
       <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap">
         <div><small>SIGNALS → DECISIONS</small><h2>Opportunity Board</h2><p>Default order follows canonical portfolio allocation priority when it exists.</p></div>
-        <div><a class="btn btn-outline-secondary" href="?view=best">Best</a> <a class="btn btn-outline-secondary" href="?view=low-risk">Low Risk</a> <a class="btn btn-outline-secondary" href="?view=high-capacity">High Capacity</a> <a class="btn btn-outline-secondary" href="?view=short-ttl">Short TTL</a> <a class="btn btn-outline-secondary" href="?view=rejected">Rejected by Portfolio</a></div>
+        <div class="cm-saved-views"><a class="btn btn-outline-secondary" href="?view=best">Best</a><a class="btn btn-outline-secondary" href="?view=low-risk">Low Risk</a><a class="btn btn-outline-secondary" href="?view=high-capacity">High Capacity</a><a class="btn btn-outline-secondary" href="?view=short-ttl">Short TTL</a><a class="btn btn-outline-secondary" href="?view=rejected">Rejected by Portfolio</a></div>
       </div>
       <form class="row g-2 align-items-end mb-3" method="get" action="/capital-markets/opportunities" aria-label="Opportunity filters">
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-type">Type</label><input id="cm-op-type" class="form-control" name="type" value="{{ query.type|default('') }}"></div>
@@ -272,7 +272,7 @@
             {% endfor %}
           </div>
         </details>
-        <div class="d-flex gap-2"><a href="/capital-markets/export/opportunities.csv">Export CSV</a><a href="/capital-markets/export/opportunities.json">Export JSON</a></div>
+        <div class="cm-export-links"><a href="/capital-markets/export/opportunities.csv">Export CSV</a><a href="/capital-markets/export/opportunities.json">Export JSON</a></div>
       </div>
       <div class="table-responsive">
         <table class="table align-middle" data-cm-table="opportunities">
@@ -281,7 +281,7 @@
           {% for o in w.opportunities|default([]) %}
             <tr>
               <td>{{ o.priority < 999999 ? o.priority : '—' }}</td>
-              <td><a href="/capital-markets/opportunities/{{ o.id|url_encode }}"><strong>{{ o.opportunity }}</strong></a><br><small>{{ o.decision }}</small></td>
+              <td>{% if permissions.portfolio_view|default(false) %}<a href="/capital-markets/opportunities/{{ o.id|url_encode }}"><strong>{{ o.opportunity }}</strong></a>{% else %}<strong>{{ o.opportunity }}</strong>{% endif %}<br><small>{{ o.decision }}</small></td>
               <td>{{ o.type }}</td>
               <td>{{ o.instruments|join(', ') ?: '—' }}<br><small>{{ o.venues|join(', ') ?: '—' }}</small></td>
               <td><strong>{{ o.expected_net is not null ? o.expected_net : '—' }}</strong></td>
