@@ -245,6 +245,7 @@ final readonly class DecisionWorkspaceReadService
             static fn(array $row): bool => (string)($row['hypothesis_id'] ?? '') === $hypothesisId,
         ));
         $page['decision_trace'] = $this->hypothesisTrace($hypothesisId, $research);
+        $page['research_decision'] = $this->researchDecision($hypothesis);
 
         return $page;
     }
@@ -315,6 +316,7 @@ final readonly class DecisionWorkspaceReadService
             'current' => $this->strategyAllocationRows($core),
             'recommendations' => $plan['allocations'] ?? [],
             'rebalance' => $core['rebalance'] ?? [],
+            'simulation_opportunities' => $this->opportunityRows($core),
         ];
         return $page;
     }
@@ -1106,6 +1108,19 @@ final readonly class DecisionWorkspaceReadService
             $trace[] = ['type'=>'Execution','label'=>$executionId === '' ? (string)($execution['status'] ?? 'EXECUTION') : $executionId,'href'=>$executionId === '' ? '/capital-markets/execution' : '/capital-markets/execution/'.rawurlencode($executionId)];
         }
         return $trace;
+    }
+
+    /** @param array<string,mixed>|null $hypothesis */
+    private function researchDecision(?array $hypothesis): string
+    {
+        if ($hypothesis === null) {
+            return 'UNAVAILABLE';
+        }
+        return match (strtoupper((string)($hypothesis['status'] ?? ''))) {
+            'VALIDATED', 'PROMOTED' => 'VALIDATED',
+            'REJECTED', 'FAILED' => 'REJECTED',
+            default => 'KEEP TESTING',
+        };
     }
 
     /** @param array<string,mixed> $research @return array<string,list<array<string,mixed>>> */
