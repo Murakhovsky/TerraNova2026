@@ -39,4 +39,12 @@ $total=0.0;foreach($plan->allocations as $i)$total+=(float)$i->approvedCapital->
 $assert($total<=12000.0,'Allocator must never oversubscribe available capital.');
 $blocked=$engine->allocate('paper-master',Decimal::fromString('50000'),$opps,$policy,PortfolioRiskState::ReduceOnly);
 foreach($blocked->allocations as $i)$assert($i->approvedCapital->isZero()&&$i->decision==='REJECT','REDUCE_ONLY must reject new risk.');
+
+$sameStrategy=[
+ ['opportunity_id'=>'S-A','strategy_version_id'=>'SHARED','requested_capital'=>'5000','expected_net_return'=>'0.01','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'5000','risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>90,'strategy_capital_headroom'=>'5000'],
+ ['opportunity_id'=>'S-B','strategy_version_id'=>'SHARED','requested_capital'=>'5000','expected_net_return'=>'0.009','confidence'=>0.9,'execution_probability'=>0.9,'capacity'=>'5000','risk'=>1,'concentration_penalty'=>0,'liquidity_penalty'=>0,'strategy_score'=>90,'strategy_capital_headroom'=>'5000'],
+];
+$strategyPlan=$engine->allocate('paper-master',Decimal::fromString('50000'),$sameStrategy,$policy);
+$strategyTotal=0.0;foreach($strategyPlan->allocations as $i)$strategyTotal+=(float)$i->approvedCapital->value();
+$assert($strategyTotal===5000.0,'Two opportunities of one strategy must share the same strategy capital headroom.');
 echo "Capital Markets Capital Risk golden financial tests passed.\n";
