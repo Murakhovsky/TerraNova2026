@@ -68,6 +68,9 @@ foreach([
     "'today_net_pnl' => null",
     "'pnl_30d' => null",
     "'live_enabled' => false",
+    "'research_decision'",
+    "'simulation_opportunities'",
+    "'KEEP TESTING'",
     "'PAPER'",
     "'RESEARCH'",
     "'STALE'",
@@ -105,6 +108,11 @@ foreach([
     'Market Quality',
     'PARTIAL DATA',
     'Time-window P&L not fabricated',
+    'Results',
+    'Decision:',
+    'Simulate portfolio impact',
+    'Transport:',
+    'quality_flags',
     'WHAT → WHY → MONEY → RISK → ACTION',
 ] as $needle){
     $assert(str_contains($template,$needle),'Decision Workspace UI contract missing: '.$needle);
@@ -151,10 +159,31 @@ foreach([
     'localStorage',
     'toggleColumn',
     'changeDensity',
+    'simulateOpportunity',
+    '/api/v1/capital-markets/portfolio/simulate-opportunity',
+    'X-CSRF-Token',
+    'setInterval',
+    'updateAge',
 ] as $needle){
     $assert(str_contains($preferences,$needle),'Decision Workspace presentation preference contract missing: '.$needle);
 }
 $assert(!preg_match('/\bprice\s*[+\-*\/]\s*|\bpnl\s*[+\-*\/]\s*|\brisk\s*[+\-*\/]\s*/i',$preferences),'Presentation controller must not calculate finance.');
+
+$realtime=(string)file_get_contents($root.'/symfony/src/Web/CapitalMarkets/CapitalMarketsRealtimeEventConsumer.php');
+foreach([
+    'DurableEventConsumerInterface',
+    "capital-markets.decision-workspace-realtime.v1",
+    "capital_markets.market_state.",
+    "capital_markets.portfolio.",
+    "capital_markets.allocation.",
+    "capital_markets.research.",
+    "capital_markets.execution.",
+    "workspace($event->organizationId, self::WORKSPACE_ID)",
+] as $needle){
+    $assert(str_contains($realtime,$needle),'Decision Workspace realtime contract missing: '.$needle);
+}
+$stream=(string)file_get_contents($root.'/symfony/templates/experience/realtime/streams/capital_markets_decision_signal.stream.html.twig');
+$assert(str_contains($stream,'cos-capital-markets-signal'),'Decision Workspace realtime signal target missing.');
 
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach([
