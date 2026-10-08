@@ -57,7 +57,7 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
             new SearchResult('capital_markets.search.instruments','Capital Markets Instruments','/capital-markets/instruments','workspace','Canonical instrument registry'),
             new SearchResult('capital_markets.search.relationships','Raw Economic Relationships','/capital-markets/relationships','workspace','Canonical economic relationship registry'),
             new SearchResult('capital_markets.search.venues','Capital Markets Venues','/capital-markets/venues','workspace','Canonical venue registry and capabilities'),
-            new SearchResult('capital_markets.search.market_data_admin','Market Data Administration','/capital-markets/market-data','workspace','Market source configuration and polling'),
+            new SearchResult('capital-markets-market-data','Market Data Administration','/capital-markets/market-data','workspace','Market source configuration and polling'),
             new SearchResult('capital_markets.search.tokenized_equity','Tokenized Equity Vertical Slice','/capital-markets/tokenized-equities','workspace','H1/H2 operator surface and paper execution'),
             new SearchResult('capital_markets.search.crypto_spot_perpetual','Crypto Spot / Perpetual Vertical Slice','/capital-markets/crypto-spot-perpetual','workspace','H4/H5/H6 operator surface and paper execution'),
         ],$query,$limit);
