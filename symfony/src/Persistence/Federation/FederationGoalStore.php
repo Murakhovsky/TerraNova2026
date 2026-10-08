@@ -83,6 +83,42 @@ final readonly class FederationGoalStore
     }
 
     /**
+     * Safe read model for the Goals workspace. Reads only authenticated tenant rows;
+     * manager policy is applied here, not inferred from ExperienceMode.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function listGoals(TenantContext $viewer, int $limit = 50): array
+    {
+        $this->writer($viewer);
+        $limit = max(1, min(50, $limit));
+        $rows = $this->db->fetchAllAssociative(
+            'SELECT g.goal_id, g.owner_id, g.state, g.current_spec_version, g.created_at, s.specification
+             FROM cos_federation_goals g
+             INNER JOIN cos_federation_goal_specs s
+               ON s.organization_id = g.organization_id AND s.goal_id = g.goal_id
+              AND s.spec_version = g.current_spec_version
+             WHERE g.organization_id = :org ORDER BY g.created_at DESC LIMIT ' . $limit,
+            ['org' => $viewer->organizationId()->value()],
+        );
+        $goals = [];
+        foreach ($rows as $row) {
+            $spec = GoalSpecification::fromArray(self::decode((string) $row['specification']));
+            $goals[] = [
+                'id' => $row['goal_id'],
+                'owner' => $row['owner_id'],
+                'state' => $row['state'],
+                'version' => (int) $row['current_spec_version'],
+                'created_at' => $row['created_at'],
+                'desired_result' => $spec->desiredResult,
+                'criteria' => $spec->criteria,
+                'allowed_capabilities' => $spec->allowedCapabilities,
+            ];
+        }
+        return $goals;
+    }
+
+    /**
      * Stores a proposal only. It does not approve a plan or execute any step.
      * Capability availability checks do not substitute runtime permission/approval enforcement.
      *
