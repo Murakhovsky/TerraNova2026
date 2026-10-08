@@ -815,9 +815,45 @@
     <section class="cos-panel"><h2>Sources</h2><div class="table-responsive"><table class="table"><thead><tr><th>Source</th><th>Role</th><th>Connection</th><th>Last Event</th><th>Latency</th><th>Errors</th><th>Reconnects</th><th>Trust / Rate Limit</th></tr></thead><tbody>
     {% for s in w.sources|default([]) %}{% set h=s.health|default({}) %}<tr><td><strong>{{ s.id|default('—') }}</strong></td><td>{{ s.roles|default([])|join(', ') }}</td><td>{{ h.connection_state|default(s.enabled|default(false) ? 'UNKNOWN' : 'DISABLED') }}</td><td>{{ h.last_event_at|default('—') }}</td><td>{{ h.last_latency_ms is not null ? h.last_latency_ms ~ ' ms' : '—' }}</td><td>{{ h.error_count|default(h.failure_count|default(0)) }}</td><td>{{ h.reconnect_count|default(0) }}</td><td>{{ h.rate_limit_state|default('—') }}</td></tr>{% else %}<tr><td colspan="8">No market data sources configured.</td></tr>{% endfor %}
     </tbody></table></div></section>
-    <section class="cos-panel"><h2>Market Quality</h2><div class="table-responsive"><table class="table"><thead><tr><th>Instrument</th><th>Venue</th><th>Quote Age</th><th>Sequence</th><th>Status</th><th>Trust</th><th>Mode</th><th>Last Updated</th></tr></thead><tbody>
-    {% for s in w.states|default([]) %}<tr><td>{{ s.instrument_id|default('—') }}</td><td>{{ s.venue_id|default('—') }}</td><td>{{ s.latency.event_age_ms|default('—') }} ms</td><td>{{ s.last_sequence|default('—') }}</td><td>{{ s.market_status|default('—') }}</td><td><strong>{{ s.trust_status|default(s.quality_status|default('—')) }}</strong><br><small>{{ s.quality_flags|default([])|join(', ') ?: 'No quality flags' }}</small></td><td>{{ s.mode|default('—') }}</td><td>{{ s.updated_at|default('—') }}</td></tr>{% else %}<tr><td colspan="8">No current market states.</td></tr>{% endfor %}
-    </tbody></table></div></section>
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div><h2>Market Quality</h2><p>Freshness is separated by evidence type. An unavailable age is shown as unavailable rather than borrowing a timestamp from another data object.</p></div>
+        <small>Quote / Book / Reference freshness</small>
+      </div>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Instrument</th><th>Venue / Source</th><th>Quote Age</th><th>Book Age</th><th>Reference Age</th><th>Sequence</th><th>Status</th><th>Trust</th><th>Why Untrusted?</th></tr></thead><tbody>
+      {% for s in w.quality_rows|default([]) %}
+        {% set quoteAge = s.quote_age_ms|default(null) %}
+        {% set bookAge = s.book_age_ms|default(null) %}
+        {% set referenceAge = s.reference_age_ms|default(null) %}
+        {% set marketTrust = s.trust|default('UNAVAILABLE') %}
+        {% set referenceTrust = s.reference_trust|default('UNAVAILABLE') %}
+        <tr>
+          <td><strong>{{ s.instrument_id|default('—') }}</strong><br><small>{{ s.mode|default('—') }}</small></td>
+          <td>{{ s.venue_id|default(s.source_id|default('—')) }}</td>
+          <td>{{ quoteAge is not null ? quoteAge ~ ' ms' : '—' }}</td>
+          <td>
+            {{ bookAge is not null ? bookAge ~ ' ms' : '—' }}
+            {% if bookAge is null %}<br><small title="{{ s.book_age_note|default('Independent book freshness is unavailable.') }}">independent age unavailable</small>{% endif %}
+          </td>
+          <td>{{ referenceAge is not null ? referenceAge ~ ' ms' : '—' }}</td>
+          <td>{{ s.sequence|default(s.book_sequence|default('—')) }}</td>
+          <td>{{ s.status|default('UNKNOWN') }}</td>
+          <td><strong>{{ marketTrust }}</strong><br><small>Reference: {{ referenceTrust }}</small></td>
+          <td>
+            {% if s.reasons|default([]) is not empty %}
+              <details><summary>Why untrusted?</summary><ul>{% for reason in s.reasons %}<li>{{ reason }}</li>{% endfor %}</ul></details>
+            {% elseif marketTrust not in ['TRUSTED','REFERENCE_ONLY'] or referenceTrust not in ['TRUSTED','UNAVAILABLE'] %}
+              <span>Untrusted state has no canonical quality flag recorded.</span>
+            {% else %}
+              <span>No quality warning.</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9">No canonical market or reference quality state is currently available.</td></tr>
+      {% endfor %}
+      </tbody></table></div>
+    </section>
     <twig:CosAlert title="Application health ≠ Market data health" copy="This screen reports market-data trust and source health. Application/runtime health remains a separate COS concern." tone="info" />
 
   {% elseif cmView == 'not_found' %}
