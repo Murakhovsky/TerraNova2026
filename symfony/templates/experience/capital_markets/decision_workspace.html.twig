@@ -119,8 +119,18 @@
       <twig:CosMetric label="Risk / Data" value="{{ riskState ~ ' / ' ~ dataState }}" hint="portfolio authority / market trust" />
     </section>
 
+    {% set navWindows = g.portfolio_nav_windows|default({}) %}
+    <section class="cos-panel" aria-label="Portfolio NAV PnL evidence">
+      <h2>Portfolio NAV time-window evidence</h2>
+      <p>Includes realized and unrealized returns, adjusted for external cash flows, when reconciled opening and closing NAV snapshots exist.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>Status</th><th>Net P&amp;L</th><th>Currency</th><th>Reason</th></tr></thead><tbody>
+        {% for code,entry in navWindows %}
+          <tr><td>{{ code == 'today' ? 'Today UTC' : '30D UTC' }}</td><td>{{ entry.status }}</td><td>{{ entry.net_pnl is not null ? entry.net_pnl : '—' }}</td><td>{{ entry.currency|default('—') }}</td><td>{{ entry.reason|default('—') }}</td></tr>
+        {% else %}<tr><td colspan="5">Reconciled NAV snapshots unavailable.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
     {% if g.today_net_pnl is null or g.pnl_30d is null %}
-      <twig:CosAlert title="Time-window P&L not fabricated" copy="Current backend exposes portfolio Net P&L attribution, but not canonical Today/30D windows yet. The workspace shows unavailable instead of relabeling lifetime P&L." tone="info" />
+      <twig:CosAlert title="Time-window P&L not fabricated" copy="Canonical Portfolio Today/30D P&L requires reconciled historical NAV and external cashflow snapshots. A missing valuation boundary is never substituted with lifetime or realized-only P&L." tone="info" />
     {% endif %}
 
     {% set rw = p.realized_windows|default({}) %}
@@ -878,6 +888,17 @@
       <p><small>{{ perf.economics_note|default('Canonical execution economics are unavailable.') }}</small></p>
     </section>
     <twig:CosAlert title="Canonical time windows" copy="{{ perf.time_window_note|default('') }}" tone="info" />
+    {% set navWindows = perf.portfolio_nav_windows|default({}) %}
+    <section class="cos-panel" aria-label="Portfolio NAV performance windows">
+      <h2>Portfolio Net P&amp;L Today / 30D · reconciled NAV</h2>
+      <p>Includes mark-to-market of open positions and realized results, adjusted for external cashflows. Incomplete opening or closing valuation means unavailable.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>State</th><th>Net P&amp;L</th><th>Currency</th><th>Reason</th><th>Boundary evidence</th></tr></thead><tbody>
+      {% for code,entry in navWindows %}
+        <tr><td>{{ code == 'today' ? 'Today UTC' : '30D UTC' }}</td><td>{{ entry.status }}</td><td>{{ entry.net_pnl is not null ? entry.net_pnl : '—' }}</td><td>{{ entry.currency|default('—') }}</td><td>{{ entry.reason|default('—') }}</td><td>{{ entry.opening_valued_at|default('—') }} → {{ entry.closing_valued_at|default('—') }}</td></tr>
+      {% else %}<tr><td colspan="6">No reconciled portfolio valuations available.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
     {% set rw = perf.realized_windows|default({}) %}
     <section class="cos-panel" aria-label="Realized-only UTC performance windows">
       <h2>Realized P&amp;L by execution time · UTC</h2>
