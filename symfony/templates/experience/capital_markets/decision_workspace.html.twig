@@ -848,9 +848,26 @@
       <twig:CosMetric label="Avg Latency" value="{{ q.avg_latency_ms is not null ? q.avg_latency_ms ~ ' ms' : '—' }}" />
       <twig:CosMetric label="Critical Issues" value="{{ q.critical_issues|default(0) }}" />
     </section>
-    <section class="cos-panel"><h2>Sources</h2><div class="table-responsive"><table class="table"><thead><tr><th>Source</th><th>Role</th><th>Connection</th><th>Last Event</th><th>Latency</th><th>Errors</th><th>Reconnects</th><th>Trust / Rate Limit</th></tr></thead><tbody>
-    {% for s in w.sources|default([]) %}{% set h=s.health|default({}) %}<tr><td><strong>{{ s.id|default('—') }}</strong></td><td>{{ s.roles|default([])|join(', ') }}</td><td>{{ h.connection_state|default(s.enabled|default(false) ? 'UNKNOWN' : 'DISABLED') }}</td><td>{{ h.last_event_at|default('—') }}</td><td>{{ h.last_latency_ms is not null ? h.last_latency_ms ~ ' ms' : '—' }}</td><td>{{ h.error_count|default(h.failure_count|default(0)) }}</td><td>{{ h.reconnect_count|default(0) }}</td><td>{{ h.rate_limit_state|default('—') }}</td></tr>{% else %}<tr><td colspan="8">No market data sources configured.</td></tr>{% endfor %}
-    </tbody></table></div></section>
+    <section class="cos-panel">
+      <h2>Sources</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Source</th><th>Role</th><th>Connection</th><th>Last Event</th><th>Latency</th><th>Errors</th><th>Reconnects</th><th>Rate Limit</th><th>Clock / Last Error</th></tr></thead><tbody>
+      {% for s in w.sources|default([]) %}
+        {% set h=s.health|default({}) %}
+        <tr>
+          <td><strong>{{ s.id|default('—') }}</strong></td>
+          <td>{{ s.roles|default([])|join(', ') }}</td>
+          <td>{{ h.connection_state|default(s.enabled|default(false) ? 'UNKNOWN' : 'DISABLED') }}</td>
+          <td>{{ h.last_event_at|default('—') }}</td>
+          <td>{{ h.last_latency_ms is not null ? h.last_latency_ms ~ ' ms' : '—' }}</td>
+          <td>{{ h.error_count|default(h.failure_count|default(0)) }}</td>
+          <td>{{ h.reconnect_count|default(0) }}</td>
+          <td>{{ h.rate_limit_state|default('—') }}</td>
+          <td>{{ h.clock_reliable|default(false) ? 'RELIABLE' : 'UNVERIFIED' }}{% if h.last_error|default('') %}<br><small>{{ h.last_error }}</small>{% endif %}</td>
+        </tr>
+      {% else %}<tr><td colspan="9">No market data sources configured.</td></tr>{% endfor %}
+      </tbody></table></div>
+      <small>Source health is transport/runtime evidence. Market trust is evaluated separately below from canonical MarketState / ReferenceMarketState quality.</small>
+    </section>
     <section class="cos-panel">
       <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div><h2>Market Quality</h2><p>Freshness is separated by evidence type. An unavailable age is shown as unavailable rather than borrowing a timestamp from another data object.</p></div>
