@@ -55,7 +55,7 @@ try {
       name: 'mobile',
       viewport: { width: 390, height: 844 },
       mobile: true,
-      paths: routeExpectations.filter(([path]) => ['/capital-markets', '/capital-markets/opportunities', '/capital-markets/portfolio', '/capital-markets/risk'].includes(path)),
+      paths: routeExpectations.filter(([path]) => ['/capital-markets', '/capital-markets/opportunities', '/capital-markets/portfolio', '/capital-markets/risk', '/capital-markets/execution'].includes(path)),
     },
   ]) {
     const context = await browser.newContext({ viewport: profile.viewport, isMobile: profile.mobile, storageState });
