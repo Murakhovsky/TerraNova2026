@@ -58,7 +58,8 @@ final readonly class FederationWorkflowPreflight
             throw new DomainException('Persisted plan is not a valid snapshot.');
         }
         $evidence = $this->approvalEvidence->requireApproval(
-            $actor, $approvalActionId, $goal->goalId, $planId, $goal->version, (string) $row['plan_json'],
+            $actor, $approvalActionId, $goal->goalId, $planId, $goal->version,
+            (string) $row['plan_json'], $goal->ownerId,
         );
         $this->guard->assertCompatible($goal, $data['steps'], $workflow, $evidence['approved_capabilities']);
         return [

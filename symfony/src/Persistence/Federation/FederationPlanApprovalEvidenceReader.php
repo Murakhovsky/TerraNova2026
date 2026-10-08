@@ -28,6 +28,7 @@ final readonly class FederationPlanApprovalEvidenceReader
         string $planId,
         int $specVersion,
         string $storedPlanJson,
+        string $goalOwnerId,
     ): array {
         $org = $actor->organizationId()->value();
         if (!preg_match('/^[a-f0-9]{32}$/', $actionId)) {
@@ -43,7 +44,9 @@ final readonly class FederationPlanApprovalEvidenceReader
             || $action['target_type'] !== 'cos_federation_plan'
             || $action['target_id'] !== $planId
             || $action['status'] !== 'QUEUED'
-            || $action['execution_mode'] !== 'APPROVAL_REQUIRED') {
+            || $action['execution_mode'] !== 'APPROVAL_REQUIRED'
+            || $action['source_type'] !== 'USER'
+            || $action['source_id'] !== $goalOwnerId) {
             throw new DomainException('Canonical approval Action is unavailable or incompatible.');
         }
         $params = json_decode((string) $action['parameters'], true, 512, JSON_THROW_ON_ERROR);

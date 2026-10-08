@@ -192,7 +192,7 @@ final readonly class FederationGoalStore
             }
             $this->approvalEvidence->requireApproval(
                 $actor, $approvalActionId, $specification->goalId, $planId,
-                $specification->version, (string) $plan['plan_json'],
+                $specification->version, (string) $plan['plan_json'], $specification->ownerId,
             );
             $existing = $this->db->fetchOne(
                 'SELECT run_id FROM cos_federation_runs
