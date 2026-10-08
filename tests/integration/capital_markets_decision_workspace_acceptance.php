@@ -71,6 +71,8 @@ foreach([
     "'research_decision'",
     "'simulation_opportunities'",
     "'KEEP TESTING'",
+    "'PARTIALLY_HEDGED'",
+    "'RECOVERY_REQUIRED'",
     "'PAPER'",
     "'RESEARCH'",
     "'STALE'",
@@ -113,6 +115,8 @@ foreach([
     'Simulate portfolio impact',
     'Transport:',
     'quality_flags',
+    'HIGH RISK ·',
+    'Residual Unhedged',
     'WHAT → WHY → MONEY → RISK → ACTION',
 ] as $needle){
     $assert(str_contains($template,$needle),'Decision Workspace UI contract missing: '.$needle);
@@ -184,6 +188,21 @@ foreach([
 }
 $stream=(string)file_get_contents($root.'/symfony/templates/experience/realtime/streams/capital_markets_decision_signal.stream.html.twig');
 $assert(str_contains($stream,'cos-capital-markets-signal'),'Decision Workspace realtime signal target missing.');
+
+$browser=(string)file_get_contents($root.'/tests/browser/capital_markets_decision_workspace.mjs');
+foreach([
+    '/capital-markets/opportunities',
+    '/capital-markets/allocation',
+    '/capital-markets/data-quality',
+    "viewport: { width: 390, height: 844 }",
+    "LIVE · DISABLED",
+    "Execute Live",
+    "keyboard",
+] as $needle){
+    $assert(str_contains($browser,$needle),'Decision Workspace browser QA contract missing: '.$needle);
+}
+$workflow=(string)file_get_contents($root.'/.github/workflows/runtime.yml');
+$assert(str_contains($workflow,'tests/browser/capital_markets_decision_workspace.mjs'),'Decision Workspace browser QA must run in runtime CI.');
 
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach([
