@@ -332,14 +332,16 @@
       <twig:CosMetric label="Portfolio Decision" value="{{ impact.decision|default(allocation.decision|default('NOT ALLOCATED')) }}" hint="{{ impact.reasons|default([])|join(', ') }}" />
     </section>
 
+    {% set ex = w.explainability|default({}) %}
     <div class="row g-3">
       <div class="col-lg-7">
-        <section class="cos-panel h-100">
-          <small>WHY?</small><h2>Why this exists</h2>
-          <p>{{ evidence.why is not null ? evidence.why : 'No human-readable thesis is stored on this opportunity yet.' }}</p>
-          <p><strong>Why system cares:</strong> the decision is evaluated against available capital, portfolio exposure and deterministic risk headroom, not only standalone edge.</p>
-          <p><strong>Recommended action:</strong> {{ impact.decision|default(allocation.decision|default('HOLD')) }}</p>
-        </section>
+        <twig:CosExplainability
+          title="Why this exists"
+          what="{{ ex.what|default('') }}"
+          why="{{ ex.why|default('') }}"
+          :evidence="ex.evidence|default([])"
+          recommendedAction="{{ ex.recommended_action|default('HOLD') }}"
+        />
       </div>
       <div class="col-lg-5">
         <section class="cos-panel h-100">
