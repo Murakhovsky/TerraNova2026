@@ -16,6 +16,9 @@ use Domains\CapitalMarkets\Domain\Service\EconomicExposureEngine;
 use Domains\CapitalMarkets\Domain\Service\PortfolioStressEngine;
 use Domains\CapitalMarkets\Domain\Service\PortfolioRiskEngine;
 use Domains\CapitalMarkets\Domain\Service\PortfolioRebalanceEngine;
+use Domains\CapitalMarkets\Domain\Service\LiquidityCapacityEngine;
+use Domains\CapitalMarkets\Domain\Service\DrawdownEngine;
+use Domains\CapitalMarkets\Domain\Risk\LiquidityBudget;
 use Domains\CapitalMarkets\Domain\Stress\PortfolioStressScenario;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
@@ -32,6 +35,8 @@ final readonly class CapitalRiskService
   private PortfolioStressEngine $stress,
   private PortfolioRiskEngine $portfolioRisk,
   private PortfolioRebalanceEngine $rebalance,
+  private LiquidityCapacityEngine $liquidity,
+  private DrawdownEngine $drawdowns,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -152,6 +157,13 @@ final readonly class CapitalRiskService
   $version=(string)($input['policy_version']??'v1');
   $policy=new AllocationPolicy('policy-'.$mode.'-'.$version,$version,'SCORE_BASED',$mode,['score_multiplier'=>'1'],(array)($input['constraints']??[]));
   $state=PortfolioRiskState::tryFrom(strtoupper((string)($input['risk_state']??'NORMAL')))??PortfolioRiskState::Normal;
+  if(isset($input['equity'],$input['peak_equity'])){
+   $dd=$this->drawdowns->drawdown(Decimal::fromString((string)$input['equity']),Decimal::fromString((string)$input['peak_equity']));
+   $ddState=$this->drawdowns->state($dd,(array)($input['drawdown_thresholds']??[]));
+   if(in_array($ddState->value,['STOP_NEW_RISK','EMERGENCY'],true))$state=PortfolioRiskState::ReduceOnly;
+   elseif($ddState->value==='REDUCED_RISK'&&$state===PortfolioRiskState::Normal)$state=PortfolioRiskState::Restricted;
+   elseif($ddState->value==='CAUTION'&&$state===PortfolioRiskState::Normal)$state=PortfolioRiskState::Caution;
+  }
   $opportunities=$this->prepareOpportunities($organizationId,(array)($input['opportunities']??[]),(string)($input['portfolio_mode']??'PAPER'));
 
   $plan=$this->allocator->allocate($portfolioId,$available,$opportunities,$policy,$state,(array)($input['hard_caps']??[]));
@@ -357,6 +369,23 @@ final readonly class CapitalRiskService
    if(in_array($valuation,['STALE','UNKNOWN','DEGRADED'],true))$blocked='STALE_OR_UNTRUSTED_VALUATION';
    $strategyStatus=strtoupper((string)($opportunity['strategy_status']??'PAPER'));
    if(strtoupper($portfolioMode)==='LIVE'&&!in_array($strategyStatus,['LIMITED_LIVE','LIVE','SCALE'],true))$blocked='STRATEGY_NOT_LIVE_VALIDATED';
+   if(isset($opportunity['visible_depth'],$opportunity['stress_exit_depth'],$opportunity['estimated_exit_seconds'])){
+    $budgetData=(array)($opportunity['liquidity_budget']??[]);
+    $budget=new LiquidityBudget(
+     Decimal::fromString((string)($budgetData['maximum_illiquid_capital']??$opportunity['requested_capital']??'0')),
+     Decimal::fromString((string)($budgetData['maximum_stress_exit_loss']??'0')),
+     (int)($budgetData['maximum_exit_seconds']??3600)
+    );
+    $liq=$this->liquidity->assess(
+     Decimal::fromString((string)($opportunity['requested_capital']??'0')),
+     Decimal::fromString((string)$opportunity['visible_depth']),
+     Decimal::fromString((string)$opportunity['stress_exit_depth']),
+     $budget,(int)$opportunity['estimated_exit_seconds']
+    );
+    $opportunity['liquidity_bucket']=$liq['bucket']->value;
+    if(!$liq['can_enter'])$blocked='INSUFFICIENT_ENTRY_LIQUIDITY';
+    elseif(!$liq['can_exit_stress'])$blocked='INSUFFICIENT_STRESS_EXIT_CAPACITY';
+   }
    foreach((array)($opportunity['capital_locations']??[]) as $location){
     if(!is_array($location))continue;
     $key=(string)($location['venue_id']??'').'|'.(string)($location['asset_key']??'');
