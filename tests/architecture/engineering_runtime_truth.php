@@ -18,6 +18,8 @@ $eventMigration = (string) file_get_contents($root.'/symfony/migrations/Version2
 $repositoryDiscovery = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Repository/LocalRepositoryDiscovery.php');
 $productStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringProductRequirementsStageExecutor.php');
 $architectStage = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArchitectStageExecutor.php');
+$engineeringRunner = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Agent/EngineeringAgentRunner.php');
+$openAiClient = (string) file_get_contents($root.'/app/Infrastructure/Llm/OpenAiResponsesStructuredLlmClient.php');
 
 $continue = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringContinueService.php');
 
@@ -89,6 +91,15 @@ if (!str_contains($architectStage, 'repository.revision_unavailable') || !str_co
 }
 if (str_contains($architectStage, "type: 'EXTERNAL_CREDENTIAL'")) {
     throw new RuntimeException('Architect repository infrastructure still asks the user to confirm runtime configuration.');
+}
+
+if (!str_contains($engineeringRunner, 'Transport/provider resilience belongs to the LLM adapter.')
+    || !str_contains($engineeringRunner, 'EngineeringAgentOutputValidationException')) {
+    throw new RuntimeException('Engineering runner does not separate provider retries from structured-output correction retries.');
+}
+if (!str_contains($openAiClient, "'OpenAI transport error: '")
+    || !str_contains($openAiClient, "'OpenAI request failed with HTTP '")) {
+    throw new RuntimeException('OpenAI transport diagnostics are still opaque.');
 }
 
 echo "Engineering runtime truth and observability contract passed.\n";
