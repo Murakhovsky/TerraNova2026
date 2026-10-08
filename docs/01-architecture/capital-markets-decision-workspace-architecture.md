@@ -319,7 +319,7 @@ Market Detail читає фактичні канонічні події за о�
 
 **Незакрита інтеграція:** це захищений producer з контрактом вхідних доказів, але ще не автоматична система отримання звірених даних. До повного приймання необхідні автоматичні постачальники account balances, position marks, liabilities, external flow ledger, перевірка їх походження та планувальник формування snapshots. Після цього потрібні перевірки 24-годинного й 30-денного ряду на реальному paper portfolio. Без таких даних показник залишається UNAVAILABLE.
 
-## NAV evidence preflight
+## Попередня перевірка доказових даних NAV
 
 Додана CLI-команда `php bin/console cos:capital-markets:nav:collect --organization=<ID> --portfolio=paper-master`. Вона збирає tenant-scoped дані з paper portfolio, venue balances, positions, ledger transactions та актуальних Market State й повертає структурований JSON: статус, перелік джерел і блокери. Команда повертає ненульовий код завершення, якщо фінансова звірка не готова. Snapshot не записується.
 
