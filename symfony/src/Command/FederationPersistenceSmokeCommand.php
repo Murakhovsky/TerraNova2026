@@ -672,7 +672,8 @@ final class FederationPersistenceSmokeCommand extends Command
                 $actor, 'eval-' . bin2hex(random_bytes(8)), $salesRunId,
             );
             self::assert($unknown['result'] === 'unverifiable'
-                && ($unknown['criteria'][0]['observed'] ?? 'MISSING') === null
+                && array_key_exists('observed', $unknown['criteria'][0])
+                && $unknown['criteria'][0]['observed'] === null
                 && $unknown['run_id'] === $salesRunId
                 && $unknown['evidence_policy'] === 'domain_read_model_v1',
                 'A completed Action was misrepresented as a business outcome.');
