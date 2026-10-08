@@ -102,6 +102,11 @@ $assert(is_file($root.'/app/Domains/CapitalMarkets/Application/Service/Portfolio
 $collector=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/PortfolioNavEvidenceCollector.php');
 $assert(str_contains($collector,'EXTERNAL_FLOW_LEDGER_UNAVAILABLE'),'NAV collector must block absent certified flow ledger.');
 $assert(str_contains($collector,'POSITION_MARK_UNTRUSTED'),'NAV collector must reject untrusted market marks.');
+$assert(str_contains($collector,'POSITION_MARK_STALE_OR_CLOCK_UNCERTAIN'),'NAV collector must enforce source timestamp freshness.');
+$assert(str_contains($collector,'BALANCE_NEGATIVE_AMOUNT'),'NAV collector must validate venue balance amounts.');
+$assert(str_contains($collector,'PortfolioLedgerIntegrityAudit::inspect'),'NAV collector must independently check trading ledger integrity.');
+$assert(str_contains($read,'nav_preflight'),'Performance read model must surface NAV reconciliation diagnostics.');
+$assert(str_contains($template,'NAV source integrity &amp; reconciliation'),'Performance must disclose accounting blockers.');
 $assert(str_contains($collector,"'snapshot_written'=>false"),'NAV preflight must not claim successful persistence.');
 $command=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsNavCollectCommand.php');
 $assert(str_contains($command,'cos:capital-markets:nav:collect'),'NAV preflight command must be available to operators.');
