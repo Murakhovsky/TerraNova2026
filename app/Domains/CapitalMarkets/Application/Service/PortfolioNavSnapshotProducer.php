@@ -43,10 +43,26 @@ final readonly class PortfolioNavSnapshotProducer
             || !is_array($evidence['external_flows_by_currency'] ?? null)) {
             throw new InvalidArgumentException('Explicit cash, marks, liabilities and flow ledgers are required.');
         }
+        $expectedDigests = [
+            'ledger_fingerprint' => hash('sha256', json_encode([
+                'cash' => $evidence['cash_by_currency'],
+                'liabilities' => $evidence['liabilities_by_currency'],
+            ], JSON_THROW_ON_ERROR)),
+            'marks_fingerprint' => hash('sha256', json_encode($evidence['marked_positions'], JSON_THROW_ON_ERROR)),
+            'external_flows_fingerprint' => hash('sha256', json_encode($evidence['external_flows_by_currency'], JSON_THROW_ON_ERROR)),
+        ];
+        foreach ($expectedDigests as $key => $digest) {
+            if (!hash_equals($digest, strtolower($evidence[$key]))) {
+                throw new InvalidArgumentException('NAV evidence fingerprint mismatch: '.$key);
+            }
+        }
         $currency=strtoupper(trim($evidence['currency']));
         $cash=$this->sumCurrency($evidence['cash_by_currency'],$currency);
         $liabilities=$this->sumCurrency($evidence['liabilities_by_currency'],$currency);
         $flows=$this->sumCurrency($evidence['external_flows_by_currency'],$currency);
+        if ($cash->isNegative() || $liabilities->isNegative()) {
+            throw new InvalidArgumentException('Cash and liabilities must use nonnegative asset balances.');
+        }
         $marks=Decimal::fromString('0');
         foreach ($evidence['marked_positions'] as $position) {
             if (!is_array($position)
@@ -78,6 +94,7 @@ final readonly class PortfolioNavSnapshotProducer
             'marks_reconciled'=>true,
             'external_flows_reconciled'=>true,
             'provenance_id'=>$evidence['provenance_id'],
+            ...$expectedDigests,
         ];
         $this->snapshots->append($organizationId,$portfolioId,$snapshot);
         return $snapshot;
