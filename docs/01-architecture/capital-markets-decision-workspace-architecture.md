@@ -162,12 +162,14 @@ Decision Workspace:
 Agent Center показує:
 
 - agent name/profile/version;
-- authority;
-- execution mode;
-- recent Agent Runs;
-- result/error/cost fields, якщо вони існують у canonical projection.
+- authority та execution mode;
+- recent Agent Runs і task/subject;
+- decision, recommendation, confidence, findings та limitations;
+- requested tools і фактично audited tool calls;
+- tool input/output з tenant-scoped Activity History;
+- structured result, token/cost/duration/error telemetry.
 
-Hidden chain-of-thought не показується. UI працює з decision summary, evidence, tool/result telemetry та audit-compatible runtime records.
+Hidden chain-of-thought не показується. UI працює лише зі збереженим structured result, evidence, tool/result telemetry та audit-compatible runtime records.
 
 ## Експорт
 
@@ -194,6 +196,10 @@ Desktop залишається primary, але critical views використо
 - no color-only meaning.
 
 Mobile priority: status → money → risk → action.
+
+## Performance economics
+
+Performance Center окремо показує Portfolio Net P&L і realized economics: Gross P&L → canonical costs → Net P&L, плюс coverage/status та cost breakdown. Completed executions без повної canonical cost evidence не домислюються: coverage стає PARTIAL/UNAVAILABLE, а missing categories лишаються `—`.
 
 ## Продуктивність
 
