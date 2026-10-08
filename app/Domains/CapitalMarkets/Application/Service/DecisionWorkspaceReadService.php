@@ -3,6 +3,10 @@ declare(strict_types=1);
 
 namespace Domains\CapitalMarkets\Application\Service;
 
+use DateTimeImmutable;
+use DateTimeZone;
+use Domains\CapitalMarkets\Application\Contract\CanonicalMarketEventRepositoryInterface;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsFoundationBoundary;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface;
 use Domains\CapitalMarkets\Application\Audit\CapitalMarketsAuditResourceType;
@@ -40,6 +44,7 @@ final readonly class DecisionWorkspaceReadService
         private AgentRunReadModelInterface $agentRuns,
         private ActivityHistoryRepositoryInterface $activityHistory,
         private DomainModuleRegistry $domains,
+        private CanonicalMarketEventRepositoryInterface $canonicalEvents,
     ) {}
 
     /**
@@ -322,7 +327,7 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @return array<string,mixed> */
-    public function marketDetail(string $organizationId, string $instrumentId): array
+    public function marketDetail(string $organizationId, string $instrumentId, bool $mayViewHistory = false): array
     {
         $page = $this->markets($organizationId);
         $instrument = $this->findById($page['instruments'] ?? [], $instrumentId, ['id','instrument_id']);
@@ -349,6 +354,27 @@ final readonly class DecisionWorkspaceReadService
             $page['market_rows'] ?? [],
             static fn(array $row): bool => (string)($row['instrument_id'] ?? '') === $instrumentId,
         ));
+        $page['history_rows'] = [];
+        $page['history_state'] = $mayViewHistory ? 'UNAVAILABLE' : 'RESTRICTED';
+        if ($instrument !== null && $mayViewHistory) {
+            $errors = $page['partial_errors'] ?? [];
+            $until = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+            $events = $this->safe(
+                fn(): array => $this->canonicalEvents->history(
+                    $organizationId,
+                    InstrumentId::fromString($instrumentId),
+                    $until->modify('-7 days'),
+                    $until,
+                    500,
+                ),
+                [],
+                $errors,
+                'canonical_market_history',
+            );
+            $page['history_rows'] = $this->historicalMarketRows($events);
+            $page['history_state'] = $page['history_rows'] === [] ? 'UNAVAILABLE' : 'AVAILABLE';
+            $page['partial_errors'] = $errors;
+        }
         return $page;
     }
 
@@ -1315,6 +1341,48 @@ final readonly class DecisionWorkspaceReadService
                 'raw' => $strategy,
                 'scorecard' => $scorecard,
                 'promotion' => $promotion,
+            ];
+        }
+        return $rows;
+    }
+
+    /**
+     * Canonical event history is presented as recorded, without browser-side
+     * financial recomputation, implicit currency conversion or backfill.
+     * @param array<int,object> $events
+     * @return list<array<string,mixed>>
+     */
+    private function historicalMarketRows(array $events): array
+    {
+        $rows = [];
+        foreach ($events as $event) {
+            if (!$event instanceof \Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent) {
+                continue;
+            }
+            $type = $event->eventType()->value;
+            $payload = $event->observation->toArray();
+            $value = match ($type) {
+                'QUOTE', 'BBO' => $payload['mid_price'] ?? null,
+                'CANDLE' => $payload['close']['value'] ?? null,
+                'REFERENCE_PRICE', 'MARK_PRICE', 'INDEX_PRICE', 'FUNDING_RATE' => $payload['value'] ?? null,
+                default => null,
+            };
+            if ($value === null) {
+                continue;
+            }
+            $rows[] = [
+                'timestamp' => $event->timestamps->sourceTimestamp->format(DATE_ATOM),
+                'event_type' => $type,
+                'venue_id' => $event->venueId?->value(),
+                'source_id' => $event->sourceId->value(),
+                'value' => (string)$value,
+                'quote_asset' => $payload['close']['quote_asset']
+                    ?? $payload['ask_price']['quote_asset']
+                    ?? $payload['unit']
+                    ?? null,
+                'spread_bps' => $payload['spread_bps'] ?? null,
+                'mode' => $event->mode->value,
+                'quality_flags' => array_map(static fn($flag): string => $flag->value, $event->qualityFlags),
             ];
         }
         return $rows;
