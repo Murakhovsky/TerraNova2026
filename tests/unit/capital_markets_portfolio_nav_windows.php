@@ -1,0 +1,54 @@
+<?php
+declare(strict_types=1);
+
+use Domains\CapitalMarkets\Application\Service\PortfolioNavWindowProjector;
+
+require dirname(__DIR__,2).'/vendor/autoload.php';
+
+$assert = static function(bool $ok,string $message):void {
+    if (!$ok) throw new RuntimeException($message);
+};
+$at = new DateTimeImmutable('2026-10-08T12:00:00Z');
+$snapshot = static fn(string $stamp,string $equity,string $flows,string $currency='USD'):array => [
+    'valued_at'=>$stamp, 'equity'=>$equity, 'cumulative_external_net_flow'=>$flows,
+    'currency'=>$currency, 'valuation_status'=>'COMPLETE',
+    'ledger_reconciled'=>true,'marks_reconciled'=>true,'external_flows_reconciled'=>true,
+];
+$rows = [
+    $snapshot('2026-09-08T12:00:00Z','1000','0'),
+    $snapshot('2026-10-08T00:00:00Z','1200','0'),
+    $snapshot('2026-10-08T12:00:00Z','1250','100'),
+];
+$window = PortfolioNavWindowProjector::project($rows,$at);
+$assert($window['today']['status']==='COMPLETE' && $window['today']['net_pnl']==='-50','Today NAV performance must deduct external deposits.');
+$assert($window['30d']['status']==='COMPLETE' && $window['30d']['net_pnl']==='150','30D NAV performance must use the verified 30-day opening balance.');
+$assert($window['today']['currency']==='USD','Valuation currency must come from reconciled snapshots.');
+$assert($window['today']['scope']==='PORTFOLIO_NAV_REALIZED_AND_UNREALIZED','Portfolio NAV must not be relabeled realized execution PnL.');
+$zero=PortfolioNavWindowProjector::project([
+    $snapshot('2026-10-08T00:00:00Z','1000','0'),
+    $snapshot('2026-10-08T12:00:00Z','1000','0'),
+],$at);
+$assert($zero['today']['net_pnl']==='0','True zero NAV performance is a valid result.');
+$missing=PortfolioNavWindowProjector::project([
+    $snapshot('2026-10-08T12:00:00Z','1250','100'),
+],$at);
+$assert($missing['today']['status']==='UNAVAILABLE' && $missing['today']['net_pnl']===null,'Missing opening NAV must not be backfilled.');
+$untrusted=$snapshot('2026-10-08T12:00:00Z','1250','100');
+$untrusted['marks_reconciled']=false;
+$guard=PortfolioNavWindowProjector::project([$rows[1],$untrusted],$at);
+$assert($guard['today']['net_pnl']===null,'Unreconciled mark values cannot support a portfolio PnL total.');
+$eur=PortfolioNavWindowProjector::project([
+    $rows[1],$snapshot('2026-10-08T12:00:00Z','1250','100','EUR'),
+],$at);
+$assert($eur['today']['reason']==='NAV_CURRENCY_MISMATCH','Currency changes require verified conversion accounting.');
+$late=PortfolioNavWindowProjector::project([
+    $rows[1],$snapshot('2026-10-08T11:20:00Z','1250','100'),
+],$at);
+$assert($late['today']['reason']==='VALUATION_BOUNDARY_STALE','Stale terminal NAV cannot be labeled current.');
+$malformed=PortfolioNavWindowProjector::project([
+    $rows[1],['valued_at'=>'2026-10-08T12:00:00Z','equity'=>'unknown','currency'=>'USD',
+       'cumulative_external_net_flow'=>'0','valuation_status'=>'COMPLETE',
+       'ledger_reconciled'=>true,'marks_reconciled'=>true,'external_flows_reconciled'=>true],
+],$at);
+$assert($malformed['today']['net_pnl']===null,'Invalid decimal money evidence must be unavailable.');
+echo "Capital Markets portfolio NAV window projection passed.\n";
