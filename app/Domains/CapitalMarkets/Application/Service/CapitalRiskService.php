@@ -7,9 +7,15 @@ use Domains\CapitalMarkets\Application\Contract\CapitalRiskRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Allocation\AllocationPolicy;
 use Domains\CapitalMarkets\Domain\Portfolio\PortfolioRiskState;
+use Domains\CapitalMarkets\Domain\Risk\RiskEnvelope;
+use Domains\CapitalMarkets\Domain\Risk\RiskEnvelopeLevel;
+use Domains\CapitalMarkets\Domain\Risk\RiskLimit;
+use Domains\CapitalMarkets\Domain\Risk\RiskLimitType;
 use Domains\CapitalMarkets\Domain\Service\CapitalAllocationEngine;
 use Domains\CapitalMarkets\Domain\Service\EconomicExposureEngine;
 use Domains\CapitalMarkets\Domain\Service\PortfolioStressEngine;
+use Domains\CapitalMarkets\Domain\Service\PortfolioRiskEngine;
+use Domains\CapitalMarkets\Domain\Service\PortfolioRebalanceEngine;
 use Domains\CapitalMarkets\Domain\Stress\PortfolioStressScenario;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
 use Domains\CapitalMarkets\Domain\Value\DecimalMath;
@@ -24,6 +30,8 @@ final readonly class CapitalRiskService
   private EconomicExposureEngine $exposure,
   private CapitalAllocationEngine $allocator,
   private PortfolioStressEngine $stress,
+  private PortfolioRiskEngine $portfolioRisk,
+  private PortfolioRebalanceEngine $rebalance,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
@@ -219,6 +227,87 @@ final readonly class CapitalRiskService
    if((string)($fresh['status']??'')!=='APPROVED')throw new RuntimeException('Allocation approval race detected.');
   }
   return ['approved'=>true,'idempotent'=>false,'reservations'=>$reservationRows];
+ }
+
+ public function saveRiskEnvelope(string $organizationId,array $input,string $portfolioId='paper-master'):array
+ {
+  $version=(string)($input['version']??'v1');
+  $limits=(array)($input['limits']??[]);
+  if($limits===[])throw new RuntimeException('Risk envelope requires limits.');
+  $record=[
+   'envelope_id'=>'risk-env-'.substr(hash('sha256',$portfolioId.'|'.$version.'|'.json_encode($limits)),0,24),
+   'portfolio_id'=>$portfolioId,
+   'version'=>$version,
+   'status'=>'ACTIVE',
+   'limits'=>$limits,
+   'created_at'=>gmdate('Y-m-d H:i:s'),
+  ];
+  $this->repository->saveRiskEnvelope($organizationId,$record);
+  return $record;
+ }
+
+ public function refreshRisk(string $organizationId,array $input=[],string $portfolioId='paper-master'):array
+ {
+  $portfolio=$this->trading->paperPortfolio($organizationId)??[];
+  $exposure=$this->repository->latestExposureSnapshot($organizationId,$portfolioId)??$this->refreshExposure($organizationId,$portfolioId);
+  $envelopeRecord=$this->repository->latestRiskEnvelope($organizationId,$portfolioId);
+  if($envelopeRecord===null)throw new RuntimeException('Risk envelope is not configured.');
+
+  $equity=Decimal::fromString((string)($input['equity']??$portfolio['initial_capital']??'0'));
+  $gross=Decimal::fromString((string)($exposure['gross_exposure']??'0'));
+  $net=Decimal::fromString((string)($exposure['net_exposure']??'0'));
+  $leverage=$equity->isZero()?Decimal::fromString('0'):DecimalMath::divide($gross,$equity);
+  $dailyLoss=DecimalMath::abs(Decimal::fromString((string)($input['daily_loss']??'0')));
+  $drawdown=Decimal::fromString((string)($input['drawdown']??'0'));
+  $margin=Decimal::fromString((string)($input['margin_utilization']??'0'));
+
+  $limits=[];
+  foreach((array)($envelopeRecord['limits']??[]) as $row){
+   if(!is_array($row))continue;
+   $limits[]=new RiskLimit(
+    (string)($row['metric']??''),
+    RiskEnvelopeLevel::tryFrom(strtoupper((string)($row['level']??'PORTFOLIO')))??RiskEnvelopeLevel::Portfolio,
+    RiskLimitType::tryFrom(strtoupper((string)($row['type']??'ABSOLUTE')))??RiskLimitType::Absolute,
+    Decimal::fromString((string)($row['limit']??'0')),
+    isset($row['scope_id'])?(string)$row['scope_id']:null,
+    (bool)($row['hard']??strtoupper((string)($row['type']??''))==='HARD')
+   );
+  }
+  $envelope=new RiskEnvelope((string)$envelopeRecord['envelope_id'],$portfolioId,(string)$envelopeRecord['version'],$limits);
+  $metrics=[
+   'gross_exposure'=>$gross,'net_exposure'=>DecimalMath::abs($net),'leverage'=>$leverage,
+   'drawdown'=>$drawdown,'daily_loss'=>$dailyLoss,'margin_utilization'=>$margin,
+   'available_capital'=>Decimal::fromString((string)($portfolio['available_capital']??'0')),
+  ];
+  $assessment=$this->portfolioRisk->assess($envelope,$metrics,PortfolioRiskState::tryFrom(strtoupper((string)($input['current_state']??'NORMAL')))??PortfolioRiskState::Normal);
+  $headroom=[];foreach($assessment['headroom'] as $key=>$h)$headroom[$key]=['metric'=>$h->metric,'current'=>$h->current->value(),'limit'=>$h->limit->value(),'headroom'=>$h->headroom->value(),'utilization'=>$h->utilization->value(),'hard'=>$h->hard,'breached'=>$h->breached];
+
+  $record=[
+   'snapshot_id'=>'risk-'.bin2hex(random_bytes(10)),'portfolio_id'=>$portfolioId,'created_at'=>gmdate('Y-m-d H:i:s'),
+   'equity'=>$equity->value(),'gross_exposure'=>$gross->value(),'net_exposure'=>$net->value(),'leverage'=>$leverage->value(),
+   'drawdown'=>$drawdown->value(),'daily_pnl'=>(string)($input['daily_pnl']??'0'),'margin_utilization'=>$margin->value(),
+   'risk_limit_utilization'=>$headroom,'breaches'=>$assessment['breaches'],'warnings'=>$assessment['warnings'],
+   'status'=>$assessment['state']->value,'valuation_quality'=>(string)($input['valuation_quality']??'TRUSTED'),
+  ];
+  $this->repository->saveRiskSnapshot($organizationId,$record);
+  return $record;
+ }
+
+ public function proposeRebalance(string $organizationId,array $input,string $portfolioId='paper-master'):array
+ {
+  $cost=Decimal::fromString((string)($input['estimated_cost']??'0'));
+  $returnImpact=Decimal::fromString((string)($input['expected_return_impact']??'0'));
+  $threshold=Decimal::fromString((string)($input['rebalance_threshold']??'0.05'));
+  $plan=$this->rebalance->propose($portfolioId,(array)($input['current_allocation']??[]),(array)($input['target_allocation']??[]),$cost,(int)($input['risk_improvement_pct']??0),$returnImpact,$threshold);
+  if($plan->decision==='REBALANCE'&&isset($input['expected_benefit'])){
+   $benefit=Decimal::fromString((string)$input['expected_benefit']);
+   if($cost->compareTo($benefit)>0){
+    $record=['plan_id'=>$plan->id,'portfolio_id'=>$portfolioId,'current_allocation'=>$plan->currentAllocation,'target_allocation'=>$plan->targetAllocation,'actions'=>[],'estimated_costs'=>$cost->value(),'expected_risk_improvement_pct'=>$plan->expectedRiskImprovementPct,'expected_return_impact'=>$returnImpact->value(),'status'=>'HOLD','reason'=>'Rebalance costs exceed expected benefit.','created_at'=>gmdate('Y-m-d H:i:s')];
+    $this->repository->saveRebalancePlan($organizationId,$record);return $record;
+   }
+  }
+  $record=['plan_id'=>$plan->id,'portfolio_id'=>$portfolioId,'current_allocation'=>$plan->currentAllocation,'target_allocation'=>$plan->targetAllocation,'actions'=>$plan->actions,'estimated_costs'=>$plan->estimatedCosts->value(),'expected_risk_improvement_pct'=>$plan->expectedRiskImprovementPct,'expected_return_impact'=>$plan->expectedReturnImpact->value(),'status'=>$plan->decision,'reason'=>$plan->reason,'created_at'=>gmdate('Y-m-d H:i:s')];
+  $this->repository->saveRebalancePlan($organizationId,$record);return $record;
  }
 
  public function runStress(string $organizationId,array $input,string $portfolioId='paper-master'):array
