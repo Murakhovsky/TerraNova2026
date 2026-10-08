@@ -15,7 +15,7 @@ final readonly class GoalPlanValidator
     }
 
     /**
-     * @param list<array{id:string,capability_id:string,capability_version:string}> $steps
+     * @param list<array{id:string,capability_id:string,capability_version:string,depends_on?:list<string>}> $steps
      * @param list<string> $tenantAvailableCapabilities From authoritative ActiveModule/permission/policy resolution
      * @return array{valid:bool,errors:list<string>,steps:list<array<string,mixed>>}
      */
@@ -24,6 +24,16 @@ final readonly class GoalPlanValidator
         array $steps,
         array $tenantAvailableCapabilities,
     ): array {
+        // Preserve implicit sequential execution for legacy plans. New Plans
+        // may declare explicit DAG edges; reject cycles and unknown nodes
+        // before any proposed Plan can be approved.
+        try {
+            $dependencies = (new FederationStepDependencyGraph())->resolve($steps);
+        } catch (\DomainException $exception) {
+            return ['valid' => false,
+                'errors' => ['invalid_plan_dependencies:' . $exception->getMessage()],
+                'steps' => []];
+        }
         $errors = [];
         $normalized = [];
         $seen = [];
@@ -62,6 +72,7 @@ final readonly class GoalPlanValidator
             }
             $normalized[] = [
                 'id' => $id,
+                'depends_on' => $dependencies[$id],
                 'capability_id' => $capabilityId,
                 'capability_version' => $capability->version,
                 'owner_domain' => $capability->ownerDomain,

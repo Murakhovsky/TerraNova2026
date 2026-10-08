@@ -44,4 +44,25 @@ if (!$valid['valid'] || $invalid['valid'] || $unknown['valid']
     || $valid['steps'][0]['owner_domain'] !== 'sales') {
     throw new RuntimeException('Goal plan validation bypassed capability ownership or availability.');
 }
-echo "Federation GoalSpecification, safe planning and deterministic outcomes passed.\n";
+$dagSteps = [
+    ['id' => 'research', 'capability_id' => 'sales.lead.qualify',
+        'capability_version' => '1.0.0', 'depends_on' => []],
+    ['id' => 'verify', 'capability_id' => 'sales.lead.qualify',
+        'capability_version' => '1.0.0', 'depends_on' => ['research']],
+];
+$dagResult = $validator->validate($spec, $dagSteps, ['sales.lead.qualify']);
+if (!$dagResult['valid'] || ($dagResult['steps'][1]['depends_on'] ?? null) !== ['research']) {
+    throw new RuntimeException('Goal Plan validator lost approved DAG prerequisites.');
+}
+$cyclic = $dagSteps;
+$cyclic[0]['depends_on'] = ['verify'];
+if ($validator->validate($spec, $cyclic, ['sales.lead.qualify'])['valid']) {
+    throw new RuntimeException('Goal Plan validator allowed a cyclic execution graph.');
+}
+$implicit = $dagSteps;
+unset($implicit[1]['depends_on']);
+if (($validator->validate($spec, $implicit, ['sales.lead.qualify'])['steps'][1]['depends_on'] ?? null)
+    !== ['research']) {
+    throw new RuntimeException('Goal Plan validator broke legacy implicit dependency order.');
+}
+echo "Federation GoalSpecification, safe planning, DAG normalization and deterministic outcomes passed.\n";

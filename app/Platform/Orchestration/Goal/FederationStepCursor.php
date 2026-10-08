@@ -6,9 +6,9 @@ namespace Platform\Orchestration\Goal;
 use DomainException;
 
 /**
- * Pure, deterministic scheduler for the initially supported linear Action
- * topology. Approved Plan array order is authoritative, never SQL row order.
- * No parallelism, branches, or implicit side effects are permitted.
+ * Deterministic serialized DAG cursor over an immutable approved Plan.
+ * Multiple independent branches may be represented, but at most ONE external
+ * Action can be claimed at a time. No implicit parallel dispatch or replay.
  */
 final readonly class FederationStepCursor
 {
@@ -19,8 +19,8 @@ final readonly class FederationStepCursor
      */
     public function select(array $planSteps, array $persistedSteps): array
     {
-        if ($planSteps === [] || !array_is_list($planSteps)
-            || count($planSteps) > 100 || count($planSteps) !== count($persistedSteps)) {
+        $dependencies = (new FederationStepDependencyGraph())->resolve($planSteps);
+        if (count($planSteps) !== count($persistedSteps)) {
             throw new DomainException('Federation plan/Run step topology differs.');
         }
         $byId = [];
@@ -31,16 +31,13 @@ final readonly class FederationStepCursor
             }
             $byId[$id] = $stored;
         }
+
         $completed = [];
-        $seen = [];
-        $next = null;
+        $completedSet = [];
+        $pending = [];
+        $active = null;
         foreach ($planSteps as $approved) {
-            $id = $approved['id'] ?? null;
-            if (!is_string($id) || !preg_match('/^[a-z0-9][a-z0-9_:-]{0,63}$/', $id)
-                || isset($seen[$id])) {
-                throw new DomainException('Federation approved Plan has invalid or duplicate steps.');
-            }
-            $seen[$id] = true;
+            $id = $approved['id'];
             $stored = $byId[$id] ?? null;
             if ($stored === null
                 || ($approved['capability_id'] ?? null) !== ($stored['capability_id'] ?? null)
@@ -49,25 +46,62 @@ final readonly class FederationStepCursor
                 || ($approved['side_effect_level'] ?? null) !== 'external') {
                 throw new DomainException('Federation Action topology/capability snapshot drift.');
             }
-            if ($next !== null) {
-                if ($stored['state'] !== 'pending') {
-                    throw new DomainException('Federation step advanced out of approved sequential order.');
-                }
-                continue;
-            }
-            if ($stored['state'] === 'completed') {
+            $state = $stored['state'] ?? null;
+            if ($state === 'completed') {
                 $completed[] = $id;
-                continue;
-            }
-            if (!in_array($stored['state'], ['pending', 'claimed', 'ambiguous'], true)) {
+                $completedSet[$id] = true;
+            } elseif ($state === 'pending') {
+                $pending[] = $id;
+            } elseif ($state === 'claimed' || $state === 'ambiguous') {
+                if ($active !== null) {
+                    throw new DomainException('Multiple concurrent external Actions are unsupported.');
+                }
+                $active = ['state' => $state, 'step_id' => $id];
+            } else {
                 throw new DomainException('Unsupported or unsafe Federation Step state.');
             }
-            $next = ['state' => (string) $stored['state'], 'step_id' => $id];
         }
-        if (count($byId) !== count($seen)) {
+        if (count($byId) !== count($dependencies)) {
             throw new DomainException('Unexpected Federation Run step was inserted.');
         }
-        return ['state' => $next['state'] ?? 'complete',
-            'step_id' => $next['step_id'] ?? null, 'completed' => $completed];
+
+        // Even previously completed steps must have had every prerequisite
+        // completed. This is a topology invariant, not a trusted success receipt.
+        foreach ($completed as $id) {
+            foreach ($dependencies[$id] as $prerequisite) {
+                if (!isset($completedSet[$prerequisite])) {
+                    throw new DomainException('Completed Federation Step skipped a DAG prerequisite.');
+                }
+            }
+        }
+        if ($active !== null) {
+            foreach ($dependencies[$active['step_id']] as $prerequisite) {
+                if (!isset($completedSet[$prerequisite])) {
+                    throw new DomainException('Claimed external Action skipped a DAG prerequisite.');
+                }
+            }
+            return ['state' => $active['state'], 'step_id' => $active['step_id'],
+                'completed' => $completed];
+        }
+
+        // Deterministic tie break follows approved Plan order, not SQL ordering.
+        // Every completed receipt will be re-attested by the orchestrator before
+        // the next external Action is submitted.
+        foreach ($pending as $id) {
+            $ready = true;
+            foreach ($dependencies[$id] as $prerequisite) {
+                if (!isset($completedSet[$prerequisite])) {
+                    $ready = false;
+                    break;
+                }
+            }
+            if ($ready) {
+                return ['state' => 'pending', 'step_id' => $id, 'completed' => $completed];
+            }
+        }
+        if ($pending !== []) {
+            throw new DomainException('Federation DAG has pending steps without a runnable prerequisite.');
+        }
+        return ['state' => 'complete', 'step_id' => null, 'completed' => $completed];
     }
 }

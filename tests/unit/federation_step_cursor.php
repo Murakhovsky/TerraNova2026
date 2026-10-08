@@ -56,4 +56,60 @@ $duplicate[1]['id'] = $duplicate[0]['id'];
 $reject($duplicate, $steps, 'duplicate Plan step id');
 $empty = [];
 $reject($empty, [], 'empty Plan');
-echo "Federation sequential cursor passed: immutable order, claimed state, predecessor and topology safety.\n";
+// Explicit branches execute in a safe deterministic serial order, never in parallel.
+$dagPlan = [
+    ['id' => 'alpha', 'capability_id' => 'sales.create_task', 'capability_version' => '1.0.0',
+        'side_effect_level' => 'external', 'depends_on' => []],
+    ['id' => 'beta', 'capability_id' => 'sales.create_task', 'capability_version' => '1.0.0',
+        'side_effect_level' => 'external', 'depends_on' => []],
+    ['id' => 'join', 'capability_id' => 'sales.create_task', 'capability_version' => '1.0.0',
+        'side_effect_level' => 'external', 'depends_on' => ['alpha', 'beta']],
+];
+$dagSteps = [];
+foreach (array_reverse($dagPlan) as $definition) {
+    $dagSteps[] = ['step_id' => $definition['id'], 'capability_id' => 'sales.create_task',
+        'capability_version' => '1.0.0', 'side_effect_level' => 'external', 'state' => 'pending'];
+}
+if ($cursor->select($dagPlan, $dagSteps)['step_id'] !== 'alpha') {
+    throw new RuntimeException('DAG root selection did not follow immutable Plan order.');
+}
+$dagSteps[2]['state'] = 'completed';
+if ($cursor->select($dagPlan, $dagSteps)['step_id'] !== 'beta') {
+    throw new RuntimeException('DAG join ran before all prerequisites completed.');
+}
+$dagSteps[1]['state'] = 'claimed';
+$claimed = $cursor->select($dagPlan, $dagSteps);
+if ($claimed['state'] !== 'claimed' || $claimed['step_id'] !== 'beta') {
+    throw new RuntimeException('Claimed DAG branch must block independent external dispatch.');
+}
+$concurrent = $dagSteps;
+$concurrent[0]['state'] = 'claimed';
+$reject($dagPlan, $concurrent, 'concurrent claimed external DAG Actions');
+$dagSteps[1]['state'] = 'completed';
+if ($cursor->select($dagPlan, $dagSteps)['step_id'] !== 'join') {
+    throw new RuntimeException('DAG join not released after both receipts completed.');
+}
+$premature = $dagSteps;
+$premature[1]['state'] = 'pending';
+$premature[0]['state'] = 'completed';
+$reject($dagPlan, $premature, 'completed join with incomplete prerequisite');
+$dagSteps[0]['state'] = 'completed';
+if ($cursor->select($dagPlan, $dagSteps)['state'] !== 'complete') {
+    throw new RuntimeException('DAG did not finalize after its last node.');
+}
+$cycle = $dagPlan;
+$cycle[0]['depends_on'] = ['join'];
+$reject($cycle, $dagSteps, 'cyclic dependency');
+$unknownEdge = $dagPlan;
+$unknownEdge[2]['depends_on'] = ['missing'];
+$reject($unknownEdge, $dagSteps, 'unknown dependency');
+$duplicateEdge = $dagPlan;
+$duplicateEdge[2]['depends_on'] = ['alpha', 'alpha'];
+$reject($duplicateEdge, $dagSteps, 'duplicate prerequisite');
+$selfEdge = $dagPlan;
+$selfEdge[2]['depends_on'] = ['join'];
+$reject($selfEdge, $dagSteps, 'self prerequisite');
+$malformed = $dagPlan;
+$malformed[1]['depends_on'] = 'alpha';
+$reject($malformed, $dagSteps, 'untyped DAG edge');
+echo "Federation serialized DAG cursor passed: legacy order, independent branches, join, cycles and unsafe concurrency.\n";
