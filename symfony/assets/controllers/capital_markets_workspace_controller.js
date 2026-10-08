@@ -1,10 +1,11 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['density', 'columnToggle'];
+    static targets = ['density', 'columnToggle', 'age', 'simulationOutput'];
 
     connect() {
         this.refreshTimer = null;
+        this.ageTimer = null;
         const storedDensity = window.localStorage.getItem('cos.capital_markets.table_density') || 'comfortable';
         if (this.hasDensityTarget) {
             this.densityTarget.value = storedDensity;
@@ -22,6 +23,8 @@ export default class extends Controller {
             }
             toggle.checked = !this.hiddenColumns(tableId).includes(column);
         }
+        this.updateAge();
+        this.ageTimer = window.setInterval(() => this.updateAge(), 1000);
     }
 
     disconnect() {
@@ -29,6 +32,97 @@ export default class extends Controller {
             window.clearTimeout(this.refreshTimer);
             this.refreshTimer = null;
         }
+        if (this.ageTimer !== null) {
+            window.clearInterval(this.ageTimer);
+            this.ageTimer = null;
+        }
+    }
+
+    updateAge() {
+        for (const target of this.ageTargets) {
+            const raw = target.dataset.updatedAt || '';
+            const timestamp = Date.parse(raw);
+            if (!raw || Number.isNaN(timestamp)) {
+                target.textContent = 'unavailable';
+                continue;
+            }
+            const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+            target.textContent = seconds < 60
+                ? seconds + 's'
+                : (seconds < 3600 ? Math.floor(seconds / 60) + 'm' : Math.floor(seconds / 3600) + 'h');
+        }
+    }
+
+    async simulateOpportunity(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const opportunityId = form.querySelector('[name="opportunity_id"]')?.value || '';
+        const capital = form.querySelector('[name="capital"]')?.value || '';
+        if (!opportunityId || !capital) {
+            this.renderSimulation({ error: 'Opportunity and positive capital are required.' });
+            return;
+        }
+        this.renderSimulation({ pending: true });
+        try {
+            const response = await fetch('/api/v1/capital-markets/portfolio/simulate-opportunity', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.element.dataset.csrf || '',
+                },
+                body: JSON.stringify({ opportunity_id: opportunityId, capital }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.data) {
+                throw new Error(payload.message || payload.error || 'Simulation failed.');
+            }
+            this.renderSimulation({ data: payload.data });
+        } catch (error) {
+            this.renderSimulation({ error: error instanceof Error ? error.message : 'Simulation failed.' });
+        }
+    }
+
+    renderSimulation(state) {
+        if (!this.hasSimulationOutputTarget) {
+            return;
+        }
+        const output = this.simulationOutputTarget;
+        output.replaceChildren();
+        if (state.pending) {
+            output.textContent = 'Running deterministic portfolio simulation…';
+            return;
+        }
+        if (state.error) {
+            output.textContent = state.error;
+            return;
+        }
+        const data = state.data || {};
+        const rows = [
+            ['Decision', data.decision],
+            ['Maximum approved capital', data.maximum_approved_capital],
+            ['Capital after', data.capital_after],
+            ['Gross exposure change', data.gross_exposure_change],
+            ['Net exposure change', data.net_exposure_change],
+            ['Margin change', data.margin_change],
+            ['Liquidity change', data.liquidity_change],
+            ['Risk score change', data.risk_score_change],
+            ['Correlation effect', data.correlation_effect],
+            ['Reasons', Array.isArray(data.reasons) ? data.reasons.join(', ') : data.reasons],
+        ];
+        const list = document.createElement('dl');
+        list.className = 'row mb-0';
+        for (const [label, value] of rows) {
+            const term = document.createElement('dt');
+            term.className = 'col-sm-5';
+            term.textContent = label;
+            const description = document.createElement('dd');
+            description.className = 'col-sm-7';
+            description.textContent = value === null || value === undefined || value === '' ? '—' : String(value);
+            list.append(term, description);
+        }
+        output.append(list);
     }
 
     realtimeUpdate() {
