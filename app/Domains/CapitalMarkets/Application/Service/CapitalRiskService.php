@@ -197,6 +197,16 @@ final readonly class CapitalRiskService
    'input_fingerprint'=>$plan->inputFingerprint,
    'proposal_actor_type'=>strtoupper((string)($input['proposal_actor_type']??'HUMAN')),
    'proposal_actor_id'=>(string)($input['proposal_actor_id']??''),
+   'decision_inputs'=>[
+    'portfolio'=>$portfolio,
+    'exposure'=>$this->repository->latestExposureSnapshot($organizationId,$portfolioId),
+    'risk'=>$this->repository->latestRiskSnapshot($organizationId,$portfolioId),
+    'risk_envelope'=>$this->repository->latestRiskEnvelope($organizationId,$portfolioId),
+    'strategy_scorecards'=>$this->research->listScorecards($organizationId,500),
+    'opportunities'=>$opportunities,
+    'policy'=>['id'=>$policy->id,'version'=>$policy->version,'type'=>$policy->type,'mode'=>$policy->mode,'weights'=>$policy->weights,'constraints'=>$policy->constraints],
+    'risk_state'=>$state->value,
+   ],
   ];
   $this->repository->saveAllocationPlan($organizationId,$record);
   return $record;
