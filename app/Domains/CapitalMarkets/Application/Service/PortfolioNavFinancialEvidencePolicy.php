@@ -49,6 +49,9 @@ final class PortfolioNavFinancialEvidencePolicy
         if (!is_string($input['effective_at']??null) || trim($input['effective_at'])==='') {
             throw new InvalidArgumentException('Source effective timestamp is required.');
         }
+        if (preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/', $input['effective_at']) !== 1) {
+            throw new InvalidArgumentException('Effective time must be an offset-aware ISO 8601 timestamp.');
+        }
         $utc=new DateTimeZone('UTC');
         $effectiveAt=(new DateTimeImmutable($input['effective_at'],$utc))->setTimezone($utc);
         if ($effectiveAt>new DateTimeImmutable('now',$utc)) {
@@ -56,6 +59,7 @@ final class PortfolioNavFinancialEvidencePolicy
         }
         return [
             'evidence_id'=>$id,
+            'source_key_sha256'=>hash('sha256',$kind.'|'.$provider.'|'.$reference),
             'kind'=>$kind,
             'currency'=>$currency,
             'amount'=>$amount->value(),
