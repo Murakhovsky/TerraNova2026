@@ -32,7 +32,8 @@ final class CapitalMarketsNavEvidenceImportCommand extends Command
         $this
             ->addOption('organization', null, InputOption::VALUE_REQUIRED, 'Organization ID')
             ->addOption('portfolio', null, InputOption::VALUE_REQUIRED, 'Portfolio ID', 'paper-master')
-            ->addOption('file', null, InputOption::VALUE_REQUIRED, 'Path to a local JSON source-evidence document');
+            ->addOption('file', null, InputOption::VALUE_REQUIRED, 'Path to a local JSON source-evidence document')
+            ->addOption('source-file', null, InputOption::VALUE_REQUIRED, 'Actual independent source document, verified against its SHA-256');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -40,8 +41,9 @@ final class CapitalMarketsNavEvidenceImportCommand extends Command
         $organization = trim((string)$input->getOption('organization'));
         $portfolio = trim((string)$input->getOption('portfolio'));
         $file = trim((string)$input->getOption('file'));
-        if ($organization === '' || $portfolio === '' || $file === '') {
-            $output->writeln(json_encode(['status'=>'REJECTED','reason'=>'ORGANIZATION_PORTFOLIO_AND_FILE_REQUIRED'], JSON_THROW_ON_ERROR));
+        $sourceFile = trim((string)$input->getOption('source-file'));
+        if ($organization === '' || $portfolio === '' || $file === '' || $sourceFile === '') {
+            $output->writeln(json_encode(['status'=>'REJECTED','reason'=>'ORGANIZATION_PORTFOLIO_AND_BOTH_FILES_REQUIRED'], JSON_THROW_ON_ERROR));
             return Command::INVALID;
         }
         if (!is_file($file) || !is_readable($file) || filesize($file) === false
@@ -58,6 +60,18 @@ final class CapitalMarketsNavEvidenceImportCommand extends Command
             }
             // Validate before writing; even an attempted authority escalation is normalized to PENDING.
             $normalized = PortfolioNavFinancialEvidencePolicy::normalize($document);
+            // Never trust a hash supplied inside JSON without checking the original bytes.
+            if (!is_file($sourceFile) || !is_readable($sourceFile) || is_link($sourceFile)) {
+                throw new \InvalidArgumentException('Independent source document unavailable.');
+            }
+            $sourceSize = filesize($sourceFile);
+            if ($sourceSize === false || $sourceSize <= 0 || $sourceSize > 20971520) {
+                throw new \InvalidArgumentException('Independent source document exceeds allowed bounds.');
+            }
+            $sourceDigest = hash_file('sha256', $sourceFile);
+            if (!is_string($sourceDigest) || !hash_equals($normalized['source_document_sha256'], $sourceDigest)) {
+                throw new \InvalidArgumentException('Independent document hash does not match.');
+            }
             $this->evidence->append($organization, $portfolio, $normalized);
             $output->writeln(json_encode([
                 'status'=>'RECORDED_PENDING_RECONCILIATION',
