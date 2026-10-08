@@ -35,6 +35,7 @@ final readonly class EngineeringWorkflowEngine
             $from,
             $target,
             $context,
+            $workflow->version(),
             new \DateTimeImmutable(),
         );
 

@@ -10,11 +10,15 @@ final class EngineeringSpecialistRequirementResolver
     /** @return list<AgentRole> */
     public function resolve(array $featureSpec, array $architecture = [], array $changedPaths = []): array
     {
-        $haystack = strtolower(json_encode([$featureSpec, $architecture, $changedPaths], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '');
+        // Use evidence values only. Structural schema keys such as "security",
+        // "database_changes" or "api_changes" are always present and must never
+        // trigger a specialist by themselves.
+        $haystack = $this->evidenceHaystack([$featureSpec, $architecture, $changedPaths]);
         $roles = [];
 
         $this->addWhen($roles, AgentRole::SECURITY_SPECIALIST, $haystack, [
-            'auth','permission','secret','credential','crypt','webhook','tenant','sensitive','security',
+            'auth','authentication','authorization','permission','permissions','secret','secrets',
+            'credential','credentials','encrypt','encryption','cryptography','webhook','tenant','sensitive','security',
         ]);
         $this->addWhen($roles, AgentRole::DATABASE_MIGRATION_SPECIALIST, $haystack, [
             'migration','schema','database','table','column','index','foreign key',
@@ -39,10 +43,47 @@ final class EngineeringSpecialistRequirementResolver
     private function addWhen(array &$roles, AgentRole $role, string $haystack, array $needles): void
     {
         foreach ($needles as $needle) {
-            if (str_contains($haystack, $needle)) {
+            if ($this->containsSignal($haystack, $needle)) {
                 $roles[] = $role;
                 return;
             }
         }
+    }
+
+    private function containsSignal(string $haystack, string $needle): bool
+    {
+        $pattern = '~(?<![a-z0-9_])'.preg_quote(strtolower($needle), '~').'(?![a-z0-9_])~u';
+        return preg_match($pattern, $haystack) === 1;
+    }
+
+    private function evidenceHaystack(mixed $value): string
+    {
+        $parts = [];
+        $this->collectEvidence($value, $parts);
+        return strtolower(implode("\n", $parts));
+    }
+
+    /** @param list<string> $parts */
+    private function collectEvidence(mixed $value, array &$parts): void
+    {
+        if (is_array($value)) {
+            foreach ($value as $nested) $this->collectEvidence($nested, $parts);
+            return;
+        }
+        if (!is_scalar($value)) return;
+
+        $text = trim((string) $value);
+        if ($text === '' || $this->isExplicitlyNoImpact($text)) return;
+        $parts[] = $text;
+    }
+
+    private function isExplicitlyNoImpact(string $text): bool
+    {
+        $normalized = strtolower(trim($text));
+        if (preg_match('~^(?:not applicable|n/a|none)\b~u', $normalized) === 1) return true;
+        if (preg_match('~^no\b.*\b(?:change|changes|impact|introduced|introduces|introduction|required|needed)\b[.!]?$~u', $normalized) === 1) return true;
+        if (preg_match('~\b(?:remains?|is|are) unchanged\b~u', $normalized) === 1) return true;
+        if (preg_match('~^does not\s+(?:change|affect|introduce|require|touch)\b~u', $normalized) === 1) return true;
+        return false;
     }
 }

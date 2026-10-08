@@ -12,8 +12,15 @@ foreach ([
     'qa_rejection_rate',
     'human_interventions_per_task',
     'cost_per_completed_feature',
+    'average_qa_planning_runs',
+    "agent_role='QA_PLANNER'",
+    "agent_role='QA_EXECUTOR'",
 ] as $needle) {
     if (!str_contains($provider, $needle)) throw new RuntimeException('Engineering metrics provider missing '.$needle);
+}
+
+if (str_contains($provider, "agent_role='QA'")) {
+    throw new RuntimeException('Engineering metrics must not use the deprecated QA role.');
 }
 
 foreach ([

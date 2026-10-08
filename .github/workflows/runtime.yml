@@ -79,6 +79,13 @@ jobs:
             -e DB_USERNAME="$MYSQL_USER" \
             -e DB_PASSWORD="$MYSQL_PASSWORD" \
             php php /tmp/engineering_agent_run_fk.php
+      - name: Engineering V0.1 operational acceptance
+        run: |
+          docker compose exec -T \
+            -e APP_ENV=test \
+            -e APP_DEBUG=1 \
+            -e COS_ENGINEERING_FIXTURE_REPOSITORY_STATE=/tmp/cos-engineering-v01-fixture-repository.json \
+            php php tests/integration/engineering_v01_operational.php
       - name: Sales governance remediation integration
         run: |
           docker compose cp tests/integration/sales_qualification_governance_repair.php php:/tmp/sales_qualification_governance_repair.php
