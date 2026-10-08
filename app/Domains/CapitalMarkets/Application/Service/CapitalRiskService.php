@@ -18,6 +18,7 @@ use Domains\CapitalMarkets\Domain\Service\PortfolioRiskEngine;
 use Domains\CapitalMarkets\Domain\Service\PortfolioRebalanceEngine;
 use Domains\CapitalMarkets\Domain\Service\LiquidityCapacityEngine;
 use Domains\CapitalMarkets\Domain\Service\DrawdownEngine;
+use Domains\CapitalMarkets\Domain\Service\CapitalStateEngine;
 use Domains\CapitalMarkets\Domain\Risk\LiquidityBudget;
 use Domains\CapitalMarkets\Domain\Stress\PortfolioStressScenario;
 use Domains\CapitalMarkets\Domain\Value\Decimal;
@@ -37,13 +38,16 @@ final readonly class CapitalRiskService
   private PortfolioRebalanceEngine $rebalance,
   private LiquidityCapacityEngine $liquidity,
   private DrawdownEngine $drawdowns,
+  private CapitalStateEngine $capitalStates,
  ){}
 
  public function workspace(string $organizationId,string $portfolioId='paper-master'):array
  {
   $portfolio=$this->trading->paperPortfolio($organizationId)??[];
+  $capitalState=$this->capitalState($organizationId,$portfolioId);
   return [
    'portfolio'=>$portfolio,
+   'capital_state'=>$capitalState,
    'positions'=>$this->trading->listPositions($organizationId,1000),
    'balances'=>$this->trading->listPaperBalances($organizationId),
    'opportunities'=>$this->trading->listOpportunities($organizationId,200),
@@ -55,6 +59,49 @@ final readonly class CapitalRiskService
    'rebalance'=>$this->repository->latestRebalancePlan($organizationId,$portfolioId),
    'correlation'=>$this->repository->latestCorrelationSnapshot($organizationId,$portfolioId),
    'stress_results'=>$this->repository->listStressResults($organizationId,$portfolioId,20),
+  ];
+ }
+
+ public function capitalState(string $organizationId,string $portfolioId='paper-master',array $buffers=[]):array
+ {
+  $portfolio=$this->trading->paperPortfolio($organizationId)??[];
+  $availableRaw=Decimal::fromString((string)($portfolio['available_capital']??'0'));
+  $reservedRaw=Decimal::fromString((string)($portfolio['reserved_capital']??'0'));
+  $reservations=$this->trading->listCapitalReservations($organizationId,'RESERVED',5000);
+  $executions=$this->trading->listExecutions($organizationId,5000);
+  $statusByOpportunity=[];
+  foreach($executions as $execution)$statusByOpportunity[(string)($execution['opportunity_id']??'')]=(string)($execution['status']??'');
+
+  $deployed=Decimal::fromString('0');$unsettled=Decimal::fromString('0');
+  foreach($reservations as $reservation){
+   $amount=Decimal::fromString((string)($reservation['amount']??'0'));
+   $status=$statusByOpportunity[(string)($reservation['opportunity_id']??'')]??'';
+   if(in_array($status,['OPEN'],true))$deployed=DecimalMath::add($deployed,$amount);
+   elseif(in_array($status,['READY','PARTIALLY_EXECUTED','EXECUTING','COMPENSATING'],true))$unsettled=DecimalMath::add($unsettled,$amount);
+  }
+  $pending=DecimalMath::subtract($reservedRaw,DecimalMath::add($deployed,$unsettled));if($pending->isNegative())$pending=Decimal::fromString('0');
+  $total=DecimalMath::add($availableRaw,$reservedRaw);
+  $allocated=Decimal::fromString('0');
+  foreach($this->repository->listStrategyAllocations($organizationId,$portfolioId) as $row)$allocated=DecimalMath::add($allocated,Decimal::fromString((string)($row['allocated_capital']??'0')));
+
+  $locations=[];
+  foreach($this->trading->listPaperBalances($organizationId) as $row)$locations[]=[
+   'venue_id'=>(string)$row['venue_id'],'asset_key'=>(string)$row['asset_key'],
+   'available'=>(string)($row['available_amount']??'0'),'reserved'=>(string)($row['reserved_amount']??'0')
+  ];
+  $snapshot=$this->capitalStates->snapshot(
+   $portfolioId,$total,$allocated,$pending,$deployed,Decimal::fromString('0'),Decimal::fromString('0'),$unsettled,
+   Decimal::fromString((string)($buffers['minimum_cash_buffer']??'0')),
+   Decimal::fromString((string)($buffers['emergency_hedge_buffer']??'0')),
+   Decimal::fromString((string)($buffers['settlement_buffer']??'0')),$locations
+  );
+  return [
+   'portfolio_id'=>$snapshot->portfolioId,'timestamp'=>$snapshot->timestamp->format(DATE_ATOM),
+   'total'=>$snapshot->total->value(),'available'=>$snapshot->available->value(),'allocated'=>$snapshot->allocated->value(),
+   'reserved'=>$snapshot->reserved->value(),'deployed'=>$snapshot->deployed->value(),'locked'=>$snapshot->locked->value(),
+   'margined'=>$snapshot->margined->value(),'unsettled'=>$snapshot->unsettled->value(),
+   'minimum_cash_buffer'=>$snapshot->minimumCashBuffer->value(),'emergency_hedge_buffer'=>$snapshot->emergencyHedgeBuffer->value(),
+   'settlement_buffer'=>$snapshot->settlementBuffer->value(),'by_location'=>$snapshot->byLocation,
   ];
  }
 
