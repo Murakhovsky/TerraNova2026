@@ -34,7 +34,7 @@ generated: true
 
 ## Capital Markets (`capital_markets`)
 
-**Опис із manifest:** Autonomous Capital Markets bounded context with shared instrument/venue, Market Intelligence, Tokenized Equity H1/H2, Crypto Spot/Perpetual H4/H5/H6 and governed Research & Strategy Lab with immutable experiments, replay/backtest, OOS, scorecards, promotion gates and Research Agent assistance. Live trading remains disabled.
+**Опис із manifest:** Autonomous Capital Markets bounded context with shared instrument/venue, Market Intelligence, Tokenized Equity H1/H2, Crypto Spot/Perpetual H4/H5/H6 and governed Research & Strategy Lab with immutable experiments, replay/backtest, OOS, scorecards, promotion gates and Research Agent assistance plus portfolio-aware Capital Allocation & Risk. Live trading remains disabled.
 
 - runtime service модуля: `capitalMarketsDomainModule`;
 - обробники jobs: `capitalMarketsResearchBacktestJobHandler`;
