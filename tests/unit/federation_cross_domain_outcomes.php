@@ -60,8 +60,11 @@ $states = new class implements ModuleStateRepositoryInterface {
     public function enabledOverride(string $organizationId, string $moduleId): ?bool {
         return $this->enabled[$organizationId . ':' . $moduleId] ?? null;
     }
-    public function enable(string $organizationId, string $moduleId, bool $value): void {
+    public function setEnabled(string $organizationId, string $moduleId, bool $value): void {
         $this->enabled[$organizationId . ':' . $moduleId] = $value;
+    }
+    public function enable(string $organizationId, string $moduleId, bool $value): void {
+        $this->setEnabled($organizationId, $moduleId, $value);
     }
 };
 $states->enable('org-one', 'growth', true);
