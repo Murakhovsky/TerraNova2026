@@ -95,3 +95,13 @@ The result always has `business_outcome_verified=false` because
 execution readiness is not proof of 50 prospects, qualification decisions,
 Sales lead IDs or native proposal drafts. Those require real tenant-scoped
 event receipts, human approvals, recoverable workflow and Goal evaluation.
+
+
+## Growth executable Federation bindings (2026-10-09)
+
+The first two reference stages now have **Domain-owned** canonical Action handlers:
+
+- `growth.market.discovery` delegates to the existing tenant-scoped Growth market-universe run (limit 1..200). A persisted completed *batch* is evidence of a completed collection attempt, **not** evidence of 50 sourced and qualified prospects. Partial/failed/in-flight batches fail closed and must be reconciled manually.
+- `growth.candidate.qualify` delegates to the active, versioned Growth qualification policy evaluator on a **scored** Candidate. Outcomes `qualified`, `monitor`, `disqualified` are persisted decisions; only `qualified` can contribute to qualification counts after independent business evidence evaluation.
+
+Both are opt-in (Growth defaults disabled), tenant manager only, immutable plan-bound, separate human approval required, first Action attempt only and idempotent through existing Growth mutation receipts. Neither endpoint or handler is an authorization bypass. Existing Growth outbound guards and scheduling remain unchanged. The remaining Growth → Sales handoff, canonical Sales lead intake, and Documents proposal preparation must be designed as a **single idempotent delivery chain**, avoiding a second Sales lead creation after an already accepted handoff. Package A acceptance remains open.

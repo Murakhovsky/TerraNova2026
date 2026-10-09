@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Federation Growth qualification receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_id",
+    "evaluation_id",
+    "policy_id",
+    "policy_revision",
+    "outcome",
+    "goal_outcome_verified"
+  ],
+  "properties": {
+    "candidate_id": {
+      "type": "string"
+    },
+    "evaluation_id": {
+      "type": "string"
+    },
+    "policy_id": {
+      "type": "string"
+    },
+    "policy_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "outcome": {
+      "enum": [
+        "qualified",
+        "monitor",
+        "disqualified"
+      ]
+    },
+    "goal_outcome_verified": {
+      "const": false
+    }
+  }
+}

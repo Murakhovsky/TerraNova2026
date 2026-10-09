@@ -15,6 +15,12 @@ final class GrowthPolicyCatalog
             $this->activationPolicies($organizationId,'growth.send_message','growth-send-message-blocked-v1','growth-send-message-auto-v1','growth-send-message-approval-v1','Growth email'),
             $this->activationPolicies($organizationId,'growth.send_linkedin','growth-linkedin-blocked-v1','growth-linkedin-auto-v1','growth-linkedin-approval-v1','Growth LinkedIn'),
             $this->activationPolicies($organizationId,'growth.place_call','growth-call-blocked-v1','growth-call-auto-v1','growth-call-approval-v1','Growth call'),
+            [new ActionPolicy($this->id($organizationId,'federation-growth-market-discovery-approval-v1'),$organizationId,
+                'growth.market.discovery',[],PolicyDecision::ApprovalRequired,10,
+                'Federation Growth market discovery approval','Federated prospect discovery requires independent approval.')],
+            [new ActionPolicy($this->id($organizationId,'federation-growth-candidate-qualification-approval-v1'),$organizationId,
+                'growth.candidate.qualify',[],PolicyDecision::ApprovalRequired,10,
+                'Federation Growth qualification approval','Federated candidate qualification requires independent approval.')],
         );
     }
 

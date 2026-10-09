@@ -1152,8 +1152,18 @@ services:
       $actorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
       $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
 
+  Domains\Growth\Automation\Action\FederatedMarketDiscoveryHandler:
+    arguments:
+      $market: '@Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary'
+
+  Domains\Growth\Automation\Action\FederatedCandidateQualificationHandler:
+    arguments:
+      $decisions: '@Domains\Growth\Application\Contract\GrowthDecisionBoundary'
+
   Domains\Growth\Bootstrap\GrowthDomainModule:
     arguments:
+      $marketDiscovery: '@Domains\Growth\Automation\Action\FederatedMarketDiscoveryHandler'
+      $qualifyCandidate: '@Domains\Growth\Automation\Action\FederatedCandidateQualificationHandler'
       $sendMessage: '@Domains\Growth\Automation\Action\GrowthSendMessageHandler'
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
