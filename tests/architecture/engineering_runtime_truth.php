@@ -142,4 +142,19 @@ foreach ([
         throw new RuntimeException('Principal Architect post-LLM checkpoint missing: '.$checkpoint);
     }
 }
+$agentRunStore = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php');
+$observabilityReadModel = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Observability/DoctrineEngineeringObservabilityReadModel.php');
+$governedLlm = (string) file_get_contents($root.'/app/Kernel/Llm/GovernedStructuredLlmClient.php');
+
+if (substr_count($agentRunStore, "['startedAt' => 'DESC']") < 2) {
+    throw new RuntimeException('Engineering AgentRun lists must be newest-first for feature and workflow views.');
+}
+if (!str_contains($observabilityReadModel, 'ORDER BY u.created_at DESC, u.id DESC')) {
+    throw new RuntimeException('Engineering LLM invocation lists must be newest-first.');
+}
+if (!str_contains($governedLlm, "\$engineeringAgentUseCase")
+    || !str_contains($governedLlm, "\$request->useCase !== 'agent.run'")) {
+    throw new RuntimeException('Engineering LLM completion is still coupled to synchronous operational metric writes.');
+}
+
 echo "Engineering runtime truth and observability contract passed.\n";

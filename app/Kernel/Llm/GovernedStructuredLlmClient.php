@@ -202,23 +202,34 @@ final readonly class GovernedStructuredLlmClient implements StructuredLlmClientI
             $this->governance->record($usage);
         }
 
-        $labels = [
-            'provider' => $response->provider,
-            'model' => $response->model,
-            'use_case' => $request->useCase ?? 'unspecified',
-        ];
-        $this->metrics->record('llm.request.latency_ms', (float) $latencyMs, $request->organizationId, $labels);
-        $this->metrics->record('llm.request.fallback_count', (float) $fallbackCount, $request->organizationId, $labels);
-        if ($response->inputTokens !== null) {
-            $this->metrics->record('llm.request.input_tokens', (float) $response->inputTokens, $request->organizationId, $labels);
-        }
-        if ($response->outputTokens !== null) {
-            $this->metrics->record('llm.request.output_tokens', (float) $response->outputTokens, $request->organizationId, $labels);
-        }
-        if ($response->costAmount !== null) {
-            $this->metrics->record('llm.request.cost', $response->costAmount, $request->organizationId, $labels + [
-                'currency' => $costCurrency ?? $this->budgetCurrency,
-            ]);
+        // Engineering agent calls already persist full provider/token/cost truth in
+        // the governed LLM ledger above. Do not let secondary operational-metric writes
+        // hold the Engineering worker after the provider response has completed.
+        // This was observable in production as: LLM ledger row visible, but the
+        // Principal Architect stage never regained control and watchdog later marked it STALE.
+        $engineeringAgentUseCase = is_string($request->useCase)
+            && str_starts_with($request->useCase, 'agent.')
+            && $request->useCase !== 'agent.run';
+
+        if (!$engineeringAgentUseCase) {
+            $labels = [
+                'provider' => $response->provider,
+                'model' => $response->model,
+                'use_case' => $request->useCase ?? 'unspecified',
+            ];
+            $this->metrics->record('llm.request.latency_ms', (float) $latencyMs, $request->organizationId, $labels);
+            $this->metrics->record('llm.request.fallback_count', (float) $fallbackCount, $request->organizationId, $labels);
+            if ($response->inputTokens !== null) {
+                $this->metrics->record('llm.request.input_tokens', (float) $response->inputTokens, $request->organizationId, $labels);
+            }
+            if ($response->outputTokens !== null) {
+                $this->metrics->record('llm.request.output_tokens', (float) $response->outputTokens, $request->organizationId, $labels);
+            }
+            if ($response->costAmount !== null) {
+                $this->metrics->record('llm.request.cost', $response->costAmount, $request->organizationId, $labels + [
+                    'currency' => $costCurrency ?? $this->budgetCurrency,
+                ]);
+            }
         }
     }
 
