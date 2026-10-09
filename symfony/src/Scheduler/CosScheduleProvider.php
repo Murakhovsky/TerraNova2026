@@ -91,8 +91,8 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         if($this->engineeringDomainAutonomyIntervalMinutes<1||$this->engineeringDomainAutonomyIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering Domain autonomy interval must be between 1 and 60 minutes.');
         }
-        if ($this->capitalMarketsPaperNavIntervalMinutes<1||$this->capitalMarketsPaperNavIntervalMinutes>60) {
-            throw new InvalidArgumentException('Paper NAV snapshot interval must be 1..60 minutes.');
+        if ($this->capitalMarketsPaperNavIntervalMinutes<10||$this->capitalMarketsPaperNavIntervalMinutes>60) {
+            throw new InvalidArgumentException('Paper NAV snapshot interval must be 10..60 minutes to preserve 31-day history integrity.');
         }
         if ($this->capitalMarketsPaperNavEnabled && trim($this->capitalMarketsPaperNavOrganizationId)==='') {
             throw new InvalidArgumentException('Paper NAV scheduler requires an existing tenant ID.');
