@@ -272,6 +272,68 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         return $failed;
     }
 
+    public function recoverStalledForOrganization(string $organizationId): int
+    {
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            "SELECT r.id AS run_id, r.feature_id, r.workflow_execution_id, r.agent_role, r.trace_id,
+                    r.technical_retry, r.started_at, w.heartbeat_at, w.runtime_reason
+             FROM cos_engineering_agent_runs r
+             INNER JOIN cos_engineering_workflows w ON w.id = r.workflow_execution_id
+             INNER JOIN cos_engineering_features f ON f.id = r.feature_id
+             WHERE f.organization_id = :organization_id
+               AND r.status = 'RUNNING'
+               AND w.health_status = 'STALLED'
+               AND w.current_agent_run_id = r.id",
+            ['organization_id' => $organizationId],
+        );
+
+        $recovered = 0;
+        $now = new DateTimeImmutable();
+        foreach ($rows as $row) {
+            $record = $this->entityManager->find(AgentRunRecord::class, (string) ($row['run_id'] ?? ''));
+            if (!$record instanceof AgentRunRecord) continue;
+
+            $heartbeatRaw = trim((string) ($row['heartbeat_at'] ?? ''));
+            $heartbeatAt = $heartbeatRaw !== ''
+                ? new DateTimeImmutable($heartbeatRaw, new \DateTimeZone('UTC'))
+                : $record->startedAt();
+
+            $reason = trim((string) ($row['runtime_reason'] ?? ''));
+            $message = $reason !== ''
+                ? 'Workflow stalled after loss of AgentRun heartbeat: '.$reason
+                : 'Workflow stalled after loss of AgentRun heartbeat.';
+
+            $record->recoverStale($message, $heartbeatAt, $record->technicalRetry());
+            $this->events->append(
+                $record->featureId(),
+                $record->workflowExecutionId(),
+                'WATCHDOG',
+                'agent.stalled_run_recovered',
+                'FAILED',
+                $record->agentRole().' RUNNING state reconciled with STALLED workflow',
+                [
+                    'role' => $record->agentRole(),
+                    'last_heartbeat_at' => $heartbeatAt->format(DATE_ATOM),
+                    'effective_finished_at' => $heartbeatAt->format(DATE_ATOM),
+                    'recovered_at' => $now->format(DATE_ATOM),
+                    'duration_basis' => 'last_heartbeat',
+                    'runtime_reason' => $reason,
+                ],
+                $record->id(),
+                $record->traceId(),
+                null,
+                $message,
+            );
+            ++$recovered;
+        }
+
+        if ($recovered > 0) {
+            $this->entityManager->flush();
+        }
+
+        return $recovered;
+    }
+
     public function byIdempotencyKey(string $idempotencyKey): ?array
     {
         $record = $this->recordByIdempotencyKey($idempotencyKey);
