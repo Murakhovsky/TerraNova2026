@@ -135,6 +135,13 @@ final readonly class EngineeringArchitectStageExecutor
                 $contextPaths[] = $file['path'];
             }
         }
+        // A prior v0.1 Human Gate may actually be a read-only evidence refresh.
+        // Include the missing files on the resumed run without changing the spec.
+        $evidencePolicy = new EngineeringArchitectEvidenceAuthorization();
+        $previousLegacy = $previousArchitecture['content']['required_human_decisions'][0] ?? null;
+        if (is_array($previousLegacy) && $evidencePolicy->isLegacyReadOnlyRefresh($previousLegacy)) {
+            $contextPaths = array_merge($contextPaths, $evidencePolicy->legacyRefreshPaths($contextPaths));
+        }
         $contextPaths = array_slice(array_values(array_unique($contextPaths)), 0, 20);
 
         $repositoryFiles = $this->journal->around(
