@@ -6,7 +6,6 @@ namespace App\Web\Experience\Component;
 
 use App\Web\Experience\Realtime\RealtimeTopic;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
@@ -33,17 +32,18 @@ final class CosRealtimeSubscription
      */
     public function getCanSubscribe(): bool
     {
-        return self::sameOrigin($this->publicHubUrl, $this->requests->getCurrentRequest());
+        return self::sameOrigin($this->publicHubUrl, $this->requests->getCurrentRequest()?->getSchemeAndHttpHost());
     }
 
-    public static function sameOrigin(string $publicHubUrl, ?Request $request): bool
+    public static function sameOrigin(string $publicHubUrl, ?string $webOrigin): bool
     {
-        if ($request === null) {
+        if ($webOrigin === null || $webOrigin === '') {
             return false;
         }
 
         $parts = parse_url($publicHubUrl);
-        if (!is_array($parts)) {
+        $web = parse_url($webOrigin);
+        if (!is_array($parts) || !is_array($web)) {
             return false;
         }
 
@@ -53,11 +53,17 @@ final class CosRealtimeSubscription
             return false;
         }
 
-        $defaultPort = $scheme === 'https' ? 443 : 80;
-        $hubPort = (int)($parts['port'] ?? $defaultPort);
+        $pageScheme = strtolower((string)($web['scheme'] ?? ''));
+        $pageHost = strtolower((string)($web['host'] ?? ''));
+        if (!in_array($pageScheme, ['http', 'https'], true) || $pageHost === '') {
+            return false;
+        }
 
-        return $scheme === strtolower($request->getScheme())
-            && $host === strtolower($request->getHost())
-            && $hubPort === $request->getPort();
+        $hubPort = (int)($parts['port'] ?? ($scheme === 'https' ? 443 : 80));
+        $pagePort = (int)($web['port'] ?? ($pageScheme === 'https' ? 443 : 80));
+
+        return $scheme === $pageScheme
+            && $host === $pageHost
+            && $hubPort === $pagePort;
     }
 }
