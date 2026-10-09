@@ -52,9 +52,9 @@ $tooLarge = $validStep;
 $tooLarge['input']['parameters']['body'] = str_repeat('x', 20000);
 $reject($tooLarge, 'oversized input');
 $prepareContract=$catalog->describe('growth.handoff.prepare');
-if ($prepareContract === null || $prepareContract->sideEffectLevel !== 'internal'
+if ($prepareContract === null || $prepareContract->sideEffectLevel !== 'external'
     || $prepareContract->executionBinding !== 'action:growth.handoff.prepare') {
-    throw new RuntimeException('Growth handoff preparation should be an internal governed Action.');
+    throw new RuntimeException('Growth handoff preparation must be an approval-gated external Federation Action.');
 }
 $growthGoal=new GoalSpecification('g-growth','tenant-a','manager-a','Prepare qualified candidate for Sales handoff',[
     ['id'=>'candidate_ready','operator'=>'at_least','expected'=>1],
@@ -66,11 +66,11 @@ $growthStep=['id'=>'prepare','capability_id'=>'growth.handoff.prepare','capabili
     ]]];
 $growthPlan=$validate->validate($growthGoal,[$growthStep],['growth.handoff.prepare']);
 if (!$growthPlan['valid']) {
-    throw new RuntimeException('Approved internal Growth Action was rejected: '.implode(',',$growthPlan['errors']));
+    throw new RuntimeException('Approved Federation Growth Action was rejected: '.implode(',',$growthPlan['errors']));
 }
-$missingInternalActionInput=$growthStep;
-unset($missingInternalActionInput['input']);
-if ($validate->validate($growthGoal,[$missingInternalActionInput],['growth.handoff.prepare'])['valid']) {
-    throw new RuntimeException('Internal Action bypassed immutable plan input validation.');
+$missingFederatedActionInput=$growthStep;
+unset($missingFederatedActionInput['input']);
+if ($validate->validate($growthGoal,[$missingFederatedActionInput],['growth.handoff.prepare'])['valid']) {
+    throw new RuntimeException('Federated Action bypassed immutable plan input validation.');
 }
 echo "Federation typed Sales Action payload validation and immutable planning passed.\n";
