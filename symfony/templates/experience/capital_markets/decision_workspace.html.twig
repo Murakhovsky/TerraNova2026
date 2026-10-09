@@ -215,10 +215,11 @@
             {% set visibleActionCount = 0 %}
             {% for action in w.recommended_actions|default([]) %}
               {% set actionAllowed = true %}
-              {% if action.href starts with '/capital-markets/opportunities/' and not permissions.portfolio_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/opportunities/' and (not permissions.portfolio_view|default(false) or not permissions.opportunity_view|default(false)) %}{% set actionAllowed = false %}{% endif %}
               {% if action.href starts with '/capital-markets/allocation' and not permissions.allocation_view|default(false) %}{% set actionAllowed = false %}{% endif %}
               {% if action.href starts with '/capital-markets/risk' and not permissions.risk_view|default(false) %}{% set actionAllowed = false %}{% endif %}
               {% if action.href starts with '/capital-markets/data-quality' and not permissions.market_data_quality_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/performance' and not permissions.portfolio_view|default(false) %}{% set actionAllowed = false %}{% endif %}
               {% if actionAllowed %}
                 {% set visibleActionCount = visibleActionCount + 1 %}
                 <li class="mb-2"><a href="{{ action.href }}"><strong>{{ action.label }}</strong></a><br><small>{{ action.reason }}</small></li>
