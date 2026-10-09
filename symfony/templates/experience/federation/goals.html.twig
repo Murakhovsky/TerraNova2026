@@ -42,12 +42,17 @@
             </label>
             <div class="cos-section-grid">
                 <label class="cos-field"><span>Показник (машинний код)</span>
-                    <input class="cos-input" name="criterion" value="qualified_leads" pattern="[a-z][a-z0-9_.-]*" maxlength="64" required>
+                    <input class="cos-input" name="criterion" value="sales.won_deals" list="federation-supported-outcomes" pattern="[a-z][a-z0-9_.-]*" maxlength="64" required>
+                    <datalist id="federation-supported-outcomes">
+                        <option value="sales.won_deals">Sales: виграні угоди</option>
+                        <option value="sales.closed_deals">Sales: закриті угоди</option>
+                    </datalist>
                 </label>
                 <label class="cos-field"><span>Цільове значення</span>
                     <input class="cos-input" type="number" name="target" min="1" max="1000000" value="5" required>
                 </label>
             </div>
+            <p class="cos-card__copy">Автоматично підтверджуються показники <code>sales.won_deals</code> і <code>sales.closed_deals</code>, якщо Sales активний. Інші коди можна зберегти, але без довіреного джерела їхній результат залишиться непідтвердженим.</p>
             <button class="cos-button cos-button--primary" type="submit">Зберегти чернетку Goal</button>
         </form>
         <p class="cos-card__copy">Збереження не запускає агентів і не створює зовнішніх операцій.</p>
@@ -93,10 +98,10 @@
         {% if reconciled %}
             <div class="cos-alert cos-alert--success" role="status">Перевірку квитанцій виконано. Непідтверджені операції залишаються без повторного запуску.</div>
         {% endif %}
-        {% if evaluated %}
+        {% if evaluated|default(false) %}
             <div class="cos-alert cos-alert--success" role="status">Оцінку бізнес-результату збережено на основі даних відповідального домену.</div>
         {% endif %}
-        {% if outcomeError %}
+        {% if outcomeError|default(false) %}
             <div class="cos-alert" role="alert">Не вдалося перевірити результат. Запуск має бути завершений, а джерело даних доступне.</div>
         {% endif %}
         <div class="cos-page__stack">

@@ -137,7 +137,7 @@ final readonly class GoalsWorkspaceController
         if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', 400);
 
         $desired = trim((string) $request->request->get('desired_result', ''));
-        $criterion = trim((string) $request->request->get('criterion', 'qualified_leads'));
+        $criterion = trim((string) $request->request->get('criterion', 'sales.won_deals'));
         $rawTarget = $request->request->get('target', '');
         $target = is_string($rawTarget) && ctype_digit($rawTarget) ? (int) $rawTarget : 0;
         if ($desired === '' || mb_strlen($desired) > 1200
