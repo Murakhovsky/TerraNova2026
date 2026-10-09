@@ -20,7 +20,15 @@
     "parameters": {
       "type": "object",
       "additionalProperties": false,
-      "maxProperties": 0
+      "required": [
+        "target_domain"
+      ],
+      "properties": {
+        "target_domain": {
+          "type": "string",
+          "const": "sales"
+        }
+      }
     }
   }
 }
