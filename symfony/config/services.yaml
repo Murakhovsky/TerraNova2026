@@ -2042,6 +2042,10 @@ services:
 
   Domains\CapitalMarkets\Application\Service\PortfolioNavEvidenceCollector: ~
 
+  Domains\CapitalMarkets\Application\Service\PortfolioNavSnapshotProducer: ~
+
+  Domains\CapitalMarkets\Application\Service\PortfolioNavIndependentReconciliationService: ~
+
   App\Command\CapitalMarketsNavCollectCommand: ~
 
   App\Command\CapitalMarketsNavEvidenceImportCommand: ~
