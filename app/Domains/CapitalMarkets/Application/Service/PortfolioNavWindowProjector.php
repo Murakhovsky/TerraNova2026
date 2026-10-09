@@ -162,6 +162,60 @@ final class PortfolioNavWindowProjector
         }
         return $out;
     }
+    /**
+     * The latest reconciled valuation can establish current NAV equity even if
+     * opening Today / 30D snapshots are still missing. One fresh snapshot is
+     * NOT evidence of positive or zero performance for any time window.
+     *
+     * @param list<array<string,mixed>> $snapshots
+     * @return array<string,mixed>
+     */
+    public static function latestVerified(
+        array $snapshots, ?DateTimeImmutable $at = null, int $maxAgeSeconds = 900,
+    ): array {
+        $now = ($at ?? new DateTimeImmutable('now', new DateTimeZone('UTC')))
+            ->setTimezone(new DateTimeZone('UTC'));
+        $result = ['status'=>'UNAVAILABLE','equity'=>null,'currency'=>null,
+            'valued_at'=>null,'provenance_id'=>null,'reason'=>'MISSING_RECONCILED_NAV'];
+        $best = null;
+        $seen=[];
+        foreach ($snapshots as $row) {
+            if (!is_array($row) || !is_string($row['valued_at'] ?? null)) continue;
+            try {
+                if (preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/',$row['valued_at'])!==1) continue;
+                $stamp=(new DateTimeImmutable($row['valued_at']))->setTimezone(new DateTimeZone('UTC'));
+                $age=$now->getTimestamp()-$stamp->getTimestamp();
+                if ($age < 0 || $age > $maxAgeSeconds) continue;
+                $key=$stamp->format('Y-m-d H:i:s.u');
+                if (isset($seen[$key])) return [...$result,'reason'=>'CONFLICTING_RECENT_NAV_TIMESTAMPS'];
+                $seen[$key]=true;
+                if (($row['valuation_status']??null)!=='COMPLETE'
+                    || ($row['ledger_reconciled']??false)!==true
+                    || ($row['marks_reconciled']??false)!==true
+                    || ($row['external_flows_reconciled']??false)!==true
+                    || !self::verifiedSnapshotEvidence($row)) {
+                    return [...$result,'reason'=>'UNVERIFIED_RECENT_NAV'];
+                }
+                $equity=Decimal::fromString((string)($row['equity']??''));
+                Decimal::fromString((string)($row['cumulative_external_net_flow']??''));
+                $currency=strtoupper(trim((string)($row['currency']??'')));
+                if ($currency==='' || $equity->isNegative()) {
+                    return [...$result,'reason'=>'INVALID_RECENT_NAV_VALUE'];
+                }
+                if ($best===null || $stamp>$best['timestamp']) {
+                    $best=['timestamp'=>$stamp,'equity'=>$equity->value(),
+                        'currency'=>$currency,'provenance_id'=>$row['provenance_id']];
+                }
+            } catch (Throwable) {
+                return [...$result,'reason'=>'INVALID_RECENT_NAV_EVIDENCE'];
+            }
+        }
+        if ($best===null) return $result;
+        return ['status'=>'COMPLETE','equity'=>$best['equity'],
+            'currency'=>$best['currency'],'valued_at'=>$best['timestamp']->format(DATE_ATOM),
+            'provenance_id'=>$best['provenance_id'],'reason'=>null];
+    }
+
     /** @param array<string,mixed> $snapshot */
     private static function verifiedSnapshotEvidence(array $snapshot):bool
     {
