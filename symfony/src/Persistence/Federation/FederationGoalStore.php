@@ -199,6 +199,36 @@ final readonly class FederationGoalStore
             if (!hash_equals(hash('sha256', self::json($proof)), $lineage['evidence_hash'])) {
                 throw new DomainException('Federation lineage evidence fingerprint mismatch.');
             }
+            // A signed source snapshot cannot be attached to an unrelated
+            // Candidate or smuggle another business Action into the same
+            // child Plan. All approved inputs must reference one subject.
+            $candidate = $lineage['candidate_id'];
+            $expectedPlan = 'plan-' . substr(hash('sha256',
+                $actor->organizationId()->value() . "\\0" . $goalId . "\\0" . $candidate
+            ), 0, 24);
+            if ($planId !== $expectedPlan || count($validated['steps']) !== 4) {
+                throw new DomainException('Fan-out Plan identity/shape differs from approved Candidate.');
+            }
+            $requiredActions = [
+                'growth.candidate.qualify',
+                'growth.handoff.prepare',
+                'growth.handoff.target.sales',
+                'documents.proposal.prepare',
+            ];
+            foreach ($validated['steps'] as $index => $step) {
+                $input = $step['input'] ?? null;
+                if (($step['capability_id'] ?? null) !== $requiredActions[$index]
+                    || !is_array($input)
+                    || ($input['target_type'] ?? null) !== 'growth_candidate'
+                    || ($input['target_id'] ?? null) !== $candidate) {
+                    throw new DomainException('Lineage-bearing Plan has a mismatched Candidate Action.');
+                }
+            }
+            $vars = $validated['steps'][3]['input']['parameters']['variables'] ?? null;
+            if (!is_array($vars) || ($vars['candidate_id'] ?? null) !== $candidate
+                || ($vars['account_id'] ?? null) !== $lineage['account_id']) {
+                throw new DomainException('Proposal template identity differs from immutable source lineage.');
+            }
         }
 
         $this->db->insert('cos_federation_plans', [
