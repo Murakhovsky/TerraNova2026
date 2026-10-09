@@ -677,6 +677,71 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $unknown['run_id'] === $salesRunId
                 && $unknown['evidence_policy'] === 'domain_read_model_v1',
                 'A completed Action was misrepresented as a business outcome.');
+            $latest = $this->goals->latestTrustedEvaluation($actor, $salesRunId);
+            self::assert($latest !== null
+                && $latest['result'] === 'unverifiable'
+                && $latest['run_id'] === $salesRunId
+                && is_string($latest['evaluation_id'] ?? null)
+                && $this->goals->latestTrustedEvaluation($other, $salesRunId) === null
+                && $this->goals->latestTrustedEvaluation($actor, $runId) === null,
+                'Latest trusted evaluation leaked between tenants or incomplete executions.');
+
+            // Pre-cutover ad hoc evaluation must never replace trusted data,
+            // even when it forges this run ID and claims a successful result.
+            $this->db->insert('cos_federation_evaluations', [
+                'organization_id' => $org,
+                'evaluation_id' => 'eval-' . bin2hex(random_bytes(8)),
+                'goal_id' => $salesGoalId, 'spec_version' => 1,
+                'result' => 'satisfied',
+                'evaluation_json' => json_encode([
+                    'run_id' => $salesRunId, 'result' => 'satisfied',
+                    'criteria' => [['criterion_id' => 'tasks_created', 'observed' => 100,
+                        'expected' => 1, 'result' => 'satisfied', 'evidence' => ['forged']]],
+                ], JSON_THROW_ON_ERROR),
+                'evaluated_at' => self::now(),
+            ]);
+            self::assert($this->goals->latestTrustedEvaluation($actor, $salesRunId)['result'] === 'unverifiable',
+                'Legacy user-supplied Goal evidence displaced canonical Domain evaluation.');
+
+            $previewOutcome = [
+                'result' => 'partial',
+                'recorded_at' => '2026-10-09 00:00:00.000000',
+                'evaluation_id' => 'eval-visible-test',
+                'evidence_policy' => 'domain_read_model_v1',
+                'specification_version' => 1,
+                'criteria' => [[
+                    'criterion_id' => 'sales.won_deals', 'observed' => 2,
+                    'expected' => 5, 'result' => 'partial',
+                    'source' => 'sales.cos_events.closed_outcomes.v1',
+                    'window_start' => '2026-10-01T00:00:00+00:00',
+                    'window_end' => '2026-10-09T00:00:00+00:00',
+                    'evidence' => ['trusted-evidence-private:<script>'],
+                ]],
+            ];
+            foreach (['result', 'process', 'expert'] as $displayMode) {
+                $view = $this->twig->render('experience/federation/goals.html.twig', [
+                    'mode' => $displayMode, 'goals' => [],
+                    'runs' => [[
+                        'run_id' => $salesRunId, 'goal_id' => $salesGoalId,
+                        'plan_id' => $salesPlanId, 'state' => 'completed',
+                        'revision' => 3, 'recovery' => null, 'outcome' => $previewOutcome,
+                    ]],
+                    'csrfToken' => 'smoke-csrf-token',
+                    'created' => false, 'error' => false,
+                    'reconciled' => false, 'evaluated' => false, 'outcomeError' => false,
+                ]);
+                self::assert(str_contains($view, 'data-goal-outcome-result="partial"')
+                    && str_contains($view, 'Частково досягнуто')
+                    && str_contains($view, '/workspace/goals/runs/' . $salesRunId . '/evaluate')
+                    && str_contains($view, 'smoke-csrf-token'),
+                    'Outcome summary or CSRF-guarded refresh missing in ' . $displayMode . ' view.');
+                self::assert(str_contains($view, 'data-goal-outcome-process') === ($displayMode !== 'result')
+                    && str_contains($view, 'sales.cos_events.closed_outcomes.v1') === ($displayMode !== 'result')
+                    && str_contains($view, 'trusted-evidence-private:') === ($displayMode === 'expert')
+                    && str_contains($view, 'data-goal-outcome-expert') === ($displayMode === 'expert')
+                    && !str_contains($view, '<script>'),
+                    'Outcome evidence disclosure violated Result/Process/Expert boundaries.');
+            }
             try {
                 $this->goals->recordEvaluation(
                     $other, 'eval-' . bin2hex(random_bytes(8)), $salesRunId,
