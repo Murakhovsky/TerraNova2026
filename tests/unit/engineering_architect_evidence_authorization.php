@@ -57,7 +57,7 @@ if (count($legacyPaths) !== 6 || in_array('symfony/config/routes.yaml', $legacyP
 }
 foreach ([
     ['type' => 'CREDENTIAL_PERMISSION', 'recommended_option' => 'REFRESH_EVIDENCE'],
-    $legacyEvidenceRequest + ['type' => 'SCOPE_CHANGE'],
+    array_replace($legacyEvidenceRequest, ['type' => 'SCOPE_CHANGE']),
     array_replace($legacyEvidenceRequest, ['recommended_option' => 'CANCEL']),
     array_replace($legacyEvidenceRequest, ['options' => [['id' => 'REFRESH_EVIDENCE']]]),
 ] as $badGate) {
