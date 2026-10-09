@@ -77,6 +77,7 @@ final readonly class PortfolioNavIndependentReconciliationService
             'POSITION_BALANCE'=>[], 'ACCOUNT_COVERAGE'=>[]];
         $sourcesFingerprint=[];
         $seenKeys=[];
+        $freshnessSources=[];
         foreach ($facts as $fact) {
             if (!is_array($fact) || !array_key_exists((string)($fact['kind']??''),$kinds)) {
                 $issues[]='INVALID_INDEPENDENT_SOURCE_TYPE';
@@ -96,6 +97,9 @@ final readonly class PortfolioNavIndependentReconciliationService
             if (strtoupper((string)($fact['currency']??''))!==$currency) $issues[]='NAV_SOURCE_CURRENCY_UNCONVERTED';
             $stamp=self::instant($fact['effective_at']??null);
             if ($stamp===null || $stamp>$now) $issues[]='SOURCE_TIMESTAMP_INVALID_OR_FUTURE';
+            if ($stamp!==null && in_array($kind,['VENUE_BALANCE','LIABILITY_BALANCE','POSITION_BALANCE','ACCOUNT_COVERAGE'],true)) {
+                $freshnessSources[]=$stamp;
+            }
             $kinds[$kind][]=$fact;
             $sourcesFingerprint[]=[
                 'id'=>$fact['evidence_id']??null,
@@ -319,6 +323,11 @@ final readonly class PortfolioNavIndependentReconciliationService
         usort($sourcesFingerprint,static fn(array $a,array $b):int =>
             strcmp((string)$a['id'],(string)$b['id']));
         $sourceDigest=hash('sha256',json_encode($sourcesFingerprint,JSON_THROW_ON_ERROR));
+        // An operator may certify now, but evidence freshness never resets to approval time.
+        $sourceBoundary=$now;
+        foreach ($freshnessSources as $sourceTimestamp) {
+            if ($sourceTimestamp<$sourceBoundary) $sourceBoundary=$sourceTimestamp;
+        }
         $provenance=hash('sha256',implode('|',[
             $organizationId,$portfolioId,(string)$reviewerId,
             (string)$audit['journal_fingerprint'],$sourceDigest,$now->format(DATE_ATOM),
@@ -326,6 +335,7 @@ final readonly class PortfolioNavIndependentReconciliationService
         $evidence=[
             'snapshot_id'=>'nav-certified-'.$provenance,
             'valued_at'=>$now->format(DATE_ATOM),
+            'source_valued_at'=>$sourceBoundary->format(DATE_ATOM),
             'currency'=>$currency,
             'provenance_id'=>'DUAL_CONTROL:'.$reviewerId.':'.$sourceDigest.':'.(string)$audit['journal_fingerprint'],
             'ledger_reconciled'=>true,
