@@ -1193,11 +1193,16 @@ final class FederationPersistenceSmokeCommand extends Command
                     ),
                     'linked_at' => $eventTime,
                 ]);
-                self::assert($this->originReader->verifiedForRun(
-                    $actor, $linearRun, $domain,
-                    new \DateTimeImmutable('2026-10-01 00:00:00', new \DateTimeZone('UTC')),
-                    new \DateTimeImmutable('+1 minute', new \DateTimeZone('UTC')),
-                ) === [], 'A Sales Action was forged as Research/Documents outcome origin.');
+                try {
+                    $this->originReader->verifiedForRun(
+                        $actor, $linearRun, $domain,
+                        new \DateTimeImmutable('2026-10-01 00:00:00', new \DateTimeZone('UTC')),
+                        new \DateTimeImmutable('+1 minute', new \DateTimeZone('UTC')),
+                    );
+                    throw new \RuntimeException('A Sales Action was forged as Research/Documents outcome origin.');
+                } catch (DomainException) {
+                    // Explicit integrity failure, never zero attributed outcomes.
+                }
                 self::assert($this->originReader->verifiedForRun(
                     $other, $linearRun, $domain,
                     new \DateTimeImmutable('2026-10-01 00:00:00', new \DateTimeZone('UTC')),

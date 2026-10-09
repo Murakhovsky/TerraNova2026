@@ -78,7 +78,7 @@ final readonly class FederationOutcomeOriginReader
                 || $row['result_reference'] !== 'action:' . $actionId
                 || $row['action_key'] !== 'fed:' . $row['step_key']
                 || $row['status'] !== 'COMPLETED') {
-                continue;
+                throw new DomainException('Persisted native outcome origin has incomplete or revoked Action lineage.');
             }
             try {
                 FederationOutcomeOriginContract::assertTarget(
@@ -91,10 +91,12 @@ final readonly class FederationOutcomeOriginReader
                 if ($source === null
                     || !hash_equals((string) $row['source_fingerprint'],
                         FederationOutcomeOriginRecorder::fingerprint($org, $domain, $outcomeId, $source))) {
-                    continue;
+                    throw new DomainException('Native Domain outcome no longer matches its recorded fingerprint.');
                 }
                 $params = json_decode((string) $row['parameters'], true, 512, JSON_THROW_ON_ERROR);
-                if (!is_array($params)) continue;
+                if (!is_array($params)) {
+                    throw new DomainException('Origin Action JSON parameters are invalid.');
+                }
                 $action = new Action(
                     $actionId, $org, (string) $row['type'],
                     $row['target_type'] !== null ? (string) $row['target_type'] : null,
@@ -110,9 +112,14 @@ final readonly class FederationOutcomeOriginReader
                     'step_id' => (string) $row['step_id'],
                     'source_fingerprint' => (string) $row['source_fingerprint'],
                 ];
-            } catch (Throwable) {
-                // Source modified, malformed or revoked Approval/Action:
-                // fail closed. The row is kept for immutable audit.
+            } catch (Throwable $failure) {
+                // Refuse the entire evaluation rather than treating missing
+                // or tampered evidence as a numeric zero. In particular,
+                // "at_most" must never be satisfied by revoked receipts.
+                throw new DomainException(
+                    'Native Domain outcome attribution contains unverifiable lineage.',
+                    0, $failure,
+                );
             }
         }
         return $valid;

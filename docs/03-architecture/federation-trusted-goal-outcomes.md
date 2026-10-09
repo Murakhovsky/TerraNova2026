@@ -240,3 +240,9 @@ Research перевіряє `status=VALIDATED` одночасно в рідно�
 стовпці та `record_json`, а також відповідність `result_id`.
 Documents вимагає `signed_by_actor_id`, `signed_at`,
 `signed_by` та непорожній `signature_reference`.
+
+**Fail-closed читання:** якщо в журналі існує link, але квитанція
+Action відкликана, native запис змінився або зв'язок підроблений,
+`FederationOutcomeOriginReader` викидає помилку цілісності замість
+повернення нульового результату. Це особливо важливо для цілей
+з умовою `at_most`, де помилковий нуль міг би означати «успіх».
