@@ -8,6 +8,31 @@ kind: workflow
 
 # Незалежна звірка NAV та Today/30D P&L
 
+## Бізнес-мета
+
+Отримувати підтверджений Portfolio NAV з незалежних первинних документів,
+ідентифікованих грошових залишків, активів, зобов’язань і зовнішніх потоків,
+а потім порівнювати дві підтверджені оцінки для Today/30D P&L.
+
+## Учасники
+
+- Оператор джерел імпортує виписки з первинними SHA-256 документами.
+- Фінансовий контролер незалежно перевіряє справжність та повноту джерел.
+- Портфельний менеджер контролює належність усіх рахунків та позицій.
+- Risk Manager перевіряє актуальність mark, заставу, ризики й обмеження.
+- COS виконує детерміновану звірку та забороняє запис при розбіжностях.
+
+## Карта коду
+
+- `PortfolioNavFinancialEvidencePolicy` перевіряє первинні свідчення.
+- `PortfolioNavEvidenceCollector` збирає діагностичний стан і причини блокування.
+- `PortfolioNavIndependentReconciliationService` реалізує звірку та розмежування ролей.
+- `PortfolioNavSnapshotProducer` обчислює і записує тільки підтверджений NAV.
+- `PortfolioNavWindowProjector` обчислює Today/30D net P&L на основі NAV.
+- `CapitalMarketsNavEvidenceImportCommand` імпортує документи.
+- `CapitalMarketsNavReconcileCommand` виконує окреме затвердження.
+- `tests/unit/capital_markets_nav_independent_reconciliation.php` містить негативні й позитивні сценарії.
+
 ## Межа достовірності
 
 NAV є бухгалтерською оцінкою `cash + independently marked spot inventory − liabilities`,
