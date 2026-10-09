@@ -67,3 +67,31 @@ Expected chain: Growth market discovery (50 target candidates, sources, dedupe) 
 Package A is eligible for acceptance only once the above P0 golden path is green in a controlled tenant. Deliver an immutable Goal/Plan/Run/Outcome read projection, Step/action controls with authorization, canonical failure/recovery statuses, and Experience Semantic descriptors as a published versioned interface.
 
 Work not required to unlock B: perfection of all Domains, P1 tracing, predictive architecture explorer, polished mobile Expert UI. No new Kernel or Domain solely for Progressive Disclosure.
+
+## Automated golden-path execution readiness preflight
+
+`FederationReferenceScenarioReadiness::inspect(TenantContext)` is an
+authenticated, read-only manager preflight for the Growth(50) → Sales →
+Documents reference scenario. It is **not** an outcome evaluation.
+
+Five required canonical executable Action transitions:
+
+1. Growth source discovery: `growth.market.discovery`;
+2. Growth qualification: `growth.candidate.qualify`;
+3. approved Growth-to-Sales handoff: `growth.handoff.target.sales`;
+4. canonical Sales lead intake: `sales.lead.create_from_growth`;
+5. Documents draft creation: `documents.proposal.prepare`.
+
+These IDs identify proposed acceptance bindings for domain owners,
+not a claim of working current handlers. The preflight compares actual
+typed capabilities against registered Action handlers, tenant/module
+activation and authenticated permission. Manifest-only declarations
+are reported as `manifest_only`, missing contracts as
+`missing_capability`, and inactive handlers as
+`handler_or_tenant_unavailable`. A signature request or unrelated Sales
+task cannot substitute for canonical CRM intake or proposal drafting.
+
+The result always has `business_outcome_verified=false` because
+execution readiness is not proof of 50 prospects, qualification decisions,
+Sales lead IDs or native proposal drafts. Those require real tenant-scoped
+event receipts, human approvals, recoverable workflow and Goal evaluation.
