@@ -130,6 +130,7 @@ final readonly class DecisionWorkspacePageController
             'opportunities'=>CapitalMarketsCapability::OpportunityView,
             'performance'=>CapitalMarketsCapability::PortfolioView,
             'realized-windows'=>CapitalMarketsCapability::PortfolioView,
+            'portfolio-nav'=>CapitalMarketsCapability::PortfolioView,
             'research-results'=>CapitalMarketsCapability::ResearchView,
             'executions'=>CapitalMarketsCapability::OpportunityView,
             default=>CapitalMarketsCapability::View,
@@ -149,9 +150,10 @@ final readonly class DecisionWorkspacePageController
             'executions'=>$this->workspace->execution($organizationId)['executions']??[],
             'performance'=>$this->performanceExportRows($this->workspace->performance($organizationId)),
             'realized-windows'=>$this->realizedWindowExportRows($this->workspace->performance($organizationId)),
+            'portfolio-nav'=>$this->portfolioNavExportRows($this->workspace->performance($organizationId)),
             default=>[],
         };
-        if(!in_array($dataset,['opportunities','performance','realized-windows','research-results','executions'],true)){
+        if(!in_array($dataset,['opportunities','performance','realized-windows','portfolio-nav','research-results','executions'],true)){
             return new JsonResponse(['error'=>['code'=>'UNSUPPORTED_DATASET']],404);
         }
         if($format==='json'){
@@ -228,6 +230,37 @@ final readonly class DecisionWorkspacePageController
                 'issues'=>implode('; ',is_array($w['issues']??null)?$w['issues']:[]),
                 'from_utc'=>$w['from_utc']??null,
                 'to_utc'=>$w['to_utc']??null,
+            ];
+        }
+        return $rows;
+    }
+
+    /** @param array<string,mixed> $page @return list<array<string,mixed>> */
+    private function portfolioNavExportRows(array $page):array
+    {
+        $performance = is_array($page['performance'] ?? null) ? $page['performance'] : [];
+        $latest = is_array($performance['latest_certified_nav'] ?? null)
+            ? $performance['latest_certified_nav'] : [];
+        $windows = is_array($performance['portfolio_nav_windows'] ?? null)
+            ? $performance['portfolio_nav_windows'] : [];
+        $rows=[[
+            'window'=>'latest','scope'=>'PORTFOLIO_NAV_CURRENT',
+            'status'=>$latest['status']??'UNAVAILABLE',
+            'equity'=>($latest['status'] ?? null) === 'COMPLETE' ? ($latest['equity']??null) : null,
+            'net_pnl'=>null,'currency'=>$latest['currency']??null,
+            'valued_at'=>$latest['valued_at']??null,
+            'reason'=>$latest['reason']??null,
+        ]];
+        foreach (['today','30d'] as $name) {
+            $state=is_array($windows[$name]??null)?$windows[$name]:[];
+            $complete=($state['status']??null)==='COMPLETE';
+            $rows[]=[
+                'window'=>$name,'scope'=>'PORTFOLIO_NAV_REALIZED_AND_UNREALIZED',
+                'status'=>$state['status']??'UNAVAILABLE',
+                'equity'=>null,'net_pnl'=>$complete?($state['net_pnl']??null):null,
+                'currency'=>$complete?($state['currency']??null):null,
+                'valued_at'=>$complete?($state['closing_valued_at']??null):null,
+                'reason'=>$state['reason']??null,
             ];
         }
         return $rows;
