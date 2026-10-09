@@ -44,6 +44,16 @@ final readonly class FederationCapabilityBindingResolver
         return $contract;
     }
 
+    /** Module activation is required for a cross-domain side effect even if its
+     * canonical Action is owned by the calling Domain. Never infer this from
+     * a manifest capability string.
+     */
+    public function isTenantModuleEnabled(TenantContext $actor, string $moduleId): bool
+    {
+        return $actor->isManager()
+            && $this->modules->isEnabled($actor->organizationId()->value(), $moduleId);
+    }
+
     private function isAvailable(TenantContext $actor, CapabilityContract $contract): bool
     {
         // The federation.plan.approval Action authorizes plans; it is not a
