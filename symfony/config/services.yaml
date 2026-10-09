@@ -3275,6 +3275,7 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  Platform\Orchestration\Goal\FederationCandidateFanoutPlanner: ~
   Platform\Orchestration\Goal\FederationStepCursor: ~
   Platform\Orchestration\Goal\FederationRecoveryClassifier: ~
 
@@ -3368,6 +3369,10 @@ services:
         - '@cos.federation.native_origin.documents'
         - '@Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider'
         - '@Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider'
+
+  App\Web\Federation\FederationCandidateFanoutController:
+    public: true
+    tags: ['controller.service_arguments']
 
   App\Web\Federation\FederationRunController:
     public: true
