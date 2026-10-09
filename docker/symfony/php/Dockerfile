@@ -22,6 +22,7 @@ COPY app/Infrastructure/ /var/www/html/app/Infrastructure/
 COPY app/migrations/ /var/www/html/app/migrations/
 COPY app/Interfaces/Web/View/ /var/www/html/app/Interfaces/Web/View/
 COPY resources/experience/ /var/www/html/resources/experience/
+COPY resources/capital-markets/ /var/www/html/resources/capital-markets/
 COPY public/build/ /var/www/html/symfony/public/build/
 COPY bin/spatial-convert.py /var/www/html/bin/spatial-convert.py
 
