@@ -21,11 +21,13 @@ final readonly class DocumentsDomainModule implements
     BootstrapPolicyProvidingModuleInterface
 {
     public function __construct(private RequestSignatureHandler $requestSignature,private RecordVerifiedSignatureHandler $recordVerifiedSignature,
-        private PrepareProposalDraftHandler $prepareProposal) {}
+        private ?PrepareProposalDraftHandler $prepareProposal=null) {}
 
     public function name(): string { return 'documents'; }
-    public function actionTypes(): array { return [RequestSignatureHandler::TYPE,RecordVerifiedSignatureHandler::TYPE,PrepareProposalDraftHandler::TYPE]; }
-    public function actionHandlers(): array { return [$this->requestSignature,$this->recordVerifiedSignature,$this->prepareProposal]; }
+    public function actionTypes(): array { return array_merge([RequestSignatureHandler::TYPE,RecordVerifiedSignatureHandler::TYPE],
+        $this->prepareProposal === null ? [] : [PrepareProposalDraftHandler::TYPE]); }
+    public function actionHandlers(): array { return array_values(array_filter(
+        [$this->requestSignature,$this->recordVerifiedSignature,$this->prepareProposal])); }
 
     /** @return list<ActionPolicy> */
     public function policies(string $organizationId): array
