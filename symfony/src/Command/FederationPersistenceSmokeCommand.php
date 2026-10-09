@@ -784,6 +784,8 @@ final class FederationPersistenceSmokeCommand extends Command
                     ['id' => 'growth.run_linked_inbound_responses', 'operator' => 'at_least', 'expected' => 1],
                     ['id' => 'capital_markets.research_results_validated', 'operator' => 'at_least', 'expected' => 1],
                     ['id' => 'documents.signatures_recorded', 'operator' => 'at_least', 'expected' => 1],
+                    ['id' => 'capital_markets.run_linked_validated_results', 'operator' => 'at_least', 'expected' => 1],
+                    ['id' => 'documents.run_linked_signatures', 'operator' => 'at_least', 'expected' => 1],
                 ],
                 ['sales.create_task'],
             ));
@@ -1075,7 +1077,9 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $local['criteria'][1]['result'] === 'unverifiable'
                 && $local['criteria'][2]['result'] === 'unverifiable'
                 && $local['criteria'][3]['result'] === 'unverifiable'
-                && $local['criteria'][4]['observed'] === 0,
+                && $local['criteria'][4]['observed'] === 0
+                && $local['criteria'][5]['result'] === 'unverifiable'
+                && $local['criteria'][6]['result'] === 'unverifiable',
                 'Domain evidence from disabled Growth/Research modules was fabricated or local Action receipts were counted.');
             self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'unverifiable'
                 && $this->goals->latestTrustedEvaluation($other, $linearRun) === null,
@@ -1218,7 +1222,7 @@ final class FederationPersistenceSmokeCommand extends Command
                 $actor, 'eval-' . bin2hex(random_bytes(8)), $linearRun,
             );
             self::assert($measured['result'] === 'partial'
-                && count($measured['criteria']) === 5
+                && count($measured['criteria']) === 7
                 && $measured['criteria'][0]['observed'] === 0
                 && $measured['criteria'][0]['result'] === 'unsatisfied'
                 && $measured['criteria'][1]['observed'] === 2
@@ -1236,7 +1240,11 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $measured['criteria'][3]['source'] === 'capital_markets.tn_capital_market_research_results.validated.v1'
                 && $measured['criteria'][4]['observed'] === 1
                 && $measured['criteria'][4]['result'] === 'satisfied'
-                && $measured['criteria'][4]['source'] === 'platform.documents.cos_document_signatures.signed.v1',
+                && $measured['criteria'][4]['source'] === 'platform.documents.cos_document_signatures.signed.v1'
+                && $measured['criteria'][5]['observed'] === null
+                && $measured['criteria'][5]['result'] === 'unverifiable'
+                && $measured['criteria'][6]['observed'] === null
+                && $measured['criteria'][6]['result'] === 'unverifiable',
                 'End-to-end Growth / Research / Documents evidence did not match real tenant rows and status policies.');
             self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'partial'
                 && $this->goals->latestTrustedEvaluation($other, $linearRun) === null,

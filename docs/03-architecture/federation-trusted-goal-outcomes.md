@@ -203,3 +203,26 @@ Actions або Runs. `FederationOutcomeOriginReader` повторно перев
 ще не реалізовані. Не підмінюємо їх іншими Actions та не вмикаємо
 Run-linked метрики для Research/Documents до наявності робочого writer
 у доменній транзакції. Ніякого retroactive backfill за correlation IDs.
+
+### Активація Run-linked метрик без хибних результатів
+
+`capital_markets.run_linked_validated_results` та
+`documents.run_linked_signatures` реалізовано на рівні
+`FederationNativeRunLinkedOutcomeEvidenceProvider`, але **за замовчуванням**
+обидва джерела залишаються недоступними (`unverifiable`).
+
+Умови активації:
+
+- Створено й протестовано реальні канонічні Action handlers для відповідних
+  Domain capabilities, з подачею recorder під час бізнес-транзакції.
+- `FederationCapabilityBindingResolver` підтвердив наявність живого
+  executable binding, дозволи та активність Domain.
+- Проведено інтеграційні тести позитивного сценарію і відкликання квитанцій.
+- Лише після цього оператор явно вмикає
+  `COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY=1` або
+  `COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY=1`.
+
+Відсутність writer або binding не вважається нульовою кількістю
+результатів. Resolver перехоплює тільки вузький
+`FederationOutcomeSourceNotReady`, залишаючи метрику `unverifiable`;
+усі інші помилки джерела й цілісності не маскуються.

@@ -51,13 +51,15 @@
                         <option value="growth.run_linked_inbound_responses">Growth: відповіді, пов'язані з перевіреними діями Run</option>
                         <option value="capital_markets.research_results_validated">Research: валідовані результати досліджень</option>
                         <option value="documents.signatures_recorded">Documents: зареєстровані підписи</option>
+                        <option value="capital_markets.run_linked_validated_results">Research: результат конкретного Run (потребує Action handler)</option>
+                        <option value="documents.run_linked_signatures">Documents: підпис конкретного Run (потребує Action handler)</option>
                     </datalist>
                 </label>
                 <label class="cos-field"><span>Цільове значення</span>
                     <input class="cos-input" type="number" name="target" min="1" max="1000000" value="5" required>
                 </label>
             </div>
-            <p class="cos-card__copy">Автоматично підтверджуються <code>sales.won_deals</code>, <code>sales.closed_deals</code> і <code>sales.local_tasks_created</code>, якщо Sales активний. Додатково підтримуються <code>growth.inbound_responses_recorded</code>, <code>capital_markets.research_results_validated</code> і <code>documents.signatures_recorded</code>. Інші коди без довіреного джерела залишаються непідтвердженими.</p>
+            <p class="cos-card__copy">Автоматично підтверджуються <code>sales.won_deals</code>, <code>sales.closed_deals</code> і <code>sales.local_tasks_created</code>, якщо Sales активний. Додатково підтримуються <code>growth.inbound_responses_recorded</code>, <code>capital_markets.research_results_validated</code> і <code>documents.signatures_recorded</code>. Run-linked метрики Research і Documents наразі непідтверджені, поки не активовано перевірені Action handlers. Інші коди без довіреного джерела також залишаються непідтвердженими.</p>
             <button class="cos-button cos-button--primary" type="submit">Зберегти чернетку Goal</button>
         </form>
         <p class="cos-card__copy">Збереження не запускає агентів і не створює зовнішніх операцій.</p>
