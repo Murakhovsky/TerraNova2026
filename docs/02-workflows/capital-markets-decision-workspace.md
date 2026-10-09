@@ -134,3 +134,18 @@ Execution
 \`\`\`
 
 P&L додається до trace тоді, коли canonical execution/performance projection має відповідний attributable value.
+
+
+## Межі NAV і фінансової достовірності
+
+- Порожній Paper Portfolio: симульований NAV відображається лише після явної ініціалізації та збереження окремого `SIMULATED` snapshot. Це не Live Equity.
+- Paper Today/30D P&L: розраховується тільки за двома збереженими valuation boundaries однієї `portfolio_epoch`. Повторна ініціалізація портфеля починає нову епоху навіть при незмінному initial capital.
+- Кожен Paper NAV capture зчитує portfolio, positions, balances, executions і ledger з однієї MySQL REPEATABLE READ revision. Відсутня можливість узгодженого читання блокує snapshot.
+- Історія 31 дня має максимум 5000 rows. Scheduler допускає інтервал від 10 до 60 хв, щоб 30D projection не стала неповною.
+- Незалежні зовнішні фінансові джерела зберігаються тільки як `PENDING_RECONCILIATION`. Кожний cash-flow має стабільний `provider_event_id`; повторний імпорт одного provider event відхиляється незалежно від зміненого текстового reference.
+- Вік сертифікованого NAV починається від найстаршої використаної актуальної виписки, не від часу натискання approval.
+- Старий CLI `cos:capital-markets:nav:reconcile` навмисно повертає `BLOCKED / AUTHENTICATED_NAV_REVIEWER_APPROVAL_NOT_CONFIGURED`. CLI-параметр `--reviewer` не є доказом особи іншого reviewer. Реальна фінансова сертифікація потребує окремого автентифікованого двоособового workflow із перевіреною provenance.
+- Відсутність незалежних виписок, повної історії зовнішніх рухів, історичних valuations та надійного approval залишає реальний Portfolio NAV і Today/30D P&L у `UNAVAILABLE`, а не підміняє їх Paper P&L.
+- Perpetual, margin, short і FX залишаються за межами long-only spot certification. Наявність таких позицій блокує сертифікацію, поки не з'являться відповідні бухгалтерські політики.
+
+UI Pack приймається окремо від наявності реальних коштів на біржах: відсутня історія у порожньому акаунті повинна виглядати як `UNAVAILABLE`, а не фальшиві нулі чи прибуток.
