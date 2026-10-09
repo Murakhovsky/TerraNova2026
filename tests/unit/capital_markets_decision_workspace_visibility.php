@@ -4,6 +4,9 @@ declare(strict_types=1);
 use App\Web\CapitalMarkets\DecisionWorkspaceVisibilityPolicy;
 
 require dirname(__DIR__, 2).'/vendor/autoload.php';
+// Root Composer autoload has no App\\ PSR-4 mapping; Symfony runtime does.
+// Keep this isolated pure-PHP security test runnable in the root CI job.
+require dirname(__DIR__, 2).'/symfony/src/Web/CapitalMarkets/DecisionWorkspaceVisibilityPolicy.php';
 
 $assert = static function (bool $condition, string $message): void {
     if (!$condition) throw new RuntimeException($message);
