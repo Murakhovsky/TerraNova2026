@@ -31,7 +31,7 @@ Keep module.php canonical; descriptive capability identities never become execut
 2. Consumer-driven schema compatibility and dependency-aware Impact Gate.
 3. Authenticated execution envelope, async propagation, idempotency and worker recovery tests.
 4. GoalSpecification, ExecutionPlan/Run, OutcomeEvaluator, artifacts and multi-domain scenario.
-5. Result/Process/Expert, deterministic disclosure and persisted tenant-scoped preferences.
+5. **Package A:** versioned `ExperienceContext`, `ExperienceProfile`, `ExperienceState`, declarative `ExperienceSemantic` and persisted tenant-scoped preferences. **Package B:** Result/Process/Expert UX and contextual adaptive disclosure.
 6. Golden paths, failure injection, browser, security, performance, rollout and rollback evidence.
 
 **Status:** Initial foundation only; full P0 Definition of Done remains open.

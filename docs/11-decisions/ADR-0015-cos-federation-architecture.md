@@ -35,7 +35,7 @@ Machine-readable policy: federation-governance-policy.json. Waivers require issu
 
 Roll out additively: audit, contracts, graph/CI, execution reliability, goals, experience, E2E. P1 tracing/interaction intelligence follows stable P0.
 
-**Acceptance:** This ADR and Phase 1 code do not imply full completion. P0 requires working cross-domain Goal, outcome evidence, controlled recovery, three experience modes, tenant isolation, security and rollback tests.
+**Acceptance (updated):** This ADR and Phase 1 code do not imply full completion. **Package A P0** requires a working multi-Domain Goal → Execution → independently verified Outcome, controlled recovery, typed Experience Semantics and tenant/security/rollback tests. **Package B P0** requires one end-to-end Expert → Process → Result presentation built over the accepted Package A data. P1 contextual adaptation comes later.
 
 ## Уточнення обсягу релізів: 2026-10-09
 
