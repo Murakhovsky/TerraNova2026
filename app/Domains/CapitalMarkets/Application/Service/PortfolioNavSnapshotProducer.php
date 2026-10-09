@@ -69,6 +69,12 @@ final readonly class PortfolioNavSnapshotProducer
         }
         $valuedAt=(new DateTimeImmutable($evidence['valued_at'],new DateTimeZone('UTC')))
             ->setTimezone(new DateTimeZone('UTC'));
+        $sourceValuedAt=(new DateTimeImmutable((string)($evidence['source_valued_at']??$evidence['valued_at']),new DateTimeZone('UTC')))
+            ->setTimezone(new DateTimeZone('UTC'));
+        $sourceAge=$valuedAt->getTimestamp()-$sourceValuedAt->getTimestamp();
+        if ($sourceAge<0 || $sourceAge>900) {
+            throw new InvalidArgumentException('Independent statement evidence is stale or future dated.');
+        }
         $marks=Decimal::fromString('0');
         $seenPositionIds=[];
         foreach ($evidence['marked_positions'] as $position) {
@@ -109,6 +115,7 @@ final readonly class PortfolioNavSnapshotProducer
         $snapshot=[
             'snapshot_id'=>$evidence['snapshot_id'],
             'valued_at'=>$valuedAt->format(DATE_ATOM),
+            'source_valued_at'=>$sourceValuedAt->format(DATE_ATOM),
             'currency'=>$currency,
             'equity'=>$nav->value(),
             'cumulative_external_net_flow'=>$flows->value(),
