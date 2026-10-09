@@ -82,6 +82,7 @@ generated: true
 | `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_risk_envelopes` |
 | `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_strategy_allocations` |
 | `capital_markets` | `app/migrations/20261008_000134_capital_markets_capital_risk.sql` | `tn_capital_market_stress_results` |
+| `capital_markets` | `app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql` | `tn_capital_market_cross_venue_discovery_snapshots` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
