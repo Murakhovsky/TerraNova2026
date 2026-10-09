@@ -39,6 +39,63 @@
   {% if cooldown %}<div class="cos-alert cos-alert--warning">Зачекайте 90 секунд між перевірками.</div>{% endif %}
   {% if scanError %}<div class="cos-alert cos-alert--danger">Не вдалося провести сканування. Подивіться серверні журнали.</div>{% endif %}
 
+  {% if quoted %}<div class="cos-alert cos-alert--success">Котирування отримано та збережено для аналізу.</div>{% endif %}
+  {% if quoteError %}<div class="cos-alert cos-alert--danger">Не вдалося зібрати котирування. Оновіть лістинги й перевірте доступність API.</div>{% endif %}
+  {% if quoteCooldown %}<div class="cos-alert cos-alert--warning">Наступна перевірка котирувань доступна через 60 секунд.</div>{% endif %}
+
+  {% if snapshot is not null and canScan %}
+    <section class="cos-panel">
+      <h2>Котирування з кількох майданчиків</h2>
+      <p>Публічні Bid/Ask із Binance Spot, Bybit Spot та Kraken. Лише котирування пар, які щойно підтверджені через Discovery. Ані вартість базової акції, ані справжній арбітраж цей крок не розраховує.</p>
+      <form method="post" action="/capital-markets/discovery/quotes">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <button type="submit" class="btn btn-primary">Отримати актуальні Bid/Ask</button>
+      </form>
+      <small>Потрібен Discovery не старше 15 хвилин. Між запусками не менше 60 секунд. Дані тільки для дослідження.</small>
+    </section>
+  {% endif %}
+
+  {% if quoteSnapshot is not null %}
+    <section class="cos-panel">
+      <h2>Останні спостереження цін</h2>
+      <p>Час отримання: {{ quoteSnapshot.observed_at_utc }}. Ціни не мають підтвердженого provider timestamp і не є сертифікованим MarketState. Оновіть знімок перед використанням.</p>
+      <p><strong>Лише діагностика.</strong> Спільний underlying не означає однаковий токен. USD та USDT не порівнюються без валютної конверсії. Комісії, проскальзування, ліквідність, права погашення та виконуваність не перевірено.</p>
+      <div class="cos-kpi-strip">
+        {% for venue, source in quoteSnapshot.source_health %}
+          <article class="cos-card">
+            <strong>{{ venue }}</strong>
+            <p>{{ source.status }}</p>
+            <small>{{ source.sample_count }} придатних котирувань</small>
+            {% if source.received_at_utc|default(null) %}<div><small>Відповідь: {{ source.received_at_utc }}</small></div>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Underlying</th><th>Інструмент</th><th>Venue</th><th>Котирування</th><th>Bid</th><th>Ask</th><th>Bid Qty</th><th>Ask Qty</th><th>Статус</th></tr></thead>
+          <tbody>
+          {% for row in quoteSnapshot.rows %}
+            {% for venue in row.venues %}
+              <tr>
+                <td>{{ row.candidate.underlying }}</td>
+                <td>{{ venue.symbol|default('—') }}</td>
+                <td>{{ venue.venue }}</td>
+                <td>{{ venue.quote_observation.quote_currency|default(venue.quote|default('—')) }}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.bid }}{% else %}—{% endif %}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.ask }}{% else %}—{% endif %}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.bid_quantity }}{% else %}—{% endif %}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.ask_quantity }}{% else %}—{% endif %}</td>
+                <td>{{ venue.quote_status }}</td>
+              </tr>
+            {% endfor %}
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p><small>Статус операційної придатності: NON_EXECUTABLE. Нетто-прибуток не розраховується до перевірки економічної тотожності, комісій, валюти й ризиків.</small></p>
+    </section>
+  {% endif %}
+
   {% if snapshot is null %}
     <section class="cos-panel">
       <h2>Немає виконаних сканувань</h2>

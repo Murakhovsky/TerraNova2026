@@ -9,6 +9,8 @@ use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
 use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
+use Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
@@ -38,6 +40,8 @@ final readonly class CrossVenueDiscoveryController
         private CrossVenueUniverse $universe,
         private CrossVenueCatalogDiscovery $scanner,
         private CrossVenueDiscoverySnapshotRepository $snapshots,
+        private CrossVenueQuoteSampler $sampler,
+        private CrossVenueQuoteSnapshotRepository $quotes,
         #[Autowire('%kernel.project_dir%/../resources/capital-markets/universes/binance-bstocks-2026-09-27.csv')]
         private string $universeFile,
     ) {}
@@ -50,6 +54,7 @@ final readonly class CrossVenueDiscoveryController
         try {
             $watchlist=$this->universe->load($this->universeFile);
             $snapshot=$this->snapshots->latest($org);
+            $quoteSnapshot=$this->quotes->latest($org);
         } catch(Throwable $e) {
             error_log('capital_markets.cross_venue_discovery.read_failed '.get_class($e).' '.$e->getMessage());
             return new Response('Cross-venue discovery data unavailable.',503);
@@ -65,11 +70,14 @@ final readonly class CrossVenueDiscoveryController
         return new Response(
             $this->twig->render('experience/capital_markets/discovery.html.twig',[
                 'shell'=>$shell,'pageTitle'=>'Cross-Venue Discovery',
-                'watchlist'=>$watchlist,'snapshot'=>$snapshot,
+                'watchlist'=>$watchlist,'snapshot'=>$snapshot,'quoteSnapshot'=>$quoteSnapshot,
                 'canScan'=>$canScan,'csrfToken'=>$this->csrf->token($request),
                 'scanned'=>$request->query->getBoolean('scanned'),
                 'cooldown'=>$request->query->getBoolean('cooldown'),
                 'scanError'=>$request->query->getBoolean('error'),
+                'quoted'=>$request->query->getBoolean('quoted'),
+                'quoteError'=>$request->query->getBoolean('quoteError'),
+                'quoteCooldown'=>$request->query->getBoolean('quoteCooldown'),
             ]),
             200,['Content-Type'=>'text/html; charset=UTF-8','Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow'],
         );
@@ -96,6 +104,27 @@ final readonly class CrossVenueDiscoveryController
             return new RedirectResponse('/capital-markets/discovery?error=1',303);
         }
         return new RedirectResponse('/capital-markets/discovery?scanned=1',303);
+    }
+
+    public function observeQuotes(Request $request):Response
+    {
+        $tenant=$this->authorized(CapitalMarketsCapability::MarketDataManage);
+        if($tenant instanceof Response)return $tenant;
+        if(!$this->csrf->isValid($request))return new Response('Invalid CSRF token.',403);
+        $org=$tenant->organizationId()->value();
+        $actor=(int)$tenant->userId()->value();
+        try {
+            $discovery=$this->snapshots->latest($org);
+            if($discovery===null)return new RedirectResponse('/capital-markets/discovery?quoteError=1',303);
+            if(!$this->quotes->reserve($org,$actor))
+                return new RedirectResponse('/capital-markets/discovery?quoteCooldown=1',303);
+            $result=$this->sampler->observe($org,$discovery);
+            $this->quotes->record($org,$actor,$result);
+        }catch(Throwable $error){
+            error_log('capital_markets.cross_venue_quotes.failed '.get_class($error).' '.$error->getMessage());
+            return new RedirectResponse('/capital-markets/discovery?quoteError=1',303);
+        }
+        return new RedirectResponse('/capital-markets/discovery?quoted=1',303);
     }
 
     private function authorized(CapitalMarketsCapability $capability):TenantContext|Response

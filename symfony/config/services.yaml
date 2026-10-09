@@ -1964,6 +1964,10 @@ services:
 
   Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery: ~
+  Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler: ~
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository:
     arguments:
       $connection: '@cos.database.pdo'

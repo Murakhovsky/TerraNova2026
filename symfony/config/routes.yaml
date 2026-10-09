@@ -2641,6 +2641,11 @@ capital_markets_discovery:
   controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::index
   methods: [GET, HEAD]
 
+capital_markets_discovery_quote:
+  path: /capital-markets/discovery/quotes
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::observeQuotes
+  methods: [POST]
+
 capital_markets_discovery_scan:
   path: /capital-markets/discovery/scan
   controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::scan

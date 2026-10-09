@@ -71,6 +71,7 @@ final readonly class CrossVenueCatalogDiscovery
                         'venue'=>$venue,'status'=>'LISTED_EXACT_TOKEN_SYMBOL',
                         'symbol'=>$same['symbol'],'quote'=>$same['quote'],
                         'equivalence'=>'UNVERIFIED','provider_status'=>$same['status'],
+                        'pair_key'=>$same['pair_key']??null,
                     ];
                     continue;
                 }
@@ -82,7 +83,8 @@ final readonly class CrossVenueCatalogDiscovery
                         'equivalence'=>'NOT_ESTABLISHED']
                     : ['venue'=>$venue,'status'=>'DISTINCT_TOKEN_REVIEW_REQUIRED',
                         'symbol'=>$other['symbol'],'quote'=>$other['quote'],
-                        'equivalence'=>'NOT_EQUIVALENT','provider_status'=>$other['status']];
+                        'equivalence'=>'NOT_EQUIVALENT','provider_status'=>$other['status'],
+                        'pair_key'=>$other['pair_key']??null];
             }
             $items[]=['candidate'=>$candidate,'venues'=>$matches,'economic_link'=>'UNVERIFIED',
                 'executable'=>false,'net_edge'=>null];
@@ -144,7 +146,7 @@ final readonly class CrossVenueCatalogDiscovery
                 || preg_match('/^[A-Za-z0-9._\/-]{2,80}$/D',$symbol)!==1)continue;
             $canonicalBase=strtoupper($base);
             $out[$canonicalBase.'|'.$quote]=['symbol'=>$symbol,'base'=>$canonicalBase,
-                'quote'=>$quote,'status'=>$status];
+                'quote'=>$quote,'status'=>$status,'pair_key'=>$provider==='KRAKEN'?(string)$key:null];
         }
         ksort($out,SORT_STRING);
         return $out;
