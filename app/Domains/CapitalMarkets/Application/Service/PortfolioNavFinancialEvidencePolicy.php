@@ -84,7 +84,7 @@ final class PortfolioNavFinancialEvidencePolicy
         }
         return [
             'evidence_id'=>$id,
-            'source_key_sha256'=>hash('sha256',$kind.'|'.$provider.'|'.$reference),
+            'source_key_sha256'=>hash('sha256',$kind.'|'.$provider.'|'.($kind==='EXTERNAL_CASH_FLOW'?$providerEventId:$reference)),
             'provider_event_id'=>$kind==='EXTERNAL_CASH_FLOW'?$providerEventId:null,
             'kind'=>$kind,
             'currency'=>$currency,
