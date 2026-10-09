@@ -353,6 +353,26 @@ scope/domain ownership, unsafe operation, external decision, credentials/permiss
 irreversible action або інша принципова архітектурна дилема. Запит «прочитай файл»
 не є дилемою.
 
+### Сумісність із WORKFLOW_EVIDENCE_REFRESH
+
+Legacy Architect іноді повертає `NEEDS_HUMAN_DECISION` із типом
+`WORKFLOW_EVIDENCE_REFRESH` і варіантами `REFRESH_EVIDENCE` / `CANCEL`.
+Manager класифікує таку пару лише за точними типом, варіантами та
+read-only repository evidence; жоден загальний `NEEDS_HUMAN_DECISION`
+не схвалюється автоматично.
+
+Якщо gate уже OPEN, orchestrator перевіряє единість рішення, його
+Architect-походження, дійсний target branch і revision (або ancestry
+для актуальної гілки), існування дозволених файлів, закриває legacy
+gate статусом `AUTO_RESOLVED` без створення HumanDecision і виконує
+SYSTEM transition назад до `ARCHITECTURE_PENDING`. Наступний запуск
+отримує відсутні route/auth/render/test файли за затвердженим списком.
+Це працює через scheduler тільки коли відповідний Engineering worker
+активний; за вимкненої автономної черги потрібний запуск штатного worker.
+
+Жоден scope/security/permission/irreversible approval не підпадає під
+автоматичний сценарій. `AUTO_RESOLVED` не рахується як людське втручання.
+
 ### Фінальний human gate
 
 `READY_FOR_HUMAN_APPROVAL` вимагає approved Architecture Gate, завершеної Development, Reviewer approval, QA PASS, CI SUCCESS, перевірених blocking Acceptance Criteria, відсутності open critical findings, blocking human decisions і незавершених engineering tasks.
