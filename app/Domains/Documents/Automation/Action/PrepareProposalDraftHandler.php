@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Domains\Documents\Automation\Action;
 
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
-use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
+use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Contract\IdempotentExternalActionHandlerInterface;
@@ -28,7 +28,7 @@ final readonly class PrepareProposalDraftHandler implements IdempotentExternalAc
         private DocumentTemplateGenerationPort $generator,
         private DocumentAttachmentPort $attachments,
         private GrowthHandoffBoundary $handoffs,
-        private SalesWorkspaceReadModelInterface $sales,
+        private SalesProposalLeadReadModelInterface $sales,
         private ActiveModuleResolver $modules,
     ) {}
 
