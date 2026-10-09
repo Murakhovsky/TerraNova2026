@@ -114,7 +114,7 @@ final readonly class PortfolioNavIndependentReconciliationService
             }
             $from=self::instant($fact['coverage_from']??null);
             $through=self::instant($fact['coverage_through']??null);
-            if ($from===null || $through===null || $from>$inception
+            if (!self::recent($fact,$now) || $from===null || $through===null || $from>$inception
                 || $through<$now->modify('-900 seconds') || $through>$now
                 || ($fact['all_accounts']??false)!==true) {
                 $issues[]='ACCOUNT_COVERAGE_INCOMPLETE'; continue;
@@ -268,6 +268,7 @@ final readonly class PortfolioNavIndependentReconciliationService
             'POSITION_AND_VENUE_RECONCILIATION_REQUIRED',
             'EXTERNAL_FLOW_RECONCILIATION_PENDING','EXTERNAL_FLOW_LEDGER_UNAVAILABLE',
             'LIABILITY_RECONCILIATION_PENDING','LIABILITY_LEDGER_UNAVAILABLE',
+            'LIABILITY_STATEMENT_MISSING','EXTERNAL_FLOW_HISTORY_MISSING',
             'VENUE_BALANCE_RECONCILIATION_PENDING',
         ];
         foreach ($preflight['issues']??[] as $issue) {
