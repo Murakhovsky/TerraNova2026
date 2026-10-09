@@ -68,53 +68,87 @@ Package A is eligible for acceptance only once the above P0 golden path is green
 
 Work not required to unlock B: perfection of all Domains, P1 tracing, predictive architecture explorer, polished mobile Expert UI. No new Kernel or Domain solely for Progressive Disclosure.
 
-## Automated golden-path execution readiness preflight
+## Automated golden-path execution readiness preflight (2026-10-09)
 
-`FederationReferenceScenarioReadiness::inspect(TenantContext)` is an
-authenticated, read-only manager preflight for the Growth(50) → Sales →
-Documents reference scenario. It is **not** an outcome evaluation.
+`FederationReferenceScenarioReadiness::inspect(TenantContext)` checks
+**real, registered, typed, tenant-executable Action handlers** for the
+Growth → native Sales → Documents reference scenario. It is a read-only,
+manager-authorized *structural preflight*, **not business Outcome evaluation**.
 
-Five required canonical executable Action transitions:
+Five actual executable Action transitions, each with an immutable approved
+input, canonical Policy and independent human Approval, are required:
 
-1. Growth source discovery: `growth.market.discovery`;
-2. Growth qualification: `growth.candidate.qualify`;
-3. approved Growth-to-Sales handoff: `growth.handoff.target.sales`;
-4. canonical Sales lead intake: `sales.lead.create_from_growth`;
-5. Documents draft creation: `documents.proposal.prepare`.
+1. `growth.market.discovery` (Growth): source a bounded tenant-owned market
+   universe through the existing discovery service, preserving deduplication
+   and the partial/in-flight recovery status.
+2. `growth.candidate.qualify` (Growth): evaluate an already **scored**
+   Candidate against an **active revisioned policy**, recording
+   `qualified` / `monitor` / `disqualified` truthfully.
+3. `growth.handoff.prepare` (Growth): persist the approved
+   `qualified → ready_for_handoff` transition and a Sales-targeted
+   package with expected value, play and recommended action.
+4. `growth.handoff.target.sales` (Growth coordinating a Sales-owned
+   write): dispatch the existing idempotent Growth handoff. Its registered
+   **SalesGrowthHandoffTarget** invokes the canonical
+   `SalesWriteService::createLead` and persists a Sales Lead ID in the
+   accepted Growth handoff attempt. **This is the CRM lead creation.**
+   A second `sales.lead.create_from_growth` Action would risk a duplicate
+   and is deliberately **not** registered. Structural preflight additionally
+   requires the **Sales module enabled for this tenant**.
+5. `documents.proposal.prepare` (Documents): resolve the future Lead ID
+   **from the accepted tenant-owned handoff receipt**, then check the
+   Sales-owned read model before generating an unsent, tenant-scoped
+   Document from a native template and attaching it to that Lead.
 
-These IDs identify proposed acceptance bindings for domain owners,
-not a claim of working current handlers. The preflight compares actual
-typed capabilities against registered Action handlers, tenant/module
-activation and authenticated permission. Manifest-only declarations
-are reported as `manifest_only`, missing contracts as
-`missing_capability`, and inactive handlers as
-`handler_or_tenant_unavailable`. A signature request or unrelated Sales
-task cannot substitute for canonical CRM intake or proposal drafting.
+`action:...` bindings must have exactly one registered Domain-owned handler;
+a string in `module.php` is insufficient. An inactive tenant module,
+inactive Sales dependency or unknown capability fails closed. The remaining
+unit evidence is in:
+`tests/unit/federation_reference_scenario_readiness.php`,
+`tests/unit/federation_reference_scenario_executable.php`,
+`tests/unit/federation_reference_action_payloads.php`,
+`tests/unit/federation_growth_action_bindings.php`,
+`tests/unit/federation_growth_prepare_handoff_action.php`,
+`tests/unit/federation_growth_sales_handoff_action.php` and
+`tests/unit/federation_documents_proposal_draft.php`.
 
-The result always has `business_outcome_verified=false` because
-execution readiness is not proof of 50 prospects, qualification decisions,
-Sales lead IDs or native proposal drafts. Those require real tenant-scoped
-event receipts, human approvals, recoverable workflow and Goal evaluation.
+### Runtime integrity and manual intervention
 
+- A market-discovery batch completing is **not** proof of 50 distinct,
+  verified, qualified prospects. A disqualified candidate is never reported
+  as qualified.
+- Qualified candidates must be explicitly prepared before dispatch; the
+  persisted `ready_for_handoff` state cannot be skipped.
+- Failed, partial or ambiguous external operations are blocked and require
+  operator receipt reconciliation; no automatic retry or second Sales write.
+- Documents generation and attachment have separate deterministic
+  idempotency subkeys. An incomplete attachment must be reconciled, not
+  silently accepted as an intact proposal.
+- A saved native Document has status `active` in the existing Documents
+  lifecycle; `prepared_not_sent` describes the Action's commercial
+  **unsent-draft** outcome, not a fictitious native `draft` status.
+- Completed Actions and a terminal Federation Run do **not** prove a
+  business Goal. The preflight explicitly reports
+  `business_outcome_verified=false` until Domain-trusted read-model
+  evidence supports each Goal criterion.
 
-## Growth executable Federation bindings (2026-10-09)
+### Outstanding Package A acceptance requirements
 
-The first two reference stages now have **Domain-owned** canonical Action handlers:
+This code implements five **single-subject canonical Action bindings**, not a
+complete 50-subject autonomous campaign. Prospect and Candidate IDs are
+discovered *after* a market scan, while the approved Plan currently pins
+immutable step inputs. The full Goal needs a separately reviewed,
+deterministically bounded, human-approved fan-out/subplan protocol rather
+than mutating approved Plans or inventing unknown future IDs.
 
-- `growth.market.discovery` delegates to the existing tenant-scoped Growth market-universe run (limit 1..200). A persisted completed *batch* is evidence of a completed collection attempt, **not** evidence of 50 sourced and qualified prospects. Partial/failed/in-flight batches fail closed and must be reconciled manually.
-- `growth.candidate.qualify` delegates to the active, versioned Growth qualification policy evaluator on a **scored** Candidate. Outcomes `qualified`, `monitor`, `disqualified` are persisted decisions; only `qualified` can contribute to qualification counts after independent business evidence evaluation.
+A real tenant-scoped acceptance test must run market discovery on a
+controlled source, verify 50 **deduplicated and sourced** prospects, qualify
+the selected Candidates, approve and reconcile each Growth→Sales handoff,
+verify **native Sales Lead IDs exactly once**, prepare actual template-backed
+proposals and measure persisted outcomes with Domain-owned evidence. The
+current readiness preflight and isolated Action handler tests do not replace
+that end-to-end test.
 
-Both are opt-in (Growth defaults disabled), tenant manager only, immutable plan-bound, separate human approval required, first Action attempt only and idempotent through existing Growth mutation receipts. Neither endpoint or handler is an authorization bypass. Existing Growth outbound guards and scheduling remain unchanged. The remaining Growth → Sales handoff, canonical Sales lead intake, and Documents proposal preparation must be designed as a **single idempotent delivery chain**, avoiding a second Sales lead creation after an already accepted handoff. Package A acceptance remains open.
-
-
-## Native Documents proposal-draft Action
-
-`documents.proposal.prepare` is a canonical, approved Document-owned Action bound to existing Platform Documents template generation and document attachment. It verifies both Growth and Sales tenant activation, an accepted Growth handoff to **the exact native Sales Lead**, and a tenant-scoped Sales read model before creating any Document. Generation and attachment use deterministic sub-keys and never send/sign documents. An incomplete attachment or ambiguous storage result must be reconciled by an operator. This handler deliberately does not claim business-Goal success or allow arbitrary unverified leads. Native draft = a stored, unsent document; it does **not** mean the platform's persisted document lifecycle gains a new `draft` state. The canonical handoff/CRM intake stages still need a single no-duplicate orchestration contract.
-
-## Validated Growth state transition and native Sales ownership (2026-10-09)
-
-The approved reference preflight now includes a mandatory `growth.handoff.prepare` Action between qualification and dispatch. Growth's original aggregate deliberately requires `qualified → ready_for_handoff → handed_off`; these states cannot be skipped. The preparation Action reuses `GrowthApplicationBoundary::prepareHandoff`, pins expected value and play in its approved immutable input, and fails closed when no durable ready-for-handoff Candidate exists.
-
-The `growth.handoff.target.sales` Action delegates to the existing `GrowthHandoffBoundary::dispatch`, whose Sales target already calls the native, idempotent `SalesWriteService::createLead`. Creating another lead in a separate Sales Action would duplicate the business mutation. Native Documents proposal preparation references the preexisting immutable Growth Candidate in its approved Plan, resolves the future native Sales Lead only from the persisted accepted Growth attempt, checks the tenant-scoped Sales read model and generates an *unsent* proposal via the canonical Documents template runtime.
-
-**Open gate:** the separate Sales independent read-only verification stage must be specified and tested without dishonestly treating a read query as a side-effectful Action. Federation's current serialized Action executor only admits external Action steps; extending the plan to mixed read/write capabilities requires an explicit architecture change and independent tests. No verified causal Goal outcome, full 50-prospect evidence, release readiness or merger is claimed.
+Package B modes are not acceptance criteria for this foundation. Production
+enablement, CI verification at **the latest branch HEAD**, controlled tenant
+rollout and merge remain separately gated.
