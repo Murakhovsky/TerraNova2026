@@ -19,6 +19,27 @@ return [
         'migration_files' => [],
         'capability_contracts' => [
             [
+                'id' => 'documents.signature.sign',
+                'version' => '1.0.0',
+                'owner_domain' => 'documents',
+                'kind' => 'command',
+                'input_schema' => 'resources/contracts/documents/verified-signature-input.schema.json',
+                'output_schema' => 'resources/contracts/documents/verified-signature-output.schema.json',
+                'execution_binding' => 'action:documents.signature.sign',
+                'async' => true,
+                'side_effect_level' => 'external',
+                'permission' => 'cos.tenant.manage',
+                'approval_policy' => 'required',
+                'idempotency' => 'required',
+                'timeout_policy' => ['seconds'=>90],
+                'retry_policy' => ['max_attempts'=>1],
+                'failure_contract' => 'No provider proof, expired proof or ambiguous signature write requires manual reconciliation; never auto-retry.',
+                'lifecycle' => 'experimental',
+                'tests' => ['tests/unit/federation_documents_signed_attestation.php','tests/architecture/federation_execution_authorization.php'],
+                'documentation' => 'docs/03-architecture/federation-trusted-goal-outcomes.md',
+            ],
+
+            [
                 'id' => 'documents.signature.request',
                 'version' => '1.0.0',
                 'owner_domain' => 'documents',
@@ -39,6 +60,6 @@ return [
                 'documentation' => 'docs/03-architecture/federation-trusted-goal-outcomes.md',
             ],
         ],
-        'capabilities' => ['documents.signature.request'],
+        'capabilities' => ['documents.signature.request','documents.signature.sign'],
     ],
 ];

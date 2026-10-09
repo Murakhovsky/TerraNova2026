@@ -2284,9 +2284,17 @@ services:
     arguments:
       $documents: '@Domains\Documents\Application\Service\SignatureRequestService'
 
+  Domains\Documents\Automation\Action\RecordVerifiedSignatureHandler:
+    arguments:
+      $documents: '@Platform\Documents\Contract\DocumentsRepositoryInterface'
+      $runtime: '@Platform\Documents\Service\DocumentsRuntimeService'
+      $proofs: '@App\Persistence\Federation\FederationDocumentSignatureProofInbox'
+      $origins: '@App\Persistence\Federation\FederationOutcomeOriginRecorder'
+
   Domains\Documents\Bootstrap\DocumentsDomainModule:
     arguments:
       $requestSignature: '@Domains\Documents\Automation\Action\RequestSignatureHandler'
+      $recordVerifiedSignature: '@Domains\Documents\Automation\Action\RecordVerifiedSignatureHandler'
 
   documentsDomainModule:
     alias: Domains\Documents\Bootstrap\DocumentsDomainModule
