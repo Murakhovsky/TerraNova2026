@@ -1962,6 +1962,16 @@ services:
 
   Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
 
+  Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~
+  Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery: ~
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  App\Web\CapitalMarkets\CrossVenueDiscoveryController:
+    public: true
+    tags: ['controller.service_arguments']
+
   Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService: ~
 
   Domains\CapitalMarkets\Domain\Service\MarketDataQualityEngine: ~
