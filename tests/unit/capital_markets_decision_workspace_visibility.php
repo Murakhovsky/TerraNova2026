@@ -17,6 +17,8 @@ $source = [
         'portfolio_equity'=>'120000', 'available_capital'=>'15000',
         'deployed_capital'=>'100000', 'reserved_capital'=>'5000',
         'net_pnl'=>'750', 'today_net_pnl'=>'110', 'pnl_30d'=>'320',
+        'paper_equity'=>'10100','paper_nav_status'=>'SIMULATED',
+        'paper_today_net_pnl'=>'10','paper_30d_net_pnl'=>'100',
         'portfolio_nav_windows'=>['today'=>['status'=>'COMPLETE','net_pnl'=>'110']],
         'risk_state'=>'HALTED', 'data_health'=>'STALE',
         'portfolio_updated_at'=>'2026-10-09T09:00:00+00:00',
@@ -29,6 +31,7 @@ $source = [
         ],
         'critical_alerts'=>2,
     ],
+    'paper_nav'=>['latest'=>['status'=>'SIMULATED','equity'=>'10100']],
     'capital'=>['total'=>'120000'], 'portfolio'=>['positions'=>[['id'=>'secret']]],
     'capital_map'=>[['key'=>'AVAILABLE','value'=>'15000']],
     'risk'=>['drawdown'=>'8.5'], 'material_risks'=>[['metric'=>'concentration']],
@@ -54,14 +57,15 @@ $source = [
 ];
 
 $none = DecisionWorkspaceVisibilityPolicy::redact($source, ['view'=>true]);
-foreach (['portfolio_equity','available_capital','deployed_capital','reserved_capital','net_pnl','today_net_pnl','pnl_30d','portfolio_updated_at'] as $key) {
+foreach (['portfolio_equity','available_capital','deployed_capital','reserved_capital','net_pnl','today_net_pnl','pnl_30d','portfolio_updated_at',
+    'paper_equity','paper_nav_status','paper_today_net_pnl','paper_30d_net_pnl'] as $key) {
     $assert($none['global'][$key] === null, 'Generic View leaked financial field '.$key);
 }
 $assert($none['global']['portfolio_nav_windows'] === [], 'Generic View leaked NAV evidence.');
 $assert($none['global']['risk_state'] === 'RESTRICTED', 'Generic View leaked risk state.');
 $assert($none['global']['alerts'] === [] && $none['global']['critical_alerts'] === 0, 'Restricted alerts leaked.');
 $assert($none['global']['last_updated'] === $source['global']['market_updated_at'], 'Hidden portfolio timestamp leaked via fallback.');
-foreach (['capital','performance','exposure','portfolio','capital_map','risk','material_risks','top_opportunities','active_strategies'] as $key) {
+foreach (['capital','performance','exposure','portfolio','paper_nav','capital_map','risk','material_risks','top_opportunities','active_strategies'] as $key) {
     $assert(($none[$key] ?? null) === [], 'Generic View leaked payload '.$key);
 }
 $assert($none['recommended_actions'] === [], 'Generic View leaked restricted action descriptions.');
