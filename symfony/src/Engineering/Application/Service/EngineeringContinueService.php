@@ -37,6 +37,10 @@ final readonly class EngineeringContinueService
         $workflowId = $this->workflows->activeIdForFeature($featureId);
         if ($workflowId === null) throw new RuntimeException('Engineering feature has no active workflow.');
         $workflow = $this->workflows->get($workflowId);
+        if ($workflow->currentState() === EngineeringWorkflowState::HUMAN_DECISION_REQUIRED) {
+            $this->legacyEvidenceGates->reconcile($featureId, $workflowId, $correlationId);
+            $workflow = $this->workflows->get($workflowId);
+        }
         $this->features->updateStatus($featureId, $workflow->currentState()->value);
         $activeRole = $this->roleForState($workflow->currentState());
         if ($activeRole !== null) {
