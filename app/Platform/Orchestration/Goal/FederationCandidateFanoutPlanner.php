@@ -28,6 +28,7 @@ final readonly class FederationCandidateFanoutPlanner
      * @param list<array<string,mixed>> $memberships Growth-owned membership snapshot
      * @param callable(string):?array<string,mixed> $viewCandidate Tenant-scoped Growth boundary
      * @param array<string,mixed> $options Human-selected bounded policy/template inputs
+     * @param list<string> $excludedCandidateIds Already proposed candidates for this Goal
      * @return array<string,mixed>
      */
     public function build(
@@ -37,9 +38,23 @@ final readonly class FederationCandidateFanoutPlanner
         callable $viewCandidate,
         int $requested,
         array $options,
+        array $excludedCandidateIds = [],
     ): array {
         if ($requested < 1 || $requested > self::MAX_CANDIDATES) {
             throw new DomainException('Fan-out size must be between 1 and 50.');
+        }
+        if (!array_is_list($excludedCandidateIds) || count($excludedCandidateIds) > self::MAX_CANDIDATES) {
+            throw new DomainException('Unbounded or malformed existing candidate snapshot.');
+        }
+        $excluded = [];
+        foreach ($excludedCandidateIds as $candidateId) {
+            if (!is_string($candidateId) || $candidateId === '' || isset($excluded[$candidateId])) {
+                throw new DomainException('Duplicate or invalid existing Goal Candidate.');
+            }
+            $excluded[$candidateId] = true;
+        }
+        if ($requested > self::MAX_CANDIDATES - count($excluded)) {
+            throw new DomainException('Requested candidates exceed remaining Goal capacity.');
         }
         if (($run['status'] ?? null) !== 'completed'
             || ($run['organization_id'] ?? null) !== $goal->organizationId
@@ -114,8 +129,8 @@ final readonly class FederationCandidateFanoutPlanner
                 throw new DomainException('Cross-tenant or cross-universe candidate source rejected.');
             }
             $candidateId = $row['candidate_id'] ?? null;
-            if (!is_string($candidateId) || $candidateId === '') {
-                continue; // Discovered accounts are NOT necessarily opportunities.
+            if (!is_string($candidateId) || $candidateId === '' || isset($excluded[$candidateId])) {
+                continue; // Accounts and already-planned Candidates are ineligible.
             }
             $accountId = $row['account_id'] ?? null;
             $source = $row['source_reference'] ?? null;
@@ -229,6 +244,8 @@ final readonly class FederationCandidateFanoutPlanner
             'ready' => $ready,
             'requested' => $requested,
             'eligible' => count($eligible),
+            'existing_count' => count($excluded),
+            'goal_remaining' => self::MAX_CANDIDATES - count($excluded),
             'proposed_count' => count($plans),
             'plans' => $plans,
             'business_outcome_verified' => false,
