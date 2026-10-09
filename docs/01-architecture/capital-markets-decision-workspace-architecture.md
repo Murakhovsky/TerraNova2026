@@ -166,6 +166,13 @@ Agent Center показує:
 - recent Agent Runs і task/subject;
 - decision, recommendation, confidence, findings та limitations;
 - requested tools і фактично audited tool calls;
+
+Для `Agent Center` право `View` дозволяє лише безпечний операційний summary.
+Повні audited inputs/outputs tool calls, run output, correlation IDs та детальні помилки
+передаються backend лише за окремої перевірки `CapitalMarketsCapability::AuditView`.
+Без `AuditView` не виконується запит до audit history, raw payload не потрапляє в SSR/Twig.
+Opportunity Detail додатково вимагає `OpportunityView` поверх `PortfolioView`.
+
 - tool input/output з tenant-scoped Activity History;
 - structured result, token/cost/duration/error telemetry.
 
