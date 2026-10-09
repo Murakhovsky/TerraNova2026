@@ -242,10 +242,22 @@ final readonly class FederationCandidateFanoutService
             if (count($actualExisting) + count($plans) > FederationCandidateFanoutPlanner::MAX_CANDIDATES) {
                 throw new DomainException('Goal already has too many candidate Plans.');
             }
-            foreach ($plans as $plan) {
+            // cos_federation_plans enforces UNIQUE(tenant,goal,plan_version).
+            // Candidate child Plans are sibling revisions of the same Goal,
+            // so assigning version=1 to every child is invalid. Reserve a
+            // monotonically increasing contiguous range under the Goal lock.
+            $latestVersion = (int) $this->db->fetchOne(
+                'SELECT COALESCE(MAX(plan_version),0) FROM cos_federation_plans
+                 WHERE organization_id=:org AND goal_id=:goal',
+                ['org'=>$org,'goal'=>$goalId],
+            );
+            if ($latestVersion < 0 || $latestVersion > PHP_INT_MAX - count($plans)) {
+                throw new DomainException('Goal Plan version capacity exhausted.');
+            }
+            foreach ($plans as $offset => $plan) {
                 $this->goals->proposePlan(
-                    $actor, $plan['plan_id'], $goalId,
-                    $plan['steps'], 1, $plan['lineage'],
+                    $actor,$plan['plan_id'],$goalId,$plan['steps'],
+                    $latestVersion + $offset + 1,$plan['lineage'],
                 );
             }
         });
