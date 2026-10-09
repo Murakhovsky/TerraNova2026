@@ -94,4 +94,18 @@ $global = $globalState->invoke($view, [
 $assert($global['portfolio_updated_at'] === '2026-10-08T08:00:00+00:00', 'Portfolio update provenance must stay separate.');
 $assert($global['market_updated_at'] === '2026-10-08T08:03:00+00:00', 'Market update provenance must stay separate.');
 
+$recommend = $ref->getMethod('recommendedActions');
+$missingNav = $recommend->invoke($view, [
+    'alerts' => [],
+    'portfolio_nav_windows' => ['today' => ['status' => 'UNAVAILABLE', 'net_pnl' => null]],
+], [], []);
+$assert(count($missingNav) === 1
+    && $missingNav[0]['reason'] === 'PORTFOLIO_NAV_UNAVAILABLE',
+    'An incomplete NAV window must appear as an operator reconciliation task.');
+$verifiedZero = $recommend->invoke($view, [
+    'alerts' => [],
+    'portfolio_nav_windows' => ['today' => ['status' => 'COMPLETE', 'net_pnl' => '0']],
+], [], []);
+$assert($verifiedZero === [], 'A verified zero must not trigger a missing NAV action.');
+
 echo "CM-DECISION-WORKSPACE canonical projection regression passed.\n";
