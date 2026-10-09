@@ -284,6 +284,35 @@ final readonly class EngineeringArchitectStageExecutor
             $round = 0;
             while (true) {
                 $run = $this->agents->run($task, $organizationId, $correlationId);
+                // Legacy agents reported safe repository reads as HUMAN_DECISION.
+                // Manager reclassifies ONLY the explicitly typed read-only request.
+                $legacy = $run->structuredOutput['required_human_decisions'][0] ?? null;
+                if (($run->structuredOutput['status'] ?? '') === 'NEEDS_HUMAN_DECISION'
+                    && is_array($legacy) && $evidencePolicy->isLegacyReadOnlyRefresh($legacy)) {
+                    $reclassified = $run->structuredOutput;
+                    $reclassified['status'] = 'NEEDS_REPOSITORY_EVIDENCE';
+                    $reclassified['required_human_decisions'] = [];
+                    $reclassified['requested_repository_files'] = $evidencePolicy->legacyRefreshPaths($seenPaths);
+                    $run = new EngineeringAgentRunResult(
+                        runId: $run->runId,
+                        role: $run->role,
+                        status: $run->status,
+                        structuredOutput: $reclassified,
+                        provider: $run->provider,
+                        model: $run->model,
+                        usage: $run->usage,
+                        error: $run->error,
+                        technicalRetries: $run->technicalRetries,
+                        steps: $run->steps,
+                    );
+                    $this->journal->event(
+                        $featureId, $workflowId, 'MANAGER', 'manager.legacy_evidence_gate_reclassified',
+                        'COMPLETED', 'Read-only evidence request reclassified without human intervention.',
+                        $correlationId,
+                        ['revision' => $repositoryRevision, 'requested_files' => $reclassified['requested_repository_files']],
+                        $engineeringRunId,
+                    );
+                }
                 $this->workflows->touchRuntime($workflowId, $engineeringRunId);
                 $this->journal->event(
                     $featureId,
