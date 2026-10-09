@@ -228,7 +228,7 @@ final class EngineeringAgentSchemas
     /** @return array<string,mixed> */
     private static function architect(): array
     {
-        $gate = ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION'];
+        $gate = ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION','NEEDS_REPOSITORY_EVIDENCE'];
 
         return [
             'type' => 'object',
@@ -314,6 +314,10 @@ final class EngineeringAgentSchemas
                 'conditions' => ['type' => 'array'],
                 'risks' => ['type' => 'array'],
                 'unresolved_questions' => ['type' => 'array'],
+                'requested_repository_files' => [
+                    'type' => 'array', 'maxItems' => 6,
+                    'items' => ['type' => 'string', 'minLength' => 1, 'maxLength' => 240],
+                ],
                 'required_human_decisions' => [
                     'type' => 'array',
                     'maxItems' => 1,
