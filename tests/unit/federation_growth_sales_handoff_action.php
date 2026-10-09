@@ -22,7 +22,7 @@ $port = new class implements GrowthHandoffBoundary {
 };
 $handler=new FederatedSalesHandoffHandler($port);
 $mk=static fn(string $target='growth_candidate',ActionStatus $status=ActionStatus::Running):Action=>
-    new Action('a-1','tenant','growth.handoff.target.sales',$target,'GROW-1',[],'USER','7',
+    new Action('a-1','tenant','growth.handoff.target.sales',$target,'GROW-1',['target_domain'=>'sales'],'USER','7',
         'APPROVAL_REQUIRED','HIGH','fed:h-1',new DateTimeImmutable('2026-10-09T14:00:00Z'),
         $status,'corr');
 if ($handler->execute($mk('sales_lead'))->successful || $port->calls!==[]) throw new RuntimeException('Forged handoff target passed validation.');
