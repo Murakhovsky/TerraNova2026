@@ -9,7 +9,7 @@
 {% set riskTone = riskState in ['NORMAL'] ? 'positive' : (riskState in ['CAUTION','RESTRICTED','NOT_CALCULATED'] ? 'warning' : 'danger') %}
 {% set dataTone = dataState == 'HEALTHY' ? 'positive' : (dataState in ['DEGRADED','STALE'] ? 'warning' : 'danger') %}
 
-<div class="cos-page__stack cos-capital-markets" data-controller="capital-markets-workspace" data-action="cos:realtime-update->capital-markets-workspace#realtimeUpdate" data-csrf="{{ csrfToken }}" data-cm-decision-workspace="{{ cmView }}">
+<div class="cos-page__stack cos-capital-markets" data-controller="capital-markets-workspace" data-action="cos:realtime-update->capital-markets-workspace#realtimeUpdate" data-csrf="{{ csrfToken }}" data-cm-decision-workspace="{{ cmView }}" data-cm-snapshot-rendered-at="{{ snapshotRenderedAt }}" data-cm-snapshot-stale-seconds="60">
   {% if cmView in ['overview','opportunities','opportunity','markets','market_detail','relationship_detail','execution','execution_detail','risk'] %}
     <span id="cos-capital-markets-signal" hidden aria-hidden="true"></span>
     <twig:CosRealtimeSubscription :topic="realtimeTopic" signalTarget="cos-capital-markets-signal" />
@@ -61,6 +61,14 @@
     {% if permissions.market_data_quality_view|default(false) %}<a class="btn {{ cmView == 'data_quality' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/data-quality">Data Quality</a>{% endif %}
   </nav>
 
+  {# Snapshot age is a UI-readiness warning, not a replacement for backend market trust. #}
+  <div class="alert alert-warning" role="status" aria-live="polite"
+       data-capital-markets-workspace-target="snapshotWarning" data-cm-snapshot-status="fresh" hidden>
+    <strong data-capital-markets-workspace-target="snapshotWarningTitle">Decision snapshot stale</strong>
+    <span data-capital-markets-workspace-target="snapshotWarningMessage">This view may no longer reflect current portfolio, risk or market conditions. Reload before acting.</span>
+    <button type="button" class="btn btn-sm btn-outline-dark ms-2" data-action="click->capital-markets-workspace#reloadSnapshot">Reload snapshot</button>
+  </div>
+
   <section class="cos-panel" aria-label="Global Capital Markets status">
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
       <div>
@@ -79,7 +87,8 @@
         {% if cmView in ['overview','opportunities','opportunity','markets','execution','execution_detail','risk'] %}
           <small data-cos-realtime-state data-state="connecting">Transport: <strong data-cos-realtime-state-label>Connecting</strong></small>
         {% endif %}
-        <small title="Canonical backend timestamp">Updated: {{ g.last_updated|default('unavailable') }} · Age <strong data-capital-markets-workspace-target="age" data-updated-at="{{ g.last_updated|default('') }}">—</strong></small>
+        <small title="Canonical source observation time; not the time this page was rendered">Data observed: {{ g.last_updated|default('unavailable') }} · Age <strong data-capital-markets-workspace-target="age" data-updated-at="{{ g.last_updated|default('') }}">—</strong></small>
+        <small title="Server-rendered decision snapshot timestamp">View snapshot: {{ snapshotRenderedAt }} UTC</small>
       </div>
     </div>
     {% for alert in g.alerts|default([]) %}
