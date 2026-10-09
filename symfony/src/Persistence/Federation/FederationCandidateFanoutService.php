@@ -7,10 +7,12 @@ use Doctrine\DBAL\Connection;
 use DomainException;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
 use Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface;
+use Domains\Growth\Application\Contract\GrowthDecisionRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\FederationCandidateFanoutPlanner;
+use Platform\Documents\Contract\DocumentsRepositoryInterface;
 
 /**
  * Human-triggered, provenance-checked 1..50 candidate PROPOSALS under one Goal.
@@ -29,6 +31,8 @@ final readonly class FederationCandidateFanoutService
         private GrowthMarketDiscoveryBoundary $market,
         private GrowthApplicationBoundary $growth,
         private GrowthBuyingCommitteeRepositoryInterface $buyingCommittees,
+        private GrowthDecisionRepositoryInterface $policies,
+        private DocumentsRepositoryInterface $documents,
         private FederationCandidateFanoutPlanner $planner,
     ) {}
 
@@ -136,6 +140,18 @@ final readonly class FederationCandidateFanoutService
             throw new DomainException('Canonical Growth discovery run receipt not found or not completed.');
         }
         $native['organization_id'] = $org;
+        // Production preflight: a policy name and template ID in a form are
+        // not evidence that either resource is usable for this tenant.
+        $policy = $this->policies->viewPolicy(
+            $org,(string)($options['policy_id'] ?? ''),(int)($options['policy_revision'] ?? 0),
+        );
+        if (!is_array($policy) || ($policy['status'] ?? null) !== 'active') {
+            throw new DomainException('Qualification policy revision is not currently active.');
+        }
+        $template = $this->documents->findTemplate($org,(string)($options['template_id'] ?? ''));
+        if (!is_array($template) || !(bool)($template['active'] ?? false)) {
+            throw new DomainException('Tenant-owned active proposal template is unavailable.');
+        }
         $options['source_federation_run'] = $sourceRunId;
         $options['source_federation_step'] = $sourceStepId;
         $preview = $this->planner->build(
