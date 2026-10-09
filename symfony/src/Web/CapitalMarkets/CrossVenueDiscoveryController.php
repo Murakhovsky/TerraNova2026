@@ -82,7 +82,7 @@ final readonly class CrossVenueDiscoveryController
         if(!$this->csrf->isValid($request))return new Response('Invalid CSRF token.',403);
         $org=$tenant->organizationId()->value();
         $actor=(int)$tenant->userId()->value();
-        if(!$this->snapshots->mayScan($org))return new RedirectResponse('/capital-markets/discovery?cooldown=1',303);
+        if(!$this->snapshots->reserveScan($org,$actor))return new RedirectResponse('/capital-markets/discovery?cooldown=1',303);
 
         $limit=(string)$request->request->get('limit','10');
         if(!in_array($limit,['10','80'],true))return new Response('Invalid scan scope.',400);
