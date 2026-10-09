@@ -25,7 +25,7 @@ use Kernel\Tenant\Model\TenantPermissions;
 $catalog = new ModuleCatalog([
     new ModuleDefinition(new ModuleManifest('growth', 'Growth', '1.0.0'), ModuleContributions::fromArray([
         'capabilities' => [
-            'growth.market.discovery', 'growth.candidate.qualify', 'growth.handoff.target.sales',
+            'growth.market.discovery', 'growth.candidate.qualify', 'growth.handoff.prepare', 'growth.handoff.target.sales',
         ],
     ])),
     new ModuleDefinition(new ModuleManifest('sales', 'Sales', '1.0.0'), new ModuleContributions()),
@@ -48,9 +48,10 @@ $actor = static fn (string $role, array $grants): TenantContext => new TenantCon
 $report = $gate->inspect($actor('manager', [TenantPermissions::ACCESS, TenantPermissions::MANAGE]));
 $statuses = array_column($report['stages'], 'status', 'stage');
 if ($report['execution_ready'] !== false || $report['business_outcome_verified'] !== false
-    || count($report['stages']) !== 5
+    || count($report['stages']) !== 6
     || $statuses['discover_candidates'] !== 'manifest_only'
     || $statuses['qualify_candidates'] !== 'manifest_only'
+    || $statuses['prepare_handoff'] !== 'manifest_only'
     || $statuses['approve_handoff'] !== 'manifest_only'
     || $statuses['create_crm_leads'] !== 'missing_capability'
     || $statuses['prepare_proposals'] !== 'missing_capability') {
