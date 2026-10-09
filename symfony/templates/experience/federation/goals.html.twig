@@ -46,13 +46,14 @@
                     <datalist id="federation-supported-outcomes">
                         <option value="sales.won_deals">Sales: виграні угоди</option>
                         <option value="sales.closed_deals">Sales: закриті угоди</option>
+                        <option value="sales.local_tasks_created">Sales: створені завдання в локальній CRM</option>
                     </datalist>
                 </label>
                 <label class="cos-field"><span>Цільове значення</span>
                     <input class="cos-input" type="number" name="target" min="1" max="1000000" value="5" required>
                 </label>
             </div>
-            <p class="cos-card__copy">Автоматично підтверджуються показники <code>sales.won_deals</code> і <code>sales.closed_deals</code>, якщо Sales активний. Інші коди можна зберегти, але без довіреного джерела їхній результат залишиться непідтвердженим.</p>
+            <p class="cos-card__copy">Автоматично підтверджуються <code>sales.won_deals</code>, <code>sales.closed_deals</code> і <code>sales.local_tasks_created</code>, якщо Sales активний. Інші коди можна зберегти, але без довіреного джерела їхній результат залишиться непідтвердженим.</p>
             <button class="cos-button cos-button--primary" type="submit">Зберегти чернетку Goal</button>
         </form>
         <p class="cos-card__copy">Збереження не запускає агентів і не створює зовнішніх операцій.</p>
