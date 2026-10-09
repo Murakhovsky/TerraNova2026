@@ -1163,10 +1163,15 @@ services:
     arguments:
       $decisions: '@Domains\Growth\Application\Contract\GrowthDecisionBoundary'
 
+  Domains\Growth\Automation\Action\FederatedSalesHandoffHandler:
+    arguments:
+      $handoffs: '@Domains\Growth\Application\Contract\GrowthHandoffBoundary'
+
   Domains\Growth\Bootstrap\GrowthDomainModule:
     arguments:
       $marketDiscovery: '@Domains\Growth\Automation\Action\FederatedMarketDiscoveryHandler'
       $qualifyCandidate: '@Domains\Growth\Automation\Action\FederatedCandidateQualificationHandler'
+      $salesHandoff: '@Domains\Growth\Automation\Action\FederatedSalesHandoffHandler'
       $sendMessage: '@Domains\Growth\Automation\Action\GrowthSendMessageHandler'
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
