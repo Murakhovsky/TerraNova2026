@@ -38,6 +38,14 @@ if(!$a['ready'] || $a['eligible']!==2 || $a['proposed_count']!==2
     || $a['plans']!==$b['plans'] || $a['business_outcome_verified']!==false) {
     throw new RuntimeException('Deterministic 2-candidate fan-out failed.');
 }
+// Repeated discovery of the same tenant/Goal/Candidate must NOT mint a
+// second executable Plan identity with a fresh native source run.
+$repeat=$planner->build($goal,array_replace($native,['run_id'=>'GMRN-NEXT']),
+    $memberships,$view,2,$opt);
+if ($repeat['plans'][0]['plan_id']!==$a['plans'][0]['plan_id']
+    || $repeat['plans'][0]['lineage']['native_discovery_run']===$a['plans'][0]['lineage']['native_discovery_run']) {
+    throw new RuntimeException('Repeated source scan can duplicate candidate Plan or loses attested lineage.');
+}
 $first=$a['plans'][0];
 if($first['candidate_id']!=='C-1'
     || count($first['steps'])!==4
