@@ -87,7 +87,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                     WHERE feature_id IN ($in) AND trace_id <> ''
                  ) traces
                  INNER JOIN cos_llm_usage u ON u.correlation_id = traces.trace_id
-                 ORDER BY u.created_at ASC, u.id ASC",
+                 ORDER BY u.created_at DESC, u.id DESC",
                 $params,
             );
 
@@ -248,7 +248,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                 SELECT DISTINCT trace_id FROM cos_engineering_agent_runs
                 WHERE feature_id = :feature_id AND trace_id <> ''
              )
-             ORDER BY u.created_at ASC, u.id ASC",
+             ORDER BY u.created_at DESC, u.id DESC",
             ['feature_id' => $featureId],
         );
     }
@@ -266,7 +266,7 @@ final readonly class DoctrineEngineeringObservabilityReadModel implements Engine
                 SELECT DISTINCT trace_id FROM cos_engineering_agent_runs
                 WHERE workflow_execution_id = :workflow_id AND trace_id <> ''
              )
-             ORDER BY u.created_at ASC, u.id ASC",
+             ORDER BY u.created_at DESC, u.id DESC",
             ['workflow_id' => $workflowId],
         );
     }
