@@ -16,16 +16,17 @@ generated: true
 
 ## Підсумок
 
-- **Installable Domains:** 12
+- **Installable Domains:** 13
 - **Покрито канонічним процесом:** 8
 - **Явних exemptions:** 4
-- **Без покриття:** 0
+- **Без покриття:** 1
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | `capital_markets` · Capital Markets | `0.9.0` | `covered` | 3 | 19 | 19/19 | 0 | 0 |
 | `construction` · Construction | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `diagnostic` · Diagnostics | `1.0.0` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
+| `documents` · Documents | `0.1.0` | `missing` | 0 | 0 | 0/0 | 0 | 0 |
 | `federation` · COS Federation | `1.0.0` | `covered` | 1 | 1 | 1/1 | 0 | 0 |
 | `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
@@ -52,6 +53,10 @@ generated: true
 ### Diagnostics (`diagnostic`)
 
 - `diagnostic.session-to-recommendation`
+
+### Documents (`documents`)
+
+- **Відсутнє покриття:** немає канонічного process і немає explicit exemption.
 
 ### COS Federation (`federation`)
 
