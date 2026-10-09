@@ -246,3 +246,7 @@ Action відкликана, native запис змінився або зв'яз
 `FederationOutcomeOriginReader` викидає помилку цілісності замість
 повернення нульового результату. Це особливо важливо для цілей
 з умовою `at_most`, де помилковий нуль міг би означати «успіх».
+
+### Канонічний Research writer
+
+`capital_markets.research.result.record` зареєстрований у `capital_markets` як реальний Action handler та typed executable capability. Він відмовляє без завершеного Research experiment, структурованих метрик та `review_evidence` із рішенням `VALIDATED`, особою і референсом перевірки. Запис результату й походження відбуваються атомарно. `VALIDATED` означає записане рішення Research Lab, **не гарантію прибутковості** і не незалежну економічну причинність. Власне схвалення Action повинно залишатися незалежним від автора Goal. Для rollout потрібні runtime smoke та QA фактичного Action-шляху.

@@ -4,16 +4,22 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Bootstrap;
 
 use Domains\CapitalMarkets\Automation\Agent\CapitalMarketsResearchAgent;
+use Domains\CapitalMarkets\Automation\Action\RecordValidatedResearchResultHandler;
+use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Domains\CapitalMarkets\Automation\Agent\CapitalMarketsPortfolioAgent;
 use Kernel\Agent\Contract\AgentContextBuilderInterface;
 use Kernel\Module\Contract\AgentProvidingModuleInterface;
 use Kernel\Module\DomainModuleInterface;
 
-final readonly class CapitalMarketsDomainModule implements DomainModuleInterface,AgentProvidingModuleInterface
+final readonly class CapitalMarketsDomainModule implements DomainModuleInterface,AgentProvidingModuleInterface,ActionOwningModuleInterface
 {
-    public function __construct(private AgentContextBuilderInterface $researchAgentContext,private AgentContextBuilderInterface $portfolioAgentContext){}
+    public function __construct(private AgentContextBuilderInterface $researchAgentContext,private AgentContextBuilderInterface $portfolioAgentContext,private RecordValidatedResearchResultHandler $researchResultHandler){}
 
     public function name():string{return 'capital_markets';}
+
+    public function actionTypes():array { return [RecordValidatedResearchResultHandler::TYPE]; }
+
+    public function actionHandlers():array { return [$this->researchResultHandler]; }
 
     public function agents():array
     {
