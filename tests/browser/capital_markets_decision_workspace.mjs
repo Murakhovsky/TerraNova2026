@@ -93,6 +93,34 @@ try {
       }
     }
 
+    // A frozen Mercure subscription must never leave the decision snapshot looking current.
+    // Force a historical server-render timestamp to test the presentational watchdog
+    // without sleeping a minute or changing canonical backend financial state.
+    await page.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' });
+    const snapshotRoot = page.locator('[data-cm-decision-workspace="overview"]');
+    if (!await snapshotRoot.getAttribute('data-cm-snapshot-rendered-at')) {
+      throw new Error(profile.name + ': server-rendered snapshot timestamp is missing.');
+    }
+    await snapshotRoot.evaluate((element) => {
+      element.dataset.cmSnapshotRenderedAt = new Date(Date.now() - 75000).toISOString();
+    });
+    const warning = page.locator('[data-capital-markets-workspace-target="snapshotWarning"]');
+    await warning.waitFor({ state: 'visible', timeout: 5000 });
+    if ((await warning.innerText()).includes('Decision snapshot stale') === false) {
+      throw new Error(profile.name + ': stale open decision snapshot has no explicit warning.');
+    }
+    await snapshotRoot.evaluate((element) => {
+      element.dataset.cmSnapshotRenderedAt = new Date().toISOString();
+    });
+    await warning.waitFor({ state: 'hidden', timeout: 5000 });
+    await snapshotRoot.evaluate((element) => {
+      element.dataset.cmSnapshotRenderedAt = '';
+    });
+    await warning.waitFor({ state: 'visible', timeout: 5000 });
+    if ((await warning.innerText()).includes('time unavailable') === false) {
+      throw new Error(profile.name + ': unknown snapshot time must fail closed.');
+    }
+
     if (!profile.mobile) {
       await page.goto(absolute('/capital-markets/opportunities'), { waitUntil: 'domcontentloaded' });
       const orderBefore = await page.locator('table[data-cm-table="opportunities"] thead [data-cm-col]').evaluateAll(
