@@ -33,6 +33,7 @@ use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use LogicException;
 use Platform\Orchestration\Goal\GoalSpecification;
+use Platform\Orchestration\Goal\FederationCandidateFanoutPlanner;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -56,6 +57,7 @@ final class FederationPersistenceSmokeCommand extends Command
     public function __construct(
         private readonly Connection $db,
         private readonly FederationGoalStore $goals,
+        private readonly FederationCandidateFanoutPlanner $candidateFanout,
         private readonly FederationOutcomeOriginReader $originReader,
         private readonly FederationOutcomeOriginRecorder $originRecorder,
         private readonly RecordValidatedResearchResultHandler $researchResultHandler,
@@ -1618,6 +1620,7 @@ final class FederationPersistenceSmokeCommand extends Command
                 ['org' => $org, 'domain' => 'documents', 'id' => $signatureId],
             ) === 0, 'Pending signature request was forged into verified outcome.');
 
+            $this->verifyIncrementalCandidatePlans($org);
             $output->writeln('<info>COS Federation MySQL persistence smoke passed.</info>');
             return Command::SUCCESS;
         } catch (Throwable $failure) {
@@ -1629,6 +1632,129 @@ final class FederationPersistenceSmokeCommand extends Command
             if ($this->db->isTransactionActive()) {
                 $this->db->rollBack();
             }
+        }
+    }
+
+    /**
+     * Transaction-scoped negative/positive acceptance of fifty immutable
+     * proposed candidate Plans. Does not create Growth Candidates, run Domain
+     * Actions, perform Sales handoff, generate/attach documents or send mail.
+     */
+    private function verifyIncrementalCandidatePlans(string $org): void
+    {
+        $actor = self::actor($org,'71');
+        // The entire smoke runs in the existing outer DB transaction.
+        // Tenant module activation is a synthetic fixture, never a release
+        // toggle for an actual organization.
+        foreach (['growth','sales','documents','federation'] as $domain) {
+            $this->db->executeStatement(
+                'INSERT INTO cos_organization_modules (organization_id,module_id,enabled)
+                 VALUES (:org,:module,1)
+                 ON DUPLICATE KEY UPDATE enabled=VALUES(enabled)',
+                ['org'=>$org,'module'=>$domain],
+            );
+        }
+        foreach (['growth.candidate.qualify', 'growth.handoff.prepare',
+                  'growth.handoff.target.sales','documents.proposal.prepare'] as $id) {
+            $this->capabilityBindings->requireExecutable($actor,$id);
+        }
+        $goalId='goal-fanout-'.bin2hex(random_bytes(8));
+        $specification=new GoalSpecification(
+            $goalId,$org,'71','Propose fifty sourced and qualified candidates',
+            [['id'=>'sales.won_deals','operator'=>'at_least','expected'=>1]],
+            ['growth.candidate.qualify','growth.handoff.prepare',
+             'growth.handoff.target.sales','documents.proposal.prepare'],
+        );
+        $this->goals->createGoal($actor,$specification);
+        $native=[
+            'organization_id'=>$org,'run_id'=>'GMRN-TEST','universe_id'=>'universe-50',
+            'status'=>'completed','started_at'=>'2026-10-09 10:00:00.000000',
+            'finished_at'=>'2026-10-09 10:20:00.000000',
+        ];
+        $members=[];
+        for ($i=1;$i<=50;$i++) {
+            $suffix=sprintf('%03d',$i);
+            $members[]=[
+                'organization_id'=>$org,'universe_id'=>'universe-50',
+                'candidate_id'=>'candidate-'.$suffix,'account_id'=>'account-'.$suffix,
+                'external_key_hash'=>hash('sha256','source-'.$suffix),
+                'source_reference'=>'https://example.test/org/'.$suffix,
+                'last_seen_at'=>'2026-10-09 10:10:00.000000',
+                'account_name'=>'Company '.$suffix,
+            ];
+        }
+        $view=static fn(string $id): ?array => [
+            'organization_id'=>$org,'candidate_id'=>$id,
+            'subject_type'=>'account',
+            'subject_id'=>str_replace('candidate-','account-',$id),
+            'target_domain'=>'sales','status'=>'scored',
+            'score'=>['total'=>90],'rationale'=>['source'=>'fixture'],
+            'lead_name'=>'Test Champion','lead_email'=>'champion@example.test',
+        ];
+        $options=[
+            'policy_id'=>'policy-test','policy_revision'=>1,
+            'template_id'=>'template-test','expected_value'=>'1000 USD',
+            'recommended_play'=>'review','recommended_action'=>'schedule a call',
+            'source_federation_run'=>'run-origin','source_federation_step'=>'discover',
+        ];
+
+        $first=$this->candidateFanout->build(
+            $specification,$native,$members,$view,10,$options,
+        );
+        self::assert($first['ready']===true && count($first['plans'])===10,
+            'First ten scored candidates should generate ten proposed Plans.');
+        foreach ($first['plans'] as $plan) {
+            $proposed=$this->goals->proposePlan($actor,$plan['plan_id'],$goalId,
+                $plan['steps'],1,$plan['lineage']);
+            self::assert($proposed['status']==='proposed','Fan-out Plans cannot auto-approve.');
+        }
+
+        $prior=array_column($first['plans'],'candidate_id');
+        $second=$this->candidateFanout->build(
+            $specification,$native,array_reverse($members),$view,40,$options,$prior,
+        );
+        self::assert($second['ready']===true && count($second['plans'])===40,
+            'Incremental 40-candidate proposal must exclude original ten.');
+        foreach ($second['plans'] as $plan) {
+            $this->goals->proposePlan($actor,$plan['plan_id'],$goalId,
+                $plan['steps'],1,$plan['lineage']);
+        }
+
+        $stored=$this->db->fetchAllAssociative(
+            'SELECT plan_id,state,plan_json FROM cos_federation_plans
+             WHERE organization_id = :org AND goal_id = :goal',
+            ['org'=>$org,'goal'=>$goalId],
+        );
+        self::assert(count($stored)===50,'Exactly 50 tenant-owned proposed Plans must persist.');
+        $candidates=[];
+        foreach ($stored as $row) {
+            $plan=json_decode((string)$row['plan_json'],true,512,JSON_THROW_ON_ERROR);
+            $candidate=$plan['lineage']['candidate_id'] ?? null;
+            self::assert($row['state']==='proposed'
+                && is_string($candidate) && $candidate!==''
+                && count($plan['steps']??[])===4,
+                'Stored Plan must retain all four canonical steps and candidate provenance.');
+            $candidates[$candidate]=true;
+        }
+        self::assert(count($candidates)===50,'Duplicate Candidate persisted under same Goal.');
+        $foreign=$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_federation_plans
+             WHERE organization_id=:foreign AND goal_id=:goal',
+            ['foreign'=>'not-'.$org,'goal'=>$goalId],
+        );
+        self::assert((int)$foreign===0,'Fan-out Plan breached tenant scoping.');
+        $runs=$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_federation_runs
+             WHERE organization_id=:org AND goal_id=:goal',
+            ['org'=>$org,'goal'=>$goalId],
+        );
+        self::assert((int)$runs===0,'Unapproved fan-out must not dispatch a Run.');
+        try {
+            $this->goals->proposePlan($actor,$first['plans'][0]['plan_id'],$goalId,
+                $first['plans'][0]['steps'],1,$first['plans'][0]['lineage']);
+            throw new \RuntimeException('Duplicate Goal Candidate Plan was allowed.');
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+            // Native DB uniqueness is the final replay boundary.
         }
     }
 
