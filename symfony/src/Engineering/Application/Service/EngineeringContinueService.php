@@ -20,6 +20,7 @@ final readonly class EngineeringContinueService
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringProductRequirementsStageExecutor $productStage,
         private EngineeringAutonomousProgressionService $progression,
+        private EngineeringLegacyEvidenceGateReconciler $legacyEvidenceGates,
         private int $staleRunSeconds = 1800,
     ) {}
 
