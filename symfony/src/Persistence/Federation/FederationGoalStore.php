@@ -481,7 +481,7 @@ final readonly class FederationGoalStore
             }
             $from = new DateTimeImmutable((string) $row['created_at'], new DateTimeZone('UTC'));
             $to = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-            $observations = $this->outcomes->collect($spec, $from, $to);
+            $observations = $this->outcomes->collect($spec, $from, $to, $actor, $runId);
             $evaluation = $this->evaluator->evaluate($spec, $observations);
             $evaluation['run_id'] = $runId;
             $evaluation['evidence_policy'] = 'domain_read_model_v1';

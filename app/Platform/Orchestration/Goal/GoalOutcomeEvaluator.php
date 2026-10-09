@@ -50,6 +50,9 @@ final readonly class GoalOutcomeEvaluator
                 'source' => $observations[$id]['source'] ?? null,
                 'window_start' => $observations[$id]['window_start'] ?? null,
                 'window_end' => $observations[$id]['window_end'] ?? null,
+                'attribution' => $state === 'unverifiable' ? 'none'
+                    : ($observations[$id]['attribution'] ?? 'temporal_only'),
+                'verified_actions' => $observations[$id]['verified_actions'] ?? null,
                 'result' => $state,
             ];
         }

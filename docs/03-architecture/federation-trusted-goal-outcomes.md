@@ -151,3 +151,24 @@ Federation. Її записи завжди обмежені tenant. Підпис
 Fingerprint підтверджує відтворюваність запиту, **не цифровий доказ**
 окремої відповіді, експерименту чи підпису. Невідомі показники або
 вимкнені Domains залишаються `unverifiable`.
+
+## Run-linked provenance: Growth inbound responses
+
+Новий критерій `growth.run_linked_inbound_responses` не дорівнює загальному
+`growth.inbound_responses_recorded`. Потрібен завершений tenant-owned Run.
+Для кожного завершеного зовнішнього Step окремий
+`FederationExternalActionReceiptReconciler` перевіряє канонічні
+Action / Policy / Approval receipts без повторного виконання.
+Growth read model рахує лише дедупліковані `tn_growth_engagement_responses`,
+чиї `action_id` збігаються з перевіреними Action поточного Run,
+а `created_at` належить UTC-вікну оцінки.
+
+Evidence містить `attribution=run_linked_action`, `run_id`, кількість
+підтверджених Actions та hash запиту з переліком Action IDs.
+Без Run-контексту показник залишається `unverifiable`. Невалідний
+Action receipt не збільшує результат.
+
+Інші критерії залишаються `attribution=temporal_only`.
+**Зв'язок у COS не є доказом контрфактичної економічної причинності.**
+Research і Documents поки не мають аналогічного надійного FK на
+перевірену Federation Action у власних business outcomes.

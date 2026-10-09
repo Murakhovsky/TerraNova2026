@@ -8,6 +8,8 @@ use DomainException;
 use Kernel\Module\ActiveModuleResolver;
 use Platform\Orchestration\Goal\GoalOutcomeEvidenceProviderInterface;
 use Platform\Orchestration\Goal\GoalSpecification;
+use Platform\Orchestration\Goal\RunScopedGoalOutcomeEvidenceProviderInterface;
+use Kernel\Tenant\Model\TenantContext;
 
 /**
  * Only explicitly registered Domain-owned read models may create persisted
@@ -22,10 +24,17 @@ final readonly class FederationTrustedOutcomeEvidenceResolver
     ) {}
 
     /** @return array<string,array<string,mixed>> */
-    public function collect(GoalSpecification $goal, DateTimeImmutable $from, DateTimeImmutable $to): array
+    public function collect(
+        GoalSpecification $goal, DateTimeImmutable $from, DateTimeImmutable $to,
+        ?TenantContext $actor = null, ?string $runId = null,
+    ): array
     {
         if ($to <= $from) {
             throw new DomainException('Outcome evaluation interval must be positive.');
+        }
+        if (($actor === null) !== ($runId === null)
+            || ($actor !== null && $actor->organizationId()->value() !== $goal->organizationId)) {
+            throw new DomainException('Run-scoped evidence actor or tenant is invalid.');
         }
         $result = [];
         foreach ($goal->criteria as $criterion) {
@@ -51,7 +60,15 @@ final readonly class FederationTrustedOutcomeEvidenceResolver
                 // never automatically counted as successful.
                 continue;
             }
-            $observation = $owner->observe($goal->organizationId, $id, $from, $to);
+            if ($owner instanceof RunScopedGoalOutcomeEvidenceProviderInterface) {
+                if ($actor === null || $runId === null) {
+                    // No authenticated Run context: fail closed, not a temporal fallback.
+                    continue;
+                }
+                $observation = $owner->observeRun($actor, $runId, $id, $from, $to);
+            } else {
+                $observation = $owner->observe($goal->organizationId, $id, $from, $to);
+            }
             if (!is_array($observation)
                 || !is_scalar($observation['value'] ?? null)
                 || !is_array($observation['evidence'] ?? null)
@@ -59,7 +76,10 @@ final readonly class FederationTrustedOutcomeEvidenceResolver
                 || !is_string($observation['source'] ?? null)
                 || $observation['source'] === ''
                 || ($observation['window_start'] ?? null) !== $from->format('Y-m-d\TH:i:s.uP')
-                || ($observation['window_end'] ?? null) !== $to->format('Y-m-d\TH:i:s.uP')) {
+                || ($observation['window_end'] ?? null) !== $to->format('Y-m-d\TH:i:s.uP')
+                || ($owner instanceof RunScopedGoalOutcomeEvidenceProviderInterface
+                    && (($observation['attribution'] ?? null) !== 'run_linked_action'
+                        || ($observation['run_id'] ?? null) !== $runId))) {
                 throw new DomainException('Trusted Domain evidence has invalid provenance.');
             }
             foreach ($observation['evidence'] as $reference) {

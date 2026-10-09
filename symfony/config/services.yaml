@@ -3252,12 +3252,24 @@ services:
     arguments:
       $readModel: '@Platform\Documents\Contract\DocumentSignatureOutcomeReadModelInterface'
 
+  Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthRunLinkedResponseReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthRunLinkedResponseReadModelInterface:
+    alias: Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthRunLinkedResponseReadModel
+
+  App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider:
+    arguments:
+      $responses: '@Domains\Growth\Application\Contract\GrowthRunLinkedResponseReadModelInterface'
+
   App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver:
     arguments:
       $providers:
         - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
+        - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider'
         - '@Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider'
 

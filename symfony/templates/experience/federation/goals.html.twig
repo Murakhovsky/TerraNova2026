@@ -48,6 +48,7 @@
                         <option value="sales.closed_deals">Sales: закриті угоди</option>
                         <option value="sales.local_tasks_created">Sales: створені завдання в локальній CRM</option>
                         <option value="growth.inbound_responses_recorded">Growth: отримані відповіді контактів</option>
+                        <option value="growth.run_linked_inbound_responses">Growth: відповіді, пов'язані з перевіреними діями Run</option>
                         <option value="capital_markets.research_results_validated">Research: валідовані результати досліджень</option>
                         <option value="documents.signatures_recorded">Documents: зареєстровані підписи</option>
                     </datalist>
@@ -130,6 +131,15 @@
                                 Немає достатніх достовірних даних для підтвердження критеріїв.
                             {% endif %}
                         </p>
+                        <p class="cos-card__copy" data-goal-outcome-attribution>
+                            {% if run.outcome.criteria|filter(c => c.result != 'unverifiable' and c.attribution|default('temporal_only') != 'run_linked_action')|length > 0 %}
+                                Увага: частина результатів є спостереженнями за періодом. Їхній зв'язок із конкретним Run не підтверджено.
+                            {% elseif run.outcome.criteria|filter(c => c.attribution|default('') == 'run_linked_action')|length > 0 %}
+                                Результати пов’язані з перевіреними Action цього Run. Економічну причинність не доведено.
+                            {% else %}
+                                Немає підтверджених бізнес-результатів або атрибуції.
+                            {% endif %}
+                        </p>
                         <p class="cos-card__copy">Оцінено: {{ run.outcome.recorded_at_kyiv|default(run.outcome.recorded_at ~ ' UTC') }} (Київ).
                             Перевірено {{ run.outcome.criteria|filter(c => c.result != 'unverifiable')|length }}
                             із {{ run.outcome.criteria|length }} критеріїв.</p>
@@ -140,6 +150,13 @@
                                         <strong>{{ criterion.criterion_id }}</strong>:
                                         {{ criterion.observed is not null ? criterion.observed : 'Немає вимірювання' }}
                                         (ціль: {{ criterion.expected }}), стан: {{ criterion.result }}.
+                                        {% if criterion.result != 'unverifiable' %}
+                                            <span data-goal-criterion-attribution>
+                                                {{ criterion.attribution|default('temporal_only') == 'run_linked_action'
+                                                    ? 'Є записаний зв’язок із перевіреною дією Run'
+                                                    : 'Лише часовий збіг, не доказ причинності' }}.
+                                            </span>
+                                        {% endif %}
                                         {% if criterion.source is defined and criterion.source %}
                                             Джерело: {{ criterion.source }}.
                                         {% endif %}
@@ -147,6 +164,9 @@
                                             <span data-goal-outcome-expert>
                                                 {% if criterion.window_start is defined and criterion.window_start %}
                                                     Інтервал (Київ): {{ criterion.window_start_kyiv|default(criterion.window_start) }} — {{ criterion.window_end_kyiv|default(criterion.window_end) }}.
+                                                {% endif %}
+                                                {% if criterion.verified_actions is defined and criterion.verified_actions is not null %}
+                                                    <code>Verified Actions: {{ criterion.verified_actions }}</code>
                                                 {% endif %}
                                                 {% for evidence in criterion.evidence %}
                                                     <code>{{ evidence }}</code>
