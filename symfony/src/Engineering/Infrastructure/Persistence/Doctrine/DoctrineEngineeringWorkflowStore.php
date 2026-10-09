@@ -283,7 +283,8 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             )
             ->from('cos_engineering_workflows', 'w')
             ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
-            ->where("w.workflow_type = 'ENGINEERING'")
+            ->where("(w.workflow_type = 'ENGINEERING'
+                OR (w.workflow_type = 'ENGINEERING_IMMEDIATE' AND w.current_state = 'HUMAN_DECISION_REQUIRED'))")
             ->andWhere("(w.current_state IN ('ANALYSIS','QA_PLANNING','ARCHITECTURE_PENDING','DEVELOPMENT_RUNNING','REVIEW_PENDING','QA_PENDING')
                 OR (w.current_state = 'HUMAN_DECISION_REQUIRED'
                     AND w.resume_state = 'ARCHITECTURE_PENDING'
