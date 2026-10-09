@@ -316,7 +316,9 @@ export default class extends Controller {
     }
 
     shouldStopLiveUpdates(health, state, status) {
-        return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);
+        // Runtime health may recover while the workflow remains nonterminal.
+        // Keep polling after STALE/STALLED; only terminal workflow states end polling.
+        return this.isTerminal(state, status);
     }
 
     stopReason(health, state, status) {
