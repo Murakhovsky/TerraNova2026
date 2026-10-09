@@ -6,6 +6,7 @@ namespace App\Persistence\Federation;
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Domains\Growth\Application\Contract\GrowthApplicationBoundary;
+use Domains\Growth\Application\Contract\GrowthBuyingCommitteeRepositoryInterface;
 use Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
@@ -27,6 +28,7 @@ final readonly class FederationCandidateFanoutService
         private FederationExternalActionReceiptReconciler $receipts,
         private GrowthMarketDiscoveryBoundary $market,
         private GrowthApplicationBoundary $growth,
+        private GrowthBuyingCommitteeRepositoryInterface $buyingCommittees,
         private FederationCandidateFanoutPlanner $planner,
     ) {}
 
@@ -58,6 +60,11 @@ final readonly class FederationCandidateFanoutService
         }
         $specification = $this->goals->specification($actor, $goalId);
         if ($specification === null) throw new DomainException('Tenant Goal not found.');
+        // Existing Growth Domain mutations require an integer actor id; fail
+        // before accepting 50 plans that cannot pass native Action handlers.
+        if (!ctype_digit($specification->ownerId) || (int)$specification->ownerId < 1) {
+            throw new DomainException('Growth fan-out requires a native numeric user actor identity.');
+        }
 
         $org = $actor->organizationId()->value();
         $source = $this->db->fetchAssociative(
@@ -133,7 +140,31 @@ final readonly class FederationCandidateFanoutService
         $options['source_federation_step'] = $sourceStepId;
         $preview = $this->planner->build(
             $specification, $native, $brief['memberships'],
-            fn (string $id): ?array => $this->growth->viewCandidate($org,$id),
+            function (string $id) use ($org): ?array {
+                $candidate = $this->growth->viewCandidate($org,$id);
+                if (!is_array($candidate) || ($candidate['subject_type'] ?? null) !== 'account') {
+                    return null;
+                }
+                $accountId = $candidate['subject_id'] ?? null;
+                if (!is_string($accountId) || $accountId === '') return null;
+                // SalesGrowthHandoffTarget requires exactly one champion with
+                // email identity, linked to this same tenant-owned account.
+                $assessment = $this->buyingCommittees->latestAssessment($org,$accountId);
+                $champions = $assessment['champion_contact_ids'] ?? null;
+                if (!is_array($champions) || count($champions) !== 1
+                    || !is_string($champions[0] ?? null) || $champions[0] === '') {
+                    return null;
+                }
+                $champion = $this->buyingCommittees->viewContact($org,$champions[0]);
+                if (!is_array($champion)
+                    || !$this->buyingCommittees->isContactLinked($org,$accountId,$champions[0])
+                    || strtolower(trim((string)($champion['identity_type'] ?? ''))) !== 'email'
+                    || filter_var((string)($champion['identity_value'] ?? ''),FILTER_VALIDATE_EMAIL) === false
+                    || trim((string)($champion['full_name'] ?? '')) === '') {
+                    return null;
+                }
+                return $candidate;
+            },
             $requested, $options,
         );
         return [
