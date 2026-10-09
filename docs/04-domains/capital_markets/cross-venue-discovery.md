@@ -40,6 +40,29 @@ kind: domain
 
 Для використання: створити Binance Venue та підтверджені інструменти, потім disabled Market Data source з adapter_type binance.spot.rest, ввімкнути feature flag capital_markets.market_data.binance.enabled, додати subscriptions, активувати source і виконати Poll now. У разі невдачі джерело лишається непридатним.
 
+## Порівняння котирувань
+
+Після Discovery можна натиснути «Отримати актуальні Bid/Ask» на тій самій
+сторінці /capital-markets/discovery. Сканер працює **лише** зі свіжим
+Discovery (до 15 хвилин) та обмежує повторні спроби до одного запуску
+на організацію за 60 секунд. Результат пишеться в tenant-scoped таблицю
+tn_capital_market_cross_venue_quote_snapshots з evidence SHA-256.
+
+Binance Spot best bid/ask та Bybit Spot tickers читаються пакетно, Kraken
+отримує тільки вже знайдені внутрішні коди торгових пар. Це зменшує
+кількість REST-запитів і уникає вгадування позначень майданчика.
+
+Відхиляються неповні Bid/Ask, нульова кількість і перехрещений стакан;
+помилка одного джерела не стирає спостереження інших. Якщо джерело
+недоступне, вказується UNAVAILABLE, якщо ціна непридатна, NO_VALID_BBO.
+Час відображає **отримання локальним сервером**, а не точну біржову мітку.
+
+Значення є лише діагностичними спостереженнями, **не** канонічними
+MarketState. Немає підтвердженої економічної тотожності, зіставлення USD
+із USDT, реальних комісій та ліквідності для виконання угоди.
+Тому система не обчислює net edge, не створює Opportunity і не
+запускає Paper Execution.
+
 ## Важлива межа
 
 Stocks Trading/tokenized-assets API Binance відрізняється від публічного Spot API. Для equity metadata, зокрема /sapi/v1/equity/market/tokenized-assets, потрібен X-MBX-APIKEY. Цей адаптер поки не реалізовано, тому відсутність bStocks у Spot exchangeInfo не доводить їхню відсутність у інших продуктах Binance.
