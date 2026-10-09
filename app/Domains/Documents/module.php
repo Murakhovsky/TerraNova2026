@@ -17,14 +17,14 @@ return [
         'configuration_provisioner_services' => [],
         'cross_domain_contracts' => [
             [
-                'contract' => 'Domains\\\\Growth\\\\Application\\\\Contract\\\\GrowthHandoffBoundary',
+                'contract' => 'Domains\\Growth\\Application\\Contract\\GrowthHandoffBoundary',
                 'role' => 'requires',
                 'counterpart' => 'growth',
                 'kind' => 'synchronous_port',
                 'purpose' => 'Verify a completed accepted Growth-to-Sales handoff before generating the Sales proposal draft.',
             ],
             [
-                'contract' => 'Domains\\\\Sales\\\\Application\\\\Contract\\\\SalesWorkspaceReadModelInterface',
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesWorkspaceReadModelInterface',
                 'role' => 'requires',
                 'counterpart' => 'sales',
                 'kind' => 'synchronous_port',
