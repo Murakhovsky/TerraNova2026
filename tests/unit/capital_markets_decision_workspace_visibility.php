@@ -34,6 +34,9 @@ $source = [
     'risk'=>['drawdown'=>'8.5'], 'material_risks'=>[['metric'=>'concentration']],
     'performance'=>['net_pnl'=>'750'], 'exposure'=>['unknown_exposure'=>[1,2,3]],
     'top_opportunities'=>[['opportunity'=>'SecretAlpha','approved_capital'=>'3000']],
+    'venue_rows'=>[['venue'=>['id'=>'X'],'capital_locations'=>[['amount'=>'120000']],'exposure'=>['gross'=>'3000']]],
+    'strategies'=>[['strategy'=>'Alpha','capital'=>'10000','net_pnl'=>'500','mode'=>'PAPER']],
+    'decision_trace'=>[['type'=>'Execution','label'=>'secret-execution','value'=>'500']],
     'active_strategies'=>[['strategy'=>'SecretStrategy','allocated_capital'=>'10000']],
     'opportunities'=>[[
         'id'=>'opp-1','opportunity'=>'PublicSignal','expected_net'=>'50',
@@ -62,6 +65,12 @@ foreach (['capital','performance','exposure','portfolio','capital_map','risk','m
     $assert(($none[$key] ?? null) === [], 'Generic View leaked payload '.$key);
 }
 $assert($none['recommended_actions'] === [], 'Generic View leaked restricted action descriptions.');
+$assert($none['venue_rows'][0]['capital_locations']===[] && $none['venue_rows'][0]['exposure']===null,
+    'Market venue rows leaked financial custody or exposure.');
+$assert($none['strategies'][0]['capital']===null && $none['strategies'][0]['net_pnl']===null,
+    'Research strategy list leaked real portfolio capital or profits.');
+$assert($none['decision_trace']===[], 'Research hypothesis trace exposed execution or realized PnL.');
+
 $assert($source['global']['portfolio_equity'] === '120000', 'The input projection must stay immutable.');
 
 $signal = DecisionWorkspaceVisibilityPolicy::redact($source, ['opportunity_view'=>true]);
