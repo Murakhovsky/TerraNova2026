@@ -48,6 +48,13 @@ final readonly class GoalsWorkspaceController
             } catch (Throwable) {
                 $run['recovery'] = null;
             }
+            try {
+                $run['outcome'] = $this->goals->latestTrustedEvaluation($tenant, (string) $run['run_id']);
+            } catch (Throwable) {
+                // A broken evaluation is never silently treated as success.
+                $run['outcome'] = null;
+                $run['outcome_unavailable'] = true;
+            }
         }
         unset($run);
         return new Response(
@@ -55,6 +62,8 @@ final readonly class GoalsWorkspaceController
                 'goals' => $this->goals->listGoals($tenant),
                 'runs' => $runs,
                 'reconciled' => $request->query->getBoolean('reconciled'),
+                'evaluated' => $request->query->getBoolean('evaluated'),
+                'outcomeError' => $request->query->get('outcome_error') === 'unavailable',
                 'mode' => $state['mode']->value,
                 'csrfToken' => $this->csrf->token($request),
                 'created' => $request->query->getBoolean('created'),
@@ -86,6 +95,26 @@ final readonly class GoalsWorkspaceController
             return new Response('Federation Run recovery unavailable.', 422);
         } catch (Throwable) {
             return new Response('Federation Run recovery failed.', 500);
+        }
+    }
+
+    /**
+     * Explicit manager operation only. Calls the trusted Domain read model,
+     * does not submit/replay an Action and never accepts supplied metrics.
+     */
+    public function evaluateRun(Request $request, string $runId): Response
+    {
+        $actor = $this->manager();
+        if ($actor === null) return self::denied();
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', 400);
+
+        try {
+            $this->goals->recordEvaluation($actor, 'eval-' . bin2hex(random_bytes(12)), $runId);
+            return new RedirectResponse('/workspace/goals?evaluated=1', 303);
+        } catch (DomainException|\LogicException|\InvalidArgumentException) {
+            return new RedirectResponse('/workspace/goals?outcome_error=unavailable', 303);
+        } catch (Throwable) {
+            return new Response('Trusted Goal evaluation unavailable.', 500);
         }
     }
 

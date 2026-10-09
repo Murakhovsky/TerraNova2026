@@ -499,6 +499,46 @@ final readonly class FederationGoalStore
         });
     }
 
+    /**
+     * Read-only, tenant-owned latest trusted result. Old ad-hoc evaluations
+     * created before the Domain evidence policy are intentionally excluded.
+     * This query never runs a Domain handler or recalculates business facts.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function latestTrustedEvaluation(TenantContext $viewer, string $runId): ?array
+    {
+        $this->writer($viewer);
+        $this->identifier($runId);
+        $row = $this->db->fetchAssociative(
+            "SELECT e.evaluation_id, e.evaluated_at, e.evaluation_json
+             FROM cos_federation_evaluations e
+             INNER JOIN cos_federation_runs r
+               ON r.organization_id = e.organization_id AND r.goal_id = e.goal_id
+             INNER JOIN cos_federation_plans p
+               ON p.organization_id = r.organization_id AND p.plan_id = r.plan_id
+              AND p.spec_version = e.spec_version
+             WHERE r.organization_id = :org AND r.run_id = :run
+               AND r.state = 'completed' AND p.state = 'approved'
+               AND JSON_UNQUOTE(JSON_EXTRACT(e.evaluation_json, '$.run_id')) = :evaluation_run
+               AND JSON_UNQUOTE(JSON_EXTRACT(e.evaluation_json, '$.evidence_policy')) = 'domain_read_model_v1'
+             ORDER BY e.evaluated_at DESC, e.evaluation_id DESC LIMIT 1",
+            ['org' => $viewer->organizationId()->value(), 'run' => $runId, 'evaluation_run' => $runId],
+        );
+        if (!$row) return null;
+        $result = self::decode((string) $row['evaluation_json']);
+        if (($result['run_id'] ?? null) !== $runId
+            || ($result['evidence_policy'] ?? null) !== 'domain_read_model_v1'
+            || !in_array(($result['result'] ?? null),
+                ['satisfied', 'partial', 'unsatisfied', 'unverifiable'], true)
+            || !is_array($result['criteria'] ?? null)) {
+            throw new DomainException('Stored Goal evaluation has invalid trusted evidence structure.');
+        }
+        $result['evaluation_id'] = (string) $row['evaluation_id'];
+        $result['recorded_at'] = (string) $row['evaluated_at'];
+        return $result;
+    }
+
     /** @return array<string,mixed>|null */
     public function run(TenantContext $viewer, string $runId): ?array
     {

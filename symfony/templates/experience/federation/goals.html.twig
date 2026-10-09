@@ -93,11 +93,85 @@
         {% if reconciled %}
             <div class="cos-alert cos-alert--success" role="status">Перевірку квитанцій виконано. Непідтверджені операції залишаються без повторного запуску.</div>
         {% endif %}
+        {% if evaluated %}
+            <div class="cos-alert cos-alert--success" role="status">Оцінку бізнес-результату збережено на основі даних відповідального домену.</div>
+        {% endif %}
+        {% if outcomeError %}
+            <div class="cos-alert" role="alert">Не вдалося перевірити результат. Запуск має бути завершений, а джерело даних доступне.</div>
+        {% endif %}
         <div class="cos-page__stack">
         {% for run in runs|default([]) %}
             <article class="cos-card" data-run-id="{{ run.run_id }}" data-recovery-mode="{{ mode }}">
                 <p class="cos-card__eyebrow">Run: {{ run.state }}</p>
                 <h3 class="cos-card__title">Ціль {{ run.goal_id }}</h3>
+                <div class="cos-page__stack" data-goal-outcome-summary>
+                    {% if run.outcome is defined and run.outcome %}
+                        {% set outcomeLabels = {
+                            'satisfied': 'Ціль досягнуто',
+                            'partial': 'Частково досягнуто',
+                            'unsatisfied': 'Ціль не досягнуто',
+                            'unverifiable': 'Результат не підтверджено'
+                        } %}
+                        <p class="cos-card__copy" data-goal-outcome-result="{{ run.outcome.result }}">
+                            <strong>Бізнес-результат:</strong> {{ outcomeLabels[run.outcome.result]|default('Потребує перевірки') }}.
+                            {% if run.outcome.result == 'unverifiable' %}
+                                Немає достатніх достовірних даних для підтвердження критеріїв.
+                            {% endif %}
+                        </p>
+                        <p class="cos-card__copy">Оцінено: {{ run.outcome.recorded_at }} UTC.
+                            Перевірено {{ run.outcome.criteria|filter(c => c.result != 'unverifiable')|length }}
+                            із {{ run.outcome.criteria|length }} критеріїв.</p>
+                        {% if mode in ['process', 'expert'] %}
+                            <div class="cos-page__stack" data-goal-outcome-process>
+                                {% for criterion in run.outcome.criteria %}
+                                    <p class="cos-card__copy">
+                                        <strong>{{ criterion.criterion_id }}</strong>:
+                                        {{ criterion.observed is not null ? criterion.observed : 'Немає вимірювання' }}
+                                        (ціль: {{ criterion.expected }}), стан: {{ criterion.result }}.
+                                        {% if criterion.source is defined and criterion.source %}
+                                            Джерело: {{ criterion.source }}.
+                                        {% endif %}
+                                        {% if mode == 'expert' %}
+                                            <span data-goal-outcome-expert>
+                                                {% if criterion.window_start is defined and criterion.window_start %}
+                                                    Інтервал: {{ criterion.window_start }} — {{ criterion.window_end }}.
+                                                {% endif %}
+                                                {% for evidence in criterion.evidence %}
+                                                    <code>{{ evidence }}</code>
+                                                {% endfor %}
+                                            </span>
+                                        {% endif %}
+                                    </p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if mode == 'expert' %}
+                            <p class="cos-card__copy" data-goal-outcome-expert>
+                                <code>Evaluation: {{ run.outcome.evaluation_id }}</code>,
+                                <code>Policy: {{ run.outcome.evidence_policy }}</code>,
+                                Goal version {{ run.outcome.specification_version }}.
+                            </p>
+                        {% endif %}
+                    {% elseif run.outcome_unavailable|default(false) %}
+                        <p class="cos-card__copy" role="status" data-goal-outcome-result="unavailable">
+                            Збережена оцінка недоступна для перевірки. Успіх цілі не підтверджено.
+                        </p>
+                    {% else %}
+                        <p class="cos-card__copy" data-goal-outcome-result="pending">
+                            {% if run.state == 'completed' %}
+                                Бізнес-результат ще не оцінювали. Завершення дій не означає досягнення цілі.
+                            {% else %}
+                                Оцінка бізнес-результату доступна після фіналізації виконання.
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                    {% if run.state == 'completed' and not run.outcome_unavailable|default(false) %}
+                        <form method="post" action="{{ path('cos_federation_goals_evaluate', {runId: run.run_id}) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <button type="submit" class="cos-button cos-button--ghost">Перевірити бізнес-результат за даними доменів</button>
+                        </form>
+                    {% endif %}
+                </div>
                 {% if run.recovery %}
                     <p class="cos-card__copy">Потребують уваги: <strong>{{ run.recovery.attention_count }}</strong>.
                         Готові до перевірки квитанцій: <strong>{{ run.recovery.recoverable_count }}</strong>.</p>
