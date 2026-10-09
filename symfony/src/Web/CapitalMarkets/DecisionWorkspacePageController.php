@@ -241,8 +241,13 @@ final readonly class DecisionWorkspacePageController
             return $tenant;
         }
 
+        $actorId = (int)$tenant->userId()->value();
+        $organizationId = $tenant->organizationId()->value();
+        if ($view === 'opportunity' && !$this->allowed($organizationId, $actorId, CapitalMarketsCapability::OpportunityView)) {
+            return new Response('Forbidden.', 403);
+        }
+
         try {
-            $organizationId = $tenant->organizationId()->value();
             $data = match ($view) {
                 'overview' => $this->workspace->overview($organizationId),
                 'opportunities' => $this->workspace->opportunities($organizationId, $request->query->all()),
@@ -269,7 +274,7 @@ final readonly class DecisionWorkspacePageController
                 'execution_detail' => $this->workspace->executionDetail($organizationId, (string)$id),
                 'risk' => $this->workspace->risk($organizationId),
                 'performance' => $this->workspace->performance($organizationId),
-                'agents' => $this->workspace->agents($organizationId),
+                'agents' => $this->workspace->agents($organizationId, $this->allowed($organizationId, $actorId, CapitalMarketsCapability::AuditView)),
                 'data_quality' => $this->workspace->dataQuality($organizationId),
                 default => throw new \LogicException('Unknown Capital Markets Decision Workspace view.'),
             };
@@ -374,6 +379,7 @@ final readonly class DecisionWorkspacePageController
                 'portfolio_view' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::PortfolioView),
                 'allocation_view' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::AllocationView),
                 'risk_view' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::RiskView),
+                'audit_view' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::AuditView),
                 'instrument_view' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::InstrumentView),
                 'relationship_view' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::RelationshipView),
                 'venue_view' => $this->allowed($organizationId, $actorId, CapitalMarketsCapability::VenueView),
