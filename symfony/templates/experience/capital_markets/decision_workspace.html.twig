@@ -1041,13 +1041,14 @@
     </section>
     <section class="cos-panel">
       <h2>Agent Authority</h2>
-      <p>Authority is explicit. Decision summaries, evidence, tool calls and results are visible; hidden chain-of-thought is not exposed.</p>
+      <p>Authority is explicit. General View shows run summaries; audited tool inputs, outputs and raw results require Audit View. Hidden chain-of-thought is not exposed.</p>
       <div class="table-responsive"><table class="table"><thead><tr><th>Agent</th><th>Profile</th><th>Version</th><th>Authority</th><th>Execution Mode</th><th>Max autonomous actions</th><th>State</th></tr></thead><tbody>
       {% for a in agents.definitions|default([]) %}<tr><td><strong>{{ a.name }}</strong></td><td>{{ a.profile }}</td><td>{{ a.version }}</td><td>{{ a.authority }}</td><td>{{ a.execution_mode }}</td><td>{{ a.max_actions_per_run }}</td><td>{{ a.enabled ? 'ENABLED' : 'DISABLED' }}</td></tr>{% else %}<tr><td colspan="7">No Capital Markets agents registered.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
     <section class="cos-panel">
       <h2>Recent Agent Runs</h2>
+      {% if not permissions.audit_view|default(false) %}<p>Detailed agent evidence is restricted to users with Audit View permission.</p>{% endif %}
       <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Run / Task</th><th>Agent</th><th>State</th><th>Decision</th><th>Recommendation</th><th>Tools Used</th><th>Cost</th><th>Errors</th></tr></thead><tbody>
       {% for run in agents.runs|default([]) %}
         <tr>
@@ -1060,6 +1061,7 @@
           <td>{{ run.cost_amount is not null ? run.cost_amount ~ ' ' ~ run.cost_currency|default('') : '—' }}{% if run.input_tokens is not null or run.output_tokens is not null %}<br><small>{{ run.input_tokens|default(0) }} in / {{ run.output_tokens|default(0) }} out</small>{% endif %}</td>
           <td>{{ run.error|default('—') }}</td>
         </tr>
+        {% if permissions.audit_view|default(false) %}
         <tr>
           <td colspan="8">
             <details>
@@ -1086,6 +1088,7 @@
             </details>
           </td>
         </tr>
+        {% endif %}
       {% else %}<tr><td colspan="8">No recent Capital Markets agent runs.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
