@@ -33,6 +33,19 @@ final class CapitalMarketsNavReconcileCommand extends Command
 
     protected function execute(InputInterface $input,OutputInterface $output):int
     {
+        // An unauthenticated CLI invocation cannot claim to be a COS reviewer.
+        // Keeping this fail-closed avoids manufactured dual-control "COMPLETE" NAV.
+        // Enable approval only through an authenticated, auditable two-person workflow.
+        $output->writeln(json_encode([
+            'status'=>'BLOCKED','snapshot_written'=>false,
+            'issues'=>['AUTHENTICATED_NAV_REVIEWER_APPROVAL_NOT_CONFIGURED'],
+        ],JSON_THROW_ON_ERROR));
+        return Command::FAILURE;
+    }
+
+    /** @deprecated Untrusted legacy CLI review arguments, retained for operator migration. */
+    private function legacyCliReviewDisabled(InputInterface $input,OutputInterface $output):int
+    {
         $org=trim((string)$input->getOption('organization'));
         $portfolio=trim((string)$input->getOption('portfolio'));
         $reviewer=filter_var($input->getOption('reviewer'),FILTER_VALIDATE_INT,[
