@@ -777,6 +777,7 @@ final class FederationPersistenceSmokeCommand extends Command
                 [
                     ['id' => 'sales.local_tasks_created', 'operator' => 'at_least', 'expected' => 2],
                     ['id' => 'growth.inbound_responses_recorded', 'operator' => 'at_least', 'expected' => 1],
+                    ['id' => 'growth.run_linked_inbound_responses', 'operator' => 'at_least', 'expected' => 1],
                     ['id' => 'capital_markets.research_results_validated', 'operator' => 'at_least', 'expected' => 1],
                     ['id' => 'documents.signatures_recorded', 'operator' => 'at_least', 'expected' => 1],
                 ],
@@ -1069,7 +1070,8 @@ final class FederationPersistenceSmokeCommand extends Command
                 && count($local['criteria'][0]['evidence']) === 1
                 && $local['criteria'][1]['result'] === 'unverifiable'
                 && $local['criteria'][2]['result'] === 'unverifiable'
-                && $local['criteria'][3]['observed'] === 0,
+                && $local['criteria'][3]['result'] === 'unverifiable'
+                && $local['criteria'][4]['observed'] === 0,
                 'Domain evidence from disabled Growth/Research modules was fabricated or local Action receipts were counted.');
             self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'unverifiable'
                 && $this->goals->latestTrustedEvaluation($other, $linearRun) === null,
@@ -1094,17 +1096,18 @@ final class FederationPersistenceSmokeCommand extends Command
 
             // Growth unique inbound response; older/out-of-tenant facts excluded.
             foreach ([
-                [$org, $eventTime],
-                [$org, $oldTime],
-                [$foreignOrg, $eventTime],
-            ] as [$tenantId, $time]) {
+                [$org, $eventTime, (string) $firstAction['action_id']],
+                [$org, $oldTime, (string) $firstAction['action_id']],
+                [$foreignOrg, $eventTime, (string) $firstAction['action_id']],
+                [$org, $eventTime, $newId()],
+            ] as [$tenantId, $time, $originActionId]) {
                 $id = $newId();
                 $this->db->insert('tn_growth_engagement_responses', [
                     'organization_id' => $tenantId, 'response_id' => $id,
                     'source_event_id' => 'event-' . $id, 'execution_id' => 'exec-' . $id,
                     'candidate_id' => 'candidate-' . $id,
                     'recommendation_id' => 'recommend-' . $id,
-                    'action_id' => 'action-' . $id, 'channel' => 'email',
+                    'action_id' => $originActionId, 'channel' => 'email',
                     'body' => 'Confirmed fixture response',
                     'body_hash' => hash('sha256', 'Confirmed fixture response'),
                     'occurred_at' => $time, 'created_at' => $time,
@@ -1156,22 +1159,57 @@ final class FederationPersistenceSmokeCommand extends Command
                 $actor, 'eval-' . bin2hex(random_bytes(8)), $linearRun,
             );
             self::assert($measured['result'] === 'partial'
-                && count($measured['criteria']) === 4
+                && count($measured['criteria']) === 5
                 && $measured['criteria'][0]['observed'] === 0
                 && $measured['criteria'][0]['result'] === 'unsatisfied'
-                && $measured['criteria'][1]['observed'] === 1
+                && $measured['criteria'][1]['observed'] === 2
                 && $measured['criteria'][1]['result'] === 'satisfied'
+                && $measured['criteria'][1]['attribution'] === 'temporal_only'
                 && $measured['criteria'][1]['source'] === 'growth.tn_growth_engagement_responses.v1'
                 && $measured['criteria'][2]['observed'] === 1
                 && $measured['criteria'][2]['result'] === 'satisfied'
-                && $measured['criteria'][2]['source'] === 'capital_markets.tn_capital_market_research_results.validated.v1'
+                && $measured['criteria'][2]['attribution'] === 'run_linked_action'
+                && $measured['criteria'][2]['verified_actions'] === 2
+                && $measured['criteria'][2]['source'] === 'growth.inbound_responses.attested_action.v1'
                 && $measured['criteria'][3]['observed'] === 1
                 && $measured['criteria'][3]['result'] === 'satisfied'
-                && $measured['criteria'][3]['source'] === 'platform.documents.cos_document_signatures.signed.v1',
+                && $measured['criteria'][3]['attribution'] === 'temporal_only'
+                && $measured['criteria'][3]['source'] === 'capital_markets.tn_capital_market_research_results.validated.v1'
+                && $measured['criteria'][4]['observed'] === 1
+                && $measured['criteria'][4]['result'] === 'satisfied'
+                && $measured['criteria'][4]['source'] === 'platform.documents.cos_document_signatures.signed.v1',
                 'End-to-end Growth / Research / Documents evidence did not match real tenant rows and status policies.');
             self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'partial'
                 && $this->goals->latestTrustedEvaluation($other, $linearRun) === null,
                 'Cross-domain persisted Goal evaluation leaked tenant data or lost latest provenance.');
+
+            // A forged or revoked canonical receipt cannot continue to
+            // attribute an existing Growth reply to this Federation Run.
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status = 'FAILED'
+                 WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => (string) $firstAction['action_id']],
+            );
+            $revoked = $this->goals->recordEvaluation(
+                $actor, 'eval-' . bin2hex(random_bytes(8)), $linearRun,
+            );
+            self::assert($revoked['criteria'][1]['observed'] === 2
+                && $revoked['criteria'][2]['observed'] === 0
+                && $revoked['criteria'][2]['result'] === 'unsatisfied'
+                && $revoked['criteria'][2]['attribution'] === 'run_linked_action'
+                && $revoked['criteria'][2]['verified_actions'] === 1,
+                'Revoked Action receipt incorrectly attributed a persisted Growth response.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status = 'COMPLETED'
+                 WHERE organization_id = :org AND id = :id",
+                ['org' => $org, 'id' => (string) $firstAction['action_id']],
+            );
+            $restored = $this->goals->recordEvaluation(
+                $actor, 'eval-' . bin2hex(random_bytes(8)), $linearRun,
+            );
+            self::assert($restored['criteria'][2]['observed'] === 1
+                && $restored['criteria'][2]['verified_actions'] === 2,
+                'Restored verified receipt did not recover correct Run attribution.');
             self::assert($this->receiptReconciler->reconcile(
                 $actor, $linearRun, 'z_first',
             )['status'] === 'completed',
