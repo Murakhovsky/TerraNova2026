@@ -41,7 +41,7 @@ process: capital-markets.market-data-to-trusted-state
 data modes: LIVE / DELAYED / HISTORICAL / REPLAY
 provider adapters: Bybit Spot REST + Massive Stocks REST
 provider polling: CLI + operator API/UI
-operator workspace: /capital-markets/market-data + /capital-markets/tokenized-equities + /capital-markets/crypto-spot-perpetual + /capital-markets/research + /capital-markets/portfolio + /capital-markets/risk + /capital-markets/allocation
+operator workspace: canonical /capital-markets Decision Workspace + advanced registries/vertical-slice execution surfaces
 streaming: disabled / next wave
 execution: guarded H1/H2 paper; H1 requires explicit executable hedge venue; live disabled
 ```
@@ -64,13 +64,15 @@ Market Intelligence сам по собі не створює trading decisions. 
 - [Tokenized Equity workflow](../../02-workflows/capital-markets-tokenized-equity-paper-cycle.md)
 - [Tokenized Equity vertical slice](./tokenized-equity-vertical-slice.md)
 - [Research & Strategy Lab](./research-strategy-lab.md)
+- [Decision Workspace Architecture](../../01-architecture/capital-markets-decision-workspace-architecture.md)
+- [Decision Workspace workflow](../../02-workflows/capital-markets-decision-workspace.md)
 - [Модулі та capabilities](../../12-reference/module-capabilities.md)
 - [Дозволи та capabilities](../../12-reference/permissions-capabilities.md)
 
 
 ## Лабораторія досліджень і стратегій
 
-Версія 0.8.0 додала керовану Research & Strategy Lab. Версія 0.9.0 додає Capital Allocation & Risk Pack: portfolio state, economic exposure, risk envelopes/headroom, constrained allocation, stress/rebalance та governed Portfolio Agent.
+Версія 0.8.0 додала керовану Research & Strategy Lab. Версія 0.9.0 включає Capital Allocation & Risk Pack і schema-neutral canonical Decision Workspace: portfolio state, economic exposure, risk envelopes/headroom, constrained allocation, stress/rebalance та governed Portfolio Agent.
 
 - формальний lineage ResearchHypothesis, ResearchExperiment, ResearchDataset та ResearchResult;
 - immutable StrategyVersion;

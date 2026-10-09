@@ -1,0 +1,1226 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ pageTitle }} | Terra Nova COS{% endblock %}
+
+{% block workspace_content %}
+{% set w = workspace|default({}) %}
+{% set g = w.global|default({}) %}
+{% set riskState = g.risk_state|default('UNAVAILABLE') %}
+{% set dataState = g.data_health|default('UNAVAILABLE') %}
+{% set riskTone = riskState in ['NORMAL'] ? 'positive' : (riskState in ['CAUTION','RESTRICTED','NOT_CALCULATED'] ? 'warning' : 'danger') %}
+{% set dataTone = dataState == 'HEALTHY' ? 'positive' : (dataState in ['DEGRADED','STALE'] ? 'warning' : 'danger') %}
+
+<div class="cos-page__stack cos-capital-markets" data-controller="capital-markets-workspace" data-action="cos:realtime-update->capital-markets-workspace#realtimeUpdate" data-csrf="{{ csrfToken }}" data-cm-decision-workspace="{{ cmView }}" data-cm-snapshot-rendered-at="{{ snapshotRenderedAt }}" data-cm-snapshot-stale-seconds="60">
+  {% if cmView in ['overview','opportunities','opportunity','markets','market_detail','relationship_detail','execution','execution_detail','risk'] %}
+    <span id="cos-capital-markets-signal" hidden aria-hidden="true"></span>
+    <twig:CosRealtimeSubscription :topic="realtimeTopic" signalTarget="cos-capital-markets-signal" />
+  {% endif %}
+
+  <header class="cos-growth-header">
+    <div>
+      <small>Capital Markets · Decision Workspace</small>
+      <h1>{{ pageTitle }}</h1>
+      <p>
+        {% if cmView == 'overview' %}Що зараз відбувається з нашим капіталом?
+        {% elseif cmView in ['opportunities','opportunity'] %}Де є potential profit і чи підходить він поточному Portfolio?
+        {% elseif cmView in ['markets','market_detail','relationship_detail'] %}Що відбувається на ринку, як пов'язані інструменти і чи можна коректно порівнювати ці дані?
+        {% elseif cmView in ['research','hypothesis'] %}Що ми зараз намагаємося довести або спростувати?
+        {% elseif cmView in ['strategies','strategy'] %}Які strategies реально працюють?
+        {% elseif cmView == 'portfolio' %}Де знаходяться гроші і який реальний exposure?
+        {% elseif cmView == 'allocation' %}Куди направити наступний dollar capital?
+        {% elseif cmView in ['execution','execution_detail'] %}Що виконується зараз і чи все йде правильно?
+        {% elseif cmView == 'risk' %}Що зараз найбільше загрожує Portfolio?
+        {% elseif cmView == 'performance' %}Чи система реально заробляє після costs?
+        {% elseif cmView == 'agents' %}Що зараз роблять AI agents і з якою authority?
+        {% elseif cmView == 'data_quality' %}Чи можна зараз довіряти market data?
+        {% else %}Decision context unavailable.{% endif %}
+      </p>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap" aria-label="Capital Markets workspace mode">
+      <span class="badge text-bg-{{ g.mode|default('PAPER') == 'RESEARCH' ? 'info' : 'secondary' }}">MODE: {{ g.mode|default('PAPER') }}</span>
+      <span class="badge text-bg-light">RESEARCH</span>
+      <span class="badge text-bg-light">PAPER</span>
+      <span class="badge text-bg-light" title="Live execution is disabled by policy">LIVE · DISABLED</span>
+      <label class="small" for="cm-density">Density</label>
+      <select id="cm-density" class="form-select form-select-sm w-auto" data-capital-markets-workspace-target="density" data-action="change->capital-markets-workspace#changeDensity">
+        <option value="comfortable">Comfortable</option>
+        <option value="compact">Compact</option>
+      </select>
+    </div>
+  </header>
+
+  <nav class="cos-growth-actions" aria-label="Capital Markets primary workspace navigation">
+    {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'overview' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets">Overview</a>{% endif %}
+    {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['opportunities','opportunity'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/opportunities">Opportunities</a>{% endif %}
+    {% if permissions.market_data_view|default(false) %}<a class="btn {{ cmView in ['markets','market_detail','relationship_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/markets">Markets</a>{% endif %}
+    {% if permissions.research_view|default(false) %}<a class="btn {{ cmView in ['research','hypothesis'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/research">Research</a><a class="btn {{ cmView in ['strategies','strategy'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/strategies">Strategies</a>{% endif %}
+    {% if permissions.portfolio_view|default(false) %}<a class="btn {{ cmView == 'portfolio' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/portfolio">Portfolio</a><a class="btn {{ cmView == 'performance' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/performance">Performance</a>{% endif %}
+    {% if permissions.allocation_view|default(false) %}<a class="btn {{ cmView == 'allocation' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/allocation">Allocation</a>{% endif %}
+    {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['execution','execution_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/execution">Execution</a>{% endif %}
+    {% if permissions.risk_view|default(false) %}<a class="btn {{ cmView == 'risk' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/risk">Risk</a>{% endif %}
+    {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'agents' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/agents">Agents</a>{% endif %}
+    {% if permissions.market_data_quality_view|default(false) %}<a class="btn {{ cmView == 'data_quality' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/data-quality">Data Quality</a>{% endif %}
+  </nav>
+
+  {# Snapshot age is a UI-readiness warning, not a replacement for backend market trust. #}
+  <div class="alert alert-warning" role="status" aria-live="polite"
+       data-capital-markets-workspace-target="snapshotWarning" data-cm-snapshot-status="fresh" hidden>
+    <strong data-capital-markets-workspace-target="snapshotWarningTitle">Decision snapshot stale</strong>
+    <span data-capital-markets-workspace-target="snapshotWarningMessage">This view may no longer reflect current portfolio, risk or market conditions. Reload before acting.</span>
+    <button type="button" class="btn btn-sm btn-outline-dark ms-2" data-action="click->capital-markets-workspace#reloadSnapshot">Reload snapshot</button>
+  </div>
+
+  <section class="cos-panel" aria-label="Global Capital Markets status">
+    <div class="cm-global-status-layout">
+      <div>
+        <small>GLOBAL STATUS · {{ g.mode|default('PAPER') }}</small>
+        <div class="cos-kpi-strip mt-2">
+          <twig:CosMoneyMetric label="Portfolio Equity" value="{{ g.portfolio_equity is not null ? g.portfolio_equity : '—' }}" hint="Certified current NAV only; capital reservations are not NAV" />
+          <twig:CosMoneyMetric label="Paper Equity" value="{{ g.paper_equity is defined and g.paper_equity is not null ? g.paper_equity : '—' }}" hint="SIMULATED paper capital plus marked unrealized P&L, not certified NAV" />
+          <twig:CosMoneyMetric label="Paper Today P&L" value="{{ g.paper_today_net_pnl is defined and g.paper_today_net_pnl is not null ? g.paper_today_net_pnl : '—' }}" />
+          <twig:CosMoneyMetric label="Paper 30D P&L" value="{{ g.paper_30d_net_pnl is defined and g.paper_30d_net_pnl is not null ? g.paper_30d_net_pnl : '—' }}" />
+          <twig:CosMoneyMetric label="Available Capital" value="{{ g.available_capital is not null ? g.available_capital : '—' }}" />
+          <twig:CosMoneyMetric label="Today Net P&L" value="{{ g.today_net_pnl is not null ? g.today_net_pnl : '—' }}" />
+          <twig:CosMoneyMetric label="Execution Net P&L" value="{{ g.net_pnl is not null ? g.net_pnl : '—' }}" />
+          <twig:CosMetric label="Critical Alerts" value="{{ g.critical_alerts|default(0) }}" hint="HIGH + CRITICAL only" />
+        </div>
+      </div>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <twig:CosStatus label="Risk {{ riskState }}" tone="{{ riskTone }}" />
+        <twig:CosStatus label="Data {{ dataState }}" tone="{{ dataTone }}" />
+        {% if cmView in ['overview','opportunities','opportunity','markets','execution','execution_detail','risk'] %}
+          <small data-cos-realtime-state data-state="connecting">Transport: <strong data-cos-realtime-state-label>Connecting</strong></small>
+        {% endif %}
+        <small title="Portfolio state timestamp, not market quote time">Portfolio update: {{ g.portfolio_updated_at|default('unavailable') }} · Age <strong data-capital-markets-workspace-target="age" data-updated-at="{{ g.portfolio_updated_at|default('') }}">—</strong></small>
+        <small title="Most recent market observation; does not certify every market feed">Market update: {{ g.market_updated_at|default('unavailable') }} · Age <strong data-capital-markets-workspace-target="age" data-updated-at="{{ g.market_updated_at|default('') }}">—</strong></small>
+        <small title="Server-rendered decision snapshot timestamp">View snapshot: {{ snapshotRenderedAt }} UTC</small>
+      </div>
+    </div>
+    {% for alert in g.alerts|default([]) %}
+      {% set alertTone = alert.severity|default('INFO') in ['CRITICAL','HIGH'] ? 'danger' : (alert.severity|default('INFO') == 'WARNING' ? 'warning' : 'info') %}
+      <div class="mt-2">
+        <twig:CosAlert title="{{ alert.severity|default('INFO') }}" copy="{{ alert.message|default('Capital Markets alert') }}" tone="{{ alertTone }}" />
+      </div>
+    {% endfor %}
+  </section>
+
+  {% if w.partial_errors|default([]) is not empty %}
+    <section class="cos-panel" aria-label="Partial data warning">
+      <twig:CosAlert title="PARTIAL DATA" copy="Some Decision Workspace read models are unavailable. Available sections remain usable; missing values are not silently substituted." tone="warning" />
+      <details class="mt-2">
+        <summary>Technical details</summary>
+        <ul>
+          {% for error in w.partial_errors %}
+            <li><strong>{{ error.source|default('unknown') }}</strong>: {{ error.message|default('unavailable') }}</li>
+          {% endfor %}
+        </ul>
+      </details>
+    </section>
+  {% endif %}
+
+  {% if cmView == 'overview' %}
+    {% set c = w.capital|default({}) %}
+    {% set p = w.performance|default({}) %}
+    {% set r = w.risk|default({}) %}
+    <section class="cos-kpi-strip" aria-label="Capital Markets overview">
+      <twig:CosMoneyMetric label="Capital State Total" value="{{ c.total|default('—') }}" hint="Capital/reservation state; not independently certified NAV" />
+      <twig:CosMoneyMetric label="Available" value="{{ c.available|default('—') }}" />
+      <twig:CosMoneyMetric label="Deployed" value="{{ c.deployed|default('—') }}" />
+      <twig:CosMoneyMetric label="Reserved" value="{{ c.reserved|default('—') }}" />
+      <twig:CosMoneyMetric label="Today Net P&L" value="{{ g.today_net_pnl is not null ? g.today_net_pnl : '—' }}" />
+      <twig:CosMoneyMetric label="30D Net P&L" value="{{ g.pnl_30d is not null ? g.pnl_30d : '—' }}" />
+      <twig:CosMetric label="Drawdown" value="{{ r.drawdown|default('—') }}" hint="canonical risk snapshot" />
+      <twig:CosMetric label="Risk / Data" value="{{ riskState ~ ' / ' ~ dataState }}" hint="portfolio authority / market trust" />
+    </section>
+
+
+    <div class="row g-3">
+      <div class="col-xl-8">
+        <section class="cos-panel h-100">
+          <div class="d-flex justify-content-between gap-3 align-items-center">
+            <div><small>SIGNALS</small><h2>Top Opportunities</h2></div>
+            <a href="/capital-markets/opportunities">Open board</a>
+          </div>
+          {% set bestOpportunity = w.top_opportunities|default([])|first %}
+          {% if bestOpportunity %}
+            <article class="cos-card mb-3">
+              <small>BEST CURRENT OPPORTUNITY · portfolio priority {{ bestOpportunity.priority < 999999 ? bestOpportunity.priority : '—' }}</small>
+              <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mt-2">
+                <div>
+                  <strong>{{ bestOpportunity.opportunity }}</strong><br>
+                  <small>{{ bestOpportunity.type }} · {{ bestOpportunity.portfolio_impact }}</small>
+                </div>
+                <div>
+                  Expected Net <strong>{{ bestOpportunity.expected_net is not null ? bestOpportunity.expected_net : '—' }}</strong> ·
+                  Approved <strong>{{ bestOpportunity.approved_capital is not null ? bestOpportunity.approved_capital : '—' }}</strong> ·
+                  Risk <strong>{{ bestOpportunity.risk }}</strong>
+                </div>
+                {% if permissions.portfolio_view|default(false) %}
+                  <a class="btn btn-primary" href="/capital-markets/opportunities/{{ bestOpportunity.id|url_encode }}">Review decision</a>
+                {% else %}
+                  <span class="small">Portfolio-aware detail unavailable to this role.</span>
+                {% endif %}
+              </div>
+            </article>
+          {% endif %}
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead><tr><th>Opportunity</th><th>Expected Net</th><th>Capital</th><th>Approved</th><th>Risk</th><th>Portfolio</th><th>Action</th></tr></thead>
+              <tbody>
+              {% for o in w.top_opportunities|default([]) %}
+                <tr>
+                  <td><strong>{{ o.opportunity }}</strong><br><small>{{ o.type }}</small></td>
+                  <td>{{ o.expected_net is not null ? o.expected_net : '—' }}</td>
+                  <td>{{ o.capital is not null ? o.capital : '—' }}</td>
+                  <td>{{ o.approved_capital is not null ? o.approved_capital : '—' }}</td>
+                  <td>{{ o.risk }}</td>
+                  <td><strong>{{ o.decision }}</strong><br><small>{{ o.portfolio_impact }}</small></td>
+                  <td>{% if permissions.portfolio_view|default(false) %}<a href="/capital-markets/opportunities/{{ o.id|url_encode }}">View details</a>{% else %}<span class="small">Restricted</span>{% endif %}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7">No current opportunities. The absence of a signal is not converted into fake activity.</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      <div class="col-xl-4">
+        <section class="cos-panel h-100">
+          <small>DECISIONS</small>
+          <h2>Recommended Actions</h2>
+          <ol>
+            {% set visibleActionCount = 0 %}
+            {% for action in w.recommended_actions|default([]) %}
+              {% set actionAllowed = true %}
+              {% if action.href starts with '/capital-markets/opportunities/' and (not permissions.portfolio_view|default(false) or not permissions.opportunity_view|default(false)) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/allocation' and not permissions.allocation_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/risk' and not permissions.risk_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/data-quality' and not permissions.market_data_quality_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if action.href starts with '/capital-markets/performance' and not permissions.portfolio_view|default(false) %}{% set actionAllowed = false %}{% endif %}
+              {% if actionAllowed %}
+                {% set visibleActionCount = visibleActionCount + 1 %}
+                <li class="mb-2"><a href="{{ action.href }}"><strong>{{ action.label }}</strong></a><br><small>{{ action.reason }}</small></li>
+              {% endif %}
+            {% endfor %}
+            {% if visibleActionCount == 0 %}
+              <li>No currently authorized action requires attention.</li>
+            {% endif %}
+          </ol>
+        </section>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <section class="cos-panel h-100">
+          <h2>Capital Map</h2>
+          <div class="table-responsive"><table class="table">
+            <thead><tr><th>State</th><th>Amount</th></tr></thead>
+            <tbody>
+            {% for item in w.capital_map|default([]) %}
+              <tr><td>{{ item.key }}</td><td><strong>{{ item.value is not null ? item.value : '—' }}</strong></td></tr>
+            {% endfor %}
+            </tbody>
+          </table></div>
+        </section>
+      </div>
+      <div class="col-lg-6">
+        <section class="cos-panel h-100">
+          <h2>Material Risks</h2>
+          <div class="table-responsive"><table class="table">
+            <thead><tr><th>Risk</th><th>Current</th><th>Limit</th><th>Utilization</th><th>State</th></tr></thead>
+            <tbody>
+            {% for item in w.material_risks|default([]) %}
+              <tr><td>{{ item.metric }}</td><td>{{ item.current is not null ? item.current : '—' }}</td><td>{{ item.limit is not null ? item.limit : '—' }}</td><td>{{ item.utilization is not null ? item.utilization : '—' }}</td><td><strong>{{ item.state }}</strong></td></tr>
+            {% else %}
+              <tr><td colspan="5">No material risk item crossed the current display threshold.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="cos-panel">
+      <h2>Active Strategies</h2>
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Strategy</th><th>Allocated</th><th>Deployed</th><th>Available</th><th>Net P&L</th><th>Risk Used</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for s in w.active_strategies|default([]) %}
+          <tr><td>{{ s.strategy_version_id }}</td><td>{{ s.allocated_capital|default('—') }}</td><td>{{ s.deployed|default('—') }}</td><td>{{ s.available|default('—') }}</td><td>{{ s.net_pnl is not null ? s.net_pnl : '—' }}</td><td>{{ s.risk_used is not null ? s.risk_used : '—' }}</td><td>{{ s.status|default('—') }}</td></tr>
+        {% else %}
+          <tr><td colspan="7">No active strategy allocation yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+
+
+    {% set navWindows = g.portfolio_nav_windows|default({}) %}
+    <section class="cos-panel" aria-label="Portfolio NAV PnL evidence">
+      <h2>Portfolio NAV time-window evidence</h2>
+      <p>Includes realized and unrealized returns, adjusted for external cash flows, when reconciled opening and closing NAV snapshots exist.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>Status</th><th>Net P&amp;L</th><th>Currency</th><th>Reason</th></tr></thead><tbody>
+        {% for code,entry in navWindows %}
+          <tr><td>{{ code == 'today' ? 'Today UTC' : '30D UTC' }}</td><td>{{ entry.status }}</td><td>{{ entry.net_pnl is not null ? entry.net_pnl : '—' }}</td><td>{{ entry.currency|default('—') }}</td><td>{{ entry.reason|default('—') }}</td></tr>
+        {% else %}<tr><td colspan="5">Reconciled NAV snapshots unavailable.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    {% if g.today_net_pnl is null or g.pnl_30d is null %}
+      <twig:CosAlert title="Time-window P&L not fabricated" copy="Canonical Portfolio Today/30D P&L requires reconciled historical NAV and external cashflow snapshots. A missing valuation boundary is never substituted with lifetime or realized-only P&L." tone="info" />
+    {% endif %}
+
+    {% set rw = p.realized_windows|default({}) %}
+    <section class="cos-panel" aria-label="Realized execution time windows">
+      <h2>Realized execution P&amp;L · UTC</h2>
+      <p>Only completed canonical executions with verified settlement currency and complete economics. These numbers exclude unrealized mark-to-market movements and are <strong>not</strong> Today / 30D Portfolio Net P&amp;L.</p>
+      <div class="cos-kpi-strip">
+        <twig:CosMoneyMetric label="Today Realized Net" value="{{ rw.today.net_pnl is defined and rw.today.net_pnl is not null ? rw.today.net_pnl : '—' }}" />
+        <twig:CosMetric label="Today Coverage" value="{{ rw.today.coverage|default('0/0') }}" hint="{{ rw.today.status|default('UNAVAILABLE') }}" />
+        <twig:CosMoneyMetric label="30D Realized Net" value="{{ rw['30d'].net_pnl is defined and rw['30d'].net_pnl is not null ? rw['30d'].net_pnl : '—' }}" />
+        <twig:CosMetric label="30D Coverage" value="{{ rw['30d'].coverage|default('0/0') }}" hint="{{ rw['30d'].status|default('UNAVAILABLE') }}" />
+      </div>
+      <p class="small">Verified currency: {{ rw.today.currency|default('—') }} (today), {{ rw['30d'].currency|default('—') }} (30 days). Unknown timestamps, incomplete costs or mixed currencies suppress the total.</p>
+    </section>
+
+
+  {% elseif cmView == 'opportunities' %}
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap">
+        <div><small>SIGNALS → DECISIONS</small><h2>Opportunity Board</h2><p>Default order follows canonical portfolio allocation priority when it exists.</p></div>
+        <div class="cm-saved-views"><a class="btn btn-outline-secondary" href="?view=best">Best</a><a class="btn btn-outline-secondary" href="?view=low-risk">Low Risk</a><a class="btn btn-outline-secondary" href="?view=high-capacity">High Capacity</a><a class="btn btn-outline-secondary" href="?view=short-ttl">Short TTL</a><a class="btn btn-outline-secondary" href="?view=rejected">Rejected by Portfolio</a></div>
+      </div>
+      <form class="row g-2 align-items-end mb-3" method="get" action="/capital-markets/opportunities" aria-label="Opportunity filters">
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-type">Type</label><input id="cm-op-type" class="form-control" name="type" value="{{ query.type|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-risk">Risk</label><input id="cm-op-risk" class="form-control" name="risk" value="{{ query.risk|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-status">Status</label><input id="cm-op-status" class="form-control" name="status" value="{{ query.status|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-decision">Decision</label><input id="cm-op-decision" class="form-control" name="decision" value="{{ query.decision|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-strategy">Strategy</label><input id="cm-op-strategy" class="form-control" name="strategy" value="{{ query.strategy|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-instrument">Instrument</label><input id="cm-op-instrument" class="form-control" name="instrument" value="{{ query.instrument|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-venue">Venue</label><input id="cm-op-venue" class="form-control" name="venue" value="{{ query.venue|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-min-net">Min expected net</label><input id="cm-op-min-net" class="form-control" name="min_net" inputmode="decimal" value="{{ query.min_net|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-min-return">Min return</label><input id="cm-op-min-return" class="form-control" name="min_return" inputmode="decimal" value="{{ query.min_return|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-max-capital">Max capital</label><input id="cm-op-max-capital" class="form-control" name="max_capital" inputmode="decimal" value="{{ query.max_capital|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><button class="btn btn-primary" type="submit">Apply</button> <a class="btn btn-outline-secondary" href="/capital-markets/opportunities">Reset</a></div>
+      </form>
+      <div class="d-flex gap-2 justify-content-between align-items-center mb-2 flex-wrap">
+        <details>
+          <summary>Columns / order</summary>
+          {% set cmOpportunityColumns = {
+            'priority':'Priority','opportunity':'Opportunity','type':'Type','market':'Instruments / Venues',
+            'expected_net':'Expected Net','return':'Return','capital':'Capital','capacity':'Capacity',
+            'risk':'Risk','portfolio_impact':'Portfolio Impact','ttl':'TTL','status':'Status'
+          } %}
+          <div class="d-flex gap-2 flex-wrap mt-2">
+            {% for key,label in cmOpportunityColumns %}
+              <span class="d-inline-flex align-items-center gap-1 border rounded px-2 py-1">
+                {% if key in ['return','capacity','ttl','status'] %}
+                  <label class="mb-0"><input type="checkbox" checked data-capital-markets-workspace-target="columnToggle" data-action="change->capital-markets-workspace#toggleColumn" data-cm-table-id="opportunities" data-cm-column="{{ key }}"> {{ label }}</label>
+                {% else %}
+                  <span>{{ label }}</span>
+                {% endif %}
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="click->capital-markets-workspace#moveColumn" data-cm-table-id="opportunities" data-cm-column="{{ key }}" data-cm-direction="-1" aria-label="Move {{ label }} left">←</button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-action="click->capital-markets-workspace#moveColumn" data-cm-table-id="opportunities" data-cm-column="{{ key }}" data-cm-direction="1" aria-label="Move {{ label }} right">→</button>
+              </span>
+            {% endfor %}
+          </div>
+          <small>Critical money, risk and portfolio-fit columns remain visible; optional detail columns can be hidden.</small>
+        </details>
+        <div class="cm-export-links"><a href="/capital-markets/export/opportunities.csv">Export CSV</a><a href="/capital-markets/export/opportunities.json">Export JSON</a></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle" data-cm-table="opportunities">
+          <thead><tr><th data-cm-col="priority">Priority</th><th data-cm-col="opportunity">Opportunity</th><th data-cm-col="type">Type</th><th data-cm-col="market">Instruments / Venues</th><th data-cm-col="expected_net">Expected Net</th><th data-cm-col="return">Return</th><th data-cm-col="capital">Capital</th><th data-cm-col="capacity">Capacity</th><th data-cm-col="risk">Risk</th><th data-cm-col="portfolio_impact">Portfolio Impact</th><th data-cm-col="ttl">TTL</th><th data-cm-col="status">Status</th></tr></thead>
+          <tbody>
+          {% for o in w.opportunities|default([]) %}
+            <tr>
+              <td data-cm-col="priority">{{ o.priority < 999999 ? o.priority : '—' }}</td>
+              <td data-cm-col="opportunity">{% if permissions.portfolio_view|default(false) %}<a href="/capital-markets/opportunities/{{ o.id|url_encode }}"><strong>{{ o.opportunity }}</strong></a>{% else %}<strong>{{ o.opportunity }}</strong>{% endif %}<br><small>{{ o.decision }}</small></td>
+              <td data-cm-col="type">{{ o.type }}</td>
+              <td data-cm-col="market">{{ o.instruments|join(', ') ?: '—' }}<br><small>{{ o.venues|join(', ') ?: '—' }}</small></td>
+              <td data-cm-col="expected_net"><strong>{{ o.expected_net is not null ? o.expected_net : '—' }}</strong></td>
+              <td data-cm-col="return">{{ o.expected_return is not null ? o.expected_return : '—' }}{% if o.expected_return is not null and o.expected_return_unit|default(null) %} {{ o.expected_return_unit }}{% endif %}</td>
+              <td data-cm-col="capital">{{ o.capital is not null ? o.capital : '—' }}</td>
+              <td data-cm-col="capacity">{{ o.capacity is not null ? o.capacity : '—' }}</td>
+              <td data-cm-col="risk">{{ o.risk }}</td>
+              <td data-cm-col="portfolio_impact"><strong>{{ o.portfolio_impact }}</strong><br><small>{{ o.reason }}</small></td>
+              <td data-cm-col="ttl">{{ o.ttl is not null ? o.ttl : '—' }}</td>
+              <td data-cm-col="status">{{ o.status }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="12">No opportunities match the current canonical state.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  {% elseif cmView == 'opportunity' %}
+    {% set o = w.opportunity|default({}) %}
+    {% set impact = w.portfolio_impact|default({}) %}
+    {% set allocation = w.allocation_item|default({}) %}
+    {% set econ = w.economics|default({}) %}
+    {% set evidence = w.evidence|default({}) %}
+    <section class="cos-kpi-strip" aria-label="Opportunity decision summary">
+      <twig:CosMoneyMetric label="Expected Net" value="{{ econ.expected_net is not null ? econ.expected_net : '—' }}" />
+      <twig:CosMoneyMetric label="Required Capital" value="{{ impact.capital_required|default(o.required_capital|default('—')) }}" />
+      <twig:CosMoneyMetric label="Approved Capital" value="{{ allocation.approved_capital|default(impact.maximum_approved_capital|default('—')) }}" />
+      <twig:CosMetric label="Expected Return" value="{{ o.expected_return|default(o.net_return|default(o.expected_net_edge_bps|default('—'))) }}" hint="{{ o.expected_net_edge_bps is defined and o.expected_return is not defined and o.net_return is not defined ? 'canonical expected net edge (bps)' : 'canonical opportunity value' }}" />
+      <twig:CosMetric label="Risk" value="{{ o.risk_level|default(o.risk_score|default(o.risk.risk_score|default('UNASSESSED'))) }}" hint="canonical level or score; not a portfolio risk approval" />
+      <twig:CosMetric label="TTL" value="{{ o.ttl|default(o.ttl_seconds|default(o.expires_at|default('—'))) }}" hint="opportunity lifetime" />
+      <twig:CosMetric label="Execution Probability" value="{{ evidence.execution_probability is not null ? evidence.execution_probability : '—' }}" hint="only when backend provides it" />
+      <twig:CosMetric label="Portfolio Decision" value="{{ impact.decision|default(allocation.decision|default('NOT ALLOCATED')) }}" hint="{{ impact.reasons|default([])|join(', ') }}" />
+    </section>
+
+    {% set ex = w.explainability|default({}) %}
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <twig:CosExplainability
+          title="Why this exists"
+          what="{{ ex.what|default('') }}"
+          why="{{ ex.why|default('') }}"
+          :evidence="ex.evidence|default([])"
+          recommendedAction="{{ ex.recommended_action|default('HOLD') }}"
+        />
+      </div>
+      <div class="col-lg-5">
+        <section class="cos-panel h-100">
+          <h2>Action</h2>
+          {% if dataState in ['STALE','UNAVAILABLE'] %}
+            <twig:CosAlert title="Execution paused" copy="Market data is not trusted enough for a decision-workspace execution handoff." tone="danger" />
+          {% elseif permissions.paper_execute|default(false) %}
+            <p>Paper execution is permitted for your role. Execution remains governed by the existing vertical-slice execution service and its deterministic checks.</p>
+            {% set hypothesis = o.hypothesis|default('') %}
+            {% if hypothesis in ['H4','H5','H6'] %}
+              <a class="btn btn-primary" href="/capital-markets/crypto-spot-perpetual">Open Paper Execution Context</a>
+            {% else %}
+              <a class="btn btn-primary" href="/capital-markets/tokenized-equities">Open Paper Execution Context</a>
+            {% endif %}
+          {% else %}
+            <p>Read-only. Your role does not have Paper Execute authority.</p>
+          {% endif %}
+          <p class="mt-2"><strong>LIVE:</strong> disabled by policy. No live execute control is rendered.</p>
+        </section>
+      </div>
+    </div>
+
+    <section class="cos-panel">
+      <h2>Economics Waterfall</h2>
+      <div class="table-responsive"><table class="table">
+        <tbody>
+          <tr><th>Gross Edge</th><td>{{ econ.gross_edge is not null ? econ.gross_edge : '—' }}</td></tr>
+          <tr><th>Trading Fees</th><td>{{ econ.trading_fees is not null ? econ.trading_fees : '—' }}</td></tr>
+          <tr><th>Slippage</th><td>{{ econ.slippage is not null ? econ.slippage : '—' }}</td></tr>
+          <tr><th>Funding</th><td>{{ econ.funding is not null ? econ.funding : '—' }}</td></tr>
+          <tr><th>Borrow</th><td>{{ econ.borrow is not null ? econ.borrow : '—' }}</td></tr>
+          <tr><th>Other</th><td>{{ econ.other is not null ? econ.other : '—' }}</td></tr>
+          <tr><th>Expected Net</th><td><strong>{{ econ.expected_net is not null ? econ.expected_net : '—' }}</strong></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="cos-panel">
+      <h2>Portfolio Impact</h2>
+      {% if impact %}
+        <div class="table-responsive"><table class="table">
+          <tbody>
+            <tr><th>Capital After</th><td>{{ impact.capital_after|default('—') }}</td></tr>
+            <tr><th>Gross Exposure Change</th><td>{{ impact.gross_exposure_change|default('—') }}</td></tr>
+            <tr><th>Net Exposure Change</th><td>{{ impact.net_exposure_change|default('—') }}</td></tr>
+            <tr><th>Margin Change</th><td>{{ impact.margin_change|default('—') }}</td></tr>
+            <tr><th>Liquidity Change</th><td>{{ impact.liquidity_change|default('—') }}</td></tr>
+            <tr><th>Risk Score Change</th><td>{{ impact.risk_score_change|default('—') }}</td></tr>
+            <tr><th>Correlation Effect</th><td>{{ impact.correlation_effect|default('—') }}</td></tr>
+            <tr><th>Decision</th><td><strong>{{ impact.decision|default('—') }}</strong></td></tr>
+            <tr><th>Reasons</th><td>{{ impact.reasons|default([])|join(', ') ?: '—' }}</td></tr>
+          </tbody>
+        </table></div>
+      {% else %}
+        <twig:CosAlert title="Portfolio impact unavailable" copy="No positive capital requirement was available for deterministic simulation." tone="warning" />
+      {% endif %}
+    </section>
+
+    <section class="cos-panel">
+      <h2>Evidence</h2>
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Instrument</th><th>Venue / Source</th><th>Mid / Reference</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead>
+        <tbody>
+        {% for state in evidence.market_states|default([]) %}
+          <tr><td>{{ state.instrument_id|default('—') }}</td><td>{{ state.venue_id|default(state.source_id|default('—')) }}</td><td>{{ state.mid_price|default('—') }}</td><td>{{ state.latency.event_age_ms|default('—') }} ms</td><td>{{ state.trust_status|default(state.quality_status|default('—')) }}</td><td>{{ state.mode|default('—') }}</td></tr>
+        {% endfor %}
+        {% for state in evidence.reference_states|default([]) %}
+          <tr><td>{{ state.instrument_id|default('—') }}</td><td>{{ state.source_id|default('—') }}</td><td>{{ state.current_quote.mid_price|default('—') }}</td><td>{{ state.reference_age_ms|default('—') }} ms</td><td>{{ state.quality.status|default('—') }}</td><td>{{ state.mode|default('—') }}</td></tr>
+        {% else %}
+          {% if evidence.market_states|default([]) is empty %}<tr><td colspan="6">No matching market evidence is currently available.</td></tr>{% endif %}
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+
+    <twig:CosDecisionTrace :steps="w.decision_trace|default([])" />
+
+  {% elseif cmView == 'markets' %}
+    {% set marketView = query.view|default('instrument') %}
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div><h2>Market Explorer</h2><p>One market surface, three questions. Raw ticks stay out of the page; canonical MarketState is displayed.</p></div>
+        <div>
+          <a class="btn {{ marketView == 'instrument' ? 'btn-primary' : 'btn-outline-secondary' }}" href="?view=instrument">Instrument View</a>
+          <a class="btn {{ marketView == 'relationship' ? 'btn-primary' : 'btn-outline-secondary' }}" href="?view=relationship">Relationship View</a>
+          <a class="btn {{ marketView == 'venue' ? 'btn-primary' : 'btn-outline-secondary' }}" href="?view=venue">Venue View</a>
+        </div>
+      </div>
+
+      {% if marketView == 'relationship' %}
+        {% if permissions.relationship_view|default(false) %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Source</th><th>Relationship</th><th>Target</th><th>Strength / Ratio</th><th>Reference / Conversion</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for rel in w.relationships|default([]) %}
+            <tr>
+              <td>{{ rel.source_instrument.id|default(rel.source_instrument_id|default(rel.from_instrument_id|default('—'))) }}</td>
+              <td>{% set rid = rel.id|default(rel.relationship_id|default('')) %}{% if rid %}<a href="/capital-markets/relationships/{{ rid|url_encode }}">{{ rel.type|default(rel.relationship_type|default(rid)) }}</a>{% else %}{{ rel.type|default(rel.relationship_type|default('—')) }}{% endif %}</td>
+              <td>{{ rel.target_instrument.id|default(rel.target_instrument_id|default(rel.to_instrument_id|default('—'))) }}</td>
+              <td>{{ rel.strength|default(rel.ratio|default('—')) }}</td>
+              <td>{{ rel.metadata.reference_mechanism|default(rel.metadata.conversion|default('NOT SPECIFIED')) }}</td>
+              <td>{{ rel.status|default('—') }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6">No explicit economic relationships are registered.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+        <twig:CosAlert title="No fake conversion" copy="If two instruments require a currency conversion and no trusted conversion source exists, the workspace must treat them as NOT COMPARABLE rather than inventing a premium." tone="info" />
+        {% else %}<p>Relationship View permission is required.</p>{% endif %}
+      {% elseif marketView == 'venue' %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Venue</th><th>Markets</th><th>Trusted</th><th>Data Health</th><th>Exposure</th><th>Capital Locations</th></tr></thead>
+          <tbody>
+          {% for row in w.venue_rows|default([]) %}
+            <tr><td><strong>{{ row.venue.name|default(row.venue.code|default(row.venue.id|default('Venue'))) }}</strong></td><td>{{ row.market_count }}</td><td>{{ row.trusted_markets }}</td><td>{{ row.data_health }}</td><td>{{ row.exposure is not null ? row.exposure : '—' }}</td><td>{{ row.capital_locations|length }}</td></tr>
+          {% else %}
+            <tr><td colspan="6">No venues available.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% else %}
+        <div class="table-responsive"><table class="table">
+          <thead><tr><th>Instrument</th><th>Venue</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Spread</th><th>Volume</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead>
+          <tbody>
+          {% for row in w.market_rows|default([]) %}
+            <tr><td>{% if row.instrument_id %}<a href="/capital-markets/markets/{{ row.instrument_id|url_encode }}">{{ row.instrument_id }}</a>{% else %}—{% endif %}</td><td>{{ row.venue_id }}</td><td>{{ row.bid is not null ? row.bid : '—' }}</td><td>{{ row.ask is not null ? row.ask : '—' }}</td><td>{{ row.mid is not null ? row.mid : '—' }}</td><td>{{ row.spread_bps is not null ? row.spread_bps ~ ' bps' : '—' }}</td><td>{{ row.volume is not null ? row.volume : '—' }}</td><td>{{ row.age_ms is not null ? row.age_ms ~ ' ms' : '—' }}</td><td><strong>{{ row.trust }}</strong></td><td>{{ row.mode }}</td></tr>
+          {% else %}
+            <tr><td colspan="10">No canonical MarketState is available.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+    </section>
+
+  {% elseif cmView == 'market_detail' %}
+    {% set instrument = w.instrument|default({}) %}
+    <section class="cos-panel">
+      <twig:CosEntityHeader eyebrow="Market Detail" identity="{{ instrument.id|default(instrument.instrument_id|default(entityId|default('—'))) }}" title="{{ instrument.symbol|default(instrument.name|default('Instrument')) }}" subtitle="{{ instrument.type|default(instrument.instrument_type|default('')) }}" statusLabel="{{ instrument.status|default('UNKNOWN') }}" statusTone="info" />
+    </section>
+    <section class="cos-panel">
+      <h2>Current Market</h2>
+      <p>Canonical values only. No browser-side price, basis, funding or P&L calculations.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Venue</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Spread</th><th>Volume</th><th>Liquidity</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead><tbody>
+      {% for row in w.market_detail_rows|default([]) %}
+        <tr><td>{{ row.venue_id|default('—') }}</td><td>{{ row.bid is not null ? row.bid : '—' }}</td><td>{{ row.ask is not null ? row.ask : '—' }}</td><td>{{ row.mid is not null ? row.mid : '—' }}</td><td>{{ row.spread_bps is not null ? row.spread_bps ~ ' bps' : '—' }}</td><td>{{ row.volume is not null ? row.volume : '—' }}</td><td>{{ row.liquidity is not null ? row.liquidity : '—' }}</td><td>{{ row.age_ms is not null ? row.age_ms ~ ' ms' : '—' }}</td><td><strong>{{ row.trust }}</strong></td><td>{{ row.mode }}</td></tr>
+      {% else %}<tr><td colspan="10">No canonical MarketState is available for this instrument.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel" aria-label="Historical Market Evidence">
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <h2>Historical Market Evidence · 7D</h2>
+        <strong>{{ w.history_state|default('UNAVAILABLE') }}</strong>
+      </div>
+      <p>Recorded canonical QUOTE, BBO, CANDLE, REFERENCE, MARK, INDEX and FUNDING observations only. Source, mode and quality are preserved; no synthetic points or currency conversion.</p>
+      {% if not permissions.market_data_history_view|default(false) %}
+        <p>Historical market evidence is restricted to users with Market Data History View authority.</p>
+      {% else %}
+        <div data-capital-markets-workspace-target="historyChart" data-history-rows="{{ w.history_rows|default([])|json_encode|e('html_attr') }}" role="group" aria-label="Canonical historical market series chart"></div>
+        <div class="table-responsive">
+          <table class="table" aria-label="Canonical market history for last seven days">
+            <thead><tr><th>Source time (UTC)</th><th>Event</th><th>Venue</th><th>Source</th><th>Observed value</th><th>Quote / Unit</th><th>Spread (bps)</th><th>Mode</th><th>Quality flags</th></tr></thead>
+            <tbody>
+              {% for item in w.history_rows|default([])|slice(-150) %}
+                <tr>
+                  <td>{{ item.timestamp }}</td>
+                  <td>{{ item.event_type }}</td>
+                  <td>{{ item.venue_id|default('—') }}</td>
+                  <td>{{ item.source_id }}</td>
+                  <td>{{ item.value }}</td>
+                  <td>{{ item.quote_asset|default('—') }}</td>
+                  <td>{{ item.spread_bps is not null ? item.spread_bps : '—' }}</td>
+                  <td>{{ item.mode }}</td>
+                  <td>{{ item.quality_flags|default([])|join(', ') ?: '—' }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="9">No canonical historical market observations are available in this window.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="small">Last 150 displayed from up to 500 fetched events in the seven-day window. Basis curves and cross-instrument spreads remain unavailable until a time-aligned canonical comparison projection exists.</p>
+      {% endif %}
+    </section>
+    {% if permissions.relationship_view|default(false) %}
+    <section class="cos-panel">
+      <h2>Relationships</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Relationship</th><th>Source</th><th>Target</th><th>Reference Mechanism</th><th>Settlement</th><th>Hedgeability</th></tr></thead><tbody>
+      {% for rel in w.instrument_relationships|default([]) %}
+        {% set rid = rel.id|default(rel.relationship_id|default('')) %}
+        <tr><td>{% if rid %}<a href="/capital-markets/relationships/{{ rid|url_encode }}">{{ rel.type|default(rel.relationship_type|default(rid)) }}</a>{% else %}{{ rel.type|default(rel.relationship_type|default('—')) }}{% endif %}</td><td>{{ rel.source_instrument.id|default(rel.source_instrument_id|default(rel.from_instrument_id|default('—'))) }}</td><td>{{ rel.target_instrument.id|default(rel.target_instrument_id|default(rel.to_instrument_id|default('—'))) }}</td><td>{{ rel.metadata.reference_mechanism|default('—') }}</td><td>{{ rel.metadata.settlement|default('—') }}</td><td>{{ rel.metadata.hedgeability|default('—') }}</td></tr>
+      {% else %}<tr><td colspan="6">No economic relationship is registered for this instrument.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+      {% else %}<section class="cos-panel"><h2>Relationships</h2><p>Relationship View permission is required.</p></section>{% endif %}
+{% elseif cmView == 'relationship_detail' %}
+    {% set rel = w.relationship|default({}) %}
+    <section class="cos-panel">
+      <twig:CosEntityHeader eyebrow="Relationship Detail" identity="{{ rel.id|default(rel.relationship_id|default(entityId|default('—'))) }}" title="{{ rel.type|default(rel.relationship_type|default('Economic Relationship')) }}" subtitle="How these instruments are economically linked and where dislocation may appear." statusLabel="{{ rel.status|default('UNKNOWN') }}" statusTone="info" />
+    </section>
+    <div class="row g-3">
+      <div class="col-lg-7"><section class="cos-panel h-100"><h2>Relationship Graph</h2><p><strong>{{ rel.source_instrument.id|default(rel.source_instrument_id|default(rel.from_instrument_id|default('—'))) }}</strong> → {{ rel.type|default(rel.relationship_type|default('RELATED')) }} → <strong>{{ rel.target_instrument.id|default(rel.target_instrument_id|default(rel.to_instrument_id|default('—'))) }}</strong></p><p>Strength: {{ rel.strength|default('—') }} · Conversion: {{ rel.metadata.conversion|default('—') }} · Reference: {{ rel.metadata.reference_mechanism|default('—') }}</p></section></div>
+      <div class="col-lg-5"><section class="cos-panel h-100"><h2>Economic Rights / Settlement</h2><p>Economic rights: {{ rel.metadata.economic_rights|default('—') }}</p><p>Settlement: {{ rel.metadata.settlement|default('—') }}</p><p>Hedgeability: {{ rel.metadata.hedgeability|default('—') }}</p></section></div>
+    </div>
+    {% if permissions.market_data_view|default(false) %}
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 flex-wrap"><h2>Price Comparison</h2><strong>{{ w.comparison_state|default('UNAVAILABLE') }}</strong></div>
+      {% if w.comparison_state|default('UNAVAILABLE') == 'NOT COMPARABLE' %}
+        <twig:CosAlert title="NOT COMPARABLE" copy="Both sides do not currently have enough canonical comparable MarketState evidence. No fake premium or conversion is shown." tone="warning" />
+      {% endif %}
+      <div class="table-responsive"><table class="table"><thead><tr><th>Instrument</th><th>Venue</th><th>Bid</th><th>Ask</th><th>Mid</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead><tbody>
+      {% for row in w.relationship_comparison|default([]) %}
+        <tr><td><a href="/capital-markets/markets/{{ row.instrument_id|url_encode }}">{{ row.instrument_id }}</a></td><td>{{ row.venue_id|default('—') }}</td><td>{{ row.bid is not null ? row.bid : '—' }}</td><td>{{ row.ask is not null ? row.ask : '—' }}</td><td>{{ row.mid is not null ? row.mid : '—' }}</td><td>{{ row.age_ms is not null ? row.age_ms ~ ' ms' : '—' }}</td><td><strong>{{ row.trust }}</strong></td><td>{{ row.mode }}</td></tr>
+      {% else %}<tr><td colspan="8">No comparable canonical prices are available.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+      {% else %}<section class="cos-panel"><h2>Price Comparison</h2><p>Market Data View permission is required. Quotes are not available to this role.</p></section>{% endif %}
+    <section class="cos-panel" aria-label="Historical Relationship Basis">
+      {% set basis = w.historical_basis|default({}) %}
+      <div class="d-flex gap-3 flex-wrap justify-content-between align-items-center">
+        <h2>Historical Basis · 7D</h2>
+        <strong>{{ basis.status|default('NOT COMPARABLE') }}</strong>
+      </div>
+      <p>Canonical, time-aligned observations only. Up to 30 seconds of skew; comparable quoted currency and an explicitly verified economic conversion are mandatory. This chart is not an executable arbitrage signal.</p>
+      {% if not permissions.market_data_view|default(false) or not permissions.market_data_history_view|default(false) %}
+        <p>Market Data View and Market Data History View permissions are required.</p>
+      {% elseif basis.status|default('NOT COMPARABLE') != 'OBSERVATIONS_AVAILABLE' %}
+        <twig:CosAlert title="NOT COMPARABLE" copy="{{ basis.reason|default('Canonical comparable history unavailable') }}. No historical basis or synthetic price is invented." tone="warning" />
+      {% else %}
+        <div data-capital-markets-workspace-target="basisChart" data-basis-rows="{{ basis.rows|default([])|json_encode|e('html_attr') }}" role="group" aria-label="Canonical historical basis chart"></div>
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Source UTC</th><th>Target UTC</th><th>Source Venue</th><th>Target Venue</th><th>Source Mid</th><th>Target Mid</th><th>Ratio</th><th>Basis bps</th><th>Quote</th><th>Skew</th></tr></thead>
+            <tbody>
+            {% for obs in basis.rows|default([])|slice(-150) %}
+              <tr><td>{{ obs.source_timestamp }}</td><td>{{ obs.target_timestamp }}</td><td>{{ obs.source_venue|default('—') }}</td><td>{{ obs.target_venue|default('—') }}</td><td>{{ obs.source_mid }}</td><td>{{ obs.target_mid }}</td><td>{{ obs.target_units_per_source_unit }}</td><td>{{ obs.basis_bps }}</td><td>{{ obs.quote_asset }}</td><td>{{ obs.skew_seconds }} s</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="small">Recorded evidence only, grouped by source/venue/currency. Current pair validity and execution economics must be evaluated independently.</p>
+      {% endif %}
+    </section>
+
+{% elseif cmView == 'research' %}
+    {% set research = w.research|default({}) %}
+    <section class="cos-kpi-strip">
+      <twig:CosMetric label="Hypotheses" value="{{ research.metrics.hypothesis_count|default(0) }}" hint="formal research objects" />
+      <twig:CosMetric label="Running Experiments" value="{{ research.metrics.running_experiments|default(0) }}" hint="active deterministic tests" />
+      <twig:CosMetric label="OOS" value="{{ research.metrics.oos_count|default(0) }}" hint="isolated out-of-sample runs" />
+      <twig:CosMetric label="Paper" value="{{ research.metrics.paper_count|default(0) }}" hint="paper validation runs" />
+      <twig:CosMetric label="Validated" value="{{ research.metrics.validated_hypotheses|default(0) }}" hint="promotion evidence passed" />
+      <twig:CosMetric label="Rejected" value="{{ research.metrics.rejected_hypotheses|default(0) }}" hint="negative knowledge remains visible" />
+    </section>
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap"><h2>Research Pipeline</h2><div><a href="/capital-markets/export/research-results.csv">Export results CSV</a> · <a href="/capital-markets/export/research-results.json">JSON</a></div></div>
+      <div class="row g-3">
+      {% for stage, items in w.pipeline|default({}) %}
+        <div class="col-xl col-md-4 col-sm-6">
+          <article class="cos-card h-100">
+            <strong>{{ stage }}</strong><span class="badge text-bg-light ms-1">{{ items|length }}</span>
+            <div class="mt-2">
+            {% for h in items|slice(0, 8) %}
+              {% set hid = h.hypothesis_id|default(h.id|default('')) %}
+              <p class="mb-2">{% if hid %}<a href="/capital-markets/research/hypotheses/{{ hid|url_encode }}">{{ h.title|default(h.name|default(hid)) }}</a>{% else %}{{ h.title|default(h.name|default('Hypothesis')) }}{% endif %}<br><small>{{ h.priority|default('') }} {{ h.edge_source|default('') }}</small></p>
+            {% else %}
+              <small>Empty</small>
+            {% endfor %}
+            </div>
+          </article>
+        </div>
+      {% endfor %}
+      </div>
+    </section>
+    <section class="cos-panel">
+      <h2>Rejected Research</h2>
+      <p>Rejected hypotheses are first-class knowledge, not a drawer where inconvenient results go to die.</p>
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Hypothesis</th><th>Reason</th><th>Result</th></tr></thead>
+        <tbody>
+        {% for h in research.rejections|default([]) %}
+          <tr><td>{{ h.hypothesis_id|default(h.id|default('—')) }}</td><td>{{ h.reason|default(h.rejection_reason|default('—')) }}</td><td>{{ h.result|default(h.status|default('REJECTED')) }}</td></tr>
+        {% else %}
+          <tr><td colspan="3">No rejected hypotheses recorded.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+
+  {% elseif cmView == 'hypothesis' %}
+    {% set h = w.hypothesis|default({}) %}
+    <section class="cos-panel">
+      <twig:CosEntityHeader eyebrow="Research Hypothesis" identity="{{ h.hypothesis_id|default(h.id|default(entityId|default('—'))) }}" title="{{ h.title|default(h.name|default('Hypothesis')) }}" subtitle="{{ h.description|default('') }}" statusLabel="{{ h.status|default('UNKNOWN') }}" statusTone="{{ h.status|default('') == 'VALIDATED' ? 'positive' : (h.status|default('') == 'REJECTED' ? 'danger' : 'info') }}" />
+    </section>
+    <div class="row g-3">
+      <div class="col-lg-7"><section class="cos-panel h-100"><small>WHY SHOULD THIS EDGE EXIST?</small><h2>Economic Thesis</h2><p>{{ h.economic_reason|default(h.thesis|default('No economic rationale stored.')) }}</p><h3>Edge Source</h3><p>{{ h.edge_source|default('—') }}</p></section></div>
+      <div class="col-lg-5"><section class="cos-panel h-100"><h2>Criteria</h2><p><strong>Success:</strong> {{ h.success_criteria is iterable ? h.success_criteria|json_encode : h.success_criteria|default('—') }}</p><p><strong>Failure:</strong> {{ h.failure_criteria is iterable ? h.failure_criteria|json_encode : h.failure_criteria|default('—') }}</p></section></div>
+    </div>
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap"><h2>Experiments</h2><strong>Decision: {{ w.research_decision|default('UNAVAILABLE') }}</strong></div>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Experiment</th><th>Type</th><th>Strategy Version</th><th>Dataset</th><th>Status</th></tr></thead><tbody>
+      {% for x in w.experiments|default([]) %}<tr><td>{{ x.experiment_id|default(x.id|default('—')) }}</td><td>{{ x.type|default('—') }}</td><td>{{ x.strategy_version_id|default('—') }}</td><td>{{ x.dataset_id|default('—') }}</td><td>{{ x.status|default('—') }}</td></tr>{% else %}<tr><td colspan="5">No experiments yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel">
+      <h2>Results</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Result</th><th>Experiment</th><th>Status</th><th>Summary</th></tr></thead><tbody>
+      {% for x in w.results|default([]) %}<tr><td>{{ x.result_id|default(x.id|default('—')) }}</td><td>{{ x.experiment_id|default('—') }}</td><td>{{ x.status|default(x.decision|default('—')) }}</td><td>{{ x.summary|default(x.outcome|default(x.metrics|default({})|json_encode)) }}</td></tr>{% else %}<tr><td colspan="4">No completed result is stored for this hypothesis yet.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <twig:CosDecisionTrace :steps="w.decision_trace|default([])" emptyCopy="No downstream research decision is traceable yet." />
+    <section class="cos-panel">
+      <h2>Audit</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Reason</th><th>Correlation</th></tr></thead><tbody>
+      {% for a in w.audit|default([]) %}
+        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
+      {% else %}<tr><td colspan="5">No audit activity is recorded for this hypothesis.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+  {% elseif cmView == 'strategies' %}
+    <section class="cos-panel">
+      <h2>Strategy Lab</h2>
+      <div class="table-responsive"><table class="table align-middle">
+        <thead><tr><th>Strategy</th><th>Version</th><th>Mode</th><th>Capital</th><th>Net P&L</th><th>Drawdown</th><th>Score</th><th>Capacity</th><th>Status</th><th>Decision</th></tr></thead>
+        <tbody>
+        {% for s in w.strategies|default([]) %}
+          <tr><td><a href="/capital-markets/strategies/{{ s.id|url_encode }}"><strong>{{ s.strategy }}</strong></a></td><td>{{ s.version is not null ? s.version : '—' }}</td><td>{{ s.mode }}</td><td>{{ s.capital is not null ? s.capital : '—' }}</td><td>{{ s.net_pnl is not null ? s.net_pnl : '—' }}</td><td>{{ s.drawdown is not null ? s.drawdown : '—' }}</td><td>{{ s.score is not null ? s.score : '—' }}</td><td>{{ s.capacity is not null ? s.capacity : '—' }}</td><td>{{ s.status }}</td><td>{{ s.decision }}</td></tr>
+        {% else %}<tr><td colspan="10">No strategy versions exist yet.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+
+  {% elseif cmView == 'strategy' %}
+    {% set s = w.strategy|default({}) %}
+    <section class="cos-panel"><twig:CosEntityHeader eyebrow="Strategy" identity="{{ s.strategy_version_id|default(s.id|default(entityId|default('—'))) }}" title="{{ s.name|default(s.strategy_name|default('Strategy Version')) }}" subtitle="{{ s.description|default('') }}" statusLabel="{{ s.status|default('UNKNOWN') }}" statusTone="info" /></section>
+    <section class="cos-panel">
+      <h2>Scorecards</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Scorecard</th><th>Profitability</th><th>Consistency</th><th>Risk</th><th>Execution</th><th>Capital Efficiency</th><th>Capacity</th><th>Robustness</th><th>Data Confidence</th></tr></thead><tbody>
+      {% for x in w.scorecards|default([]) %}
+        <tr><td>{{ x.scorecard_id|default(x.id|default('—')) }}</td><td>{{ x.profitability|default(x.dimensions.profitability|default('—')) }}</td><td>{{ x.consistency|default(x.dimensions.consistency|default('—')) }}</td><td>{{ x.risk|default(x.dimensions.risk|default('—')) }}</td><td>{{ x.execution|default(x.dimensions.execution|default('—')) }}</td><td>{{ x.capital_efficiency|default(x.dimensions.capital_efficiency|default('—')) }}</td><td>{{ x.capacity|default(x.dimensions.capacity|default('—')) }}</td><td>{{ x.robustness|default(x.dimensions.robustness|default('—')) }}</td><td>{{ x.data_confidence|default(x.dimensions.data_confidence|default('—')) }}</td></tr>
+      {% else %}<tr><td colspan="9">No scorecard exists for this version.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <div class="row g-3">
+      <div class="col-lg-4"><section class="cos-panel h-100"><h2>Backtest</h2><p>{{ w.backtest_runs|default([])|length }} run(s)</p></section></div>
+      <div class="col-lg-4"><section class="cos-panel h-100"><h2>OOS</h2><p>{{ w.oos_runs|default([])|length }} run(s)</p></section></div>
+      <div class="col-lg-4"><section class="cos-panel h-100"><h2>Paper</h2><p>{{ w.paper_runs|default([])|length }} run(s)</p></section></div>
+    </div>
+    <section class="cos-panel">
+      <h2>Version Comparison</h2>
+      <p>Compare canonical strategy versions side-by-side. Missing evidence remains unavailable rather than being inferred.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Version</th><th>Mode / Stage</th><th>Status</th><th>Logic / Parameters</th><th>Created</th><th>Open</th></tr></thead><tbody>
+      {% for v in w.version_comparison|default([]) %}
+        {% set vid = v.strategy_version_id|default(v.id|default('')) %}
+        <tr><td><strong>{{ v.version|default(v.version_number|default(vid ?: '—')) }}</strong></td><td>{{ v.mode|default(v.stage|default('—')) }}</td><td>{{ v.status|default('—') }}</td><td>{{ v.parameters|default(v.logic|default({})) is iterable ? v.parameters|default(v.logic|default({}))|json_encode : v.parameters|default(v.logic|default('—')) }}</td><td>{{ v.created_at|default('—') }}</td><td>{% if vid %}<a href="/capital-markets/strategies/{{ vid|url_encode }}">Details</a>{% else %}—{% endif %}</td></tr>
+      {% else %}<tr><td colspan="6">No sibling strategy versions are available for comparison.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel"><h2>Promotion Gate</h2>{% for x in w.promotion_decisions|default([]) %}<p><strong>{{ x.status|default('—') }}</strong> · {{ x.from_stage|default('—') }} → {{ x.to_stage|default('—') }} · {{ x.reason|default('') }}</p>{% else %}<p>No promotion decision yet.</p>{% endfor %}</section>
+    <section class="cos-panel">
+      <h2>Audit</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Reason</th><th>Correlation</th></tr></thead><tbody>
+      {% for a in w.audit|default([]) %}
+        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
+      {% else %}<tr><td colspan="5">No audit activity is recorded for this strategy version.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+  {% elseif cmView == 'portfolio' %}
+    {% set p = w.portfolio|default({}) %}
+    {% set c = p.capital_state|default({}) %}
+    {% set e = p.exposure|default({}) %}
+    <section class="cos-kpi-strip">
+      <twig:CosMoneyMetric label="Equity" value="{{ c.total|default('—') }}" />
+      <twig:CosMoneyMetric label="Available" value="{{ c.available|default('—') }}" />
+      <twig:CosMoneyMetric label="Reserved" value="{{ c.reserved|default('—') }}" />
+      <twig:CosMoneyMetric label="Deployed" value="{{ c.deployed|default('—') }}" />
+      <twig:CosMoneyMetric label="Margin" value="{{ c.margined|default('—') }}" />
+      <twig:CosMoneyMetric label="Gross Exposure" value="{{ e.gross_exposure|default('—') }}" />
+      <twig:CosMoneyMetric label="Net Exposure" value="{{ e.net_exposure|default('—') }}" />
+      <twig:CosMetric label="Risk State" value="{{ p.risk.status|default('NOT CALCULATED') }}" hint="deterministic portfolio authority" />
+    </section>
+    <section class="cos-panel"><h2>Capital Map</h2><div class="table-responsive"><table class="table"><thead><tr><th>State</th><th>Amount</th></tr></thead><tbody>{% for item in w.capital_map|default([]) %}<tr><td>{{ item.key }}</td><td>{{ item.value is not null ? item.value : '—' }}</td></tr>{% endfor %}</tbody></table></div></section>
+    <section class="cos-panel"><h2>Strategy Allocation</h2><div class="table-responsive"><table class="table"><thead><tr><th>Strategy</th><th>Allocated</th><th>Reserved</th><th>Deployed</th><th>Available</th><th>Risk Used</th><th>P&L</th></tr></thead><tbody>{% for s in w.strategy_allocations|default([]) %}<tr><td>{{ s.strategy_version_id }}</td><td>{{ s.allocated_capital|default('—') }}</td><td>{{ s.reserved|default('—') }}</td><td>{{ s.deployed|default('—') }}</td><td>{{ s.available|default('—') }}</td><td>{{ s.risk_used is not null ? s.risk_used : '—' }}</td><td>{{ s.net_pnl is not null ? s.net_pnl : '—' }}</td></tr>{% else %}<tr><td colspan="7">No strategy allocation yet.</td></tr>{% endfor %}</tbody></table></div></section>
+    <section class="cos-panel">
+      <h2>Economic Exposure</h2>
+      <p>Gross <strong>{{ e.gross_exposure|default('—') }}</strong> · Net <strong>{{ e.net_exposure|default('—') }}</strong>. Both remain visible together.</p>
+      <div class="row g-3">
+      {% for dimension, values in w.exposure_tabs|default({}) %}
+        <div class="col-lg-4"><article class="cos-card h-100"><strong>{{ dimension|upper }}</strong><div class="table-responsive"><table class="table"><tbody>{% for key,value in values %}<tr><td>{{ key }}</td><td>{{ value }}</td></tr>{% else %}<tr><td colspan="2">No exposure.</td></tr>{% endfor %}</tbody></table></div></article></div>
+      {% endfor %}
+      </div>
+    </section>
+    <section class="cos-panel"><h2>Capital Location</h2><div class="table-responsive"><table class="table"><thead><tr><th>Venue</th><th>Asset</th><th>Available</th><th>Reserved</th></tr></thead><tbody>{% for x in c.by_location|default([]) %}<tr><td>{{ x.venue_id }}</td><td>{{ x.asset_key }}</td><td>{{ x.available }}</td><td>{{ x.reserved }}</td></tr>{% else %}<tr><td colspan="4">No venue balance data.</td></tr>{% endfor %}</tbody></table></div></section>
+
+  {% elseif cmView == 'allocation' %}
+    {% set a = w.allocation|default({}) %}
+    {% set plan = a.plan|default({}) %}
+    <section class="cos-panel">
+      <h2>Recommended Allocation</h2>
+      {% if plan %}
+        <p><strong>{{ plan.status|default('—') }}</strong> · policy {{ plan.policy_version|default('—') }}</p>
+        <p>{{ plan.reasoning_summary|default('') }}</p>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Priority</th><th>Strategy</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Difference</th><th>Decision</th><th>Reason</th></tr></thead><tbody>
+        {% for x in plan.allocations|default([]) %}
+          <tr><td>{{ x.priority|default('—') }}</td><td>{{ x.strategy_version_id|default('—') }}</td><td><a href="/capital-markets/opportunities/{{ x.opportunity_id|default('')|url_encode }}">{{ x.opportunity_id|default('—') }}</a></td><td>{{ x.requested_capital|default('—') }}</td><td>{{ x.approved_capital|default('—') }}</td><td>backend canonical values</td><td><strong>{{ x.decision|default('—') }}</strong></td><td>{{ x.reason|default('—') }}</td></tr>
+        {% endfor %}
+        </tbody></table></div>
+      {% else %}
+        <p>No allocation plan has been calculated yet.</p>
+      {% endif %}
+    </section>
+    <section class="cos-panel">
+      <h2>Scenario Simulator</h2>
+      {% if permissions.portfolio_view|default(false) %}
+      <p>Change only proposed capital. All portfolio/risk math runs in the existing deterministic backend engine.</p>
+      <form class="row g-3 align-items-end" data-action="submit->capital-markets-workspace#simulateOpportunity">
+        <div class="col-lg-5">
+          <label class="form-label" for="cm-sim-opportunity">Opportunity</label>
+          <select class="form-select" id="cm-sim-opportunity" name="opportunity_id" required>
+            <option value="">Select opportunity</option>
+            {% for o in a.simulation_opportunities|default([]) %}
+              <option value="{{ o.id }}">{{ o.opportunity }} · {{ o.decision }} · requested {{ o.capital is not null ? o.capital : '—' }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-lg-3">
+          <label class="form-label" for="cm-sim-capital">Proposed capital</label>
+          <input class="form-control" id="cm-sim-capital" name="capital" inputmode="decimal" autocomplete="off" required>
+        </div>
+        <div class="col-lg-4"><button class="btn btn-primary" type="submit">Simulate portfolio impact</button></div>
+      </form>
+      <div class="mt-3" data-capital-markets-workspace-target="simulationOutput" aria-live="polite">Run a simulation to inspect the deterministic portfolio decision.</div>
+      {% else %}
+        <p>Portfolio simulation is hidden because this role does not have Portfolio View authority.</p>
+      {% endif %}
+    </section>
+    <section class="cos-panel"><h2>Rebalance Recommendation</h2>{% if a.rebalance|default({}) %}<p><strong>{{ a.rebalance.status|default('—') }}</strong> · {{ a.rebalance.reason|default('') }}</p><p>Estimated costs: {{ a.rebalance.estimated_costs|default('—') }} · risk improvement: {{ a.rebalance.expected_risk_improvement_pct|default('—') }}</p>{% else %}<p>No rebalance recommendation.</p>{% endif %}</section>
+
+  {% elseif cmView == 'execution' %}
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap"><h2>Execution Groups</h2><div><a href="/capital-markets/export/executions.csv">Export CSV</a> · <a href="/capital-markets/export/executions.json">JSON</a></div></div>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Execution</th><th>Strategy</th><th>Opportunity</th><th>Legs</th><th>Capital</th><th>State</th><th>Hedge</th><th>Duration</th><th>P&L</th><th>Updated</th></tr></thead><tbody>
+      {% for x in w.executions|default([]) %}
+        <tr><td><a href="/capital-markets/execution/{{ x.id|url_encode }}">{{ x.id ?: '—' }}</a></td><td>{{ x.strategy is not null ? x.strategy : '—' }}</td><td>{% if x.opportunity_id %}<a href="/capital-markets/opportunities/{{ x.opportunity_id|url_encode }}">{{ x.opportunity_id }}</a>{% else %}—{% endif %}</td><td>{{ x.legs is iterable ? x.legs|length : '—' }}</td><td>{{ x.capital is not null ? x.capital : '—' }}</td><td><strong>{{ x.state }}</strong></td><td>{{ x.hedge is not null ? x.hedge : '—' }}</td><td>{{ x.duration is not null ? x.duration : '—' }}</td><td>{{ x.pnl is not null ? x.pnl : '—' }}</td><td>{{ x.updated_at is not null ? x.updated_at : '—' }}</td></tr>
+      {% else %}<tr><td colspan="10">No executions.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+  {% elseif cmView == 'execution_detail' %}
+    {% set x = w.execution|default({}) %}
+    {% set health = w.execution_health|default({}) %}
+    <section class="cos-panel"><twig:CosEntityHeader eyebrow="Execution" identity="{{ x.execution_id|default(x.id|default(entityId|default('—'))) }}" title="{{ x.status|default('Execution') }}" subtitle="Paper execution lifecycle, orders, fills and hedge evidence." statusLabel="{{ x.status|default('UNKNOWN') }}" statusTone="{{ health.severity|default('NORMAL') == 'HIGH' ? 'danger' : 'info' }}" /></section>
+    {% if health.severity|default('NORMAL') == 'HIGH' %}
+      <twig:CosAlert title="HIGH RISK · {{ health.hedge_state|default('UNHEDGED')|replace({'_':' '}) }}" copy="Execution is not in a clean completed state. Review checkpoint, fills and recovery evidence before any further action." tone="danger" />
+    {% endif %}
+    <section class="cos-kpi-strip">
+      <twig:CosMetric label="Execution State" value="{{ health.status|default('UNKNOWN') }}" />
+      <twig:CosMetric label="Hedge State" value="{{ health.hedge_state|default('UNKNOWN')|replace({'_':' '}) }}" />
+      <twig:CosMetric label="Checkpoint" value="{{ health.checkpoint|default('—') }}" />
+      <twig:CosMetric label="Orders" value="{{ health.orders|default(0) }}" />
+      <twig:CosMetric label="Fills" value="{{ health.fills|default(0) }}" />
+      <twig:CosMetric label="Residual Unhedged" value="{{ health.residual_unhedged_quantity is not null ? health.residual_unhedged_quantity : '—' }}" />
+    </section>
+    <div class="row g-3">
+      <div class="col-lg-6"><section class="cos-panel h-100"><h2>Orders</h2><div class="table-responsive"><table class="table"><thead><tr><th>Order</th><th>Leg</th><th>State</th></tr></thead><tbody>{% for o in w.orders|default([]) %}<tr><td>{{ o.order_id|default(o.id|default('—')) }}</td><td>{{ o.leg_id|default('—') }}</td><td>{{ o.state|default(o.status|default('—')) }}</td></tr>{% else %}<tr><td colspan="3">No orders.</td></tr>{% endfor %}</tbody></table></div></section></div>
+      <div class="col-lg-6"><section class="cos-panel h-100"><h2>Fills</h2><div class="table-responsive"><table class="table"><thead><tr><th>Fill</th><th>Order</th><th>Quantity</th><th>Price</th></tr></thead><tbody>{% for f in w.fills|default([]) %}<tr><td>{{ f.fill_id|default(f.id|default('—')) }}</td><td>{{ f.order_id|default('—') }}</td><td>{{ f.quantity|default('—') }}</td><td>{{ f.price|default('—') }}</td></tr>{% else %}<tr><td colspan="4">No fills.</td></tr>{% endfor %}</tbody></table></div></section></div>
+    </div>
+    <section class="cos-panel">
+      <h2>Recovery</h2>
+      <p><strong>Checkpoint:</strong> {{ health.checkpoint|default('—') }}</p>
+      <p><strong>Failure reason:</strong> {{ health.failure_reason|default('—') }}</p>
+      <p><strong>Hedge state:</strong> {{ health.hedge_state|default('UNKNOWN')|replace({'_':' '}) }}</p>
+      <p>Retry / Reduce Position / Emergency Flatten / Manual Review controls remain governed by the existing execution policy and are not synthesized in this read-only workspace.</p>
+    </section>
+
+  {% elseif cmView == 'risk' %}
+    {% set rr = w.risk|default({}) %}
+    {% set snap = rr.snapshot|default({}) %}
+    <section class="cos-kpi-strip">
+      <twig:CosMetric label="Risk State" value="{{ snap.status|default('NOT CALCULATED') }}" hint="deterministic authority" />
+      <twig:CosMetric label="Risk Headroom" value="{{ snap.risk_headroom|default('—') }}" hint="canonical snapshot when available" />
+      <twig:CosMetric label="Drawdown" value="{{ snap.drawdown|default('—') }}" />
+      <twig:CosMetric label="Daily Loss" value="{{ snap.daily_loss|default('—') }}" />
+      <twig:CosMetric label="Gross Exposure" value="{{ snap.gross_exposure|default('—') }}" />
+      <twig:CosMetric label="Leverage" value="{{ snap.leverage|default('—') }}" />
+      <twig:CosMetric label="Margin Utilization" value="{{ snap.margin_utilization|default('—') }}" />
+    </section>
+    <section class="cos-panel"><h2>Limits / Headroom</h2><div class="table-responsive"><table class="table"><thead><tr><th>Metric</th><th>Current</th><th>Soft / Hard Limit</th><th>Headroom</th><th>Utilization</th><th>Authority</th><th>State</th></tr></thead><tbody>{% for key,x in snap.risk_limit_utilization|default({}) %}<tr><td>{{ x.metric|default(key) }}</td><td>{{ x.current|default('—') }}</td><td>{{ x.limit|default('—') }}</td><td>{{ x.headroom|default('—') }}</td><td>{{ x.utilization|default('—') }}</td><td>{{ x.hard|default(false) ? 'HARD' : 'SOFT' }}</td><td><strong>{{ x.breached|default(false) ? 'BREACHED' : 'OK' }}</strong></td></tr>{% else %}<tr><td colspan="7">No risk snapshot. Configure and calculate a Risk Envelope.</td></tr>{% endfor %}</tbody></table></div></section>
+    <section class="cos-panel"><h2>Top Risks</h2><ol>{% for item in rr.top_risks|default([]) %}<li><strong>{{ item.metric }}</strong> · {{ item.current is not null ? item.current : '—' }} / {{ item.limit is not null ? item.limit : '—' }} · {{ item.state }}</li>{% else %}<li>No material limit utilization item to surface.</li>{% endfor %}</ol></section>
+    <section class="cos-panel"><h2>Stress Tests</h2><div class="table-responsive"><table class="table"><thead><tr><th>Scenario</th><th>Estimated Loss</th><th>Margin Impact</th><th>Positions</th><th>Venues</th><th>Limits / Capital</th></tr></thead><tbody>{% for x in rr.stress_results|default([]) %}<tr><td>{{ x.name|default(x.scenario_id|default('—')) }}</td><td>{{ x.estimated_loss|default('—') }}</td><td>{{ x.margin_impact|default('—') }}</td><td>{{ x.positions_affected|default([])|length }}</td><td>{{ x.venues_affected|default([])|join(', ') }}</td><td>{{ x.capital_remaining|default('—') }}</td></tr>{% else %}<tr><td colspan="6">No stress result yet.</td></tr>{% endfor %}</tbody></table></div></section>
+
+  {% elseif cmView == 'performance' %}
+    {% set perf = w.performance|default({}) %}
+    {% set attr = perf.attribution|default({}) %}
+    <div class="d-flex justify-content-end gap-2 flex-wrap"><a href="/capital-markets/export/performance.csv">Export CSV</a><a href="/capital-markets/export/performance.json">Export JSON</a><a href="/capital-markets/export/realized-windows.csv">Realized windows CSV</a><a href="/capital-markets/export/realized-windows.json">Realized windows JSON</a><a href="/capital-markets/export/portfolio-nav.json">Verified NAV JSON</a><a href="/capital-markets/export/portfolio-nav.csv">Verified NAV CSV</a></div>
+    <section class="cos-kpi-strip">
+      <twig:CosMoneyMetric label="Execution-attributed Net P&L" value="{{ attr.net_pnl|default('—') }}" hint="Execution attribution only; not full NAV-based portfolio P&L" />
+      <twig:CosMoneyMetric label="Realized Gross P&L" value="{{ attr.realized_gross_pnl is not null ? attr.realized_gross_pnl : '—' }}" />
+      <twig:CosMoneyMetric label="Realized Costs" value="{{ attr.realized_costs is not null ? attr.realized_costs : '—' }}" />
+      <twig:CosMoneyMetric label="Realized Net P&L" value="{{ attr.realized_net_pnl is not null ? attr.realized_net_pnl : '—' }}" />
+      <twig:CosMetric label="Economics Coverage" value="{{ perf.economics_coverage|default('0/0') }}" hint="{{ perf.economics_status|default('UNAVAILABLE') }}" />
+      <twig:CosMetric label="Return" value="{{ attr.return|default('—') }}" />
+      <twig:CosMetric label="Drawdown" value="{{ attr.drawdown|default('—') }}" />
+      <twig:CosMetric label="Profit Factor" value="{{ attr.profit_factor|default('—') }}" hint="unavailable until canonical wins/losses performance model exists" />
+      <twig:CosMetric label="Capital Efficiency" value="{{ attr.capital_efficiency|default('—') }}" />
+      <twig:CosMetric label="Risk Efficiency" value="{{ attr.risk_efficiency|default('—') }}" />
+    </section>
+    {% set paperNav = perf.paper_nav|default({}) %}
+    {% set paperLatest = paperNav.latest|default({}) %}
+    {% set paperWindows = paperNav.windows|default({}) %}
+    <section class="cos-panel" aria-label="Paper Trading simulated NAV and P&L">
+      <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+        <h2>Paper NAV · simulated portfolio</h2>
+        <span class="badge text-bg-secondary">SIMULATED ONLY · NO REAL CAPITAL</span>
+      </div>
+      <div class="cos-kpi-strip">
+        <twig:CosMoneyMetric label="Paper Equity" value="{{ paperLatest.equity is defined and paperLatest.equity is not null ? paperLatest.equity : '—' }}" hint="Capital book + mark-to-entry valuation, not broker balance" />
+        <twig:CosMoneyMetric label="Today Paper Net P&L" value="{{ paperWindows.today.net_pnl is defined and paperWindows.today.net_pnl is not null ? paperWindows.today.net_pnl : '—' }}" />
+        <twig:CosMoneyMetric label="30D Paper Net P&L" value="{{ paperWindows['30d'].net_pnl is defined and paperWindows['30d'].net_pnl is not null ? paperWindows['30d'].net_pnl : '—' }}" />
+        <twig:CosMetric label="Paper NAV State" value="{{ paperLatest.status|default('UNAVAILABLE') }}" />
+      </div>
+      <p class="small">Last observation: {{ paperLatest.valued_at|default('unavailable') }} · {{ paperLatest.currency|default('—') }}. Historical windows require real simulated observations near both UTC boundaries, with no backdating.</p>
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Period</th><th>State</th><th>Simulated Net P&amp;L</th><th>Reason</th></tr></thead>
+        <tbody>{% for period, value in paperWindows %}
+          <tr><td>{{ period == 'today' ? 'Today UTC' : 'Rolling 30D' }}</td><td>{{ value.status|default('UNAVAILABLE') }}</td><td>{{ value.net_pnl is defined and value.net_pnl is not null ? value.net_pnl : '—' }}</td><td>{{ value.reason|default('—') }}</td></tr>
+        {% else %}<tr><td colspan="4">No simulated NAV observations yet.</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <p class="small">Collector: <code>cos:capital-markets:paper:nav:snapshot</code>. Existing financial certification and historical NAV exports remain completely separate.</p>
+    </section>
+    {% set certifiedNav = perf.latest_certified_nav|default({}) %}
+    <section class="cos-panel" aria-label="Independently certified latest NAV">
+      <h2>Certified Current NAV</h2>
+      <div class="cos-kpi-strip">
+        <twig:CosMoneyMetric label="Portfolio Equity" value="{{ certifiedNav.equity is not null ? certifiedNav.equity : '—' }}" />
+        <twig:CosMetric label="Certification State" value="{{ certifiedNav.status|default('UNAVAILABLE') }}" />
+      </div>
+      <p class="small">Currency: {{ certifiedNav.currency|default('—') }} · Valued: {{ certifiedNav.valued_at|default('unavailable') }} · Evidence: {{ certifiedNav.provenance_id|default('unavailable') }}</p>
+      <p class="small">NAV equity needs a fresh certified snapshot. Today/30D P&amp;L additionally requires independently certified opening valuations and complete external-flow history.</p>
+    </section>
+    {% set economicsTone = perf.economics_status|default('UNAVAILABLE') == 'COMPLETE' ? 'positive' : (perf.economics_status|default('UNAVAILABLE') == 'PARTIAL' ? 'warning' : 'info') %}
+    <section class="cos-panel" aria-label="Realized performance economics">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <h2>Gross → Costs → Net</h2>
+          <p>Realized economics are aggregated only from completed executions that expose canonical cost decomposition. Open positions remain in Portfolio Net P&L and are not silently mixed into realized economics.</p>
+        </div>
+        <twig:CosStatus label="{{ perf.economics_status|default('UNAVAILABLE') }}" tone="{{ economicsTone }}" />
+      </div>
+      <p><small>{{ perf.economics_note|default('Canonical execution economics are unavailable.') }}</small></p>
+    </section>
+    <twig:CosAlert title="Canonical time windows" copy="{{ perf.time_window_note|default('') }}" tone="info" />
+    {% set navPreflight = perf.nav_preflight|default({}) %}
+    <section class="cos-panel" aria-label="NAV source integrity and reconciliation">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2>NAV source integrity &amp; reconciliation</h2>
+        <strong>{{ navPreflight.status|default('UNAVAILABLE') }}</strong>
+      </div>
+      <p>Trading ledger journal balance is checked independently of external deposits, liabilities, and venue cash. A balanced trading journal alone never certifies Portfolio NAV.</p>
+      <div class="cos-kpi-strip">
+        <twig:CosMetric label="Journal state" value="{{ navPreflight.trading_ledger_audit.status|default('UNAVAILABLE') }}" />
+        <twig:CosMetric label="Journal transactions" value="{{ navPreflight.trading_ledger_audit.transactions_checked|default(0) }}" />
+        <twig:CosMetric label="Positions inspected" value="{{ navPreflight.sources.positions_examined|default(0) }}" />
+        <twig:CosMetric label="Market marks examined" value="{{ navPreflight.sources.market_marks_examined|default(0) }}" />
+      </div>
+      <h3>Open accounting blockers</h3>
+      <ul>
+        {% for issue in navPreflight.issues|default([]) %}
+          <li>{{ issue }}</li>
+        {% else %}
+          <li>No source blockers reported. Full NAV snapshots still require canonical reconciliation.</li>
+        {% endfor %}
+      </ul>
+      {% set remediation = navPreflight.remediation_plan|default({}) %}
+      <section aria-label="NAV reconciliation next actions">
+        <h3>Наступні дії для звірки NAV</h3>
+        <p class="small">Це план перевірок, а не фінансове затвердження. Створення snapshot залишається заблокованим до незалежної звірки.</p>
+        <p><strong>Відкриті напрями: {{ remediation.open_workstreams|default(0) }}</strong> · Невирішені коди: {{ remediation.open_issue_codes|default(0) }}</p>
+        <div class="table-responsive">
+          <table class="table" aria-label="NAV remediation checklist">
+            <thead><tr><th>Пріоритет</th><th>Напрям</th><th>Відповідальний</th><th>Дія</th><th>Необхідне підтвердження</th><th>Блокери</th></tr></thead>
+            <tbody>
+              {% for task in remediation.tasks|default([]) %}
+                <tr>
+                  <td>{{ task.priority }}</td>
+                  <td><strong>{{ task.title }}</strong></td>
+                  <td>{{ task.owner_role }}</td>
+                  <td>{{ task.action }}</td>
+                  <td>{{ task.required_evidence }}</td>
+                  <td><code>{{ task.issue_codes|default([])|join(', ') }}</code></td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6">Немає сформованого плану. Це не означає, що NAV вже затверджений.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if remediation.unmatched_venues|default([]) is not empty %}
+          <p class="small">Майданчики з невідповідностями: {{ remediation.unmatched_venues|join(', ') }}</p>
+        {% endif %}
+      </section>
+      {% set sourcePreview = navPreflight.statement_reconciliation_preview|default({}) %}
+      <h3>Unreconciled venue cash statement differences</h3>
+      <p class="small">Historical venue statements excluded from current-balance comparison: {{ sourcePreview.historical_venue_statements_ignored|default(0) }}. Historical liability statements excluded: {{ sourcePreview.historical_liability_statements_ignored|default(0) }}. Previous statements remain available in append-only audit history.</p>
+      <p>Venue cash statement comparison · observation only.</p>
+      <p>Reported amounts are not accounting approval. Cash differences and missing venue statements prevent automatic NAV recognition.</p>
+      <div class="table-responsive">
+        <table class="table" aria-label="Unreconciled venue cash statement differences">
+          <thead><tr><th>Venue</th><th>Internal cash</th><th>Source statement</th><th>Difference</th><th>Diagnostic</th></tr></thead>
+          <tbody>
+          {% for venue in sourcePreview.venue_comparison|default([]) %}
+            <tr><td>{{ venue.venue_id }}</td><td>{{ venue.paper_cash is not null ? venue.paper_cash : '—' }}</td><td>{{ venue.statement_cash is not null ? venue.statement_cash : '—' }}</td><td>{{ venue.difference is not null ? venue.difference : '—' }}</td><td>{{ venue.same_amount|default(false) ? 'AMOUNTS MATCH · UNRECONCILED' : 'MISSING OR DIFFERENT · UNRECONCILED' }}</td></tr>
+          {% else %}
+            <tr><td colspan="5">No comparable tenant-scoped venue cash statements available.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="small">Candidate external flows: {{ sourcePreview.candidate_cumulative_external_flow is defined and sourcePreview.candidate_cumulative_external_flow is not null ? sourcePreview.candidate_cumulative_external_flow : '—' }}; candidate liabilities: {{ sourcePreview.candidate_liability_balance is defined and sourcePreview.candidate_liability_balance is not null ? sourcePreview.candidate_liability_balance : '—' }}; authority: {{ sourcePreview.financial_authority|default('OBSERVATION_ONLY') }}. Neither figure enters P&amp;L until independently reconciled.</p>
+      <p class="small">Status is diagnostic only; preflight never writes a snapshot. CLI: <code>cos:capital-markets:nav:collect</code>.</p>
+    </section>
+
+    {% set navWindows = perf.portfolio_nav_windows|default({}) %}
+    <section class="cos-panel" aria-label="Portfolio NAV performance windows">
+      <h2>Portfolio Net P&amp;L Today / 30D · reconciled NAV</h2>
+      <p>Includes mark-to-market of open positions and realized results, adjusted for external cashflows. Incomplete opening or closing valuation means unavailable.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>State</th><th>Net P&amp;L</th><th>Currency</th><th>Reason</th><th>Boundary evidence</th></tr></thead><tbody>
+      {% for code,entry in navWindows %}
+        <tr><td>{{ code == 'today' ? 'Today UTC' : '30D UTC' }}</td><td>{{ entry.status }}</td><td>{{ entry.net_pnl is not null ? entry.net_pnl : '—' }}</td><td>{{ entry.currency|default('—') }}</td><td>{{ entry.reason|default('—') }}</td><td>{{ entry.opening_valued_at|default('—') }} → {{ entry.closing_valued_at|default('—') }}</td></tr>
+      {% else %}<tr><td colspan="6">No reconciled portfolio valuations available.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+    {% set rw = perf.realized_windows|default({}) %}
+    <section class="cos-panel" aria-label="Realized-only UTC performance windows">
+      <h2>Realized P&amp;L by execution time · UTC</h2>
+      <div class="cos-kpi-strip">
+        <twig:CosMoneyMetric label="Today Realized Net" value="{{ rw.today.net_pnl is defined and rw.today.net_pnl is not null ? rw.today.net_pnl : '—' }}" />
+        <twig:CosMetric label="Today Coverage" value="{{ rw.today.coverage|default('0/0') }}" hint="{{ rw.today.status|default('UNAVAILABLE') }}" />
+        <twig:CosMoneyMetric label="30D Realized Net" value="{{ rw['30d'].net_pnl is defined and rw['30d'].net_pnl is not null ? rw['30d'].net_pnl : '—' }}" />
+        <twig:CosMetric label="30D Coverage" value="{{ rw['30d'].coverage|default('0/0') }}" hint="{{ rw['30d'].status|default('UNAVAILABLE') }}" />
+      </div>
+      <p>These values include completed execution economics only, not unrealized daily mark-to-market. Currency: {{ rw.today.currency|default('—') }} / {{ rw['30d'].currency|default('—') }}.</p>
+      {% if rw.today.status|default('UNAVAILABLE') != 'COMPLETE' or rw['30d'].status|default('UNAVAILABLE') != 'COMPLETE' %}
+        <twig:CosAlert title="Incomplete window evidence" copy="At least one time window is unavailable or partial. Undated execution, mismatched currency, missing cost evidence or paginated history suppresses the displayed total." tone="warning" />
+      {% endif %}
+    </section>
+
+    {% set perfView = query.view|default('by_strategy') %}
+    {% set perfViews = {
+      'by_strategy':'Strategy',
+      'by_asset':'Instrument / Asset',
+      'by_venue':'Venue',
+      'by_opportunity_type':'Opportunity Type',
+      'by_instrument_family':'Instrument Family',
+      'by_risk_bucket':'Risk Bucket'
+    } %}
+    {% if perfViews[perfView] is not defined %}{% set perfView = 'by_strategy' %}{% endif %}
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div><h2>P&L Attribution · {{ perfViews[perfView] }}</h2><p>Net P&L is shown beside deployed capital and risk consumed so small absolute profit is not mistaken for superior capital efficiency.</p></div>
+        <div class="d-flex gap-2 flex-wrap">
+          {% for key,label in perfViews %}<a class="btn {{ perfView == key ? 'btn-primary' : 'btn-outline-secondary' }}" href="?view={{ key }}">{{ label }}</a>{% endfor %}
+          <span class="btn btn-outline-secondary disabled" aria-disabled="true">Day · unavailable</span>
+          <span class="btn btn-outline-secondary disabled" aria-disabled="true">Market Regime · unavailable</span>
+        </div>
+      </div>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ perfViews[perfView] }}</th><th>Net P&L</th><th>Deployed Capital</th><th>Risk Consumed</th></tr></thead><tbody>
+      {% for key,x in attr[perfView]|default({}) %}<tr><td>{{ key }}</td><td>{{ x.pnl|default('—') }}</td><td>{{ x.deployed_capital|default('—') }}</td><td>{{ x.risk_consumed|default('—') }}</td></tr>{% else %}<tr><td colspan="4">No attributable performance for this dimension.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel"><h2>Edge Funnel</h2><div class="cos-kpi-strip"><twig:CosMetric label="Detected" value="{{ perf.edge_funnel.detected|default(0) }}" /><twig:CosMetric label="Validated" value="{{ perf.edge_funnel.validated|default(0) }}" /><twig:CosMetric label="Executable" value="{{ perf.edge_funnel.executable|default(0) }}" /><twig:CosMetric label="Executed" value="{{ perf.edge_funnel.executed|default(0) }}" /><twig:CosMetric label="Profitable" value="{{ perf.edge_funnel.profitable|default(0) }}" /></div><p class="mt-2"><strong>Detected / Executable / Realized Edge value:</strong> unavailable until the backend exposes canonical edge-value attribution. Counts remain visible; the UI does not infer money from them.</p></section>
+    <section class="cos-panel">
+      <h2>Cost Breakdown</h2>
+      <p>Missing categories are unavailable, never assumed to be zero. Slippage is not subtracted twice when executable fill prices already contain it.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Category</th><th>Amount</th><th>State</th></tr></thead><tbody>
+      {% for key,item in perf.cost_breakdown|default({}) %}
+        <tr><td>{{ item.label|default(key|upper) }}</td><td>{{ item.value is not null ? item.value : '—' }}</td><td><strong>{{ item.available|default(false) ? 'AVAILABLE' : 'UNAVAILABLE' }}</strong></td></tr>
+      {% else %}
+        <tr><td colspan="3">No canonical cost decomposition is available.</td></tr>
+      {% endfor %}
+      </tbody></table></div>
+    </section>
+
+  {% elseif cmView == 'agents' %}
+    {% set agents = w.agents|default({}) %}
+    <section class="cos-kpi-strip">
+      <twig:CosMetric label="Registered Agents" value="{{ agents.metrics.registered|default(0) }}" hint="Capital Markets governed agents" />
+      <twig:CosMetric label="Recent Runs" value="{{ agents.metrics.recent_runs|default(0) }}" hint="tenant-scoped canonical AgentRun projection" />
+      <twig:CosMetric label="Running" value="{{ agents.metrics.running|default(0) }}" hint="current runtime state" />
+      <twig:CosMetric label="Failed" value="{{ agents.metrics.failed|default(0) }}" hint="recent failures" />
+      <twig:CosMetric label="Tool Calls" value="{{ agents.metrics.tool_calls|default(0) }}" hint="audited tool.execute records linked by correlation" />
+    </section>
+    <section class="cos-panel">
+      <h2>Agent Authority</h2>
+      <p>Authority is explicit. General View shows run summaries; audited tool inputs, outputs and raw results require Audit View. Hidden chain-of-thought is not exposed.</p>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Agent</th><th>Profile</th><th>Version</th><th>Authority</th><th>Execution Mode</th><th>Max autonomous actions</th><th>State</th></tr></thead><tbody>
+      {% for a in agents.definitions|default([]) %}<tr><td><strong>{{ a.name }}</strong></td><td>{{ a.profile }}</td><td>{{ a.version }}</td><td>{{ a.authority }}</td><td>{{ a.execution_mode }}</td><td>{{ a.max_actions_per_run }}</td><td>{{ a.enabled ? 'ENABLED' : 'DISABLED' }}</td></tr>{% else %}<tr><td colspan="7">No Capital Markets agents registered.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <section class="cos-panel">
+      <h2>Recent Agent Runs</h2>
+      {% if not permissions.audit_view|default(false) %}<p>Detailed agent evidence is restricted to users with Audit View permission.</p>{% endif %}
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Run / Task</th><th>Agent</th><th>State</th><th>Decision</th><th>Recommendation</th><th>Tools Used</th><th>Cost</th><th>Errors</th></tr></thead><tbody>
+      {% for run in agents.runs|default([]) %}
+        <tr>
+          <td><strong>{{ run.id }}</strong><br><small>{{ run.current_task|default('—') }}</small></td>
+          <td>{{ run.agent_name|default('—') }}</td>
+          <td>{{ run.status|default('—') }}</td>
+          <td><strong>{{ run.decision|default('—') }}</strong>{% if run.confidence is not null %}<br><small>confidence {{ run.confidence }}</small>{% endif %}</td>
+          <td>{{ run.recommendation|default('—') }}</td>
+          <td>{% for tool in run.tools|default([]) %}<code>{{ tool.name }}</code>{% if not loop.last %}<br>{% endif %}{% else %}<span>—</span>{% endfor %}</td>
+          <td>{{ run.cost_amount is not null ? run.cost_amount ~ ' ' ~ run.cost_currency|default('') : '—' }}{% if run.input_tokens is not null or run.output_tokens is not null %}<br><small>{{ run.input_tokens|default(0) }} in / {{ run.output_tokens|default(0) }} out</small>{% endif %}</td>
+          <td>{{ run.error|default('—') }}</td>
+        </tr>
+        {% if permissions.audit_view|default(false) %}
+        <tr>
+          <td colspan="8">
+            <details>
+              <summary>Run evidence · {{ run.audit_event_count|default(0) }} audit event(s)</summary>
+              <div class="row g-3 mt-1">
+                <div class="col-lg-4"><strong>Findings</strong><ul>{% for finding in run.findings|default([]) %}<li>{{ finding }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul></div>
+                <div class="col-lg-4"><strong>Limitations</strong><ul>{% for limitation in run.limitations|default([]) %}<li>{{ limitation }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul></div>
+                <div class="col-lg-4"><strong>Requested Tools</strong><ul>{% for tool in run.requested_tools|default([]) %}<li><code>{{ tool }}</code></li>{% else %}<li>None requested in this pass.</li>{% endfor %}</ul></div>
+              </div>
+              {% for tool in run.tools|default([]) %}
+                <details class="mt-2">
+                  <summary><code>{{ tool.name }}</code> · audited tool call</summary>
+                  <div class="row g-3 mt-1">
+                    <div class="col-lg-6"><strong>Input</strong><pre>{{ tool.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+                    <div class="col-lg-6"><strong>Output</strong><pre>{{ tool.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+                  </div>
+                </details>
+              {% endfor %}
+              <details class="mt-2">
+                <summary>Structured Result</summary>
+                <pre class="mt-2 mb-0"><code>{{ run.output|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</code></pre>
+              </details>
+              <p class="mt-2"><small>Correlation: <code>{{ run.correlation_id }}</code> · Duration {{ run.duration_ms is not null ? run.duration_ms ~ ' ms' : '—' }}</small></p>
+            </details>
+          </td>
+        </tr>
+        {% endif %}
+      {% else %}<tr><td colspan="8">No recent Capital Markets agent runs.</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+
+  {% elseif cmView == 'data_quality' %}
+    {% set q = w.summary|default({}) %}
+    <section class="cos-kpi-strip">
+      <twig:CosMetric label="Sources Online" value="{{ q.sources_online|default(0) ~ ' / ' ~ q.sources_total|default(0) }}" />
+      <twig:CosMetric label="Trusted Markets" value="{{ q.trusted_markets|default(0) }}" />
+      <twig:CosMetric label="Stale Markets" value="{{ q.stale_markets|default(0) }}" />
+      <twig:CosMetric label="Data Gaps" value="{{ q.data_gaps|default(0) }}" />
+      <twig:CosMetric label="Avg Latency" value="{{ q.avg_latency_ms is not null ? q.avg_latency_ms ~ ' ms' : '—' }}" />
+      <twig:CosMetric label="Critical Issues" value="{{ q.critical_issues|default(0) }}" />
+    </section>
+    <section class="cos-panel">
+      <h2>Sources</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Source</th><th>Role</th><th>Connection</th><th>Last Event</th><th>Latency</th><th>Errors</th><th>Reconnects</th><th>Rate Limit</th><th>Clock / Last Error</th></tr></thead><tbody>
+      {% for s in w.sources|default([]) %}
+        {% set h=s.health|default({}) %}
+        <tr>
+          <td><strong>{{ s.id|default('—') }}</strong></td>
+          <td>{{ s.roles|default([])|join(', ') }}</td>
+          <td>{{ h.connection_state|default(s.enabled|default(false) ? 'UNKNOWN' : 'DISABLED') }}</td>
+          <td>{{ h.last_event_at|default('—') }}</td>
+          <td>{{ h.last_latency_ms is not null ? h.last_latency_ms ~ ' ms' : '—' }}</td>
+          <td>{{ h.error_count|default(h.failure_count|default(0)) }}</td>
+          <td>{{ h.reconnect_count|default(0) }}</td>
+          <td>{{ h.rate_limit_state|default('—') }}</td>
+          <td>{{ h.clock_reliable|default(false) ? 'RELIABLE' : 'UNVERIFIED' }}{% if h.last_error|default('') %}<br><small>{{ h.last_error }}</small>{% endif %}</td>
+        </tr>
+      {% else %}<tr><td colspan="9">No market data sources configured.</td></tr>{% endfor %}
+      </tbody></table></div>
+      <small>Source health is transport/runtime evidence. Market trust is evaluated separately below from canonical MarketState / ReferenceMarketState quality.</small>
+    </section>
+    <section class="cos-panel">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div><h2>Market Quality</h2><p>Freshness is separated by evidence type. An unavailable age is shown as unavailable rather than borrowing a timestamp from another data object.</p></div>
+        <small>Quote / Book / Reference freshness</small>
+      </div>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Instrument</th><th>Venue / Source</th><th>Quote Age</th><th>Book Age</th><th>Reference Age</th><th>Sequence</th><th>Status</th><th>Trust</th><th>Why Untrusted?</th></tr></thead><tbody>
+      {% for s in w.quality_rows|default([]) %}
+        {% set quoteAge = s.quote_age_ms|default(null) %}
+        {% set bookAge = s.book_age_ms|default(null) %}
+        {% set referenceAge = s.reference_age_ms|default(null) %}
+        {% set marketTrust = s.trust|default('UNAVAILABLE') %}
+        {% set referenceTrust = s.reference_trust|default('UNAVAILABLE') %}
+        <tr>
+          <td><strong>{{ s.instrument_id|default('—') }}</strong><br><small>{{ s.mode|default('—') }}</small></td>
+          <td>{{ s.venue_id|default(s.source_id|default('—')) }}</td>
+          <td>{{ quoteAge is not null ? quoteAge ~ ' ms' : '—' }}</td>
+          <td>
+            {{ bookAge is not null ? bookAge ~ ' ms' : '—' }}
+            {% if bookAge is null %}<br><small title="{{ s.book_age_note|default('Independent book freshness is unavailable.') }}">independent age unavailable</small>{% endif %}
+          </td>
+          <td>{{ referenceAge is not null ? referenceAge ~ ' ms' : '—' }}</td>
+          <td>{{ s.sequence|default(s.book_sequence|default('—')) }}</td>
+          <td>{{ s.status|default('UNKNOWN') }}</td>
+          <td><strong>{{ marketTrust }}</strong><br><small>Reference: {{ referenceTrust }}</small></td>
+          <td>
+            {% if s.reasons|default([]) is not empty %}
+              <details><summary>Why untrusted?</summary><ul>{% for reason in s.reasons %}<li>{{ reason }}</li>{% endfor %}</ul></details>
+            {% elseif marketTrust not in ['TRUSTED','REFERENCE_ONLY'] or referenceTrust not in ['TRUSTED','UNAVAILABLE'] %}
+              <span>Untrusted state has no canonical quality flag recorded.</span>
+            {% else %}
+              <span>No quality warning.</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9">No canonical market or reference quality state is currently available.</td></tr>
+      {% endfor %}
+      </tbody></table></div>
+    </section>
+    <twig:CosAlert title="Application health ≠ Market data health" copy="This screen reports market-data trust and source health. Application/runtime health remains a separate COS concern." tone="info" />
+
+  {% elseif cmView == 'not_found' %}
+    <section class="cos-panel"><twig:CosEmptyState title="Capital Markets entity not found" copy="{{ entityType|default('Entity') }} {{ entityId|default('') }} is not present in the current tenant." /></section>
+
+  {% else %}
+    <section class="cos-panel"><twig:CosAlert title="Decision Workspace unavailable" copy="{{ failureMessage|default('The requested Capital Markets view could not be loaded.') }}" tone="danger" /></section>
+  {% endif %}
+
+  <footer class="cos-panel">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+      <small>Decision Workspace principle: WHAT → WHY → MONEY → RISK → ACTION.</small>
+      <div class="d-flex gap-2 flex-wrap">
+        {% if permissions.instrument_view|default(false) %}<a href="/capital-markets/instruments">Instruments registry</a>{% endif %}
+        {% if permissions.relationship_view|default(false) %}<a href="/capital-markets/relationships">Raw relationships</a>{% endif %}
+        {% if permissions.venue_view|default(false) %}<a href="/capital-markets/venues">Venue registry</a>{% endif %}
+        {% if permissions.market_data_manage|default(false) %}<a href="/capital-markets/market-data">Market data administration</a>{% endif %}
+      </div>
+    </div>
+  </footer>
+</div>
+{% endblock %}

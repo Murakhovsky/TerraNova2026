@@ -1,0 +1,22 @@
+<section class="cos-panel" aria-label="{{ title }}">
+    <small>EXPLAINABILITY</small>
+    <h2>{{ title }}</h2>
+    <dl class="mb-0">
+        <dt>What happened</dt>
+        <dd>{{ what ?: 'No human-readable event summary is available.' }}</dd>
+        <dt>Why system cares</dt>
+        <dd>{{ why ?: 'No decision relevance summary is available.' }}</dd>
+        <dt>What data supports it</dt>
+        <dd>
+            <ul class="mb-0">
+                {% for item in evidence %}
+                    <li>{{ item }}</li>
+                {% else %}
+                    <li>No supporting evidence summary is available.</li>
+                {% endfor %}
+            </ul>
+        </dd>
+        <dt>What action is recommended</dt>
+        <dd>{{ recommendedAction ?: 'HOLD / REVIEW' }}</dd>
+    </dl>
+</section>

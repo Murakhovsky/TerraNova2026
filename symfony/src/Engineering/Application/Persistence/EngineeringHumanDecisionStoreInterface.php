@@ -24,6 +24,8 @@ interface EngineeringHumanDecisionStoreInterface
     public function answer(string $requestId, string $selectedOption, ?string $comment, string $decidedBy): array;
 
     /** @return list<array<string,mixed>> */
+    public function autoResolveReadOnlyEvidence(string $requestId): void;
+
     public function openForFeature(string $featureId): array;
 
     /** @return list<array<string,mixed>> */

@@ -224,7 +224,7 @@ final class EngineeringAgentOutputValidator
     {
         $this->required($output, ['status','architecture_decision','implementation_plan','developer_handoff','documentation_changes','conditions','risks','unresolved_questions','required_human_decisions']);
         $status = (string) $output['status'];
-        if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION'], true)) {
+        if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION','NEEDS_REPOSITORY_EVIDENCE'], true)) {
             throw new EngineeringAgentOutputValidationException('Architect gate status is invalid.');
         }
         foreach (['architecture_decision','implementation_plan','developer_handoff'] as $section) {
@@ -315,6 +315,21 @@ final class EngineeringAgentOutputValidator
         if ($status === 'APPROVED_WITH_CONDITIONS' && (!is_array($output['conditions']) || $output['conditions'] === [])) {
             throw new EngineeringAgentOutputValidationException('APPROVED_WITH_CONDITIONS requires explicit conditions.');
         }
+        $requestedFiles = $output['requested_repository_files'] ?? [];
+        if (!is_array($requestedFiles)) {
+            throw new EngineeringAgentOutputValidationException('Architect requested_repository_files must be an array.');
+        }
+        if ($status === 'NEEDS_REPOSITORY_EVIDENCE') {
+            if (count($requestedFiles) < 1 || count($requestedFiles) > 6) {
+                throw new EngineeringAgentOutputValidationException('Repository evidence request must name 1 to 6 exact files.');
+            }
+            if (($output['required_human_decisions'] ?? []) !== []) {
+                throw new EngineeringAgentOutputValidationException('Read-only evidence collection must not trigger a human gate.');
+            }
+        } elseif ($requestedFiles !== []) {
+            throw new EngineeringAgentOutputValidationException('Repository file requests require NEEDS_REPOSITORY_EVIDENCE status.');
+        }
+
         if ($status === 'NEEDS_HUMAN_DECISION') {
             $required = is_array($output['required_human_decisions']) ? $output['required_human_decisions'] : [];
             if (count($required) !== 1 || !is_array($required[0])) {

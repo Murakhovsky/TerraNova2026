@@ -91,6 +91,12 @@ final class TableOwnership
             'tn_capital_market_allocation_plans', 'tn_capital_market_strategy_allocations',
             'tn_capital_market_rebalance_plans', 'tn_capital_market_correlation_snapshots',
             'tn_capital_market_stress_results',
+            'tn_capital_market_portfolio_valuation_snapshots',
+            'tn_capital_market_nav_financial_evidence',
+            'tn_capital_market_paper_nav_snapshots',
+            'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
+            'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
+            'cos_experience_profiles', 'cos_workspace_experience_states',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [
@@ -117,9 +123,6 @@ final class TableOwnership
             'cos_document_templates', 'cos_document_signatures', 'cos_document_operation_receipts',
             'tn_notification_outbox', 'tn_analytics_events',
             'tn_integration_outbox', 'tn_webhook_deliveries', 'tn_migrations',
-            'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
-            'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
-            'cos_experience_profiles', 'cos_workspace_experience_states',
         ],
     ];
 

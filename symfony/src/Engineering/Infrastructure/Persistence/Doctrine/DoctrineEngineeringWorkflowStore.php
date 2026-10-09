@@ -283,8 +283,20 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             )
             ->from('cos_engineering_workflows', 'w')
             ->innerJoin('w', 'cos_engineering_features', 'f', 'f.id = w.feature_id')
-            ->where("w.workflow_type = 'ENGINEERING'")
-            ->andWhere("w.current_state IN ('ANALYSIS','QA_PLANNING','ARCHITECTURE_PENDING','DEVELOPMENT_RUNNING','REVIEW_PENDING','QA_PENDING')")
+            ->where("(w.workflow_type = 'ENGINEERING'
+                OR (w.workflow_type = 'ENGINEERING_IMMEDIATE' AND w.current_state = 'HUMAN_DECISION_REQUIRED'))")
+            ->andWhere("(w.current_state IN ('ANALYSIS','QA_PLANNING','ARCHITECTURE_PENDING','DEVELOPMENT_RUNNING','REVIEW_PENDING','QA_PENDING')
+                OR (w.current_state = 'HUMAN_DECISION_REQUIRED'
+                    AND w.resume_state = 'ARCHITECTURE_PENDING'
+                    AND EXISTS (
+                        SELECT 1 FROM cos_engineering_human_decision_requests d
+                        WHERE d.feature_id = w.feature_id
+                          AND d.workflow_execution_id = w.id
+                          AND d.status = 'OPEN'
+                          AND d.blocking = 1
+                          AND d.type = 'WORKFLOW_EVIDENCE_REFRESH'
+                          AND d.recommended_option = 'REFRESH_EVIDENCE'
+                    )))")
             ->andWhere("COALESCE(w.health_status, 'HEALTHY') <> 'STALLED'")
             ->orderBy("CASE f.priority WHEN 'P0' THEN 0 WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 9 END", 'ASC')
             ->addOrderBy('w.started_at', 'ASC')
@@ -404,11 +416,37 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
             initiatedByType: $context->initiatedByType,
             initiatedById: $context->initiatedById,
             metadata: $context->metadata,
+            sequenceNo: $transition->sequence,
             createdAt: $transition->createdAt,
             agentRunId: $context->agentRunId,
             humanDecisionId: $context->humanDecisionId,
         ));
         $this->entityManager->flush();
+
+        $metadata = is_array($context->metadata) ? $context->metadata : [];
+        $this->events->append(
+            $transition->featureId,
+            $transition->workflowExecutionId,
+            'WORKFLOW',
+            'workflow.transition',
+            'COMPLETED',
+            $transition->from->value.' -> '.$transition->to->value,
+            [
+                'agent_role' => $metadata['agent_role'] ?? null,
+                'state_from' => $transition->from->value,
+                'state_to' => $transition->to->value,
+                'logical_attempt' => $metadata['logical_attempt'] ?? null,
+                'technical_retry' => $metadata['technical_retry'] ?? null,
+                'revision' => $metadata['revision'] ?? $metadata['repository_revision'] ?? null,
+                'provider' => $metadata['provider'] ?? null,
+                'model' => $metadata['model'] ?? null,
+                'cost' => $metadata['cost'] ?? null,
+                'result' => $context->trigger,
+            ],
+            $context->agentRunId,
+            $record->traceId(),
+        );
+
         $this->observer->afterPersisted($transition);
     }
 

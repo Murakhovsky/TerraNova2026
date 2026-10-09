@@ -588,8 +588,11 @@ final readonly class EngineeringDeveloperStageExecutor
                 continue;
             }
 
-            if (!isset($plannedModify[$path])) {
-                throw new RuntimeException('Developer change is outside Principal Architect files_to_modify: '.$path);
+            $isFixingFeatureCreatedFile = $operation === 'UPDATE'
+                && isset($plannedCreate[$path])
+                && isset($evidence[$path]);
+            if (!isset($plannedModify[$path]) && !$isFixingFeatureCreatedFile) {
+                throw new RuntimeException('Developer change is outside Principal Architect files_to_modify/files_to_create fix scope: '.$path);
             }
             if (!isset($evidence[$path])) {
                 throw new RuntimeException('Developer change lacks repository evidence: '.$path);

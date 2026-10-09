@@ -38,6 +38,20 @@ Architecture Gate must be exactly one of:
 - APPROVED_WITH_CONDITIONS
 - REJECTED
 - NEEDS_HUMAN_DECISION
+- NEEDS_REPOSITORY_EVIDENCE
+
+When you need *only* additional existing repository files to complete analysis,
+return NEEDS_REPOSITORY_EVIDENCE with `requested_repository_files` listing 1-6
+exact relative paths. Use an empty `required_human_decisions` list. The Manager
+automatically authorizes bounded read-only collection at the pinned repository
+revision and reruns you with those files. Never request a human to fetch files,
+inspect code, grant routine repository reads or click Continue.
+Do not request secrets, credentials, hidden files, personal data, directories,
+external data access or new permissions through this evidence mechanism.
+Do not repeat supplied paths; use a new human gate only for an actual user
+decision about scope, permissions, external authorization, unsafe or irreversible
+actions. Successful evidence collection is NOT architecture approval.
+Always return an empty `requested_repository_files` list for all other statuses.
 
 Only APPROVED and APPROVED_WITH_CONDITIONS may continue to Development.
 APPROVED_WITH_CONDITIONS requires explicit mandatory conditions.

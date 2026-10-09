@@ -76,6 +76,41 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         return $result;
     }
 
+    public function existingPathsAtRevision(array $paths, string $revision): array
+    {
+        $this->assertAvailable();
+        $revision = trim($revision);
+        if ($revision === '') throw new RuntimeException('Repository revision is required.');
+
+        $wanted = [];
+        foreach (array_slice(array_values(array_unique($paths)), 0, 20) as $rawPath) {
+            if (!is_string($rawPath)) continue;
+            $path = $this->assertPath($rawPath);
+            $wanted[$path] = true;
+        }
+        if ($wanted === []) return [];
+
+        $commit = $this->request('GET', '/git/commits/'.rawurlencode($revision), null, [200]);
+        $treeSha = trim((string) ($commit['tree']['sha'] ?? ''));
+        if ($treeSha === '') {
+            throw new RuntimeException('GitHub commit '.$revision.' does not expose a tree.');
+        }
+
+        $tree = $this->request('GET', '/git/trees/'.rawurlencode($treeSha).'?recursive=1', null, [200]);
+        $existing = [];
+        foreach (is_array($tree['tree'] ?? null) ? $tree['tree'] : [] as $entry) {
+            if (!is_array($entry) || ($entry['type'] ?? null) !== 'blob') continue;
+            $path = (string) ($entry['path'] ?? '');
+            if ($path !== '' && isset($wanted[$path])) {
+                $existing[] = $path;
+                unset($wanted[$path]);
+                if ($wanted === []) break;
+            }
+        }
+
+        return $existing;
+    }
+
     public function compareRevisions(string $baseRevision, string $headRevision): array
     {
         $this->assertAvailable();

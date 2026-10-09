@@ -52,10 +52,31 @@ jobs:
       - run: npm run build
       - name: Current verification
         run: bash bin/verify fast
-      - name: Capital Markets Capital Risk acceptance
+      - name: Capital Markets Capital Risk and Decision Workspace acceptance
         run: |
+          php tests/unit/capital_markets_cross_venue_discovery.php
+          php tests/integration/capital_markets_cross_venue_operator.php
+          php tests/unit/realtime_hub_origin.php
+          php tests/unit/capital_markets_realized_pnl_windows.php
+          php tests/unit/capital_markets_historical_basis.php
+          php tests/unit/capital_markets_portfolio_nav_windows.php
+          php tests/unit/capital_markets_nav_snapshot_producer.php
+          php tests/unit/capital_markets_nav_independent_reconciliation.php
+          php tests/unit/capital_markets_paper_nav.php
+          php tests/unit/capital_markets_nav_source_freshness.php
+          php tests/unit/capital_markets_nav_spot_mark_evidence.php
+          php tests/unit/capital_markets_nav_financial_evidence.php
+          php tests/unit/capital_markets_nav_source_document.php
+          php tests/unit/capital_markets_nav_statement_reconciliation.php
+          php tests/unit/capital_markets_nav_remediation_planner.php
+          php tests/unit/capital_markets_ledger_integrity_audit.php
           php tests/integration/capital_markets_capital_risk_acceptance.php
           php tests/integration/capital_markets_capital_risk_manager_acceptance.php
+          php tests/unit/capital_markets_decision_workspace_projection.php
+          php tests/unit/capital_markets_decision_workspace_visibility.php
+          php tests/unit/capital_markets_decision_workspace_freshness.php
+          php tests/integration/capital_markets_decision_workspace_acceptance.php
+          php tests/integration/capital_markets_decision_workspace_manager_acceptance.php
       - name: Compose validation
         run: docker compose config --quiet
       - name: Build runtime
@@ -66,10 +87,62 @@ jobs:
         run: |
           docker compose run --rm --no-deps php php bin/console cos:schema:migrate
           docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Verify Capital Markets universe in production image
+        run: |
+          docker compose run --rm --no-deps php sh -c 'test -r /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv && test "$(wc -l < /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv)" -eq 81'
       - name: Start runtime
         run: docker compose up -d --remove-orphans
       - name: Federation tenant-persistence smoke
         run: docker compose exec -T php php bin/console cos:federation:persistence:smoke
+      - name: Capital Markets paper NAV persistence integration
+        run: |
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_capital_market_paper_portfolios
+              (organization_id,currency,initial_capital,available_capital,reserved_capital,realized_pnl)
+            VALUES ('paper-nav-ci','USD',10000,10000,0,0);
+          "
+          docker compose exec -T php php bin/console cos:capital-markets:paper:nav:snapshot \
+            --organization=paper-nav-ci --portfolio=paper-master > /tmp/cm-paper-nav.json
+          grep -q '"status":"SIMULATED"' /tmp/cm-paper-nav.json
+          grep -q '"equity":"10000"' /tmp/cm-paper-nav.json
+          grep -q '"certified":false' /tmp/cm-paper-nav.json
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT COUNT(*) FROM tn_capital_market_paper_nav_snapshots WHERE organization_id='paper-nav-ci'")" = "1"
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT COUNT(*) FROM tn_capital_market_portfolio_valuation_snapshots WHERE organization_id='paper-nav-ci'")" = "0"
+      - name: Capital Markets NAV financial evidence import integration
+        run: |
+          docker compose cp tests/fixtures/capital_markets_nav_external_flow.json php:/tmp/nav-external-flow.json
+          docker compose cp tests/fixtures/capital_markets_nav_external_flow_source.txt php:/tmp/nav-source.txt
+          docker compose exec -T php sh -c 'printf tampered > /tmp/nav-source-corrupt.txt'
+          if docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json --source-file=/tmp/nav-source-corrupt.txt \
+            > /tmp/nav-source-rejected.json; then
+            echo 'Source-document checksum mismatch was incorrectly accepted.'
+            exit 1
+          fi
+          grep -q '"status":"REJECTED"' /tmp/nav-source-rejected.json
+          docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json --source-file=/tmp/nav-source.txt \
+            > /tmp/nav-import.json
+          grep -q 'RECORDED_PENDING_RECONCILIATION' /tmp/nav-import.json
+          grep -q '"approved":false' /tmp/nav-import.json
+          if docker compose exec -T php php bin/console cos:capital-markets:nav:evidence:import \
+            --organization=default --portfolio=paper-master --file=/tmp/nav-external-flow.json --source-file=/tmp/nav-source.txt \
+            > /tmp/nav-duplicate.json; then
+            echo 'Duplicate source evidence was incorrectly accepted.'
+            exit 1
+          fi
+          grep -q '"status":"REJECTED"' /tmp/nav-duplicate.json
+          if docker compose exec -T php php bin/console cos:capital-markets:nav:collect \
+            --organization=default --portfolio=paper-master > /tmp/nav-preflight.json; then
+            echo 'Unreconciled NAV preflight was incorrectly accepted.'
+            exit 1
+          fi
+          grep -q '"status":"BLOCKED"' /tmp/nav-preflight.json
+          grep -q 'EXTERNAL_FLOW_RECONCILIATION_PENDING' /tmp/nav-preflight.json
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT COUNT(*) FROM tn_capital_market_nav_financial_evidence WHERE organization_id='default' AND evidence_id='ci-external-flow-20261007'")" = "1"
       - name: Engineering AgentRun FK integration
         run: |
           docker compose cp tests/integration/engineering_agent_run_fk.php php:/tmp/engineering_agent_run_fk.php
@@ -81,6 +154,13 @@ jobs:
             -e DB_USERNAME="$MYSQL_USER" \
             -e DB_PASSWORD="$MYSQL_PASSWORD" \
             php php /tmp/engineering_agent_run_fk.php
+      - name: Engineering V0.1 operational acceptance
+        run: |
+          docker compose exec -T \
+            -e APP_ENV=test \
+            -e APP_DEBUG=1 \
+            -e COS_ENGINEERING_FIXTURE_REPOSITORY_STATE=/tmp/cos-engineering-v01-fixture-repository.json \
+            php php tests/integration/engineering_v01_operational.php
       - name: Sales governance remediation integration
         run: |
           docker compose cp tests/integration/sales_qualification_governance_repair.php php:/tmp/sales_qualification_governance_repair.php
@@ -142,12 +222,17 @@ jobs:
           docker compose exec -T php php bin/console cos:experience:routes:debt --strict --no-interaction
       - name: Smoke vertical slices
         run: bash bin/verify smoke
+      - name: Capital Markets Decision Workspace Twig lint
+        run: docker compose exec -T php php bin/console lint:twig templates/experience/capital_markets/decision_workspace.html.twig
+
       - name: Production cutover Web routes
         env:
           COS_WEB_SMOKE_BASE_URL: http://127.0.0.1:8081
           COS_WEB_SMOKE_EMAIL: production-cutover-web@example.test
           COS_WEB_SMOKE_PASSWORD: Production-Cutover-Web-CI-Ab9!
           COS_WEB_FOREIGN_USER_EMAIL: foreign-tenant-user@example.test
+          COS_CM_RESTRICTED_EMAIL: cm-limited-acceptance@example.test
+          COS_CM_RESTRICTED_PASSWORD: CM-Limited-Acceptance-CI-Ab9!
         run: |
           WEB_HASH="$(php -r 'echo password_hash(getenv("COS_WEB_SMOKE_PASSWORD"), PASSWORD_DEFAULT);')"
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
@@ -191,6 +276,33 @@ jobs:
           test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "SELECT full_name FROM tn_users WHERE id=$FOREIGN_USER_ID AND organization_id='foreign-tenant' LIMIT 1")" = "Foreign Tenant User"
           if ! CHROME_PATH="$CHROME_BIN" node tests/browser/production_cutover_dynamic_details.mjs; then
             docker compose logs --no-color --tail=250 php nginx
+            exit 1
+          fi
+          if ! CHROME_PATH="$CHROME_BIN" node tests/browser/capital_markets_decision_workspace.mjs; then
+            docker compose logs --no-color --tail=300 php nginx
+            exit 1
+          fi
+          # A real non-admin principal must not see portfolio/risk/audit data
+          # through shared HTML projections or Opportunity JSON/CSV exports.
+          RESTRICTED_HASH="$(php -r 'echo password_hash(getenv("COS_CM_RESTRICTED_PASSWORD"), PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
+            VALUES ('default','$COS_CM_RESTRICTED_EMAIL','$RESTRICTED_HASH','Capital Markets Limited QA','manager','active')
+            ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),role='manager',status='active';
+            INSERT INTO cos_organization_memberships (organization_id,user_id,role,status)
+            SELECT 'default',id,'manager','ACTIVE' FROM tn_users WHERE email='$COS_CM_RESTRICTED_EMAIL'
+            ON DUPLICATE KEY UPDATE role='manager',status='ACTIVE';
+            INSERT INTO capital_market_user_capabilities (organization_id,user_id,capability,status,granted_by)
+            SELECT 'default',id,'capital_markets.view','ACTIVE','cm-decision-workspace-ci'
+            FROM tn_users WHERE email='$COS_CM_RESTRICTED_EMAIL'
+            ON DUPLICATE KEY UPDATE status='ACTIVE';
+            INSERT INTO capital_market_user_capabilities (organization_id,user_id,capability,status,granted_by)
+            SELECT 'default',id,'capital_markets.opportunity.view','ACTIVE','cm-decision-workspace-ci'
+            FROM tn_users WHERE email='$COS_CM_RESTRICTED_EMAIL'
+            ON DUPLICATE KEY UPDATE status='ACTIVE';
+          "
+          if ! CHROME_PATH="$CHROME_BIN" node tests/browser/capital_markets_decision_workspace_visibility.mjs; then
+            docker compose logs --no-color --tail=300 php nginx
             exit 1
           fi
       - name: Seed Sales functional acceptance

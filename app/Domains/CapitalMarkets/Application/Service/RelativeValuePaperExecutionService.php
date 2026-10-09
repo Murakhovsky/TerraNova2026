@@ -222,6 +222,8 @@ final readonly class RelativeValuePaperExecutionService
         $payload=[
             'id'=>$executionId,'execution_id'=>$executionId,'opportunity_id'=>$opportunityId,'hypothesis'=>$hypothesis,
             'status'=>$status,'opened_at'=>$now->format(DATE_ATOM),'holding_until'=>$holdUntil->format(DATE_ATOM),
+            'quote_asset'=>$this->quoteAsset($firstState)===$this->quoteAsset($secondState)
+                ?$this->quoteAsset($firstState):null,
             'strategy_version'=>$strategy,'execution_policy'=>'SIMULTANEOUS','maximum_unhedged_time_ms'=>$maxUnhedgedMs,
             'simulated_leg_latency_ms'=>$simulatedLegLatencyMs,'matched_quantity'=>$matched->value(),
             'partial_fill'=>!$simulation['first']['fully_filled']||!$simulation['second']['fully_filled'],

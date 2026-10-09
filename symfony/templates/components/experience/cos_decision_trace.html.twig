@@ -1,0 +1,19 @@
+<section class="cos-panel" aria-label="{{ label }}">
+    <h2>{{ label }}</h2>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        {% for step in steps %}
+            {% if not loop.first %}<span aria-hidden="true">→</span>{% endif %}
+            {% set text = step.type|default('Step') ~ ' · ' ~ step.label|default('—') %}
+            {% if step.value is defined and step.value is not null %}
+                {% set text = text ~ ' · ' ~ step.value %}
+            {% endif %}
+            {% if step.href|default('') %}
+                <a class="btn btn-outline-secondary" href="{{ step.href }}">{{ text }}</a>
+            {% else %}
+                <span class="btn btn-outline-secondary disabled" aria-disabled="true">{{ text }}</span>
+            {% endif %}
+        {% else %}
+            <p class="mb-0">{{ emptyCopy }}</p>
+        {% endfor %}
+    </div>
+</section>

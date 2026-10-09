@@ -57,6 +57,7 @@ return [
             'app/migrations/20261006_000132_capital_markets_crypto_spot_perpetual.sql',
             'app/migrations/20261006_000133_capital_markets_research_lab.sql',
             'app/migrations/20261008_000134_capital_markets_capital_risk.sql',
+            'app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql',
         ],
         'capabilities'=>[
             'capital_markets.research.result.record',

@@ -27,8 +27,11 @@ foreach (['status','architecture_decision','implementation_plan','developer_hand
     if (!in_array($field, $architect['required'], true)) throw new RuntimeException('Architect schema missing '.$field);
 }
 $architectStatuses = $architect['properties']['status']['enum'] ?? [];
-if ($architectStatuses !== ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION']) {
+if ($architectStatuses !== ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION','NEEDS_REPOSITORY_EVIDENCE']) {
     throw new RuntimeException('Architect gate statuses do not match canonical Architecture Gate.');
+}
+if (($architect['properties']['requested_repository_files']['maxItems'] ?? null) !== 6) {
+    throw new RuntimeException('Read-only Architect evidence request is not bounded.');
 }
 if (($architect['properties']['documentation_changes']['maxItems'] ?? null) !== 5) {
     throw new RuntimeException('Architect documentation change budget is not bounded.');

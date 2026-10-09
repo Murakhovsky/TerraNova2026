@@ -44,6 +44,15 @@ final class EngineeringV01AcceptanceVerifier
         'QA_PENDING',
     ];
 
+    /** @var list<string> */
+    private const REQUIRED_RECOVERY_STATES = [
+        'QA_PLANNING',
+        'ARCHITECTURE_PENDING',
+        'DEVELOPMENT_RUNNING',
+        'REVIEW_PENDING',
+        'QA_PENDING',
+    ];
+
     /**
      * @param array<string,mixed> $status
      * @param list<array<string,mixed>> $audit
@@ -163,6 +172,7 @@ final class EngineeringV01AcceptanceVerifier
             in_array($recommendation, ['READY_FOR_HUMAN_APPROVAL', 'DONE'], true),
             'Final Report recommendation='.$recommendation.'.',
         );
+        $checks[] = $this->staticAnalysisCheck($final);
 
         if ($scenario === 'fix-loop') {
             $this->appendFixLoopChecks($checks, $runs, $audit);
@@ -271,7 +281,7 @@ final class EngineeringV01AcceptanceVerifier
                 ++$reviewerRuns;
                 if (($output['status'] ?? null) === 'REQUEST_CHANGES') $defectDetected = true;
             }
-            if ($role === 'QA' && ($output['phase'] ?? null) === 'EXECUTION' && ($output['status'] ?? null) === 'FAIL') $defectDetected = true;
+            if ($role === 'QA_EXECUTOR' && ($output['phase'] ?? null) === 'EXECUTION' && ($output['status'] ?? null) === 'FAIL') $defectDetected = true;
         }
 
         $checks[] = $this->check('fix_loop_defect_detected', $defectDetected, $defectDetected ? 'Reviewer/QA rejected at least one implementation revision.' : 'No REQUEST_CHANGES or QA FAIL evidence found.');
@@ -337,16 +347,28 @@ final class EngineeringV01AcceptanceVerifier
 
         $workflowId = (string) ($workflow['id'] ?? '');
         $valid = false;
+        $recoveredState = '';
         foreach ($events as $event) {
             if (!is_array($event)) continue;
             if (($event['workflow_id'] ?? null) !== $workflowId) continue;
-            if (!in_array((string) ($event['state'] ?? ''), self::RESUMABLE_STATES, true)) continue;
+            $state = (string) ($event['state'] ?? '');
+            if (!in_array($state, self::REQUIRED_RECOVERY_STATES, true)) continue;
             if (trim((string) ($event['correlation_id'] ?? '')) === '') continue;
             if ((int) ($event['recovered_stale_runs'] ?? 0) < 1) continue;
             $valid = true;
+            $recoveredState = $state;
             break;
         }
-        $checks[] = $this->check('recovery_continue_evidence', $valid, $valid ? 'Persisted cos:engineering:continue evidence exists for this workflow.' : 'No valid recovery continuation evidence found.');
+        $checks[] = $this->check(
+            'recovery_continue_evidence',
+            $valid,
+            $valid ? 'Persisted cos:engineering:continue evidence exists for '.$recoveredState.'.' : 'No valid recovery continuation evidence found.',
+        );
+        $checks[] = $this->check(
+            'recovery_required_state',
+            $valid,
+            $valid ? 'Recovered interruption state '.$recoveredState.' is part of the mandatory release suite.' : 'Recovery evidence does not cover a mandatory interruption state.',
+        );
 
         $workflowIds = [];
         foreach ($audit as $transition) {
@@ -355,6 +377,30 @@ final class EngineeringV01AcceptanceVerifier
             if ($id !== '') $workflowIds[$id] = true;
         }
         $checks[] = $this->check('recovery_single_workflow', count($workflowIds) === 1, 'Workflow ids in audit='.count($workflowIds).'.');
+    }
+
+    /** @param array<string,mixed> $final */
+    private function staticAnalysisCheck(array $final): array
+    {
+        $ci = is_array($final['ci'] ?? null) ? $final['ci'] : [];
+        foreach (is_array($ci['checks'] ?? null) ? $ci['checks'] : [] as $check) {
+            if (!is_array($check)) continue;
+            $name = strtolower(trim((string) ($check['name'] ?? '')));
+            $status = strtolower((string) ($check['status'] ?? ''));
+            $conclusion = strtolower((string) ($check['conclusion'] ?? ''));
+            if (
+                $status === 'completed'
+                && $conclusion === 'success'
+                && (
+                    str_contains($name, 'static analysis')
+                    || str_contains($name, 'phpstan')
+                    || str_contains($name, 'psalm')
+                )
+            ) {
+                return $this->check('static_analysis_success', true, 'Explicit successful static-analysis CI evidence exists.');
+            }
+        }
+        return $this->check('static_analysis_success', false, 'No explicit successful static-analysis CI check was found.');
     }
 
     /** @param list<array<string,mixed>> $audit @param list<string> $targets */

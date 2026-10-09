@@ -13,10 +13,10 @@ final readonly class DoctrineEngineeringAuditQuery implements EngineeringAuditQu
     public function forFeature(string $featureId): array
     {
         $rows = $this->entityManager->getConnection()->fetchAllAssociative(
-            'SELECT id, workflow_execution_id, from_state, to_state, transition_trigger, reason, initiated_by_type, initiated_by_id, agent_run_id, human_decision_id, metadata, created_at
+            'SELECT id, workflow_execution_id, from_state, to_state, transition_trigger, reason, initiated_by_type, initiated_by_id, agent_run_id, human_decision_id, metadata, sequence_no, created_at
              FROM cos_engineering_transitions
              WHERE feature_id = :feature_id
-             ORDER BY created_at ASC, id ASC',
+             ORDER BY sequence_no ASC, created_at ASC, id ASC',
             ['feature_id' => $featureId],
         );
 
@@ -39,6 +39,7 @@ final readonly class DoctrineEngineeringAuditQuery implements EngineeringAuditQu
                 'agent_run_id' => $row['agent_run_id'],
                 'human_decision_id' => $row['human_decision_id'],
                 'based_on' => is_array($metadata) ? $metadata : [],
+                'sequence' => (int) $row['sequence_no'],
                 'when' => $row['created_at'],
             ];
         }, $rows);

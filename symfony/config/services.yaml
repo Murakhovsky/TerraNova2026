@@ -46,6 +46,8 @@ parameters:
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '3'
+  env(COS_CM_PAPER_NAV_SCHEDULER_ENABLED): '0'
+  env(COS_CM_PAPER_NAV_SCHEDULER_INTERVAL_MINUTES): '10'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED): '1'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_RUNTIME_STALE_SECONDS): '600'
@@ -316,6 +318,9 @@ services:
       $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringDomainAutonomyEnabled: '%env(bool:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED)%'
       $engineeringDomainAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $capitalMarketsPaperNavEnabled: '%env(bool:COS_CM_PAPER_NAV_SCHEDULER_ENABLED)%'
+      $capitalMarketsPaperNavOrganizationId: '%env(COS_ORGANIZATION_ID)%'
+      $capitalMarketsPaperNavIntervalMinutes: '%env(int:COS_CM_PAPER_NAV_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringRuntimeWatchdogEnabled: '%env(bool:COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED)%'
       $engineeringRuntimeWatchdogIntervalMinutes: '%env(int:COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES)%'
 
@@ -1945,6 +1950,10 @@ services:
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder: ~
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceMarketDataDecoder: ~
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder: ~
@@ -1959,6 +1968,7 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
 
@@ -1968,6 +1978,7 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
 
@@ -1977,6 +1988,16 @@ services:
     alias: Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability
 
   Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
+
+  Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~
+  Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery: ~
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  App\Web\CapitalMarkets\CrossVenueDiscoveryController:
+    public: true
+    tags: ['controller.service_arguments']
 
   Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService: ~
 
@@ -2056,7 +2077,42 @@ services:
       $metrics: '@Kernel\Operations\Contract\MetricsRecorderInterface'
       $logger: '@Kernel\Observability\StructuredLoggerInterface'
 
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioValuationSnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\PortfolioValuationSnapshotRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioValuationSnapshotRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioNavFinancialEvidenceRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\PortfolioNavFinancialEvidenceRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioNavFinancialEvidenceRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPaperNavSnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\PaperNavSnapshotRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPaperNavSnapshotRepository
+
+  Domains\CapitalMarkets\Application\Service\PaperNavSnapshotService: ~
+
+  Domains\CapitalMarkets\Application\Service\PortfolioNavEvidenceCollector: ~
+
+  Domains\CapitalMarkets\Application\Service\PortfolioNavSnapshotProducer: ~
+
+  Domains\CapitalMarkets\Application\Service\PortfolioNavIndependentReconciliationService: ~
+
+  App\Command\CapitalMarketsNavCollectCommand: ~
+
+  App\Command\CapitalMarketsNavEvidenceImportCommand: ~
+
   Domains\CapitalMarkets\Application\Service\CapitalRiskService: ~
+
+  Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService: ~
 
   Domains\CapitalMarkets\Domain\Research\StrategyPromotionGate: ~
   Domains\CapitalMarkets\Domain\Research\StrategyScorecardEngine: ~
@@ -2221,6 +2277,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\CapitalMarkets\CapitalRiskPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\CapitalMarkets\DecisionWorkspacePageController:
     public: true
     tags: ['controller.service_arguments']
 
@@ -2533,6 +2593,7 @@ services:
         sales.stage-history.v1: '@Domains\Sales\Automation\Event\SalesHistoricalEventConsumer'
         diagnostic.action-outcome.v1: '@Domains\Diagnostic\Automation\Handler\DiagnosticActionOutcomeHandler'
         platform.async-operations-realtime.v1: '@App\Web\Experience\Async\AsyncOperationRealtimeEventConsumer'
+        capital-markets.decision-workspace-realtime.v1: '@App\Web\CapitalMarkets\CapitalMarketsRealtimeEventConsumer'
         growth.outcome-feedback.v1: '@Domains\Growth\Automation\Event\GrowthOutcomeFeedbackConsumer'
         growth.response-classification.v1: '@Domains\Growth\Automation\Event\GrowthResponseClassificationConsumer'
         growth.conversation-routing.v1: '@Domains\Growth\Automation\Event\GrowthConversationRoutingConsumer'

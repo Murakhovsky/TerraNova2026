@@ -279,6 +279,42 @@ try {
 } catch (EngineeringAgentOutputValidationException) {
 }
 
+// Read-only repository evidence is explicitly NOT a human decision.
+$architectEvidence = $architect;
+$architectEvidence['status'] = 'NEEDS_REPOSITORY_EVIDENCE';
+$architectEvidence['requested_repository_files'] = ['symfony/src/Engineering/Application/Workflow/EngineeringWorkflowCoordinator.php'];
+$architectEvidence['required_human_decisions'] = [];
+$architectEvidence['conditions'] = [];
+$validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $architectEvidence);
+
+$architectEvidenceWithoutFiles = $architectEvidence;
+$architectEvidenceWithoutFiles['requested_repository_files'] = [];
+try {
+    $validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $architectEvidenceWithoutFiles);
+    throw new RuntimeException('Architect evidence request without paths was accepted.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$architectEvidenceAsHuman = $architectEvidence;
+$architectEvidenceAsHuman['required_human_decisions'] = [[
+    'question' => 'May I read an existing file?',
+    'reason' => 'Need evidence.',
+    'options' => [['id' => 'ALLOW'], ['id' => 'DENY']],
+]];
+try {
+    $validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $architectEvidenceAsHuman);
+    throw new RuntimeException('Architect evidence request incorrectly created human gate.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
+$architectApprovalWithPendingFiles = $architect;
+$architectApprovalWithPendingFiles['requested_repository_files'] = ['tests/unit/engineering_agent_contracts.php'];
+try {
+    $validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $architectApprovalWithPendingFiles);
+    throw new RuntimeException('Architect approved architecture with unresolved evidence request.');
+} catch (EngineeringAgentOutputValidationException) {
+}
+
 $architectHuman = $architect;
 $architectHuman['status'] = 'NEEDS_HUMAN_DECISION';
 $architectHuman['conditions'] = [];

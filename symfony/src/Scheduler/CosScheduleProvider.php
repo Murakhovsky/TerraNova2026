@@ -13,6 +13,7 @@ use App\Application\Growth\Command\RunGrowthMarketDiscoveryCommand;
 use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
 use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
+use App\Application\CapitalMarkets\Command\CapturePaperNavSnapshot;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -50,6 +51,9 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly int $engineeringDomainAutonomyIntervalMinutes = 3,
         private readonly bool $engineeringRuntimeWatchdogEnabled = true,
         private readonly int $engineeringRuntimeWatchdogIntervalMinutes = 2,
+        private readonly bool $capitalMarketsPaperNavEnabled = false,
+        private readonly string $capitalMarketsPaperNavOrganizationId = '',
+        private readonly int $capitalMarketsPaperNavIntervalMinutes = 10,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
@@ -86,6 +90,12 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if($this->engineeringDomainAutonomyIntervalMinutes<1||$this->engineeringDomainAutonomyIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering Domain autonomy interval must be between 1 and 60 minutes.');
+        }
+        if ($this->capitalMarketsPaperNavIntervalMinutes<10||$this->capitalMarketsPaperNavIntervalMinutes>60) {
+            throw new InvalidArgumentException('Paper NAV snapshot interval must be 10..60 minutes to preserve 31-day history integrity.');
+        }
+        if ($this->capitalMarketsPaperNavEnabled && trim($this->capitalMarketsPaperNavOrganizationId)==='') {
+            throw new InvalidArgumentException('Paper NAV scheduler requires an existing tenant ID.');
         }
         if($this->engineeringRuntimeWatchdogIntervalMinutes<1||$this->engineeringRuntimeWatchdogIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering runtime watchdog interval must be between 1 and 60 minutes.');
@@ -173,6 +183,16 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthAutonomousOutreachIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthAutonomousOutreachCommand('scheduler'), 'async'),
+            );
+        }
+
+        if ($this->capitalMarketsPaperNavEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsPaperNavIntervalMinutes.' minutes',
+                new RedispatchMessage(
+                    new CapturePaperNavSnapshot($this->capitalMarketsPaperNavOrganizationId),
+                    'async',
+                ),
             );
         }
 

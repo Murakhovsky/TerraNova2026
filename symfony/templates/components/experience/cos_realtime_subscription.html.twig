@@ -1,6 +1,8 @@
 <div
     class="cos-realtime-subscription"
     data-controller="realtime-connection"
+    data-realtime-connection-enabled-value="{{ this.canSubscribe ? 'true' : 'false' }}"
+    data-realtime-subscription-status="{{ this.canSubscribe ? 'enabled' : 'unavailable' }}"
     data-realtime-connection-topic-value="{{ topic.value }}"
     data-realtime-connection-signal-target-value="{{ signalTarget }}"
     data-action="
@@ -9,6 +11,7 @@
         turbo:before-stream-render@document->realtime-connection#stream
     "
 >
+    {% if this.canSubscribe %}
     <span
         hidden
         aria-hidden="true"
@@ -17,4 +20,8 @@
             withCredentials: true
         }) }}
     ></span>
+    {% else %}
+    {# Never mint a private Mercure cookie for an incompatible browser origin. #}
+    <span hidden aria-hidden="true" data-realtime-subscription-unavailable="origin-mismatch"></span>
+    {% endif %}
 </div>

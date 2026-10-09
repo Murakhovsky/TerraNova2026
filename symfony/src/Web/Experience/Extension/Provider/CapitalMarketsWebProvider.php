@@ -13,10 +13,22 @@ use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
 use App\Web\Experience\Search\SearchResultMatcher;
 use App\Web\Experience\Shell\ShellCommandItem;
+use Domains\CapitalMarkets\Application\Service\DecisionWorkspaceReadService;
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
+use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Tenant\Contract\TenantContextProviderInterface;
+use Throwable;
 
 final readonly class CapitalMarketsWebProvider implements NavigationProviderInterface,SearchProviderInterface,CommandProviderInterface,WorkspaceProviderInterface
 {
-    public function __construct(private SearchResultMatcher $matcher){}
+    public function __construct(
+        private SearchResultMatcher $matcher,
+        private DecisionWorkspaceReadService $workspace,
+        private TenantContextProviderInterface $tenants,
+        private CapitalMarketsAccessControlInterface $access,
+        private ActiveModuleResolver $modules,
+    ) {}
 
     public function serviceId():string{return 'capitalMarketsNavigationContributor';}
 
@@ -25,56 +37,133 @@ final readonly class CapitalMarketsWebProvider implements NavigationProviderInte
         return [
             new NavigationContribution('capital-markets','Capital Markets','/capital-markets','CM',35),
             new NavigationContribution('capital-markets-overview','Overview','/capital-markets',priority:10,parentKey:'capital-markets'),
-            new NavigationContribution('capital-markets-instruments','Instruments','/capital-markets/instruments',priority:20,parentKey:'capital-markets'),
-            new NavigationContribution('capital-markets-relationships','Relationships','/capital-markets/relationships',priority:30,parentKey:'capital-markets'),
-            new NavigationContribution('capital-markets-venues','Venues','/capital-markets/venues',priority:40,parentKey:'capital-markets'),
-            new NavigationContribution('capital-markets-market-data','Market Data','/capital-markets/market-data',priority:50,parentKey:'capital-markets'),
-            new NavigationContribution('capital-markets-tokenized-equity','Tokenized Equity','/capital-markets/tokenized-equities',priority:60,parentKey:'capital-markets'),
-            new NavigationContribution('capital-markets-crypto-spot-perpetual','Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual',priority:70,parentKey:'capital-markets'),
-            new NavigationContribution('capital-markets-research','Research Lab','/capital-markets/research',priority:80,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-opportunities','Opportunities','/capital-markets/opportunities',priority:20,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-markets','Markets','/capital-markets/markets',priority:30,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-discovery','Discovery','/capital-markets/discovery',priority:35,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-research','Research','/capital-markets/research',priority:40,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-strategies','Strategies','/capital-markets/strategies',priority:50,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-portfolio','Portfolio','/capital-markets/portfolio',priority:60,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-allocation','Allocation','/capital-markets/allocation',priority:70,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-execution','Execution','/capital-markets/execution',priority:80,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-risk','Risk','/capital-markets/risk',priority:90,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-performance','Performance','/capital-markets/performance',priority:100,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-agents','Agents','/capital-markets/agents',priority:110,parentKey:'capital-markets'),
+            new NavigationContribution('capital-markets-data-quality','Data Quality','/capital-markets/data-quality',priority:120,parentKey:'capital-markets'),
         ];
     }
 
     public function search(WebExtensionContext $context,string $query,int $limit=10):array
     {
-        return $this->matcher->match([
-            new SearchResult('capital_markets.search.overview','Capital Markets','/capital-markets','workspace','Financial instrument foundation'),
-            new SearchResult('capital_markets.search.instruments','Capital Markets Instruments','/capital-markets/instruments','workspace','Instrument identity registry'),
-            new SearchResult('capital_markets.search.relationships','Capital Markets Relationships','/capital-markets/relationships','workspace','Economic relationship graph'),
-            new SearchResult('capital_markets.search.venues','Capital Markets Venues','/capital-markets/venues','workspace','Venue registry and capabilities'),
-            new SearchResult('capital_markets.search.market_data','Capital Markets Market Data','/capital-markets/market-data','workspace','Sources, subscriptions, health and trusted market state'),
-            new SearchResult('capital_markets.search.tokenized_equity','Tokenized Equity','/capital-markets/tokenized-equities','workspace','H1/H2 dislocations, paper execution and P&L'),
-            new SearchResult('capital_markets.search.crypto_spot_perpetual','Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual','workspace','H4 basis, H5 funding capture and H6 cross-venue funding'),
-            new SearchResult('capital_markets.search.research','Research & Strategy Lab','/capital-markets/research','workspace','Hypotheses, experiments, OOS, scorecards, promotion and research knowledge'),
-        ],$query,$limit);
+        $items = [
+            new SearchResult('capital_markets.search.overview','Capital Markets Overview','/capital-markets','workspace','Capital, profit, risk, opportunities and recommended action'),
+            new SearchResult('capital_markets.search.opportunities','Opportunity Board','/capital-markets/opportunities','workspace','Portfolio-adjusted opportunities and expected net economics'),
+            new SearchResult('capital_markets.search.markets','Market Explorer','/capital-markets/markets','workspace','Instrument, relationship and venue market views'),
+            new SearchResult('capital_markets.search.discovery','Cross-Venue Discovery','/capital-markets/discovery','workspace','Verify Binance bStocks candidates against Binance, Bybit and Kraken live listings'),
+            new SearchResult('capital_markets.search.research','Capital Markets Research','/capital-markets/research','workspace','Hypotheses, experiments, OOS, paper and rejected research'),
+            new SearchResult('capital_markets.search.strategies','Capital Markets Strategies','/capital-markets/strategies','workspace','Strategy versions, scorecards and promotion gates'),
+            new SearchResult('capital_markets.search.portfolio','Portfolio Command Center','/capital-markets/portfolio','workspace','Capital location, gross/net exposure and allocation'),
+            new SearchResult('capital_markets.search.allocation','Allocation Workspace','/capital-markets/allocation','workspace','Constrained capital allocation and rebalance recommendations'),
+            new SearchResult('capital_markets.search.execution','Execution Cockpit','/capital-markets/execution','workspace','Paper execution groups, hedge state and recovery evidence'),
+            new SearchResult('capital_markets.search.risk','Risk Center','/capital-markets/risk','workspace','Risk state, limits, headroom and stress results'),
+            new SearchResult('capital_markets.search.performance','Performance Center','/capital-markets/performance','workspace','Net performance, attribution, costs and edge funnel'),
+            new SearchResult('capital_markets.search.agents','Capital Markets Agents','/capital-markets/agents','workspace','Research and Portfolio agent authority and recent runs'),
+            new SearchResult('capital_markets.search.data_quality','Capital Markets Data Quality','/capital-markets/data-quality','workspace','Source health, stale data and market trust'),
+            new SearchResult('capital_markets.search.instruments','Capital Markets Instruments','/capital-markets/instruments','workspace','Canonical instrument registry'),
+            new SearchResult('capital_markets.search.relationships','Raw Economic Relationships','/capital-markets/relationships','workspace','Canonical economic relationship registry'),
+            new SearchResult('capital_markets.search.venues','Capital Markets Venues','/capital-markets/venues','workspace','Canonical venue registry and capabilities'),
+            new SearchResult('capital-markets-market-data','Market Data Administration','/capital-markets/market-data','workspace','Market source configuration and polling'),
+            new SearchResult('capital_markets.search.tokenized_equity','Tokenized Equity Vertical Slice','/capital-markets/tokenized-equities','workspace','H1/H2 operator surface and paper execution'),
+            new SearchResult('capital_markets.search.crypto_spot_perpetual','Crypto Spot / Perpetual Vertical Slice','/capital-markets/crypto-spot-perpetual','workspace','H4/H5/H6 operator surface and paper execution'),
+        ];
+
+        // WebExtensionContext has no authenticated actor ID. Do not infer permissions
+        // from its role string: resolve the actual tenant principal and fail closed.
+        $tenant = $this->tenants->current();
+        if (
+            $tenant !== null
+            && $tenant->organizationId()->value() === $context->organizationId
+            && $this->modules->isEnabled($context->organizationId, 'capital_markets')
+        ) {
+            $actorId = (int)$tenant->userId()->value();
+            $can = fn(CapitalMarketsCapability $capability): bool =>
+                $this->access->hasCapability($context->organizationId, $actorId, $capability->value)
+                || $this->access->hasCapability($context->organizationId, $actorId, CapitalMarketsCapability::Manage->value);
+            $entityPermissions = [
+                'instrument' => $can(CapitalMarketsCapability::InstrumentView),
+                'hypothesis' => $can(CapitalMarketsCapability::ResearchView),
+                'strategy' => $can(CapitalMarketsCapability::ResearchView),
+                'opportunity' => $can(CapitalMarketsCapability::OpportunityView) && $can(CapitalMarketsCapability::PortfolioView),
+                'execution' => $can(CapitalMarketsCapability::OpportunityView),
+            ];
+            if (in_array(true, $entityPermissions, true)) {
+                try {
+                    foreach ($this->workspace->searchEntities($context->organizationId) as $entity) {
+                        if (!($entityPermissions[(string)($entity['kind'] ?? '')] ?? false)) {
+                            continue;
+                        }
+                        $items[] = new SearchResult(
+                            id: $entity['id'],
+                            label: $entity['label'],
+                            path: $entity['path'],
+                            kind: $entity['kind'],
+                            subtitle: $entity['subtitle'],
+                        );
+                    }
+                } catch (Throwable) {
+                    // Search stays usable when one allowed read model is degraded.
+                }
+            }
+        }
+
+        return $this->matcher->match($items,$query,$limit);
     }
 
     public function commands(WebExtensionContext $context):array
     {
         return [
-            new ShellCommandItem('capital_markets.open','Open Capital Markets','/capital-markets','navigation','Capital Markets'),
-            new ShellCommandItem('capital_markets.instruments','Open Instruments','/capital-markets/instruments','navigation','Capital Markets'),
-            new ShellCommandItem('capital_markets.relationships','Open Relationships','/capital-markets/relationships','navigation','Capital Markets'),
-            new ShellCommandItem('capital_markets.venues','Open Venues','/capital-markets/venues','navigation','Capital Markets'),
-            new ShellCommandItem('capital_markets.market_data','Open Market Data','/capital-markets/market-data','navigation','Capital Markets'),
-            new ShellCommandItem('capital_markets.tokenized_equity','Open Tokenized Equity','/capital-markets/tokenized-equities','navigation','Capital Markets'),
-            new ShellCommandItem('capital_markets.crypto_spot_perpetual','Open Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual','navigation','Capital Markets'),
-            new ShellCommandItem('capital_markets.research','Open Research Lab','/capital-markets/research','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.open','Open Capital Markets','/capital-markets','navigation','Decision Workspace'),
+            new ShellCommandItem('capital_markets.opportunities','Open Opportunities','/capital-markets/opportunities','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.markets','Open Markets','/capital-markets/markets','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.research','Open Research','/capital-markets/research','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.strategies','Open Strategies','/capital-markets/strategies','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.portfolio','Open Portfolio','/capital-markets/portfolio','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.allocation','Open Allocation','/capital-markets/allocation','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.execution','Open Execution','/capital-markets/execution','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.risk','Open Risk','/capital-markets/risk','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.performance','Open Performance','/capital-markets/performance','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.agents','Open Agents','/capital-markets/agents','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.data_quality','Open Data Quality','/capital-markets/data-quality','navigation','Capital Markets'),
+            new ShellCommandItem('capital_markets.instruments','Open Instrument Registry','/capital-markets/instruments','navigation','Capital Markets · Advanced'),
+            new ShellCommandItem('capital_markets.market_data_admin','Open Market Data Admin','/capital-markets/market-data','navigation','Capital Markets · Advanced'),
         ];
     }
 
     public function workspaces(WebExtensionContext $context):array
     {
         return [
-            new WorkspaceDefinition('capital_markets.overview','Capital Markets','/capital-markets',null,10),
-            new WorkspaceDefinition('capital_markets.instruments','Capital Markets Instruments','/capital-markets/instruments',null,20),
-            new WorkspaceDefinition('capital_markets.instrument','Capital Markets Instrument','/capital-markets/instruments','capital_markets.instrument',30),
-            new WorkspaceDefinition('capital_markets.relationships','Capital Markets Relationships','/capital-markets/relationships',null,40),
-            new WorkspaceDefinition('capital_markets.venues','Capital Markets Venues','/capital-markets/venues',null,50),
-            new WorkspaceDefinition('capital_markets.market_data','Capital Markets Market Data','/capital-markets/market-data',null,60),
-            new WorkspaceDefinition('capital_markets.tokenized_equity','Tokenized Equity','/capital-markets/tokenized-equities',null,70),
-            new WorkspaceDefinition('capital_markets.crypto_spot_perpetual','Crypto Spot / Perpetual','/capital-markets/crypto-spot-perpetual',null,80),
-            new WorkspaceDefinition('capital_markets.research','Research & Strategy Lab','/capital-markets/research',null,90),
+            new WorkspaceDefinition('capital_markets.overview','Capital Markets Overview','/capital-markets',null,10),
+            new WorkspaceDefinition('capital_markets.opportunities','Opportunity Board','/capital-markets/opportunities',null,20),
+            new WorkspaceDefinition('capital_markets.opportunity','Opportunity','/capital-markets/opportunities','capital_markets.opportunity',30),
+            new WorkspaceDefinition('capital_markets.markets','Market Explorer','/capital-markets/markets',null,40),
+            new WorkspaceDefinition('capital_markets.research','Capital Markets Research','/capital-markets/research',null,50),
+            new WorkspaceDefinition('capital_markets.hypothesis','Research Hypothesis','/capital-markets/research/hypotheses','capital_markets.hypothesis',60),
+            new WorkspaceDefinition('capital_markets.strategies','Strategies','/capital-markets/strategies',null,70),
+            new WorkspaceDefinition('capital_markets.strategy','Strategy','/capital-markets/strategies','capital_markets.strategy',80),
+            new WorkspaceDefinition('capital_markets.portfolio','Portfolio Command Center','/capital-markets/portfolio',null,90),
+            new WorkspaceDefinition('capital_markets.allocation','Allocation Workspace','/capital-markets/allocation',null,100),
+            new WorkspaceDefinition('capital_markets.execution','Execution Cockpit','/capital-markets/execution',null,110),
+            new WorkspaceDefinition('capital_markets.execution_detail','Execution','/capital-markets/execution','capital_markets.execution',120),
+            new WorkspaceDefinition('capital_markets.risk','Risk Center','/capital-markets/risk',null,130),
+            new WorkspaceDefinition('capital_markets.performance','Performance Center','/capital-markets/performance',null,140),
+            new WorkspaceDefinition('capital_markets.agents','Agent Center','/capital-markets/agents',null,150),
+            new WorkspaceDefinition('capital_markets.data_quality','Data Quality Center','/capital-markets/data-quality',null,160),
+            new WorkspaceDefinition('capital_markets.instruments','Capital Markets Instruments','/capital-markets/instruments',null,200),
+            new WorkspaceDefinition('capital_markets.instrument','Capital Markets Instrument','/capital-markets/instruments','capital_markets.instrument',210),
+            new WorkspaceDefinition('capital_markets.relationships','Raw Economic Relationships','/capital-markets/relationships',null,220),
+            new WorkspaceDefinition('capital_markets.venues','Capital Markets Venues','/capital-markets/venues',null,230),
+            new WorkspaceDefinition('capital_markets.market_data','Market Data Administration','/capital-markets/market-data',null,240),
+            new WorkspaceDefinition('capital_markets.tokenized_equity','Tokenized Equity Vertical Slice','/capital-markets/tokenized-equities',null,250),
+            new WorkspaceDefinition('capital_markets.crypto_spot_perpetual','Crypto Spot / Perpetual Vertical Slice','/capital-markets/crypto-spot-perpetual',null,260),
         ];
     }
 }

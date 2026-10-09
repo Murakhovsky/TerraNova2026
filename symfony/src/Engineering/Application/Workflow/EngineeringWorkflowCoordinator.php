@@ -101,6 +101,39 @@ final readonly class EngineeringWorkflowCoordinator
         };
     }
 
+    /**
+     * Restore a legacy evidence-only gate using a SYSTEM transition.
+     * This is not a human approval and may only resume the Architect stage.
+     */
+    public function resumeAfterAutomaticEvidenceRefresh(
+        WorkflowExecution $workflow,
+        string $requestId,
+        string $revision,
+    ): WorkflowDirective {
+        if ($workflow->currentState() !== EngineeringWorkflowState::HUMAN_DECISION_REQUIRED
+            || $workflow->resumeState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
+            throw new LogicException('Only an Architect evidence-only gate may be automatically resumed.');
+        }
+
+        $transition = $this->engine->transition(
+            $workflow,
+            EngineeringWorkflowState::ARCHITECTURE_PENDING,
+            new WorkflowTransitionContext(
+                trigger: 'REPOSITORY_EVIDENCE_AUTO_AUTHORIZED',
+                reason: 'Manager policy classified read-only repository evidence as a technical action.',
+                initiatedByType: 'SYSTEM',
+                initiatedById: 'engineering-manager-policy',
+                metadata: ['evidence_request_id' => $requestId, 'repository_revision' => $revision],
+            ),
+        );
+        return new WorkflowDirective(
+            WorkflowDirectiveType::RUN_AGENT,
+            AgentRole::PRINCIPAL_ARCHITECT,
+            'Repository evidence refresh is authorized; rerun Architect without human approval.',
+            [$transition],
+        );
+    }
+
     public function specialistRework(WorkflowExecution $workflow, string $reason): WorkflowDirective
     {
         if ($workflow->currentState() === EngineeringWorkflowState::DEVELOPMENT_RUNNING) {

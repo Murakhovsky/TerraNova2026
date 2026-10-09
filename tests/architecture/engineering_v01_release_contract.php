@@ -45,6 +45,16 @@ foreach ([
     if (!str_contains($qa, $needle)) throw new RuntimeException('V0.1 QA release contract missing '.$needle);
 }
 
+if (!str_contains($qa, "'Static Analysis'") || !str_contains($qa, "str_contains(\$name, 'phpstan')")) {
+    throw new RuntimeException('V0.1 requires an explicit static-analysis CI gate.');
+}
+if (str_contains($qa, "\$name === 'fast'") || str_contains($qa, "\$name === 'ci'")) {
+    throw new RuntimeException('Generic CI/fast checks must not impersonate static analysis.');
+}
+if (str_contains($qa, "['success','neutral','skipped']")) {
+    throw new RuntimeException('Required V0.1 CI gates must not accept neutral/skipped as success.');
+}
+
 if (!str_contains($finalize, "if (!\$pr['merged']")) throw new RuntimeException('V0.1 DONE must require verified human merge.');
 if (count($evaluation['cases'] ?? []) < 30) throw new RuntimeException('V0.1 requires at least 30 engineering evals.');
 
@@ -54,6 +64,9 @@ foreach ([
     'fix_loop_full_rerun_chain',
     'human_gate_resume_exact_stage',
     'recovery_continue_evidence',
+    'recovery_required_state',
+    'static_analysis_success',
+    'QA_EXECUTOR',
 ] as $needle) {
     if (!str_contains($acceptance, $needle)) throw new RuntimeException('V0.1 acceptance verifier missing '.$needle);
 }

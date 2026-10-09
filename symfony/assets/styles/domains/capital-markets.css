@@ -1,0 +1,80 @@
+/*
+ * Capital Markets Decision Workspace responsive containment.
+ *
+ * Wide financial tables stay locally scrollable on compact screens. Grid/flex
+ * children must be allowed to shrink or their intrinsic table width can expand
+ * the whole page, which makes the mobile decision surface unusable.
+ */
+.cos-capital-markets,
+.cos-capital-markets .cos-panel,
+.cos-capital-markets .row > *,
+.cos-capital-markets .table-responsive {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cos-capital-markets .table-responsive {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cos-capital-markets .cm-saved-views,
+.cos-capital-markets .cm-export-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cos-space-2);
+}
+
+
+/* Keep the decision-first Overview above the fold: twelve workspace routes
+   should not turn into a multi-row button wall on narrow viewports. */
+.cos-capital-markets > nav[aria-label="Capital Markets primary workspace navigation"] {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  gap: var(--cos-space-2);
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.cos-capital-markets > nav[aria-label="Capital Markets primary workspace navigation"] > a {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cos-capital-markets pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 650px) {
+  .cos-capital-markets .cm-saved-views > .btn {
+    flex: 1 1 auto;
+  }
+
+  .cos-capital-markets .table-responsive {
+    width: 100%;
+  }
+}
+
+
+/* The decision status contains both financial KPIs and transport/health details.
+ * A flex row compresses the KPI grid to one narrow column at laptop widths.
+ * Give the financial metrics the full content width; put status on its own row.
+ */
+.cos-capital-markets .cm-global-status-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--cos-space-3);
+}
+
+.cos-capital-markets .cm-global-status-layout > * {
+  min-width: 0;
+}
+
+.cos-capital-markets .cm-global-status-layout .cos-kpi-strip {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+}

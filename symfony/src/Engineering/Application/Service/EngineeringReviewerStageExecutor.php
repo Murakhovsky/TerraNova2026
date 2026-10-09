@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Engineering\Application\Service;
 
 use App\Engineering\Application\Agent\EngineeringAgentOutputValidator;
+use App\Engineering\Application\Agent\EngineeringAgentRunResult;
 use App\Engineering\Application\Agent\EngineeringSpecialistReportCollector;
 use App\Engineering\Application\Agent\EngineeringAgentRunnerInterface;
 use App\Engineering\Application\Context\EngineeringStandardsProvider;
@@ -251,6 +252,18 @@ final readonly class EngineeringReviewerStageExecutor
             }
             $this->validator->validate(AgentRole::REVIEWER, $reviewOutput);
             $this->assertAcceptanceCriteriaCoverage($featureSpec['content'], $reviewOutput);
+            $run = new EngineeringAgentRunResult(
+                runId: $run->runId,
+                role: $run->role,
+                status: $run->status,
+                structuredOutput: $reviewOutput,
+                provider: $run->provider,
+                model: $run->model,
+                usage: $run->usage,
+                error: $run->error,
+                technicalRetries: $run->technicalRetries,
+                steps: $run->steps,
+            );
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,

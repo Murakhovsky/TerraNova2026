@@ -32,6 +32,8 @@ class WorkflowTransitionRecord
         private string $initiatedById,
         #[ORM\Column(type: Types::JSON)]
         private array $metadata,
+        #[ORM\Column(type: Types::INTEGER)]
+        private int $sequenceNo,
         #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
         private DateTimeImmutable $createdAt,
         #[ORM\Column(type: Types::STRING, length: 36, nullable: true)]

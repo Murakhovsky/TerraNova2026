@@ -119,4 +119,82 @@ if (!str_contains($engineeringLlmObserver, 'touchRuntime(')) {
     throw new RuntimeException('Engineering background LLM polling does not refresh workflow heartbeat.');
 }
 
+$repositoryGateway = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Repository/GitHubEngineeringRepositoryGateway.php');
+if (!str_contains($repositoryGateway, 'existingPathsAtRevision')
+    || !str_contains($repositoryGateway, '/git/trees/')) {
+    throw new RuntimeException('Engineering repository path existence lookup is not bounded to a tree query.');
+}
+if (!str_contains($architectStage, 'repository.verify_documentation_targets')
+    || !str_contains($architectStage, 'existingPathsAtRevision')
+    || !str_contains($architectStage, 'touchRuntime($workflowId)')) {
+    throw new RuntimeException('Architect post-LLM documentation verification can still become an unobservable stall.');
+}
+
+foreach ([
+    'architect.llm_result_received',
+    'architect.postprocess_validation_started',
+    'architect.postprocess_validation_completed',
+    'architect.persistence_started',
+    'architect.agent_run_persisted',
+    'architect.persistence_completed',
+] as $checkpoint) {
+    if (!str_contains($architectStage, $checkpoint)) {
+        throw new RuntimeException('Principal Architect post-LLM checkpoint missing: '.$checkpoint);
+    }
+}
+$agentRunStore = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php');
+$observabilityReadModel = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Observability/DoctrineEngineeringObservabilityReadModel.php');
+$governedLlm = (string) file_get_contents($root.'/app/Kernel/Llm/GovernedStructuredLlmClient.php');
+
+if (substr_count($agentRunStore, "['startedAt' => 'DESC']") < 2) {
+    throw new RuntimeException('Engineering AgentRun lists must be newest-first for feature and workflow views.');
+}
+if (!str_contains($observabilityReadModel, 'ORDER BY u.created_at DESC, u.id DESC')) {
+    throw new RuntimeException('Engineering LLM invocation lists must be newest-first.');
+}
+if (!str_contains($governedLlm, "\$engineeringAgentUseCase")
+    || !str_contains($governedLlm, "\$request->useCase !== 'agent.run'")) {
+    throw new RuntimeException('Engineering LLM completion is still coupled to synchronous operational metric writes.');
+}
+
+$agentRunRecord = (string) file_get_contents($root.'/symfony/src/Persistence/Doctrine/Entity/Engineering/AgentRunRecord.php');
+$agentRunStore = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php');
+$featureTemplate = (string) file_get_contents($root.'/symfony/templates/experience/engineering/feature.html.twig');
+
+if (!str_contains($agentRunStore, 'currentAgentRunId() === $record->id()')
+    || !str_contains($agentRunStore, '$workflow->heartbeatAt()')
+    || !str_contains($agentRunStore, "'duration_basis'")) {
+    throw new RuntimeException('Engineering stale AgentRun recovery is still based on run age instead of attributable heartbeat.');
+}
+if (!str_contains($agentRunRecord, 'recoverStale(')
+    || !str_contains($agentRunRecord, '$this->finishedAt = $effectiveFinishedAt')) {
+    throw new RuntimeException('Recovered AgentRun duration still ends at recovery time instead of last known activity.');
+}
+if (!str_contains($featureTemplate, 'до останньої ознаки життя')) {
+    throw new RuntimeException('Engineering UI does not explain STALE_RUN_RECOVERY duration semantics.');
+}
+
+$llmProgressObserver = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Llm/EngineeringStructuredLlmProgressObserver.php');
+$runtimeWatchdogHandler = (string) file_get_contents($root.'/symfony/src/Application/Engineering/Command/WatchEngineeringRuntimeCommandHandler.php');
+
+if (!str_contains($llmProgressObserver, "'current_agent_run_id'")
+    || !str_contains($llmProgressObserver, 'touchRuntime(')
+    || str_contains($llmProgressObserver, "touchRuntime(\$workflowId, null, \$taskId")) {
+    throw new RuntimeException('Engineering LLM progress heartbeat is not attributed to the persisted current AgentRun.');
+}
+if (!str_contains($agentRunStore, 'recoverStalledForOrganization')
+    || !str_contains($agentRunStore, "w.health_status = 'STALLED'")
+    || !str_contains($agentRunStore, 'w.current_agent_run_id = r.id')) {
+    throw new RuntimeException('STALLED Engineering workflows can still leave zombie RUNNING AgentRuns.');
+}
+if (!str_contains($runtimeWatchdogHandler, 'recoverStalledForOrganization')) {
+    throw new RuntimeException('Engineering runtime watchdog does not reconcile stalled AgentRuns.');
+}
+
+$engineeringFeatureController = (string) file_get_contents($root.'/symfony/src/Web/Engineering/EngineeringFeatureController.php');
+if (!str_contains($engineeringFeatureController, 'recoverStalledForOrganization($organizationId)')
+    || !str_contains($engineeringFeatureController, 'refreshRuntimeHealthForOrganization($organizationId)')) {
+    throw new RuntimeException('Engineering Resume can still be blocked by a zombie RUNNING AgentRun.');
+}
+
 echo "Engineering runtime truth and observability contract passed.\n";

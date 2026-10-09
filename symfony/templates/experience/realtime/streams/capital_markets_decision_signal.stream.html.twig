@@ -1,0 +1,11 @@
+<turbo-stream action="update" target="cos-capital-markets-signal">
+    <template>
+        <span
+            data-event-id="{{ event.id }}"
+            data-event-type="{{ event.type }}"
+            data-aggregate-type="{{ event.aggregate_type }}"
+            data-aggregate-id="{{ event.aggregate_id }}"
+            data-event-occurred-at="{{ event.occurred_at|date('c') }}"
+        ></span>
+    </template>
+</turbo-stream>

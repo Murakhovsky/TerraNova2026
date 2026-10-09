@@ -1,0 +1,94 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+
+{% block title %}Cross-Venue Discovery · Capital Markets{% endblock %}
+
+{% block workspace_content %}
+<div class="cos-page__stack cos-capital-markets">
+  <header class="cos-growth-header">
+    <div>
+      <small>Capital Markets · Market Intelligence</small>
+      <h1>Пошук інструментів на різних біржах</h1>
+      <p>Історичний каталог bStocks → перевірка актуального лістингу на Binance, Bybit і Kraken.</p>
+    </div>
+  </header>
+
+  <div class="cos-panel">
+    <h2>Початковий каталог</h2>
+    <p><strong>{{ watchlist|length }}</strong> кандидатів із файлу bStocks Binance.
+      Час даних: <strong>27.09.2026 17:53 UTC</strong>. Це не актуальні котирування та не підтвердження прав на токен.</p>
+    <p><a href="/capital-markets/market-data">Налаштувати джерела котирувань</a> ·
+      <a href="/capital-markets/instruments">Реєстр інструментів</a> ·
+      <a href="/capital-markets/markets">Market Explorer</a></p>
+    {% if canScan %}
+      <form method="post" action="/capital-markets/discovery/scan" class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label for="discovery-limit">Обсяг сканування:</label>
+        <select class="form-select" id="discovery-limit" name="limit">
+          <option value="10">Перші 10 кандидатів</option>
+          <option value="80">Усі 80 кандидатів</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Перевірити лістинги через API</button>
+      </form>
+      <p><small>Три публічні каталоги. Запуск лише вручну, не частіше ніж раз на 90 секунд для організації.</small></p>
+    {% else %}
+      <p>Для запуску перевірки потрібен дозвіл Market Data Manage.</p>
+    {% endif %}
+  </div>
+
+  {% if scanned %}<div class="cos-alert cos-alert--success">Результат перевірки збережено.</div>{% endif %}
+  {% if cooldown %}<div class="cos-alert cos-alert--warning">Зачекайте 90 секунд між перевірками.</div>{% endif %}
+  {% if scanError %}<div class="cos-alert cos-alert--danger">Не вдалося провести сканування. Подивіться серверні журнали.</div>{% endif %}
+
+  {% if snapshot is null %}
+    <section class="cos-panel">
+      <h2>Немає виконаних сканувань</h2>
+      <p>Запустіть перевірку 10 кандидатів. До цього часу всі лістинги вважаються непідтвердженими.</p>
+    </section>
+  {% else %}
+    <section class="cos-panel">
+      <h2>Остання перевірка</h2>
+      <p>{{ snapshot.as_of_utc }} · кандидатів {{ snapshot.total }} · знімок незмінний після збереження.</p>
+      <div class="cos-kpi-strip">
+        {% for venue, health in snapshot.source_health %}
+          <article class="cos-card">
+            <strong>{{ venue }}</strong>
+            <p>{{ health.state }}</p>
+            <small>{% if health.count is not null %}{{ health.count }} активних USD/USDT пар у каталозі{% else %}Каталог недоступний{% endif %}</small>
+            {% if health.reason|default('') %}<p>{{ health.reason }}</p>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="cos-panel">
+      <h2>Результати пошуку</h2>
+      <p>Статус «LISTED» означає лише наявність символу в публічному каталозі. Ідентичність токенів, його забезпечення, конвертація валют і можливість виконання угоди <strong>не перевірені</strong>.</p>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Underlying</th><th>Binance bStock</th><th>Плече</th><th>Binance</th><th>Bybit</th><th>Kraken</th><th>Стан</th></tr></thead>
+          <tbody>
+            {% for row in snapshot.rows %}
+              <tr>
+                <td>{{ row.candidate.underlying }}</td>
+                <td>{{ row.candidate.token }}</td>
+                <td>{{ row.candidate.leverage }}</td>
+                {% for venue in row.venues %}
+                  <td>
+                    <strong>{{ venue.status }}</strong>
+                    {% if venue.symbol|default(null) %}<div><small>{{ venue.symbol }} / {{ venue.quote }}</small></div>{% endif %}
+                  </td>
+                {% endfor %}
+                <td>{{ row.economic_link }} · PAPER ONLY</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="cos-panel">
+      <h2>Що далі?</h2>
+      <p>Підтверджені символи вручну співвідносяться з реєстром COS. Після перевірки ідентичності, типу інструмента та біржових правил налаштовуються Market Data subscriptions і збираються Bid/Ask. Лише тоді їх можна передавати до Opportunity Engine.</p>
+      <a href="/capital-markets/market-data">Перейти до налаштування Market Data →</a>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}
