@@ -4,10 +4,15 @@ export default class extends Controller {
     static values = {
         topic: String,
         signalTarget: String,
+        enabled: Boolean,
     };
 
     connect() {
         this.reconnectTimer = null;
+        if (!this.enabledValue) {
+            this.apply('unavailable');
+            return;
+        }
         this.apply(navigator.onLine ? 'live' : 'offline');
     }
 
@@ -16,17 +21,20 @@ export default class extends Controller {
     }
 
     online() {
+        if (!this.enabledValue) return;
         this.apply('reconnecting');
         this.clearReconnectTimer();
         this.reconnectTimer = window.setTimeout(() => this.apply('live'), 1500);
     }
 
     offline() {
+        if (!this.enabledValue) return;
         this.clearReconnectTimer();
         this.apply('offline');
     }
 
     stream(event) {
+        if (!this.enabledValue) return;
         if (!navigator.onLine) {
             return;
         }
