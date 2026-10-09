@@ -42,8 +42,19 @@ final readonly class EngineeringStructuredLlmProgressObserver implements Structu
                 return;
             }
 
-            $taskId = trim((string) ($metadata['engineering_task_id'] ?? ''));
-            $this->workflows->touchRuntime($workflowId, null, $taskId !== '' ? $taskId : null);
+            $workflow = $this->workflows->view($workflowId);
+            $currentAgentRunId = trim((string) ($workflow['current_agent_run_id'] ?? ''));
+
+            // engineering_task_id is an execution correlation id, not a persisted
+            // cos_engineering_tasks.id. Passing it as current_task_id violates the FK,
+            // made every background-poll heartbeat fail, and the exception was deliberately
+            // swallowed here to avoid breaking the provider call. Attribute liveness to the
+            // persisted current AgentRun instead.
+            $this->workflows->touchRuntime(
+                $workflowId,
+                $currentAgentRunId !== '' ? $currentAgentRunId : null,
+                null,
+            );
 
             if ($pollCount === 0 || in_array($status, ['completed','failed','cancelled','incomplete'], true)) {
                 $terminal = in_array($status, ['completed','failed','cancelled','incomplete'], true);
