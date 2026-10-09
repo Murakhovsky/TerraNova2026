@@ -71,6 +71,17 @@ foreach ([
 }
 
 foreach ([
+    '<strong>error_type:</strong>',
+    '<strong>error_message:</strong>',
+    '<strong>Architecture Gate:</strong>',
+    "run.output.status|default('')",
+] as $needle) {
+    if (!str_contains($template, $needle)) {
+        throw new RuntimeException('Engineering agent diagnostic details missing '.$needle);
+    }
+}
+
+foreach ([
     'window.setInterval',
     'default: 10000',
     'this.intervalValue || 10000',
