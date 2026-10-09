@@ -4,9 +4,10 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Infrastructure\Persistence\MySql;
 
 use Domains\CapitalMarkets\Application\Contract\TokenizedEquityVerticalSliceRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\PaperNavConsistentAccountingInterface;
 use PDO;
 
-final readonly class MysqlTokenizedEquityVerticalSliceRepository implements TokenizedEquityVerticalSliceRepositoryInterface
+final readonly class MysqlTokenizedEquityVerticalSliceRepository implements TokenizedEquityVerticalSliceRepositoryInterface, PaperNavConsistentAccountingInterface
 {
     public function __construct(private PDO $connection){}
 
@@ -271,6 +272,30 @@ final readonly class MysqlTokenizedEquityVerticalSliceRepository implements Toke
         $statement->execute(['org'=>$organizationId]);
         $row=$statement->fetch(PDO::FETCH_ASSOC);
         return is_array($row)?$row:null;
+    }
+
+    /** One MVCC revision for all capital, positions, cash, trades and ledger. */
+    public function paperAccountingSnapshot(string $organizationId):array
+    {
+        if ($this->connection->inTransaction()) {
+            throw new \RuntimeException('PAPER_NAV_SNAPSHOT_REQUIRES_OWN_READ_TRANSACTION');
+        }
+        $this->connection->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        $this->connection->beginTransaction();
+        try {
+            $view=[
+                'portfolio'=>$this->paperPortfolio($organizationId),
+                'positions'=>$this->listPositions($organizationId,5000),
+                'balances'=>$this->listPaperBalances($organizationId),
+                'executions'=>$this->listExecutions($organizationId,5000),
+                'ledger'=>$this->listLedgerTransactions($organizationId,5000),
+            ];
+            $this->connection->commit();
+            return $view;
+        } catch (\Throwable $error) {
+            if ($this->connection->inTransaction()) $this->connection->rollBack();
+            throw $error;
+        }
     }
 
     public function reserveCapital(
