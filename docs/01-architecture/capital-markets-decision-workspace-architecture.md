@@ -413,46 +413,49 @@ EXTERNAL_CASH_FLOW залишається послідовністю підпи�
 Навіть якщо всі прапорці reconciliation істинні та fingerprints пакета коректні, порожній масив cash_by_currency не вважається підтвердженим нульовим балансом. Guarded NAV Producer відхиляє такий пакет до запису snapshot. Для нульового залишку потрібна явна підтверджена cash observation із amount 0 та валютою оцінки. Це окремо перевіряється unit-тестом, щоб відсутність виписки не могла непомітно перетворитися на нуль активів.
 
 
-## Capability-safe shared Decision Workspace
 
-Route-level `CapitalMarketsCapability` checks are necessary but insufficient because
-all Decision Workspace routes include shared portfolio/risk global projections.
-`DecisionWorkspaceVisibilityPolicy` is applied on the server immediately before
-Twig rendering and never substitutes template hiding for data authorization.
+## Контроль доступу до спільних проєкцій Decision Workspace
 
-- Generic `View` alone does not disclose Portfolio Equity, cash allocation,
-  Today/30D Portfolio P&L, strategy allocations, risk limits or portfolio alerts.
-- `OpportunityView` can inspect signal/economics, but without `PortfolioView`
-  allocation decision, approved capital, portfolio impact, priority and reason
-  become explicitly `RESTRICTED` / null; JSON/CSV exports follow identical rules.
-- Overview opportunity details require both `OpportunityView` and `PortfolioView`.
-- `ResearchView` alone cannot expose active portfolio strategy allocations.
-- `RiskView` governs risk state, material limits and their alert contents.
-- `AuditView` governs full Agent tool inputs, outputs, result trace and correlations.
+Перевірка `CapitalMarketsCapability` на рівні маршруту недостатня: кожна сторінка
+містить спільний блок портфеля й ризику, а для Overview вистачає загального `View`.
+`DecisionWorkspaceVisibilityPolicy` застосовується на сервері **до** Twig-рендерингу.
+Приховування кнопок не замінює перевірки даних.
 
-Runtime QA creates a real restricted, non-admin organization member with only
-`View` and `OpportunityView`. Browser tests verify an authorized signal board,
-forbidden Portfolio/Performance/Risk/Data Quality/detail routes, export redaction,
-and missing Agent audit payload. Unit regression additionally protects these
-projections for various grant combinations.
+- Загальне `View` не дає доступу до Portfolio Equity, розподілу капіталу,
+  Portfolio P&L, розміщення стратегій, обмежень ризику й відповідних повідомлень.
+- `OpportunityView` дозволяє перегляд сигналу та його економіки, але без
+  `PortfolioView` рішення щодо виділення капіталу, сума, вплив на портфель,
+  пріоритет і причина позначаються `RESTRICTED` або `null`.
+  Ті самі обмеження діють для JSON/CSV-експорту.
+- Для Opportunity Detail потрібні `OpportunityView` та `PortfolioView`.
+- `ResearchView` без `PortfolioView` не відкриває обсяги капіталу активних стратегій.
+- `RiskView` контролює доступ до стану ризику, лімітів і причин тривоги.
+- `AuditView` потрібне для Agent tool inputs/outputs і повного трасування запусків.
 
-## Read-time market-data freshness
+Runtime QA створює окремого неадміністративного користувача з правами `View` та
+`OpportunityView`. Browser-тести перевіряють дозволений Opportunity Board,
+відмови для Portfolio, Performance, Risk, Data Quality й Opportunity Detail,
+обмежений експорт та захист Agent audit.
 
-A `TRUSTED` verdict calculated at ingestion is not eternal. As a read-side
-operator safety guard (not execution risk policy), Decision Workspace checks
-timestamps at page-render time. LIVE observation older than 60 seconds becomes
-`STALE`; non-LIVE mode or uncertain future clock becomes `DEGRADED`;
-missing/invalid clock becomes `UNAVAILABLE`. Native untrusted statuses are
-never upgraded by UI code. Reference states account for the persisted
-`reference_age_ms` even when processing time appears recent.
+## Актуальність ринкових даних у момент читання
 
-Market Explorer and Data Quality show advancing quote/reference ages based
-on original source timestamp rather than the frozen ingestion-time age.
-Canonical order book age remains `UNAVAILABLE` without its own timestamp.
-An enabled source without any market/reference observations never yields
-`HEALTHY`, even when its connection flag is `CONNECTED`.
+Оцінка `TRUSTED`, збережена під час отримання тіку, не може залишатися
+актуальною назавжди. Decision Workspace перевіряє час спостереження під час
+формування відповіді:
 
-This conservative 60-second read-side indicator does not replace
-per-event/source `MarketDataQualityPolicy`, can be more restrictive than
-that configured policy, and does not authorize Live trading or create
-accounting evidence.
+- спостереження LIVE старше 60 секунд отримує `STALE`;
+- дані в іншому режимі або з невизначеним майбутнім часом отримують `DEGRADED`;
+- за відсутності достовірної часової позначки показується `UNAVAILABLE`;
+- недовірені джерелом дані ніколи не підвищуються до `TRUSTED`.
+
+Для reference state враховується `reference_age_ms`, навіть якщо час запису
+в БД новий. Market Explorer та Data Quality показують вік котирувань,
+перерахований від вихідного часу спостереження, а не застиглий ingestion age.
+Без незалежної часової позначки вік order book залишається невідомим.
+
+Налаштоване джерело зі станом `CONNECTED`, але без ринкових спостережень,
+не може позначатися як `HEALTHY`.
+
+Поріг у 60 секунд є консервативним **індикатором для оператора**.
+Він не замінює `MarketDataQualityPolicy`, не дозволяє Live trading,
+не підтверджує бухгалтерську звірку та не створює NAV.
