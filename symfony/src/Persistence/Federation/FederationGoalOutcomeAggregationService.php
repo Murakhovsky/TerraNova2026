@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use DomainException;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
 use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
+use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Documents\Contract\DocumentsRepositoryInterface;
@@ -33,6 +34,7 @@ final readonly class FederationGoalOutcomeAggregationService
     public function __construct(
         private Connection $db,
         private FederationGoalStore $goals,
+        private ActiveModuleResolver $modules,
         private FederationExternalActionReceiptReconciler $receipts,
         private GrowthHandoffBoundary $growth,
         private SalesProposalLeadReadModelInterface $sales,
@@ -53,6 +55,11 @@ final readonly class FederationGoalOutcomeAggregationService
             throw new DomainException('Goal does not exist in this tenant.');
         }
         $org=$actor->organizationId()->value();
+        foreach (['federation','growth','sales','documents'] as $module) {
+            if (!$this->modules->isEnabled($org,$module)) {
+                throw new DomainException('Goal native outcome verification requires active tenant Modules.');
+            }
+        }
         $rows=$this->db->fetchAllAssociative(
             'SELECT p.plan_id,p.state AS plan_state,p.spec_version,p.plan_json,
                     r.run_id,r.state AS run_state
