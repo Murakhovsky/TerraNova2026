@@ -12,7 +12,8 @@ $boundary = new class implements GrowthApplicationBoundary {
     public string $status = 'ready_for_handoff';
     public function detectSignal(string $org,int $actor,string $corr,string $key,array $input):array{return [];}
     public function ingestExternalSignal(string $org,int $actor,string $corr,string $source,string $key,array $input):array{return [];}
-    public function createCandidate(string $org,int $actor,string $corr,string $key,array $input):array{return [];}
+    public function detectCandidate(string $org,int $actor,string $corr,string $key,array $input):array{return [];}
+    public function researchCandidate(string $org,int $actor,string $corr,string $id,string $key,array $input):array{return [];}
     public function scoreCandidate(string $org,int $actor,string $corr,string $id,string $key,array $input):array{return [];}
     public function qualifyCandidate(string $org,int $actor,string $corr,string $id,string $reason,string $key):array{return [];}
     public function monitorCandidate(string $org,int $actor,string $corr,string $id,string $reason,string $key):array{return [];}
