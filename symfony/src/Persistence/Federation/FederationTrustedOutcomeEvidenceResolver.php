@@ -65,7 +65,13 @@ final readonly class FederationTrustedOutcomeEvidenceResolver
                     // No authenticated Run context: fail closed, not a temporal fallback.
                     continue;
                 }
-                $observation = $owner->observeRun($actor, $runId, $id, $from, $to);
+                try {
+                    $observation = $owner->observeRun($actor, $runId, $id, $from, $to);
+                } catch (FederationOutcomeSourceNotReady) {
+                    // Only this explicit readiness failure means unknown.
+                    // Generic DomainExceptions and corrupt provenance still fail loudly.
+                    continue;
+                }
             } else {
                 $observation = $owner->observe($goal->organizationId, $id, $from, $to);
             }

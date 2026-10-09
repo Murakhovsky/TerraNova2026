@@ -1,5 +1,7 @@
 parameters:
   env(N8N_WEBHOOK_SECRET): ''
+  env(COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY): '0'
+  env(COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY): '0'
   env(GROWTH_SIGNAL_WEBHOOK_SECRET): ''
   env(GROWTH_SIGNAL_WEBHOOK_ACTOR_ID): '0'
   env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
@@ -3263,6 +3265,22 @@ services:
     arguments:
       $responses: '@Domains\Growth\Application\Contract\GrowthRunLinkedResponseReadModelInterface'
 
+  cos.federation.native_origin.research:
+    class: App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider
+    arguments:
+      $ownerDomain: 'capital_markets'
+      $criterionId: 'capital_markets.run_linked_validated_results'
+      $capabilityId: 'capital_markets.research.result.record'
+      $writerReady: '%env(bool:COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY)%'
+
+  cos.federation.native_origin.documents:
+    class: App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider
+    arguments:
+      $ownerDomain: 'platform.documents'
+      $criterionId: 'documents.run_linked_signatures'
+      $capabilityId: 'documents.signature.sign'
+      $writerReady: '%env(bool:COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY)%'
+
   App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver:
     arguments:
       $providers:
@@ -3270,6 +3288,8 @@ services:
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
+        - '@cos.federation.native_origin.research'
+        - '@cos.federation.native_origin.documents'
         - '@Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider'
         - '@Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider'
 
