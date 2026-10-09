@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS cos_federation_outcome_origins (
     PRIMARY KEY (id),
     UNIQUE KEY uq_fed_origin_business (organization_id, domain_id, outcome_id),
     KEY idx_fed_origin_run (organization_id, run_id, domain_id),
-    KEY idx_fed_origin_action (organization_id, action_id)
+    UNIQUE KEY uq_fed_origin_action_domain (organization_id, domain_id, action_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO tn_migrations (migration)
