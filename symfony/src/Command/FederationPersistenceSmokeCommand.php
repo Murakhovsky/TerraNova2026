@@ -1769,6 +1769,21 @@ final class FederationPersistenceSmokeCommand extends Command
             && $aggregate['business_outcome_verified']===false,
             'Proposed Candidate Plans were falsely promoted to native business results.');
 
+        // A Goal claiming won Sales deals cannot be marked successful by
+        // counting unapproved proposal Plans, even with manager access.
+        try {
+            $this->goalAggregates->recordVerifiedProposalOutcome($actor,$goalId);
+            throw new \RuntimeException('Business Goal evaluation accepted unsupported Sales metric.');
+        } catch (DomainException) {
+        }
+        $evaluations=$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_federation_evaluations
+             WHERE organization_id=:org AND goal_id=:goal',
+            ['org'=>$org,'goal'=>$goalId],
+        );
+        self::assert((int)$evaluations===0,
+            'Rejected native aggregate evaluation persisted a fraudulent business success.');
+
         $foreign=$this->db->fetchOne(
             'SELECT COUNT(*) FROM cos_federation_plans
              WHERE organization_id=:foreign AND goal_id=:goal',
