@@ -10,7 +10,8 @@
   ],
   "properties": {
     "target_type": {
-      "const": "research_result"
+      "const": "research_result",
+      "type": "string"
     },
     "target_id": {
       "type": "string",
@@ -63,7 +64,8 @@
           ],
           "properties": {
             "decision": {
-              "const": "VALIDATED"
+              "const": "VALIDATED",
+              "type": "string"
             },
             "reviewed_by": {
               "type": "string",
