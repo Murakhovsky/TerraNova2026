@@ -980,6 +980,14 @@ final readonly class DecisionWorkspaceReadService
                 $reasons[] = 'Reference: '.(string)$flag;
             }
 
+            $marketDecisionTrust = $this->decisionStateTrust($state);
+            $referenceDecisionTrust = $this->decisionStateTrust($reference);
+            if ($marketDecisionTrust !== strtoupper((string)($state['trust_status'] ?? $state['quality_status'] ?? 'UNAVAILABLE'))) {
+                $reasons[] = 'Market: read-time observation freshness is '.$marketDecisionTrust;
+            }
+            if ($reference !== [] && $referenceDecisionTrust !== strtoupper((string)($referenceQuality['status'] ?? 'UNAVAILABLE'))) {
+                $reasons[] = 'Reference: read-time observation freshness is '.$referenceDecisionTrust;
+            }
             $rows[] = [
                 'instrument_id' => $instrumentId,
                 'venue_id' => $state['venue_id'] ?? null,
@@ -992,8 +1000,8 @@ final readonly class DecisionWorkspaceReadService
                 'sequence' => $state['last_sequence'] ?? null,
                 'book_sequence' => is_array($state['order_book'] ?? null) ? ($state['order_book']['sequence'] ?? null) : null,
                 'status' => strtoupper((string)($state['market_status'] ?? 'UNKNOWN')),
-                'trust' => strtoupper((string)($state['trust_status'] ?? $state['quality_status'] ?? 'UNAVAILABLE')),
-                'reference_trust' => strtoupper((string)($referenceQuality['status'] ?? 'UNAVAILABLE')),
+                'trust' => $this->decisionStateTrust($state),
+                'reference_trust' => $this->decisionStateTrust($reference),
                 'mode' => strtoupper((string)($state['mode'] ?? 'HISTORICAL')),
                 'updated_at' => $state['updated_at'] ?? null,
                 'reference_updated_at' => $reference['updated_at'] ?? null,
@@ -1025,7 +1033,7 @@ final readonly class DecisionWorkspaceReadService
                 'book_sequence' => null,
                 'status' => strtoupper((string)($reference['session'] ?? 'REFERENCE_ONLY')),
                 'trust' => 'REFERENCE_ONLY',
-                'reference_trust' => strtoupper((string)($referenceQuality['status'] ?? 'UNAVAILABLE')),
+                'reference_trust' => $this->decisionStateTrust($reference),
                 'mode' => strtoupper((string)($reference['mode'] ?? 'HISTORICAL')),
                 'updated_at' => null,
                 'reference_updated_at' => $reference['updated_at'] ?? null,
@@ -1035,6 +1043,42 @@ final readonly class DecisionWorkspaceReadService
         }
 
         return $rows;
+    }
+
+    // Ingestion trust reflects the assessment at event arrival. Read-only
+    // pages must never silently advertise a frozen observation as current LIVE.
+    // This guard ONLY downgrades the UI and never authorizes execution.
+    private function decisionStateTrust(array $state): string
+    {
+        $raw = strtoupper((string)(
+            $state['trust_status']
+            ?? $state['quality_status']
+            ?? $state['quality']['status']
+            ?? 'UNAVAILABLE'
+        ));
+        if ($raw !== 'TRUSTED') {
+            return $raw;
+        }
+        if (strtoupper((string)($state['mode'] ?? 'UNKNOWN')) !== 'LIVE') {
+            return 'DEGRADED';
+        }
+        $timestamp = $state['source_timestamp'] ?? $state['updated_at'] ?? null;
+        if (!is_string($timestamp) || trim($timestamp) === '') {
+            return 'UNAVAILABLE';
+        }
+        try {
+            $observed = new \DateTimeImmutable($timestamp);
+            $ageSeconds = time() - $observed->getTimestamp();
+        } catch (\Throwable) {
+            return 'UNAVAILABLE';
+        }
+        if ($ageSeconds < -5) {
+            return 'DEGRADED'; // uncertain source clock
+        }
+        if ($ageSeconds > 60) {
+            return 'STALE'; // bounded Decision Workspace operator freshness
+        }
+        return 'TRUSTED';
     }
 
     /** @param array<string,mixed> $core @param array<string,mixed> $market @return array<string,mixed> */
@@ -1113,7 +1157,7 @@ final readonly class DecisionWorkspaceReadService
             if (!is_array($state)) {
                 continue;
             }
-            $status = strtoupper((string)($state['trust_status'] ?? $state['quality_status'] ?? $state['quality']['status'] ?? 'UNAVAILABLE'));
+            $status = $this->decisionStateTrust($state);
             if ($status === 'TRUSTED') {
                 $trusted++;
             } elseif ($status === 'STALE') {
@@ -1149,7 +1193,7 @@ final readonly class DecisionWorkspaceReadService
         }
 
         $status = 'HEALTHY';
-        if ($sources === [] && $states === [] && $references === []) {
+        if ($states === [] && $references === []) {
             $status = 'UNAVAILABLE';
         } elseif ($unavailable > 0 || $sourceProblems > 0) {
             $status = 'DEGRADED';
@@ -1496,7 +1540,7 @@ final readonly class DecisionWorkspaceReadService
                 'volume' => $state['volume'] ?? null,
                 'liquidity' => $state['order_book']['depth'] ?? null,
                 'age_ms' => $state['latency']['event_age_ms'] ?? null,
-                'trust' => strtoupper((string)($state['trust_status'] ?? $state['quality_status'] ?? 'UNAVAILABLE')),
+                'trust' => $this->decisionStateTrust($state),
                 'mode' => strtoupper((string)($state['mode'] ?? 'HISTORICAL')),
                 'last_updated' => $state['updated_at'] ?? null,
                 'market_status' => $state['market_status'] ?? null,
