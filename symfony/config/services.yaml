@@ -3340,6 +3340,7 @@ services:
     tags: ['controller.service_arguments']
 
   Platform\Orchestration\Goal\FederationCandidateFanoutPlanner: ~
+  Platform\Orchestration\Goal\FederationGoalAggregateProjector: ~
   Platform\Orchestration\Goal\FederationProposalTemplateGuard: ~
   Platform\Orchestration\Goal\FederationStepCursor: ~
   Platform\Orchestration\Goal\FederationRecoveryClassifier: ~
