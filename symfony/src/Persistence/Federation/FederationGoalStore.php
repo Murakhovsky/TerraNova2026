@@ -204,7 +204,7 @@ final readonly class FederationGoalStore
             // child Plan. All approved inputs must reference one subject.
             $candidate = $lineage['candidate_id'];
             $expectedPlan = 'plan-' . substr(hash('sha256',
-                $actor->organizationId()->value() . "\\0" . $goalId . "\\0" . $candidate
+                $actor->organizationId()->value() . "\0" . $goalId . "\0" . $candidate
             ), 0, 24);
             if ($planId !== $expectedPlan || count($validated['steps']) !== 4) {
                 throw new DomainException('Fan-out Plan identity/shape differs from approved Candidate.');
