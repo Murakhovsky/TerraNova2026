@@ -128,6 +128,7 @@ Manifest capabilities не задекларовані.
 ### Задекларовані capabilities
 
 - `documents.signature.request`;
+- `documents.signature.sign`;
 
 ## COS Federation (`federation`)
 
