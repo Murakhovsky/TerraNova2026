@@ -28,11 +28,15 @@ final class DecisionWorkspaceVisibilityPolicy
             foreach ([
                 'portfolio_equity', 'available_capital', 'deployed_capital',
                 'reserved_capital', 'net_pnl', 'today_net_pnl', 'pnl_30d',
+                'paper_equity','paper_nav_status','paper_today_net_pnl','paper_30d_net_pnl',
                 'portfolio_updated_at',
+                'portfolio_nav_status',
             ] as $key) {
                 $global[$key] = null;
             }
             $global['portfolio_nav_windows'] = [];
+            $page['paper_nav'] = [];
+            $global['paper_nav_windows'] = [];
             $global['last_updated'] = $global['market_updated_at'] ?? null;
             foreach (['capital','performance','exposure','portfolio','capital_map','strategy_allocations'] as $key) {
                 if (array_key_exists($key, $page)) {
