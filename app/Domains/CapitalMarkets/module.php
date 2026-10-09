@@ -36,6 +36,7 @@ return [
             'app/migrations/20261006_000133_capital_markets_research_lab.sql',
             'app/migrations/20261008_000134_capital_markets_capital_risk.sql',
             'app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql',
+            'app/migrations/20261009_000140_capital_markets_cross_venue_quotes.sql',
         ],
         'capabilities'=>[
             'capital_markets.view',
