@@ -42,6 +42,8 @@ parameters:
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '3'
+  env(COS_CM_PAPER_NAV_SCHEDULER_ENABLED): '0'
+  env(COS_CM_PAPER_NAV_SCHEDULER_INTERVAL_MINUTES): '5'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED): '1'
   env(COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_RUNTIME_STALE_SECONDS): '600'
@@ -312,6 +314,9 @@ services:
       $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringDomainAutonomyEnabled: '%env(bool:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED)%'
       $engineeringDomainAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $capitalMarketsPaperNavEnabled: '%env(bool:COS_CM_PAPER_NAV_SCHEDULER_ENABLED)%'
+      $capitalMarketsPaperNavOrganizationId: '%env(COS_ORGANIZATION_ID)%'
+      $capitalMarketsPaperNavIntervalMinutes: '%env(int:COS_CM_PAPER_NAV_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringRuntimeWatchdogEnabled: '%env(bool:COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED)%'
       $engineeringRuntimeWatchdogIntervalMinutes: '%env(int:COS_ENGINEERING_RUNTIME_WATCHDOG_INTERVAL_MINUTES)%'
 
@@ -2039,6 +2044,15 @@ services:
 
   Domains\CapitalMarkets\Application\Contract\PortfolioNavFinancialEvidenceRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPortfolioNavFinancialEvidenceRepository
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPaperNavSnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\PaperNavSnapshotRepositoryInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlPaperNavSnapshotRepository
+
+  Domains\CapitalMarkets\Application\Service\PaperNavSnapshotService: ~
 
   Domains\CapitalMarkets\Application\Service\PortfolioNavEvidenceCollector: ~
 
