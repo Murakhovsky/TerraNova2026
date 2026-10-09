@@ -68,7 +68,7 @@ final readonly class FederationApprovedActionIntentFactory
         $contract = $this->bindings->requireExecutable($actor, (string) $row['capability_id']);
         if ($contract->version !== $row['capability_version']
             || $contract->sideEffectLevel !== $row['side_effect_level']
-            || $contract->sideEffectLevel !== 'external'
+            || !in_array($contract->sideEffectLevel, ['internal','external'], true)
             || $contract->approvalPolicy !== 'required'
             || $contract->idempotency !== 'required'
             || !in_array($contract->id, $goal->allowedCapabilities, true)) {
