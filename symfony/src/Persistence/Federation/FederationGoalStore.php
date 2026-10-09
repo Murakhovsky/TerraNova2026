@@ -589,6 +589,6 @@ final readonly class FederationGoalStore
 
     private static function now(): string
     {
-        return gmdate('Y-m-d H:i:s.u');
+        return (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s.u');
     }
 }

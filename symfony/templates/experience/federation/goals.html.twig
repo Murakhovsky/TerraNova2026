@@ -109,6 +109,9 @@
         {% for run in runs|default([]) %}
             <article class="cos-card" data-run-id="{{ run.run_id }}" data-recovery-mode="{{ mode }}">
                 <p class="cos-card__eyebrow">Run: {{ run.state }}</p>
+                {% if run.created_at_kyiv is defined %}
+                    <p class="cos-card__copy">Початок: {{ run.created_at_kyiv }} (Київ)</p>
+                {% endif %}
                 <h3 class="cos-card__title">Ціль {{ run.goal_id }}</h3>
                 <div class="cos-page__stack" data-goal-outcome-summary>
                     {% if run.outcome is defined and run.outcome %}
@@ -124,7 +127,7 @@
                                 Немає достатніх достовірних даних для підтвердження критеріїв.
                             {% endif %}
                         </p>
-                        <p class="cos-card__copy">Оцінено: {{ run.outcome.recorded_at }} UTC.
+                        <p class="cos-card__copy">Оцінено: {{ run.outcome.recorded_at_kyiv|default(run.outcome.recorded_at ~ ' UTC') }} (Київ).
                             Перевірено {{ run.outcome.criteria|filter(c => c.result != 'unverifiable')|length }}
                             із {{ run.outcome.criteria|length }} критеріїв.</p>
                         {% if mode in ['process', 'expert'] %}
@@ -140,7 +143,7 @@
                                         {% if mode == 'expert' %}
                                             <span data-goal-outcome-expert>
                                                 {% if criterion.window_start is defined and criterion.window_start %}
-                                                    Інтервал: {{ criterion.window_start }} — {{ criterion.window_end }}.
+                                                    Інтервал (Київ): {{ criterion.window_start_kyiv|default(criterion.window_start) }} — {{ criterion.window_end_kyiv|default(criterion.window_end) }}.
                                                 {% endif %}
                                                 {% for evidence in criterion.evidence %}
                                                     <code>{{ evidence }}</code>

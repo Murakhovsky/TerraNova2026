@@ -41,6 +41,9 @@ final readonly class GoalsWorkspaceController
         $state = $this->experience->workspace($tenant, 'cos.goals');
         $runs = $this->goals->listRuns($tenant);
         foreach ($runs as &$run) {
+            // Storage timestamps are UTC. Convert only presentation values:
+            // the database and Domain metrics remain timezone-independent.
+            $run['created_at_kyiv'] = FederationKyivTime::displayUtc((string) $run['created_at']);
             try {
                 // A disabled tenant may view its old Run history without
                 // implicitly activating Federation execution or recovery.
@@ -50,6 +53,19 @@ final readonly class GoalsWorkspaceController
             }
             try {
                 $run['outcome'] = $this->goals->latestTrustedEvaluation($tenant, (string) $run['run_id']);
+                if ($run['outcome'] !== null) {
+                    $run['outcome']['recorded_at_kyiv'] = FederationKyivTime::displayUtc(
+                        (string) $run['outcome']['recorded_at'],
+                    );
+                    foreach ($run['outcome']['criteria'] as &$criterion) {
+                        foreach (['window_start', 'window_end'] as $field) {
+                            if (is_string($criterion[$field] ?? null) && $criterion[$field] !== '') {
+                                $criterion[$field . '_kyiv'] = FederationKyivTime::displayUtc($criterion[$field]);
+                            }
+                        }
+                    }
+                    unset($criterion);
+                }
             } catch (Throwable) {
                 // A broken evaluation is never silently treated as success.
                 $run['outcome'] = null;
