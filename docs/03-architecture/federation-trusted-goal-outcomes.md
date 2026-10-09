@@ -152,7 +152,7 @@ Fingerprint підтверджує відтворюваність запиту, 
 окремої відповіді, експерименту чи підпису. Невідомі показники або
 вимкнені Domains залишаються `unverifiable`.
 
-## Run-linked provenance: Growth inbound responses
+## Зв’язування результатів Growth із підтвердженими діями Run
 
 Новий критерій `growth.run_linked_inbound_responses` не дорівнює загальному
 `growth.inbound_responses_recorded`. Потрібен завершений tenant-owned Run.
