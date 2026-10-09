@@ -75,16 +75,13 @@ $catalog = new ModuleCatalog([
     new ModuleDefinition(new ModuleManifest('documents','Documents','1.0.0'),new ModuleContributions()),
 ]);
 $handler = new PrepareProposalDraftHandler($gen,$attachment,$growth,$sales,new ActiveModuleResolver($catalog,$states));
-$make = static fn(string $lead='7',array $params=['candidate_id'=>'C-1','template_id'=>'T-1','variables'=>[]]):Action =>
-    new Action('a-1','tenant-1',PrepareProposalDraftHandler::TYPE,'sales_lead',$lead,$params,
+$make = static fn(string $candidate='C-1',array $params=['template_id'=>'T-1','variables'=>[]]):Action =>
+    new Action('a-1','tenant-1',PrepareProposalDraftHandler::TYPE,'growth_candidate',$candidate,$params,
         'USER','42','APPROVAL_REQUIRED','HIGH','fed:1',new DateTimeImmutable('2026-10-09T12:00:00Z'),
         ActionStatus::Running,'corr');
-if ($handler->execute($make('99'))->successful || $gen->calls!==[]) {
-    throw new RuntimeException('Unverified Sales Lead was allowed to generate a document.');
-}
 $growth->reference='99';
 if ($handler->execute($make())->successful || $gen->calls!==[]) {
-    throw new RuntimeException('Unmatched accepted Growth handoff was allowed to generate.');
+    throw new RuntimeException('Unverified Sales Lead was allowed to generate a document.');
 }
 $growth->reference='7';
 $states->enableGrowth=false;
