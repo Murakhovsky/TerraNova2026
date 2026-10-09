@@ -179,10 +179,38 @@ final readonly class FederationCandidateFanoutService
                     || trim((string)($champion['full_name'] ?? '')) === '') {
                     return null;
                 }
+                $candidate['lead_name'] = trim((string)$champion['full_name']);
+                $candidate['lead_email'] = trim((string)$champion['identity_value']);
                 return $candidate;
             },
             $requested, $options,
         );
+        // The native renderer only performs exact {{key}} replacement. Never
+        // propose a document that would retain unknown or empty placeholders.
+        $body = $template['body'] ?? null;
+        if (!is_string($body)) {
+            throw new DomainException('Invalid active Documents template body.');
+        }
+        preg_match_all('/\\{\\{([^{}]+)\\}\\}/', $body, $matches);
+        $keys = [];
+        foreach ($matches[1] as $key) {
+            if (!preg_match('/^[a-z][a-z0-9_]*$/', $key)) {
+                throw new DomainException('Template placeholder syntax is unsupported.');
+            }
+            $keys[$key] = true;
+        }
+        if (substr_count($body,'{{') !== count($matches[0])
+            || substr_count($body,'}}') !== count($matches[0])) {
+            throw new DomainException('Template contains malformed unresolved placeholders.');
+        }
+        foreach ($preview['plans'] as $plan) {
+            $variables = $plan['steps'][3]['input']['parameters']['variables'] ?? [];
+            foreach (array_keys($keys) as $key) {
+                if (!is_string($variables[$key] ?? null) || trim($variables[$key]) === '') {
+                    throw new DomainException('Active template needs missing tenant-sourced variable: '.$key);
+                }
+            }
+        }
         return [
             'goal_id' => $goalId,
             'source_run_id' => $sourceRunId,
