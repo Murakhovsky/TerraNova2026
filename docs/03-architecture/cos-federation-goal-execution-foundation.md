@@ -6,15 +6,15 @@ updated: 2026-10-09
 kind: architecture
 ---
 
-# Package A: COS Federation & Goal Execution Foundation
+# Пакет A: федеративна архітектура COS і виконання цілей
 
 **Priority:** P0. **Scope:** canonical Federation, owned capabilities, Action/Workflow/Agent governance, Goal → Plan → Run → verified Outcome, tenant isolation, operational audit and minimal Experience contracts. **Out of scope:** complete Result/Process/Expert UI, personalization, behavioral analytics and AI-driven adaptive UI; see [Package B](./cos-progressive-disclosure-adaptive-experience.md).
 
-## Architectural ownership
+## Архітектурна відповідальність
 
 Kernel/Platform retains identity, tenant, command/event transport, human approvals, Policy, Workflow, Action and Agent dispatch. Each Domain owns its business semantics and authoritative Outcome. Federation validates and coordinates an immutable approved plan but never generates its own arbitrary domain outcomes. Experience sees read-only canonical projections and metadata; no view grants permissions.
 
-## Canonical execution model
+## Канонічна модель виконання
 
 ```text
 Authenticated request / user Goal
@@ -36,7 +36,7 @@ Single Goal state / execution state / source references
 
 Federation stores one authoritative Run with step state, provenance, immutable approvals and evidence. A completed workflow does **not** equal a successful business goal; unverifiable evidence is explicitly unknown and must not be interpreted as zero or success.
 
-## Minimum Experience contracts included in A
+## Мінімальні контракти Experience у пакеті A
 
 - Existing `ExperienceContext`: trusted organization/user, mode and capability snapshot; not an authorization source.
 - `ExperienceProfile`: versioned, tenant/user-scoped preference snapshot; persistence remains `cos_experience_profiles`.
@@ -45,7 +45,7 @@ Federation stores one authoritative Run with step state, provenance, immutable a
 - Metadata cannot carry credentials, arbitrary PHP/JS snippets, command arguments, grants or deny rules. `UIActionResolver` and Policy/Approval/tenant checks remain separate, authoritative and enforced on actual requests.
 - Existing proof-of-concept mode UI is retained without making visual completeness a Package A acceptance gate.
 
-## Required P0 exit evidence
+## Обов'язкові докази приймання P0
 
 1. Canonical capability owner, schema version, tenant activation and executable Action/Agent bindings verified against registry; no cross-domain direct business writes.
 2. Goal → approved immutable Plan → one durable Run → independently reconciled Action receipts → native Domain outcomes → evaluation. No self-approval or fabricated success.
@@ -54,7 +54,7 @@ Federation stores one authoritative Run with step state, provenance, immutable a
 5. Presentation DTOs and semantics contracts versioned, unit-tested and immune to authorization escalation. UX is not used as a P0 workaround for execution incompleteness.
 6. CI, runtime, database, browser/security testing, targeted migration and deployment rollback runbook green for the accepted commit. Production readiness remains a separate gate.
 
-## Concrete reference acceptance scenario
+## Еталонний сценарій приймання
 
 > Знайди 50 потенційних клієнтів, перевір їх, передай у CRM і підготуй комерційні пропозиції.
 
@@ -62,13 +62,13 @@ Expected chain: Growth market discovery (50 target candidates, sources, dedupe) 
 
 **Important:** current Federation PR includes slices for Sales, Growth feedback, Research and Documents signature requests, but does **not** yet prove this full 50-lead Growth → Sales → proposal production golden path. The scenario is the remaining Package A gate, not a claim of completion.
 
-## Release boundary A → B
+## Межа релізів пакетів A і B
 
 Package A is eligible for acceptance only once the above P0 golden path is green in a controlled tenant. Deliver an immutable Goal/Plan/Run/Outcome read projection, Step/action controls with authorization, canonical failure/recovery statuses, and Experience Semantic descriptors as a published versioned interface.
 
 Work not required to unlock B: perfection of all Domains, P1 tracing, predictive architecture explorer, polished mobile Expert UI. No new Kernel or Domain solely for Progressive Disclosure.
 
-## Automated golden-path execution readiness preflight (2026-10-09)
+## Автоматична перевірка готовності еталонного сценарію (2026-10-09)
 
 `FederationReferenceScenarioReadiness::inspect(TenantContext)` checks
 **real, registered, typed, tenant-executable Action handlers** for the
@@ -112,7 +112,7 @@ unit evidence is in:
 `tests/unit/federation_growth_sales_handoff_action.php` and
 `tests/unit/federation_documents_proposal_draft.php`.
 
-### Runtime integrity and manual intervention
+### Цілісність виконання та ручне втручання
 
 - A market-discovery batch completing is **not** proof of 50 distinct,
   verified, qualified prospects. A disqualified candidate is never reported
@@ -132,7 +132,7 @@ unit evidence is in:
   `business_outcome_verified=false` until Domain-trusted read-model
   evidence supports each Goal criterion.
 
-### Outstanding Package A acceptance requirements
+### Незакриті вимоги приймання пакета A
 
 This code implements five **single-subject canonical Action bindings**, not a
 complete 50-subject autonomous campaign. Prospect and Candidate IDs are
@@ -154,7 +154,7 @@ enablement, CI verification at **the latest branch HEAD**, controlled tenant
 rollout and merge remain separately gated.
 
 
-## Bounded candidate fan-out after source discovery (2026-10-09)
+## Обмежене розгортання планів для кандидатів після пошуку (2026-10-09)
 
 `FederationCandidateFanoutService` implements the next **explicit manager-operated** step without mutating an approved Federation Plan. It attaches 1–50 candidate-specific **proposed child Plans** to the same existing Goal, so future Growth Candidate IDs never need to be invented in the original market-discovery Plan.
 
@@ -162,7 +162,7 @@ rollout and merge remain separately gated.
 
 **Explicit draft creation:** `POST /api/v1/federation/fanout/propose`, the same fields as form fields, mandatory session CSRF. Creates the candidate-specific Plans in one DB transaction, all-or-nothing. The `state` remains `proposed`; **each plan requires independent native Plan approval, and each Action requires its own human approval**. No scheduler, bulk Action execution, automatic CRM writes, or proposal sending is part of this step.
 
-### Trusted provenance
+### Перевірене походження даних
 
 - Confirm completed Federation source Run and its **approved, version-pinned** `growth.market.discovery` Step for the **same Goal and tenant**.
 - Re-attest the completed **first-attempt** canonical Action via the existing receipt reconciler, then verify its exact source Universe and federated idempotency key.
@@ -173,7 +173,7 @@ rollout and merge remain separately gated.
 - Resolve an **active qualification policy revision** and an **active tenant-owned Documents template** from existing Domain/Platform repositories before any proposed Plan can be saved.
 - Verify all four candidate Action capabilities are tenant executable and the Federation and Sales modules are enabled. The Goal must allow those capabilities and its original actor identity must be usable by the existing integer-actor Growth runtime.
 
-### Immutable plan and recovery policy
+### Незмінність планів і правила відновлення
 
 The pure `FederationCandidateFanoutPlanner` creates one deterministic `plan-<hash>` per tenant/Goal/Candidate, **independent of repeated source scans**; each contains four ordered Action Steps:
 
