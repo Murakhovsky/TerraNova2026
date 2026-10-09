@@ -139,7 +139,12 @@ final readonly class DecisionWorkspacePageController
 
         $organizationId=$tenant->organizationId()->value();
         $rows=match($dataset){
-            'opportunities'=>$this->workspace->opportunities($organizationId,$request->query->all())['opportunities']??[],
+            'opportunities'=>DecisionWorkspaceVisibilityPolicy::redact(
+                $this->workspace->opportunities($organizationId, $request->query->all()),
+                ['portfolio_view'=>$this->allowed(
+                    $organizationId, (int)$tenant->userId()->value(), CapitalMarketsCapability::PortfolioView,
+                )],
+            )['opportunities'] ?? [],
             'research-results'=>$this->workspace->research($organizationId)['research']['results']??[],
             'executions'=>$this->workspace->execution($organizationId)['executions']??[],
             'performance'=>$this->performanceExportRows($this->workspace->performance($organizationId)),
