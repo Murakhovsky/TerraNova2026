@@ -89,7 +89,7 @@ final readonly class DoctrineEngineeringHumanDecisionStore implements Engineerin
     {
         $record = $this->entityManager->find(HumanDecisionRequestRecord::class, $requestId);
         if (!$record instanceof HumanDecisionRequestRecord) {
-            throw new \\RuntimeException('Engineering evidence request not found.');
+            throw new \RuntimeException('Engineering evidence request not found.');
         }
         $record->markAutoResolved(new DateTimeImmutable());
         $this->entityManager->flush();
