@@ -40,7 +40,7 @@ final readonly class PrepareProposalDraftHandler implements IdempotentExternalAc
     {
         $candidateId = $action->targetId;
         $templateId = $action->parameters['template_id'] ?? null;
-        $variables = $action->parameters['variables'] ?? null;
+        $variables = $action->parameters['variables'] ?? [];
         $title = $action->parameters['title'] ?? null;
 
         if ($action->status !== ActionStatus::Running || $action->sourceType !== 'USER'
