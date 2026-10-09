@@ -44,7 +44,7 @@ final class EngineeringArchitectEvidenceAuthorization
 
             $segments = explode('/', $path);
             foreach ($segments as $segment) {
-                if ($segment === '.' || $segment === '..' || str_starts_with($segment, '.')) {
+                if ($segment === '.' || $segment === '..' || (str_starts_with($segment, '.') && !($segment === '.github' && $segment === $segments[0]))) {
                     throw new RuntimeException('Architect repository evidence path includes a hidden or traversal segment.');
                 }
                 if (in_array(strtolower($segment), [
@@ -62,6 +62,12 @@ final class EngineeringArchitectEvidenceAuthorization
                 || preg_match('/\.(?:pem|key|p12|pfx|keystore|jks|sqlite|db|zip|gz|tar)$/D', $name)
             ) {
                 throw new RuntimeException('Architect repository evidence request may include secrets or binary material.');
+            }
+            // Repository evidence is text-only; binary and unknown formats need explicit handling.
+            if (!preg_match('/\\.(?:php|md|txt|json|jsonl|yaml|yml|xml|twig|js|jsx|ts|tsx|css|scss|html|htm|sql|sh|bash|py|go|rs|java|kt|ini|lock|dist)$/D', $name)
+                && !in_array($name, ['dockerfile', 'makefile', 'jenkinsfile'], true)
+            ) {
+                throw new RuntimeException('Architect read-only evidence must be a supported text source file.');
             }
             if (isset($known[$path]) || isset($paths[$path])) {
                 throw new RuntimeException('Architect repository evidence request repeats a previously supplied file.');
