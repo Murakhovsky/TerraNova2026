@@ -173,13 +173,32 @@ final readonly class FederationGoalStore
 
         // Auditable immutable provenance for approved, candidate-specific
         // fan-out plans. This metadata grants NO additional execution rights.
-        if ($lineage !== [] && (
-            ($lineage['schema_version'] ?? null) !== 1
-            || !is_string($lineage['evidence_hash'] ?? null)
-            || !preg_match('/^[a-f0-9]{64}$/', $lineage['evidence_hash'])
-            || strlen(self::json($lineage)) > 2048
-        )) {
-            throw new DomainException('Malformed Federation Plan lineage.');
+        if ($lineage !== []) {
+            $expectedKeys = ['account_id', 'candidate_id', 'evidence_hash',
+                'native_discovery_run', 'schema_version', 'source_federation_run',
+                'source_federation_step', 'source_hash'];
+            $keys = array_keys($lineage);
+            sort($keys);
+            if ($keys !== $expectedKeys
+                || $lineage['schema_version'] !== 1
+                || !is_string($lineage['evidence_hash'])
+                || !preg_match('/^[a-f0-9]{64}$/', $lineage['evidence_hash'])
+                || !is_string($lineage['source_hash'])
+                || !preg_match('/^[a-f0-9]{64}$/', $lineage['source_hash'])
+                || strlen(self::json($lineage)) > 2048) {
+                throw new DomainException('Malformed Federation Plan lineage.');
+            }
+            foreach (['source_federation_run', 'source_federation_step',
+                'native_discovery_run', 'candidate_id', 'account_id'] as $field) {
+                if (!is_string($lineage[$field]) || trim($lineage[$field]) === '') {
+                    throw new DomainException('Invalid Federation Plan lineage source.');
+                }
+            }
+            $proof = $lineage;
+            unset($proof['evidence_hash']);
+            if (!hash_equals(hash('sha256', self::json($proof)), $lineage['evidence_hash'])) {
+                throw new DomainException('Federation lineage evidence fingerprint mismatch.');
+            }
         }
 
         $this->db->insert('cos_federation_plans', [
