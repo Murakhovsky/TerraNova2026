@@ -48,6 +48,15 @@ final readonly class FederationOutcomeOriginRecorder
         // Canonical persisted Action, immutable Plan, worker-time policy,
         // independent human approval, tenant and claimed Step.
         $this->admission->assertAuthorized($action);
+        $attempt = $this->db->fetchAssociative(
+            "SELECT status, started_at FROM cos_action_attempts
+             WHERE organization_id=:org AND action_id=:id AND attempt=1",
+            ['org' => $action->organizationId, 'id' => $action->id],
+        );
+        if (!$attempt || $attempt['status'] !== 'RUNNING'
+            || !is_string($attempt['started_at'] ?? null)) {
+            throw new DomainException('Native outcome must be created by an active first-attempt worker.');
+        }
 
         $org = $action->organizationId;
         $step = $this->db->fetchAssociative(
@@ -67,9 +76,11 @@ final readonly class FederationOutcomeOriginRecorder
             throw new DomainException('Native Research/Documents outcome is not final and verifiable.');
         }
         $eventTime = $source[$domain === 'capital_markets' ? 'created_at' : 'signed_at'];
-        if ($eventTime < (string) $step['run_started_at']) {
-            // Fail closed on second-precision Research boundary ambiguity.
-            throw new DomainException('Native outcome predates the originating Federation Run.');
+        if ($eventTime < (string) $step['run_started_at']
+            || $eventTime < (string) $attempt['started_at']) {
+            // Old or second-precision ambiguous events cannot be safely
+            // backfilled into a later Action. Future writers need UTC(6).
+            throw new DomainException('Native outcome predates the active Federation worker attempt.');
         }
         $this->db->insert('cos_federation_outcome_origins', [
             'organization_id' => $org,
@@ -95,6 +106,15 @@ final readonly class FederationOutcomeOriginRecorder
                 ['org' => $org, 'id' => $outcomeId],
             );
             if (!$row) return null;
+            try {
+                $stored = json_decode((string) $row['record_json'], true, 512, JSON_THROW_ON_ERROR);
+                if (!is_array($stored) || ($stored['status'] ?? null) !== 'VALIDATED'
+                    || ($stored['result_id'] ?? null) !== $outcomeId) {
+                    return null;
+                }
+            } catch (\JsonException) {
+                return null;
+            }
             return [
                 'status' => (string) $row['status'],
                 'created_at' => (string) $row['created_at'],
@@ -102,11 +122,12 @@ final readonly class FederationOutcomeOriginRecorder
             ];
         }
         $row = $this->db->fetchAssociative(
-            "SELECT signature_id, status, signed_at, signed_by, signature_reference
+            "SELECT signature_id, status, signed_at, signed_by, signed_by_actor_id, signature_reference
              FROM cos_document_signatures
              WHERE organization_id=:org AND signature_id=:id
                AND status='signed' AND signed_at IS NOT NULL
                AND signed_by IS NOT NULL AND signed_by <> ''
+               AND signed_by_actor_id IS NOT NULL
                AND signature_reference IS NOT NULL AND signature_reference <> ''",
             ['org' => $org, 'id' => $outcomeId],
         );
@@ -115,6 +136,7 @@ final readonly class FederationOutcomeOriginRecorder
             'status' => (string) $row['status'],
             'signed_at' => (string) $row['signed_at'],
             'signed_by' => (string) $row['signed_by'],
+            'signed_by_actor_id' => (string) $row['signed_by_actor_id'],
             'signature_reference' => (string) $row['signature_reference'],
         ];
     }

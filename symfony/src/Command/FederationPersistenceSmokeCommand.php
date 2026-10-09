@@ -1139,7 +1139,8 @@ final class FederationPersistenceSmokeCommand extends Command
                     'result_id' => 'result-' . $id,
                     'experiment_id' => 'experiment-' . $id,
                     'status' => $status,
-                    'record_json' => json_encode(['fixture' => true, 'status' => $status], JSON_THROW_ON_ERROR),
+                    'record_json' => json_encode(['fixture' => true, 'status' => $status,
+                        'result_id' => 'result-' . $id], JSON_THROW_ON_ERROR),
                     'created_at' => $time,
                 ]);
             }
@@ -1167,6 +1168,7 @@ final class FederationPersistenceSmokeCommand extends Command
                     'status' => $status, 'requested_by' => 1,
                     'requested_at' => $time,
                     'signed_by' => $status === 'signed' ? 'user-fixture' : null,
+                    'signed_by_actor_id' => $status === 'signed' ? 1 : null,
                     'signature_reference' => $signatureRef,
                     'signed_at' => $status === 'signed' ? $time : null,
                 ]);

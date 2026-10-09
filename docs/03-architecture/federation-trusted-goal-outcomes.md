@@ -226,3 +226,17 @@ Run-linked метрики для Research/Documents до наявності ро
 результатів. Resolver перехоплює тільки вузький
 `FederationOutcomeSourceNotReady`, залишаючи метрику `unverifiable`;
 усі інші помилки джерела й цілісності не маскуються.
+
+### Додатковий захист від приписування старих результатів
+
+Реєстратор вимагає persisted Action у статусі `RUNNING` і
+одну активну спробу worker із `attempt=1`, `status=RUNNING`.
+Native outcome timestamp має бути не ранішим за початок Run
+та першої worker attempt; для Research час має бути UTC з
+мікросекундами. Старі записи з округленням до секунди не
+приписуються заднім числом.
+
+Research перевіряє `status=VALIDATED` одночасно в рідному
+стовпці та `record_json`, а також відповідність `result_id`.
+Documents вимагає `signed_by_actor_id`, `signed_at`,
+`signed_by` та непорожній `signature_reference`.
