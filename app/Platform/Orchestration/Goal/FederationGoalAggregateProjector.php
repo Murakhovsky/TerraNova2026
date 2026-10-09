@@ -59,6 +59,7 @@ final readonly class FederationGoalAggregateProjector
                 || !is_bool($subject['native_proposal_verified'] ?? null)
                 || ($run !== null && (!is_string($run) || $run === ''))
                 || ($run === null && $runState !== null)
+                || ($state === 'proposed' && $run !== null)
                 || ($run !== null && !in_array($runState,['pending','running','waiting','completed','failed','cancelled','ambiguous'],true))) {
                 throw new DomainException('Untrusted or malformed Goal candidate aggregate snapshot.');
             }
@@ -127,8 +128,9 @@ final readonly class FederationGoalAggregateProjector
         if (count($goal->criteria) === 1
             && $goal->criteria[0]['id'] === 'federation.verified_proposals'
             && $goal->criteria[0]['operator'] === 'at_least'
-            && is_numeric($goal->criteria[0]['expected'])) {
-            $target = (int)$goal->criteria[0]['expected'];
+            && is_int($goal->criteria[0]['expected'])
+            && $goal->criteria[0]['expected'] >= 1) {
+            $target = $goal->criteria[0]['expected'];
         }
         $fullyAttested = $subjects !== [] && $verifiedProposals === count($subjects)
             && $states['completed'] === count($subjects);
