@@ -19,7 +19,7 @@ kind: domain
 ## Операторський сценарій
 
 1. Відкрити /capital-markets/discovery. Для читання потрібен MarketDataView, для сканування MarketDataManage.
-2. Натиснути сканування 10 або 80 кандидатів. Сервер надсилає три read-only запити до Binance Spot exchangeInfo, Bybit Spot instruments-info та Kraken AssetPairs. CSRF обов'язковий, повторне сканування не частіше ніж раз на 90 секунд.
+2. Натиснути сканування 10 або 80 кандидатів. Сервер надсилає три read-only запити до Binance Spot exchangeInfo, Bybit Spot instruments-info та Kraken AssetPairs. CSRF обов'язковий, повторне сканування не частіше ніж раз на 90 секунд завдяки атомарному резервуванню спроби до зовнішніх запитів, навіть якщо вони завершилися помилкою.
 3. Перевірити незалежний стан кожного джерела, дату і SHA-256 доказ відповіді. Недоступна біржа отримує UNAVAILABLE, а не NOT_LISTED.
 4. LISTED_EXACT_TOKEN_SYMBOL означає лише підтверджений символ у поточному каталозі. Економічний зв'язок лишається UNVERIFIED, а executable завжди false.
 5. DISTINCT_TOKEN_REVIEW_REQUIRED означає інший токен на той самий underlying. Наприклад AAPLB і AAPLx не є одним активом.
