@@ -272,6 +272,25 @@ final readonly class EngineeringArchitectStageExecutor
 
         try {
             $run = $this->agents->run($task, $organizationId, $correlationId);
+            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+            $this->journal->event(
+                $featureId,
+                $workflowId,
+                'AGENT',
+                'architect.llm_result_received',
+                'COMPLETED',
+                'Principal Architect LLM result returned to the stage executor.',
+                $correlationId,
+                [
+                    'agent_run_id' => $engineeringRunId,
+                    'kernel_run_id' => $run->runId,
+                    'status' => $run->status,
+                    'provider' => $run->provider,
+                    'model' => $run->model,
+                    'documentation_changes' => count(is_array($run->structuredOutput['documentation_changes'] ?? null) ? $run->structuredOutput['documentation_changes'] : []),
+                ],
+                $engineeringRunId,
+            );
             if ($run->status !== 'completed') {
                 throw new RuntimeException('Principal Architect Agent did not complete: '.($run->error ?? $run->status));
             }
@@ -285,6 +304,19 @@ final readonly class EngineeringArchitectStageExecutor
                 $featureId,
                 $workflowId,
                 $correlationId,
+            );
+
+            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+            $this->journal->event(
+                $featureId,
+                $workflowId,
+                'RUNTIME',
+                'architect.postprocess_validation_started',
+                'RUNNING',
+                'Principal Architect result entered post-LLM validation.',
+                $correlationId,
+                ['agent_run_id' => $engineeringRunId],
+                $engineeringRunId,
             );
 
             $structured = $this->enrichOutput(
@@ -306,6 +338,18 @@ final readonly class EngineeringArchitectStageExecutor
                 steps: $run->steps,
             );
             $this->validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput);
+            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+            $this->journal->event(
+                $featureId,
+                $workflowId,
+                'RUNTIME',
+                'architect.postprocess_validation_completed',
+                'COMPLETED',
+                'Principal Architect post-LLM validation completed.',
+                $correlationId,
+                ['agent_run_id' => $engineeringRunId],
+                $engineeringRunId,
+            );
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
@@ -317,13 +361,38 @@ final readonly class EngineeringArchitectStageExecutor
             throw $error;
         }
 
-        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId, $previousArchitecture): WorkflowDirective {
+        $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+        $this->journal->event(
+            $featureId,
+            $workflowId,
+            'RUNTIME',
+            'architect.persistence_started',
+            'RUNNING',
+            'Persist Principal Architect result and workflow transition.',
+            $correlationId,
+            ['agent_run_id' => $engineeringRunId],
+            $engineeringRunId,
+        );
+
+        return $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $run, $engineeringRunId, $previousArchitecture, $correlationId): WorkflowDirective {
             $workflow = $this->workflows->get($workflowId);
             if ($workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
                 throw new WorkflowAlreadyRunningException('Engineering workflow changed while Architect was running.');
             }
 
             $this->agentRuns->complete($engineeringRunId, $run);
+            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+            $this->journal->event(
+                $featureId,
+                $workflowId,
+                'RUNTIME',
+                'architect.agent_run_persisted',
+                'COMPLETED',
+                'Principal Architect AgentRun persisted.',
+                $correlationId,
+                ['agent_run_id' => $engineeringRunId],
+                $engineeringRunId,
+            );
             $architectStatus = (string) ($run->structuredOutput['status'] ?? '');
             $this->tasks->markRole(
                 $featureId,
@@ -403,6 +472,22 @@ final readonly class EngineeringArchitectStageExecutor
             );
             $this->persistTransitions($workflow, $next->transitions);
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
+            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+            $this->journal->event(
+                $featureId,
+                $workflowId,
+                'RUNTIME',
+                'architect.persistence_completed',
+                'COMPLETED',
+                'Principal Architect artifacts and workflow transition persisted.',
+                $correlationId,
+                [
+                    'agent_run_id' => $engineeringRunId,
+                    'next_directive' => $next->type->value,
+                    'workflow_state' => $workflow->currentState()->value,
+                ],
+                $engineeringRunId,
+            );
 
             if ($next->type === WorkflowDirectiveType::REQUEST_HUMAN_DECISION) {
                 $decision = $run->structuredOutput['required_human_decisions'][0] ?? null;

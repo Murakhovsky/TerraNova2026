@@ -130,4 +130,16 @@ if (!str_contains($architectStage, 'repository.verify_documentation_targets')
     throw new RuntimeException('Architect post-LLM documentation verification can still become an unobservable stall.');
 }
 
+foreach ([
+    'architect.llm_result_received',
+    'architect.postprocess_validation_started',
+    'architect.postprocess_validation_completed',
+    'architect.persistence_started',
+    'architect.agent_run_persisted',
+    'architect.persistence_completed',
+] as $checkpoint) {
+    if (!str_contains($architectStage, $checkpoint)) {
+        throw new RuntimeException('Principal Architect post-LLM checkpoint missing: '.$checkpoint);
+    }
+}
 echo "Engineering runtime truth and observability contract passed.\n";
