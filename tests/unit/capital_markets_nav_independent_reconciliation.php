@@ -112,6 +112,7 @@ $fact=static function(string $kind,string $id,string $amount,array $more=[])use(
     return [
         'evidence_id'=>$id, 'kind'=>$kind, 'amount'=>$amount,
         'currency'=>'USD','provider_id'=>'independent-issuer',
+        'provider_event_id'=>$kind==='EXTERNAL_CASH_FLOW'?$id:null,
         'source_reference'=>'file:'.$id,
         'source_document_sha256'=>hash('sha256','independent-document:'.$id),
         'collected_by'=>'21','effective_at'=>$now,
@@ -165,6 +166,15 @@ $trading->ledger[0]['entries'][0]['debit']='105';
 $denied=$service->certify('org-a','paper-master',77,'APPROVE_VERIFIED_INDEPENDENT_EVIDENCE');
 $assert($denied['status']==='BLOCKED','Unbalanced trading journal must block NAV.');
 $trading->ledger[0]['entries'][0]['debit']='100';
+
+$duplicatedFlow=$fact('EXTERNAL_CASH_FLOW','alternative-reference','100',[
+    'provider_event_id'=>'external-deposit',
+]);
+$source->append('org-a','paper-master',$duplicatedFlow);
+$duplicateCheck=$service->certify('org-a','paper-master',77,'APPROVE_VERIFIED_INDEPENDENT_EVIDENCE');
+$assert(in_array('DUPLICATE_PROVIDER_CASH_FLOW_EVENT',$duplicateCheck['issues']??[],true),
+    'The same actual deposit imported under a different reference must not be counted twice.');
+array_pop($source->records);
 
 $ok=$service->certify('org-a','paper-master',77,'APPROVE_VERIFIED_INDEPENDENT_EVIDENCE');
 $assert($ok['status']==='COMPLETE' && $ok['snapshot_written']===true,'Reconciled documentary NAV needs persisted COMPLETE status.');
