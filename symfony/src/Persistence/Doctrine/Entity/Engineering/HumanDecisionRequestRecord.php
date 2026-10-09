@@ -52,6 +52,15 @@ class HumanDecisionRequestRecord
     public function status(): string { return $this->status; }
     public function recommendedOption(): ?string { return $this->recommendedOption; }
 
+    public function markAutoResolved(DateTimeImmutable $at): void
+    {
+        if ($this->status !== 'OPEN' || $this->type !== 'WORKFLOW_EVIDENCE_REFRESH') {
+            throw new \\LogicException('Only an open evidence refresh request can be system-resolved.');
+        }
+        $this->status = 'AUTO_RESOLVED';
+        $this->resolvedAt = $at;
+    }
+
     public function markAnswered(DateTimeImmutable $at): void
     {
         $this->status = 'ANSWERED';
