@@ -11,6 +11,7 @@ use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Documents\Contract\DocumentsRepositoryInterface;
 use Platform\Orchestration\Goal\FederationGoalAggregateProjector;
+use Platform\Orchestration\Goal\GoalOutcomeEvaluator;
 
 /**
  * Tenant-owned, read-only Goal-wide native artifact verifier. This is not a
@@ -37,6 +38,7 @@ final readonly class FederationGoalOutcomeAggregationService
         private SalesProposalLeadReadModelInterface $sales,
         private DocumentsRepositoryInterface $documents,
         private FederationGoalAggregateProjector $projector,
+        private GoalOutcomeEvaluator $evaluator,
     ) {}
 
     /** @return array<string,mixed> */
@@ -228,4 +230,96 @@ final readonly class FederationGoalOutcomeAggregationService
         $aggregate['read_only']=true;
         return $aggregate;
     }
+    /**
+     * Independently requested, evidence-only business outcome evaluation.
+     * Never authorizes or replays an Action. No user-supplied metric or
+     * evidence is accepted; only the single exact native-proposal Goal metric
+     * is supported. The transaction locks the Goal against concurrent fan-out.
+     *
+     * @return array<string,mixed>
+     */
+    public function recordVerifiedProposalOutcome(TenantContext $actor,string $goalId): array
+    {
+        if (!$actor->isManager() || !$actor->allows(TenantPermissions::MANAGE)
+            || !preg_match('/^[a-z0-9][a-z0-9_:-]{0,63}$/D',$goalId)) {
+            throw new DomainException('Unauthorized aggregate Goal evaluation.');
+        }
+        $org=$actor->organizationId()->value();
+        return $this->db->transactional(function()use($actor,$goalId,$org):array {
+            $row=$this->db->fetchAssociative(
+                'SELECT goal_id,current_spec_version FROM cos_federation_goals
+                 WHERE organization_id=:org AND goal_id=:goal FOR UPDATE',
+                ['org'=>$org,'goal'=>$goalId],
+            );
+            if (!$row) {
+                throw new DomainException('Tenant Goal is unavailable for independent evaluation.');
+            }
+            $goal=$this->goals->specification($actor,$goalId);
+            if ($goal===null || $goal->version!==(int)$row['current_spec_version']
+                || count($goal->criteria)!==1
+                || $goal->criteria[0]['id']!=='federation.verified_proposals'
+                || $goal->criteria[0]['operator']!=='at_least'
+                || !is_int($goal->criteria[0]['expected'])
+                || $goal->criteria[0]['expected']<1
+                || $goal->criteria[0]['expected']>FederationGoalAggregateProjector::LIMIT) {
+                throw new DomainException('Goal has no approved native proposal metric; Sales revenue cannot be inferred.');
+            }
+            // The read is repeated within the Goal transaction. Every
+            // completed child Action and native Growth/Sales/Document fact is
+            // freshly re-attested before persisted Goal credit is permitted.
+            $aggregate=$this->inspect($actor,$goalId);
+            $count=$aggregate['candidate_plans'];
+            $proof=$aggregate['native_proposals_prepared'];
+            if ($count<$goal->criteria[0]['expected']
+                || $count!==$proof
+                || $aggregate['plan_states']['completed']!==$count
+                || $aggregate['native_sales_handoffs']!==$count
+                || $aggregate['aggregate_state']!=='ready_for_independent_goal_evaluation') {
+                throw new DomainException('Goal contains pending, unapproved or unverifiable native candidate outcomes.');
+            }
+            $references=[];
+            foreach ($aggregate['items'] as $item) {
+                if (($item['native_proposal_verified']??null)!==true
+                    || !is_string($item['run_id']??null)
+                    || !is_string($item['sales_lead_id']??null)
+                    || !is_string($item['document_id']??null)) {
+                    throw new DomainException('Invalid native outcome entry in Goal aggregate.');
+                }
+                $references[]='federation:native_proposal:v1:'.hash('sha256',
+                    implode("\0",[$org,$goalId,$item['plan_id'],$item['run_id'],
+                        $item['candidate_id'],$item['sales_lead_id'],$item['document_id']])
+                );
+            }
+            sort($references,SORT_STRING);
+            if (count(array_unique($references))!==$count) {
+                throw new DomainException('Duplicate native proposal outcome fingerprint.');
+            }
+            $evaluation=$this->evaluator->evaluate($goal,[
+                'federation.verified_proposals'=>[
+                    'value'=>$proof,'evidence'=>$references,
+                    'source'=>'federation.native_growth_sales_documents.v1',
+                    'attribution'=>'native_multi_domain_completed_actions',
+                    'verified_actions'=>$count*4,
+                ],
+            ]);
+            if ($evaluation['result']!=='satisfied') {
+                throw new DomainException('Canonical deterministic Goal criterion was not satisfied.');
+            }
+            $evaluationId='eval-'.bin2hex(random_bytes(12));
+            $evaluation['evaluation_id']=$evaluationId;
+            $evaluation['evidence_policy']='native_goal_aggregate_v1';
+            $evaluation['verified_candidate_count']=$count;
+            $evaluation['business_outcome_verified']=true;
+            $this->db->insert('cos_federation_evaluations',[
+                'organization_id'=>$org,'evaluation_id'=>$evaluationId,
+                'goal_id'=>$goalId,'spec_version'=>$goal->version,
+                'result'=>'satisfied',
+                'evaluation_json'=>json_encode($evaluation,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
+                'evaluated_at'=>(new \DateTimeImmutable('now',new \DateTimeZone('UTC')))
+                    ->format('Y-m-d H:i:s.u'),
+            ]);
+            return $evaluation;
+        });
+    }
+
 }
