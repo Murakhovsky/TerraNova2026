@@ -115,36 +115,35 @@ Nginx вимикає buffering для SSE.
 
 Hub має окремий readiness healthcheck і persistent data/config volumes.
 
-## Canonical public URL and safe degraded mode
+## Публічна адреса Mercure та безпечний режим недоступності
 
-Private Mercure subscriptions require the browser-facing `MERCURE_PUBLIC_URL` to be
-on the **same origin** (scheme + host + port) as the authenticated Web request.
-The internal publisher URL `MERCURE_URL=http://mercure/.well-known/mercure`
-remains unchanged and is **not** a browser destination.
+Приватна підписка Mercure потребує, щоб `MERCURE_PUBLIC_URL` мав те саме
+походження (протокол, домен і порт), що й авторизований вебзапит.
+Внутрішня адреса публікації `MERCURE_URL=http://mercure/.well-known/mercure`
+не змінюється і не використовується браузером.
 
-For the production Web host `https://company-os.shop` configure the deployment
-environment (do not put secrets in the repository):
+Для сайту `https://company-os.shop` налаштування середовища розгортання:
 
 ```dotenv
 APP_URL=https://company-os.shop
 MERCURE_PUBLIC_URL=https://company-os.shop/.well-known/mercure
 ```
 
-The canonical nginx SSE endpoint `/.well-known/mercure` proxies to the
-internal hub. After updating the production environment, recreate/restart the
-Symfony PHP service, then confirm an authenticated page can subscribe to a
-private tenant-scoped topic without an unauthorized hub cookie error.
+Вебсервер Nginx передає запити до `/.well-known/mercure` внутрішньому хабу.
+Після зміни змінних середовища потрібно перестворити або перезапустити
+службу Symfony PHP та перевірити приватну підписку авторизованого користувача.
 
-If a public Mercure URL is misconfigured, `CosRealtimeSubscription` **does not
-invoke** `turbo_stream_listen()`; the UI exposes transport `Unavailable`,
-keeps the business page server-rendered, and does not issue a token to a
-different origin. Do not replace private subscriptions with anonymous events,
-loosen cookie domains, or use `127.0.0.1` as a production public hub.
+Якщо публічна адреса хаба налаштована помилково, компонент
+`CosRealtimeSubscription` не викликає `turbo_stream_listen()`. Сторінка
+продовжує працювати, а стан транспорту позначається як `Unavailable`.
+Приватний токен не видається для іншого домену. Не можна замінювати
+приватні підписки анонімними або використовувати `127.0.0.1` як публічну
+адресу виробничого хаба.
 
-A working SSR page does **not** prove that realtime is configured; transport
-readiness must be independently checked on `/dev/realtime` or by a trusted
-two-tab private publish/subscribe smoke test. This behavior is covered by
-`tests/unit/realtime_hub_origin.php`, invoked in Runtime CI.
+Відкриття сторінки без помилок не гарантує роботу доставки подій.
+Окремо потрібно перевірити `/dev/realtime` або приватну доставку подій
+між двома авторизованими вкладками. Регресійний тест:
+`tests/unit/realtime_hub_origin.php`, який виконується у Runtime CI.
 
 ## Надійність
 
