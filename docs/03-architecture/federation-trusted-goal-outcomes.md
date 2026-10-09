@@ -173,3 +173,33 @@ Action receipt не збільшує результат.
 **Зв'язок у COS не є доказом контрфактичної економічної причинності.**
 Research і Documents поки не мають аналогічного надійного FK на
 перевірену Federation Action у власних business outcomes.
+
+## Перевірений зв'язок Research і Documents з Action: підготовлений реєстр
+
+Поточні записи Research та Documents не містять Federation Action ID. Їхні
+наявні критерії `capital_markets.research_results_validated` та
+`documents.signatures_recorded` і надалі мають `attribution=temporal_only`.
+
+Додано непублічний `FederationOutcomeOriginRecorder` і таблицю
+`cos_federation_outcome_origins` (міграція `20261009_000137`). В одному
+транзакційному контексті з нативним бізнес-записом recorder перевіряє:
+
+- Активну Action у стані `RUNNING`, що існує у канонічній таблиці;
+- Worker-time Policy, незалежне Approval і незмінний затверджений Plan;
+- Точний тип Action та ціль (`research_result` або `document_signature`);
+- Прив'язку до claimed Step конкретного Run та часову послідовність;
+- Збережений результат Research `VALIDATED` або реальний запис підпису
+  Documents `signed` з непорожніми виконавцем і посиланням.
+
+Унікальні ключі не дозволяють приписати один native Outcome декільком
+Actions або Runs. `FederationOutcomeOriginReader` повторно перевіряє
+поточний native record fingerprint і канонічну завершену Action
+з однією успішною спробою. Невірні, підмінені або відкликані записи
+не повертаються серед verified links. Пряме внесення рядка в журнал
+не є підтвердженням походження.
+
+**Обмеження цього етапу:** реальні Action handlers типів
+`capital_markets.research.result.record` та `documents.signature.sign`
+ще не реалізовані. Не підмінюємо їх іншими Actions та не вмикаємо
+Run-linked метрики для Research/Documents до наявності робочого writer
+у доменній транзакції. Ніякого retroactive backfill за correlation IDs.

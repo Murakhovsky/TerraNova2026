@@ -8,6 +8,7 @@ use DateTimeZone;
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Kernel\Action\Action;
+use Kernel\Action\ActionStatus;
 
 /**
  * Internal-only, append-only origin recorder. It must be called in the SAME
@@ -29,13 +30,28 @@ final readonly class FederationOutcomeOriginRecorder
         if (!$this->db->isTransactionActive()) {
             throw new DomainException('Domain outcome origin must be atomic with the business write.');
         }
+        if ($action->status !== ActionStatus::Running) {
+            throw new DomainException('Only a running canonical worker Action may create origin lineage.');
+        }
+        $persisted = $this->db->fetchAssociative(
+            'SELECT status, type, target_type, target_id, idempotency_key
+             FROM cos_actions WHERE organization_id=:org AND id=:action',
+            ['org' => $action->organizationId, 'action' => $action->id],
+        );
+        if (!$persisted || $persisted['status'] !== 'RUNNING'
+            || $persisted['type'] !== $action->type
+            || $persisted['target_type'] !== $action->targetType
+            || $persisted['target_id'] !== $action->targetId
+            || $persisted['idempotency_key'] !== $action->idempotencyKey) {
+            throw new DomainException('Origin requires identical durable running Action identity.');
+        }
         // Canonical persisted Action, immutable Plan, worker-time policy,
         // independent human approval, tenant and claimed Step.
         $this->admission->assertAuthorized($action);
 
         $org = $action->organizationId;
         $step = $this->db->fetchAssociative(
-            "SELECT s.run_id, s.step_id FROM cos_federation_steps s
+            "SELECT s.run_id, s.step_id, r.created_at AS run_started_at FROM cos_federation_steps s
              INNER JOIN cos_federation_runs r ON r.organization_id=s.organization_id AND r.run_id=s.run_id
              WHERE s.organization_id=:org AND s.idempotency_key=:key
                AND s.side_effect_level='external' AND s.state='claimed'
@@ -49,6 +65,11 @@ final readonly class FederationOutcomeOriginRecorder
         $source = $this->nativeOutcome($org, $domain, $outcomeId);
         if ($source === null) {
             throw new DomainException('Native Research/Documents outcome is not final and verifiable.');
+        }
+        $eventTime = $source[$domain === 'capital_markets' ? 'created_at' : 'signed_at'];
+        if ($eventTime < (string) $step['run_started_at']) {
+            // Fail closed on second-precision Research boundary ambiguity.
+            throw new DomainException('Native outcome predates the originating Federation Run.');
         }
         $this->db->insert('cos_federation_outcome_origins', [
             'organization_id' => $org,
