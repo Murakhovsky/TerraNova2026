@@ -33,6 +33,16 @@ foreach ([
 ] as $needle) {
     if (!str_contains($stage, $needle)) throw new RuntimeException('Architect stage missing '.$needle);
 }
+foreach ([
+    'architect.preflight_evidence_ready',
+    'architect.agent_run_start',
+    'Architect AgentRun start failed after repository/database evidence',
+] as $checkpoint) {
+    if (!str_contains($stage, $checkpoint)) {
+        throw new RuntimeException('Architect pre-AgentRun diagnostics missing: '.$checkpoint);
+    }
+}
+
 if (!str_contains($progression, 'AgentRole::PRINCIPAL_ARCHITECT')) throw new RuntimeException('Autonomous progression does not run Architect.');
 if (!str_contains($schemaProvider, 'get_debug_type($column->getType())')) throw new RuntimeException('Architect DB schema provider must use DBAL 4-safe type introspection.');
 if (str_contains($schemaProvider, 'getDefault()')) throw new RuntimeException('Architect DB schema snapshot must not expose column default values.');
