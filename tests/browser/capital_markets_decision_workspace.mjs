@@ -167,6 +167,18 @@ try {
       if (!windowsJson.ok()) {
         throw new Error('desktop: realized-window JSON export returned ' + windowsJson.status());
       }
+      const navJson = await context.request.get(absolute('/capital-markets/export/portfolio-nav.json'));
+      if (!navJson.ok()) throw new Error('desktop: verified NAV export returned ' + navJson.status());
+      const navPayload = await navJson.json();
+      if (navPayload.dataset !== 'portfolio-nav' || !Array.isArray(navPayload.data)
+          || navPayload.data.length !== 3) {
+        throw new Error('desktop: verified NAV export must include current, today and 30d rows.');
+      }
+      for (const item of navPayload.data) {
+        if (item.status !== 'COMPLETE' && (item.equity !== null || item.net_pnl !== null)) {
+          throw new Error('desktop: incomplete verified NAV must not export financial totals.');
+        }
+      }
       const windowsPayload = await windowsJson.json();
       if (windowsPayload.dataset !== 'realized-windows' || !Array.isArray(windowsPayload.data)
         || windowsPayload.data.length !== 2) {
