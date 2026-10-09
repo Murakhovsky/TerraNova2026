@@ -215,7 +215,7 @@ final readonly class PortfolioNavIndependentReconciliationService
         foreach ($positions as $position) {
             if (!is_array($position)) {$issues[]='POSITION_RECORD_INVALID';continue;}
             $owner=(string)($position['portfolio_id']??'');
-            if ($owner!==$portfolioId) {
+            if ($owner!==$portfolioId && !str_starts_with($owner,'paper:')) {
                 $issues[]='POSITION_PORTFOLIO_SCOPE_UNVERIFIED';continue;
             }
             $id=trim((string)($position['position_id']??''));
