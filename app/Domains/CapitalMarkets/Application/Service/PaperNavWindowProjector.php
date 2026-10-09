@@ -13,7 +13,7 @@ use Throwable;
 final class PaperNavWindowProjector
 {
     /** @param list<array<string,mixed>> $snapshots @return array<string,mixed> */
-    public static function project(array $snapshots,?DateTimeImmutable $at=null,int $maxSkewSeconds=900):array
+    public static function project(array $snapshots,?DateTimeImmutable $at=null,int $maxSkewSeconds=900,?string $expectedEpoch=null):array
     {
         $now=($at??new DateTimeImmutable('now',new DateTimeZone('UTC')))
             ->setTimezone(new DateTimeZone('UTC'));
@@ -67,12 +67,16 @@ final class PaperNavWindowProjector
         if ($recentRejected) $latest['reason']='INVALID_RECENT_SIMULATED_SNAPSHOT';
         elseif ($fresh!==[]) {
             $current=end($fresh);
+            if ($expectedEpoch!==null && $current['epoch']!==$expectedEpoch) {
+                $latest['reason']='PAPER_ACCOUNT_RESET_SINCE_LAST_SNAPSHOT';
+            } else {
             $duplicates=0;
             foreach ($fresh as $x) if ($x['time']==$current['time']) $duplicates++;
             if ($duplicates>1) $latest['reason']='CONFLICTING_SIMULATED_SNAPSHOTS';
             else {
                 $latest=['status'=>'SIMULATED','mode'=>'PAPER','equity'=>$current['equity']->value(),
                     'currency'=>$current['currency'],'valued_at'=>$current['time']->format(DATE_ATOM),'reason'=>null];
+            }
             }
         }
         $windows=[];
@@ -96,6 +100,9 @@ final class PaperNavWindowProjector
                 if ($row['time']<=$now) $closing=$row;
             }
             if ($opening===null || $closing===null) {$windows[$key]=$base;continue;}
+            if ($expectedEpoch!==null && $closing['epoch']!==$expectedEpoch) {
+                $windows[$key]=[...$base,'reason'=>'PAPER_ACCOUNT_RESET_SINCE_LAST_SNAPSHOT'];continue;
+            }
             $startLag=$start->getTimestamp()-$opening['time']->getTimestamp();
             $endLag=$now->getTimestamp()-$closing['time']->getTimestamp();
             if ($opening['time']>=$closing['time']
