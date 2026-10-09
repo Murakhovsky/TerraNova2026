@@ -58,6 +58,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly Connection $db,
         private readonly FederationGoalStore $goals,
         private readonly FederationCandidateFanoutPlanner $candidateFanout,
+        private readonly \App\Persistence\Federation\FederationGoalOutcomeAggregationService $goalAggregates,
         private readonly FederationOutcomeOriginReader $originReader,
         private readonly FederationOutcomeOriginRecorder $originRecorder,
         private readonly RecordValidatedResearchResultHandler $researchResultHandler,
@@ -1758,6 +1759,16 @@ final class FederationPersistenceSmokeCommand extends Command
             && min(array_keys($versions))===1 && max(array_keys($versions))===50,
             'Native Goal Plan uniqueness requires 50 distinct monotonic versions.');
         self::assert(count($candidates)===50,'Duplicate Candidate persisted under same Goal.');
+        // Data-backed Goal-wide native evidence: proposed Plans cannot mint
+        // Sales Leads, Documents, completed Runs or verified business success.
+        $aggregate=$this->goalAggregates->inspect($actor,$goalId);
+        self::assert($aggregate['candidate_plans']===50
+            && $aggregate['native_sales_handoffs']===0
+            && $aggregate['native_proposals_prepared']===0
+            && $aggregate['verified_action_steps']['qualify']===0
+            && $aggregate['business_outcome_verified']===false,
+            'Proposed Candidate Plans were falsely promoted to native business results.');
+
         $foreign=$this->db->fetchOne(
             'SELECT COUNT(*) FROM cos_federation_plans
              WHERE organization_id=:foreign AND goal_id=:goal',
