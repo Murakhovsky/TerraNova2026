@@ -119,6 +119,14 @@ foreach ([
     }
 }
 
+// Recoverable runtime health is not a terminal workflow state.
+if (!str_contains($controller, 'return this.isTerminal(state, status);')) {
+    throw new RuntimeException('Engineering live polling must survive STALE and STALLED health.');
+}
+if (str_contains($controller, "return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);")) {
+    throw new RuntimeException('Engineering UI incorrectly treats recoverable health as terminal.');
+}
+
 if (!str_contains($uiActions, "\$activeExecution = \$hasWorkflow && \$workflowStatus === 'RUNNING'")) {
     throw new RuntimeException('Engineering UI still lacks active-execution action suppression.');
 }
