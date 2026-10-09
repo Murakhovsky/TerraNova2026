@@ -1,5 +1,12 @@
 
 # COS Federation Goal/Outcome draft workspace.
+# Read-only, Domain-attested Goal-wide progress (no auto approval or execution).
+cos_federation_goal_aggregate:
+  path: /api/v1/federation/goals/{goalId}/aggregate
+  controller: App\Web\Federation\FederationGoalAggregateController::show
+  methods: [GET, HEAD]
+  requirements: { goalId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 cos_federation_goals_index:
   path: /workspace/goals
   controller: App\Web\Federation\GoalsWorkspaceController::index
