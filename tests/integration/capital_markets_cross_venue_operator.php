@@ -11,6 +11,7 @@ $files=[
     'app/Domains/CapitalMarkets/Application/Service/CrossVenueCatalogDiscovery.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueDiscoverySnapshotRepository.php',
     'symfony/src/Web/CapitalMarkets/CrossVenueDiscoveryController.php',
+    'resources/capital-markets/universes/binance-bstocks-2026-09-27.csv',
     'symfony/templates/experience/capital_markets/discovery.html.twig',
     'app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql',
 ];
@@ -40,4 +41,7 @@ $reservation=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infras
 $assert(str_contains($reservation,'UPDATE tn_capital_market_discovery_scan_gates')
     && str_contains($reservation,'TIMESTAMPDIFF(SECOND,last_attempt_at,UTC_TIMESTAMP(6))>=:cooldown'),
     'Operator provider cooldown must use database-atomic reservation.');
+$docker=(string)file_get_contents($root.'/docker/symfony/php/Dockerfile');
+$assert(str_contains($docker,'COPY resources/capital-markets/ /var/www/html/resources/capital-markets/'),
+    'Production Docker runtime must include historical discovery universe.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
