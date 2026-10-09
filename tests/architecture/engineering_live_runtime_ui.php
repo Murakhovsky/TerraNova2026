@@ -105,6 +105,15 @@ foreach ([
     }
 }
 
+// STALE/STALLED is an operational warning. It must not permanently stop
+// read-only live polling: otherwise a recovering workflow stays falsely frozen.
+if (!str_contains($controller, 'return this.isTerminal(state, status);')) {
+    throw new RuntimeException('Engineering live UI still stops polling on recoverable runtime health.');
+}
+if (str_contains($controller, "return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);")) {
+    throw new RuntimeException('Engineering live UI still treats STALE/STALLED as terminal.');
+}
+
 if (!str_contains($uiActions, "\$activeExecution = \$hasWorkflow && \$workflowStatus === 'RUNNING'")) {
     throw new RuntimeException('Engineering UI still lacks active-execution action suppression.');
 }
