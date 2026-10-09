@@ -78,6 +78,13 @@
                     {% endfor %}
                 </p>
 
+                <p class="cos-card__copy">
+                    <a href="{{ path('cos_federation_goal_aggregate', {goalId: goal.id}) }}"
+                       data-goal-native-aggregate-link
+                       rel="nofollow">Перевірити реальні результати Growth → Sales → Documents (JSON)</a>
+                    <small>Лише читання. Не означає автоматичного підтвердження бізнес-цілі.</small>
+                </p>
+
                 {% if mode in ['process', 'expert'] %}
                     <div class="cos-card__copy" data-goal-process>
                         <strong>Процес:</strong> специфікацію збережено; план виконання ще не погоджений.
