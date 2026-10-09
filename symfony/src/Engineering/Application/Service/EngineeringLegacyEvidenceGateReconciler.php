@@ -49,7 +49,22 @@ final readonly class EngineeringLegacyEvidenceGateReconciler
             if (!preg_match('/^[0-9a-f]{40}$/i', $revision)) {
                 throw new RuntimeException('Read-only evidence requires an authoritative revision.');
             }
-            // REVALIDATE_AND_RESUME
+            $oldRevision = $this->policy->requestedLegacyRevision($request)
+                ?? trim((string) ($request['evidence']['repository_revision'] ?? ''));
+            if ($oldRevision !== '' && $oldRevision !== $revision) {
+                $comparison = $this->repository->compareRevisions($oldRevision, $revision);
+                if (!in_array((string) ($comparison['status'] ?? ''), ['ahead','identical'], true)) {
+                    throw new RuntimeException('Replacement repository revision failed ancestor revalidation.');
+                }
+            }
+            $paths = $this->policy->legacyRefreshPaths([]);
+            if ($paths === []) throw new RuntimeException('No bounded evidence paths were selected.');
+            $existing = $this->repository->existingPathsAtRevision($paths, $revision);
+            if (array_diff($paths, $existing) !== []) {
+                throw new RuntimeException('Evidence files are absent from the validated repository revision.');
+            }
+            // RESUME_PERSIST
+
         });
     }
 }
