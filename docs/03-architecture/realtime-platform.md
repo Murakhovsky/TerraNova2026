@@ -115,6 +115,37 @@ Nginx вимикає buffering для SSE.
 
 Hub має окремий readiness healthcheck і persistent data/config volumes.
 
+## Canonical public URL and safe degraded mode
+
+Private Mercure subscriptions require the browser-facing `MERCURE_PUBLIC_URL` to be
+on the **same origin** (scheme + host + port) as the authenticated Web request.
+The internal publisher URL `MERCURE_URL=http://mercure/.well-known/mercure`
+remains unchanged and is **not** a browser destination.
+
+For the production Web host `https://company-os.shop` configure the deployment
+environment (do not put secrets in the repository):
+
+```dotenv
+APP_URL=https://company-os.shop
+MERCURE_PUBLIC_URL=https://company-os.shop/.well-known/mercure
+```
+
+The canonical nginx SSE endpoint `/.well-known/mercure` proxies to the
+internal hub. After updating the production environment, recreate/restart the
+Symfony PHP service, then confirm an authenticated page can subscribe to a
+private tenant-scoped topic without an unauthorized hub cookie error.
+
+If a public Mercure URL is misconfigured, `CosRealtimeSubscription` **does not
+invoke** `turbo_stream_listen()`; the UI exposes transport `Unavailable`,
+keeps the business page server-rendered, and does not issue a token to a
+different origin. Do not replace private subscriptions with anonymous events,
+loosen cookie domains, or use `127.0.0.1` as a production public hub.
+
+A working SSR page does **not** prove that realtime is configured; transport
+readiness must be independently checked on `/dev/realtime` or by a trusted
+two-tab private publish/subscribe smoke test. This behavior is covered by
+`tests/unit/realtime_hub_origin.php`, invoked in Runtime CI.
+
 ## Надійність
 
 Mercure відповідає за transport reconnect та replay semantics.
