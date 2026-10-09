@@ -774,7 +774,12 @@ final class FederationPersistenceSmokeCommand extends Command
             $linearRun = 'run-' . bin2hex(random_bytes(8));
             $this->goals->createGoal($actor, new GoalSpecification(
                 $linearGoal, $org, 'user-smoke', 'Create two approved follow-up tasks in order',
-                [['id' => 'sales.local_tasks_created', 'operator' => 'at_least', 'expected' => 2]],
+                [
+                    ['id' => 'sales.local_tasks_created', 'operator' => 'at_least', 'expected' => 2],
+                    ['id' => 'growth.inbound_responses_recorded', 'operator' => 'at_least', 'expected' => 1],
+                    ['id' => 'capital_markets.research_results_validated', 'operator' => 'at_least', 'expected' => 1],
+                    ['id' => 'documents.signatures_recorded', 'operator' => 'at_least', 'expected' => 1],
+                ],
                 ['sales.create_task'],
             ));
             $this->goals->proposePlan($actor, $linearPlan, $linearGoal, [
@@ -1057,15 +1062,116 @@ final class FederationPersistenceSmokeCommand extends Command
             $local = $this->goals->recordEvaluation(
                 $actor, 'eval-' . bin2hex(random_bytes(8)), $linearRun,
             );
-            self::assert($local['result'] === 'unsatisfied'
+            self::assert($local['result'] === 'unverifiable'
                 && $local['criteria'][0]['result'] === 'unsatisfied'
                 && $local['criteria'][0]['observed'] === 0
                 && $local['criteria'][0]['source'] === 'sales.tn_client_case_activities.task.v1'
-                && count($local['criteria'][0]['evidence']) === 1,
-                'Domain-owned CRM task count fabricated results from Action receipts.');
-            self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'unsatisfied'
+                && count($local['criteria'][0]['evidence']) === 1
+                && $local['criteria'][1]['result'] === 'unverifiable'
+                && $local['criteria'][2]['result'] === 'unverifiable'
+                && $local['criteria'][3]['observed'] === 0,
+                'Domain evidence from disabled Growth/Research modules was fabricated or local Action receipts were counted.');
+            self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'unverifiable'
                 && $this->goals->latestTrustedEvaluation($other, $linearRun) === null,
-                'Task evaluation leaked tenant data or omitted durable audit.');
+                'Initial multi-domain evaluation leaked disabled modules or tenant data.');
+
+            // Activate only the two optional business Domains for the test tenant.
+            // Platform Documents is a core capability, with no module toggle.
+            $this->db->insert('cos_organization_modules', [
+                'organization_id' => $org, 'module_id' => 'growth', 'enabled' => 1,
+            ]);
+            $this->db->insert('cos_organization_modules', [
+                'organization_id' => $org, 'module_id' => 'capital_markets', 'enabled' => 1,
+            ]);
+
+            // Authoritative persisted facts AFTER Run creation, not Action
+            // responses. All writes belong to the outer rollback transaction.
+            $eventTime = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+                ->format('Y-m-d H:i:s.u');
+            $oldTime = '2020-01-01 00:00:00.000000';
+            $foreignOrg = 'foreign-' . $org;
+            $newId = static fn (): string => bin2hex(random_bytes(10));
+
+            // Growth unique inbound response; older/out-of-tenant facts excluded.
+            foreach ([
+                [$org, $eventTime],
+                [$org, $oldTime],
+                [$foreignOrg, $eventTime],
+            ] as [$tenantId, $time]) {
+                $id = $newId();
+                $this->db->insert('tn_growth_engagement_responses', [
+                    'organization_id' => $tenantId, 'response_id' => $id,
+                    'source_event_id' => 'event-' . $id, 'execution_id' => 'exec-' . $id,
+                    'candidate_id' => 'candidate-' . $id,
+                    'recommendation_id' => 'recommend-' . $id,
+                    'action_id' => 'action-' . $id, 'channel' => 'email',
+                    'body' => 'Confirmed fixture response',
+                    'body_hash' => hash('sha256', 'Confirmed fixture response'),
+                    'occurred_at' => $time, 'created_at' => $time,
+                ]);
+            }
+
+            // Research: only persisted VALIDATED results count.
+            foreach ([
+                [$org, $eventTime, 'VALIDATED'],
+                [$org, $eventTime, 'REJECTED'],
+                [$org, $oldTime, 'VALIDATED'],
+                [$foreignOrg, $eventTime, 'VALIDATED'],
+            ] as [$tenantId, $time, $status]) {
+                $id = $newId();
+                $this->db->insert('tn_capital_market_research_results', [
+                    'organization_id' => $tenantId,
+                    'result_id' => 'result-' . $id,
+                    'experiment_id' => 'experiment-' . $id,
+                    'status' => $status,
+                    'record_json' => json_encode(['fixture' => true, 'status' => $status], JSON_THROW_ON_ERROR),
+                    'created_at' => $time,
+                ]);
+            }
+
+            // Documents: signed + nonempty reference + actor. Requested,
+            // unreferenced, old or foreign signatures must not count.
+            foreach ([
+                [$org, $eventTime, 'signed', 'signed-proof'],
+                [$org, $eventTime, 'requested', null],
+                [$org, $eventTime, 'signed', ''],
+                [$org, $oldTime, 'signed', 'signed-proof'],
+                [$foreignOrg, $eventTime, 'signed', 'signed-proof'],
+            ] as [$tenantId, $time, $status, $signatureRef]) {
+                $id = $newId();
+                $this->db->insert('cos_document_signatures', [
+                    'organization_id' => $tenantId,
+                    'signature_id' => 'signature-' . $id,
+                    'document_id' => 'document-' . $id,
+                    'signer_id' => 'user-fixture',
+                    'status' => $status, 'requested_by' => 1,
+                    'requested_at' => $time,
+                    'signed_by' => $status === 'signed' ? 'user-fixture' : null,
+                    'signature_reference' => $signatureRef,
+                    'signed_at' => $status === 'signed' ? $time : null,
+                ]);
+            }
+
+            $measured = $this->goals->recordEvaluation(
+                $actor, 'eval-' . bin2hex(random_bytes(8)), $linearRun,
+            );
+            self::assert($measured['result'] === 'partial'
+                && count($measured['criteria']) === 4
+                && $measured['criteria'][0]['observed'] === 0
+                && $measured['criteria'][0]['result'] === 'unsatisfied'
+                && $measured['criteria'][1]['observed'] === 1
+                && $measured['criteria'][1]['result'] === 'satisfied'
+                && $measured['criteria'][1]['source'] === 'growth.tn_growth_engagement_responses.v1'
+                && $measured['criteria'][2]['observed'] === 1
+                && $measured['criteria'][2]['result'] === 'satisfied'
+                && $measured['criteria'][2]['source'] === 'capital_markets.tn_capital_market_research_results.validated.v1'
+                && $measured['criteria'][3]['observed'] === 1
+                && $measured['criteria'][3]['result'] === 'satisfied'
+                && $measured['criteria'][3]['source'] === 'platform.documents.cos_document_signatures.signed.v1',
+                'End-to-end Growth / Research / Documents evidence did not match real tenant rows and status policies.');
+            self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'partial'
+                && $this->goals->latestTrustedEvaluation($other, $linearRun) === null,
+                'Cross-domain persisted Goal evaluation leaked tenant data or lost latest provenance.');
             self::assert($this->receiptReconciler->reconcile(
                 $actor, $linearRun, 'z_first',
             )['status'] === 'completed',
