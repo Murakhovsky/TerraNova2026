@@ -1602,6 +1602,16 @@ final readonly class DecisionWorkspaceReadService
                 'reason' => $alert['code'] ?? 'SYSTEM_ALERT',
             ];
         }
+        // Missing reconciled NAV is a material operator task, never a silent zero.
+        // This is based on the canonical window status, not on a front-end P&L estimate.
+        if (($global['portfolio_nav_windows']['today']['status'] ?? 'UNAVAILABLE') !== 'COMPLETE') {
+            $actions[] = [
+                'priority' => 'WARNING',
+                'label' => 'Reconcile Today Portfolio NAV and external cash flows',
+                'href' => '/capital-markets/performance',
+                'reason' => 'PORTFOLIO_NAV_UNAVAILABLE',
+            ];
+        }
         foreach ($opportunities as $opportunity) {
             if (in_array($opportunity['decision'] ?? '', ['ACCEPT','ACCEPT_REDUCED_SIZE'], true)) {
                 $actions[] = [
