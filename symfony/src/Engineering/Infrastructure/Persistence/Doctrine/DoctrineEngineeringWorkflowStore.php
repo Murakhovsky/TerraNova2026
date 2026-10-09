@@ -295,7 +295,7 @@ final readonly class DoctrineEngineeringWorkflowStore implements EngineeringWork
                           AND d.blocking = 1
                           AND d.type = 'WORKFLOW_EVIDENCE_REFRESH'
                           AND d.recommended_option = 'REFRESH_EVIDENCE'
-                    )))"
+                    )))")
             ->andWhere("COALESCE(w.health_status, 'HEALTHY') <> 'STALLED'")
             ->orderBy("CASE f.priority WHEN 'P0' THEN 0 WHEN 'P1' THEN 1 WHEN 'P2' THEN 2 WHEN 'P3' THEN 3 ELSE 9 END", 'ASC')
             ->addOrderBy('w.started_at', 'ASC')
