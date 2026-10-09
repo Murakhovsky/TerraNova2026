@@ -4,7 +4,7 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use Domains\Documents\Automation\Action\PrepareProposalDraftHandler;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
-use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
+use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
 use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Identity\Model\OrganizationRole;
@@ -47,7 +47,7 @@ $growth = new class implements GrowthHandoffBoundary {
     }
     public function targets():array{return ['sales'];}
 };
-$sales = new class implements SalesWorkspaceReadModelInterface {
+$sales = new class implements SalesProposalLeadReadModelInterface {
     public array $calls = [];
     public function dashboard(string $org,?int $owner=null):array{return [];}
     public function leads(string $org,array $filters=[]):array{return [];}
