@@ -128,20 +128,26 @@ final readonly class PortfolioNavIndependentReconciliationService
         // Independent venue cash statement must equal available + reserved for
         // every ledger venue. Foreign assets are NOT silently priced as cash.
         $paper=[];
+        $paperInventory=[];
+        $seenBalanceKeys=[];
         foreach ($balances as $row) {
             if (!is_array($row)) {$issues[]='PAPER_BALANCE_INVALID';continue;}
             $venue=trim((string)($row['venue_id']??''));
-            $asset=strtoupper((string)($row['asset_key']??''));
-            if ($venue==='' || $asset!==$currency || isset($paper[$venue])) {
+            $asset=strtoupper(trim((string)($row['asset_key']??'')));
+            $key=$venue.'|'.$asset;
+            if ($venue==='' || $asset==='' || isset($seenBalanceKeys[$key])) {
                 $issues[]='BALANCE_SCOPE_CURRENCY_OR_DUPLICATE';continue;
             }
+            $seenBalanceKeys[$key]=true;
             try {
                 $available=Decimal::fromString((string)($row['available_amount']??''));
                 $reserved=Decimal::fromString((string)($row['reserved_amount']??''));
                 if ($available->isNegative() || $reserved->isNegative()) {
                     $issues[]='PAPER_BALANCE_NEGATIVE';continue;
                 }
-                $paper[$venue]=DecimalMath::add($available,$reserved);
+                $total=DecimalMath::add($available,$reserved);
+                if ($asset===$currency) $paper[$venue]=$total;
+                else $paperInventory[$key]=$total; // verify against custody and position quantities below
             } catch (Throwable) {$issues[]='PAPER_BALANCE_AMOUNT_INVALID';}
         }
         $statementVenues=[];
@@ -223,6 +229,26 @@ final readonly class PortfolioNavIndependentReconciliationService
             }
             $current[$id]=$position;
         }
+        // Noncash paper balances are inventory quantities, not cash NAV.
+        // Cross-check them against open canonical positions and independent
+        // custody reports. Position marks are the only valued inventory asset.
+        $positionInventory=[];
+        foreach ($current as $position) {
+            $inventoryKey=trim((string)($position['venue_id']??'')).'|'
+                .strtoupper(trim((string)($position['instrument_id']??'')));
+            try {
+                $qty=Decimal::fromString((string)($position['quantity']??''));
+                $positionInventory[$inventoryKey]=isset($positionInventory[$inventoryKey])
+                    ? DecimalMath::add($positionInventory[$inventoryKey],$qty)
+                    : $qty;
+            } catch (Throwable) {$issues[]='POSITION_QUANTITY_INVALID';}
+        }
+        foreach ($paperInventory as $inventoryKey=>$balance) {
+            if (!isset($positionInventory[$inventoryKey])
+                || !DecimalMath::subtract($balance,$positionInventory[$inventoryKey])->isZero()) {
+                $issues[]='NONCASH_INVENTORY_WITHOUT_MATCHING_POSITION';
+            }
+        }
         foreach ($custody as $id=>$record) if (!isset($current[$id])) $issues[]='UNMATCHED_CUSTODY_POSITION';
         $marks=[];
         // Collector independently resolves existing canonical MarketState source
@@ -266,6 +292,8 @@ final readonly class PortfolioNavIndependentReconciliationService
         // the separate second-person review happens HERE, never in collector.
         $expected=[
             'POSITION_AND_VENUE_RECONCILIATION_REQUIRED',
+            'BALANCE_FX_OR_ASSET_RECONCILIATION_REQUIRED',
+            'NONCASH_ASSET_VALUATION_REQUIRED',
             'EXTERNAL_FLOW_RECONCILIATION_PENDING','EXTERNAL_FLOW_LEDGER_UNAVAILABLE',
             'LIABILITY_RECONCILIATION_PENDING','LIABILITY_LEDGER_UNAVAILABLE',
             'LIABILITY_STATEMENT_MISSING','EXTERNAL_FLOW_HISTORY_MISSING',
