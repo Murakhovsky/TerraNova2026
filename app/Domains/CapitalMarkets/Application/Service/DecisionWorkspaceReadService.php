@@ -1091,6 +1091,11 @@ final readonly class DecisionWorkspaceReadService
         if (strtoupper((string)($state['mode'] ?? 'UNKNOWN')) !== 'LIVE') {
             return 'DEGRADED';
         }
+        if (array_key_exists('reference_age_ms', $state)) {
+            $ageMs = $this->decisionReferenceAgeMs($state);
+            if ($ageMs === null) return 'UNAVAILABLE';
+            return $ageMs > 60000 ? 'STALE' : 'TRUSTED';
+        }
         $timestamp = $state['source_timestamp'] ?? $state['updated_at'] ?? null;
         if (!is_string($timestamp) || trim($timestamp) === '') {
             return 'UNAVAILABLE';
