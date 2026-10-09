@@ -30,6 +30,18 @@ cos_federation_goals_evaluate:
   requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
 
 # COS Federation: manager-triggered sequential orchestration, CSRF protected.
+# Read-only, manager-authorized preview of 1..50 sourced scored candidates.
+cos_federation_candidate_fanout_preview:
+  path: /api/v1/federation/fanout/preview
+  controller: App\Web\Federation\FederationCandidateFanoutController::preview
+  methods: [GET, HEAD]
+
+# Creates only human-approval-pending immutable child Plans under an existing Goal.
+cos_federation_candidate_fanout_propose:
+  path: /api/v1/federation/fanout/propose
+  controller: App\Web\Federation\FederationCandidateFanoutController::propose
+  methods: [POST]
+
 cos_federation_run_start:
   path: /api/v1/federation/runs/start
   controller: App\Web\Federation\FederationRunController::start
