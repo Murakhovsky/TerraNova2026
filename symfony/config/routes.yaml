@@ -2693,7 +2693,7 @@ capital_markets_decision_export:
   controller: App\Web\CapitalMarkets\DecisionWorkspacePageController::export
   methods: [GET, HEAD]
   requirements:
-    dataset: 'opportunities|performance|realized-windows|research-results|executions'
+    dataset: 'opportunities|performance|realized-windows|portfolio-nav|research-results|executions'
     format: 'json|csv'
 
 capital_markets_instruments:
