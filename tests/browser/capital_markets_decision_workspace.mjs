@@ -277,6 +277,34 @@ try {
     await context.close();
   }
 
+  // Manual acceptance regression: on a laptop-sized workspace, global KPIs
+  // must form a compact row instead of eight vertically stacked numbers.
+  const laptopContext = await browser.newContext({
+    viewport: { width: 960, height: 900 },
+    storageState,
+  });
+  const laptop = await laptopContext.newPage();
+  try {
+    await assertOk(await laptop.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' }), 'laptop: overview');
+    const metrics = laptop.locator('[aria-label="Global Capital Markets status"] .cos-kpi-strip .cos-money-metric');
+    if (await metrics.count() < 2) {
+      throw new Error('laptop: financial status KPIs are missing.');
+    }
+    const positions = await metrics.evaluateAll((nodes) => nodes.slice(0, 2).map((node) => ({
+      x: node.getBoundingClientRect().x,
+      y: node.getBoundingClientRect().y,
+    })));
+    if (Math.abs(positions[0].y - positions[1].y) > 2 || positions[0].x === positions[1].x) {
+      throw new Error('laptop: global financial KPIs collapsed into one vertical column.');
+    }
+    const statusText = await laptop.locator('[aria-label="Global Capital Markets status"]').innerText();
+    if (statusText.includes('P&amp;L') || !statusText.includes('Paper Today P&L')) {
+      throw new Error('laptop: P&L labels contain escaped HTML entities.');
+    }
+  } finally {
+    await laptopContext.close();
+  }
+
   console.log(JSON.stringify({ ok: true, suite: 'CM-DECISION-WORKSPACE browser acceptance' }, null, 2));
 } finally {
   await browser.close();

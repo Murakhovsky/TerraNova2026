@@ -54,6 +54,7 @@ jobs:
         run: bash bin/verify fast
       - name: Capital Markets Capital Risk and Decision Workspace acceptance
         run: |
+          php tests/unit/realtime_hub_origin.php
           php tests/unit/capital_markets_realized_pnl_windows.php
           php tests/unit/capital_markets_historical_basis.php
           php tests/unit/capital_markets_portfolio_nav_windows.php
