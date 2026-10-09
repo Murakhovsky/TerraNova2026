@@ -133,6 +133,8 @@ final readonly class PortfolioNavEvidenceCollector
             'EXTERNAL_CASH_FLOW' => 0,
             'LIABILITY_BALANCE' => 0,
             'VENUE_BALANCE' => 0,
+            'POSITION_BALANCE' => 0,
+            'ACCOUNT_COVERAGE' => 0,
         ];
         foreach ($sourceEvidence as $observation) {
             if (!is_array($observation) || !array_key_exists((string)($observation['kind'] ?? ''), $sourceCounts)) {
@@ -146,7 +148,13 @@ final readonly class PortfolioNavEvidenceCollector
             }
         }
         $statementPreview = PortfolioNavStatementReconciliationPreview::inspect(
-            $balances, $sourceEvidence, $currency,
+            $balances,
+            array_values(array_filter($sourceEvidence, static fn(mixed $row): bool =>
+                is_array($row) && in_array(($row['kind'] ?? null), [
+                    'EXTERNAL_CASH_FLOW','LIABILITY_BALANCE','VENUE_BALANCE',
+                ], true)
+            )),
+            $currency,
         );
         foreach ($statementPreview['issues'] as $issue) $issues[] = $issue;
         $issues[] = $sourceCounts['EXTERNAL_CASH_FLOW'] === 0
