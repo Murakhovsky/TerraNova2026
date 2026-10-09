@@ -27,6 +27,7 @@ final readonly class FederatedSalesHandoffHandler implements IdempotentExternalA
     {
         if ($action->status !== ActionStatus::Running || $action->sourceType !== 'USER'
             || !ctype_digit($action->sourceId) || (int)$action->sourceId < 1
+            || ($action->parameters['target_domain'] ?? null) !== 'sales'
             || $action->targetType !== 'growth_candidate'
             || !is_string($action->targetId) || trim($action->targetId)==='') {
             return ExecutionResult::failure('Growth Sales handoff requires a running approved user Action and native Growth Candidate.');
