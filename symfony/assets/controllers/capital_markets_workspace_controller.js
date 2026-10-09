@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['density', 'columnToggle', 'age', 'simulationOutput', 'historyChart', 'basisChart'];
+    static targets = ['density', 'columnToggle', 'age', 'simulationOutput', 'historyChart', 'basisChart', 'snapshotWarning', 'snapshotWarningTitle', 'snapshotWarningMessage'];
 
     connect() {
         this.refreshTimer = null;
@@ -24,7 +24,11 @@ export default class extends Controller {
             toggle.checked = !this.hiddenColumns(tableId).includes(column);
         }
         this.updateAge();
-        this.ageTimer = window.setInterval(() => this.updateAge(), 1000);
+        this.updateSnapshotFreshness();
+        this.ageTimer = window.setInterval(() => {
+            this.updateAge();
+            this.updateSnapshotFreshness();
+        }, 1000);
         this.renderHistoricalCharts();
         this.renderBasisCharts();
     }
@@ -234,6 +238,41 @@ export default class extends Controller {
                 ? seconds + 's'
                 : (seconds < 3600 ? Math.floor(seconds / 60) + 'm' : Math.floor(seconds / 3600) + 'h');
         }
+    }
+
+    // UI freshness tracks how long this rendered decision snapshot has been open.
+    // It does NOT calculate or override canonical market trust, financial values or risk.
+    updateSnapshotFreshness() {
+        if (!this.hasSnapshotWarningTarget) return;
+
+        const raw = this.element.dataset.cmSnapshotRenderedAt || '';
+        const renderedAt = Date.parse(raw);
+        const thresholdSeconds = Number(this.element.dataset.cmSnapshotStaleSeconds);
+        const safeThresholdSeconds = Number.isFinite(thresholdSeconds) && thresholdSeconds > 0
+            ? thresholdSeconds
+            : 60;
+        const unknown = !raw || !Number.isFinite(renderedAt);
+        const stale = unknown || Date.now() - renderedAt >= safeThresholdSeconds * 1000;
+
+        this.snapshotWarningTarget.hidden = !stale;
+        this.snapshotWarningTarget.dataset.cmSnapshotStatus = unknown ? 'unknown' : (stale ? 'stale' : 'fresh');
+        if (!stale) return;
+        if (this.hasSnapshotWarningTitleTarget) {
+            this.snapshotWarningTitleTarget.textContent = unknown
+                ? 'Decision snapshot time unavailable'
+                : 'Decision snapshot stale';
+        }
+        if (this.hasSnapshotWarningMessageTarget) {
+            this.snapshotWarningMessageTarget.textContent = unknown
+                ? 'The freshness of this screen cannot be established. Reload before acting.'
+                : 'The screen has not refreshed for at least ' + safeThresholdSeconds
+                    + ' seconds. Portfolio, risk and market conditions may have changed. Reload before acting.';
+        }
+    }
+
+    reloadSnapshot(event) {
+        event.preventDefault();
+        window.location.reload();
     }
 
     async simulateOpportunity(event) {
