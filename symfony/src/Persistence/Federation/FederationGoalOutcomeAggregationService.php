@@ -89,9 +89,24 @@ final readonly class FederationGoalOutcomeAggregationService
                 || (int)$row['spec_version']!==$goal->version) {
                 throw new DomainException('Goal candidate lineage or specification is stale or malformed.');
             }
-            $proof=$lineage;
-            unset($proof['evidence_hash']);
-            $fingerprint=hash('sha256',json_encode($proof,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
+            // MySQL JSON columns normalize object key order. A stored
+            // object cannot be hashed by iteration order: reconstruct exactly
+            // the v1 canonical producer field order before hashing.
+            $proof=[];
+            foreach (['schema_version','source_federation_run',
+                      'source_federation_step','native_discovery_run',
+                      'candidate_id','account_id','source_hash'] as $field) {
+                if (!array_key_exists($field,$lineage)) {
+                    throw new DomainException('Candidate Plan lineage has missing source identity.');
+                }
+                $proof[$field]=$lineage[$field];
+            }
+            if (count($lineage)!==8) {
+                throw new DomainException('Candidate Plan lineage contains unexpected source fields.');
+            }
+            $fingerprint=hash('sha256',json_encode(
+                $proof,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES
+            ));
             if (!hash_equals($lineage['evidence_hash'],$fingerprint)) {
                 throw new DomainException('Candidate Plan lineage was modified after approval.');
             }
