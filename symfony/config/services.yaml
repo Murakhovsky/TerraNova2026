@@ -3265,6 +3265,10 @@ services:
     arguments:
       $responses: '@Domains\Growth\Application\Contract\GrowthRunLinkedResponseReadModelInterface'
 
+  App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider:
+    abstract: true
+    autowire: false
+
   cos.federation.native_origin.research:
     class: App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider
     arguments:
