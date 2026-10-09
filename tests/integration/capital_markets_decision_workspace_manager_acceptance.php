@@ -149,4 +149,14 @@ $assert(str_contains($browser,'Version Comparison'),'Manager Acceptance: strateg
 $assert(str_contains($browser,'Relationship Graph'),'Manager Acceptance: relationship detail browser QA missing.');
 $assert(str_contains($browser,'keyboard reachable'),'Manager Acceptance: keyboard accessibility QA missing.');
 
+// Capability boundaries are business-data protection, not cosmetic hiding of buttons.
+$agentRead = $read;
+$assert(str_contains($controller, "CapitalMarketsCapability::AuditView"), 'Agent audit access must be checked by controller.');
+$assert(str_contains($controller, "CapitalMarketsCapability::OpportunityView"), 'Opportunity detail requires opportunity authority as well as portfolio authority.');
+$assert(str_contains($controller, "if (\$view === 'opportunity'"), 'Opportunity detail must enforce an additional capability gate.');
+$assert(str_contains($agentRead, 'public function agents(string $organizationId, bool $includeAudit = false)'), 'Agent read model must fail closed by default.');
+$assert(str_contains($agentRead, "'output' => \$includeAudit ? \$output : []"), 'Unaudited agent consumers must not receive raw structured output.');
+$assert(str_contains($agentRead, "'tools' => \$includeAudit ? \$tools : []"), 'Unaudited consumers must not receive tool input/output.');
+$assert(str_contains($template, 'permissions.audit_view'), 'Agent audit detail must be permission gated in Twig.');
+
 echo "CM-DECISION-WORKSPACE Manager Acceptance passed.\n";
