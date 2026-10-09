@@ -36,6 +36,8 @@ final readonly class MysqlPaperNavSnapshotRepository implements PaperNavSnapshot
             || preg_match('/^[a-f0-9]{64}$/',$snapshot['source_fingerprint'])!==1) {
             throw new InvalidArgumentException('Paper snapshot identity or evidence fingerprint invalid.');
         }
+        $epoch=trim((string)($snapshot['portfolio_epoch']??''));
+        if ($epoch==='' || strlen($epoch)>36) throw new InvalidArgumentException('Paper NAV requires a valid accounting epoch.');
         $currency=strtoupper(trim((string)($snapshot['currency']??'')));
         if ($currency==='' || strlen($currency)>32) throw new InvalidArgumentException('Missing paper valuation currency.');
         $initial=Decimal::fromString((string)($snapshot['initial_capital']??''));
@@ -49,12 +51,14 @@ final readonly class MysqlPaperNavSnapshotRepository implements PaperNavSnapshot
         $valued=$at->format('Y-m-d H:i:s.u');
 
         $latest=$this->connection->prepare(
-            'SELECT initial_capital,currency FROM tn_capital_market_paper_nav_snapshots
+            'SELECT initial_capital,currency,record_json FROM tn_capital_market_paper_nav_snapshots
              WHERE organization_id=:org AND portfolio_id=:portfolio ORDER BY valued_at DESC,id DESC LIMIT 1'
         );
         $latest->execute(['org'=>$organizationId,'portfolio'=>$portfolioId]);
         $baseline=$latest->fetch(PDO::FETCH_ASSOC);
-        if (is_array($baseline) && ($currency!==(string)$baseline['currency']
+        $baselineRecord=is_array($baseline)?json_decode((string)$baseline['record_json'],true,512,JSON_THROW_ON_ERROR):[];
+        $previousEpoch=trim((string)($baselineRecord['portfolio_epoch']??'legacy'));
+        if (is_array($baseline) && $epoch===$previousEpoch && ($currency!==(string)$baseline['currency']
             || $initial->compareTo(Decimal::fromString((string)$baseline['initial_capital']))!==0)) {
             throw new RuntimeException('PAPER_PORTFOLIO_RESET_REQUIRES_NEW_EPOCH');
         }
