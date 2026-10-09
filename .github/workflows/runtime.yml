@@ -86,6 +86,22 @@ jobs:
           docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Capital Markets paper NAV persistence integration
+        run: |
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_capital_market_paper_portfolios
+              (organization_id,currency,initial_capital,available_capital,reserved_capital,realized_pnl)
+            VALUES ('paper-nav-ci','USD',10000,10000,0,0);
+          "
+          docker compose exec -T php php bin/console cos:capital-markets:paper:nav:snapshot \
+            --organization=paper-nav-ci --portfolio=paper-master > /tmp/cm-paper-nav.json
+          grep -q '"status":"SIMULATED"' /tmp/cm-paper-nav.json
+          grep -q '"equity":"10000"' /tmp/cm-paper-nav.json
+          grep -q '"certified":false' /tmp/cm-paper-nav.json
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT COUNT(*) FROM tn_capital_market_paper_nav_snapshots WHERE organization_id='paper-nav-ci'")" = "1"
+          test "$(docker compose exec -T mysql mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+            -e "SELECT COUNT(*) FROM tn_capital_market_portfolio_valuation_snapshots WHERE organization_id='paper-nav-ci'")" = "0"
       - name: Capital Markets NAV financial evidence import integration
         run: |
           docker compose cp tests/fixtures/capital_markets_nav_external_flow.json php:/tmp/nav-external-flow.json
