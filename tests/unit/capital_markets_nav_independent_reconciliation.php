@@ -9,6 +9,11 @@ use Domains\CapitalMarkets\Application\Service\PortfolioNavFinancialEvidencePoli
 use Domains\CapitalMarkets\Application\Service\PortfolioNavIndependentReconciliationService;
 use Domains\CapitalMarkets\Application\Service\PortfolioNavSnapshotProducer;
 use Domains\CapitalMarkets\Application\Service\PortfolioNavWindowProjector;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
+use Domains\CapitalMarkets\Domain\Venue\VenueId;
+use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
+use Domains\CapitalMarkets\Domain\MarketData\MarketState;
+use Domains\CapitalMarkets\Domain\MarketData\ReferenceMarketState;
 
 require dirname(__DIR__,2).'/vendor/autoload.php';
 
