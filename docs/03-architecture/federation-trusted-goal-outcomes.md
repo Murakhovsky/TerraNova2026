@@ -156,9 +156,10 @@ Fingerprint підтверджує відтворюваність запиту, 
 
 Новий критерій `growth.run_linked_inbound_responses` не дорівнює загальному
 `growth.inbound_responses_recorded`. Потрібен завершений tenant-owned Run.
-Для кожного завершеного зовнішнього Step окремий
-`FederationExternalActionReceiptReconciler` перевіряє канонічні
-Action / Policy / Approval receipts без повторного виконання.
+Для кожного завершеного зовнішнього Step серверний
+`FederatedActionAdmission::assertCompletedReceipt()` незалежно перевіряє
+канонічні Action / Policy / Approval receipts без повторного виконання.
+Пряме читання та атестація не створюють циклу залежностей із GoalStore.
 Growth read model рахує лише дедупліковані `tn_growth_engagement_responses`,
 чиї `action_id` збігаються з перевіреними Action поточного Run,
 а `created_at` належить UTC-вікну оцінки.
