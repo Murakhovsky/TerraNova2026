@@ -614,7 +614,7 @@
                     <tbody>
                     {% for event in engineering.execution_events %}
                         <tr>
-                            <td>{{ event.occurred_at }}</td>
+                            <td><span data-engineering-live-timestamp="{{ event.occurred_at|default('') }}">{{ event.occurred_at|default('')|slice(0, 19)|replace({'T': ' '}) }}</span></td>
                             <td>{{ event.category }}</td>
                             <td><strong>{{ event.action }}</strong><div class="engineering-muted">{{ event.summary }}</div></td>
                             <td>{{ event.status }}</td>
@@ -664,7 +664,7 @@
                     <tbody>
                     {% for inv in engineering.llm_invocations %}
                         <tr>
-                            <td>{{ inv.created_at }}</td>
+                            <td><span data-engineering-live-timestamp="{{ inv.created_at|default('') }}">{{ inv.created_at|default('')|slice(0, 19)|replace({'T': ' '}) }}</span></td>
                             <td>{{ inv.provider }} / {{ inv.model }}</td>
                             <td>{{ inv.use_case|default('—') }}</td>
                             <td>{{ inv.input_tokens is not null ? inv.input_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
