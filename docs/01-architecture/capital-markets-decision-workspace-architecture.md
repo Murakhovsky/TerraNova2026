@@ -411,3 +411,48 @@ EXTERNAL_CASH_FLOW залишається послідовністю підпи�
 ## Обов'язкова доказова база грошових залишків
 
 Навіть якщо всі прапорці reconciliation істинні та fingerprints пакета коректні, порожній масив cash_by_currency не вважається підтвердженим нульовим балансом. Guarded NAV Producer відхиляє такий пакет до запису snapshot. Для нульового залишку потрібна явна підтверджена cash observation із amount 0 та валютою оцінки. Це окремо перевіряється unit-тестом, щоб відсутність виписки не могла непомітно перетворитися на нуль активів.
+
+
+## Capability-safe shared Decision Workspace
+
+Route-level `CapitalMarketsCapability` checks are necessary but insufficient because
+all Decision Workspace routes include shared portfolio/risk global projections.
+`DecisionWorkspaceVisibilityPolicy` is applied on the server immediately before
+Twig rendering and never substitutes template hiding for data authorization.
+
+- Generic `View` alone does not disclose Portfolio Equity, cash allocation,
+  Today/30D Portfolio P&L, strategy allocations, risk limits or portfolio alerts.
+- `OpportunityView` can inspect signal/economics, but without `PortfolioView`
+  allocation decision, approved capital, portfolio impact, priority and reason
+  become explicitly `RESTRICTED` / null; JSON/CSV exports follow identical rules.
+- Overview opportunity details require both `OpportunityView` and `PortfolioView`.
+- `ResearchView` alone cannot expose active portfolio strategy allocations.
+- `RiskView` governs risk state, material limits and their alert contents.
+- `AuditView` governs full Agent tool inputs, outputs, result trace and correlations.
+
+Runtime QA creates a real restricted, non-admin organization member with only
+`View` and `OpportunityView`. Browser tests verify an authorized signal board,
+forbidden Portfolio/Performance/Risk/Data Quality/detail routes, export redaction,
+and missing Agent audit payload. Unit regression additionally protects these
+projections for various grant combinations.
+
+## Read-time market-data freshness
+
+A `TRUSTED` verdict calculated at ingestion is not eternal. As a read-side
+operator safety guard (not execution risk policy), Decision Workspace checks
+timestamps at page-render time. LIVE observation older than 60 seconds becomes
+`STALE`; non-LIVE mode or uncertain future clock becomes `DEGRADED`;
+missing/invalid clock becomes `UNAVAILABLE`. Native untrusted statuses are
+never upgraded by UI code. Reference states account for the persisted
+`reference_age_ms` even when processing time appears recent.
+
+Market Explorer and Data Quality show advancing quote/reference ages based
+on original source timestamp rather than the frozen ingestion-time age.
+Canonical order book age remains `UNAVAILABLE` without its own timestamp.
+An enabled source without any market/reference observations never yields
+`HEALTHY`, even when its connection flag is `CONNECTED`.
+
+This conservative 60-second read-side indicator does not replace
+per-event/source `MarketDataQualityPolicy`, can be more restrictive than
+that configured policy, and does not authorize Live trading or create
+accounting evidence.
