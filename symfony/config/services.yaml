@@ -403,6 +403,9 @@ services:
   Platform\Documents\Contract\DocumentAttachmentPort:
     alias: Platform\Documents\Service\DocumentsRuntimeService
 
+  Platform\Documents\Contract\DocumentTemplateGenerationPort:
+    alias: Platform\Documents\Service\DocumentsRuntimeService
+
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2301,10 +2304,18 @@ services:
       $proofs: '@App\Persistence\Federation\FederationDocumentSignatureProofInbox'
       $origins: '@App\Persistence\Federation\FederationOutcomeOriginRecorder'
 
+  Domains\Documents\Automation\Action\PrepareProposalDraftHandler:
+    arguments:
+      $generator: '@Platform\Documents\Contract\DocumentTemplateGenerationPort'
+      $attachments: '@Platform\Documents\Contract\DocumentAttachmentPort'
+      $handoffs: '@Domains\Growth\Application\Contract\GrowthHandoffBoundary'
+      $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
+
   Domains\Documents\Bootstrap\DocumentsDomainModule:
     arguments:
       $requestSignature: '@Domains\Documents\Automation\Action\RequestSignatureHandler'
       $recordVerifiedSignature: '@Domains\Documents\Automation\Action\RecordVerifiedSignatureHandler'
+      $prepareProposal: '@Domains\Documents\Automation\Action\PrepareProposalDraftHandler'
 
   documentsDomainModule:
     alias: Domains\Documents\Bootstrap\DocumentsDomainModule
