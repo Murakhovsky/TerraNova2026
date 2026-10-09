@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
+use App\Persistence\Federation\FederationOutcomeOriginReader;
+use App\Persistence\Federation\FederationOutcomeOriginRecorder;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
@@ -50,6 +52,8 @@ final class FederationPersistenceSmokeCommand extends Command
     public function __construct(
         private readonly Connection $db,
         private readonly FederationGoalStore $goals,
+        private readonly FederationOutcomeOriginReader $originReader,
+        private readonly FederationOutcomeOriginRecorder $originRecorder,
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
         private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
@@ -1115,6 +1119,7 @@ final class FederationPersistenceSmokeCommand extends Command
             }
 
             // Research: only persisted VALIDATED results count.
+            $researchOriginFixture = '';
             foreach ([
                 [$org, $eventTime, 'VALIDATED'],
                 [$org, $eventTime, 'REJECTED'],
@@ -1122,6 +1127,9 @@ final class FederationPersistenceSmokeCommand extends Command
                 [$foreignOrg, $eventTime, 'VALIDATED'],
             ] as [$tenantId, $time, $status]) {
                 $id = $newId();
+                if ($tenantId === $org && $time === $eventTime && $status === 'VALIDATED') {
+                    $researchOriginFixture = 'result-' . $id;
+                }
                 $this->db->insert('tn_capital_market_research_results', [
                     'organization_id' => $tenantId,
                     'result_id' => 'result-' . $id,
@@ -1134,6 +1142,7 @@ final class FederationPersistenceSmokeCommand extends Command
 
             // Documents: signed + nonempty reference + actor. Requested,
             // unreferenced, old or foreign signatures must not count.
+            $documentOriginFixture = '';
             foreach ([
                 [$org, $eventTime, 'signed', 'signed-proof'],
                 [$org, $eventTime, 'requested', null],
@@ -1142,6 +1151,10 @@ final class FederationPersistenceSmokeCommand extends Command
                 [$foreignOrg, $eventTime, 'signed', 'signed-proof'],
             ] as [$tenantId, $time, $status, $signatureRef]) {
                 $id = $newId();
+                if ($tenantId === $org && $time === $eventTime
+                    && $status === 'signed' && $signatureRef === 'signed-proof') {
+                    $documentOriginFixture = 'signature-' . $id;
+                }
                 $this->db->insert('cos_document_signatures', [
                     'organization_id' => $tenantId,
                     'signature_id' => 'signature-' . $id,
@@ -1153,6 +1166,52 @@ final class FederationPersistenceSmokeCommand extends Command
                     'signature_reference' => $signatureRef,
                     'signed_at' => $status === 'signed' ? $time : null,
                 ]);
+            }
+
+            // Deliberately forged origin journal rows have perfectly valid
+            // native source fingerprints but reference the Sales Action of
+            // this Run. They must NEVER become Research/Document attribution.
+            foreach ([
+                ['capital_markets', $researchOriginFixture],
+                ['platform.documents', $documentOriginFixture],
+            ] as [$domain, $outcomeId]) {
+                $source = $this->originRecorder->nativeOutcome($org, $domain, $outcomeId);
+                self::assert($source !== null,
+                    'Native Domain source unavailable for origin trust-boundary smoke.');
+                $this->db->insert('cos_federation_outcome_origins', [
+                    'organization_id' => $org, 'domain_id' => $domain,
+                    'outcome_id' => $outcomeId, 'run_id' => $linearRun,
+                    'step_id' => 'z_first', 'action_id' => $firstAction['action_id'],
+                    'source_fingerprint' => FederationOutcomeOriginRecorder::fingerprint(
+                        $org, $domain, $outcomeId, $source,
+                    ),
+                    'linked_at' => $eventTime,
+                ]);
+                self::assert($this->originReader->verifiedForRun(
+                    $actor, $linearRun, $domain,
+                    new \DateTimeImmutable('2026-10-01 00:00:00', new \DateTimeZone('UTC')),
+                    new \DateTimeImmutable('+1 minute', new \DateTimeZone('UTC')),
+                ) === [], 'A Sales Action was forged as Research/Documents outcome origin.');
+                self::assert($this->originReader->verifiedForRun(
+                    $other, $linearRun, $domain,
+                    new \DateTimeImmutable('2026-10-01 00:00:00', new \DateTimeZone('UTC')),
+                    new \DateTimeImmutable('+1 minute', new \DateTimeZone('UTC')),
+                ) === [], 'Foreign tenant inspected another tenant origin journal.');
+            }
+            self::assert((int)$this->db->fetchOne(
+                'SELECT COUNT(*) FROM cos_federation_outcome_origins
+                 WHERE organization_id = :org AND run_id = :run',
+                ['org' => $org, 'run' => $linearRun],
+            ) === 2, 'Origin journal did not persist immutable Research/Documents provenance fixtures.');
+            try {
+                $this->db->insert('cos_federation_outcome_origins', [
+                    'organization_id' => $org, 'domain_id' => 'capital_markets',
+                    'outcome_id' => $researchOriginFixture, 'run_id' => $linearRun,
+                    'step_id' => 'a_second', 'action_id' => $secondAction['action_id'],
+                    'source_fingerprint' => str_repeat('0', 64), 'linked_at' => $eventTime,
+                ]);
+                throw new \RuntimeException('The same Research outcome was attributed to two Federation Actions.');
+            } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
             }
 
             $measured = $this->goals->recordEvaluation(
