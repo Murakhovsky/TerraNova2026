@@ -18,6 +18,7 @@ $make = static function(string $id,string $kind,string $amount,string $at,?strin
         'amount'=>$amount,
         'currency'=>'USD',
         'provider_id'=>'independent-statement-feed',
+        'provider_event_id'=>$kind==='EXTERNAL_CASH_FLOW'?$id:null,
         'source_reference'=>'reference-'.$id,
         'source_document_sha256'=>hash('sha256','document-'.$id),
         'collected_by'=>'source-ingestion',
