@@ -250,3 +250,7 @@ Action відкликана, native запис змінився або зв'яз
 ### Канонічний Research writer
 
 `capital_markets.research.result.record` зареєстрований у `capital_markets` як реальний Action handler та typed executable capability. Він відмовляє без завершеного Research experiment, структурованих метрик та `review_evidence` із рішенням `VALIDATED`, особою і референсом перевірки. Запис результату й походження відбуваються атомарно. `VALIDATED` означає записане рішення Research Lab, **не гарантію прибутковості** і не незалежну економічну причинність. Власне схвалення Action повинно залишатися незалежним від автора Goal. Для rollout потрібні runtime smoke та QA фактичного Action-шляху.
+
+### Documents signature request як окремий підтверджений етап
+
+Створено опціональний модуль `documents` із канонічним Action handler `documents.signature.request`. Він викликає наявний `Platform Documents::requestSignature`, повертає `status=requested` і `signature_verified=false`. Працює через tenant permission, Approval і idempotency, **без автоматичного підпису**. [Docs overview](../04-domains/documents/overview.md). **Відкритий блокер:** для `documents.signature.sign` потрібен достовірний незалежний підпис і перевірка провайдером; `documents.run_linked_signatures` залишається `unverifiable`.
