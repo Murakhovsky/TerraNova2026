@@ -276,85 +276,85 @@ final readonly class EngineeringArchitectStageExecutor
             $extraPaths = [];
             $round = 0;
             while (true) {
-            $run = $this->agents->run($task, $organizationId, $correlationId);
-            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
-            $this->journal->event(
-                $featureId,
-                $workflowId,
-                'AGENT',
-                'architect.llm_result_received',
-                'COMPLETED',
-                'Principal Architect LLM result returned to the stage executor.',
-                $correlationId,
-                [
-                    'agent_run_id' => $engineeringRunId,
-                    'kernel_run_id' => $run->runId,
-                    'status' => $run->status,
-                    'provider' => $run->provider,
-                    'model' => $run->model,
-                    'documentation_changes' => count(is_array($run->structuredOutput['documentation_changes'] ?? null) ? $run->structuredOutput['documentation_changes'] : []),
-                ],
-                $engineeringRunId,
-            );
-            if ($run->status !== 'completed') {
-                throw new RuntimeException('Principal Architect Agent did not complete: '.($run->error ?? $run->status));
-            }
+                $run = $this->agents->run($task, $organizationId, $correlationId);
+                $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+                $this->journal->event(
+                    $featureId,
+                    $workflowId,
+                    'AGENT',
+                    'architect.llm_result_received',
+                    'COMPLETED',
+                    'Principal Architect LLM result returned to the stage executor.',
+                    $correlationId,
+                    [
+                        'agent_run_id' => $engineeringRunId,
+                        'kernel_run_id' => $run->runId,
+                        'status' => $run->status,
+                        'provider' => $run->provider,
+                        'model' => $run->model,
+                        'documentation_changes' => count(is_array($run->structuredOutput['documentation_changes'] ?? null) ? $run->structuredOutput['documentation_changes'] : []),
+                    ],
+                    $engineeringRunId,
+                );
+                if ($run->status !== 'completed') {
+                    throw new RuntimeException('Principal Architect Agent did not complete: '.($run->error ?? $run->status));
+                }
 
-            $this->assertDocumentationEvidence(
-                is_array($run->structuredOutput['documentation_changes'] ?? null)
-                    ? $run->structuredOutput['documentation_changes']
-                    : [],
-                $repositoryFiles,
-                $repositoryRevision,
-                $featureId,
-                $workflowId,
-                $correlationId,
-            );
+                $this->assertDocumentationEvidence(
+                    is_array($run->structuredOutput['documentation_changes'] ?? null)
+                        ? $run->structuredOutput['documentation_changes']
+                        : [],
+                    $repositoryFiles,
+                    $repositoryRevision,
+                    $featureId,
+                    $workflowId,
+                    $correlationId,
+                );
 
-            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
-            $this->journal->event(
-                $featureId,
-                $workflowId,
-                'RUNTIME',
-                'architect.postprocess_validation_started',
-                'RUNNING',
-                'Principal Architect result entered post-LLM validation.',
-                $correlationId,
-                ['agent_run_id' => $engineeringRunId],
-                $engineeringRunId,
-            );
+                $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+                $this->journal->event(
+                    $featureId,
+                    $workflowId,
+                    'RUNTIME',
+                    'architect.postprocess_validation_started',
+                    'RUNNING',
+                    'Principal Architect result entered post-LLM validation.',
+                    $correlationId,
+                    ['agent_run_id' => $engineeringRunId],
+                    $engineeringRunId,
+                );
 
-            $structured = $this->enrichOutput(
-                $run->structuredOutput,
-                $featureId,
-                $contextRevision !== '' ? $contextRevision : null,
-                $repositoryRevision,
-            );
-            $run = new EngineeringAgentRunResult(
-                runId: $run->runId,
-                role: $run->role,
-                status: $run->status,
-                structuredOutput: $structured,
-                provider: $run->provider,
-                model: $run->model,
-                usage: $run->usage,
-                error: $run->error,
-                technicalRetries: $run->technicalRetries,
-                steps: $run->steps,
-            );
-            $this->validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput);
-            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
-            $this->journal->event(
-                $featureId,
-                $workflowId,
-                'RUNTIME',
-                'architect.postprocess_validation_completed',
-                'COMPLETED',
-                'Principal Architect post-LLM validation completed.',
-                $correlationId,
-                ['agent_run_id' => $engineeringRunId],
-                $engineeringRunId,
-            );
+                $structured = $this->enrichOutput(
+                    $run->structuredOutput,
+                    $featureId,
+                    $contextRevision !== '' ? $contextRevision : null,
+                    $repositoryRevision,
+                );
+                $run = new EngineeringAgentRunResult(
+                    runId: $run->runId,
+                    role: $run->role,
+                    status: $run->status,
+                    structuredOutput: $structured,
+                    provider: $run->provider,
+                    model: $run->model,
+                    usage: $run->usage,
+                    error: $run->error,
+                    technicalRetries: $run->technicalRetries,
+                    steps: $run->steps,
+                );
+                $this->validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput);
+                $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+                $this->journal->event(
+                    $featureId,
+                    $workflowId,
+                    'RUNTIME',
+                    'architect.postprocess_validation_completed',
+                    'COMPLETED',
+                    'Principal Architect post-LLM validation completed.',
+                    $correlationId,
+                    ['agent_run_id' => $engineeringRunId],
+                    $engineeringRunId,
+                );
             if (($run->structuredOutput['status'] ?? null) !== 'NEEDS_REPOSITORY_EVIDENCE') {
                 break;
             }
