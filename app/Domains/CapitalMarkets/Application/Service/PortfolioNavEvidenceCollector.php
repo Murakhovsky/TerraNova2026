@@ -46,9 +46,9 @@ final readonly class PortfolioNavEvidenceCollector
         foreach ($positions as $position) {
             if (!is_array($position)) continue;
             $assignedPortfolio = (string)($position['portfolio_id'] ?? '');
-            if ($assignedPortfolio !== $portfolioId) {
+            if ($assignedPortfolio !== $portfolioId && !str_starts_with($assignedPortfolio, 'paper:')) {
                 // Unassigned or legacy positions cannot be silently excluded from NAV.
-                if ($assignedPortfolio === '' || str_contains($assignedPortfolio, 'paper:')) {
+                if ($assignedPortfolio === '') {
                     $issues[] = 'POSITION_PORTFOLIO_SCOPE_UNVERIFIED';
                 }
                 continue;
