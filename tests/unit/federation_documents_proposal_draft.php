@@ -84,6 +84,7 @@ if ($handler->execute($make())->successful || $gen->calls!==[]) {
     throw new RuntimeException('Unverified Sales Lead was allowed to generate a document.');
 }
 $growth->reference='7';
+$sales->calls=[];
 $states->enableGrowth=false;
 if ($handler->execute($make())->successful || $gen->calls!==[]) {
     throw new RuntimeException('Disabled Growth module was not respected.');
