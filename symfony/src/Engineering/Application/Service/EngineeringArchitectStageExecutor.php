@@ -140,7 +140,7 @@ final readonly class EngineeringArchitectStageExecutor
         $evidencePolicy = new EngineeringArchitectEvidenceAuthorization();
         $previousLegacy = $previousArchitecture['content']['required_human_decisions'][0] ?? null;
         if (is_array($previousLegacy) && $evidencePolicy->isLegacyReadOnlyRefresh($previousLegacy)) {
-            $contextPaths = array_merge($contextPaths, $evidencePolicy->legacyRefreshPaths($contextPaths));
+            $contextPaths = array_merge($evidencePolicy->legacyRefreshPaths($contextPaths), $contextPaths);
         }
         $contextPaths = array_slice(array_values(array_unique($contextPaths)), 0, 20);
 
