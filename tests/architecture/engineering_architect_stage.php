@@ -37,6 +37,18 @@ if (!str_contains($progression, 'AgentRole::PRINCIPAL_ARCHITECT')) throw new Run
 if (!str_contains($schemaProvider, 'get_debug_type($column->getType())')) throw new RuntimeException('Architect DB schema provider must use DBAL 4-safe type introspection.');
 if (str_contains($schemaProvider, 'getDefault()')) throw new RuntimeException('Architect DB schema snapshot must not expose column default values.');
 if (!str_contains($stage, "'NEEDS_HUMAN_DECISION'")) throw new RuntimeException('Architect stage does not implement canonical human decision gate.');
+foreach ([
+    'EngineeringArchitectEvidenceAuthorization',
+    "'NEEDS_REPOSITORY_EVIDENCE'",
+    'manager.repository_evidence_auto_authorized',
+    'architect.repository_evidence_collected',
+    'existingPathsAtRevision',
+    'MAX_ROUNDS',
+    'Repository revision changed during evidence collection',
+] as $evidenceNeedle) {
+    if (!str_contains($stage, $evidenceNeedle)) throw new RuntimeException('Architect read-only evidence automation missing '.$evidenceNeedle);
+}
+
 if (!str_contains($stage, "'repository_revision'")) throw new RuntimeException('Architect stage does not bind decisions to repository revision.');
 if (!str_contains($stage, "'human_decision_required' => false")) throw new RuntimeException('Repository infrastructure failure must not be exposed as a human decision.');
 if (!str_contains($stage, "markRuntimeIssue(") || !str_contains($stage, "'STALLED'")) throw new RuntimeException('Repository infrastructure failure must stall runtime explicitly.');
