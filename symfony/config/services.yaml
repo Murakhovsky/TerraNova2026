@@ -1923,6 +1923,10 @@ services:
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder: ~
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotPayloadParser: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceMarketDataDecoder: ~
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder: ~
@@ -1937,6 +1941,7 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
 
@@ -1946,6 +1951,7 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
 
@@ -1955,6 +1961,16 @@ services:
     alias: Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability
 
   Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
+
+  Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~
+  Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery: ~
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  App\Web\CapitalMarkets\CrossVenueDiscoveryController:
+    public: true
+    tags: ['controller.service_arguments']
 
   Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService: ~
 

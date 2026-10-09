@@ -2635,6 +2635,17 @@ cos_api_engineering_domain_approve:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+# Capital Markets cross-venue operator discovery (read-only)
+capital_markets_discovery:
+  path: /capital-markets/discovery
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::index
+  methods: [GET, HEAD]
+
+capital_markets_discovery_scan:
+  path: /capital-markets/discovery/scan
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::scan
+  methods: [POST]
+
 # Capital Markets CM-FOUNDATION UI
 capital_markets_overview:
   path: /capital-markets

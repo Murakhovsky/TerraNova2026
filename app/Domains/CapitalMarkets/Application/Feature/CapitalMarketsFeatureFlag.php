@@ -16,6 +16,7 @@ enum CapitalMarketsFeatureFlag:string
     case MarketDataStreaming='capital_markets.market_data.streaming.enabled';
     case MarketDataHistory='capital_markets.market_data.history.enabled';
     case MarketDataBybit='capital_markets.market_data.bybit.enabled';
+    case MarketDataBinance='capital_markets.market_data.binance.enabled';
     case MarketDataOkx='capital_markets.market_data.okx.enabled';
     case MarketDataKraken='capital_markets.market_data.kraken.enabled';
     case MarketDataMassive='capital_markets.market_data.massive.enabled';
