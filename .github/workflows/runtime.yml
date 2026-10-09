@@ -55,6 +55,7 @@ jobs:
       - name: Capital Markets Capital Risk and Decision Workspace acceptance
         run: |
           php tests/unit/capital_markets_cross_venue_discovery.php
+          php tests/unit/capital_markets_cross_venue_quotes.php
           php tests/integration/capital_markets_cross_venue_operator.php
           php tests/unit/realtime_hub_origin.php
           php tests/unit/capital_markets_realized_pnl_windows.php
