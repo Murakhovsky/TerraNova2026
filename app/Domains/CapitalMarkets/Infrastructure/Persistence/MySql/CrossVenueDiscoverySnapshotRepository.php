@@ -48,14 +48,29 @@ final readonly class CrossVenueDiscoverySnapshotRepository
         return $result;
     }
 
-    public function mayScan(string $organizationId, int $cooldownSeconds = 90): bool
+    /**
+     * Atomic reservation BEFORE external calls. A failed scan still consumes
+     * the cooldown so concurrent browser POSTs cannot exceed provider budgets.
+     * InnoDB serializes competing UPDATEs through the organization primary key.
+     */
+    public function reserveScan(string $organizationId, int $actorId, int $cooldownSeconds = 90): bool
     {
+        if ($organizationId === '' || $actorId < 1 || $cooldownSeconds < 60) {
+            throw new RuntimeException('Invalid scan reservation.');
+        }
+        $this->connection->prepare(
+            'INSERT IGNORE INTO tn_capital_market_discovery_scan_gates
+             (organization_id,actor_id,last_attempt_at)
+             VALUES (:org,:actor,\'1970-01-01 00:00:00\')'
+        )->execute(['org'=>$organizationId,'actor'=>$actorId]);
+
         $statement=$this->connection->prepare(
-            'SELECT TIMESTAMPDIFF(SECOND,MAX(scanned_at),UTC_TIMESTAMP(6))
-             FROM tn_capital_market_cross_venue_discovery_snapshots WHERE organization_id=:org'
+            'UPDATE tn_capital_market_discovery_scan_gates
+             SET last_attempt_at=UTC_TIMESTAMP(6),actor_id=:actor
+             WHERE organization_id=:org
+               AND TIMESTAMPDIFF(SECOND,last_attempt_at,UTC_TIMESTAMP(6))>=:cooldown'
         );
-        $statement->execute(['org'=>$organizationId]);
-        $age=$statement->fetchColumn();
-        return $age===null||$age===false||(int)$age >= $cooldownSeconds;
+        $statement->execute(['org'=>$organizationId,'actor'=>$actorId,'cooldown'=>$cooldownSeconds]);
+        return $statement->rowCount() === 1;
     }
 }
