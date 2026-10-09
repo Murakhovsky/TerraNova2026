@@ -24,7 +24,7 @@ return [
                 'purpose' => 'Verify a completed accepted Growth-to-Sales handoff before generating the Sales proposal draft.',
             ],
             [
-                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesWorkspaceReadModelInterface',
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesProposalLeadReadModelInterface',
                 'role' => 'requires',
                 'counterpart' => 'sales',
                 'kind' => 'synchronous_port',
