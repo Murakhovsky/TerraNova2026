@@ -8,12 +8,17 @@ $assert=static function(bool $ok,string $message):void { if(!$ok) throw new Runt
 $record=[
     'evidence_id'=>'flow-1','kind'=>'EXTERNAL_CASH_FLOW',
     'currency'=>'USD','amount'=>'-25.375','provider_id'=>'bank-statement',
+    'provider_event_id'=>'bank-tx-0001',
     'source_reference'=>'statement-2026-001','source_document_sha256'=>str_repeat('a',64),
     'collected_by'=>'operator-123','effective_at'=>'2026-10-01T12:00:00Z',
     'status'=>'COMPLETE','reconciled'=>true,
 ];
 $flow=PortfolioNavFinancialEvidencePolicy::normalize($record);
 $assert($flow['amount']==='-25.375','Outflows must retain signed exact decimal value.');
+$assert($flow['provider_event_id']==='bank-tx-0001','Canonical provider event identity must survive normalization.');
+$missingEvent=$record;unset($missingEvent['provider_event_id']);
+try {PortfolioNavFinancialEvidencePolicy::normalize($missingEvent);throw new RuntimeException('Unidentified cash flow was accepted');}
+catch (InvalidArgumentException) {}
 $assert(strlen($flow['source_key_sha256'])===64,'Every accounting observation needs deterministic source identity.');
 $assert($flow['status']==='PENDING_RECONCILIATION' && $flow['reconciled']===false,
     'User-supplied reconciliation or approval must never grant ledger authority.');
