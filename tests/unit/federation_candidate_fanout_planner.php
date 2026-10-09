@@ -52,6 +52,9 @@ if($first['candidate_id']!=='C-1'
     || $first['steps'][0]['capability_id']!=='growth.candidate.qualify'
     || $first['steps'][3]['input']['target_id']!=='C-1'
     || $first['steps'][3]['input']['parameters']['template_id']!=='T-1'
+    || $first['steps'][3]['input']['parameters']['variables']['candidate_id']!=='C-1'
+    || $first['steps'][3]['input']['parameters']['variables']['account_id']!=='account-1'
+    || $first['steps'][3]['input']['parameters']['variables']['expected_value']!=='500 USD'
     || $first['lineage']['source_federation_run']!=='run-parent'
     || $first['lineage']['native_discovery_run']!=='GMRN-A1') {
     throw new RuntimeException('Approved native Candidate subplan/lineage incorrect.');
