@@ -70,6 +70,20 @@ foreach ([
     }
 }
 
+// Actions and LLM tables must display seconds, never raw MySQL microseconds.
+// Keep original UTC timestamps in data attributes for timezone-aware JS rendering.
+foreach (['event.occurred_at', 'inv.created_at'] as $field) {
+    if (!str_contains($template, 'data-engineering-live-timestamp="{{ '.$field."|default('') }}\"")) {
+        throw new RuntimeException('Engineering timestamp lacks local-time rendering for '.$field);
+    }
+    if (!str_contains($template, $field."|default('')|slice(0, 19)")) {
+        throw new RuntimeException('Engineering timestamp fallback still includes fractional seconds for '.$field);
+    }
+    if (str_contains($template, '<td>{{ '.$field.' }}</td>')) {
+        throw new RuntimeException('Engineering table still shows raw microsecond timestamp for '.$field);
+    }
+}
+
 foreach ([
     'window.setInterval',
     'default: 10000',
