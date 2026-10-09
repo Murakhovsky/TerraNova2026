@@ -29,7 +29,7 @@ kind: domain
 
 Результати зберігаються в tenant-scoped таблиці tn_capital_market_cross_venue_discovery_snapshots. Кожне сканування фіксує організацію, оператора, час, provider health і дані кандидатів.
 
-## Binance Spot Market Data
+## Котирування Binance Spot
 
 Реалізовано адаптер binance.spot.rest для публічних HTTPS адрес data-api.binance.vision:
 - /api/v3/ticker/bookTicker для Bid/Ask;
