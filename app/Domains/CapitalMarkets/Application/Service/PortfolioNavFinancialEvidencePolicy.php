@@ -26,6 +26,10 @@ final class PortfolioNavFinancialEvidencePolicy
         $provider=trim((string)($input['provider_id']??''));
         $digest=strtolower(trim((string)($input['source_document_sha256']??'')));
         $collector=trim((string)($input['collected_by']??''));
+        $providerEventId=trim((string)($input['provider_event_id']??''));
+        if ($kind==='EXTERNAL_CASH_FLOW' && ($providerEventId==='' || strlen($providerEventId)>190)) {
+            throw new InvalidArgumentException('External cash flows require a stable provider_event_id distinct from editable source references.');
+        }
         if ($id===''||strlen($id)>190||$reference===''||strlen($reference)>512
             ||$provider===''||$collector===''||!in_array($kind,self::TYPES,true)
             ||preg_match('/^[A-Z0-9][A-Z0-9._:-]{1,19}$/',$currency)!==1
@@ -81,6 +85,7 @@ final class PortfolioNavFinancialEvidencePolicy
         return [
             'evidence_id'=>$id,
             'source_key_sha256'=>hash('sha256',$kind.'|'.$provider.'|'.$reference),
+            'provider_event_id'=>$kind==='EXTERNAL_CASH_FLOW'?$providerEventId:null,
             'kind'=>$kind,
             'currency'=>$currency,
             'amount'=>$amount->value(),
