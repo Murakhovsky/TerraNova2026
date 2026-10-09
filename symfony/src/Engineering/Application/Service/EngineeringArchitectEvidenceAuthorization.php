@@ -35,6 +35,37 @@ final class EngineeringArchitectEvidenceAuthorization
             && str_contains($reason, 'repository');
     }
 
+    /** @param list<string> $alreadyRead @return list<string> */
+    public function legacyRefreshPaths(array $alreadyRead): array
+    {
+        $candidates = [
+            'symfony/config/routes.yaml',
+            'symfony/config/packages/security.yaml',
+            'symfony/src/Security/SessionAuthenticator.php',
+            'symfony/src/Web/PublicSite/HomeController.php',
+            'symfony/templates/experience/public/home.html.twig',
+            'tests/history/architecture/web_experience_wave13_public_home.php',
+            'symfony/templates/experience/public_shell.html.twig',
+            'symfony/assets/public_home.js',
+            'symfony/src/Web/PublicSite/PublicCosController.php',
+            'tests/architecture/engineering_feature_ui.php',
+        ];
+        $paths = array_slice(array_values(array_diff($candidates, $alreadyRead)), 0, self::MAX_FILES_PER_ROUND);
+        return $paths !== [] ? $this->authorize($paths, $alreadyRead) : [];
+    }
+
+    /** @param array<string,mixed> $decision */
+    public function requestedLegacyRevision(array $decision): ?string
+    {
+        foreach (is_array($decision['options'] ?? null) ? $decision['options'] : [] as $option) {
+            if (!is_array($option) || ($option['id'] ?? null) !== 'REFRESH_EVIDENCE') continue;
+            if (preg_match('/[0-9a-f]{40}/i', (string) ($option['description'] ?? ''), $match)) {
+                return strtolower($match[0]);
+            }
+        }
+        return null;
+    }
+
     /**
      * @param mixed $requested
      * @param list<string> $alreadyRead
