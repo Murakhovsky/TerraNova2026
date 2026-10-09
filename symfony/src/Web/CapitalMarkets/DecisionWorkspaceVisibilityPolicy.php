@@ -40,6 +40,27 @@ final class DecisionWorkspaceVisibilityPolicy
                 }
             }
         }
+        if (!$portfolio && is_array($page['venue_rows'] ?? null)) {
+            $page['venue_rows'] = array_map(static function (mixed $venue): mixed {
+                if (!is_array($venue)) return $venue;
+                $venue['capital_locations'] = [];
+                $venue['exposure'] = null;
+                return $venue;
+            }, $page['venue_rows']);
+        }
+        if (!$portfolio && is_array($page['strategies'] ?? null)) {
+            $page['strategies'] = array_map(static function (mixed $strategy): mixed {
+                if (!is_array($strategy)) return $strategy;
+                $strategy['capital'] = null;
+                $strategy['net_pnl'] = null;
+                return $strategy;
+            }, $page['strategies']);
+        }
+        if (!$portfolio && array_key_exists('decision_trace', $page)) {
+            // Hypothesis traces may include real execution IDs and realized P&L.
+            // ResearchView alone cannot authorize those operational details.
+            $page['decision_trace'] = [];
+        }
         if (!$risk) {
             $global['risk_state'] = 'RESTRICTED';
             $page['risk'] = [];
