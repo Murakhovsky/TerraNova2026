@@ -36,10 +36,22 @@ final readonly class FederatedSalesHandoffHandler implements IdempotentExternalA
             $org=$action->organizationId;
             $context=$this->handoffs->handoffBrief($org,$action->targetId);
             $candidate=$context['candidate'] ?? null;
-            if (!is_array($candidate)
-                || ($candidate['target_domain'] ?? null) !== 'sales'
-                || ($candidate['status'] ?? null) !== 'ready_for_handoff') {
-                return ExecutionResult::failure('Only a Sales-targeted, ready-for-handoff Growth Candidate is eligible.');
+            if (!is_array($candidate) || ($candidate['target_domain'] ?? null) !== 'sales') {
+                return ExecutionResult::failure('Only Sales-targeted Growth Candidates are eligible.');
+            }
+            // Crash recovery: accept only the exact native receipt belonging to
+            // this Action's stable key. Never create another Lead after handoff.
+            if (($candidate['status'] ?? null) === 'handed_off') {
+                $expectedAttemptId='GHAT-'.strtoupper(substr(
+                    hash('sha256',$org.':handoff_attempt:'.$this->idempotencyKey($action)),0,20));
+                $previous=$context['latest_attempt'] ?? null;
+                if (!is_array($previous) || ($previous['attempt_id'] ?? null) !== $expectedAttemptId) {
+                    return ExecutionResult::failure('Existing Sales handoff belongs to another idempotency key; reconcile manually.');
+                }
+                return $this->acceptedReceipt($action,$previous);
+            }
+            if (($candidate['status'] ?? null) !== 'ready_for_handoff') {
+                return ExecutionResult::failure('Candidate must be ready_for_handoff before Sales admission.');
             }
             $result=$this->handoffs->dispatch(
                 $org,(int)$action->sourceId,
@@ -47,23 +59,32 @@ final readonly class FederatedSalesHandoffHandler implements IdempotentExternalA
                 $action->targetId,$this->idempotencyKey($action),
             );
             $attempt=$result['attempt'] ?? null;
-            if (!is_array($attempt) || ($attempt['status'] ?? null) !== 'accepted'
+            if (!is_array($attempt)) {
+                return ExecutionResult::failure('Growth handoff has no native Sales acceptance receipt.');
+            }
+            return $this->acceptedReceipt($action,$attempt);
+        } catch (Throwable $failure) {
+            return ExecutionResult::failure('Growth Sales handoff requires manual reconciliation: '.$failure->getMessage());
+        }
+    }
+
+    /** @param array<string,mixed> $attempt */
+    private function acceptedReceipt(Action $action,array $attempt): ExecutionResult
+    {
+        if (($attempt['status'] ?? null) !== 'accepted'
                 || ($attempt['target_domain'] ?? null) !== 'sales'
                 || ($attempt['target_reference_type'] ?? null) !== 'sales_lead'
                 || !is_string($attempt['target_reference_id'] ?? null)
                 || !ctype_digit($attempt['target_reference_id'])
                 || (int)$attempt['target_reference_id'] < 1) {
-                return ExecutionResult::failure('Growth Sales handoff has no accepted native Sales Lead receipt; reconcile manually.');
-            }
-            return ExecutionResult::success([
-                'candidate_id'=>$action->targetId,
-                'handoff_attempt_id'=>(string)($attempt['attempt_id'] ?? ''),
-                'sales_lead_id'=>$attempt['target_reference_id'],
-                'status'=>'accepted',
-                'goal_outcome_verified'=>false,
-            ]);
-        } catch (Throwable $failure) {
-            return ExecutionResult::failure('Growth Sales handoff requires manual reconciliation: '.$failure->getMessage());
+            return ExecutionResult::failure('Growth Sales handoff has no accepted native Sales Lead receipt; reconcile manually.');
         }
+        return ExecutionResult::success([
+            'candidate_id'=>$action->targetId,
+            'handoff_attempt_id'=>(string)($attempt['attempt_id'] ?? ''),
+            'sales_lead_id'=>$attempt['target_reference_id'],
+            'status'=>'accepted',
+            'goal_outcome_verified'=>false,
+        ]);
     }
 }
