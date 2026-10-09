@@ -215,9 +215,15 @@ final readonly class FederationGoalStore
                 'growth.handoff.target.sales',
                 'documents.proposal.prepare',
             ];
+            $requiredSteps = ['qualify','prepare','handoff','proposal'];
             foreach ($validated['steps'] as $index => $step) {
                 $input = $step['input'] ?? null;
-                if (($step['capability_id'] ?? null) !== $requiredActions[$index]
+                $dependsOn = $index === 0 ? [] : [$requiredSteps[$index - 1]];
+                if (($step['id'] ?? null) !== $requiredSteps[$index]
+                    || ($step['depends_on'] ?? null) !== $dependsOn
+                    || ($step['capability_version'] ?? null) !== '1.0.0'
+                    || ($step['side_effect_level'] ?? null) !== 'external'
+                    || ($step['capability_id'] ?? null) !== $requiredActions[$index]
                     || !is_array($input)
                     || ($input['target_type'] ?? null) !== 'growth_candidate'
                     || ($input['target_id'] ?? null) !== $candidate) {
