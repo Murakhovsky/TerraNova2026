@@ -7,7 +7,7 @@ use Kernel\Action\Action;
 use Kernel\Action\Contract\IdempotentExternalActionHandlerInterface;
 use Kernel\Action\ExecutionResult;
 use Kernel\Action\ExternalActionIdempotency;
-use Platform\Documents\Service\DocumentsRuntimeService;
+use Domains\Documents\Application\Service\SignatureRequestService;
 use Throwable;
 
 /**
@@ -19,7 +19,7 @@ final readonly class RequestSignatureHandler implements IdempotentExternalAction
 {
     public const TYPE = 'documents.signature.request';
 
-    public function __construct(private DocumentsRuntimeService $documents) {}
+    public function __construct(private SignatureRequestService $documents) {}
 
     public function supports(string $actionType): bool { return $actionType === self::TYPE; }
 
@@ -39,7 +39,7 @@ final readonly class RequestSignatureHandler implements IdempotentExternalAction
             return ExecutionResult::failure('Signature request requires a Document target, signer and authenticated numeric requesting actor.');
         }
         try {
-            $signature = $this->documents->requestSignature(
+            $signature = $this->documents->request(
                 $action->organizationId,
                 (int) $action->sourceId,
                 $action->correlationId !== '' ? $action->correlationId : $action->id,

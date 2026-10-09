@@ -2265,9 +2265,13 @@ services:
     arguments:
       $approvalHandler: '@App\Persistence\Federation\FederationPlanApproveHandler'
 
-  Domains\Documents\Automation\Action\RequestSignatureHandler:
+  Domains\Documents\Application\Service\SignatureRequestService:
     arguments:
       $documents: '@Platform\Documents\Service\DocumentsRuntimeService'
+
+  Domains\Documents\Automation\Action\RequestSignatureHandler:
+    arguments:
+      $documents: '@Domains\Documents\Application\Service\SignatureRequestService'
 
   Domains\Documents\Bootstrap\DocumentsDomainModule:
     arguments:
