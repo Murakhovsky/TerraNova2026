@@ -57,7 +57,7 @@ final readonly class GoalPlanValidator
                 continue;
             }
             $input = $step['input'] ?? null;
-            if (in_array($capability->sideEffectLevel, ['external', 'financial', 'irreversible'], true)
+            if (in_array($capability->sideEffectLevel, ['internal', 'external', 'financial', 'irreversible'], true)
                 && $input === null) {
                 $errors[] = 'missing_approved_action_input:' . $capabilityId;
                 continue;
