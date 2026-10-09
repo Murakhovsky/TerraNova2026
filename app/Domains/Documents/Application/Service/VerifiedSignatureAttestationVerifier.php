@@ -34,6 +34,8 @@ final class VerifiedSignatureAttestationVerifier
         string $currentVersionId,
         string $currentFileSha256,
         ?DateTimeImmutable $now = null,
+        ?string $expectedRunId = null,
+        ?string $expectedProofId = null,
     ): array {
         if ($envelopeJson === '' || strlen($envelopeJson) > 16384
             || $trustedIssuer === '' || $organizationId === ''
@@ -77,6 +79,8 @@ final class VerifiedSignatureAttestationVerifier
             'document_version_id' => $currentVersionId,
             'file_sha256' => $currentFileSha256,
         ];
+        if ($expectedRunId !== null) $expected['run_id'] = $expectedRunId;
+        if ($expectedProofId !== null) $expected['proof_id'] = $expectedProofId;
         if (!is_array($claims) || array_is_list($claims)) {
             throw new DomainException('Signed attestation payload must be a claim object.');
         }

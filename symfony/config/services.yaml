@@ -2,6 +2,8 @@ parameters:
   env(N8N_WEBHOOK_SECRET): ''
   env(COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY): '0'
   env(COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY): '0'
+  env(COS_DOCUMENTS_PROOF_RSA_PUBLIC_KEY): ''
+  env(COS_DOCUMENTS_PROOF_ISSUER): ''
   env(GROWTH_SIGNAL_WEBHOOK_SECRET): ''
   env(GROWTH_SIGNAL_WEBHOOK_ACTOR_ID): '0'
   env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
@@ -2264,6 +2266,15 @@ services:
   Domains\Federation\Bootstrap\FederationDomainModule:
     arguments:
       $approvalHandler: '@App\Persistence\Federation\FederationPlanApproveHandler'
+
+  Domains\Documents\Application\Service\VerifiedSignatureAttestationVerifier: ~
+
+  App\Persistence\Federation\FederationDocumentSignatureProofInbox:
+    arguments:
+      $documents: '@Platform\Documents\Contract\DocumentsRepositoryInterface'
+      $verifier: '@Domains\Documents\Application\Service\VerifiedSignatureAttestationVerifier'
+      $trustedPublicKeyPem: '%env(string:COS_DOCUMENTS_PROOF_RSA_PUBLIC_KEY)%'
+      $trustedIssuer: '%env(string:COS_DOCUMENTS_PROOF_ISSUER)%'
 
   Domains\Documents\Application\Service\SignatureRequestService:
     arguments:

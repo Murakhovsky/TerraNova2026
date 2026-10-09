@@ -21,6 +21,7 @@ $claims = [
     'document_version_id' => 'VER-1',
     'file_sha256' => str_repeat('f', 64),
     'proof_id' => 'proof-verified-1',
+    'run_id' => 'run-test-01',
     'signature_reference' => 'external-proof-reference',
     'signed_at' => '2026-10-09T11:59:00Z',
     'issued_at' => '2026-10-09T12:00:00Z',
@@ -40,7 +41,8 @@ $issue = static function (array $claims) use ($private, $encode): string {
 };
 $verify = new Verifier();
 $input = [$issue($claims), $public, 'trusted-test-provider', 'tenant-a', 'DOC-a',
-    'SIG-a', 'human-signer', 'VER-1', str_repeat('f', 64), $now];
+    'SIG-a', 'human-signer', 'VER-1', str_repeat('f', 64), $now,
+    'run-test-01', 'proof-verified-1'];
 $verified = $verify->verify(...$input);
 if ($verified['proof_id'] !== 'proof-verified-1'
     || $verified['signature_reference'] !== 'external-proof-reference'
@@ -54,7 +56,8 @@ $deny = static function (array $args, string $case) use ($verify): void {
     } catch (DomainException) {}
 };
 foreach ([3 => 'tenant-b', 4 => 'DOC-wrong', 5 => 'SIG-wrong', 6 => 'different-signer',
-    7 => 'different-version', 8 => str_repeat('a', 64), 2 => 'untrusted-issuer'] as $index => $replacement) {
+    7 => 'different-version', 8 => str_repeat('a', 64), 2 => 'untrusted-issuer',
+    10 => 'another-run', 11 => 'different-proof-id'] as $index => $replacement) {
     $changed = $input;
     $changed[$index] = $replacement;
     $deny($changed, 'context-' . $index);
