@@ -12,6 +12,14 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_cross_venue_discovery_snapshots (
     INDEX idx_cm_discovery_org_time (organization_id, scanned_at, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Atomic per-organization scan reservation, including failed and concurrent attempts.
+CREATE TABLE IF NOT EXISTS tn_capital_market_discovery_scan_gates (
+    organization_id VARCHAR(190) NOT NULL,
+    actor_id BIGINT UNSIGNED NOT NULL,
+    last_attempt_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (organization_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO cos_feature_flags
     (flag_key,description,enabled,rollout_percentage,rollout_salt)
 VALUES
