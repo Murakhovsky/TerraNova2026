@@ -1,0 +1,41 @@
+<?php
+declare(strict_types=1);
+
+namespace Domains\Documents\Bootstrap;
+
+use Domains\Documents\Automation\Action\RequestSignatureHandler;
+use Kernel\Module\Contract\ActionOwningModuleInterface;
+use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
+use Kernel\Module\Contract\PolicyProvidingModuleInterface;
+use Kernel\Module\DomainModuleInterface;
+use Kernel\Policy\ActionPolicy;
+use Kernel\Policy\PolicyDecision;
+
+/** Canonical owning adapter for the shared Platform Documents bounded context. */
+final readonly class DocumentsDomainModule implements
+    DomainModuleInterface,
+    ActionOwningModuleInterface,
+    PolicyProvidingModuleInterface,
+    BootstrapPolicyProvidingModuleInterface
+{
+    public function __construct(private RequestSignatureHandler $requestSignature) {}
+
+    public function name(): string { return 'documents'; }
+    public function actionTypes(): array { return [RequestSignatureHandler::TYPE]; }
+    public function actionHandlers(): array { return [$this->requestSignature]; }
+
+    /** @return list<ActionPolicy> */
+    public function policies(string $organizationId): array
+    {
+        $id = $organizationId === 'default' ? 'documents-signature-request-review-v1'
+            : substr(hash('sha256', $organizationId . ':documents-signature-request-review-v1'), 0, 32);
+        return [new ActionPolicy(
+            $id, $organizationId, RequestSignatureHandler::TYPE,
+            [], PolicyDecision::ApprovalRequired, 10,
+            'Document signature requests require independent human approval',
+        )];
+    }
+
+    /** @return list<ActionPolicy> */
+    public function bootstrapPolicies(): array { return $this->policies('default'); }
+}

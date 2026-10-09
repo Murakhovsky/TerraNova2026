@@ -2265,12 +2265,24 @@ services:
     arguments:
       $approvalHandler: '@App\Persistence\Federation\FederationPlanApproveHandler'
 
+  Domains\Documents\Automation\Action\RequestSignatureHandler:
+    arguments:
+      $documents: '@Platform\Documents\Service\DocumentsRuntimeService'
+
+  Domains\Documents\Bootstrap\DocumentsDomainModule:
+    arguments:
+      $requestSignature: '@Domains\Documents\Automation\Action\RequestSignatureHandler'
+
+  documentsDomainModule:
+    alias: Domains\Documents\Bootstrap\DocumentsDomainModule
+
   Kernel\Module\DomainModuleRegistry:
     arguments:
       $modules:
         - '@Domains\Federation\Bootstrap\FederationDomainModule'
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
         - '@Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule'
+        - '@Domains\Documents\Bootstrap\DocumentsDomainModule'
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'

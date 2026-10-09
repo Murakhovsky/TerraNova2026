@@ -1,0 +1,44 @@
+<?php
+declare(strict_types=1);
+
+return [
+    'id' => 'documents',
+    'name' => 'Documents',
+    'version' => '0.1.0',
+    'schema_version' => '0.1.0',
+    'kernel_constraint' => '>=0.11.0 <0.12.0',
+    'description' => 'Tenant-owned document signature request Actions backed by the canonical Platform Documents runtime. A request never means a verified signed document.',
+    'icon' => 'file-signature',
+    'dependencies' => [],
+    'enabled_by_default' => false,
+    'contributions' => [
+        'runtime_module_service' => 'documentsDomainModule',
+        'api_route_contributor_services' => [],
+        'configuration_provisioner_services' => [],
+        'cross_domain_contracts' => [],
+        'migration_files' => [],
+        'capability_contracts' => [
+            [
+                'id' => 'documents.signature.request',
+                'version' => '1.0.0',
+                'owner_domain' => 'documents',
+                'kind' => 'command',
+                'input_schema' => 'resources/contracts/documents/request-signature-input.schema.json',
+                'output_schema' => 'resources/contracts/documents/request-signature-output.schema.json',
+                'execution_binding' => 'action:documents.signature.request',
+                'async' => true,
+                'side_effect_level' => 'external',
+                'permission' => 'cos.tenant.manage',
+                'approval_policy' => 'required',
+                'idempotency' => 'required',
+                'timeout_policy' => ['seconds' => 90],
+                'retry_policy' => ['max_attempts' => 1],
+                'failure_contract' => 'Ambiguous signature requests require idempotency-key reconciliation; no blind external retry.',
+                'lifecycle' => 'experimental',
+                'tests' => ['tests/unit/federation_documents_signature_request.php', 'tests/architecture/federation_execution_authorization.php'],
+                'documentation' => 'docs/03-architecture/federation-trusted-goal-outcomes.md',
+            ],
+        ],
+        'capabilities' => ['documents.signature.request'],
+    ],
+];
