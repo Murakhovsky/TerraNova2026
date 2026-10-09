@@ -128,6 +128,12 @@ final readonly class FederationCandidateFanoutPlanner
                 'account_id' => $accountId,
                 'source_hash' => $sourceHash,
                 'source_reference' => $source,
+                'account_name' => is_string($row['account_name'] ?? null)
+                    ? mb_substr($row['account_name'],0,220) : '',
+                'lead_name' => is_string($candidate['lead_name'] ?? null)
+                    ? mb_substr($candidate['lead_name'],0,220) : '',
+                'lead_email' => is_string($candidate['lead_email'] ?? null)
+                    ? mb_substr($candidate['lead_email'],0,254) : '',
             ];
         }
         usort($eligible, static fn (array $a, array $b): int =>
@@ -167,6 +173,17 @@ final readonly class FederationCandidateFanoutPlanner
                 ])),
                 $step('proposal', 'documents.proposal.prepare', $input($id, [
                     'template_id' => $options['template_id'],
+                    'variables' => [
+                        'candidate_id' => $id,
+                        'account_id' => $subject['account_id'],
+                        'account_name' => $subject['account_name'],
+                        'source_reference' => mb_substr($subject['source_reference'],0,4000),
+                        'lead_name' => $subject['lead_name'],
+                        'lead_email' => $subject['lead_email'],
+                        'expected_value' => $options['expected_value'],
+                        'recommended_play' => $options['recommended_play'],
+                        'recommended_action' => $options['recommended_action'],
+                    ],
                 ])),
             ];
             $evidence = [
