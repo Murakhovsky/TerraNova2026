@@ -175,7 +175,10 @@ final readonly class DecisionWorkspaceReadService
             'market_data',
         );
         $global = $this->globalState($core, $market, 'PAPER');
-        $portfolioWindows = $this->portfolioNavWindows($organizationId, $errors);
+        $latestNav = null;
+        $portfolioWindows = $this->portfolioNavWindows($organizationId, $errors, $latestNav);
+        $global['portfolio_equity'] = $latestNav['equity'] ?? null;
+        $global['portfolio_nav_status'] = $latestNav['status'] ?? 'UNAVAILABLE';
         $global['today_net_pnl'] = $portfolioWindows['today']['net_pnl'] ?? null;
         $global['pnl_30d'] = $portfolioWindows['30d']['net_pnl'] ?? null;
         $global['portfolio_nav_windows'] = $portfolioWindows;
@@ -623,8 +626,13 @@ final readonly class DecisionWorkspaceReadService
             $errors,
             'market_data',
         );
+        $latestNav = null;
+        $this->portfolioNavWindows($organizationId, $errors, $latestNav);
+        $global = $this->globalState($core, $market, 'PAPER');
+        $global['portfolio_equity'] = $latestNav['equity'] ?? null;
+        $global['portfolio_nav_status'] = $latestNav['status'] ?? 'UNAVAILABLE';
         return [
-            'global' => $this->globalState($core, $market, 'PAPER'),
+            'global' => $global,
             'portfolio' => $core,
             'capital_map' => $this->capitalMap($core['capital_state'] ?? []),
             'strategy_allocations' => $this->strategyAllocationRows($core),
@@ -737,7 +745,10 @@ final readonly class DecisionWorkspaceReadService
             'ledger',
         );
         $attribution = is_array($core['performance'] ?? null) ? $core['performance'] : [];
-        $portfolioWindows = $this->portfolioNavWindows($organizationId, $errors);
+        $latestNav = null;
+        $portfolioWindows = $this->portfolioNavWindows($organizationId, $errors, $latestNav);
+        $page['global']['portfolio_equity'] = $latestNav['equity'] ?? null;
+        $page['global']['portfolio_nav_status'] = $latestNav['status'] ?? 'UNAVAILABLE';
         $navPreflight = $this->safe(
             fn(): array => $this->navEvidence->inspect($organizationId),
             ['status'=>'UNAVAILABLE','issues'=>['NAV_PREFLIGHT_UNAVAILABLE'],'sources'=>[]],
@@ -748,6 +759,7 @@ final readonly class DecisionWorkspaceReadService
         $page['global']['pnl_30d'] = $portfolioWindows['30d']['net_pnl'] ?? null;
         $page['performance'] = [
             'portfolio_nav_windows' => $portfolioWindows,
+            'latest_certified_nav' => $latestNav,
             'nav_preflight' => $navPreflight,
             'attribution' => $attribution,
             'ledger' => $ledger,
@@ -1154,7 +1166,7 @@ final readonly class DecisionWorkspaceReadService
         return [
             'mode' => $mode,
             'live_enabled' => false,
-            'portfolio_equity' => $capital['total'] ?? null,
+            'portfolio_equity' => null, // Only independently certified valuation snapshots supply NAV equity.
             'available_capital' => $capital['available'] ?? null,
             'deployed_capital' => $capital['deployed'] ?? null,
             'reserved_capital' => $capital['reserved'] ?? null,
@@ -1542,7 +1554,7 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @param list<array<string,string>> $errors @return array<string,array<string,mixed>> */
-    private function portfolioNavWindows(string $organizationId, array &$errors): array
+    private function portfolioNavWindows(string $organizationId, array &$errors, ?array &$latestNav = null): array
     {
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $snapshots = $this->safe(
@@ -1551,6 +1563,7 @@ final readonly class DecisionWorkspaceReadService
             ),
             [], $errors, 'portfolio_nav_history',
         );
+        $latestNav = PortfolioNavWindowProjector::latestVerified($snapshots, $now);
         return PortfolioNavWindowProjector::project($snapshots, $now);
     }
 
