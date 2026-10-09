@@ -138,8 +138,10 @@ final readonly class FederationCandidateFanoutPlanner
         $plans = [];
         foreach ($selected as $subject) {
             $id = $subject['candidate_id'];
-            $seed = $goal->organizationId . "\0" . $goal->goalId . "\0"
-                . $run['run_id'] . "\0" . $id;
+            // One Candidate may reappear in later discovery runs. Never
+            // mint a second Plan for the same tenant+Goal+Candidate.
+            // The particular discovery run is pinned separately in lineage.
+            $seed = $goal->organizationId . "\0" . $goal->goalId . "\0" . $id;
             $planId = 'plan-' . substr(hash('sha256', $seed), 0, 24);
             $input = static fn (string $target, array $parameters): array => [
                 'target_type' => 'growth_candidate',
