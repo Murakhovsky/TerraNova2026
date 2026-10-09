@@ -193,7 +193,20 @@ final readonly class PortfolioNavIndependentReconciliationService
         // empty liability list is an observed zero, not missing source data.
 
         $flows=Decimal::fromString('0');
+        $seenFlowEvents=[];
         foreach ($kinds['EXTERNAL_CASH_FLOW'] as $fact) {
+            $provider=trim((string)($fact['provider_id']??''));
+            $event=trim((string)($fact['provider_event_id']??''));
+            if ($provider==='' || $event==='') {
+                $issues[]='EXTERNAL_FLOW_PROVIDER_EVENT_ID_MISSING';
+                continue;
+            }
+            $eventKey=$provider.'|'.$event;
+            if (isset($seenFlowEvents[$eventKey])) {
+                $issues[]='DUPLICATE_PROVIDER_CASH_FLOW_EVENT';
+                continue;
+            }
+            $seenFlowEvents[$eventKey]=true;
             $when=self::instant($fact['effective_at']??null);
             if ($when===null || $when<$inception || $when>$now) {
                 $issues[]='EXTERNAL_FLOW_OUT_OF_COVERAGE';continue;
