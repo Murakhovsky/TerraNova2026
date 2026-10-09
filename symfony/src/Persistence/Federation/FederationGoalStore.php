@@ -151,6 +151,7 @@ final readonly class FederationGoalStore
         string $goalId,
         array $steps,
         int $planVersion = 1,
+        array $lineage = [],
     ): array {
         $this->writer($actor);
         $this->identifier($planId);
@@ -170,6 +171,17 @@ final readonly class FederationGoalStore
             throw new DomainException('Goal plan is not valid: ' . implode(',', $validated['errors']));
         }
 
+        // Auditable immutable provenance for approved, candidate-specific
+        // fan-out plans. This metadata grants NO additional execution rights.
+        if ($lineage !== [] && (
+            ($lineage['schema_version'] ?? null) !== 1
+            || !is_string($lineage['evidence_hash'] ?? null)
+            || !preg_match('/^[a-f0-9]{64}$/', $lineage['evidence_hash'])
+            || strlen(self::json($lineage)) > 2048
+        )) {
+            throw new DomainException('Malformed Federation Plan lineage.');
+        }
+
         $this->db->insert('cos_federation_plans', [
             'organization_id' => $actor->organizationId()->value(),
             'plan_id' => $planId,
@@ -177,7 +189,8 @@ final readonly class FederationGoalStore
             'spec_version' => $goal->version,
             'plan_version' => $planVersion,
             'state' => 'proposed',
-            'plan_json' => self::json(['steps' => $validated['steps'], 'created_by' => $actor->userId()->value()]),
+            'plan_json' => self::json(['steps' => $validated['steps'], 'created_by' => $actor->userId()->value()]
+                + ($lineage === [] ? [] : ['lineage' => $lineage])),
             'created_at' => self::now(),
         ]);
         return ['plan_id' => $planId, 'status' => 'proposed', 'steps' => $validated['steps']];
