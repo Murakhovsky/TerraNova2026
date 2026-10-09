@@ -10,27 +10,21 @@
   ],
   "properties": {
     "target_type": {
-      "const": "sales_lead"
+      "const": "growth_candidate"
     },
     "target_id": {
       "type": "string",
-      "pattern": "^[1-9][0-9]*$",
-      "maxLength": 18
+      "minLength": 1,
+      "maxLength": 80
     },
     "parameters": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "candidate_id",
         "template_id",
         "variables"
       ],
       "properties": {
-        "candidate_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 80
-        },
         "template_id": {
           "type": "string",
           "minLength": 1,
