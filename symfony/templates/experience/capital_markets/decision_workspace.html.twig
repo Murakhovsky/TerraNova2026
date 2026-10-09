@@ -877,7 +877,7 @@
   {% elseif cmView == 'performance' %}
     {% set perf = w.performance|default({}) %}
     {% set attr = perf.attribution|default({}) %}
-    <div class="d-flex justify-content-end gap-2 flex-wrap"><a href="/capital-markets/export/performance.csv">Export CSV</a><a href="/capital-markets/export/performance.json">Export JSON</a><a href="/capital-markets/export/realized-windows.csv">Realized windows CSV</a><a href="/capital-markets/export/realized-windows.json">Realized windows JSON</a></div>
+    <div class="d-flex justify-content-end gap-2 flex-wrap"><a href="/capital-markets/export/performance.csv">Export CSV</a><a href="/capital-markets/export/performance.json">Export JSON</a><a href="/capital-markets/export/realized-windows.csv">Realized windows CSV</a><a href="/capital-markets/export/realized-windows.json">Realized windows JSON</a><a href="/capital-markets/export/portfolio-nav.json">Verified NAV JSON</a><a href="/capital-markets/export/portfolio-nav.csv">Verified NAV CSV</a></div>
     <section class="cos-kpi-strip">
       <twig:CosMoneyMetric label="Execution-attributed Net P&L" value="{{ attr.net_pnl|default('—') }}" hint="Execution attribution only; not full NAV-based portfolio P&L" />
       <twig:CosMoneyMetric label="Realized Gross P&L" value="{{ attr.realized_gross_pnl is not null ? attr.realized_gross_pnl : '—' }}" />
