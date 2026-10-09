@@ -49,4 +49,25 @@ catch (InvalidArgumentException) {}
 $bad=$record;$bad['kind']='EXPENSE';
 try {PortfolioNavFinancialEvidencePolicy::normalize($bad);throw new RuntimeException('Unknown accounting evidence type accepted');}
 catch (InvalidArgumentException) {}
+$custody=$record;
+$custody['kind']='POSITION_BALANCE';$custody['amount']='2.5';
+$custody['venue_id']='venue-2';$custody['position_id']='position-1';
+$custody['instrument_id']='AAPLx';
+$positionEvidence=PortfolioNavFinancialEvidencePolicy::normalize($custody);
+$assert($positionEvidence['position_id']==='position-1'
+    && $positionEvidence['instrument_id']==='AAPLx',
+    'Independent custody statement must carry both stable position and instrument identity.');
+$badCustody=$custody;unset($badCustody['position_id']);
+try {PortfolioNavFinancialEvidencePolicy::normalize($badCustody);throw new RuntimeException('Custody without position ID accepted');}
+catch (InvalidArgumentException) {}
+$coverage=$record;$coverage['kind']='ACCOUNT_COVERAGE';$coverage['amount']='0';
+$coverage['coverage_scope']='EXTERNAL_FLOWS';
+$coverage['coverage_from']='1970-01-01T00:00:00Z';
+$coverage['coverage_through']='2026-10-09T09:00:00Z';$coverage['all_accounts']=true;
+$normalizedCoverage=PortfolioNavFinancialEvidencePolicy::normalize($coverage);
+$assert($normalizedCoverage['coverage_scope']==='EXTERNAL_FLOWS' && $normalizedCoverage['all_accounts']===true,
+    'Zero-flow history requires explicit full-account scope coverage.');
+$badCoverage=$coverage;$badCoverage['all_accounts']=false;
+try {PortfolioNavFinancialEvidencePolicy::normalize($badCoverage);throw new RuntimeException('Incomplete account coverage accepted');}
+catch (InvalidArgumentException) {}
 echo "Capital Markets NAV financial source evidence policy passed.\n";
