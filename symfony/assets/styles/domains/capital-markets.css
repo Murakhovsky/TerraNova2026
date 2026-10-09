@@ -59,3 +59,22 @@
     width: 100%;
   }
 }
+
+
+/* The decision status contains both financial KPIs and transport/health details.
+ * A flex row compresses the KPI grid to one narrow column at laptop widths.
+ * Give the financial metrics the full content width; put status on its own row.
+ */
+.cos-capital-markets .cm-global-status-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--cos-space-3);
+}
+
+.cos-capital-markets .cm-global-status-layout > * {
+  min-width: 0;
+}
+
+.cos-capital-markets .cm-global-status-layout .cos-kpi-strip {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+}
