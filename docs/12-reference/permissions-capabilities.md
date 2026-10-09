@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 45 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 132 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 133 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -50,6 +50,7 @@ generated: true
 | `capital_markets` | `capital_markets.relationship.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.agent.use` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.experiment.run` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.research.result.record` | ні | так | `manifest-only` | — | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.risk.manage_policy` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |

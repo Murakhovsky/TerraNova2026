@@ -70,6 +70,7 @@ generated: true
 - `capital_markets.research.agent.use`;
 - `capital_markets.research.experiment.run`;
 - `capital_markets.research.manage`;
+- `capital_markets.research.result.record`;
 - `capital_markets.research.view`;
 - `capital_markets.risk.manage_policy`;
 - `capital_markets.risk.view`;
