@@ -93,7 +93,7 @@ final readonly class BinanceSpotMarketDataAdapter implements MarketDataAdapterIn
             $depth = $this->parser->depth($body);
             $events[] = new RawMarketEvent(
                 $this->eventId('book'), $source->id, $source->venueId, $symbol,
-                'binance.spot.depth.snapshot', null, $received, $depth['sequence'],
+                'binance.spot.depth.snapshot', null, $received, (string) $depth['sequence'],
                 ['raw_json'=>$body], $metadata + ['timestamp_authority'=>'RECEIVED_AT'],
             );
         }
