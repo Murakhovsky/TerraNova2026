@@ -1709,6 +1709,22 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($proposed['status']==='proposed','Fan-out Plans cannot auto-approve.');
         }
 
+        // Negative: Even a SHA-valid lineage document must NOT authorize
+        // a Plan ID or target Candidate from another identity.
+        $wrong=$first['plans'][0];
+        $wrong['lineage']['candidate_id']='another-candidate';
+        $proof=$wrong['lineage'];
+        unset($proof['evidence_hash']);
+        $wrong['lineage']['evidence_hash']=hash('sha256',json_encode(
+            $proof,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES,
+        ));
+        try {
+            $this->goals->proposePlan($actor,'plan-'.bin2hex(random_bytes(12)),$goalId,
+                $wrong['steps'],1,$wrong['lineage']);
+            throw new \RuntimeException('Forged Candidate lineage was accepted.');
+        } catch (DomainException) {
+        }
+
         $prior=array_column($first['plans'],'candidate_id');
         $second=$this->candidateFanout->build(
             $specification,$native,array_reverse($members),$view,40,$options,$prior,
