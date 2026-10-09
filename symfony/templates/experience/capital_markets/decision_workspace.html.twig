@@ -74,10 +74,10 @@
       <div>
         <small>GLOBAL STATUS · {{ g.mode|default('PAPER') }}</small>
         <div class="cos-kpi-strip mt-2">
-          <twig:CosMoneyMetric label="Portfolio Equity" value="{{ g.portfolio_equity is not null ? g.portfolio_equity : '—' }}" />
+          <twig:CosMoneyMetric label="Portfolio Equity" value="{{ g.portfolio_equity is not null ? g.portfolio_equity : '—' }}" hint="Certified current NAV only; capital reservations are not NAV" />
           <twig:CosMoneyMetric label="Available Capital" value="{{ g.available_capital is not null ? g.available_capital : '—' }}" />
           <twig:CosMoneyMetric label="Today Net P&L" value="{{ g.today_net_pnl is not null ? g.today_net_pnl : '—' }}" />
-          <twig:CosMoneyMetric label="Net P&L" value="{{ g.net_pnl is not null ? g.net_pnl : '—' }}" />
+          <twig:CosMoneyMetric label="Execution Net P&L" value="{{ g.net_pnl is not null ? g.net_pnl : '—' }}" />
           <twig:CosMetric label="Critical Alerts" value="{{ g.critical_alerts|default(0) }}" hint="HIGH + CRITICAL only" />
         </div>
       </div>
@@ -119,7 +119,7 @@
     {% set p = w.performance|default({}) %}
     {% set r = w.risk|default({}) %}
     <section class="cos-kpi-strip" aria-label="Capital Markets overview">
-      <twig:CosMoneyMetric label="Portfolio Equity" value="{{ c.total|default('—') }}" />
+      <twig:CosMoneyMetric label="Capital State Total" value="{{ c.total|default('—') }}" hint="Capital/reservation state; not independently certified NAV" />
       <twig:CosMoneyMetric label="Available" value="{{ c.available|default('—') }}" />
       <twig:CosMoneyMetric label="Deployed" value="{{ c.deployed|default('—') }}" />
       <twig:CosMoneyMetric label="Reserved" value="{{ c.reserved|default('—') }}" />
@@ -879,7 +879,7 @@
     {% set attr = perf.attribution|default({}) %}
     <div class="d-flex justify-content-end gap-2 flex-wrap"><a href="/capital-markets/export/performance.csv">Export CSV</a><a href="/capital-markets/export/performance.json">Export JSON</a><a href="/capital-markets/export/realized-windows.csv">Realized windows CSV</a><a href="/capital-markets/export/realized-windows.json">Realized windows JSON</a></div>
     <section class="cos-kpi-strip">
-      <twig:CosMoneyMetric label="Portfolio Net P&L" value="{{ attr.net_pnl|default('—') }}" />
+      <twig:CosMoneyMetric label="Execution-attributed Net P&L" value="{{ attr.net_pnl|default('—') }}" hint="Execution attribution only; not full NAV-based portfolio P&L" />
       <twig:CosMoneyMetric label="Realized Gross P&L" value="{{ attr.realized_gross_pnl is not null ? attr.realized_gross_pnl : '—' }}" />
       <twig:CosMoneyMetric label="Realized Costs" value="{{ attr.realized_costs is not null ? attr.realized_costs : '—' }}" />
       <twig:CosMoneyMetric label="Realized Net P&L" value="{{ attr.realized_net_pnl is not null ? attr.realized_net_pnl : '—' }}" />
@@ -889,6 +889,16 @@
       <twig:CosMetric label="Profit Factor" value="{{ attr.profit_factor|default('—') }}" hint="unavailable until canonical wins/losses performance model exists" />
       <twig:CosMetric label="Capital Efficiency" value="{{ attr.capital_efficiency|default('—') }}" />
       <twig:CosMetric label="Risk Efficiency" value="{{ attr.risk_efficiency|default('—') }}" />
+    </section>
+    {% set certifiedNav = perf.latest_certified_nav|default({}) %}
+    <section class="cos-panel" aria-label="Independently certified latest NAV">
+      <h2>Certified Current NAV</h2>
+      <div class="cos-kpi-strip">
+        <twig:CosMoneyMetric label="Portfolio Equity" value="{{ certifiedNav.equity is not null ? certifiedNav.equity : '—' }}" />
+        <twig:CosMetric label="Certification State" value="{{ certifiedNav.status|default('UNAVAILABLE') }}" />
+      </div>
+      <p class="small">Currency: {{ certifiedNav.currency|default('—') }} · Valued: {{ certifiedNav.valued_at|default('unavailable') }} · Evidence: {{ certifiedNav.provenance_id|default('unavailable') }}</p>
+      <p class="small">NAV equity needs a fresh certified snapshot. Today/30D P&amp;L additionally requires independently certified opening valuations and complete external-flow history.</p>
     </section>
     {% set economicsTone = perf.economics_status|default('UNAVAILABLE') == 'COMPLETE' ? 'positive' : (perf.economics_status|default('UNAVAILABLE') == 'PARTIAL' ? 'warning' : 'info') %}
     <section class="cos-panel" aria-label="Realized performance economics">
