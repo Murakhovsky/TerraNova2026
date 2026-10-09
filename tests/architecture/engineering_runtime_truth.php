@@ -191,4 +191,10 @@ if (!str_contains($runtimeWatchdogHandler, 'recoverStalledForOrganization')) {
     throw new RuntimeException('Engineering runtime watchdog does not reconcile stalled AgentRuns.');
 }
 
+$engineeringFeatureController = (string) file_get_contents($root.'/symfony/src/Web/Engineering/EngineeringFeatureController.php');
+if (!str_contains($engineeringFeatureController, 'recoverStalledForOrganization($organizationId)')
+    || !str_contains($engineeringFeatureController, 'refreshRuntimeHealthForOrganization($organizationId)')) {
+    throw new RuntimeException('Engineering Resume can still be blocked by a zombie RUNNING AgentRun.');
+}
+
 echo "Engineering runtime truth and observability contract passed.\n";
