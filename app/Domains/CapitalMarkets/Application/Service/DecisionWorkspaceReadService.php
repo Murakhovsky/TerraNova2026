@@ -1593,7 +1593,13 @@ final readonly class DecisionWorkspaceReadService
             ),
             [],$errors,'paper_nav_history',
         );
-        return PaperNavWindowProjector::project($snapshots,$now);
+                $portfolio=$this->safe(
+            fn():?array=>$this->trading->paperPortfolio($organizationId),
+            null,$errors,'paper_portfolio_epoch',
+        );
+        $epoch=is_array($portfolio)?trim((string)($portfolio['epoch_id']??'legacy')):'';
+        if ($epoch==='') return PaperNavWindowProjector::project([],$now);
+        return PaperNavWindowProjector::project($snapshots,$now,900,$epoch);
     }
 
     /** @param array<string,mixed> $market @return list<array<string,mixed>> */
