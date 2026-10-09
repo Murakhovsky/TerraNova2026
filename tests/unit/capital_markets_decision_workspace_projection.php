@@ -92,6 +92,7 @@ $global = $globalState->invoke($view, [
     'reference_states' => [],
 ], 'PAPER');
 $assert($global['portfolio_updated_at'] === '2026-10-08T08:00:00+00:00', 'Portfolio update provenance must stay separate.');
+$assert($global['portfolio_equity'] === null, 'Capital reservations may never masquerade as reconciled Portfolio NAV Equity.');
 $assert($global['market_updated_at'] === '2026-10-08T08:03:00+00:00', 'Market update provenance must stay separate.');
 
 $recommend = $ref->getMethod('recommendedActions');
