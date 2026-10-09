@@ -159,4 +159,8 @@ $assert(str_contains($agentRead, "'output' => \$includeAudit ? \$output : []"), 
 $assert(str_contains($agentRead, "'tools' => \$includeAudit ? \$tools : []"), 'Unaudited consumers must not receive tool input/output.');
 $assert(str_contains($template, 'permissions.audit_view'), 'Agent audit detail must be permission gated in Twig.');
 
+$decisionsAt = strpos($template, '<h2>Top Opportunities</h2>');
+$diagnosticsAt = strpos($template, '<h2>Portfolio NAV time-window evidence</h2>');
+$assert($decisionsAt !== false && $diagnosticsAt !== false && $decisionsAt < $diagnosticsAt,
+    'Decision First: top opportunities must appear before detailed NAV diagnostics on Overview.');
 echo "CM-DECISION-WORKSPACE Manager Acceptance passed.\n";
