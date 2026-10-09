@@ -10,6 +10,7 @@ use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Persistence\Doctrine\Entity\Engineering\AgentRunRecord;
+use App\Persistence\Doctrine\Entity\Engineering\WorkflowExecutionRecord;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -196,7 +197,8 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
     public function failStaleRunning(string $featureId, \App\Engineering\Domain\Agent\AgentRole $role, int $staleAfterSeconds): int
     {
         $staleAfterSeconds = max(60, $staleAfterSeconds);
-        $threshold = (new DateTimeImmutable())->modify('-'.$staleAfterSeconds.' seconds');
+        $now = new DateTimeImmutable();
+        $threshold = $now->modify('-'.$staleAfterSeconds.' seconds');
         $records = $this->entityManager->getRepository(AgentRunRecord::class)->findBy([
             'featureId' => $featureId,
             'agentRole' => $role->value,
@@ -205,13 +207,44 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
 
         $failed = 0;
         foreach ($records as $record) {
-            if (!$record instanceof AgentRunRecord || $record->startedAt() > $threshold) continue;
-            $message = 'AgentRun exceeded the recovery timeout and was closed before a new logical attempt.';
-            $record->fail(
-                'STALE_RUN_RECOVERY',
+            if (!$record instanceof AgentRunRecord) continue;
+
+            $workflow = $this->entityManager->find(WorkflowExecutionRecord::class, $record->workflowExecutionId());
+            $heartbeatAt = $workflow instanceof WorkflowExecutionRecord
+                && $workflow->currentAgentRunId() === $record->id()
+                ? $workflow->heartbeatAt()
+                : null;
+
+            // A long-running agent is not stale while its own workflow heartbeat is fresh.
+            // Recovery must be based on loss of liveness, never merely on run age.
+            if ($heartbeatAt instanceof DateTimeImmutable && $heartbeatAt > $threshold) {
+                continue;
+            }
+
+            if (!$heartbeatAt instanceof DateTimeImmutable && $record->startedAt() > $threshold) {
+                continue;
+            }
+
+            $effectiveFinishedAt = $heartbeatAt instanceof DateTimeImmutable
+                ? $heartbeatAt
+                : $record->startedAt()->modify('+'.$staleAfterSeconds.' seconds');
+
+            $message = $heartbeatAt instanceof DateTimeImmutable
+                ? sprintf(
+                    'AgentRun lost heartbeat; last known activity was %s and the run was closed by stale recovery.',
+                    $heartbeatAt->format(DATE_ATOM),
+                )
+                : sprintf(
+                    'AgentRun had no attributable heartbeat for %d seconds and was closed by stale recovery.',
+                    $staleAfterSeconds,
+                );
+
+            $record->recoverStale(
                 $message,
+                $effectiveFinishedAt,
                 $record->technicalRetry(),
             );
+
             $this->events->append(
                 $record->featureId(),
                 $record->workflowExecutionId(),
@@ -219,7 +252,14 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
                 'agent.stale_run_recovered',
                 'FAILED',
                 $record->agentRole().' stale run closed by recovery',
-                ['role' => $record->agentRole(), 'stale_after_seconds' => $staleAfterSeconds],
+                [
+                    'role' => $record->agentRole(),
+                    'stale_after_seconds' => $staleAfterSeconds,
+                    'last_heartbeat_at' => $heartbeatAt?->format(DATE_ATOM),
+                    'effective_finished_at' => $effectiveFinishedAt->format(DATE_ATOM),
+                    'recovered_at' => $now->format(DATE_ATOM),
+                    'duration_basis' => $heartbeatAt instanceof DateTimeImmutable ? 'last_heartbeat' : 'stale_timeout',
+                ],
                 $record->id(),
                 $record->traceId(),
                 null,
@@ -230,6 +270,68 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         if ($failed > 0) $this->entityManager->flush();
 
         return $failed;
+    }
+
+    public function recoverStalledForOrganization(string $organizationId): int
+    {
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
+            "SELECT r.id AS run_id, r.feature_id, r.workflow_execution_id, r.agent_role, r.trace_id,
+                    r.technical_retry, r.started_at, w.heartbeat_at, w.runtime_reason
+             FROM cos_engineering_agent_runs r
+             INNER JOIN cos_engineering_workflows w ON w.id = r.workflow_execution_id
+             INNER JOIN cos_engineering_features f ON f.id = r.feature_id
+             WHERE f.organization_id = :organization_id
+               AND r.status = 'RUNNING'
+               AND w.health_status = 'STALLED'
+               AND w.current_agent_run_id = r.id",
+            ['organization_id' => $organizationId],
+        );
+
+        $recovered = 0;
+        $now = new DateTimeImmutable();
+        foreach ($rows as $row) {
+            $record = $this->entityManager->find(AgentRunRecord::class, (string) ($row['run_id'] ?? ''));
+            if (!$record instanceof AgentRunRecord) continue;
+
+            $heartbeatRaw = trim((string) ($row['heartbeat_at'] ?? ''));
+            $heartbeatAt = $heartbeatRaw !== ''
+                ? new DateTimeImmutable($heartbeatRaw, new \DateTimeZone('UTC'))
+                : $record->startedAt();
+
+            $reason = trim((string) ($row['runtime_reason'] ?? ''));
+            $message = $reason !== ''
+                ? 'Workflow stalled after loss of AgentRun heartbeat: '.$reason
+                : 'Workflow stalled after loss of AgentRun heartbeat.';
+
+            $record->recoverStale($message, $heartbeatAt, $record->technicalRetry());
+            $this->events->append(
+                $record->featureId(),
+                $record->workflowExecutionId(),
+                'WATCHDOG',
+                'agent.stalled_run_recovered',
+                'FAILED',
+                $record->agentRole().' RUNNING state reconciled with STALLED workflow',
+                [
+                    'role' => $record->agentRole(),
+                    'last_heartbeat_at' => $heartbeatAt->format(DATE_ATOM),
+                    'effective_finished_at' => $heartbeatAt->format(DATE_ATOM),
+                    'recovered_at' => $now->format(DATE_ATOM),
+                    'duration_basis' => 'last_heartbeat',
+                    'runtime_reason' => $reason,
+                ],
+                $record->id(),
+                $record->traceId(),
+                null,
+                $message,
+            );
+            ++$recovered;
+        }
+
+        if ($recovered > 0) {
+            $this->entityManager->flush();
+        }
+
+        return $recovered;
     }
 
     public function byIdempotencyKey(string $idempotencyKey): ?array

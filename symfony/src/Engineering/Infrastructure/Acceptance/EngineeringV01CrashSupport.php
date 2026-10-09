@@ -11,13 +11,32 @@ final readonly class EngineeringV01CrashSupport
 
     public function backdateRunningAgentRun(string $featureId, int $seconds = 3600): int
     {
-        $startedAt = (new \DateTimeImmutable())->modify('-'.max(120, $seconds).' seconds')->format('Y-m-d H:i:s.u');
-        return $this->entityManager->getConnection()->executeStatement(
+        $staleAt = (new \DateTimeImmutable())->modify('-'.max(120, $seconds).' seconds')->format('Y-m-d H:i:s.u');
+        $connection = $this->entityManager->getConnection();
+        $updated = $connection->executeStatement(
             "UPDATE cos_engineering_agent_runs
              SET started_at = :started_at
              WHERE feature_id = :feature_id AND status = 'RUNNING'",
-            ['started_at' => $startedAt, 'feature_id' => $featureId],
+            ['started_at' => $staleAt, 'feature_id' => $featureId],
         );
+
+        if ($updated > 0) {
+            // Recovery is now heartbeat-based. Crash fixtures must therefore age the
+            // attributable workflow heartbeat as well as started_at to represent an
+            // actually dead AgentRun rather than merely an old one.
+            $connection->executeStatement(
+                "UPDATE cos_engineering_workflows w
+                 INNER JOIN cos_engineering_agent_runs r
+                    ON r.workflow_execution_id = w.id
+                   AND r.id = w.current_agent_run_id
+                 SET w.heartbeat_at = :heartbeat_at
+                 WHERE r.feature_id = :feature_id
+                   AND r.status = 'RUNNING'",
+                ['heartbeat_at' => $staleAt, 'feature_id' => $featureId],
+            );
+        }
+
+        return $updated;
     }
 
     /** @return array<string,mixed>|null */

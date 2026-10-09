@@ -487,12 +487,16 @@
                                     data-engineering-live-duration-start="{{ run.started_at|default('') }}"
                                     data-engineering-live-duration-finish="{{ run.finished_at|default('') }}"
                                 >{{ summary.run_durations[run.id].label|default('—') }}</strong>
+                                {% if run.error_type|default('') == 'STALE_RUN_RECOVERY' %}
+                                    <div class="engineering-muted">до останньої ознаки життя</div>
+                                {% endif %}
                             </td>
                             <td>
                                 <span data-engineering-live-timestamp="{{ run.started_at|default('') }}">{{ run.started_at|default('') }}</span>
                                 <div class="engineering-muted">
                                     {% if run.finished_at|default('') %}
                                         <span data-engineering-live-timestamp="{{ run.finished_at }}">{{ run.finished_at }}</span>
+                                        {% if run.error_type|default('') == 'STALE_RUN_RECOVERY' %} · остання ознака життя{% endif %}
                                     {% else %}
                                         виконується
                                     {% endif %}

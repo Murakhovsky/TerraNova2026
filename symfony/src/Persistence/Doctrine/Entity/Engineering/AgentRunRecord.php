@@ -117,4 +117,18 @@ class AgentRunRecord
         $this->errorMessage = $errorMessage;
         $this->finishedAt = new DateTimeImmutable();
     }
+
+    public function recoverStale(
+        string $errorMessage,
+        DateTimeImmutable $effectiveFinishedAt,
+        int $technicalRetry = 0,
+    ): void {
+        $this->status = 'FAILED';
+        $this->technicalRetry = $technicalRetry;
+        $this->errorType = 'STALE_RUN_RECOVERY';
+        $this->errorMessage = $errorMessage;
+        $this->finishedAt = $effectiveFinishedAt < $this->startedAt
+            ? $this->startedAt
+            : $effectiveFinishedAt;
+    }
 }
