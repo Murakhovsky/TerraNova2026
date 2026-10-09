@@ -6,6 +6,7 @@ namespace Domains\CapitalMarkets\Application\Service;
 use DateTimeImmutable;
 use DateTimeZone;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\PaperNavConsistentAccountingInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketStateRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\PaperNavSnapshotRepositoryInterface;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
@@ -33,14 +34,18 @@ final readonly class PaperNavSnapshotService
         if (trim($organizationId)==='' || trim($portfolioId)==='') return $block('PAPER_TENANT_PORTFOLIO_REQUIRED');
         $now=new DateTimeImmutable('now',new DateTimeZone('UTC'));
         try {
-            $portfolio=$this->trading->paperPortfolio($organizationId);
+            if (!$this->trading instanceof PaperNavConsistentAccountingInterface) {
+                return $block('PAPER_CONSISTENT_ACCOUNTING_UNAVAILABLE');
+            }
+            $accounting=$this->trading->paperAccountingSnapshot($organizationId);
+            $portfolio=$accounting['portfolio'];
             if (!is_array($portfolio)) return $block('PAPER_PORTFOLIO_NOT_INITIALIZED');
-            $positions=$this->trading->listPositions($organizationId,5000);
+            $positions=$accounting['positions'];
+            $balances=$accounting['balances'];
+            $executions=$accounting['executions'];
+            $ledger=$accounting['ledger'];
             if (count($positions)>=5000) return $block('PAPER_POSITIONS_TRUNCATED');
-            $balances=$this->trading->listPaperBalances($organizationId);
             if (count($balances)>=5000) return $block('PAPER_BALANCES_TRUNCATED');
-            $executions=$this->trading->listExecutions($organizationId,5000);
-            $ledger=$this->trading->listLedgerTransactions($organizationId,5000);
             if (count($ledger)>=5000 || count($executions)>=5000) return $block('PAPER_LEDGER_OR_EXECUTIONS_TRUNCATED');
             if ($executions!==[] && $ledger===[]) return $block('PAPER_EXECUTIONS_WITHOUT_LEDGER');
             if ($ledger!==[]) {
