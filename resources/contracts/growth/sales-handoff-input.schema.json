@@ -10,7 +10,8 @@
   ],
   "properties": {
     "target_type": {
-      "const": "growth_candidate"
+      "const": "growth_candidate",
+      "type": "string"
     },
     "target_id": {
       "type": "string",
