@@ -155,6 +155,12 @@ $trading->positions=[[
 $denied=$service->certify('org-a','paper-master',77,'APPROVE_VERIFIED_INDEPENDENT_EVIDENCE');
 $assert($denied['status']==='BLOCKED','Unconfirmed custody/mark cannot enter portfolio NAV.');
 $trading->positions=[];
+$trading->balances[]=['venue_id'=>'VENUE-1','asset_key'=>'AAPLx','available_amount'=>'2','reserved_amount'=>'0'];
+$denied=$service->certify('org-a','paper-master',77,'APPROVE_VERIFIED_INDEPENDENT_EVIDENCE');
+$assert($denied['status']==='BLOCKED'
+    && in_array('NONCASH_INVENTORY_WITHOUT_MATCHING_POSITION',$denied['issues'],true),
+    'Unexplained noncash inventory must block NAV to prevent omitted assets and double counting.');
+array_pop($trading->balances);
 $trading->ledger[0]['entries'][0]['debit']='105';
 $denied=$service->certify('org-a','paper-master',77,'APPROVE_VERIFIED_INDEPENDENT_EVIDENCE');
 $assert($denied['status']==='BLOCKED','Unbalanced trading journal must block NAV.');
