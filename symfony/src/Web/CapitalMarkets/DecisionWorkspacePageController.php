@@ -420,6 +420,13 @@ final readonly class DecisionWorkspacePageController
         }
         $shell = $this->shells->create($tenant, $context, $title, $breadcrumbs);
 
+        if (is_array($variables['workspace'] ?? null)) {
+            $variables['workspace'] = DecisionWorkspaceVisibilityPolicy::redact(
+                $variables['workspace'],
+                $variables['permissions'],
+            );
+        }
+
         return new Response(
             $this->twig->render('experience/capital_markets/decision_workspace.html.twig', array_replace($variables, ['shell'=>$shell])),
             $status,
