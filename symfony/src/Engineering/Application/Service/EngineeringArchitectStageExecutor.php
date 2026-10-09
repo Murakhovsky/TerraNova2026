@@ -336,16 +336,18 @@ final readonly class EngineeringArchitectStageExecutor
                     throw new RuntimeException('Principal Architect Agent did not complete: '.($run->error ?? $run->status));
                 }
 
-                $this->assertDocumentationEvidence(
-                    is_array($run->structuredOutput['documentation_changes'] ?? null)
-                        ? $run->structuredOutput['documentation_changes']
-                        : [],
-                    $repositoryFiles,
-                    $repositoryRevision,
-                    $featureId,
-                    $workflowId,
-                    $correlationId,
-                );
+                if (($run->structuredOutput['status'] ?? '') !== 'NEEDS_REPOSITORY_EVIDENCE') {
+                    $this->assertDocumentationEvidence(
+                        is_array($run->structuredOutput['documentation_changes'] ?? null)
+                            ? $run->structuredOutput['documentation_changes']
+                            : [],
+                        $repositoryFiles,
+                        $repositoryRevision,
+                        $featureId,
+                        $workflowId,
+                        $correlationId,
+                    );
+                }
 
                 $this->workflows->touchRuntime($workflowId, $engineeringRunId);
                 $this->journal->event(
