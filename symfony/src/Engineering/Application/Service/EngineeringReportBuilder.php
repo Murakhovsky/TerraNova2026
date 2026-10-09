@@ -104,7 +104,7 @@ final readonly class EngineeringReportBuilder
             is_array($qaContent['known_limitations'] ?? null) ? $qaContent['known_limitations'] : [],
         ), SORT_REGULAR));
 
-        $humanInterventions = count($this->humanDecisions->historyForFeature($featureId));
+        $humanInterventions = count(array_filter($this->humanDecisions->historyForFeature($featureId), static fn (array $d): bool => ($d['status'] ?? '') !== 'AUTO_RESOLVED'));
         $qaExecutionCycles = $qaCycles;
         $startedAt = $workflow->startedAt();
         $timeToPr = $firstDeveloperFinishedAt !== null

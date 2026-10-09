@@ -328,6 +328,51 @@ active stage
 
 Людина може вибрати `CONTINUE`, що відкриває наступний budget tranche, або `CANCEL`. Без явного рішення autonomous execution не продовжується.
 
+### Автоматичний read-only evidence gate (Manager → Architect)
+
+Коли repository gateway доступний, pinned repository revision відома й Architect потребує
+лише додаткового read-only контексту, він повертає `NEEDS_REPOSITORY_EVIDENCE`
+та `requested_repository_files` (точні шляхи файлів). Це **не human decision**.
+
+1. Manager policy детерміновано перевіряє шляхи: до 6 за один запит, до 12 додаткових
+   за весь Architect stage, максимум 2 цикли повторного аналізу; заборонені secrets,
+   credentials, hidden/private locations, traversal, binary files, дублікати та нові permissions.
+2. Orchestrator перевіряє незмінність revision, існування файлів у тому самому commit,
+   читає **тільки GET/read-only** через `filesAtRevision` та додає докази до контексту.
+   Загальний ліміт переданих текстових даних: 768 KiB.
+3. Journal фіксує `manager.repository_evidence_auto_authorized` і
+   `architect.repository_evidence_collected`, після чого Architect rerun
+   отримує новий idempotency key та повторно аналізує ті самі вимоги.
+4. Поки немає фінального `APPROVED` / `APPROVED_WITH_CONDITIONS`, наступний Developer
+   не запускається. Якщо перевірки безпеки, revision або бюджети не проходять,
+   процес зупиняється з технічною помилкою, **без фіктивного human gate**.
+   Невалідні запити не надають жодних додаткових дозволів.
+
+`NEEDS_HUMAN_DECISION` залишається тільки для реального вибору людини:
+scope/domain ownership, unsafe operation, external decision, credentials/permissions,
+irreversible action або інша принципова архітектурна дилема. Запит «прочитай файл»
+не є дилемою.
+
+### Сумісність із WORKFLOW_EVIDENCE_REFRESH
+
+Legacy Architect іноді повертає `NEEDS_HUMAN_DECISION` із типом
+`WORKFLOW_EVIDENCE_REFRESH` і варіантами `REFRESH_EVIDENCE` / `CANCEL`.
+Manager класифікує таку пару лише за точними типом, варіантами та
+read-only repository evidence; жоден загальний `NEEDS_HUMAN_DECISION`
+не схвалюється автоматично.
+
+Якщо gate уже OPEN, orchestrator перевіряє единість рішення, його
+Architect-походження, дійсний target branch і revision (або ancestry
+для актуальної гілки), існування дозволених файлів, закриває legacy
+gate статусом `AUTO_RESOLVED` без створення HumanDecision і виконує
+SYSTEM transition назад до `ARCHITECTURE_PENDING`. Наступний запуск
+отримує відсутні route/auth/render/test файли за затвердженим списком.
+Це працює через scheduler тільки коли відповідний Engineering worker
+активний; за вимкненої автономної черги потрібний запуск штатного worker.
+
+Жоден scope/security/permission/irreversible approval не підпадає під
+автоматичний сценарій. `AUTO_RESOLVED` не рахується як людське втручання.
+
 ### Фінальний human gate
 
 `READY_FOR_HUMAN_APPROVAL` вимагає approved Architecture Gate, завершеної Development, Reviewer approval, QA PASS, CI SUCCESS, перевірених blocking Acceptance Criteria, відсутності open critical findings, blocking human decisions і незавершених engineering tasks.

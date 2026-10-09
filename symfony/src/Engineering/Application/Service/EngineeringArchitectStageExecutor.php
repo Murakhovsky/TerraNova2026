@@ -135,6 +135,13 @@ final readonly class EngineeringArchitectStageExecutor
                 $contextPaths[] = $file['path'];
             }
         }
+        // A prior v0.1 Human Gate may actually be a read-only evidence refresh.
+        // Include the missing files on the resumed run without changing the spec.
+        $evidencePolicy = new EngineeringArchitectEvidenceAuthorization();
+        $previousLegacy = $previousArchitecture['content']['required_human_decisions'][0] ?? null;
+        if (is_array($previousLegacy) && $evidencePolicy->isLegacyReadOnlyRefresh($previousLegacy)) {
+            $contextPaths = array_merge($evidencePolicy->legacyRefreshPaths($contextPaths), $contextPaths);
+        }
         $contextPaths = array_slice(array_values(array_unique($contextPaths)), 0, 20);
 
         $repositoryFiles = $this->journal->around(
@@ -271,85 +278,205 @@ final readonly class EngineeringArchitectStageExecutor
         });
 
         try {
-            $run = $this->agents->run($task, $organizationId, $correlationId);
-            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
-            $this->journal->event(
-                $featureId,
-                $workflowId,
-                'AGENT',
-                'architect.llm_result_received',
-                'COMPLETED',
-                'Principal Architect LLM result returned to the stage executor.',
-                $correlationId,
-                [
-                    'agent_run_id' => $engineeringRunId,
-                    'kernel_run_id' => $run->runId,
-                    'status' => $run->status,
-                    'provider' => $run->provider,
-                    'model' => $run->model,
-                    'documentation_changes' => count(is_array($run->structuredOutput['documentation_changes'] ?? null) ? $run->structuredOutput['documentation_changes'] : []),
-                ],
-                $engineeringRunId,
-            );
-            if ($run->status !== 'completed') {
-                throw new RuntimeException('Principal Architect Agent did not complete: '.($run->error ?? $run->status));
+            $evidencePolicy = new EngineeringArchitectEvidenceAuthorization();
+            $seenPaths = $contextPaths;
+            $extraPaths = [];
+            $round = 0;
+            while (true) {
+                $run = $this->agents->run($task, $organizationId, $correlationId);
+                // Legacy agents reported safe repository reads as HUMAN_DECISION.
+                // Manager reclassifies ONLY the explicitly typed read-only request.
+                $legacy = $run->structuredOutput['required_human_decisions'][0] ?? null;
+                if (($run->structuredOutput['status'] ?? '') === 'NEEDS_HUMAN_DECISION'
+                    && is_array($legacy) && $evidencePolicy->isLegacyReadOnlyRefresh($legacy)) {
+                    $reclassified = $run->structuredOutput;
+                    $reclassified['status'] = 'NEEDS_REPOSITORY_EVIDENCE';
+                    $reclassified['required_human_decisions'] = [];
+                    $reclassified['requested_repository_files'] = $evidencePolicy->legacyRefreshPaths($seenPaths);
+                    $run = new EngineeringAgentRunResult(
+                        runId: $run->runId,
+                        role: $run->role,
+                        status: $run->status,
+                        structuredOutput: $reclassified,
+                        provider: $run->provider,
+                        model: $run->model,
+                        usage: $run->usage,
+                        error: $run->error,
+                        technicalRetries: $run->technicalRetries,
+                        steps: $run->steps,
+                    );
+                    $this->journal->event(
+                        $featureId, $workflowId, 'MANAGER', 'manager.legacy_evidence_gate_reclassified',
+                        'COMPLETED', 'Read-only evidence request reclassified without human intervention.',
+                        $correlationId,
+                        ['revision' => $repositoryRevision, 'requested_files' => $reclassified['requested_repository_files']],
+                        $engineeringRunId,
+                    );
+                }
+                $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+                $this->journal->event(
+                    $featureId,
+                    $workflowId,
+                    'AGENT',
+                    'architect.llm_result_received',
+                    'COMPLETED',
+                    'Principal Architect LLM result returned to the stage executor.',
+                    $correlationId,
+                    [
+                        'agent_run_id' => $engineeringRunId,
+                        'kernel_run_id' => $run->runId,
+                        'status' => $run->status,
+                        'provider' => $run->provider,
+                        'model' => $run->model,
+                        'documentation_changes' => count(is_array($run->structuredOutput['documentation_changes'] ?? null) ? $run->structuredOutput['documentation_changes'] : []),
+                    ],
+                    $engineeringRunId,
+                );
+                if ($run->status !== 'completed') {
+                    throw new RuntimeException('Principal Architect Agent did not complete: '.($run->error ?? $run->status));
+                }
+
+                if (($run->structuredOutput['status'] ?? '') !== 'NEEDS_REPOSITORY_EVIDENCE') {
+                    $this->assertDocumentationEvidence(
+                        is_array($run->structuredOutput['documentation_changes'] ?? null)
+                            ? $run->structuredOutput['documentation_changes']
+                            : [],
+                        $repositoryFiles,
+                        $repositoryRevision,
+                        $featureId,
+                        $workflowId,
+                        $correlationId,
+                    );
+                }
+
+                $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+                $this->journal->event(
+                    $featureId,
+                    $workflowId,
+                    'RUNTIME',
+                    'architect.postprocess_validation_started',
+                    'RUNNING',
+                    'Principal Architect result entered post-LLM validation.',
+                    $correlationId,
+                    ['agent_run_id' => $engineeringRunId],
+                    $engineeringRunId,
+                );
+
+                $structured = $this->enrichOutput(
+                    $run->structuredOutput,
+                    $featureId,
+                    $contextRevision !== '' ? $contextRevision : null,
+                    $repositoryRevision,
+                );
+                $run = new EngineeringAgentRunResult(
+                    runId: $run->runId,
+                    role: $run->role,
+                    status: $run->status,
+                    structuredOutput: $structured,
+                    provider: $run->provider,
+                    model: $run->model,
+                    usage: $run->usage,
+                    error: $run->error,
+                    technicalRetries: $run->technicalRetries,
+                    steps: $run->steps,
+                );
+                $this->validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput);
+                $this->workflows->touchRuntime($workflowId, $engineeringRunId);
+                $this->journal->event(
+                    $featureId,
+                    $workflowId,
+                    'RUNTIME',
+                    'architect.postprocess_validation_completed',
+                    'COMPLETED',
+                    'Principal Architect post-LLM validation completed.',
+                    $correlationId,
+                    ['agent_run_id' => $engineeringRunId],
+                    $engineeringRunId,
+                );
+                if (($run->structuredOutput['status'] ?? null) !== 'NEEDS_REPOSITORY_EVIDENCE') {
+                    break;
+                }
+                if ($round >= EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS) {
+                    throw new RuntimeException('Read-only repository evidence rerun budget exhausted; no human gate required.');
+                }
+                if (!$this->repository->available() || $repositoryRevision === '' || $repositoryRevision === 'unknown') {
+                    throw new RuntimeException('Repository evidence collection requires existing access and a pinned valid revision.');
+                }
+                $paths = $evidencePolicy->authorize($run->structuredOutput['requested_repository_files'] ?? null, $seenPaths);
+                if (count($extraPaths) + count($paths) > EngineeringArchitectEvidenceAuthorization::MAX_ADDITIONAL_FILES) {
+                    throw new RuntimeException('Repository evidence file budget exhausted.');
+                }
+                $currentRevision = $this->repository->currentBaseRevision($targetBranch !== '' ? $targetBranch : null);
+                if ($currentRevision !== $repositoryRevision) {
+                    throw new RuntimeException('Repository revision changed during evidence collection; Architect must revalidate.');
+                }
+                $existing = $this->repository->existingPathsAtRevision($paths, $repositoryRevision);
+                if (array_diff($paths, $existing) !== []) {
+                    throw new RuntimeException('Architect requested file does not exist at the pinned revision.');
+                }
+                $this->journal->event(
+                    $featureId, $workflowId, 'MANAGER', 'manager.repository_evidence_auto_authorized',
+                    'COMPLETED', 'Manager approved only bounded read-only evidence collection, not architecture.',
+                    $correlationId,
+                    ['revision' => $repositoryRevision, 'paths' => $paths, 'round' => $round + 1, 'read_only' => true],
+                    $engineeringRunId,
+                );
+                $additionalFiles = $this->repository->filesAtRevision($paths, $repositoryRevision);
+                $returned = array_values(array_filter(array_map(
+                    static fn (mixed $f): ?string => is_array($f) && is_string($f['path'] ?? null) ? $f['path'] : null,
+                    $additionalFiles,
+                )));
+                if (array_diff($paths, $returned) !== []) {
+                    throw new RuntimeException('Requested repository evidence could not be read completely.');
+                }
+                $repositoryFiles = array_merge($repositoryFiles, $additionalFiles);
+                $bytes = array_sum(array_map(
+                    static fn (mixed $f): int => is_array($f) ? strlen((string) ($f['content'] ?? '')) : 0,
+                    $repositoryFiles,
+                ));
+                if ($bytes > 786432) {
+                    throw new RuntimeException('Repository evidence exceeds 768 KiB context safety budget.');
+                }
+                $seenPaths = array_merge($seenPaths, $paths);
+                $extraPaths = array_merge($extraPaths, $paths);
+                ++$round;
+                $this->journal->event(
+                    $featureId, $workflowId, 'REPOSITORY', 'architect.repository_evidence_collected',
+                    'COMPLETED', 'Read-only evidence collected at pinned revision; Architect rerun follows.',
+                    $correlationId,
+                    [
+                        'revision' => $repositoryRevision, 'paths' => $paths, 'round' => $round,
+                        'total_context_bytes' => $bytes, 'previous_kernel_run_id' => $run->runId,
+                        'previous_llm_usage' => $run->usage,
+                    ],
+                    $engineeringRunId,
+                );
+                $task = new EngineeringAgentTask(
+                    id: EngineeringId::generate(),
+                    featureId: $featureId,
+                    role: AgentRole::PRINCIPAL_ARCHITECT,
+                    objective: $task->objective,
+                    inputs: array_replace($task->inputs, [
+                        'repository_files' => $repositoryFiles,
+                        'repository_evidence_collection' => [
+                            'auto_authorized_by' => 'ENGINEERING_MANAGER_POLICY',
+                            'revision' => $repositoryRevision,
+                            'additional_paths' => $extraPaths,
+                            'round' => $round,
+                        ],
+                    ]),
+                    contextRefs: $task->contextRefs,
+                    constraints: $task->constraints,
+                    expectedOutputSchema: $task->expectedOutputSchema,
+                    completionCriteria: $task->completionCriteria,
+                    idempotencyKey: $task->idempotencyKey.':evidence:'.$round.':'.hash('sha256', implode('|', $paths)),
+                    inputSnapshot: array_replace($task->inputSnapshot, [
+                        'repository_evidence_round' => $round,
+                        'repository_evidence_paths' => $extraPaths,
+                    ]),
+                );
+                $this->workflows->touchRuntime($workflowId, $engineeringRunId);
             }
-
-            $this->assertDocumentationEvidence(
-                is_array($run->structuredOutput['documentation_changes'] ?? null)
-                    ? $run->structuredOutput['documentation_changes']
-                    : [],
-                $repositoryFiles,
-                $repositoryRevision,
-                $featureId,
-                $workflowId,
-                $correlationId,
-            );
-
-            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
-            $this->journal->event(
-                $featureId,
-                $workflowId,
-                'RUNTIME',
-                'architect.postprocess_validation_started',
-                'RUNNING',
-                'Principal Architect result entered post-LLM validation.',
-                $correlationId,
-                ['agent_run_id' => $engineeringRunId],
-                $engineeringRunId,
-            );
-
-            $structured = $this->enrichOutput(
-                $run->structuredOutput,
-                $featureId,
-                $contextRevision !== '' ? $contextRevision : null,
-                $repositoryRevision,
-            );
-            $run = new EngineeringAgentRunResult(
-                runId: $run->runId,
-                role: $run->role,
-                status: $run->status,
-                structuredOutput: $structured,
-                provider: $run->provider,
-                model: $run->model,
-                usage: $run->usage,
-                error: $run->error,
-                technicalRetries: $run->technicalRetries,
-                steps: $run->steps,
-            );
-            $this->validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput);
-            $this->workflows->touchRuntime($workflowId, $engineeringRunId);
-            $this->journal->event(
-                $featureId,
-                $workflowId,
-                'RUNTIME',
-                'architect.postprocess_validation_completed',
-                'COMPLETED',
-                'Principal Architect post-LLM validation completed.',
-                $correlationId,
-                ['agent_run_id' => $engineeringRunId],
-                $engineeringRunId,
-            );
         } catch (\Throwable $error) {
             $this->lock->synchronized(
                 $featureId,
