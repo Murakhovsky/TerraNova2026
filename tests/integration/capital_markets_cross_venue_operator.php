@@ -28,7 +28,7 @@ foreach(['/capital-markets/discovery','/capital-markets/discovery/scan',
 }
 $controller=(string)file_get_contents($root.'/symfony/src/Web/CapitalMarkets/CrossVenueDiscoveryController.php');
 foreach(['CapitalMarketsCapability::MarketDataManage','CapitalMarketsCapability::MarketDataView',
-    '$this->csrf->isValid($request)','$this->snapshots->mayScan($org)'] as $needle){
+    '$this->csrf->isValid($request)','$this->snapshots->reserveScan($org,$actor)'] as $needle){
     $assert(str_contains($controller,$needle),'Unsafe discovery operator boundary: '.$needle);
 }
 $availability=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/MarketData/CapitalMarketsMarketDataProviderAvailability.php');
@@ -36,4 +36,8 @@ $assert(str_contains($availability,'MarketDataBinance'),'Binance source must rem
 $tpl=(string)file_get_contents($root.'/symfony/templates/experience/capital_markets/discovery.html.twig');
 $assert(str_contains($tpl,'економічн') || str_contains($tpl,'Ідентичність'),
     'UI must explain economic relationship uncertainty.');
+$reservation=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueDiscoverySnapshotRepository.php');
+$assert(str_contains($reservation,'UPDATE tn_capital_market_discovery_scan_gates')
+    && str_contains($reservation,'TIMESTAMPDIFF(SECOND,last_attempt_at,UTC_TIMESTAMP(6))>=:cooldown'),
+    'Operator provider cooldown must use database-atomic reservation.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
