@@ -70,14 +70,14 @@
   </div>
 
   <section class="cos-panel" aria-label="Global Capital Markets status">
-    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+    <div class="cm-global-status-layout">
       <div>
         <small>GLOBAL STATUS · {{ g.mode|default('PAPER') }}</small>
         <div class="cos-kpi-strip mt-2">
           <twig:CosMoneyMetric label="Portfolio Equity" value="{{ g.portfolio_equity is not null ? g.portfolio_equity : '—' }}" hint="Certified current NAV only; capital reservations are not NAV" />
-          <twig:CosMoneyMetric label="Paper Equity" value="{{ g.paper_equity is defined and g.paper_equity is not null ? g.paper_equity : '—' }}" hint="SIMULATED paper capital plus marked unrealized P&amp;L, not certified NAV" />
-          <twig:CosMoneyMetric label="Paper Today P&amp;L" value="{{ g.paper_today_net_pnl is defined and g.paper_today_net_pnl is not null ? g.paper_today_net_pnl : '—' }}" />
-          <twig:CosMoneyMetric label="Paper 30D P&amp;L" value="{{ g.paper_30d_net_pnl is defined and g.paper_30d_net_pnl is not null ? g.paper_30d_net_pnl : '—' }}" />
+          <twig:CosMoneyMetric label="Paper Equity" value="{{ g.paper_equity is defined and g.paper_equity is not null ? g.paper_equity : '—' }}" hint="SIMULATED paper capital plus marked unrealized P&L, not certified NAV" />
+          <twig:CosMoneyMetric label="Paper Today P&L" value="{{ g.paper_today_net_pnl is defined and g.paper_today_net_pnl is not null ? g.paper_today_net_pnl : '—' }}" />
+          <twig:CosMoneyMetric label="Paper 30D P&L" value="{{ g.paper_30d_net_pnl is defined and g.paper_30d_net_pnl is not null ? g.paper_30d_net_pnl : '—' }}" />
           <twig:CosMoneyMetric label="Available Capital" value="{{ g.available_capital is not null ? g.available_capital : '—' }}" />
           <twig:CosMoneyMetric label="Today Net P&L" value="{{ g.today_net_pnl is not null ? g.today_net_pnl : '—' }}" />
           <twig:CosMoneyMetric label="Execution Net P&L" value="{{ g.net_pnl is not null ? g.net_pnl : '—' }}" />
@@ -903,8 +903,8 @@
       </div>
       <div class="cos-kpi-strip">
         <twig:CosMoneyMetric label="Paper Equity" value="{{ paperLatest.equity is defined and paperLatest.equity is not null ? paperLatest.equity : '—' }}" hint="Capital book + mark-to-entry valuation, not broker balance" />
-        <twig:CosMoneyMetric label="Today Paper Net P&amp;L" value="{{ paperWindows.today.net_pnl is defined and paperWindows.today.net_pnl is not null ? paperWindows.today.net_pnl : '—' }}" />
-        <twig:CosMoneyMetric label="30D Paper Net P&amp;L" value="{{ paperWindows['30d'].net_pnl is defined and paperWindows['30d'].net_pnl is not null ? paperWindows['30d'].net_pnl : '—' }}" />
+        <twig:CosMoneyMetric label="Today Paper Net P&L" value="{{ paperWindows.today.net_pnl is defined and paperWindows.today.net_pnl is not null ? paperWindows.today.net_pnl : '—' }}" />
+        <twig:CosMoneyMetric label="30D Paper Net P&L" value="{{ paperWindows['30d'].net_pnl is defined and paperWindows['30d'].net_pnl is not null ? paperWindows['30d'].net_pnl : '—' }}" />
         <twig:CosMetric label="Paper NAV State" value="{{ paperLatest.status|default('UNAVAILABLE') }}" />
       </div>
       <p class="small">Last observation: {{ paperLatest.valued_at|default('unavailable') }} · {{ paperLatest.currency|default('—') }}. Historical windows require real simulated observations near both UTC boundaries, with no backdating.</p>
