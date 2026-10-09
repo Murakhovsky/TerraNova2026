@@ -462,7 +462,15 @@
                         {% set runCost = ledgerUsage and ledgerUsage.cost_amount is not null ? ledgerUsage.cost_amount : run.cost %}
                         <tr>
                             <td><strong>{{ run.role }}</strong><div class="engineering-muted">{{ run.id }}</div></td>
-                            <td>{{ run.status }}{% if run.error_type %}<div class="engineering-danger">{{ run.error_type }}</div>{% endif %}</td>
+                            <td>
+                                {{ run.status }}
+                                {% if run.error_type|default('') %}
+                                    <div class="engineering-danger"><strong>error_type:</strong> {{ run.error_type }}</div>
+                                {% endif %}
+                                {% if run.role == 'PRINCIPAL_ARCHITECT' and run.output.status|default('') %}
+                                    <div class="engineering-muted"><strong>Architecture Gate:</strong> {{ run.output.status }}</div>
+                                {% endif %}
+                            </td>
                             <td>{{ run.provider|default('unknown') }} / {{ run.model|default('unknown') }}</td>
                             <td>{{ runTokens is not null ? runTokens|number_format(0, '.', ' ') : 'ще немає' }}</td>
                             <td>
@@ -505,7 +513,11 @@
                             <td>
                                 <details class="engineering-details">
                                     <summary>Деталі</summary>
-                                    {% if run.error_message %}<p class="engineering-danger">{{ run.error_message }}</p>{% endif %}
+                                    {% if run.error_type|default('') %}<p class="engineering-danger"><strong>error_type:</strong> {{ run.error_type }}</p>{% endif %}
+                                    {% if run.error_message|default('') %}<p class="engineering-danger"><strong>error_message:</strong> {{ run.error_message }}</p>{% endif %}
+                                    {% if run.role == 'PRINCIPAL_ARCHITECT' and run.output.status|default('') %}
+                                        <p><strong>Architecture Gate:</strong> {{ run.output.status }}</p>
+                                    {% endif %}
                                     {% if run.input_snapshot|default([]) is not empty %}
                                         <details class="engineering-details" style="margin:8px 0">
                                             <summary>Вхідний контекст агента</summary>
