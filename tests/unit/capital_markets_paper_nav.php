@@ -75,10 +75,10 @@ $cashOnly[]=['venue_id'=>'venue-1','asset_key'=>'BTC','available_amount'=>'0.1',
 $unknown=PaperNavValuation::calculate($capital,[$position],$cashOnly,['pos-1'=>$mark],$at);
 $assert($unknown['status']==='UNAVAILABLE','Unknown unvalued noncash asset must block NAV.');
 
-$snapshot=static fn(string $timestamp,string $equity,string $initial='10000',string $flow='10000'):array=>[
+$snapshot=static fn(string $timestamp,string $equity,string $initial='10000',string $flow='10000',string $epoch='epoch-a'):array=>[
     'mode'=>'PAPER','status'=>'SIMULATED','valuation_status'=>'SIMULATED',
     'valued_at'=>$timestamp,'equity'=>$equity,'initial_capital'=>$initial,
-    'cumulative_external_net_flow'=>$flow,'currency'=>'USD',
+    'cumulative_external_net_flow'=>$flow,'currency'=>'USD','portfolio_epoch'=>$epoch,
     'certified'=>false,'ledger_reconciled'=>false,'external_flows_reconciled'=>false,
     'source_fingerprint'=>str_repeat('b',64),
 ];
@@ -113,6 +113,17 @@ $reset=PaperNavWindowProjector::project([
 ],$at);
 $assert($reset['windows']['today']['net_pnl']===null,
     'Paper account reinitialization cannot masquerade as 10000 profit.');
+$sameCapitalReset=PaperNavWindowProjector::project([
+    $snapshot('2026-10-09T00:00:00Z','10020'),
+    $snapshot('2026-10-09T12:00:00Z','10000','10000','10000','epoch-b'),
+],$at,900,'epoch-b');
+$assert($sameCapitalReset['windows']['today']['net_pnl']===null,
+    'Same-capital reset must not inherit profit or loss from previous paper epoch.');
+$oldEpoch=PaperNavWindowProjector::project([
+    $snapshot('2026-10-09T11:59:00Z','10020'),
+],$at,900,'epoch-b');
+$assert($oldEpoch['latest']['equity']===null,
+    'After reset, latest old-epoch equity is not current paper NAV.');
 $duplicate=PaperNavWindowProjector::project([
     $snapshot('2026-10-09T00:00:00Z','10000'),
     $snapshot('2026-10-09T12:00:00Z','10300'),
