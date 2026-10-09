@@ -83,6 +83,12 @@ try {
       if (await primaryLinks.count() < 12) {
         throw new Error(profile.name + ': ' + path + ' primary Decision Workspace navigation is incomplete.');
       }
+      const navHeight = await page.locator('nav[aria-label="Capital Markets primary workspace navigation"]')
+        .evaluate((node) => node.getBoundingClientRect().height);
+      if (navHeight > 100) {
+        throw new Error(profile.name + ': ' + path + ' primary navigation wrapped into a tall button wall (' + navHeight + 'px).');
+      }
+
 
       if (profile.mobile) {
         const width = await page.evaluate(() => document.documentElement.scrollWidth);
