@@ -1593,9 +1593,9 @@ final readonly class DecisionWorkspaceReadService
             ),
             [],$errors,'paper_nav_history',
         );
-                $portfolio=$this->safe(
-            fn():?array=>$this->trading->paperPortfolio($organizationId),
-            null,$errors,'paper_portfolio_epoch',
+        $portfolio=$this->safe(
+            fn():array=>$this->trading->paperPortfolio($organizationId)??[],
+            [],$errors,'paper_portfolio_epoch',
         );
         $epoch=is_array($portfolio)?trim((string)($portfolio['epoch_id']??'legacy')):'';
         if ($epoch==='') return PaperNavWindowProjector::project([],$now);
