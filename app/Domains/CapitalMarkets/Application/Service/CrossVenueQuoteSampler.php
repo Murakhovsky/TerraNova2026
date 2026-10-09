@@ -67,9 +67,11 @@ final readonly class CrossVenueQuoteSampler
                 [$url,$host]=$this->endpoint($name,$targets[$name]);
                 $body=$this->http->get($organizationId,'capital_markets.quote_preview.'.strtolower($name),
                     $url,[],[$host]);
+                $receivedAt=(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format(DATE_ATOM);
                 $quotes=$this->parse($name,$body,$targets[$name]);
                 $observed[$name]=$quotes;
                 $health[$name]=['status'=>'AVAILABLE','sample_count'=>count($quotes),
+                    'received_at_utc'=>$receivedAt,
                     'evidence_sha256'=>hash('sha256',$body)];
             } catch(Throwable $error) {
                 $health[$name]=['status'=>'UNAVAILABLE','sample_count'=>0,
@@ -102,7 +104,7 @@ final readonly class CrossVenueQuoteSampler
         return ['dataset'=>'cross_venue_quote_observation',
             'universe'=>$discovery['universe'],
             'discovery_as_of_utc'=>$discovery['as_of_utc'],
-            'observed_at_utc'=>$now->format(DATE_ATOM),
+            'observed_at_utc'=>(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format(DATE_ATOM),
             'source_health'=>$health,'total'=>count($rows),'rows'=>$rows,
             'constraints'=>['UNVERIFIED_ISSUER_AND_REDEMPTION','NON_EXECUTABLE_PREVIEW',
                 'NO_FEE_FX_SLIPPAGE_ADJUSTMENT','RECEIVE_TIME_NOT_PROVIDER_TIME',
