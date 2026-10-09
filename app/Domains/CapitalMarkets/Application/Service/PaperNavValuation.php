@@ -162,6 +162,7 @@ final class PaperNavValuation
             'status'=>'SIMULATED', 'mode'=>'PAPER','valuation_status'=>'SIMULATED',
             'equity'=>$equity->value(),'currency'=>$currency,
             'initial_capital'=>$initial->value(),
+            'portfolio_epoch'=>trim((string)($portfolio['epoch_id']??'legacy')),
             'realized_pnl'=>$realized->value(),
             'unrealized_pnl'=>$unrealized->value(),
             'net_pnl'=>DecimalMath::subtract($equity,$initial)->value(),
