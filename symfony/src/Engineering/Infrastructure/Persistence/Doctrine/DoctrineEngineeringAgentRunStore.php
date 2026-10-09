@@ -242,7 +242,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
     {
         $records = $this->entityManager->getRepository(AgentRunRecord::class)->findBy(
             ['featureId' => $featureId],
-            ['startedAt' => 'ASC'],
+            ['startedAt' => 'DESC'],
         );
         return array_map(fn (AgentRunRecord $record): array => $this->view($record), $records);
     }
