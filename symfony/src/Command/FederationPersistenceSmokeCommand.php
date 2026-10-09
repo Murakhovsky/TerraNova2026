@@ -5,6 +5,9 @@ namespace App\Command;
 
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
 use App\Persistence\Federation\FederationOutcomeOriginReader;
+use Domains\CapitalMarkets\Automation\Action\RecordValidatedResearchResultHandler;
+use App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider;
+use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use App\Persistence\Federation\FederationOutcomeOriginRecorder;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalCoordinator;
@@ -54,6 +57,8 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationGoalStore $goals,
         private readonly FederationOutcomeOriginReader $originReader,
         private readonly FederationOutcomeOriginRecorder $originRecorder,
+        private readonly RecordValidatedResearchResultHandler $researchResultHandler,
+        private readonly ResearchLabRepositoryInterface $researchRepository,
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
         private readonly FederationPlanApprovalCoordinator $approvalCoordinator,
@@ -1310,6 +1315,221 @@ final class FederationPersistenceSmokeCommand extends Command
                 throw new \RuntimeException('Foreign tenant advanced Federation Run.');
             } catch (DomainException) {
             }
+
+            // Real Research Action vertical slice. This synthetic tenant is
+            // isolated by the outer database rollback; no market order exists.
+            $researchResultId = 'research-' . bin2hex(random_bytes(12));
+            $researchExperimentId = 'exp-' . bin2hex(random_bytes(12));
+            $researchGoalId = 'goal-' . bin2hex(random_bytes(12));
+            $researchPlanId = 'plan-' . bin2hex(random_bytes(12));
+            $researchRunId = 'run-' . bin2hex(random_bytes(12));
+            $this->db->insert('tn_capital_market_research_experiments', [
+                'organization_id' => $org, 'experiment_id' => $researchExperimentId,
+                'hypothesis_id' => 'hyp-smoke', 'dataset_id' => 'dataset-smoke',
+                'strategy_version_id' => 'strategy-smoke',
+                'status' => 'COMPLETED',
+                'record_json' => json_encode([
+                    'experiment_id' => $researchExperimentId, 'status' => 'COMPLETED',
+                ], JSON_THROW_ON_ERROR),
+                'created_at' => self::now(),
+            ]);
+            $researchParameters = [
+                'experiment_id' => $researchExperimentId,
+                'financial_metrics' => ['expected_pnl_average' => '1.25', 'sample_count' => 125],
+                'risk_metrics' => ['max_drawdown' => '0.08'],
+                'execution_metrics' => ['execution_fidelity' => 'PAPER'],
+                'data_quality' => ['sample_count' => 125, 'skipped_count' => 0],
+                'limitations' => ['Synthetic financial data: not an investment recommendation'],
+                'review_evidence' => [
+                    'decision' => 'VALIDATED',
+                    'reviewed_by' => 'human-research-reviewer',
+                    'review_reference' => 'internal-fixture-review',
+                ],
+            ];
+            $this->goals->createGoal($actor, new GoalSpecification(
+                $researchGoalId, $org, 'user-smoke', 'Validate one reviewed Research result',
+                [['id' => 'capital_markets.run_linked_validated_results', 'operator' => 'at_least', 'expected' => 1]],
+                ['capital_markets.research.result.record'],
+            ));
+            self::assert(
+                $this->capabilityBindings->requireExecutable($actor, RecordValidatedResearchResultHandler::TYPE)
+                    ->ownerDomain === 'capital_markets',
+                'Research canonical capability is not executable for enabled tenant.',
+            );
+            $this->goals->proposePlan($actor, $researchPlanId, $researchGoalId, [[
+                'id' => 'research_result',
+                'capability_id' => 'capital_markets.research.result.record',
+                'capability_version' => '1.0.0',
+                'input' => [
+                    'target_type' => 'research_result',
+                    'target_id' => $researchResultId,
+                    'parameters' => $researchParameters,
+                ],
+            ]]);
+            $researchPlanJson = (string) $this->db->fetchOne(
+                'SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan',
+                ['org' => $org, 'plan' => $researchPlanId],
+            );
+            $researchApprovalId = bin2hex(random_bytes(16));
+            $researchApprovalParams = [
+                'goal_id' => $researchGoalId, 'plan_id' => $researchPlanId,
+                'specification_version' => 1, 'plan_hash' => hash('sha256', $researchPlanJson),
+            ];
+            $this->db->insert('cos_actions', [
+                'id' => $researchApprovalId, 'organization_id' => $org,
+                'type' => FederationPlanApproveHandler::ACTION_TYPE,
+                'target_type' => 'cos_federation_plan', 'target_id' => $researchPlanId,
+                'parameters' => json_encode($researchApprovalParams, JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'RUNNING', 'execution_mode' => 'APPROVAL_REQUIRED',
+                'risk_level' => 'LOW',
+                'idempotency_key' => 'research-plan:' . $researchApprovalId,
+                'correlation_id' => $researchApprovalId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $researchApprovalId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $researchApprovalId, 'evaluated_at' => self::now(),
+            ]);
+            $this->db->insert('cos_approvals', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $researchApprovalId, 'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'research-independent-approver',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'research-independent-approver',
+                'decided_at' => self::now(),
+            ]);
+            $researchApprovalAction = new Action(
+                $researchApprovalId, $org, FederationPlanApproveHandler::ACTION_TYPE,
+                'cos_federation_plan', $researchPlanId, $researchApprovalParams,
+                'USER', 'user-smoke', 'APPROVAL_REQUIRED', 'LOW',
+                'research-plan:' . $researchApprovalId, new \DateTimeImmutable(),
+                ActionStatus::Running, $researchApprovalId,
+            );
+            self::assert($this->approvalHandler->execute($researchApprovalAction)->successful,
+                'Research plan activation through approved canonical Action failed.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status='COMPLETED'
+                 WHERE organization_id=:org AND id=:id",
+                ['org' => $org, 'id' => $researchApprovalId],
+            );
+            $this->goals->startApprovedRun($actor, $researchRunId, $researchPlanId, $researchApprovalId);
+            $this->goals->transitionRun($actor, $researchRunId, 'pending', 'running', 1);
+            $stepKey = $this->goals->claimStep($actor, $researchRunId, 'research_result');
+            $researchActionId = bin2hex(random_bytes(16));
+            $this->db->insert('cos_actions', [
+                'id' => $researchActionId, 'organization_id' => $org,
+                'type' => RecordValidatedResearchResultHandler::TYPE,
+                'target_type' => 'research_result', 'target_id' => $researchResultId,
+                'parameters' => json_encode($researchParameters, JSON_THROW_ON_ERROR),
+                'source_type' => 'USER', 'source_id' => 'user-smoke',
+                'status' => 'RUNNING', 'execution_mode' => 'APPROVAL_REQUIRED',
+                'risk_level' => 'HIGH', 'idempotency_key' => 'fed:' . $stepKey,
+                'correlation_id' => $researchActionId,
+            ]);
+            $this->db->insert('cos_policy_evaluations', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $researchActionId, 'decision' => 'APPROVAL_REQUIRED',
+                'correlation_id' => $researchActionId, 'evaluated_at' => self::now(),
+            ]);
+            $this->db->insert('cos_approvals', [
+                'id' => bin2hex(random_bytes(16)), 'organization_id' => $org,
+                'action_id' => $researchActionId, 'status' => 'APPROVED',
+                'approver_type' => 'USER', 'approver_id' => 'research-independent-approver',
+                'requested_by_type' => 'USER', 'requested_by_id' => 'user-smoke',
+                'decided_by_type' => 'USER', 'decided_by_id' => 'research-independent-approver',
+                'decided_at' => self::now(),
+            ]);
+            $this->db->insert('cos_action_attempts', [
+                'action_id' => $researchActionId, 'organization_id' => $org,
+                'attempt' => 1, 'worker_id' => 'research-smoke-worker',
+                'status' => 'RUNNING',
+                'started_at' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+                    ->format('Y-m-d H:i:s.u'),
+            ]);
+            $researchAction = new Action(
+                $researchActionId, $org, RecordValidatedResearchResultHandler::TYPE,
+                'research_result', $researchResultId, $researchParameters,
+                'USER', 'user-smoke', 'APPROVAL_REQUIRED', 'HIGH',
+                'fed:' . $stepKey, new \DateTimeImmutable(),
+                ActionStatus::Running, $researchActionId,
+            );
+            $this->actionAdmission->assertAuthorized($researchAction);
+            $wrongAction = new Action(
+                $researchActionId, $org, RecordValidatedResearchResultHandler::TYPE,
+                'research_result', 'result-that-was-not-approved', $researchParameters,
+                'USER', 'user-smoke', 'APPROVAL_REQUIRED', 'HIGH',
+                'fed:' . $stepKey, new \DateTimeImmutable(),
+                ActionStatus::Running, $researchActionId,
+            );
+            self::assert(!$this->researchResultHandler->execute($wrongAction)->successful,
+                'Research handler accepted a forged approved target.');
+            self::assert($this->researchRepository->getResultForExperiment($org, $researchExperimentId) === null,
+                'Rejected Research Action wrote business state.');
+            $researchExecution = $this->researchResultHandler->execute($researchAction);
+            self::assert($researchExecution->successful
+                && ($researchExecution->data['result_id'] ?? null) === $researchResultId
+                && $this->researchRepository->getResultForExperiment($org, $researchExperimentId) !== null,
+                'Approved Research Action did not atomically create native result and origin.');
+            self::assert((int) $this->db->fetchOne(
+                'SELECT COUNT(*) FROM cos_federation_outcome_origins
+                 WHERE organization_id=:org AND run_id=:run AND action_id=:action',
+                ['org' => $org, 'run' => $researchRunId, 'action' => $researchActionId],
+            ) === 1, 'Research Action did not persist exactly one native origin.');
+            self::assert(!$this->researchResultHandler->execute($researchAction)->successful,
+                'Research outcome replay bypassed uniqueness and immutable origin.');
+            $this->db->executeStatement(
+                "UPDATE cos_actions SET status='COMPLETED' WHERE organization_id=:org AND id=:id",
+                ['org' => $org, 'id' => $researchActionId],
+            );
+            $this->db->executeStatement(
+                "UPDATE cos_action_attempts SET status='COMPLETED', finished_at=NOW(6)
+                 WHERE organization_id=:org AND action_id=:id AND attempt=1",
+                ['org' => $org, 'id' => $researchActionId],
+            );
+            self::assert($this->receiptReconciler->reconcile(
+                $actor, $researchRunId, 'research_result',
+            )['status'] === 'completed', 'Research Action receipt not independently reconciled.');
+            $stateBeforeFinal = $this->goals->run($actor, $researchRunId);
+            $this->runFinalizer->finalize($actor, $researchRunId, (int) $stateBeforeFinal['revision']);
+            $verifiedResearch = $this->originReader->verifiedForRun(
+                $actor, $researchRunId, 'capital_markets',
+                new \DateTimeImmutable('2026-10-01T00:00:00+00:00'),
+                new \DateTimeImmutable('+5 minutes', new \DateTimeZone('UTC')),
+            );
+            self::assert(count($verifiedResearch) === 1
+                && $verifiedResearch[0]['action_id'] === $researchActionId
+                && $verifiedResearch[0]['outcome_id'] === $researchResultId,
+                'Completed Research Run did not independently attest its Action-to-outcome provenance.');
+            self::assert($this->originReader->verifiedForRun(
+                $other, $researchRunId, 'capital_markets',
+                new \DateTimeImmutable('2026-10-01T00:00:00+00:00'),
+                new \DateTimeImmutable('+5 minutes', new \DateTimeZone('UTC')),
+            ) === [], 'Foreign tenant accessed Research origin.');
+            $oldResearchJson = (string) $this->db->fetchOne(
+                'SELECT record_json FROM tn_capital_market_research_results
+                 WHERE organization_id=:org AND result_id=:id',
+                ['org' => $org, 'id' => $researchResultId],
+            );
+            $this->db->executeStatement(
+                "UPDATE tn_capital_market_research_results SET record_json='{}'
+                 WHERE organization_id=:org AND result_id=:id",
+                ['org' => $org, 'id' => $researchResultId],
+            );
+            try {
+                $this->originReader->verifiedForRun(
+                    $actor, $researchRunId, 'capital_markets',
+                    new \DateTimeImmutable('2026-10-01T00:00:00+00:00'),
+                    new \DateTimeImmutable('+5 minutes', new \DateTimeZone('UTC')),
+                );
+                throw new \RuntimeException('Tampered native Research result was accepted as trusted.');
+            } catch (DomainException) {
+            }
+            $this->db->executeStatement(
+                'UPDATE tn_capital_market_research_results SET record_json=:record
+                 WHERE organization_id=:org AND result_id=:id',
+                ['record' => $oldResearchJson, 'org' => $org, 'id' => $researchResultId],
+            );
 
             $output->writeln('<info>COS Federation MySQL persistence smoke passed.</info>');
             return Command::SUCCESS;
