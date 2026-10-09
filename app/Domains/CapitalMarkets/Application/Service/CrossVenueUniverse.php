@@ -18,16 +18,17 @@ final class CrossVenueUniverse
         if ($handle === false) throw new InvalidArgumentException('Cross-venue universe file missing.');
         try {
             $header = fgetcsv($handle);
-            if ($header !== ['underlying_symbol','token_symbol','source_asset_type','leverage_factor']) {
+            if ($header !== ['underlying_symbol','token_symbol','binance_spot_symbol','source_asset_type','leverage_factor']) {
                 throw new InvalidArgumentException('Cross-venue universe has an unsupported schema.');
             }
             $rows = [];
             $symbols = [];
             while (($row = fgetcsv($handle)) !== false) {
-                if (count($row) !== 4) throw new InvalidArgumentException('Cross-venue universe has a malformed row.');
-                [$underlying,$token,$family,$leverage] = $row;
+                if (count($row) !== 5) throw new InvalidArgumentException('Cross-venue universe has a malformed row.');
+                [$underlying,$token,$market,$family,$leverage] = $row;
                 if (preg_match('/^[A-Z0-9]{1,15}$/D', $underlying) !== 1
                     || preg_match('/^[A-Z0-9]{2,24}$/D', $token) !== 1
+                    || preg_match('/^[A-Z0-9]{4,40}$/D', $market) !== 1
                     || !in_array($family, ['Stock','ETF'], true)
                     || preg_match('/^-?[0-9]{1,2}$/D', $leverage) !== 1
                     || (int) $leverage === 0
@@ -36,7 +37,7 @@ final class CrossVenueUniverse
                 }
                 $symbols[$token] = true;
                 $rows[] = [
-                    'underlying'=>$underlying, 'token'=>$token, 'market'=>$token.'USDT',
+                    'underlying'=>$underlying, 'token'=>$token, 'market'=>$market,
                     'asset_type'=>$family, 'leverage'=>$leverage,
                     'risk_class'=>abs((int) $leverage) !== 1 || (int)$leverage < 0
                         ? 'LEVERAGED_OR_INVERSE' : 'STANDARD_CANDIDATE',
