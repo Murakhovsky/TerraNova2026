@@ -53,7 +53,7 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly int $engineeringRuntimeWatchdogIntervalMinutes = 2,
         private readonly bool $capitalMarketsPaperNavEnabled = false,
         private readonly string $capitalMarketsPaperNavOrganizationId = '',
-        private readonly int $capitalMarketsPaperNavIntervalMinutes = 5,
+        private readonly int $capitalMarketsPaperNavIntervalMinutes = 10,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
