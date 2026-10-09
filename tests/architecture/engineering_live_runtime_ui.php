@@ -71,6 +71,17 @@ foreach ([
 }
 
 foreach ([
+    '<strong>error_type:</strong>',
+    '<strong>error_message:</strong>',
+    '<strong>Architecture Gate:</strong>',
+    "run.output.status|default('')",
+] as $needle) {
+    if (!str_contains($template, $needle)) {
+        throw new RuntimeException('Engineering agent diagnostic details missing '.$needle);
+    }
+}
+
+foreach ([
     'window.setInterval',
     'default: 10000',
     'this.intervalValue || 10000',
@@ -103,6 +114,15 @@ foreach ([
     if (!str_contains($controller, $needle)) {
         throw new RuntimeException('Engineering live Stimulus controller missing '.$needle);
     }
+}
+
+// STALE/STALLED is an operational warning. It must not permanently stop
+// read-only live polling: otherwise a recovering workflow stays falsely frozen.
+if (!str_contains($controller, 'return this.isTerminal(state, status);')) {
+    throw new RuntimeException('Engineering live UI still stops polling on recoverable runtime health.');
+}
+if (str_contains($controller, "return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);")) {
+    throw new RuntimeException('Engineering live UI still treats STALE/STALLED as terminal.');
 }
 
 if (!str_contains($uiActions, "\$activeExecution = \$hasWorkflow && \$workflowStatus === 'RUNNING'")) {
