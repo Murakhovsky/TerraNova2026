@@ -29,13 +29,13 @@ final readonly class GrowthDomainModule implements
     BootstrapPolicyProvidingModuleInterface
 {
     public function __construct(
-        private FederatedMarketDiscoveryHandler $marketDiscovery,
-        private FederatedCandidateQualificationHandler $qualifyCandidate,
-        private FederatedSalesHandoffHandler $salesHandoff,
-        private FederatedPrepareHandoffHandler $prepareHandoff,
         private ?GrowthSendMessageHandler $sendMessage=null,
         private ?GrowthLinkedInHandler $linkedIn=null,
         private ?GrowthCallHandler $call=null,
+        private ?FederatedMarketDiscoveryHandler $marketDiscovery=null,
+        private ?FederatedCandidateQualificationHandler $qualifyCandidate=null,
+        private ?FederatedSalesHandoffHandler $salesHandoff=null,
+        private ?FederatedPrepareHandoffHandler $prepareHandoff=null,
     ) {}
 
     public function name():string{return 'growth';}
@@ -47,9 +47,16 @@ final readonly class GrowthDomainModule implements
 
     public function actionTypes():array
     {
-        return [GrowthSendMessageHandler::TYPE,GrowthLinkedInHandler::TYPE,GrowthCallHandler::TYPE,
-            FederatedMarketDiscoveryHandler::TYPE,FederatedCandidateQualificationHandler::TYPE,
-            FederatedSalesHandoffHandler::TYPE,FederatedPrepareHandoffHandler::TYPE];
+        $types=[GrowthSendMessageHandler::TYPE,GrowthLinkedInHandler::TYPE,GrowthCallHandler::TYPE];
+        foreach ([
+            FederatedMarketDiscoveryHandler::TYPE => $this->marketDiscovery,
+            FederatedCandidateQualificationHandler::TYPE => $this->qualifyCandidate,
+            FederatedSalesHandoffHandler::TYPE => $this->salesHandoff,
+            FederatedPrepareHandoffHandler::TYPE => $this->prepareHandoff,
+        ] as $type => $handler) {
+            if ($handler !== null) $types[]=$type;
+        }
+        return $types;
     }
 
     public function actionHandlers():array
