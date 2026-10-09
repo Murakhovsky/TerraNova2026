@@ -237,6 +237,36 @@ final readonly class FederationCandidateFanoutService
         }
         $plans = $preview['plans'];
         $this->db->transactional(function () use ($actor,$goalId,$plans): void {
+            $org = $actor->organizationId()->value();
+            // Serialize proposals for this Goal. The per-call 50 cap alone is
+            // insufficient: multiple source runs must not cause 100 Leads.
+            $goalLock = $this->db->fetchOne(
+                'SELECT goal_id FROM cos_federation_goals
+                 WHERE organization_id = :org AND goal_id = :goal FOR UPDATE',
+                ['org'=>$org,'goal'=>$goalId],
+            );
+            if ($goalLock === false) {
+                throw new DomainException('Goal vanished during fan-out proposal.');
+            }
+            $existing = $this->db->fetchAllAssociative(
+                'SELECT plan_json FROM cos_federation_plans
+                 WHERE organization_id = :org AND goal_id = :goal',
+                ['org'=>$org,'goal'=>$goalId],
+            );
+            $already = 0;
+            foreach ($existing as $row) {
+                $snapshot = json_decode((string)$row['plan_json'],true,512,JSON_THROW_ON_ERROR);
+                if (!is_array($snapshot)) {
+                    throw new DomainException('Malformed existing tenant Goal Plan snapshot.');
+                }
+                if (is_array($snapshot['lineage'] ?? null)
+                    && ($snapshot['lineage']['schema_version'] ?? null) === 1) {
+                    ++$already;
+                }
+            }
+            if ($already + count($plans) > FederationCandidateFanoutPlanner::MAX_CANDIDATES) {
+                throw new DomainException('Goal already has too many proposed candidate Plans.');
+            }
             foreach ($plans as $plan) {
                 $this->goals->proposePlan(
                     $actor, $plan['plan_id'], $goalId,
