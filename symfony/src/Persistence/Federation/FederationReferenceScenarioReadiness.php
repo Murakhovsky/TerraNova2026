@@ -24,12 +24,10 @@ final readonly class FederationReferenceScenarioReadiness
         ['stage' => 'prepare_handoff', 'domain' => 'growth',
             'capability' => 'growth.handoff.prepare',
             'proof' => 'Canonical qualified → ready_for_handoff transition with human-approved expected value and contact play'],
-        ['stage' => 'approve_handoff', 'domain' => 'growth',
+        ['stage' => 'handoff_and_sales_intake', 'domain' => 'growth',
             'capability' => 'growth.handoff.target.sales',
-            'proof' => 'Approved idempotent Growth handoff with canonical IDs'],
-        ['stage' => 'create_crm_leads', 'domain' => 'sales',
-            'capability' => 'sales.lead.create_from_growth',
-            'proof' => 'Independently verified Sales-owned native Lead acceptance; MUST NOT create a duplicate after Growth handoff'],
+            'requires_module' => 'sales',
+            'proof' => 'Approved Growth handoff invokes the existing Sales-owned idempotent native Lead intake exactly once; accepted native Sales Lead ID is persisted and later verified by Documents'],
         ['stage' => 'prepare_proposals', 'domain' => 'documents',
             'capability' => 'documents.proposal.prepare',
             'proof' => 'Native proposal drafts, linked to qualified leads; not signature requests'],
@@ -64,7 +62,12 @@ final readonly class FederationReferenceScenarioReadiness
             } else {
                 try {
                     $this->bindings->requireExecutable($actor, $id);
-                    $status = 'executable';
+                    // Growth owns handoff coordination, but the target Sales module
+                    // owns the native CRM write. Both must be tenant-active.
+                    $dependency = $spec['requires_module'] ?? null;
+                    $status = is_string($dependency)
+                        && !$this->bindings->isTenantModuleEnabled($actor, $dependency)
+                        ? 'dependent_module_unavailable' : 'executable';
                 } catch (DomainException) {
                     $status = 'handler_or_tenant_unavailable';
                 }
