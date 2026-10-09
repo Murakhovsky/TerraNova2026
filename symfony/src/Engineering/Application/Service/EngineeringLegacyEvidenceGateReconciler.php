@@ -63,7 +63,22 @@ final readonly class EngineeringLegacyEvidenceGateReconciler
             if (array_diff($paths, $existing) !== []) {
                 throw new RuntimeException('Evidence files are absent from the validated repository revision.');
             }
-            // RESUME_PERSIST
+            $directive = $this->coordinator->resumeAfterAutomaticEvidenceRefresh(
+                $workflow, (string) $request['id'], $revision,
+            );
+            $this->decisions->autoResolveReadOnlyEvidence((string) $request['id']);
+            foreach ($directive->transitions as $transition) {
+                $this->workflows->saveTransition($workflow, $transition);
+            }
+            $this->features->updateStatus($featureId, $workflow->currentState()->value);
+            $this->workflows->touchRuntime($workflowId);
+            $this->journal->event(
+                $featureId, $workflowId, 'MANAGER', 'manager.legacy_evidence_gate_auto_resumed',
+                'COMPLETED', 'Read-only evidence reclassified as a system action.',
+                $correlationId,
+                ['request_id' => $request['id'], 'previous_revision' => $oldRevision, 'revision' => $revision, 'paths' => $paths],
+            );
+            return true;
 
         });
     }
