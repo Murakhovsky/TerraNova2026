@@ -1619,7 +1619,7 @@ final readonly class DecisionWorkspaceReadService
             $states = $statesByVenue[$id] ?? [];
             $trusted = count(array_filter(
                 $states,
-                static fn(array $state): bool => strtoupper((string)($state['trust_status'] ?? $state['quality_status'] ?? '')) === 'TRUSTED',
+                fn(array $state): bool => $this->decisionStateTrust($state) === 'TRUSTED',
             ));
             $rows[] = [
                 'venue' => $venue,
