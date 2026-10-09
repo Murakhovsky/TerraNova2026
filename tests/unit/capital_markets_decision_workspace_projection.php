@@ -82,4 +82,16 @@ $risks = $risksMethod->invoke($view, [
 ]);
 $assert(count($risks) === 1 && $risks[0]['state'] === 'CAUTION', '80% utilization must be read as decimal ratio.');
 
+// A combined "last updated" field must not mislabel portfolio time as market time.
+$globalState = $ref->getMethod('globalState');
+$global = $globalState->invoke($view, [
+    'capital_state' => ['timestamp' => '2026-10-08T08:00:00+00:00'],
+], [
+    'sources' => [],
+    'states' => [['updated_at' => '2026-10-08T08:03:00+00:00', 'trust_status' => 'TRUSTED']],
+    'reference_states' => [],
+], 'PAPER');
+$assert($global['portfolio_updated_at'] === '2026-10-08T08:00:00+00:00', 'Portfolio update provenance must stay separate.');
+$assert($global['market_updated_at'] === '2026-10-08T08:03:00+00:00', 'Market update provenance must stay separate.');
+
 echo "CM-DECISION-WORKSPACE canonical projection regression passed.\n";
