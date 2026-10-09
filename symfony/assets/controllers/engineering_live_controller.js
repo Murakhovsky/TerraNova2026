@@ -316,7 +316,10 @@ export default class extends Controller {
     }
 
     shouldStopLiveUpdates(health, state, status) {
-        return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);
+        // STALE and STALLED are observations, not terminal workflow states.
+        // Continue read-only polling so recovery becomes visible without a
+        // manual page reload. Only genuinely terminal workflows stop polling.
+        return this.isTerminal(state, status);
     }
 
     stopReason(health, state, status) {
