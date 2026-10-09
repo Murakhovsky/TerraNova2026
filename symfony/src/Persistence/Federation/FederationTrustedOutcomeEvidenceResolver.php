@@ -41,7 +41,12 @@ final readonly class FederationTrustedOutcomeEvidenceResolver
                 }
                 $owner = $provider;
             }
-            if ($owner === null || !$this->modules->isEnabled($goal->organizationId, $owner->domain())) {
+            // Documents is a built-in Platform capability, not a tenant
+            // Domain module. Only its explicitly registered provider can use
+            // this reserved identity; other Domains require module activation.
+            if ($owner === null
+                || ($owner->domain() !== 'platform.documents'
+                    && !$this->modules->isEnabled($goal->organizationId, $owner->domain()))) {
                 // Unsupported or unavailable metric is NOT a zero and is
                 // never automatically counted as successful.
                 continue;

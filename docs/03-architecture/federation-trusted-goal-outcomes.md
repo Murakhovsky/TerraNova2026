@@ -127,3 +127,27 @@ criterion IDs. Показник не підтверджує виконання �
 та протестувати DST fallback. DDL на живій великій таблиці може
 мати блокування/перебудову; міграцію не запускаємо автоматично
 на production з цього PR.
+
+## Другий набір доказів: Growth / Capital Markets Research / Documents
+
+Усі метрики рахуються тільки з першоджерел відповідного bounded context,
+у межах tenant і UTC-вікна від Run creation до його оцінки.
+**Це облік за інтервалом, не доказ причинності конкретного Run.**
+
+| Критерій | Авторитетне джерело | Правило |
+| --- | --- | --- |
+| `growth.inbound_responses_recorded` | `tn_growth_engagement_responses` | Кількість дедуплікованих вхідних відповідей, створених у вікні (час запису `created_at`) |
+| `capital_markets.research_results_validated` | `tn_capital_market_research_results` | Кількість записів `status=VALIDATED` з `created_at` у вікні |
+| `documents.signatures_recorded` | `cos_document_signatures` | `status=signed`, `signed_at` у вікні, непорожні `signed_by` та `signature_reference` |
+
+**Важливо:** Research належить `capital_markets` та перевіряється через
+його tenant-module gate. Growth перевіряється через власний gate.
+Documents є постійною Platform capability `platform.documents`,
+не окремим module ID, і явно зареєстрована як дозволений provider у
+Federation. Її записи завжди обмежені tenant. Підпис у Documents означає
+`recorded signed state`, а не зовнішню перевірку юридичної чинності.
+
+Кожен результат зберігає source, часовий інтервал та агрегатний fingerprint.
+Fingerprint підтверджує відтворюваність запиту, **не цифровий доказ**
+окремої відповіді, експерименту чи підпису. Невідомі показники або
+вимкнені Domains залишаються `unverifiable`.

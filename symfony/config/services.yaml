@@ -3219,11 +3219,47 @@ services:
     arguments:
       $tasks: '@Domains\Sales\Application\Contract\SalesLocalTaskOutcomeReadModelInterface'
 
+  Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthInboundResponseOutcomeReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthInboundResponseOutcomeReadModelInterface:
+    alias: Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthInboundResponseOutcomeReadModel
+
+  Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Domains\Growth\Application\Contract\GrowthInboundResponseOutcomeReadModelInterface'
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalResearchValidatedOutcomeReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\CapitalResearchValidatedOutcomeReadModelInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalResearchValidatedOutcomeReadModel
+
+  Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Domains\CapitalMarkets\Application\Contract\CapitalResearchValidatedOutcomeReadModelInterface'
+
+  Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentSignatureOutcomeReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Platform\Documents\Contract\DocumentSignatureOutcomeReadModelInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentSignatureOutcomeReadModel
+
+  Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Platform\Documents\Contract\DocumentSignatureOutcomeReadModelInterface'
+
   App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver:
     arguments:
       $providers:
         - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
+        - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
+        - '@Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider'
+        - '@Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider'
 
   App\Web\Federation\FederationRunController:
     public: true
