@@ -48,7 +48,9 @@ final class PaperNavWindowProjector
                     $rejected[]=$time;continue;
                 }
                 if ($time<=$now) $rows[]=['time'=>$time,'equity'=>$equity,'flow'=>$flow,
-                    'initial'=>$capital,'currency'=>$currency,'fingerprint'=>$snapshot['source_fingerprint']];
+                    'initial'=>$capital,'currency'=>$currency,
+                    'epoch'=>trim((string)($snapshot['portfolio_epoch']??'legacy')),
+                    'fingerprint'=>$snapshot['source_fingerprint']];
             } catch (Throwable) {$rejected[]=$time;}
         }
         usort($rows,static fn(array $a,array $b):int=>$a['time']<=>$b['time']);
@@ -105,7 +107,8 @@ final class PaperNavWindowProjector
                 if ($row['time']<$opening['time']||$row['time']>$closing['time']) continue;
                 $stamp=$row['time']->format('Y-m-d H:i:s.u');
                 if (isset($seen[$stamp]) || $row['currency']!==$opening['currency']
-                    || $row['initial']->compareTo($opening['initial'])!==0) $inconsistent=true;
+                    || $row['initial']->compareTo($opening['initial'])!==0
+                    || $row['epoch']==='' || $row['epoch']!==$opening['epoch']) $inconsistent=true;
                 $seen[$stamp]=true;
             }
             if ($inconsistent) {
