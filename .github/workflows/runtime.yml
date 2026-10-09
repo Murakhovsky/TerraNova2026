@@ -68,6 +68,7 @@ jobs:
           php tests/integration/capital_markets_capital_risk_acceptance.php
           php tests/integration/capital_markets_capital_risk_manager_acceptance.php
           php tests/unit/capital_markets_decision_workspace_projection.php
+          php tests/unit/capital_markets_decision_workspace_visibility.php
           php tests/integration/capital_markets_decision_workspace_acceptance.php
           php tests/integration/capital_markets_decision_workspace_manager_acceptance.php
       - name: Compose validation
