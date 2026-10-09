@@ -51,6 +51,31 @@ if ($validated['steps'][0]['depends_on']!==[]
     || $validated['steps'][3]['depends_on']!==['handoff']) {
     throw new RuntimeException('Fan-out workflow did not preserve immutable sequential predecessor gates.');
 }
+$persisted=array_map(static fn(array $step):array=>[
+    'step_id'=>$step['id'],
+    'capability_id'=>$step['capability_id'],
+    'capability_version'=>$step['capability_version'],
+    'side_effect_level'=>$step['side_effect_level'],
+    'state'=>'pending',
+],$validated['steps']);
+$cursor=new \Platform\Orchestration\Goal\FederationStepCursor();
+foreach (['qualify','prepare','handoff','proposal'] as $idx=>$expectedId) {
+    $selected=$cursor->select($validated['steps'],$persisted);
+    if ($selected['step_id']!==$expectedId || $selected['state']!=='pending') {
+        throw new RuntimeException('Actual Federation Action cursor cannot admit ordered fan-out step '.$expectedId);
+    }
+    $persisted[$idx]['state']='completed';
+}
+if($cursor->select($validated['steps'],$persisted)['state']!=='complete'){
+    throw new RuntimeException('Four-step Federation candidate Plan never reaches terminal state.');
+}
+$drift=$persisted;
+$drift[0]['side_effect_level']='internal';
+try {
+    $cursor->select($validated['steps'],$drift);
+    throw new RuntimeException('Unsupported internal topology passed external-only Federation cursor.');
+} catch(DomainException) {
+}
 $bad=$plan['steps'];
 $bad[0]['input']['parameters']['policy_revision']=0;
 if ($validator->validate($goal,$bad,$allowed)['valid']) {
