@@ -50,8 +50,8 @@ generated: true
 | `capital_markets` | `capital_markets.relationship.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.agent.use` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.experiment.run` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
-| `capital_markets` | `capital_markets.research.result.record` | ні | так | `manifest-only` | — | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.research.result.record` | ні | так | `manifest-only` | — | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.risk.manage_policy` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.risk.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |

@@ -2062,6 +2062,12 @@ services:
       $trading: '@Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface'
       $events: '@Domains\CapitalMarkets\Application\Service\ResearchEventPublisher'
 
+  Domains\CapitalMarkets\Automation\Action\RecordValidatedResearchResultHandler:
+    arguments:
+      $repository: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $lab: '@Domains\CapitalMarkets\Application\Service\ResearchLabService'
+      $origins: '@App\Persistence\Federation\FederationOutcomeOriginRecorder'
+
   Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
 
   Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService: ~
