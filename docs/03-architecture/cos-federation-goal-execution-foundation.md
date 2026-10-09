@@ -175,14 +175,14 @@ rollout and merge remain separately gated.
 
 ### Immutable plan and recovery policy
 
-The pure `FederationCandidateFanoutPlanner` creates one deterministic `plan-<hash>` per Goal/source run/Candidate; each contains four ordered Action Steps:
+The pure `FederationCandidateFanoutPlanner` creates one deterministic `plan-<hash>` per tenant/Goal/Candidate, **independent of repeated source scans**; each contains four ordered Action Steps:
 
 1. `growth.candidate.qualify`
 2. `growth.handoff.prepare`
 3. `growth.handoff.target.sales` (this performs the native Sales Lead creation **once**)
 4. `documents.proposal.prepare` (resolves that Lead from the accepted handoff)
 
-Each immutable Plan JSON includes a strictly checked `lineage` with source Federation Run and Step IDs, native discovery run ID, Candidate/Account IDs, hashed external identity and SHA-256 evidence fingerprint. Attempted re-proposal with the same deterministic Plan ID is rejected, and a transactional failure rolls back the entire proposed batch. The existing approved-plan hash covers lineage as well as Action inputs.
+Each immutable Plan JSON includes a strictly checked `lineage` with source Federation Run and Step IDs, native discovery run ID, Candidate/Account IDs, hashed external identity and SHA-256 evidence fingerprint. Repeat discovery of an existing Candidate within the same Goal is rejected through the same deterministic Plan ID, rather than creating a second Sales intake. Attempted re-proposal with the same deterministic Plan ID is rejected, and a transactional failure rolls back the entire proposed batch. The existing approved-plan hash covers lineage as well as Action inputs.
 
 If fewer than `requested` Candidates pass all gates, the operation returns `insufficient_scored_candidates` and **creates no Plans**. A `monitor` / `disqualified` decision can still stop a candidate's subsequent handoff under normal Growth guards. The preview explicitly returns `business_outcome_verified=false`; no result is counted until tenant-owned native business evidence can be reconciled.
 
