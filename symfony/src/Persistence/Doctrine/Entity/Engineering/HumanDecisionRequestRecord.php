@@ -55,7 +55,7 @@ class HumanDecisionRequestRecord
     public function markAutoResolved(DateTimeImmutable $at): void
     {
         if ($this->status !== 'OPEN' || $this->type !== 'WORKFLOW_EVIDENCE_REFRESH') {
-            throw new \\LogicException('Only an open evidence refresh request can be system-resolved.');
+            throw new \LogicException('Only an open evidence refresh request can be system-resolved.');
         }
         $this->status = 'AUTO_RESOLVED';
         $this->resolvedAt = $at;
