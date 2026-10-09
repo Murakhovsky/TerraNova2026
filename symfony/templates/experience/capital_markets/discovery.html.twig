@@ -66,6 +66,7 @@
             <strong>{{ venue }}</strong>
             <p>{{ source.status }}</p>
             <small>{{ source.sample_count }} придатних котирувань</small>
+            {% if source.received_at_utc|default(null) %}<div><small>Відповідь: {{ source.received_at_utc }}</small></div>{% endif %}
           </article>
         {% endfor %}
       </div>
