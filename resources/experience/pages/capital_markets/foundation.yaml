@@ -123,8 +123,8 @@ pages:
       page_purpose: "Tenant-scoped operator dashboard for guarded Binance, Bybit and Kraken symbol catalog evidence."
     archetype: domain_dashboard
     patterns:
-      required: [PageHeader, EntityList]
-      optional: [Toolbar, KpiStrip, EmptyState, ErrorState]
+      required: [PageHeader, KpiStrip, EntityList]
+      optional: [Toolbar, EmptyState, ErrorState]
     primary_action: capital_markets.market_data.poll
     states: [normal, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: stacked_dashboard }
