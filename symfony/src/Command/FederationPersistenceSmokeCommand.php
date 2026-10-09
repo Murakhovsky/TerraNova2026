@@ -6,6 +6,7 @@ namespace App\Command;
 use App\Persistence\Federation\FederationExperiencePreferenceStore;
 use App\Persistence\Federation\FederationOutcomeOriginReader;
 use Domains\CapitalMarkets\Automation\Action\RecordValidatedResearchResultHandler;
+use Domains\Documents\Automation\Action\RequestSignatureHandler;
 use App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider;
 use Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface;
 use App\Persistence\Federation\FederationOutcomeOriginRecorder;
@@ -58,6 +59,7 @@ final class FederationPersistenceSmokeCommand extends Command
         private readonly FederationOutcomeOriginReader $originReader,
         private readonly FederationOutcomeOriginRecorder $originRecorder,
         private readonly RecordValidatedResearchResultHandler $researchResultHandler,
+        private readonly RequestSignatureHandler $signatureRequestHandler,
         private readonly ResearchLabRepositoryInterface $researchRepository,
         private readonly FederationExperiencePreferenceStore $preferences,
         private readonly Environment $twig,
@@ -1550,6 +1552,71 @@ final class FederationPersistenceSmokeCommand extends Command
                  WHERE organization_id=:org AND result_id=:id',
                 ['record' => $oldResearchJson, 'org' => $org, 'id' => $researchResultId],
             );
+
+            // Documents Action owns REQUESTING a human signature, not the
+            // unverified signing event. Real Domain-owned Platform service,
+            // canonical stored mutation and idempotent business receipt.
+            $docId = 'DOC-' . bin2hex(random_bytes(12));
+            $this->db->insert('cos_documents', [
+                'organization_id' => $org, 'document_id' => $docId,
+                'title' => 'Federation signature request fixture',
+                'status' => 'active', 'created_by' => 1001, 'updated_by' => 1001,
+            ]);
+            $request = new Action(
+                bin2hex(random_bytes(16)), $org, RequestSignatureHandler::TYPE,
+                'document', $docId, ['signer_id' => 'external-human-signer'],
+                'USER', '1001', 'APPROVAL_REQUIRED', 'HIGH',
+                'fed:request-' . bin2hex(random_bytes(16)), new \DateTimeImmutable(),
+                ActionStatus::Running,
+            );
+            $createdRequest = $this->signatureRequestHandler->execute($request);
+            self::assert(
+                $createdRequest->successful
+                && ($createdRequest->data['status'] ?? null) === 'requested'
+                && ($createdRequest->data['signature_verified'] ?? null) === false
+                && is_string($createdRequest->data['signature_id'] ?? null),
+                'Documents request Action falsely signed or failed to request.',
+            );
+            $signatureId = (string) $createdRequest->data['signature_id'];
+            $recorded = $this->db->fetchAssociative(
+                'SELECT organization_id, document_id, signer_id, status, signature_reference,
+                        signed_at
+                 FROM cos_document_signatures WHERE organization_id=:org AND signature_id=:sig',
+                ['org' => $org, 'sig' => $signatureId],
+            );
+            self::assert(
+                is_array($recorded) && $recorded['status'] === 'requested'
+                && $recorded['document_id'] === $docId
+                && $recorded['signer_id'] === 'external-human-signer'
+                && $recorded['signed_at'] === null
+                && $recorded['signature_reference'] === null,
+                'A signature request was stored as a signed document.',
+            );
+            $replayedRequest = $this->signatureRequestHandler->execute($request);
+            self::assert(
+                $replayedRequest->successful
+                && ($replayedRequest->data['signature_id'] ?? null) === $signatureId
+                && (int) $this->db->fetchOne(
+                    'SELECT COUNT(*) FROM cos_document_signatures
+                     WHERE organization_id=:org AND document_id=:doc',
+                    ['org' => $org, 'doc' => $docId],
+                ) === 1,
+                'Documents signature request replay created another signature.',
+            );
+            $crossTenantRequest = new Action(
+                bin2hex(random_bytes(16)), 'foreign-' . $org, RequestSignatureHandler::TYPE,
+                'document', $docId, ['signer_id' => 'external-human-signer'],
+                'USER', '1001', 'APPROVAL_REQUIRED', 'HIGH',
+                'fed:foreign-' . bin2hex(random_bytes(16)), new \DateTimeImmutable(),
+                ActionStatus::Running,
+            );
+            self::assert(!$this->signatureRequestHandler->execute($crossTenantRequest)->successful,
+                'Documents accepted signature request against another tenant Document.');
+            self::assert((int) $this->db->fetchOne(
+                'SELECT COUNT(*) FROM cos_federation_outcome_origins
+                 WHERE organization_id=:org AND domain_id=:domain AND outcome_id=:id',
+                ['org' => $org, 'domain' => 'documents', 'id' => $signatureId],
+            ) === 0, 'Pending signature request was forged into verified outcome.');
 
             $output->writeln('<info>COS Federation MySQL persistence smoke passed.</info>');
             return Command::SUCCESS;
