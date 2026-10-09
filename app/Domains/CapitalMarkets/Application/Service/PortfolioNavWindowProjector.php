@@ -68,6 +68,7 @@ final class PortfolioNavWindowProjector
                 }
                 $valid[] = [
                     'timestamp' => $timestamp,
+                    'source_timestamp' => isset($snapshot['source_valued_at']) ? new DateTimeImmutable((string)$snapshot['source_valued_at']) : $timestamp,
                     'equity' => $equity,
                     'cumulative_flow' => $flow,
                     'currency' => $currency,
@@ -114,7 +115,7 @@ final class PortfolioNavWindowProjector
                 continue;
             }
             $openingLag = $start->getTimestamp() - $opening['timestamp']->getTimestamp();
-            $closingLag = $at->getTimestamp() - $closing['timestamp']->getTimestamp();
+            $closingLag = $at->getTimestamp() - min($closing['timestamp']->getTimestamp(),$closing['source_timestamp']->getTimestamp());
             if ($openingLag > $maxSkewSeconds || $closingLag > $maxSkewSeconds) {
                 $out[$name] = [...$base, 'reason'=>'VALUATION_BOUNDARY_STALE'];
                 continue;
@@ -185,7 +186,10 @@ final class PortfolioNavWindowProjector
                 if (preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$/',$row['valued_at'])!==1) continue;
                 $stamp=(new DateTimeImmutable($row['valued_at']))->setTimezone(new DateTimeZone('UTC'));
                 $age=$now->getTimestamp()-$stamp->getTimestamp();
-                if ($age < 0 || $age > $maxAgeSeconds) continue;
+                $sourceStamp=isset($row['source_valued_at'])
+                    ? new DateTimeImmutable((string)$row['source_valued_at']) : $stamp;
+                $sourceAge=$now->getTimestamp()-$sourceStamp->getTimestamp();
+                if ($age < 0 || $age > $maxAgeSeconds || $sourceAge<0 || $sourceAge>$maxAgeSeconds) continue;
                 $key=$stamp->format('Y-m-d H:i:s.u');
                 if (isset($seen[$key])) return [...$result,'reason'=>'CONFLICTING_RECENT_NAV_TIMESTAMPS'];
                 $seen[$key]=true;
