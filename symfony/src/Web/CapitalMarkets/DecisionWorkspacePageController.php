@@ -361,6 +361,7 @@ final readonly class DecisionWorkspacePageController
             'pageTitle' => $title,
             'cmView' => $view,
             'csrfToken' => $this->csrf->token($request),
+            'snapshotRenderedAt' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(DATE_ATOM),
             'query' => $request->query->all(),
             'realtimeTopic' => $this->realtimeTopics->workspace($organizationId, 'capital-markets'),
             'permissions' => [
