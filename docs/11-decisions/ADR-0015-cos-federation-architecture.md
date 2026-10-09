@@ -36,3 +36,12 @@ Machine-readable policy: federation-governance-policy.json. Waivers require issu
 Roll out additively: audit, contracts, graph/CI, execution reliability, goals, experience, E2E. P1 tracing/interaction intelligence follows stable P0.
 
 **Acceptance:** This ADR and Phase 1 code do not imply full completion. P0 requires working cross-domain Goal, outcome evidence, controlled recovery, three experience modes, tenant isolation, security and rollback tests.
+
+## Уточнення обсягу релізів: 2026-10-09
+
+Початковий master specification включав `FED-10–13` у Federation P0. Зараз P0 розділено на два **послідовні пакети**, без створення нового Kernel або Domain:
+
+- [Package A: Federation Foundation](../03-architecture/cos-federation-goal-execution-foundation.md) — канонічне виконання Goal, відокремлений Outcome, контроль доступу, відновлення, реальний multi-Domain golden path, **мінімальні** `ExperienceContext`, `ExperienceProfile`, `ExperienceState`, `ExperienceSemantic` і DTO.
+- [Package B: Progressive Disclosure](../03-architecture/cos-progressive-disclosure-adaptive-experience.md) — Expert Reference Workspace → Process View → Result View → Adaptive Experience; існуючий UI proof-of-concept не є остаточним критерієм приймання.
+
+Попередню вимогу `three experience modes` із загального Federation DoD перенесено до Package B. Для Package A достатньо сумісних versioned presentation contracts та доступного людського контролю через чинні службові інтерфейси. Усі режими працюють з одними Goal/Run/Outcome, без UI-side authorization.

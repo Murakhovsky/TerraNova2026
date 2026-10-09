@@ -35,3 +35,7 @@ Keep module.php canonical; descriptive capability identities never become execut
 6. Golden paths, failure injection, browser, security, performance, rollout and rollback evidence.
 
 **Status:** Initial foundation only; full P0 Definition of Done remains open.
+
+## Послідовна межа P0
+
+Початкові пункти про Result/Process/Expert із цього baseline тепер належать **Package B**. Package A включає лише мінімальні контракти Experience та незалежно перевірений Goal → Run → Outcome. [Foundation Package A](./cos-federation-goal-execution-foundation.md) → [Progressive Disclosure Package B](./cos-progressive-disclosure-adaptive-experience.md). Для виходу з A потрібний один реальний багатодоменний golden path, а не UX-готовність усіх Domains.
