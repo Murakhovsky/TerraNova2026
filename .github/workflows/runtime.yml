@@ -197,6 +197,8 @@ jobs:
           COS_WEB_SMOKE_EMAIL: production-cutover-web@example.test
           COS_WEB_SMOKE_PASSWORD: Production-Cutover-Web-CI-Ab9!
           COS_WEB_FOREIGN_USER_EMAIL: foreign-tenant-user@example.test
+          COS_CM_RESTRICTED_EMAIL: cm-limited-acceptance@example.test
+          COS_CM_RESTRICTED_PASSWORD: CM-Limited-Acceptance-CI-Ab9!
         run: |
           WEB_HASH="$(php -r 'echo password_hash(getenv("COS_WEB_SMOKE_PASSWORD"), PASSWORD_DEFAULT);')"
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
@@ -243,6 +245,29 @@ jobs:
             exit 1
           fi
           if ! CHROME_PATH="$CHROME_BIN" node tests/browser/capital_markets_decision_workspace.mjs; then
+            docker compose logs --no-color --tail=300 php nginx
+            exit 1
+          fi
+          # A real non-admin principal must not see portfolio/risk/audit data
+          # through shared HTML projections or Opportunity JSON/CSV exports.
+          RESTRICTED_HASH="$(php -r 'echo password_hash(getenv("COS_CM_RESTRICTED_PASSWORD"), PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
+            VALUES ('default','$COS_CM_RESTRICTED_EMAIL','$RESTRICTED_HASH','Capital Markets Limited QA','manager','active')
+            ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),role='manager',status='active';
+            INSERT INTO cos_organization_memberships (organization_id,user_id,role,status)
+            SELECT 'default',id,'manager','ACTIVE' FROM tn_users WHERE email='$COS_CM_RESTRICTED_EMAIL'
+            ON DUPLICATE KEY UPDATE role='manager',status='ACTIVE';
+            INSERT INTO capital_market_user_capabilities (organization_id,user_id,capability,status,granted_by)
+            SELECT 'default',id,'capital_markets.view','ACTIVE','cm-decision-workspace-ci'
+            FROM tn_users WHERE email='$COS_CM_RESTRICTED_EMAIL'
+            ON DUPLICATE KEY UPDATE status='ACTIVE';
+            INSERT INTO capital_market_user_capabilities (organization_id,user_id,capability,status,granted_by)
+            SELECT 'default',id,'capital_markets.opportunity.view','ACTIVE','cm-decision-workspace-ci'
+            FROM tn_users WHERE email='$COS_CM_RESTRICTED_EMAIL'
+            ON DUPLICATE KEY UPDATE status='ACTIVE';
+          "
+          if ! CHROME_PATH="$CHROME_BIN" node tests/browser/capital_markets_decision_workspace_visibility.mjs; then
             docker compose logs --no-color --tail=300 php nginx
             exit 1
           fi
