@@ -152,3 +152,38 @@ that end-to-end test.
 Package B modes are not acceptance criteria for this foundation. Production
 enablement, CI verification at **the latest branch HEAD**, controlled tenant
 rollout and merge remain separately gated.
+
+
+## Bounded candidate fan-out after source discovery (2026-10-09)
+
+`FederationCandidateFanoutService` implements the next **explicit manager-operated** step without mutating an approved Federation Plan. It attaches 1–50 candidate-specific **proposed child Plans** to the same existing Goal, so future Growth Candidate IDs never need to be invented in the original market-discovery Plan.
+
+**Read-only preview:** `GET /api/v1/federation/fanout/preview`, authenticated tenant manager. Parameters: `goal_id`, `source_run_id`, `source_step_id`, `requested` (1–50), `policy_id`, `policy_revision`, `template_id`, `expected_value`, `recommended_play`, `recommended_action`. No Actions/Plans are created.
+
+**Explicit draft creation:** `POST /api/v1/federation/fanout/propose`, the same fields as form fields, mandatory session CSRF. Creates the candidate-specific Plans in one DB transaction, all-or-nothing. The `state` remains `proposed`; **each plan requires independent native Plan approval, and each Action requires its own human approval**. No scheduler, bulk Action execution, automatic CRM writes, or proposal sending is part of this step.
+
+### Trusted provenance
+
+- Confirm completed Federation source Run and its **approved, version-pinned** `growth.market.discovery` Step for the **same Goal and tenant**.
+- Re-attest the completed **first-attempt** canonical Action via the existing receipt reconciler, then verify its exact source Universe and federated idempotency key.
+- Derive the deterministic native `GMRN-…` market discovery run ID from that key, not from a user-entered string. Native Growth Run must be completed and fall within `universeBrief`'s bounded latest-run snapshot.
+- Source memberships must be tenant/universe-bound, deduplicated across Candidate, Account and source fingerprint, and actually observed within the native run's start/end window. Accounts **without** a Candidate are ineligible.
+- Resolve each Candidate through `GrowthApplicationBoundary::viewCandidate`. Only `scored`, Sales-targeted, account-owned Candidates with stored score/rationale are eligible. A completed source scan is **not** 50 qualified Candidates.
+- Require the actual **SalesGrowthHandoffTarget** prerequisites: Buying Committee assessment, exactly one champion, valid full name and email identity, and a tenant-scoped contact-account link.
+- Resolve an **active qualification policy revision** and an **active tenant-owned Documents template** from existing Domain/Platform repositories before any proposed Plan can be saved.
+- Verify all four candidate Action capabilities are tenant executable and the Federation and Sales modules are enabled. The Goal must allow those capabilities and its original actor identity must be usable by the existing integer-actor Growth runtime.
+
+### Immutable plan and recovery policy
+
+The pure `FederationCandidateFanoutPlanner` creates one deterministic `plan-<hash>` per Goal/source run/Candidate; each contains four ordered Action Steps:
+
+1. `growth.candidate.qualify`
+2. `growth.handoff.prepare`
+3. `growth.handoff.target.sales` (this performs the native Sales Lead creation **once**)
+4. `documents.proposal.prepare` (resolves that Lead from the accepted handoff)
+
+Each immutable Plan JSON includes a strictly checked `lineage` with source Federation Run and Step IDs, native discovery run ID, Candidate/Account IDs, hashed external identity and SHA-256 evidence fingerprint. Attempted re-proposal with the same deterministic Plan ID is rejected, and a transactional failure rolls back the entire proposed batch. The existing approved-plan hash covers lineage as well as Action inputs.
+
+If fewer than `requested` Candidates pass all gates, the operation returns `insufficient_scored_candidates` and **creates no Plans**. A `monitor` / `disqualified` decision can still stop a candidate's subsequent handoff under normal Growth guards. The preview explicitly returns `business_outcome_verified=false`; no result is counted until tenant-owned native business evidence can be reconciled.
+
+**Still required for Package A acceptance:** a controlled tenant integration run with 50 distinct truly sourced candidates, independent approvals and native Growth/Sales/Documents receipts, an aggregated trustworthy Goal Outcome across the child Runs, operator UX for reviewing/selecting the proposed batches, CI against the final commit, and branch conflict resolution before merge. Structural preview and unit tests are not a substitute.
