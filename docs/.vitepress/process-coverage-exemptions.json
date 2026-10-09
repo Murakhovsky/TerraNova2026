@@ -7,6 +7,11 @@
       "reason": "V1 skeleton only; executable Construction process models are intentionally deferred until Construction runtime implementation."
     },
     {
+      "domain": "documents",
+      "owner": "COS Federation / Documents",
+      "reason": "Initial Documents V0.1 provides only approved, idempotent signature REQUEST Actions. A complete canonical signature-request-to-provider-verified-signed process is deferred until authenticated human/e-sign provider attestation and durable signer proof have been integrated and positively tested; request is never equivalent to signed outcome."
+    },
+    {
       "domain": "finance",
       "owner": "COS Architecture",
       "reason": "V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation."
