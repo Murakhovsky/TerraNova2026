@@ -10,7 +10,8 @@
   ],
   "properties": {
     "target_type": {
-      "const": "growth_market_universe"
+      "const": "growth_market_universe",
+      "type": "string"
     },
     "target_id": {
       "type": "string",
