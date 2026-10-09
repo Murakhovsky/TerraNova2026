@@ -17,7 +17,7 @@ generated: true
 | `capital_markets` | `0.9.0` | — | 36 |
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `1.0.0` | — | 5 |
-| `documents` | `0.1.0` | — | 2 |
+| `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
 | `finance` | `0.1.0` | — | 0 |
 | `growth` | `0.50.0` | — | 92 |
@@ -50,7 +50,7 @@ generated: true
 
 - manifest: `app/Domains/Documents/module.php`;
 - configuration provisioners: —;
-- capabilities: `documents.signature.request`, `documents.signature.sign`.
+- capabilities: `documents.signature.request`, `documents.signature.sign`, `documents.proposal.prepare`.
 
 ## `federation`
 
