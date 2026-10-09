@@ -15,6 +15,26 @@ final class EngineeringArchitectEvidenceAuthorization
     public const MAX_FILES_PER_ROUND = 6;
     public const MAX_ADDITIONAL_FILES = 12;
 
+    /** @param array<string,mixed> $decision */
+    public function isLegacyReadOnlyRefresh(array $decision): bool
+    {
+        if (($decision['type'] ?? null) !== 'WORKFLOW_EVIDENCE_REFRESH'
+            || ($decision['recommended_option'] ?? null) !== 'REFRESH_EVIDENCE') return false;
+        $options = $decision['options'] ?? null;
+        if (!is_array($options) || count($options) !== 2) return false;
+        $ids = [];
+        foreach ($options as $option) {
+            if (!is_array($option) || !is_string($option['id'] ?? null)) return false;
+            $ids[] = strtoupper(trim($option['id']));
+        }
+        sort($ids);
+        if ($ids !== ['CANCEL','REFRESH_EVIDENCE']) return false;
+        $question = strtolower((string) ($decision['question'] ?? ''));
+        $reason = strtolower((string) ($decision['reason'] ?? ''));
+        return str_contains($question.' '.$reason, 'read-only')
+            && str_contains($reason, 'repository');
+    }
+
     /**
      * @param mixed $requested
      * @param list<string> $alreadyRead
