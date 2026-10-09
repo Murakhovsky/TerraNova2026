@@ -6,6 +6,7 @@ namespace App\Web\Engineering;
 use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use App\Application\Engineering\Command\RunEngineeringFeatureCommand;
 use App\Engineering\Application\DTO\EngineeringRequest;
+use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface;
@@ -41,6 +42,7 @@ final readonly class EngineeringFeatureController
         private EngineeringStatusService $engineering,
         private EngineeringFeatureStoreInterface $features,
         private EngineeringWorkflowStoreInterface $workflows,
+        private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringObservabilityReadModelInterface $observability,
         private EngineeringOrchestrator $orchestrator,
         private EngineeringCancelService $cancel,
@@ -290,7 +292,7 @@ final readonly class EngineeringFeatureController
                 );
                 $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
                     featureId: $featureId,
-                    organizationId: $tenant->organizationId()->value(),
+                    organizationId: $organizationId,
                     trigger: 'web-create-immediate',
                 ));
                 $message = 'Engineering workflow передано immediate worker · ' . $result->state . '.';
@@ -385,11 +387,23 @@ final readonly class EngineeringFeatureController
 
         try {
             $featureId = EngineeringId::assert($id);
+            $organizationId = $tenant->organizationId()->value();
+
+            // Resume must first reconcile any zombie RUNNING AgentRun left behind by a
+            // workflow that watchdog has already declared STALLED. Otherwise the UI
+            // blocks the very recovery action with a duplicate-run error.
+            $this->workflows->refreshRuntimeHealthForOrganization($organizationId);
+            $this->agentRuns->recoverStalledForOrganization($organizationId);
+
             $status = $this->ownedStatus($tenant, $featureId);
             $runtimeHealth = strtoupper((string) ($status['workflow']['health_status'] ?? 'UNKNOWN'));
             foreach ($status['agent_runs'] ?? [] as $agentRun) {
-                if (($agentRun['status'] ?? null) === 'RUNNING' && $runtimeHealth !== 'STALLED') {
-                    throw new \LogicException('Engineering AgentRun already RUNNING; duplicate immediate execution is not allowed.');
+                if (($agentRun['status'] ?? null) === 'RUNNING') {
+                    throw new \LogicException(
+                        $runtimeHealth === 'STALLED'
+                            ? 'Engineering recovery could not reconcile the stalled AgentRun. Refresh the page and retry.'
+                            : 'Engineering AgentRun already RUNNING; duplicate immediate execution is not allowed.',
+                    );
                 }
             }
 
@@ -397,7 +411,7 @@ final readonly class EngineeringFeatureController
             if ($activeWorkflowId === null) {
                 $this->orchestrator->queueImmediate(
                     $featureId,
-                    $tenant->organizationId()->value(),
+                    $organizationId,
                     $this->correlation('run', $featureId),
                 );
             } else {
