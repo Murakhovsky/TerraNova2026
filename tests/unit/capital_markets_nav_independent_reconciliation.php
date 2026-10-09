@@ -22,13 +22,7 @@ $assert=static function(bool $yes,string $why):void {if(!$yes)throw new RuntimeE
 $trading = new class implements \Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface {
     public array $balances = [['venue_id'=>'VENUE-1','asset_key'=>'USD','available_amount'=>'90','reserved_amount'=>'10']];
     public array $positions = [];
-    public array $ledger = [[
-        'transaction_id'=>'trade-ledger-1', 'posted_at'=>(new \DateTimeImmutable('-2 hours'))->format(DATE_ATOM),
-        'entries'=>[
-            ['asset_key'=>'USD','account'=>'cash','debit'=>'100','credit'=>'0'],
-            ['asset_key'=>'USD','account'=>'equity','debit'=>'0','credit'=>'100'],
-        ],
-    ]];
+    public array $ledger = [];
     public function saveCandidate(string $organizationId,string $candidateId,string $hypothesis,string $status,array $payload):void { return; }
     public function saveOpportunity(string $organizationId,string $opportunityId,string $candidateId,string $hypothesis,string $status,array $payload):void { return; }
     public function getOpportunity(string $organizationId,string $opportunityId):?array { return null; }
@@ -76,6 +70,14 @@ $market = new class implements \Domains\CapitalMarkets\Application\Contract\Mark
     public function getReference(string $organizationId,MarketSourceId $sourceId,InstrumentId $instrumentId):?ReferenceMarketState { return null; }
     public function listReferences(string $organizationId,int $limit=200):array { return []; }
 };
+
+$trading->ledger = [[
+        'transaction_id'=>'trade-ledger-1', 'posted_at'=>(new \DateTimeImmutable('-2 hours'))->format(DATE_ATOM),
+        'entries'=>[
+            ['asset_key'=>'USD','account'=>'cash','debit'=>'100','credit'=>'0'],
+            ['asset_key'=>'USD','account'=>'equity','debit'=>'0','credit'=>'100'],
+        ],
+    ]];
 
 $source = new class implements PortfolioNavFinancialEvidenceRepositoryInterface {
     public array $records=[];
