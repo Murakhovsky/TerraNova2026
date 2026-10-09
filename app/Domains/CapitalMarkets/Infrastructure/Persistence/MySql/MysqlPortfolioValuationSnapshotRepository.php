@@ -42,6 +42,7 @@ final readonly class MysqlPortfolioValuationSnapshotRepository implements Portfo
         $record=[
             'snapshot_id'=>$id,
             'valued_at'=>$time->format(DATE_ATOM),
+            'source_valued_at'=>(string)($snapshot['source_valued_at']??$time->format(DATE_ATOM)),
             'currency'=>strtoupper(trim($currency)),
             'equity'=>$equity->value(),
             'cumulative_external_net_flow'=>$external->value(),
