@@ -87,6 +87,9 @@ jobs:
         run: |
           docker compose run --rm --no-deps php php bin/console cos:schema:migrate
           docker compose run --rm --no-deps php php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Verify Capital Markets universe in production image
+        run: |
+          docker compose run --rm --no-deps php sh -c 'test -r /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv && test "$(wc -l < /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv)" -eq 81'
       - name: Start runtime
         run: docker compose up -d --remove-orphans
       - name: Capital Markets paper NAV persistence integration
