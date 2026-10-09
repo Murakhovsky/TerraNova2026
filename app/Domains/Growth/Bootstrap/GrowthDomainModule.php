@@ -7,6 +7,7 @@ use Domains\Growth\Automation\Action\GrowthCallHandler;
 use Domains\Growth\Automation\Action\FederatedMarketDiscoveryHandler;
 use Domains\Growth\Automation\Action\FederatedCandidateQualificationHandler;
 use Domains\Growth\Automation\Action\FederatedSalesHandoffHandler;
+use Domains\Growth\Automation\Action\FederatedPrepareHandoffHandler;
 use Domains\Growth\Automation\Action\GrowthLinkedInHandler;
 use Domains\Growth\Automation\Action\GrowthSendMessageHandler;
 use Domains\Growth\Automation\Event\GrowthEventType;
@@ -31,6 +32,7 @@ final readonly class GrowthDomainModule implements
         private FederatedMarketDiscoveryHandler $marketDiscovery,
         private FederatedCandidateQualificationHandler $qualifyCandidate,
         private FederatedSalesHandoffHandler $salesHandoff,
+        private FederatedPrepareHandoffHandler $prepareHandoff,
         private ?GrowthSendMessageHandler $sendMessage=null,
         private ?GrowthLinkedInHandler $linkedIn=null,
         private ?GrowthCallHandler $call=null,
@@ -47,13 +49,13 @@ final readonly class GrowthDomainModule implements
     {
         return [GrowthSendMessageHandler::TYPE,GrowthLinkedInHandler::TYPE,GrowthCallHandler::TYPE,
             FederatedMarketDiscoveryHandler::TYPE,FederatedCandidateQualificationHandler::TYPE,
-            FederatedSalesHandoffHandler::TYPE];
+            FederatedSalesHandoffHandler::TYPE,FederatedPrepareHandoffHandler::TYPE];
     }
 
     public function actionHandlers():array
     {
         return array_values(array_filter(
-            [$this->sendMessage,$this->linkedIn,$this->call,$this->marketDiscovery,$this->qualifyCandidate,$this->salesHandoff],
+            [$this->sendMessage,$this->linkedIn,$this->call,$this->marketDiscovery,$this->qualifyCandidate,$this->salesHandoff,$this->prepareHandoff],
             static fn(object|null $handler):bool=>$handler!==null,
         ));
     }
