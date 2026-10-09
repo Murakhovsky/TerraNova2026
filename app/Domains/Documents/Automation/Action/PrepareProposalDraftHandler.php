@@ -49,7 +49,7 @@ final readonly class PrepareProposalDraftHandler implements IdempotentExternalAc
             || !ctype_digit($action->targetId) || (int)$action->targetId < 1
             || !is_string($candidateId) || trim($candidateId) === ''
             || !is_string($templateId) || trim($templateId) === ''
-            || !is_array($variables) || array_is_list($variables)
+            || !is_array($variables) || ($variables !== [] && array_is_list($variables))
             || ($title !== null && (!is_string($title) || trim($title) === ''))) {
             return ExecutionResult::failure('Proposal requires a running approved user Action, native Sales Lead, Growth Candidate and template.');
         }
