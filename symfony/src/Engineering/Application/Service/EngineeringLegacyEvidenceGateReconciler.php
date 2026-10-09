@@ -6,11 +6,13 @@ namespace App\Engineering\Application\Service;
 use App\Engineering\Application\Lock\EngineeringWorkflowLockInterface;
 use App\Engineering\Application\Observability\EngineeringExecutionJournal;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
+use App\Engineering\Application\Persistence\EngineeringArtifactStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringHumanDecisionStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Repository\EngineeringRepositoryGatewayInterface;
 use App\Engineering\Application\Workflow\EngineeringWorkflowCoordinator;
 use App\Engineering\Domain\Agent\AgentRole;
+use App\Engineering\Domain\Artifact\ArtifactType;
 use App\Engineering\Domain\Workflow\EngineeringWorkflowState;
 use RuntimeException;
 
@@ -20,6 +22,7 @@ final readonly class EngineeringLegacyEvidenceGateReconciler
         private EngineeringHumanDecisionStoreInterface $decisions,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringFeatureStoreInterface $features,
+        private EngineeringArtifactStoreInterface $artifacts,
         private EngineeringRepositoryGatewayInterface $repository,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringExecutionJournal $journal,
@@ -45,7 +48,9 @@ final readonly class EngineeringLegacyEvidenceGateReconciler
             if (!$this->repository->available()) {
                 throw new RuntimeException('Read-only evidence requires existing repository access.');
             }
-            $revision = $this->repository->currentBaseRevision();
+            $domainContext = $this->artifacts->latest($featureId, ArtifactType::DOMAIN_CONTEXT_PACK);
+            $targetBranch = trim((string) ($domainContext['content']['target_branch'] ?? ''));
+            $revision = $this->repository->currentBaseRevision($targetBranch !== '' ? $targetBranch : null);
             if (!preg_match('/^[0-9a-f]{40}$/i', $revision)) {
                 throw new RuntimeException('Read-only evidence requires an authoritative revision.');
             }
