@@ -157,4 +157,21 @@ if (!str_contains($governedLlm, "\$engineeringAgentUseCase")
     throw new RuntimeException('Engineering LLM completion is still coupled to synchronous operational metric writes.');
 }
 
+$agentRunRecord = (string) file_get_contents($root.'/symfony/src/Persistence/Doctrine/Entity/Engineering/AgentRunRecord.php');
+$agentRunStore = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php');
+$featureTemplate = (string) file_get_contents($root.'/symfony/templates/experience/engineering/feature.html.twig');
+
+if (!str_contains($agentRunStore, 'currentAgentRunId() === $record->id()')
+    || !str_contains($agentRunStore, '$workflow->heartbeatAt()')
+    || !str_contains($agentRunStore, "'duration_basis'")) {
+    throw new RuntimeException('Engineering stale AgentRun recovery is still based on run age instead of attributable heartbeat.');
+}
+if (!str_contains($agentRunRecord, 'recoverStale(')
+    || !str_contains($agentRunRecord, '$this->finishedAt = $effectiveFinishedAt')) {
+    throw new RuntimeException('Recovered AgentRun duration still ends at recovery time instead of last known activity.');
+}
+if (!str_contains($featureTemplate, 'до останньої ознаки життя')) {
+    throw new RuntimeException('Engineering UI does not explain STALE_RUN_RECOVERY duration semantics.');
+}
+
 echo "Engineering runtime truth and observability contract passed.\n";
