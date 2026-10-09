@@ -65,6 +65,18 @@ final readonly class RecordValidatedResearchResultHandler implements IdempotentE
                     || !is_array($input['limitations'] ?? null)) {
                     throw new InvalidArgumentException('Validated Research requires human review evidence and structured experiment results.');
                 }
+                $reviewer = $this->db->fetchOne(
+                    "SELECT decided_by_id FROM cos_approvals
+                     WHERE organization_id=:org AND action_id=:action
+                       AND status='APPROVED' AND decided_by_type='USER'",
+                    ['org' => $org, 'action' => $action->id],
+                );
+                if (!is_string($reviewer) || $reviewer === ''
+                    || $reviewer !== $review['reviewed_by'] || $reviewer === $action->sourceId) {
+                    throw new InvalidArgumentException(
+                        'Research validation must be confirmed by the independent Action approver.'
+                    );
+                }
                 $experiment = $this->repository->getExperiment($org, $experimentId);
                 if ($experiment === null || ($experiment['status'] ?? null) !== 'COMPLETED') {
                     throw new InvalidArgumentException('Only a completed Research experiment can have an approved validation result.');

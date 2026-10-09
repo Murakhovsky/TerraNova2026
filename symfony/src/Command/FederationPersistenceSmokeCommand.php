@@ -1342,7 +1342,7 @@ final class FederationPersistenceSmokeCommand extends Command
                 'limitations' => ['Synthetic financial data: not an investment recommendation'],
                 'review_evidence' => [
                     'decision' => 'VALIDATED',
-                    'reviewed_by' => 'human-research-reviewer',
+                    'reviewed_by' => 'research-independent-approver',
                     'review_reference' => 'internal-fixture-review',
                 ],
             ];
