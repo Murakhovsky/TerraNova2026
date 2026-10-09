@@ -85,6 +85,16 @@ final readonly class DoctrineEngineeringHumanDecisionStore implements Engineerin
         ];
     }
 
+    public function autoResolveReadOnlyEvidence(string $requestId): void
+    {
+        $record = $this->entityManager->find(HumanDecisionRequestRecord::class, $requestId);
+        if (!$record instanceof HumanDecisionRequestRecord) {
+            throw new \\RuntimeException('Engineering evidence request not found.');
+        }
+        $record->markAutoResolved(new DateTimeImmutable());
+        $this->entityManager->flush();
+    }
+
     public function openForFeature(string $featureId): array
     {
         $records = $this->entityManager->getRepository(HumanDecisionRequestRecord::class)->findBy(
