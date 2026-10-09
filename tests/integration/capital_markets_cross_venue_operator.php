@@ -11,6 +11,9 @@ $files=[
     'app/Domains/CapitalMarkets/Application/Service/CrossVenueCatalogDiscovery.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueDiscoverySnapshotRepository.php',
     'symfony/src/Web/CapitalMarkets/CrossVenueDiscoveryController.php',
+    'app/Domains/CapitalMarkets/Application/Service/CrossVenueQuoteSampler.php',
+    'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueQuoteSnapshotRepository.php',
+    'app/migrations/20261009_000140_capital_markets_cross_venue_quotes.sql',
     'resources/capital-markets/universes/binance-bstocks-2026-09-27.csv',
     'symfony/templates/experience/capital_markets/discovery.html.twig',
     'app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql',
@@ -19,12 +22,13 @@ foreach($files as $file)$assert(is_file($root.'/'.$file),'Missing cross-venue ar
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueCatalogDiscovery','CrossVenueDiscoverySnapshotRepository',
-    'CrossVenueDiscoveryController',"$".'connection: '."'@cos.database.pdo'"] as $needle){
+    'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
 }
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
 foreach(['/capital-markets/discovery','/capital-markets/discovery/scan',
-    'CrossVenueDiscoveryController::index','CrossVenueDiscoveryController::scan'] as $needle){
+    'CrossVenueDiscoveryController::index','CrossVenueDiscoveryController::scan',
+    '/capital-markets/discovery/quotes','CrossVenueDiscoveryController::observeQuotes'] as $needle){
     $assert(str_contains($routes,$needle),'Missing discovery route: '.$needle);
 }
 $controller=(string)file_get_contents($root.'/symfony/src/Web/CapitalMarkets/CrossVenueDiscoveryController.php');
@@ -44,4 +48,6 @@ $assert(str_contains($reservation,'UPDATE tn_capital_market_discovery_scan_gates
 $docker=(string)file_get_contents($root.'/docker/symfony/php/Dockerfile');
 $assert(str_contains($docker,'COPY resources/capital-markets/ /var/www/html/resources/capital-markets/'),
     'Production Docker runtime must include historical discovery universe.');
+$assert(str_contains($controller, '$this->quotes->reserve($org,$actor)'),
+    'Quote refresh must have its own atomic tenant cooldown.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
