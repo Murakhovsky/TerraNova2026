@@ -12,6 +12,7 @@ use Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\FederationCandidateFanoutPlanner;
+use Platform\Orchestration\Goal\FederationProposalTemplateGuard;
 use Platform\Documents\Contract\DocumentsRepositoryInterface;
 
 /**
@@ -34,6 +35,7 @@ final readonly class FederationCandidateFanoutService
         private GrowthDecisionRepositoryInterface $policies,
         private DocumentsRepositoryInterface $documents,
         private FederationCandidateFanoutPlanner $planner,
+        private FederationProposalTemplateGuard $templates,
     ) {}
 
     /**
@@ -191,26 +193,7 @@ final readonly class FederationCandidateFanoutService
         if (!is_string($body)) {
             throw new DomainException('Invalid active Documents template body.');
         }
-        preg_match_all('/\\{\\{([^{}]+)\\}\\}/', $body, $matches);
-        $keys = [];
-        foreach ($matches[1] as $key) {
-            if (!preg_match('/^[a-z][a-z0-9_]*$/', $key)) {
-                throw new DomainException('Template placeholder syntax is unsupported.');
-            }
-            $keys[$key] = true;
-        }
-        if (substr_count($body,'{{') !== count($matches[0])
-            || substr_count($body,'}}') !== count($matches[0])) {
-            throw new DomainException('Template contains malformed unresolved placeholders.');
-        }
-        foreach ($preview['plans'] as $plan) {
-            $variables = $plan['steps'][3]['input']['parameters']['variables'] ?? [];
-            foreach (array_keys($keys) as $key) {
-                if (!is_string($variables[$key] ?? null) || trim($variables[$key]) === '') {
-                    throw new DomainException('Active template needs missing tenant-sourced variable: '.$key);
-                }
-            }
-        }
+        $this->templates->assertResolvable($body, $preview['plans']);
         return [
             'goal_id' => $goalId,
             'source_run_id' => $sourceRunId,
