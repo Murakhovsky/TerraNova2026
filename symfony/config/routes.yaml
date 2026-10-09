@@ -7,6 +7,13 @@ cos_federation_goal_aggregate:
   methods: [GET, HEAD]
   requirements: { goalId: '[a-z0-9][a-z0-9_:-]{0,63}' }
 
+# Manual CSRF-guarded Goal Outcome commit; never accepts caller-supplied metrics.
+cos_federation_goal_aggregate_evaluate:
+  path: /api/v1/federation/goals/{goalId}/evaluate-aggregate
+  controller: App\Web\Federation\FederationGoalAggregateController::evaluate
+  methods: [POST]
+  requirements: { goalId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 cos_federation_goals_index:
   path: /workspace/goals
   controller: App\Web\Federation\GoalsWorkspaceController::index
