@@ -1086,6 +1086,9 @@ final readonly class DecisionWorkspaceReadService
                 static fn(array $row): bool => in_array($row['severity'] ?? '', ['HIGH','CRITICAL'], true),
             )),
             'alerts' => $alerts,
+            'portfolio_updated_at' => $capital['timestamp'] ?? null,
+            'market_updated_at' => $data['last_updated'] ?? null,
+            // Retained for existing consumers; UI renders distinct portfolio/market sources.
             'last_updated' => $capital['timestamp'] ?? $data['last_updated'] ?? null,
         ];
     }
