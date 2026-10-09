@@ -75,7 +75,7 @@ final readonly class BinanceSpotMarketDataAdapter implements MarketDataAdapterIn
             $this->parser->bbo($body, $symbol);
             $events[] = new RawMarketEvent(
                 $this->eventId('bbo'), $source->id, $source->venueId, $symbol,
-                'binance.spot.ticker.bbo', $received, $received, null,
+                'binance.spot.ticker.bbo', null, $received, null,
                 ['raw_json'=>$body], $metadata + ['timestamp_authority'=>'RECEIVED_AT'],
             );
         }
@@ -84,7 +84,7 @@ final readonly class BinanceSpotMarketDataAdapter implements MarketDataAdapterIn
             $this->parser->volume($body, $symbol);
             $events[] = new RawMarketEvent(
                 $this->eventId('volume'), $source->id, $source->venueId, $symbol,
-                'binance.spot.ticker.volume', $received, $received, null,
+                'binance.spot.ticker.volume', null, $received, null,
                 ['raw_json'=>$body], $metadata + ['timestamp_authority'=>'RECEIVED_AT'],
             );
         }
@@ -93,7 +93,7 @@ final readonly class BinanceSpotMarketDataAdapter implements MarketDataAdapterIn
             $depth = $this->parser->depth($body);
             $events[] = new RawMarketEvent(
                 $this->eventId('book'), $source->id, $source->venueId, $symbol,
-                'binance.spot.depth.snapshot', $received, $received, $depth['sequence'],
+                'binance.spot.depth.snapshot', null, $received, $depth['sequence'],
                 ['raw_json'=>$body], $metadata + ['timestamp_authority'=>'RECEIVED_AT'],
             );
         }
