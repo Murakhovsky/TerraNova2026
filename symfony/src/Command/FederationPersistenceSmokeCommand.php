@@ -1501,6 +1501,26 @@ final class FederationPersistenceSmokeCommand extends Command
                 && $verifiedResearch[0]['action_id'] === $researchActionId
                 && $verifiedResearch[0]['outcome_id'] === $researchResultId,
                 'Completed Research Run did not independently attest its Action-to-outcome provenance.');
+            // Positive opt-in provider contract: default deployment flag
+            // remains OFF, but this fixture proves true readiness can return
+            // business evidence from native recorded sources.
+            $readyResearch = new FederationNativeRunLinkedOutcomeEvidenceProvider(
+                $this->originReader, $this->capabilityBindings,
+                'capital_markets', 'capital_markets.run_linked_validated_results',
+                RecordValidatedResearchResultHandler::TYPE, true,
+            );
+            $nativeEvidence = $readyResearch->observeRun(
+                $actor, $researchRunId,
+                'capital_markets.run_linked_validated_results',
+                new \DateTimeImmutable('2026-10-01T00:00:00+00:00'),
+                new \DateTimeImmutable('+5 minutes', new \DateTimeZone('UTC')),
+            );
+            self::assert($nativeEvidence['value'] === 1
+                && $nativeEvidence['attribution'] === 'run_linked_action'
+                && $nativeEvidence['verified_actions'] === 1
+                && $nativeEvidence['run_id'] === $researchRunId,
+                'Enabled Research provider failed to confirm real Run-linked outcome.');
+
             self::assert($this->originReader->verifiedForRun(
                 $other, $researchRunId, 'capital_markets',
                 new \DateTimeImmutable('2026-10-01T00:00:00+00:00'),
