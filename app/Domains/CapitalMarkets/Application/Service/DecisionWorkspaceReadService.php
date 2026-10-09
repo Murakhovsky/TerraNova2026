@@ -992,11 +992,11 @@ final readonly class DecisionWorkspaceReadService
                 'instrument_id' => $instrumentId,
                 'venue_id' => $state['venue_id'] ?? null,
                 'source_id' => $state['source_id'] ?? null,
-                'quote_age_ms' => is_array($state['best_quote'] ?? null) ? ($state['latency']['event_age_ms'] ?? null) : null,
+                'quote_age_ms' => is_array($state['best_quote'] ?? null) ? $this->decisionObservationAgeMs($state) : null,
                 // Canonical MarketOrderBook does not store an independent observation timestamp yet.
                 // Showing the MarketState age as book age would falsely imply freshness we do not possess.
                 'book_age_ms' => null,
-                'reference_age_ms' => $reference['reference_age_ms'] ?? null,
+                'reference_age_ms' => $this->decisionReferenceAgeMs($reference),
                 'sequence' => $state['last_sequence'] ?? null,
                 'book_sequence' => is_array($state['order_book'] ?? null) ? ($state['order_book']['sequence'] ?? null) : null,
                 'status' => strtoupper((string)($state['market_status'] ?? 'UNKNOWN')),
@@ -1028,7 +1028,7 @@ final readonly class DecisionWorkspaceReadService
                 'source_id' => $reference['source_id'] ?? null,
                 'quote_age_ms' => null,
                 'book_age_ms' => null,
-                'reference_age_ms' => $reference['reference_age_ms'] ?? null,
+                'reference_age_ms' => $this->decisionReferenceAgeMs($reference),
                 'sequence' => $reference['last_sequence'] ?? null,
                 'book_sequence' => null,
                 'status' => strtoupper((string)($reference['session'] ?? 'REFERENCE_ONLY')),
@@ -1043,6 +1043,35 @@ final readonly class DecisionWorkspaceReadService
         }
 
         return $rows;
+    }
+
+    /** Observation age at render time, not the frozen age measured at ingestion. */
+    private function decisionObservationAgeMs(array $state): ?int
+    {
+        $timestamp = $state['source_timestamp'] ?? $state['updated_at'] ?? null;
+        if (!is_string($timestamp) || trim($timestamp) === '') return null;
+        try {
+            $source = new \DateTimeImmutable($timestamp);
+            $seconds = time() - $source->getTimestamp();
+            return $seconds < -5 ? null : max(0, $seconds) * 1000;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Ref states created without source timestamps carry age as of updated_at. */
+    private function decisionReferenceAgeMs(array $reference): ?int
+    {
+        if ($reference === []) return null;
+        if (!empty($reference['source_timestamp'])) {
+            return $this->decisionObservationAgeMs($reference);
+        }
+        $processingAge = $this->decisionObservationAgeMs([
+            'updated_at'=>$reference['updated_at'] ?? null,
+        ]);
+        $ingestionAge = $reference['reference_age_ms'] ?? null;
+        if ($processingAge === null || !is_numeric($ingestionAge) || $ingestionAge < 0) return null;
+        return $processingAge + (int)$ingestionAge;
     }
 
     // Ingestion trust reflects the assessment at event arrival. Read-only
@@ -1539,7 +1568,7 @@ final readonly class DecisionWorkspaceReadService
                 'spread_bps' => $state['spread_bps'] ?? $quote['spread_bps'] ?? null,
                 'volume' => $state['volume'] ?? null,
                 'liquidity' => $state['order_book']['depth'] ?? null,
-                'age_ms' => $state['latency']['event_age_ms'] ?? null,
+                'age_ms' => $this->decisionObservationAgeMs($state),
                 'trust' => $this->decisionStateTrust($state),
                 'mode' => strtoupper((string)($state['mode'] ?? 'HISTORICAL')),
                 'last_updated' => $state['updated_at'] ?? null,
