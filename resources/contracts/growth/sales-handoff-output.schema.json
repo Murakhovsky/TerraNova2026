@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Native Sales acceptance receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_id",
+    "handoff_attempt_id",
+    "sales_lead_id",
+    "status",
+    "goal_outcome_verified"
+  ],
+  "properties": {
+    "candidate_id": {
+      "type": "string"
+    },
+    "handoff_attempt_id": {
+      "type": "string"
+    },
+    "sales_lead_id": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "status": {
+      "const": "accepted"
+    },
+    "goal_outcome_verified": {
+      "const": false
+    }
+  }
+}
