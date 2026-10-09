@@ -91,9 +91,6 @@ final readonly class FederationGoalOutcomeAggregationService
             if (!is_array($steps) || count($steps)!==4 || !array_is_list($steps)) {
                 throw new DomainException('Candidate Plan is not the canonical four-step workflow.');
             }
-            foreach (self::ACTIONS as $i=>$capability) {
-                // Keys are stage names. Verify by actual approved array order.
-            }
             $names=array_keys(self::ACTIONS);
             foreach ($names as $i=>$name) {
                 $step=$steps[$i];
