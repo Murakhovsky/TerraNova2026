@@ -10,7 +10,7 @@ use App\Persistence\Federation\FederationOutcomeOriginRecorder;
 
 foreach ([
     ['capital_markets', 'capital_markets.research.result.record', 'research_result', 'result-a'],
-    ['platform.documents', 'documents.signature.sign', 'document_signature', 'signature-a'],
+    ['documents', 'documents.signature.sign', 'document_signature', 'signature-a'],
 ] as [$domain, $type, $target, $id]) {
     FederationOutcomeOriginContract::assertTarget($domain, $type, $target, $id, $id);
     if (!FederationOutcomeOriginContract::canLink($domain)

@@ -13,7 +13,7 @@ final class FederationOutcomeOriginContract
 {
     private const TARGETS = [
         'capital_markets' => ['action_type' => 'capital_markets.research.result.record', 'target_type' => 'research_result'],
-        'platform.documents' => ['action_type' => 'documents.signature.sign', 'target_type' => 'document_signature'],
+        'documents' => ['action_type' => 'documents.signature.sign', 'target_type' => 'document_signature'],
     ];
 
     public static function assertTarget(

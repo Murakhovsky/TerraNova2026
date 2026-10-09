@@ -1184,7 +1184,7 @@ final class FederationPersistenceSmokeCommand extends Command
             // this Run. They must NEVER become Research/Document attribution.
             foreach ([
                 ['capital_markets', $researchOriginFixture],
-                ['platform.documents', $documentOriginFixture],
+                ['documents', $documentOriginFixture],
             ] as [$domain, $outcomeId]) {
                 $source = $this->originRecorder->nativeOutcome($org, $domain, $outcomeId);
                 self::assert($source !== null,

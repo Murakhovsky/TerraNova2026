@@ -3298,7 +3298,7 @@ services:
   cos.federation.native_origin.documents:
     class: App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider
     arguments:
-      $ownerDomain: 'platform.documents'
+      $ownerDomain: 'documents'
       $criterionId: 'documents.run_linked_signatures'
       $capabilityId: 'documents.signature.sign'
       $writerReady: '%env(bool:COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY)%'
