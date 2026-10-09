@@ -174,4 +174,21 @@ if (!str_contains($featureTemplate, 'до останньої ознаки жит
     throw new RuntimeException('Engineering UI does not explain STALE_RUN_RECOVERY duration semantics.');
 }
 
+$llmProgressObserver = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Llm/EngineeringStructuredLlmProgressObserver.php');
+$runtimeWatchdogHandler = (string) file_get_contents($root.'/symfony/src/Application/Engineering/Command/WatchEngineeringRuntimeCommandHandler.php');
+
+if (!str_contains($llmProgressObserver, "'current_agent_run_id'")
+    || !str_contains($llmProgressObserver, 'touchRuntime(')
+    || str_contains($llmProgressObserver, "touchRuntime(\$workflowId, null, \$taskId")) {
+    throw new RuntimeException('Engineering LLM progress heartbeat is not attributed to the persisted current AgentRun.');
+}
+if (!str_contains($agentRunStore, 'recoverStalledForOrganization')
+    || !str_contains($agentRunStore, "w.health_status = 'STALLED'")
+    || !str_contains($agentRunStore, 'w.current_agent_run_id = r.id')) {
+    throw new RuntimeException('STALLED Engineering workflows can still leave zombie RUNNING AgentRuns.');
+}
+if (!str_contains($runtimeWatchdogHandler, 'recoverStalledForOrganization')) {
+    throw new RuntimeException('Engineering runtime watchdog does not reconcile stalled AgentRuns.');
+}
+
 echo "Engineering runtime truth and observability contract passed.\n";
