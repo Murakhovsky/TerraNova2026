@@ -138,10 +138,110 @@ final readonly class CapitalRiskService
   $attribution=$this->performanceAttribution->attribute($records);
   $result=$this->serializeDecimals($attribution);
   $netPnl=$attribution['net_pnl'];
+  $economics=$this->realizedExecutionEconomics($executions);
   $result['return_on_capital_time']=$capitalTime->isZero()?'0':DecimalMath::divide($netPnl,$capitalTime,18)->value();
   $result['capital_time']=$capitalTime->value();
   $result['record_count']=count($records);
+  $result['realized_gross_pnl']=$economics['gross_pnl'];
+  $result['realized_costs']=$economics['costs'];
+  $result['realized_net_pnl']=$economics['net_pnl'];
+  $result['costs_by_type']=$economics['costs_by_type'];
+  $result['economics_coverage']=$economics['coverage'];
+  $result['economics_status']=$economics['status'];
+  $result['economics_executions']=$economics['executions'];
+  $result['economics_complete_executions']=$economics['complete_executions'];
+  $result['economics_note']=$economics['note'];
+  // Realized-only UTC windows are separate from portfolio mark-to-market P&L.
+  $result['realized_windows']=RealizedPnlWindowProjector::project($executions);
   return $result;
+ }
+
+ /** @param list<array<string,mixed>> $executions @return array<string,mixed> */
+ private function realizedExecutionEconomics(array $executions):array
+ {
+  $gross=Decimal::fromString('0');
+  $costs=Decimal::fromString('0');
+  $net=Decimal::fromString('0');
+  $fees=Decimal::fromString('0');
+  $borrow=Decimal::fromString('0');
+  $network=Decimal::fromString('0');
+  $eligible=0;
+  $complete=0;
+
+  foreach($executions as $execution){
+   if(!is_array($execution))continue;
+   $status=strtoupper((string)($execution['status']??''));
+   if(!in_array($status,['COMPLETED','COMPLETED_COMPENSATED','CLOSED'],true))continue;
+   $eligible++;
+
+   $performance=is_array($execution['performance']??null)?$execution['performance']:[];
+   if(
+    array_key_exists('spot_price_pnl',$performance)
+    &&array_key_exists('derivative_price_pnl',$performance)
+    &&array_key_exists('funding_pnl',$performance)
+    &&array_key_exists('trading_fees',$performance)
+    &&array_key_exists('borrow_cost',$performance)
+    &&array_key_exists('network_costs',$performance)
+    &&array_key_exists('net_pnl',$performance)
+   ){
+    $spot=Decimal::fromString((string)$performance['spot_price_pnl']);
+    $derivative=Decimal::fromString((string)$performance['derivative_price_pnl']);
+    $funding=Decimal::fromString((string)$performance['funding_pnl']);
+    $executionFees=DecimalMath::abs(Decimal::fromString((string)$performance['trading_fees']));
+    $executionBorrow=DecimalMath::abs(Decimal::fromString((string)$performance['borrow_cost']));
+    $executionNetwork=DecimalMath::abs(Decimal::fromString((string)$performance['network_costs']));
+    $executionGross=DecimalMath::add(DecimalMath::add($spot,$derivative),$funding);
+    $executionCosts=DecimalMath::add(DecimalMath::add($executionFees,$executionBorrow),$executionNetwork);
+
+    $gross=DecimalMath::add($gross,$executionGross);
+    $costs=DecimalMath::add($costs,$executionCosts);
+    $net=DecimalMath::add($net,Decimal::fromString((string)$performance['net_pnl']));
+    $fees=DecimalMath::add($fees,$executionFees);
+    $borrow=DecimalMath::add($borrow,$executionBorrow);
+    $network=DecimalMath::add($network,$executionNetwork);
+    $complete++;
+    continue;
+   }
+
+   $feePayload=is_array($execution['fees']??null)?$execution['fees']:null;
+   if($feePayload!==null&&array_key_exists('realized_pnl',$execution)){
+    $executionFees=Decimal::fromString('0');
+    foreach($feePayload as $fee){
+     if(is_scalar($fee)&&trim((string)$fee)!==''){
+      $executionFees=DecimalMath::add($executionFees,DecimalMath::abs(Decimal::fromString((string)$fee)));
+     }
+    }
+    $executionNet=Decimal::fromString((string)$execution['realized_pnl']);
+    // Tokenized-equity realized P&L is executable cash P&L after fill fees.
+    // Slippage is already embedded in executable fill prices and is attribution metadata,
+    // so it must not be subtracted a second time.
+    $executionGross=DecimalMath::add($executionNet,$executionFees);
+    $gross=DecimalMath::add($gross,$executionGross);
+    $costs=DecimalMath::add($costs,$executionFees);
+    $net=DecimalMath::add($net,$executionNet);
+    $fees=DecimalMath::add($fees,$executionFees);
+    $complete++;
+   }
+  }
+
+  return [
+   'gross_pnl'=>$complete>0?$gross->value():null,
+   'costs'=>$complete>0?$costs->value():null,
+   'net_pnl'=>$complete>0?$net->value():null,
+   'costs_by_type'=>[
+    'trading_fees'=>$complete>0?$fees->value():null,
+    'borrow'=>$complete>0?$borrow->value():null,
+    'network'=>$complete>0?$network->value():null,
+    'slippage'=>null,
+    'data_api'=>null,
+    'ai'=>null,
+   ],
+   'coverage'=>$eligible===0?'0/0':$complete.'/'.$eligible,
+   'status'=>$eligible===0?'UNAVAILABLE':($complete===$eligible?'COMPLETE':'PARTIAL'),
+   'executions'=>$eligible,
+   'complete_executions'=>$complete,
+   'note'=>'Realized decomposition uses canonical completed execution economics only. Slippage is embedded in executable prices where the engine treats it as attribution; data/API and AI costs remain unavailable until canonical cost records exist.',
+  ];
  }
 
  public function capitalState(string $organizationId,string $portfolioId='paper-master',array $buffers=[]):array

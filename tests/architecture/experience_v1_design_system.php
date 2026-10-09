@@ -48,7 +48,8 @@ if ($declaredEntries !== count($canonical)) {
     ));
 }
 
-if (count($componentFiles) !== 65 || count($canonical) !== 63 || count($helpers) !== 2) {
+// CM-DECISION-WORKSPACE adds stable reusable CosDecisionTrace and CosExplainability components.
+if (count($componentFiles) !== 67 || count($canonical) !== 65 || count($helpers) !== 2) {
     throw new RuntimeException(sprintf(
         'EX-002 baseline changed unexpectedly: files=%d canonical=%d helpers=%d.',
         count($componentFiles),

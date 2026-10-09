@@ -300,7 +300,7 @@ final readonly class TokenizedEquityPaperExecutionService
 
             $payload=[
                 'id'=>$executionId,'opportunity_id'=>$opportunityId,'status'=>'COMPLETED',
-                'executed_at'=>$now->format(DATE_ATOM),'reservation_id'=>$reservationId,
+                'executed_at'=>$now->format(DATE_ATOM),'quote_asset'=>$quoteAsset,'reservation_id'=>$reservationId,
                 'quantity'=>$quantity->value(),'buy_fill'=>$this->fillArray($buyFill),'sell_fill'=>$this->fillArray($sellFill),
                 'detected_edge'=>$detectedEdge->value(),'executable_edge'=>$executableEdge->value(),
                 'realized_edge'=>$realizedEdge->value(),'expected_pnl'=>$opportunity['expected_pnl'],
@@ -784,6 +784,7 @@ final readonly class TokenizedEquityPaperExecutionService
         $payload=[
             'position_id'=>$position->positionId,'portfolio_id'=>$position->portfolioId,'strategy_id'=>$position->strategyId,
             'instrument_id'=>$position->instrumentId,'venue_id'=>$position->venueId,'status'=>$position->status(),
+            'instrument_kind'=>'TOKENIZED_EQUITY','side'=>'LONG',
             'quantity'=>$position->quantity->value(),'average_entry_price'=>$position->averageEntryPrice->value(),
             'mark_price'=>$position->markPrice->value(),'market_value'=>$position->marketValue()->value(),
             'fees'=>$position->fees->value(),'realized_pnl'=>$position->realizedPnl->value(),

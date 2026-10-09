@@ -1,0 +1,148 @@
+<?php
+declare(strict_types=1);
+
+namespace Domains\CapitalMarkets\Application\Service;
+
+use DateTimeImmutable;
+use DateTimeZone;
+use Domains\CapitalMarkets\Application\Contract\PortfolioValuationSnapshotRepositoryInterface;
+use Domains\CapitalMarkets\Domain\Value\Decimal;
+use Domains\CapitalMarkets\Domain\Value\DecimalMath;
+use InvalidArgumentException;
+
+/**
+ * A guarded writer, not an estimation engine. Only verified cash, asset marks,
+ * liabilities and reconciled external ledger flows may enter NAV.
+ */
+final readonly class PortfolioNavSnapshotProducer
+{
+    public function __construct(private PortfolioValuationSnapshotRepositoryInterface $snapshots) {}
+
+    /**
+     * @param array<string,mixed> $evidence
+     * @return array<string,mixed>
+     */
+    public function record(string $organizationId,string $portfolioId,array $evidence): array
+    {
+        if ($organizationId === '' || $portfolioId === '') {
+            throw new InvalidArgumentException('Tenant and portfolio required.');
+        }
+        foreach (['snapshot_id','valued_at','currency','provenance_id','ledger_fingerprint','marks_fingerprint','external_flows_fingerprint'] as $key) {
+            if (!is_string($evidence[$key] ?? null) || trim($evidence[$key]) === '') {
+                throw new InvalidArgumentException('Missing NAV evidence: '.$key);
+            }
+        }
+        foreach (['ledger_reconciled','marks_reconciled','external_flows_reconciled'] as $gate) {
+            if (($evidence[$gate] ?? false) !== true) {
+                throw new InvalidArgumentException('NAV reconciliation incomplete: '.$gate);
+            }
+        }
+        if (!is_array($evidence['cash_by_currency'] ?? null)
+            || !is_array($evidence['marked_positions'] ?? null)
+            || !is_array($evidence['liabilities_by_currency'] ?? null)
+            || !is_array($evidence['external_flows_by_currency'] ?? null)) {
+            throw new InvalidArgumentException('Explicit cash, marks, liabilities and flow ledgers are required.');
+        }
+        $expectedDigests = [
+            'ledger_fingerprint' => hash('sha256', json_encode([
+                'cash' => $evidence['cash_by_currency'],
+                'liabilities' => $evidence['liabilities_by_currency'],
+            ], JSON_THROW_ON_ERROR)),
+            'marks_fingerprint' => hash('sha256', json_encode($evidence['marked_positions'], JSON_THROW_ON_ERROR)),
+            'external_flows_fingerprint' => hash('sha256', json_encode($evidence['external_flows_by_currency'], JSON_THROW_ON_ERROR)),
+        ];
+        foreach ($expectedDigests as $key => $digest) {
+            if (!hash_equals($digest, strtolower($evidence[$key]))) {
+                throw new InvalidArgumentException('NAV evidence fingerprint mismatch: '.$key);
+            }
+        }
+        // Empty cash evidence is not proof of a zero cash balance.
+        if ($evidence['cash_by_currency'] === []) {
+            throw new InvalidArgumentException('A certified cash-balance observation is required for NAV.');
+        }
+        $currency=strtoupper(trim($evidence['currency']));
+        $cash=$this->sumCurrency($evidence['cash_by_currency'],$currency);
+        $liabilities=$this->sumCurrency($evidence['liabilities_by_currency'],$currency);
+        $flows=$this->sumCurrency($evidence['external_flows_by_currency'],$currency);
+        if ($cash->isNegative() || $liabilities->isNegative()) {
+            throw new InvalidArgumentException('Cash and liabilities must use nonnegative asset balances.');
+        }
+        $valuedAt=(new DateTimeImmutable($evidence['valued_at'],new DateTimeZone('UTC')))
+            ->setTimezone(new DateTimeZone('UTC'));
+        $sourceValuedAt=(new DateTimeImmutable((string)($evidence['source_valued_at']??$evidence['valued_at']),new DateTimeZone('UTC')))
+            ->setTimezone(new DateTimeZone('UTC'));
+        $sourceAge=$valuedAt->getTimestamp()-$sourceValuedAt->getTimestamp();
+        if ($sourceAge<0 || $sourceAge>900) {
+            throw new InvalidArgumentException('Independent statement evidence is stale or future dated.');
+        }
+        $marks=Decimal::fromString('0');
+        $seenPositionIds=[];
+        foreach ($evidence['marked_positions'] as $position) {
+            if (!is_array($position)
+                || ($position['quote_currency'] ?? '') !== $currency
+                || ($position['mark_reconciled'] ?? false) !== true
+                || !is_string($position['market_value'] ?? null)
+                || !is_string($position['mark_source_fingerprint'] ?? null)
+                || preg_match('/^[a-f0-9]{64}$/', $position['mark_source_fingerprint']) !== 1
+                || !is_string($position['source_timestamp'] ?? null)
+                || !is_int($position['market_state_version'] ?? null)
+                || $position['market_state_version'] < 1
+                || !is_string($position['position_id'] ?? null)
+            ) {
+                throw new InvalidArgumentException('Every position needs a reconciled current mark and provenance in NAV currency.');
+            }
+            $positionId=trim($position['position_id']);
+            if ($positionId === '' || isset($seenPositionIds[$positionId])) {
+                throw new InvalidArgumentException('Duplicate or empty portfolio position identity cannot be valued.');
+            }
+            $seenPositionIds[$positionId]=true;
+            try {
+                $sourceTime=(new DateTimeImmutable($position['source_timestamp'],new DateTimeZone('UTC')))
+                    ->setTimezone(new DateTimeZone('UTC'));
+            } catch (\Throwable) {
+                throw new InvalidArgumentException('NAV position mark timestamp is invalid.');
+            }
+            $age=$valuedAt->getTimestamp()-$sourceTime->getTimestamp();
+            if ($age < 0 || $age > 30) {
+                throw new InvalidArgumentException('NAV position mark is stale or has uncertain clock.');
+            }
+            $marks=DecimalMath::add($marks,Decimal::fromString($position['market_value']));
+        }
+        $nav=DecimalMath::subtract(DecimalMath::add($cash,$marks),$liabilities);
+        if ($nav->isNegative()) {
+            throw new InvalidArgumentException('Negative NAV is unsupported by this valuation policy.');
+        }
+        $snapshot=[
+            'snapshot_id'=>$evidence['snapshot_id'],
+            'valued_at'=>$valuedAt->format(DATE_ATOM),
+            'source_valued_at'=>$sourceValuedAt->format(DATE_ATOM),
+            'currency'=>$currency,
+            'equity'=>$nav->value(),
+            'cumulative_external_net_flow'=>$flows->value(),
+            'valuation_status'=>'COMPLETE',
+            'ledger_reconciled'=>true,
+            'marks_reconciled'=>true,
+            'external_flows_reconciled'=>true,
+            'provenance_id'=>$evidence['provenance_id'],
+            ...$expectedDigests,
+        ];
+        $this->snapshots->append($organizationId,$portfolioId,$snapshot);
+        return $snapshot;
+    }
+
+    /** @param array<string,mixed> $values */
+    private function sumCurrency(array $values,string $currency):Decimal
+    {
+        $sum=Decimal::fromString('0');
+        foreach ($values as $record) {
+            if (!is_array($record)
+                || strtoupper((string)($record['currency'] ?? '')) !== $currency
+                || !is_string($record['amount'] ?? null)) {
+                throw new InvalidArgumentException('NAV basket contains an unconverted or unsupported currency.');
+            }
+            $amount=Decimal::fromString($record['amount']);
+            $sum=DecimalMath::add($sum,$amount);
+        }
+        return $sum;
+    }
+}

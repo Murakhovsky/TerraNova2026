@@ -1,25 +1,25 @@
 pages:
   - id: capital_markets.overview
-    route: { name: capital_markets_overview, path: /capital-markets, methods: [GET] }
+    route: { name: capital_markets_overview, path: /capital-markets, methods: [GET, HEAD] }
     surface: workspace
     domain: Capital Markets
     capability: capital_markets.view
     owner: Capital Markets
-    priority: P1
+    priority: P0
     status: IMPLEMENTED
-    personas: [capital_markets_user, administrator]
+    personas: [capital_markets_user, portfolio_manager, risk_manager, administrator]
     product:
-      primary_goal: "Understand the structural state of the Capital Markets foundation and open the relevant registry."
-      page_purpose: "Foundation overview for instruments, economic relationships and venues without market-data or execution surfaces."
+      primary_goal: "Understand capital, net performance, risk, market-data health, top opportunity and recommended action within 30 seconds."
+      page_purpose: "Canonical Capital Markets Decision Workspace overview. It composes authoritative portfolio, risk, opportunity and market-data read models without frontend finance calculations."
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip]
-      optional: [EntityList, EmptyState, ErrorState]
-    primary_action: capital_markets.instrument.create
-    states: [normal, empty, error, permission_denied]
-    responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
-    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
-    quality: { functionality: 2, ux: 1, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+      optional: [EntityList, Toolbar, EmptyState, ErrorState]
+    primary_action: capital_markets.opportunity.view
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: decision_workspace, tablet: stacked_dashboard, mobile: critical_status_stack }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
 
   - id: capital_markets.instruments
     route: { name: capital_markets_instruments, path: /capital-markets/instruments, methods: [GET] }
@@ -288,3 +288,204 @@ pages:
     responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
     qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 1, responsive: 1, accessibility: 1, content: 2 }
+
+
+  - id: capital_markets.opportunities
+    route: { name: capital_markets_opportunities, path: /capital-markets/opportunities, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.opportunity.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, portfolio_manager, administrator]
+    product:
+      primary_goal: "Find the best current opportunities in portfolio-adjusted priority order."
+      page_purpose: "Opportunity Board centered on expected net economics, capital need, risk, TTL and portfolio decision."
+    archetype: collection
+    patterns: { required: [PageHeader, DataGrid], optional: [FilterBar, SavedViews, EmptyState, ErrorState] }
+    primary_action: capital_markets.opportunity.view
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.markets
+    route: { name: capital_markets_markets, path: /capital-markets/markets, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.market_data.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, researcher, administrator]
+    product:
+      primary_goal: "Understand current canonical market state through instrument, relationship and venue views."
+      page_purpose: "Market Explorer using canonical MarketState, explicit trust/age/mode and economic relationships."
+    archetype: collection
+    patterns: { required: [PageHeader, DataGrid], optional: [Toolbar, EmptyState, ErrorState] }
+    primary_action: capital_markets.market_data.view
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.hypothesis
+    route: { name: capital_markets_research_hypothesis, path: "/capital-markets/research/hypotheses/{id}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.research.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [researcher, administrator]
+    product:
+      primary_goal: "Understand one hypothesis, its economic thesis, criteria, experiments and decision trace."
+      page_purpose: "Stable deep-link research hypothesis workspace."
+    archetype: entity_workspace
+    patterns: { required: [WorkspaceHeader, EntityHeader], optional: [ContextPanel, Timeline, EmptyState, ErrorState] }
+    primary_action: capital_markets.research.manage
+    states: [normal, error]
+    responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.strategies
+    route: { name: capital_markets_strategies, path: /capital-markets/strategies, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.research.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [researcher, portfolio_manager, administrator]
+    product:
+      primary_goal: "Compare strategy versions, scorecards, capital and promotion state without a spreadsheet."
+      page_purpose: "Strategy Lab collection focused on what works and what is eligible for promotion."
+    archetype: collection
+    patterns: { required: [PageHeader, DataGrid], optional: [FilterBar, EmptyState, ErrorState] }
+    primary_action: capital_markets.strategy.version.manage
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.strategy
+    route: { name: capital_markets_strategy_detail, path: "/capital-markets/strategies/{id}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.research.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [researcher, portfolio_manager, administrator]
+    product:
+      primary_goal: "Inspect one immutable strategy version, scorecards, backtest/OOS/paper evidence and promotion decisions."
+      page_purpose: "Stable deep-link strategy detail workspace."
+    archetype: entity_workspace
+    patterns: { required: [WorkspaceHeader, EntityHeader], optional: [KpiStrip, ContextPanel, Timeline, ActionBar, EmptyState, ErrorState] }
+    primary_action: capital_markets.strategy.promote
+    states: [normal, error]
+    responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.execution
+    route: { name: capital_markets_execution, path: /capital-markets/execution, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.opportunity.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, executor, risk_manager, administrator]
+    product:
+      primary_goal: "See what is executing and whether hedge/execution state needs attention."
+      page_purpose: "Execution Cockpit for current paper executions with stable detail links."
+    archetype: collection
+    patterns: { required: [PageHeader, DataGrid], optional: [Toolbar, EmptyState, ErrorState] }
+    primary_action: capital_markets.paper.execute
+    states: [normal, empty, error]
+    responsive: { desktop: data_grid, tablet: reduced_data_grid, mobile: horizontal_scroll }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.execution.detail
+    route: { name: capital_markets_execution_detail, path: "/capital-markets/execution/{id}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.opportunity.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [executor, risk_manager, administrator]
+    product:
+      primary_goal: "Inspect execution state, orders, fills and recovery evidence."
+      page_purpose: "Stable deep-link execution detail with explicit partial/recovery warnings."
+    archetype: entity_workspace
+    patterns: { required: [WorkspaceHeader, EntityHeader], optional: [KpiStrip, Timeline, ActionBar, ErrorState] }
+    primary_action: capital_markets.paper.execute
+    states: [normal, error]
+    responsive: { desktop: workspace, tablet: stacked_workspace, mobile: stacked_workspace }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.performance
+    route: { name: capital_markets_performance, path: /capital-markets/performance, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.portfolio.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, portfolio_manager, administrator]
+    product:
+      primary_goal: "Understand whether the system makes money after costs and where performance comes from."
+      page_purpose: "Performance Center with canonical attribution, explicit unavailable time windows and edge funnel."
+    archetype: domain_dashboard
+    patterns: { required: [PageHeader, KpiStrip], optional: [EntityList, Toolbar, EmptyState, ErrorState] }
+    primary_action: capital_markets.portfolio.view
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: critical_status_stack }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.agents
+    route: { name: capital_markets_agents, path: /capital-markets/agents, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, administrator]
+    product:
+      primary_goal: "See Capital Markets agents, their authority and recent governed runtime results."
+      page_purpose: "Agent Center showing decision summaries and runtime evidence without hidden chain-of-thought."
+    archetype: domain_dashboard
+    patterns: { required: [PageHeader, KpiStrip], optional: [EntityList, Toolbar, EmptyState, ErrorState] }
+    primary_action: capital_markets.research.agent.use
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: horizontal_scroll }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
+
+  - id: capital_markets.data_quality
+    route: { name: capital_markets_data_quality, path: /capital-markets/data-quality, methods: [GET, HEAD] }
+    surface: workspace
+    domain: Capital Markets
+    capability: capital_markets.market_data.quality.view
+    owner: Capital Markets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [capital_markets_user, researcher, risk_manager, administrator]
+    product:
+      primary_goal: "Know whether current market data is trustworthy, fresh and connected."
+      page_purpose: "Data Quality Center separating application health from market-data trust and exposing source/market age."
+    archetype: domain_dashboard
+    patterns: { required: [PageHeader, KpiStrip], optional: [EntityList, Toolbar, EmptyState, ErrorState] }
+    primary_action: capital_markets.market_data.view
+    states: [normal, loading, empty, error, permission_denied]
+    responsive: { desktop: dashboard, tablet: stacked_dashboard, mobile: horizontal_scroll }
+    qa: { functional: true, visual: false, responsive: true, accessibility: true, human_acceptance: false }
+    quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 2 }
