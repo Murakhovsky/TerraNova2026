@@ -1703,9 +1703,9 @@ final class FederationPersistenceSmokeCommand extends Command
         );
         self::assert($first['ready']===true && count($first['plans'])===10,
             'First ten scored candidates should generate ten proposed Plans.');
-        foreach ($first['plans'] as $plan) {
+        foreach ($first['plans'] as $index => $plan) {
             $proposed=$this->goals->proposePlan($actor,$plan['plan_id'],$goalId,
-                $plan['steps'],1,$plan['lineage']);
+                $plan['steps'],$index+1,$plan['lineage']);
             self::assert($proposed['status']==='proposed','Fan-out Plans cannot auto-approve.');
         }
 
@@ -1731,18 +1731,19 @@ final class FederationPersistenceSmokeCommand extends Command
         );
         self::assert($second['ready']===true && count($second['plans'])===40,
             'Incremental 40-candidate proposal must exclude original ten.');
-        foreach ($second['plans'] as $plan) {
+        foreach ($second['plans'] as $index => $plan) {
             $this->goals->proposePlan($actor,$plan['plan_id'],$goalId,
-                $plan['steps'],1,$plan['lineage']);
+                $plan['steps'],$index+11,$plan['lineage']);
         }
 
         $stored=$this->db->fetchAllAssociative(
-            'SELECT plan_id,state,plan_json FROM cos_federation_plans
+            'SELECT plan_id,plan_version,state,plan_json FROM cos_federation_plans
              WHERE organization_id = :org AND goal_id = :goal',
             ['org'=>$org,'goal'=>$goalId],
         );
         self::assert(count($stored)===50,'Exactly 50 tenant-owned proposed Plans must persist.');
         $candidates=[];
+        $versions=[];
         foreach ($stored as $row) {
             $plan=json_decode((string)$row['plan_json'],true,512,JSON_THROW_ON_ERROR);
             $candidate=$plan['lineage']['candidate_id'] ?? null;
@@ -1751,7 +1752,11 @@ final class FederationPersistenceSmokeCommand extends Command
                 && count($plan['steps']??[])===4,
                 'Stored Plan must retain all four canonical steps and candidate provenance.');
             $candidates[$candidate]=true;
+            $versions[(int)$row['plan_version']]=true;
         }
+        self::assert(count($versions)===50
+            && min(array_keys($versions))===1 && max(array_keys($versions))===50,
+            'Native Goal Plan uniqueness requires 50 distinct monotonic versions.');
         self::assert(count($candidates)===50,'Duplicate Candidate persisted under same Goal.');
         $foreign=$this->db->fetchOne(
             'SELECT COUNT(*) FROM cos_federation_plans
@@ -1767,7 +1772,7 @@ final class FederationPersistenceSmokeCommand extends Command
         self::assert((int)$runs===0,'Unapproved fan-out must not dispatch a Run.');
         try {
             $this->goals->proposePlan($actor,$first['plans'][0]['plan_id'],$goalId,
-                $first['plans'][0]['steps'],1,$first['plans'][0]['lineage']);
+                $first['plans'][0]['steps'],51,$first['plans'][0]['lineage']);
             throw new \RuntimeException('Duplicate Goal Candidate Plan was allowed.');
         } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
             // Native DB uniqueness is the final replay boundary.
