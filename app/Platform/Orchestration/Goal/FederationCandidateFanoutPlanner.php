@@ -80,6 +80,29 @@ final readonly class FederationCandidateFanoutPlanner
             throw new DomainException('Fan-out requires trusted Federation discovery provenance.');
         }
 
+        // Growth's membership query is ordered by last_seen_at, which can
+        // change on every market refresh. Canonicalize before deduplication,
+        // otherwise the same input SET can yield a different source lineage
+        // (and thus a different approved-plan hash) across previews.
+        foreach ($memberships as $row) {
+            if (!is_array($row)) {
+                throw new DomainException('Malformed Growth membership source.');
+            }
+        }
+        usort($memberships, static function (array $a, array $b): int {
+            foreach (['candidate_id', 'account_id', 'external_key_hash',
+                'source_reference', 'last_seen_at'] as $field) {
+                $left = is_string($a[$field] ?? null) ? $a[$field] : '';
+                $right = is_string($b[$field] ?? null) ? $b[$field] : '';
+                $comparison = strcmp($left, $right);
+                if ($comparison !== 0) return $comparison;
+            }
+            return strcmp(
+                json_encode($a, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+                json_encode($b, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+            );
+        });
+
         $eligible = [];
         $seenCandidates = [];
         $seenAccounts = [];
