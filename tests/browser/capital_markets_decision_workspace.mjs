@@ -277,6 +277,29 @@ try {
     await context.close();
   }
 
+  // Cross-venue discovery must remain a safe, usable operator page when
+  // no provider has been scanned. Listing data must never be auto-fabricated.
+  const discoveryContext = await browser.newContext({ viewport: {width: 1280, height: 900}, storageState });
+  const discoveryPage = await discoveryContext.newPage();
+  try {
+    await assertOk(await discoveryPage.goto(absolute('/capital-markets/discovery'), { waitUntil: 'domcontentloaded' }), 'cross-venue discovery');
+    const content = await discoveryPage.locator('main').innerText();
+    if (!content.includes('Пошук інструментів на різних біржах')
+      || !content.includes('80') || !content.includes('Немає виконаних сканувань')
+      && !content.includes('Остання перевірка')) {
+      throw new Error('Cross-venue discovery operator page is incomplete.');
+    }
+    const form = discoveryPage.locator('form[action="/capital-markets/discovery/scan"]');
+    if (await form.count() > 0) {
+      const token = await form.locator('input[name="csrf_token"]').inputValue();
+      if (!token) throw new Error('Discovery scan mutation is missing CSRF token.');
+      const options = await form.locator('select[name="limit"] option').evaluateAll(nodes => nodes.map(n => n.value));
+      if (options.join('|') !== '10|80') throw new Error('Discovery scan must bound operator scope.');
+    }
+  } finally {
+    await discoveryContext.close();
+  }
+
   // Manual acceptance regression: on a laptop-sized workspace, global KPIs
   // must form a compact row instead of eight vertically stacked numbers.
   const laptopContext = await browser.newContext({
