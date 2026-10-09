@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Prepare Sales-targeted Growth candidate handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "growth_candidate"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_value",
+        "recommended_play",
+        "recommended_action"
+      ],
+      "properties": {
+        "expected_value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "recommended_play": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "recommended_action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    }
+  }
+}
