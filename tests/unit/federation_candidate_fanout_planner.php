@@ -38,6 +38,21 @@ if(!$a['ready'] || $a['eligible']!==2 || $a['proposed_count']!==2
     || $a['plans']!==$b['plans'] || $a['business_outcome_verified']!==false) {
     throw new RuntimeException('Deterministic 2-candidate fan-out failed.');
 }
+// A second membership for the same account/candidate with a different
+// source may be returned first after refresh; preview lineage must be
+// independent of database row order.
+$conflicting = array_replace($member('C-1','account-1'),[
+    'source_reference'=>'https://second-source.test/account-1',
+    'external_key_hash'=>hash('sha256','alternative source'),
+]);
+$ordered = [$conflicting, ...$memberships];
+$reverse = array_reverse($ordered);
+$choiceA=$planner->build($goal,$native,$ordered,$view,2,$opt);
+$choiceB=$planner->build($goal,$native,$reverse,$view,2,$opt);
+if ($choiceA['plans']!==$choiceB['plans']) {
+    throw new RuntimeException('Fan-out lineage changed with membership row order.');
+}
+
 // Repeated discovery of the same tenant/Goal/Candidate must NOT mint a
 // second executable Plan identity with a fresh native source run.
 $repeat=$planner->build($goal,array_replace($native,['run_id'=>'GMRN-NEXT']),
