@@ -14,7 +14,7 @@ use InvalidArgumentException;
  */
 final class PortfolioNavFinancialEvidencePolicy
 {
-    private const TYPES=['EXTERNAL_CASH_FLOW','LIABILITY_BALANCE','VENUE_BALANCE'];
+    private const TYPES=['EXTERNAL_CASH_FLOW','LIABILITY_BALANCE','VENUE_BALANCE','POSITION_BALANCE','ACCOUNT_COVERAGE'];
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
     public static function normalize(array $input):array
@@ -47,8 +47,25 @@ final class PortfolioNavFinancialEvidencePolicy
             throw new InvalidArgumentException('Liability statements require a stable liability_account_id.');
         }
         $venue=trim((string)($input['venue_id']??''));
-        if ($kind==='VENUE_BALANCE' && $venue==='') {
-            throw new InvalidArgumentException('Venue statement requires venue identity.');
+        if (in_array($kind,['VENUE_BALANCE','POSITION_BALANCE'],true) && $venue==='') {
+            throw new InvalidArgumentException('Venue/position statement requires venue identity.');
+        }
+        $positionId=trim((string)($input['position_id']??''));
+        $instrumentId=trim((string)($input['instrument_id']??''));
+        if ($kind==='POSITION_BALANCE' && ($positionId===''||$instrumentId==='')) {
+            throw new InvalidArgumentException('Custody position statement requires position and instrument identity.');
+        }
+        $coverageScope=strtoupper(trim((string)($input['coverage_scope']??'')));
+        $coverageFrom=trim((string)($input['coverage_from']??''));
+        $coverageThrough=trim((string)($input['coverage_through']??''));
+        if ($kind==='ACCOUNT_COVERAGE' && (
+            !in_array($coverageScope,['EXTERNAL_FLOWS','LIABILITIES','POSITIONS','VENUES'],true)
+            || preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:Z|[+-]\\d{2}:\\d{2})$/',$coverageFrom)!==1
+            || preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:Z|[+-]\\d{2}:\\d{2})$/',$coverageThrough)!==1
+            || ($input['all_accounts']??null)!==true
+            || !$amount->isZero()
+        )) {
+            throw new InvalidArgumentException('Account coverage needs scope, interval, all-accounts attestation and zero nonfinancial amount.');
         }
         if (!is_string($input['effective_at']??null) || trim($input['effective_at'])==='') {
             throw new InvalidArgumentException('Source effective timestamp is required.');
@@ -69,6 +86,12 @@ final class PortfolioNavFinancialEvidencePolicy
             'amount'=>$amount->value(),
             'venue_id'=>$venue?:null,
             'liability_account_id'=>$kind==='LIABILITY_BALANCE'?$liabilityAccount:null,
+            'position_id'=>$kind==='POSITION_BALANCE'?$positionId:null,
+            'instrument_id'=>$kind==='POSITION_BALANCE'?$instrumentId:null,
+            'coverage_scope'=>$kind==='ACCOUNT_COVERAGE'?$coverageScope:null,
+            'coverage_from'=>$kind==='ACCOUNT_COVERAGE'?$coverageFrom:null,
+            'coverage_through'=>$kind==='ACCOUNT_COVERAGE'?$coverageThrough:null,
+            'all_accounts'=>$kind==='ACCOUNT_COVERAGE' ? true : null,
             'provider_id'=>$provider,
             'source_reference'=>$reference,
             'source_document_sha256'=>$digest,
