@@ -34,11 +34,13 @@ final readonly class MysqlSalesLocalTaskOutcomeReadModel implements SalesLocalTa
                AND a.created_at < FROM_UNIXTIME(:to_epoch)"
         );
         $query->bindValue(':org', $organizationId, PDO::PARAM_STR);
-        $query->bindValue(':from_epoch', $from->getTimestamp(), PDO::PARAM_INT);
-        $query->bindValue(':to_epoch', $to->getTimestamp(), PDO::PARAM_INT);
+        // Preserve sub-second Run.created_at boundaries; integer seconds
+        // would include tasks created immediately before the Run.
+        $query->bindValue(':from_epoch', $from->format('U.u'), PDO::PARAM_STR);
+        $query->bindValue(':to_epoch', $to->format('U.u'), PDO::PARAM_STR);
         $query->execute();
         $raw = $query->fetchColumn();
-        if (!is_numeric($raw) || (string) $raw[0] === '-') {
+        if (!is_scalar($raw) || !preg_match('/^[0-9]+$/', (string) $raw)) {
             throw new DomainException('Local CRM task read model failed to return a valid count.');
         }
         return (int) $raw;

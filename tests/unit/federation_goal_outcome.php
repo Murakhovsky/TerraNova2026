@@ -13,6 +13,8 @@ use Kernel\Module\ModuleManifest;
 use Platform\Orchestration\Goal\GoalSpecification;
 use Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider;
 use Domains\Sales\Application\Contract\SalesHistoricalMetricsReadModelInterface;
+use Domains\Sales\Application\Contract\SalesLocalTaskOutcomeReadModelInterface;
+use Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider;
 use Platform\Orchestration\Goal\GoalOutcomeEvaluator;
 use Platform\Orchestration\Goal\GoalPlanValidator;
 
@@ -104,6 +106,38 @@ if ($trusted['result'] !== 'satisfied'
 try {
     $provider->observe('tenant-1', 'tasks_created', $from, $to);
     throw new RuntimeException('Unverified CRM task count advertised as trusted.');
+} catch (\DomainException) {
+}
+$taskFacts = new class implements SalesLocalTaskOutcomeReadModelInterface {
+    public ?string $tenant = null;
+    public function createdTaskCount(
+        string $organizationId, \DateTimeImmutable $from, \DateTimeImmutable $to,
+    ): int {
+        $this->tenant = $organizationId;
+        return 2;
+    }
+};
+$taskProvider = new SalesLocalTaskOutcomeEvidenceProvider($taskFacts);
+if (!$taskProvider->supports('sales.local_tasks_created')
+    || $taskProvider->supports('tasks_created')
+    || $taskProvider->supports('sales.crm_tasks_created')) {
+    throw new RuntimeException('Sales local tasks incorrectly advertised ambiguous CRM-wide metrics.');
+}
+$localTasks = $taskProvider->observe('tenant-1', 'sales.local_tasks_created', $from, $to);
+$taskGoal = new GoalSpecification('goal-task', 'tenant-1', 'user-1', 'Create two local CRM tasks',
+    [['id' => 'sales.local_tasks_created', 'operator' => 'at_least', 'expected' => 2]], []);
+$taskResult = $evaluator->evaluate($taskGoal, ['sales.local_tasks_created' => $localTasks]);
+if ($taskFacts->tenant !== 'tenant-1'
+    || $taskResult['result'] !== 'satisfied'
+    || $localTasks['value'] !== 2
+    || $localTasks['source'] !== 'sales.tn_client_case_activities.task.v1'
+    || !str_starts_with($localTasks['evidence'][0], 'sales:local_task_activities:v1:')
+    || $localTasks['window_end'] !== $to->format('Y-m-d\TH:i:s.uP')) {
+    throw new RuntimeException('Local CRM task evidence lost source, tenant, time or positive Goal evaluation.');
+}
+try {
+    $taskProvider->observe('tenant-1', 'tasks_created', $from, $to);
+    throw new RuntimeException('External task count accepted as local task evidence.');
 } catch (\DomainException) {
 }
 echo "Federation GoalSpecification, DAG planning and trusted Sales outcomes passed.\n";

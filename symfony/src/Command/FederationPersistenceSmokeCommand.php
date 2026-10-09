@@ -774,7 +774,7 @@ final class FederationPersistenceSmokeCommand extends Command
             $linearRun = 'run-' . bin2hex(random_bytes(8));
             $this->goals->createGoal($actor, new GoalSpecification(
                 $linearGoal, $org, 'user-smoke', 'Create two approved follow-up tasks in order',
-                [['id' => 'tasks_created', 'operator' => 'at_least', 'expected' => 2]],
+                [['id' => 'sales.local_tasks_created', 'operator' => 'at_least', 'expected' => 2]],
                 ['sales.create_task'],
             ));
             $this->goals->proposePlan($actor, $linearPlan, $linearGoal, [
@@ -1050,6 +1050,22 @@ final class FederationPersistenceSmokeCommand extends Command
             self::assert($this->sequentialOrchestrator->advance(
                 $actor, $linearRun, $linearApprovalId,
             )['state'] === 'completed', 'Terminal linear Run caused duplicate execution.');
+
+            // Test runtime uses Action receipts only: no actual CRM task rows
+            // are written. A real Domain reader must therefore return zero,
+            // never upgrade 2 completed Actions to 2 completed business facts.
+            $local = $this->goals->recordEvaluation(
+                $actor, 'eval-' . bin2hex(random_bytes(8)), $linearRun,
+            );
+            self::assert($local['result'] === 'unsatisfied'
+                && $local['criteria'][0]['result'] === 'unsatisfied'
+                && $local['criteria'][0]['observed'] === 0
+                && $local['criteria'][0]['source'] === 'sales.tn_client_case_activities.task.v1'
+                && count($local['criteria'][0]['evidence']) === 1,
+                'Domain-owned CRM task count fabricated results from Action receipts.');
+            self::assert($this->goals->latestTrustedEvaluation($actor, $linearRun)['result'] === 'unsatisfied'
+                && $this->goals->latestTrustedEvaluation($other, $linearRun) === null,
+                'Task evaluation leaked tenant data or omitted durable audit.');
             self::assert($this->receiptReconciler->reconcile(
                 $actor, $linearRun, 'z_first',
             )['status'] === 'completed',
