@@ -21,8 +21,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "template_id",
-        "variables"
+        "template_id"
       ],
       "properties": {
         "template_id": {
