@@ -48,12 +48,11 @@ $actor = static fn (string $role, array $grants): TenantContext => new TenantCon
 $report = $gate->inspect($actor('manager', [TenantPermissions::ACCESS, TenantPermissions::MANAGE]));
 $statuses = array_column($report['stages'], 'status', 'stage');
 if ($report['execution_ready'] !== false || $report['business_outcome_verified'] !== false
-    || count($report['stages']) !== 6
+    || count($report['stages']) !== 5
     || $statuses['discover_candidates'] !== 'manifest_only'
     || $statuses['qualify_candidates'] !== 'manifest_only'
     || $statuses['prepare_handoff'] !== 'manifest_only'
-    || $statuses['approve_handoff'] !== 'manifest_only'
-    || $statuses['create_crm_leads'] !== 'missing_capability'
+    || $statuses['handoff_and_sales_intake'] !== 'manifest_only'
     || $statuses['prepare_proposals'] !== 'missing_capability') {
     throw new RuntimeException('A manifest-only capability falsely passed the golden-path gate.');
 }
