@@ -764,7 +764,7 @@ final readonly class DecisionWorkspaceReadService
     }
 
     /** @return array<string,mixed> */
-    public function agents(string $organizationId): array
+    public function agents(string $organizationId, bool $includeAudit = false): array
     {
         $page = $this->portfolio($organizationId);
         $errors = $page['partial_errors'] ?? [];
@@ -776,12 +776,16 @@ final readonly class DecisionWorkspaceReadService
             $errors,
             'agent_runs',
         );
-        $audit = $this->safe(
-            fn(): array => $this->activityHistory->recent(OrganizationId::fromString($organizationId), 250),
-            [],
-            $errors,
-            'agent_activity',
-        );
+        // Full tool inputs/outputs and structured run results require AuditView.
+        // General View only receives the safe operational summary, not tool payloads.
+        $audit = $includeAudit
+            ? $this->safe(
+                fn(): array => $this->activityHistory->recent(OrganizationId::fromString($organizationId), 250),
+                [],
+                $errors,
+                'agent_activity',
+            )
+            : [];
 
         $runs = [];
         foreach ($projections as $projection) {
@@ -835,20 +839,20 @@ final readonly class DecisionWorkspaceReadService
                 'decision' => $output['decision'] ?? null,
                 'recommendation' => $output['reason'] ?? null,
                 'confidence' => $projection->confidence,
-                'findings' => is_array($evidence['findings'] ?? null) ? $evidence['findings'] : [],
-                'limitations' => is_array($evidence['limitations'] ?? null) ? $evidence['limitations'] : [],
-                'requested_tools' => array_values(array_unique($requestedTools)),
-                'tools' => $tools,
-                'output' => $output,
-                'context_reference' => $projection->contextReference,
+                'findings' => $includeAudit && is_array($evidence['findings'] ?? null) ? $evidence['findings'] : [],
+                'limitations' => $includeAudit && is_array($evidence['limitations'] ?? null) ? $evidence['limitations'] : [],
+                'requested_tools' => $includeAudit ? array_values(array_unique($requestedTools)) : [],
+                'tools' => $includeAudit ? $tools : [],
+                'output' => $includeAudit ? $output : [],
+                'context_reference' => $includeAudit ? $projection->contextReference : null,
                 'cost_amount' => $projection->costAmount,
                 'cost_currency' => $projection->costCurrency,
                 'input_tokens' => $projection->inputTokens,
                 'output_tokens' => $projection->outputTokens,
                 'duration_ms' => $projection->durationMs,
-                'error' => $projection->error,
-                'correlation_id' => $projection->correlationId,
-                'audit_event_count' => $auditCount,
+                'error' => $includeAudit ? $projection->error : ($projection->error === null ? null : 'Agent execution error; audit access required for details.'),
+                'correlation_id' => $includeAudit ? $projection->correlationId : null,
+                'audit_event_count' => $includeAudit ? $auditCount : null,
                 'created_at' => $projection->createdAt->format(DATE_ATOM),
             ];
         }
