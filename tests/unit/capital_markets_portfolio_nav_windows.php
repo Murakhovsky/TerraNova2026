@@ -111,4 +111,18 @@ $assert($independentPeriod['today']['status']==='COMPLETE'
     && $independentPeriod['30d']['status']==='COMPLETE',
     'Invalid NAV evidence outside the evaluated window must not poison unrelated periods.');
 
+$latest = PortfolioNavWindowProjector::latestVerified($rows,$at);
+$assert($latest['status']==='COMPLETE' && $latest['equity']==='1250' && $latest['currency']==='USD',
+    'Only current independently certified NAV should supply Portfolio Equity.');
+$onlyLast = PortfolioNavWindowProjector::latestVerified([$rows[2]],$at);
+$assert($onlyLast['status']==='COMPLETE' && $onlyLast['equity']==='1250',
+    'One trusted current snapshot supplies NAV equity without fabricating a PnL window.');
+$old = PortfolioNavWindowProjector::latestVerified([$rows[0]],$at);
+$assert($old['status']==='UNAVAILABLE' && $old['equity']===null,
+    'Expired certified NAV must not become current portfolio equity.');
+$recentBad=$rows[2];
+$recentBad['ledger_reconciled']=false;
+$rejectedLatest=PortfolioNavWindowProjector::latestVerified([$rows[1],$recentBad],$at);
+$assert($rejectedLatest['equity']===null,
+    'Unverified recent NAV must suppress current equity, not fall back to an older record.');
 echo "Capital Markets portfolio NAV window projection passed.\n";
