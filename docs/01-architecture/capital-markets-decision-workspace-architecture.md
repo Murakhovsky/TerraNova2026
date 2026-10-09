@@ -207,6 +207,25 @@ SSR отримує coherent read-model payload замість клієнтськ
 
 Таблиці та read-side projections залишаються server-controlled. Майбутня virtualization потрібна лише тоді, коли фактичний dataset перевищить practical SSR page size.
 
+## Контроль свіжості відкритого Decision Workspace
+
+Кожна HTML-відповідь містить окремий серверний timestamp `snapshotRenderedAt` у UTC.
+Це час формування **UI snapshot**, а не час біржового тіку та не ознака якості котирування.
+Stimulus-компонент незалежно від доставки Mercure перевіряє вік сторінки раз на секунду:
+
+- до 60 секунд: банер не показується;
+- після 60 секунд без нового рендеру: persistent `Decision snapshot stale` + кнопка `Reload snapshot`;
+- якщо timestamp відсутній/пошкоджений: fail-closed `Decision snapshot time unavailable`.
+
+Стан банера лише попереджає оператора про застарілий **екран**. Він не змінює
+канонічний `Market Data Health`, `Risk State` і не обчислює P&L у JS.
+Окреме `Data observed` продовжує показувати час джерела. Ці два часи
+не можна змішувати: свіжа HTTP-сторінка може містити старий market feed.
+
+Browser acceptance у desktop/mobile сценаріях перевіряє перехід
+`fresh → stale → fresh → unknown`, використовуючи контрольований server timestamp
+у DOM без таймерів на 60 секунд. Результат не є доказом доставки подій Mercure в продакшені.
+
 ## Межа realtime-взаємодії
 
 Decision Workspace не створює окремий WebSocket/runtime.
