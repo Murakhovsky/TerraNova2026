@@ -127,6 +127,7 @@ Manifest capabilities не задекларовані.
 
 ### Задекларовані capabilities
 
+- `documents.proposal.prepare`;
 - `documents.signature.request`;
 - `documents.signature.sign`;
 
