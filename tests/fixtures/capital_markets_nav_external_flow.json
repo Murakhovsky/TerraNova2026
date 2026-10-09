@@ -4,6 +4,7 @@
   "amount": "100.25",
   "currency": "USD",
   "provider_id": "ci-independent-statement",
+  "provider_event_id": "ci-bank-transaction-20261007-1",
   "source_reference": "ci-statement:2026-10-07:cash:1",
   "source_document_sha256": "8769a5d38fd9e29a58f60d5caf9a460997488ae10faa388260abb5e6a6e4a064",
   "collected_by": "ci-source-fixture",
