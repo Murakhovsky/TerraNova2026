@@ -38,15 +38,14 @@ final readonly class PrepareProposalDraftHandler implements IdempotentExternalAc
 
     public function execute(Action $action): ExecutionResult
     {
-        $candidateId = $action->parameters['candidate_id'] ?? null;
+        $candidateId = $action->targetId;
         $templateId = $action->parameters['template_id'] ?? null;
         $variables = $action->parameters['variables'] ?? null;
         $title = $action->parameters['title'] ?? null;
 
         if ($action->status !== ActionStatus::Running || $action->sourceType !== 'USER'
             || !ctype_digit($action->sourceId) || (int)$action->sourceId < 1
-            || $action->targetType !== 'sales_lead' || !is_string($action->targetId)
-            || !ctype_digit($action->targetId) || (int)$action->targetId < 1
+            || $action->targetType !== 'growth_candidate'
             || !is_string($candidateId) || trim($candidateId) === ''
             || !is_string($templateId) || trim($templateId) === ''
             || !is_array($variables) || ($variables !== [] && array_is_list($variables))
@@ -72,12 +71,14 @@ final readonly class PrepareProposalDraftHandler implements IdempotentExternalAc
                 || ($attempt['status'] ?? null) !== 'accepted'
                 || ($attempt['target_domain'] ?? null) !== 'sales'
                 || ($attempt['target_reference_type'] ?? null) !== 'sales_lead'
-                || (string)($attempt['target_reference_id'] ?? '') !== $action->targetId) {
+                || !is_string($attempt['target_reference_id'] ?? null)
+                || !ctype_digit($attempt['target_reference_id']) || (int)$attempt['target_reference_id'] < 1) {
                 return ExecutionResult::failure('Sales Lead is not the accepted, tenant-owned Growth handoff target.');
             }
-            $lead = $this->sales->lead($org,(int)$action->targetId);
+            $leadId = $attempt['target_reference_id'];
+            $lead = $this->sales->lead($org,(int)$leadId);
             if (!is_array($lead) || ($lead['source'] ?? null) !== 'growth-handoff'
-                || (string)($lead['id'] ?? '') !== $action->targetId) {
+                || (string)($lead['id'] ?? '') !== $leadId) {
                 return ExecutionResult::failure('Canonical Sales Lead is missing or not created by Growth handoff.');
             }
             $actor = (int)$action->sourceId;
@@ -92,18 +93,18 @@ final readonly class PrepareProposalDraftHandler implements IdempotentExternalAc
                 return ExecutionResult::failure('Canonical Documents generation did not return a persisted document identifier.');
             }
             $relation = $this->attachments->attachExistingDocument(
-                $org,$actor,$correlation,$documentId,'sales.lead',$action->targetId,$key . '-attach',
+                $org,$actor,$correlation,$documentId,'sales.lead',$leadId,$key . '-attach',
             );
             if (!is_string($relation['relation_id'] ?? null) || $relation['relation_id'] === ''
                 || ($relation['document_id'] ?? null) !== $documentId
                 || ($relation['related_type'] ?? null) !== 'sales.lead'
-                || (string)($relation['related_id'] ?? '') !== $action->targetId) {
+                || (string)($relation['related_id'] ?? '') !== $leadId) {
                 return ExecutionResult::failure('Proposal exists but is not reliably attached to the approved Sales Lead; reconcile manually.');
             }
             return ExecutionResult::success([
                 'document_id'=>$documentId,
                 'relation_id'=>$relation['relation_id'],
-                'sales_lead_id'=>$action->targetId,
+                'sales_lead_id'=>$leadId,
                 'candidate_id'=>$candidateId,
                 'status'=>'prepared_not_sent',
                 'goal_outcome_verified'=>false,
