@@ -52,8 +52,21 @@ final class DecisionWorkspaceVisibilityPolicy
                 }
             }
         }
-        if (!$research && array_key_exists('active_strategies', $page)) {
+        if ((!$research || !$portfolio) && array_key_exists('active_strategies', $page)) {
             $page['active_strategies'] = [];
+        }
+        // OpportunityView alone permits the signal but not portfolio allocation
+        // sizing, portfolio impact or internal allocation decisions.
+        if (!$portfolio && is_array($page['opportunities'] ?? null)) {
+            $page['opportunities'] = array_map(static function (mixed $row): mixed {
+                if (!is_array($row)) return $row;
+                $row['approved_capital'] = null;
+                $row['portfolio_impact'] = 'RESTRICTED';
+                $row['decision'] = 'RESTRICTED';
+                $row['priority'] = null;
+                $row['reason'] = '';
+                return $row;
+            }, $page['opportunities']);
         }
         if (!$marketQuality && array_key_exists('quality_rows', $page)) {
             $page['quality_rows'] = [];
