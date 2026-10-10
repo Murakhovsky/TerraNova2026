@@ -55,7 +55,10 @@ if (!$one['ready'] || count($one['plans'])!==10 || $one['existing_count']!==0) {
     throw new RuntimeException('First 10 candidates were not proposed.');
 }
 $prior = array_column($one['plans'],'candidate_id');
-$two = $planner->build($goal,$run,array_reverse($members),$view,40,$opts,$prior);
+$priorAccounts = array_map(static fn(array $plan):string => $plan['lineage']['account_id'],$one['plans']);
+$priorSources = array_map(static fn(array $plan):string => $plan['lineage']['source_hash'],$one['plans']);
+$two = $planner->build($goal,$run,array_reverse($members),$view,40,$opts,
+    $prior,$priorAccounts,$priorSources);
 $all = [...$one['plans'],...$two['plans']];
 if (!$two['ready'] || count($two['plans'])!==40
     || $two['goal_remaining']!==40
@@ -85,10 +88,32 @@ try {
     throw new RuntimeException('Duplicate exclusion identity was accepted.');
 } catch(DomainException) {
 }
+// A different Candidate ID does not make an already proposed Account new.
+$duplicateAccount = array_replace($members[0],[
+    'candidate_id'=>'C-051',
+    'external_key_hash'=>hash('sha256','second-source-for-account-001'),
+]);
+$accountView = static fn(string $id):array => array_replace($view($id),[
+    'subject_id'=>'A-001',
+]);
+$accountRepeat = $planner->build($goal,$run,[$duplicateAccount],
+    $accountView,1,$opts,$prior,$priorAccounts,$priorSources);
+if($accountRepeat['ready'] || $accountRepeat['eligible']!==0) {
+    throw new RuntimeException('Second Candidate ID bypassed an existing Account identity.');
+}
+// A reused external-source fingerprint is likewise ineligible across runs.
+$duplicateSource = array_replace($members[0],[
+    'candidate_id'=>'C-052','account_id'=>'A-052',
+]);
+$sourceRepeat = $planner->build($goal,$run,[$duplicateSource],
+    $view,1,$opts,$prior,$priorAccounts,$priorSources);
+if($sourceRepeat['ready'] || $sourceRepeat['eligible']!==0) {
+    throw new RuntimeException('Reused source hash bypassed cross-batch source exclusion.');
+}
 $insufficient = $planner->build($goal,$run,array_slice($members,0,20),
-    $view,15,$opts,$prior);
+    $view,15,$opts,$prior,$priorAccounts,$priorSources);
 if ($insufficient['ready'] || $insufficient['plans']!==[]
     || $insufficient['eligible']!==10) {
     throw new RuntimeException('Incremental plan wrongly accepts partial batch.');
 }
-echo "Federation incremental 50: 10 + 40 unique candidate plans, cap and replay guards PASS.\n";
+echo "Federation incremental 50: 10 + 40 unique candidate/account/source identities, cap and replay guards PASS.\n";
