@@ -1727,8 +1727,35 @@ final class FederationPersistenceSmokeCommand extends Command
         }
 
         $prior=array_column($first['plans'],'candidate_id');
+        $priorAccounts=array_map(static fn(array $plan):string => $plan['lineage']['account_id'],$first['plans']);
+        $priorSources=array_map(static fn(array $plan):string => $plan['lineage']['source_hash'],$first['plans']);
+        // A newly detected Candidate for the SAME Account must not be
+        // counted as an additional business opportunity in the next batch.
+        $sameAccount=array_replace($members[0],[
+            'candidate_id'=>'candidate-051',
+            'external_key_hash'=>hash('sha256','different-source-for-account-001'),
+        ]);
+        $sameAccountView=static fn(string $id):array => array_replace($view($id),[
+            'subject_id'=>'account-001',
+        ]);
+        $repeat=$this->candidateFanout->build(
+            $specification,$native,[$sameAccount],$sameAccountView,1,$options,
+            $prior,$priorAccounts,$priorSources,
+        );
+        self::assert($repeat['ready']===false && $repeat['eligible']===0,
+            'A second Candidate for the same Account must not mint another Plan.');
+        $sameSource=array_replace($members[0],[
+            'candidate_id'=>'candidate-052','account_id'=>'account-052',
+        ]);
+        $repeatSource=$this->candidateFanout->build(
+            $specification,$native,[$sameSource],$view,1,$options,
+            $prior,$priorAccounts,$priorSources,
+        );
+        self::assert($repeatSource['ready']===false && $repeatSource['eligible']===0,
+            'Reused external source identity must not mint another Plan.');
         $second=$this->candidateFanout->build(
-            $specification,$native,array_reverse($members),$view,40,$options,$prior,
+            $specification,$native,array_reverse($members),$view,40,$options,
+            $prior,$priorAccounts,$priorSources,
         );
         self::assert($second['ready']===true && count($second['plans'])===40,
             'Incremental 40-candidate proposal must exclude original ten.');
