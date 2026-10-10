@@ -14,23 +14,25 @@ generated: true
 
 | Модуль | Версія | Configuration provisioners | Можливостей |
 | --- | --- | --- | ---: |
-| `capital_markets` | `0.9.0` | — | 35 |
+| `capital_markets` | `0.9.0` | — | 36 |
 | `construction` | `0.1.0` | — | 0 |
 | `diagnostic` | `1.0.0` | — | 5 |
+| `documents` | `0.1.0` | — | 3 |
+| `federation` | `1.0.0` | — | 1 |
 | `finance` | `0.1.0` | — | 0 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 20 |
 | `real_estate` | `1.0.0` | — | 6 |
-| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 10 |
+| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 11 |
 | `service` | `1.0.0` | — | 7 |
 
 ## `capital_markets`
 
 - manifest: `app/Domains/CapitalMarkets/module.php`;
 - configuration provisioners: —;
-- capabilities: `capital_markets.view`, `capital_markets.manage`, `capital_markets.instrument.view`, `capital_markets.instrument.manage`, `capital_markets.relationship.view`, `capital_markets.relationship.manage`, `capital_markets.venue.view`, `capital_markets.venue.manage`, `capital_markets.audit.view`, `capital_markets.market_data.view`, `capital_markets.market_data.manage`, `capital_markets.market_data.source.view`, `capital_markets.market_data.source.manage`, `capital_markets.market_data.quality.view`, `capital_markets.market_data.history.view`, `capital_markets.market_data.replay.manage`, `capital_markets.opportunity.view`, `capital_markets.paper.execute`, `capital_markets.research.view`, `capital_markets.research.manage`, `capital_markets.research.experiment.run`, `capital_markets.strategy.version.manage`, `capital_markets.strategy.promote`, `capital_markets.strategy.demote`, `capital_markets.strategy.reject`, `capital_markets.research.agent.use`, `capital_markets.portfolio.view`, `capital_markets.portfolio.manage`, `capital_markets.risk.view`, `capital_markets.risk.manage_policy`, `capital_markets.allocation.view`, `capital_markets.allocation.propose`, `capital_markets.allocation.approve`, `capital_markets.rebalance.propose`, `capital_markets.rebalance.approve`.
+- capabilities: `capital_markets.research.result.record`, `capital_markets.view`, `capital_markets.manage`, `capital_markets.instrument.view`, `capital_markets.instrument.manage`, `capital_markets.relationship.view`, `capital_markets.relationship.manage`, `capital_markets.venue.view`, `capital_markets.venue.manage`, `capital_markets.audit.view`, `capital_markets.market_data.view`, `capital_markets.market_data.manage`, `capital_markets.market_data.source.view`, `capital_markets.market_data.source.manage`, `capital_markets.market_data.quality.view`, `capital_markets.market_data.history.view`, `capital_markets.market_data.replay.manage`, `capital_markets.opportunity.view`, `capital_markets.paper.execute`, `capital_markets.research.view`, `capital_markets.research.manage`, `capital_markets.research.experiment.run`, `capital_markets.strategy.version.manage`, `capital_markets.strategy.promote`, `capital_markets.strategy.demote`, `capital_markets.strategy.reject`, `capital_markets.research.agent.use`, `capital_markets.portfolio.view`, `capital_markets.portfolio.manage`, `capital_markets.risk.view`, `capital_markets.risk.manage_policy`, `capital_markets.allocation.view`, `capital_markets.allocation.propose`, `capital_markets.allocation.approve`, `capital_markets.rebalance.propose`, `capital_markets.rebalance.approve`.
 
 ## `construction`
 
@@ -43,6 +45,18 @@ generated: true
 - manifest: `app/Domains/Diagnostic/module.php`;
 - configuration provisioners: —;
 - capabilities: `diagnostic.methodology.compile`, `diagnostic.state.rebuild`, `diagnostic.traceability`, `diagnostic.semantic.v1`, `diagnostic.v1`.
+
+## `documents`
+
+- manifest: `app/Domains/Documents/module.php`;
+- configuration provisioners: —;
+- capabilities: `documents.signature.request`, `documents.signature.sign`, `documents.proposal.prepare`.
+
+## `federation`
+
+- manifest: `app/Domains/Federation/module.php`;
+- configuration provisioners: —;
+- capabilities: `federation.plan.approval`.
 
 ## `finance`
 
@@ -84,7 +98,7 @@ generated: true
 
 - manifest: `app/Domains/Sales/module.php`;
 - configuration provisioners: `salesModuleConfigurationProvisioner`;
-- capabilities: `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
+- capabilities: `sales.create_task`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
 
 ## `service`
 

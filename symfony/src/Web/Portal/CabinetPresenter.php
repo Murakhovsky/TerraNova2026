@@ -7,6 +7,7 @@ use App\Web\Portal\ViewModel\CabinetSubmissionStatusViewModel;
 use App\Web\Portal\ViewModel\CabinetViewModel;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
+use Kernel\Tenant\Model\TenantPermissions;
 
 final readonly class CabinetPresenter
 {
@@ -35,6 +36,9 @@ final readonly class CabinetPresenter
                 ['label' => 'Sales Today', 'description' => 'Операційний inbox менеджера на сьогодні.', 'href' => '/sales/today'],
                 ['label' => 'Property Workspace', 'description' => 'Inventory, listing та модерація об’єктів.', 'href' => '/property/manage'],
             );
+            if ($tenant->allows(TenantPermissions::MANAGE)) {
+                $workspaces[] = ['label' => 'COS Goals', 'description' => 'Бізнес-цілі та режими Результат / Процес / Експерт.', 'href' => '/workspace/goals'];
+            }
             $workspaces[] = ['label' => 'Sales', 'description' => 'Ліди, угоди, pipeline та аналітика.', 'href' => '/sales'];
             $workspaces[] = ['label' => 'Client Cases', 'description' => 'Клієнтські кейси, активності та наступні дії.', 'href' => '/client-case'];
             $workspaces[] = ['label' => 'Spatial', 'description' => '3D-сцени, captures та assets.', 'href' => '/spatial/manage'];

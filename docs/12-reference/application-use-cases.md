@@ -19,6 +19,8 @@ generated: true
 | `capital_markets` | 0 |
 | `construction` | 0 |
 | `diagnostic` | 10 |
+| `documents` | 0 |
+| `federation` | 0 |
 | `finance` | 0 |
 | `growth` | 1 |
 | `hr` | 0 |
@@ -50,6 +52,14 @@ generated: true
 | `RecordDiagnosticResult` | `app/Domains/Diagnostic/Application/UseCase/RecordDiagnosticResult.php` |
 | `ReviseDiagnosticPack` | `app/Domains/Diagnostic/Application/UseCase/ReviseDiagnosticPack.php` |
 | `StartDiagnosticSession` | `app/Domains/Diagnostic/Application/UseCase/StartDiagnosticSession.php` |
+
+## Documents (`documents`)
+
+Точок входу Application UseCase не знайдено.
+
+## COS Federation (`federation`)
+
+Точок входу Application UseCase не знайдено.
 
 ## Finance (`finance`)
 

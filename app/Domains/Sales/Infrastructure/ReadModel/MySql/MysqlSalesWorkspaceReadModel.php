@@ -4,9 +4,10 @@ declare(strict_types=1);
 namespace Domains\Sales\Infrastructure\ReadModel\MySql;
 
 use Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface;
+use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
 use PDO;
 
-final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface
+final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface, SalesProposalLeadReadModelInterface
 {
     public function __construct(private PDO $connection)
     {

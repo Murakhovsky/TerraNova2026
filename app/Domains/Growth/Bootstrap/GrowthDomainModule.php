@@ -4,6 +4,10 @@ declare(strict_types=1);
 namespace Domains\Growth\Bootstrap;
 
 use Domains\Growth\Automation\Action\GrowthCallHandler;
+use Domains\Growth\Automation\Action\FederatedMarketDiscoveryHandler;
+use Domains\Growth\Automation\Action\FederatedCandidateQualificationHandler;
+use Domains\Growth\Automation\Action\FederatedSalesHandoffHandler;
+use Domains\Growth\Automation\Action\FederatedPrepareHandoffHandler;
 use Domains\Growth\Automation\Action\GrowthLinkedInHandler;
 use Domains\Growth\Automation\Action\GrowthSendMessageHandler;
 use Domains\Growth\Automation\Event\GrowthEventType;
@@ -28,6 +32,10 @@ final readonly class GrowthDomainModule implements
         private ?GrowthSendMessageHandler $sendMessage=null,
         private ?GrowthLinkedInHandler $linkedIn=null,
         private ?GrowthCallHandler $call=null,
+        private ?FederatedMarketDiscoveryHandler $marketDiscovery=null,
+        private ?FederatedCandidateQualificationHandler $qualifyCandidate=null,
+        private ?FederatedSalesHandoffHandler $salesHandoff=null,
+        private ?FederatedPrepareHandoffHandler $prepareHandoff=null,
     ) {}
 
     public function name():string{return 'growth';}
@@ -39,13 +47,22 @@ final readonly class GrowthDomainModule implements
 
     public function actionTypes():array
     {
-        return [GrowthSendMessageHandler::TYPE,GrowthLinkedInHandler::TYPE,GrowthCallHandler::TYPE];
+        $types=[GrowthSendMessageHandler::TYPE,GrowthLinkedInHandler::TYPE,GrowthCallHandler::TYPE];
+        foreach ([
+            FederatedMarketDiscoveryHandler::TYPE => $this->marketDiscovery,
+            FederatedCandidateQualificationHandler::TYPE => $this->qualifyCandidate,
+            FederatedSalesHandoffHandler::TYPE => $this->salesHandoff,
+            FederatedPrepareHandoffHandler::TYPE => $this->prepareHandoff,
+        ] as $type => $handler) {
+            if ($handler !== null) $types[]=$type;
+        }
+        return $types;
     }
 
     public function actionHandlers():array
     {
         return array_values(array_filter(
-            [$this->sendMessage,$this->linkedIn,$this->call],
+            [$this->sendMessage,$this->linkedIn,$this->call,$this->marketDiscovery,$this->qualifyCandidate,$this->salesHandoff,$this->prepareHandoff],
             static fn(object|null $handler):bool=>$handler!==null,
         ));
     }

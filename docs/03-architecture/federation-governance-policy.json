@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "policy_id": "cos.federation.governance",
+  "owner": "cos.architecture",
+  "rules": [
+    {
+      "id": "FED-INV-01",
+      "description": "Business aggregates have exactly one owning domain.",
+      "scope": "domain",
+      "severity": "error",
+      "check": "ownership_catalog",
+      "exception_policy": "noncritical_timeboxed_only",
+      "owner": "cos.architecture",
+      "version": "1.0.0"
+    },
+    {
+      "id": "FED-INV-02",
+      "description": "Executable capability identity and owner match manifest.",
+      "scope": "capability",
+      "severity": "error",
+      "check": "capability_catalog",
+      "exception_policy": "none",
+      "owner": "cos.architecture",
+      "version": "1.0.0"
+    },
+    {
+      "id": "FED-INV-03",
+      "description": "Cross-domain mutation uses public application contracts.",
+      "scope": "domain",
+      "severity": "error",
+      "check": "cross_domain_dependency_audit",
+      "exception_policy": "none",
+      "owner": "cos.architecture",
+      "version": "1.0.0"
+    },
+    {
+      "id": "FED-INV-07",
+      "description": "Operations use authenticated tenant context.",
+      "scope": "security",
+      "severity": "error",
+      "check": "kernel_tenant_boundaries",
+      "exception_policy": "none",
+      "owner": "cos.security",
+      "version": "1.0.0"
+    },
+    {
+      "id": "FED-INV-09",
+      "description": "Public contracts carry semantic versions and explicit ranges.",
+      "scope": "contract",
+      "severity": "error",
+      "check": "cross_domain_contract_v2",
+      "exception_policy": "noncritical_timeboxed_only",
+      "owner": "cos.architecture",
+      "version": "1.0.0"
+    },
+    {
+      "id": "FED-INV-11",
+      "description": "Experience mode does not grant permissions.",
+      "scope": "experience",
+      "severity": "error",
+      "check": "experience_mode_security",
+      "exception_policy": "none",
+      "owner": "cos.security",
+      "version": "1.0.0"
+    }
+  ],
+  "waivers": []
+}

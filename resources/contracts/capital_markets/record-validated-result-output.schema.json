@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Research result confirmation",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "result_id": {
+      "type": "string"
+    },
+    "status": {
+      "const": "VALIDATED",
+      "type": "string"
+    }
+  }
+}

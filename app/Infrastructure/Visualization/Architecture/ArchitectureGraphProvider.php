@@ -97,13 +97,24 @@ final readonly class ArchitectureGraphProvider implements GraphProviderInterface
                 );
             }
 
+            $executableContracts = [];
+            foreach ($definition->contributions->capabilityContracts as $capabilityContract) {
+                $executableContracts[$capabilityContract->id] = $capabilityContract;
+            }
             foreach ($definition->contributions->capabilities as $capability) {
                 $capabilityId = 'capability:' . $capability;
                 $nodes[$capabilityId] ??= new Node(
                     $capabilityId,
                     ArchitectureGraphVocabulary::TYPE_CAPABILITY,
                     $capability,
-                    metadata: ['capability' => $capability],
+                    metadata: [
+                        'capability' => $capability,
+                        'owner_domain' => $manifest->id,
+                        'version' => $executableContracts[$capability]->version ?? null,
+                        'lifecycle' => $executableContracts[$capability]->lifecycle ?? 'unclassified',
+                        'tests' => $executableContracts[$capability]->tests ?? [],
+                        'source' => $definition->sourcePath,
+                    ],
                 );
                 $this->addEdge(
                     $edges,

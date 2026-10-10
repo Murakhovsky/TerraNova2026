@@ -1,5 +1,9 @@
 parameters:
   env(N8N_WEBHOOK_SECRET): ''
+  env(COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY): '0'
+  env(COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY): '0'
+  env(COS_DOCUMENTS_PROOF_RSA_PUBLIC_KEY): ''
+  env(COS_DOCUMENTS_PROOF_ISSUER): ''
   env(GROWTH_SIGNAL_WEBHOOK_SECRET): ''
   env(GROWTH_SIGNAL_WEBHOOK_ACTOR_ID): '0'
   env(GROWTH_SIGNAL_WEBHOOK_MAX_CLOCK_SKEW): '300'
@@ -402,6 +406,9 @@ services:
       $audit: '@Kernel\Audit\Contract\AuditRepositoryInterface'
 
   Platform\Documents\Contract\DocumentAttachmentPort:
+    alias: Platform\Documents\Service\DocumentsRuntimeService
+
+  Platform\Documents\Contract\DocumentTemplateGenerationPort:
     alias: Platform\Documents\Service\DocumentsRuntimeService
 
   Domains\Property\Infrastructure\ReadModel\MySql\MysqlPropertyReferencePort:
@@ -1153,8 +1160,28 @@ services:
       $actorId: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_ACTOR_ID)%'
       $signalLimit: '%env(int:COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT)%'
 
+  Domains\Growth\Automation\Action\FederatedMarketDiscoveryHandler:
+    arguments:
+      $market: '@Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary'
+
+  Domains\Growth\Automation\Action\FederatedCandidateQualificationHandler:
+    arguments:
+      $decisions: '@Domains\Growth\Application\Contract\GrowthDecisionBoundary'
+
+  Domains\Growth\Automation\Action\FederatedPrepareHandoffHandler:
+    arguments:
+      $growth: '@Domains\Growth\Application\Contract\GrowthApplicationBoundary'
+
+  Domains\Growth\Automation\Action\FederatedSalesHandoffHandler:
+    arguments:
+      $handoffs: '@Domains\Growth\Application\Contract\GrowthHandoffBoundary'
+
   Domains\Growth\Bootstrap\GrowthDomainModule:
     arguments:
+      $marketDiscovery: '@Domains\Growth\Automation\Action\FederatedMarketDiscoveryHandler'
+      $qualifyCandidate: '@Domains\Growth\Automation\Action\FederatedCandidateQualificationHandler'
+      $salesHandoff: '@Domains\Growth\Automation\Action\FederatedSalesHandoffHandler'
+      $prepareHandoff: '@Domains\Growth\Automation\Action\FederatedPrepareHandoffHandler'
       $sendMessage: '@Domains\Growth\Automation\Action\GrowthSendMessageHandler'
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlClientCaseReadModelFactory:
@@ -1169,6 +1196,9 @@ services:
       $connection: '@cos.database.pdo'
 
   Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
+
+  Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface:
     alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesWorkspaceReadModel
 
   App\Application\Experience\Search\Contract\SalesEntitySearchInterface:
@@ -2120,6 +2150,12 @@ services:
       $trading: '@Domains\CapitalMarkets\Application\Contract\CapitalMarketsTradingRepositoryInterface'
       $events: '@Domains\CapitalMarkets\Application\Service\ResearchEventPublisher'
 
+  Domains\CapitalMarkets\Automation\Action\RecordValidatedResearchResultHandler:
+    arguments:
+      $repository: '@Domains\CapitalMarkets\Application\Contract\ResearchLabRepositoryInterface'
+      $lab: '@Domains\CapitalMarkets\Application\Service\ResearchLabService'
+      $origins: '@App\Persistence\Federation\FederationOutcomeOriginRecorder'
+
   Domains\CapitalMarkets\Application\Service\ResearchLabService: ~
 
   Domains\CapitalMarkets\Application\Service\RelativeValueHistoricalReplayService: ~
@@ -2317,11 +2353,57 @@ services:
   Kernel\Process\ProcessRegistryInterface:
     alias: Infrastructure\Process\JsonProcessRegistry
 
+  Domains\Federation\Bootstrap\FederationDomainModule:
+    arguments:
+      $approvalHandler: '@App\Persistence\Federation\FederationPlanApproveHandler'
+
+  Domains\Documents\Application\Service\VerifiedSignatureAttestationVerifier: ~
+
+  App\Persistence\Federation\FederationDocumentSignatureProofInbox:
+    arguments:
+      $documents: '@Platform\Documents\Contract\DocumentsRepositoryInterface'
+      $verifier: '@Domains\Documents\Application\Service\VerifiedSignatureAttestationVerifier'
+      $trustedPublicKeyPem: '%env(string:COS_DOCUMENTS_PROOF_RSA_PUBLIC_KEY)%'
+      $trustedIssuer: '%env(string:COS_DOCUMENTS_PROOF_ISSUER)%'
+
+  Domains\Documents\Application\Service\SignatureRequestService:
+    arguments:
+      $documents: '@Platform\Documents\Service\DocumentsRuntimeService'
+
+  Domains\Documents\Automation\Action\RequestSignatureHandler:
+    arguments:
+      $documents: '@Domains\Documents\Application\Service\SignatureRequestService'
+
+  Domains\Documents\Automation\Action\RecordVerifiedSignatureHandler:
+    arguments:
+      $documents: '@Platform\Documents\Contract\DocumentsRepositoryInterface'
+      $runtime: '@Platform\Documents\Service\DocumentsRuntimeService'
+      $proofs: '@App\Persistence\Federation\FederationDocumentSignatureProofInbox'
+      $origins: '@App\Persistence\Federation\FederationOutcomeOriginRecorder'
+
+  Domains\Documents\Automation\Action\PrepareProposalDraftHandler:
+    arguments:
+      $generator: '@Platform\Documents\Contract\DocumentTemplateGenerationPort'
+      $attachments: '@Platform\Documents\Contract\DocumentAttachmentPort'
+      $handoffs: '@Domains\Growth\Application\Contract\GrowthHandoffBoundary'
+      $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
+
+  Domains\Documents\Bootstrap\DocumentsDomainModule:
+    arguments:
+      $requestSignature: '@Domains\Documents\Automation\Action\RequestSignatureHandler'
+      $recordVerifiedSignature: '@Domains\Documents\Automation\Action\RecordVerifiedSignatureHandler'
+      $prepareProposal: '@Domains\Documents\Automation\Action\PrepareProposalDraftHandler'
+
+  documentsDomainModule:
+    alias: Domains\Documents\Bootstrap\DocumentsDomainModule
+
   Kernel\Module\DomainModuleRegistry:
     arguments:
       $modules:
+        - '@Domains\Federation\Bootstrap\FederationDomainModule'
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
         - '@Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule'
+        - '@Domains\Documents\Bootstrap\DocumentsDomainModule'
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
@@ -2420,6 +2502,7 @@ services:
     arguments:
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $modules: '@Kernel\Module\ActiveModuleResolver'
+      $federation: '@App\Persistence\Federation\FederatedActionAdmission'
 
   Kernel\Action\Service\ActionExecutor:
     arguments:
@@ -2807,6 +2890,22 @@ services:
   Kernel\Module\ModuleCapabilityRegistry:
     arguments:
       $catalog: '@Kernel\Module\ModuleCatalog'
+
+  Kernel\Module\CanonicalCapabilityCatalog:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+
+  Platform\Orchestration\Goal\GoalPlanValidator:
+    arguments:
+      $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'
+
+  Platform\Orchestration\Goal\GoalOutcomeEvaluator: ~
+
+  Platform\Orchestration\Goal\GoalWorkflowBindingGuard: ~
+
+  Platform\Orchestration\Goal\GoalWorkflowProjection: ~
+
+  Platform\Orchestration\Goal\GoalPlanApprovalRequestFactory: ~
 
   Kernel\Module\EffectiveModuleContext:
     arguments:
@@ -3237,6 +3336,119 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Portal\CabinetController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Federation\GoalsWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  Platform\Orchestration\Goal\FederationCandidateFanoutPlanner: ~
+  Platform\Orchestration\Goal\FederationGoalAggregateProjector: ~
+  Platform\Orchestration\Goal\FederationProposalTemplateGuard: ~
+  Platform\Orchestration\Goal\FederationStepCursor: ~
+  Platform\Orchestration\Goal\FederationRecoveryClassifier: ~
+
+  Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Domains\Sales\Application\Contract\SalesHistoricalMetricsReadModelInterface'
+
+  Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesLocalTaskOutcomeReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Sales\Application\Contract\SalesLocalTaskOutcomeReadModelInterface:
+    alias: Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesLocalTaskOutcomeReadModel
+
+  Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider:
+    arguments:
+      $tasks: '@Domains\Sales\Application\Contract\SalesLocalTaskOutcomeReadModelInterface'
+
+  Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthInboundResponseOutcomeReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthInboundResponseOutcomeReadModelInterface:
+    alias: Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthInboundResponseOutcomeReadModel
+
+  Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Domains\Growth\Application\Contract\GrowthInboundResponseOutcomeReadModelInterface'
+
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalResearchValidatedOutcomeReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\CapitalResearchValidatedOutcomeReadModelInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlCapitalResearchValidatedOutcomeReadModel
+
+  Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Domains\CapitalMarkets\Application\Contract\CapitalResearchValidatedOutcomeReadModelInterface'
+
+  Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentSignatureOutcomeReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Platform\Documents\Contract\DocumentSignatureOutcomeReadModelInterface:
+    alias: Infrastructure\Platform\Persistence\MySql\Documents\MysqlDocumentSignatureOutcomeReadModel
+
+  Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider:
+    arguments:
+      $readModel: '@Platform\Documents\Contract\DocumentSignatureOutcomeReadModelInterface'
+
+  Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthRunLinkedResponseReadModel:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Growth\Application\Contract\GrowthRunLinkedResponseReadModelInterface:
+    alias: Domains\Growth\Infrastructure\ReadModel\MySql\MysqlGrowthRunLinkedResponseReadModel
+
+  App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider:
+    arguments:
+      $responses: '@Domains\Growth\Application\Contract\GrowthRunLinkedResponseReadModelInterface'
+
+  App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider:
+    abstract: true
+    autowire: false
+
+  cos.federation.native_origin.research:
+    class: App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider
+    arguments:
+      $ownerDomain: 'capital_markets'
+      $criterionId: 'capital_markets.run_linked_validated_results'
+      $capabilityId: 'capital_markets.research.result.record'
+      $writerReady: '%env(bool:COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY)%'
+
+  cos.federation.native_origin.documents:
+    class: App\Persistence\Federation\FederationNativeRunLinkedOutcomeEvidenceProvider
+    arguments:
+      $ownerDomain: 'documents'
+      $criterionId: 'documents.run_linked_signatures'
+      $capabilityId: 'documents.signature.sign'
+      $writerReady: '%env(bool:COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY)%'
+
+  App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver:
+    arguments:
+      $providers:
+        - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
+        - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
+        - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
+        - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
+        - '@cos.federation.native_origin.research'
+        - '@cos.federation.native_origin.documents'
+        - '@Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider'
+        - '@Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider'
+
+  App\Web\Federation\FederationCandidateFanoutController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Federation\FederationGoalAggregateController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Federation\FederationRunController:
     public: true
     tags: ['controller.service_arguments']
 

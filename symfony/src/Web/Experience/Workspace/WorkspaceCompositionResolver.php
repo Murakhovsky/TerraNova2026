@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Web\Experience\Workspace;
 
 use App\Web\Experience\Action\UIActionPlacement;
+use App\Web\Experience\Adaptive\AdaptiveExperienceResolver;
+use App\Web\Experience\Adaptive\ExperienceContext;
+use App\Web\Experience\Adaptive\ExperienceComposition;
 use App\Web\Experience\Action\UIActionResolver;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Extension\Model\WorkspaceDefinition;
@@ -19,7 +22,35 @@ final readonly class WorkspaceCompositionResolver
     public function __construct(
         private WebExtensionCatalog $extensions,
         private UIActionResolver $actions,
+        private ?AdaptiveExperienceResolver $adaptive = null,
     ) {
+    }
+
+    /**
+     * Optional adaptive projection of an already-resolved, tenant-checked Workspace.
+     * Reuses canonical UIAction objects; never constructs new mutation authority.
+     */
+    public function resolveAdaptive(
+        TenantContext $tenant,
+        WebExtensionContext $context,
+        string $workspaceId,
+        ExperienceContext $experience,
+        ?EntityRef $entity = null,
+    ): ExperienceComposition {
+        if ($experience->organizationId !== $tenant->organizationId()->value()) {
+            throw new LogicException('Adaptive experience tenant differs from authenticated context.');
+        }
+        if ($experience->userId !== $tenant->userId()->value()) {
+            throw new LogicException('Adaptive experience user differs from authenticated context.');
+        }
+        $view = $this->resolve($tenant, $context, $workspaceId, $entity);
+        return ($this->adaptive ?? new AdaptiveExperienceResolver())->compose(
+            $experience,
+            [
+                ...$view->primaryActions, ...$view->secondaryActions,
+                ...$view->mobilePrimaryActions, ...$view->mobileMenuActions,
+            ],
+        );
     }
 
     public function resolve(

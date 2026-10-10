@@ -18,7 +18,7 @@ use Platform\Documents\Event\DocumentsEventType;
 use Platform\Storage\Contract\FileStorageInterface;
 use Throwable;
 
-final readonly class DocumentsRuntimeService implements DocumentAttachmentPort
+final readonly class DocumentsRuntimeService implements DocumentAttachmentPort, \Platform\Documents\Contract\DocumentTemplateGenerationPort
 {
     private const MAX_CONTENT_BYTES = 10_485_760;
 

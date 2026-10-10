@@ -94,6 +94,9 @@ final class TableOwnership
             'tn_capital_market_portfolio_valuation_snapshots',
             'tn_capital_market_nav_financial_evidence',
             'tn_capital_market_paper_nav_snapshots',
+            'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
+            'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
+            'cos_experience_profiles', 'cos_workspace_experience_states',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [

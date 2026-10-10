@@ -1,0 +1,46 @@
+<?php
+declare(strict_types=1);
+
+return [
+    'id' => 'federation',
+    'name' => 'COS Federation',
+    'version' => '1.0.0',
+    'schema_version' => '1.0.0',
+    'kernel_constraint' => '>=0.11.0 <0.12.0',
+    'description' => 'Opt-in canonical Goal Plan approval Action bridge; no duplicate workflow engine.',
+    'icon' => 'network',
+    'dependencies' => [],
+    'enabled_by_default' => false,
+    'contributions' => [
+        'runtime_module_service' => 'federationDomainModule',
+        'capabilities' => ['federation.plan.approval'],
+        'capability_contracts' => [
+            [
+                'id' => 'federation.plan.approval',
+                'version' => '1.0.0',
+                'owner_domain' => 'federation',
+                'kind' => 'command',
+                'input_schema' => 'resources/contracts/federation/plan-approval-input.schema.json',
+                'output_schema' => 'resources/contracts/federation/plan-approval-output.schema.json',
+                'execution_binding' => 'action:cos.federation.plan.approval',
+                'async' => true,
+                'side_effect_level' => 'internal',
+                'permission' => 'cos.tenant.manage',
+                'approval_policy' => 'required',
+                'idempotency' => 'required',
+                'timeout_policy' => ['seconds' => 60],
+                'retry_policy' => ['max_attempts' => 1],
+                'failure_contract' => 'Do not start Workflow or retry external operations; failed approval remains observable.',
+                'lifecycle' => 'experimental',
+                'tests' => ['tests/unit/federation_plan_approval_request.php',
+                            'tests/architecture/federation_execution_authorization.php'],
+                'documentation' => 'docs/02-workflows/federation-goal-plan-approval.md',
+            ],
+        ],
+        'job_handler_services' => [],
+        'api_route_contributor_services' => [],
+        'configuration_provisioner_services' => [],
+        'extension_services' => [],
+        'migration_files' => [],
+    ],
+];

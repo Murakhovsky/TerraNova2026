@@ -93,6 +93,8 @@ jobs:
           docker compose run --rm --no-deps php sh -c 'test -r /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv && test "$(wc -l < /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv)" -eq 81'
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Federation tenant-persistence smoke
+        run: docker compose exec -T php php bin/console cos:federation:persistence:smoke
       - name: Capital Markets paper NAV persistence integration
         run: |
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "

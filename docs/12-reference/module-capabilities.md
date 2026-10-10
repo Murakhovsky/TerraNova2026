@@ -23,6 +23,8 @@ generated: true
 | `capital_markets` | Capital Markets | `0.9.0` | `0.9.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/CapitalMarkets/module.php` |
 | `construction` | Construction | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Construction/module.php` |
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
+| `documents` | Documents | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Documents/module.php` |
+| `federation` | COS Federation | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Federation/module.php` |
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
@@ -69,6 +71,7 @@ generated: true
 - `capital_markets.research.agent.use`;
 - `capital_markets.research.experiment.run`;
 - `capital_markets.research.manage`;
+- `capital_markets.research.result.record`;
 - `capital_markets.research.view`;
 - `capital_markets.risk.manage_policy`;
 - `capital_markets.risk.view`;
@@ -111,6 +114,36 @@ Manifest capabilities не задекларовані.
 - `diagnostic.state.rebuild`;
 - `diagnostic.traceability`;
 - `diagnostic.v1`;
+
+## Documents (`documents`)
+
+**Опис із manifest:** Tenant-owned document signature request Actions backed by the canonical Platform Documents runtime. A request never means a verified signed document.
+
+- runtime service модуля: `documentsDomainModule`;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+- `documents.proposal.prepare`;
+- `documents.signature.request`;
+- `documents.signature.sign`;
+
+## COS Federation (`federation`)
+
+**Опис із manifest:** Opt-in canonical Goal Plan approval Action bridge; no duplicate workflow engine.
+
+- runtime service модуля: `federationDomainModule`;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: —.
+
+### Задекларовані capabilities
+
+- `federation.plan.approval`;
 
 ## Finance (`finance`)
 
@@ -331,6 +364,7 @@ Manifest capabilities не задекларовані.
 - `sales.admin.rules.manage`;
 - `sales.admin.teams.manage`;
 - `sales.admin.view`;
+- `sales.create_task`;
 - `sales.director.view`;
 - `sales.workspace.use`;
 

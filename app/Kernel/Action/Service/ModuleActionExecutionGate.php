@@ -5,6 +5,7 @@ namespace Kernel\Action\Service;
 
 use Kernel\Action\Action;
 use Kernel\Action\Contract\ActionExecutionGateInterface;
+use Kernel\Action\Contract\FederatedActionAdmissionInterface;
 use Kernel\Execution\ExecutionFailureException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\DomainModuleRegistry;
@@ -14,6 +15,7 @@ final readonly class ModuleActionExecutionGate implements ActionExecutionGateInt
     public function __construct(
         private DomainModuleRegistry $domains,
         private ActiveModuleResolver $modules,
+        private ?FederatedActionAdmissionInterface $federation = null,
     ) {
     }
 
@@ -32,6 +34,13 @@ final readonly class ModuleActionExecutionGate implements ActionExecutionGateInt
                 $moduleId,
                 $action->organizationId,
             ));
+        }
+        if ($action->idempotencyKey !== null
+            && str_starts_with($action->idempotencyKey, 'fed:')) {
+            if ($this->federation === null) {
+                throw ExecutionFailureException::policyDenied('Federation Action admission is not installed.');
+            }
+            $this->federation->assertAuthorized($action);
         }
     }
 }

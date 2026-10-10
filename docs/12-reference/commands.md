@@ -21,6 +21,8 @@ generated: true
 | `capital_markets` | 0 |
 | `construction` | 0 |
 | `diagnostic` | 1 |
+| `documents` | 0 |
+| `federation` | 0 |
 | `finance` | 0 |
 | `growth` | 0 |
 | `hr` | 0 |
@@ -43,6 +45,14 @@ generated: true
 | Command | Джерело |
 | --- | --- |
 | `StartDiagnosticSessionCommand` | `app/Domains/Diagnostic/Application/DTO/StartDiagnosticSessionCommand.php` |
+
+## Documents (`documents`)
+
+Явних `*Command` DTO contracts не знайдено.
+
+## COS Federation (`federation`)
+
+Явних `*Command` DTO contracts не знайдено.
 
 ## Finance (`finance`)
 
