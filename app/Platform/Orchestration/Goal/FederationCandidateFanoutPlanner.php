@@ -39,6 +39,8 @@ final readonly class FederationCandidateFanoutPlanner
         int $requested,
         array $options,
         array $excludedCandidateIds = [],
+        array $excludedAccountIds = [],
+        array $excludedSourceHashes = [],
     ): array {
         if ($requested < 1 || $requested > self::MAX_CANDIDATES) {
             throw new DomainException('Fan-out size must be between 1 and 50.');
@@ -52,6 +54,15 @@ final readonly class FederationCandidateFanoutPlanner
                 throw new DomainException('Duplicate or invalid existing Goal Candidate.');
             }
             $excluded[$candidateId] = true;
+        }
+        // Re-discovery may mint a new Candidate ID for the same native
+        // Account or external source. Across batches these identities are
+        // already reserved and must not generate duplicate Sales leads.
+        $excludedAccounts = self::exclusions($excludedAccountIds, 'account');
+        $excludedSources = self::exclusions($excludedSourceHashes, 'source');
+        if (count($excludedAccounts) > count($excluded)
+            || count($excludedSources) > count($excluded)) {
+            throw new DomainException('Existing Account/Source snapshot exceeds Candidate capacity.');
         }
         if ($requested > self::MAX_CANDIDATES - count($excluded)) {
             throw new DomainException('Requested candidates exceed remaining Goal capacity.');
@@ -143,7 +154,8 @@ final readonly class FederationCandidateFanoutPlanner
                 continue; // Never use unproven or stale discovery membership.
             }
             if (isset($seenCandidates[$candidateId]) || isset($seenAccounts[$accountId])
-                || isset($seenSources[$sourceHash])) {
+                || isset($seenSources[$sourceHash]) || isset($excludedAccounts[$accountId])
+                || isset($excludedSources[$sourceHash])) {
                 continue;
             }
             $candidate = $viewCandidate($candidateId);
@@ -251,6 +263,23 @@ final readonly class FederationCandidateFanoutPlanner
             'business_outcome_verified' => false,
             'reason' => $ready ? null : 'insufficient_scored_candidates',
         ];
+    }
+
+    /** @param list<string> $values @return array<string,true> */
+    private static function exclusions(array $values, string $type): array
+    {
+        if (!array_is_list($values) || count($values) > self::MAX_CANDIDATES) {
+            throw new DomainException('Malformed or unbounded existing ' . $type . ' snapshot.');
+        }
+        $seen = [];
+        foreach ($values as $value) {
+            if (!is_string($value) || $value === '' || isset($seen[$value])
+                || ($type === 'source' && !preg_match('/^[a-f0-9]{64}$/D', $value))) {
+                throw new DomainException('Duplicate or invalid existing ' . $type . ' identity.');
+            }
+            $seen[$value] = true;
+        }
+        return $seen;
     }
 
     private static function instant(mixed $date): ?int
