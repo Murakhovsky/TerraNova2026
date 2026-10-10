@@ -158,7 +158,7 @@ final readonly class FederationCandidateFanoutService
         $options['source_federation_step'] = $sourceStepId;
         // Read-only eligibility must exclude candidates already proposed for
         // this tenant Goal, even when they are rediscovered in a later scan.
-        $existingCandidates = $this->existingCandidates($org, $goalId);
+        $existing = $this->existingIdentities($org, $goalId);
         $preview = $this->planner->build(
             $specification, $native, $brief['memberships'],
             function (string $id) use ($org): ?array {
@@ -188,7 +188,8 @@ final readonly class FederationCandidateFanoutService
                 $candidate['lead_email'] = trim((string)$champion['identity_value']);
                 return $candidate;
             },
-            $requested, $options, $existingCandidates,
+            $requested, $options,
+            $existing['candidates'], $existing['accounts'], $existing['sources'],
         );
         // The native renderer only performs exact {{key}} replacement. Never
         // propose a document that would retain unknown or empty placeholders.
@@ -202,7 +203,9 @@ final readonly class FederationCandidateFanoutService
             'source_run_id' => $sourceRunId,
             'source_step_id' => $sourceStepId,
             'native_discovery_run_id' => $nativeRunId,
-            'existing_candidate_ids' => $existingCandidates,
+            'existing_candidate_ids' => $existing['candidates'],
+            'existing_account_ids' => $existing['accounts'],
+            'existing_source_hashes' => $existing['sources'],
         ] + $preview;
     }
 
@@ -235,11 +238,15 @@ final readonly class FederationCandidateFanoutService
             if ($goalLock === false) {
                 throw new DomainException('Goal vanished during fan-out proposal.');
             }
-            $actualExisting = $this->existingCandidates($org,$goalId);
-            if ($actualExisting !== $preview['existing_candidate_ids']) {
+            $actualExisting = $this->existingIdentities($org,$goalId);
+            if ($actualExisting !== [
+                'candidates'=>$preview['existing_candidate_ids'],
+                'accounts'=>$preview['existing_account_ids'],
+                'sources'=>$preview['existing_source_hashes'],
+            ]) {
                 throw new DomainException('Concurrent candidate Plan proposal changed Goal capacity; preview must be repeated.');
             }
-            if (count($actualExisting) + count($plans) > FederationCandidateFanoutPlanner::MAX_CANDIDATES) {
+            if (count($actualExisting['candidates']) + count($plans) > FederationCandidateFanoutPlanner::MAX_CANDIDATES) {
                 throw new DomainException('Goal already has too many candidate Plans.');
             }
             // cos_federation_plans enforces UNIQUE(tenant,goal,plan_version).
@@ -272,43 +279,53 @@ final readonly class FederationCandidateFanoutService
     }
 
     /**
-     * Read-only, fail-closed identity snapshot of all prior fan-out plans.
-     * The caller's tenant and Goal identity are never sourced from Plan JSON.
+     * Read-only, fail-closed identity snapshot of all previous child Plans.
+     * Candidate, Account and external-source identities must all remain
+     * unique across separate discovery runs and incremental fan-out batches.
      *
-     * @return list<string>
+     * @return array{candidates:list<string>,accounts:list<string>,sources:list<string>}
      */
-    private function existingCandidates(string $organizationId, string $goalId): array
+    private function existingIdentities(string $organizationId, string $goalId): array
     {
         $rows = $this->db->fetchAllAssociative(
             'SELECT plan_json FROM cos_federation_plans
              WHERE organization_id = :org AND goal_id = :goal ORDER BY plan_id',
             ['org'=>$organizationId,'goal'=>$goalId],
         );
-        $seen = [];
+        $seen = ['candidates'=>[], 'accounts'=>[], 'sources'=>[]];
         foreach ($rows as $row) {
             $snapshot = json_decode((string)$row['plan_json'], true, 512, JSON_THROW_ON_ERROR);
             if (!is_array($snapshot)) {
                 throw new DomainException('Invalid tenant Goal Plan snapshot.');
             }
             $lineage = $snapshot['lineage'] ?? null;
-            if ($lineage === null) continue;
-            if (!is_array($lineage) || ($lineage['schema_version'] ?? null) !== 1
-                || !is_string($lineage['candidate_id'] ?? null)
-                || trim($lineage['candidate_id']) === '') {
-                throw new DomainException('Unrecognized fan-out Plan lineage; manual reconciliation required.');
+            if ($lineage === null) continue; // Parent discovery is not a candidate.
+            if (!is_array($lineage) || ($lineage['schema_version'] ?? null) !== 1) {
+                throw new DomainException('Unrecognized fan-out lineage; manual reconciliation required.');
             }
-            $candidate = $lineage['candidate_id'];
-            if (isset($seen[$candidate])) {
-                throw new DomainException('Goal already has duplicated fan-out Candidate lineage.');
+            $identities = [
+                'candidates'=>$lineage['candidate_id'] ?? null,
+                'accounts'=>$lineage['account_id'] ?? null,
+                'sources'=>$lineage['source_hash'] ?? null,
+            ];
+            foreach ($identities as $kind=>$identity) {
+                if (!is_string($identity) || $identity === ''
+                    || ($kind === 'sources' && !preg_match('/^[a-f0-9]{64}$/D',$identity))
+                    || isset($seen[$kind][$identity])) {
+                    throw new DomainException('Duplicate or invalid existing Goal ' . $kind . ' identity.');
+                }
+                $seen[$kind][$identity] = true;
             }
-            $seen[$candidate] = true;
         }
-        $ids = array_keys($seen);
-        sort($ids, SORT_STRING);
-        if (count($ids) > FederationCandidateFanoutPlanner::MAX_CANDIDATES) {
-            throw new DomainException('Goal candidate plan capacity exceeded.');
+        $result = [];
+        foreach ($seen as $kind=>$identities) {
+            $result[$kind] = array_keys($identities);
+            sort($result[$kind], SORT_STRING);
+            if (count($result[$kind]) > FederationCandidateFanoutPlanner::MAX_CANDIDATES) {
+                throw new DomainException('Goal identity capacity exceeded.');
+            }
         }
-        return $ids;
+        return $result;
     }
 
     private static function manager(TenantContext $actor): void
