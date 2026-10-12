@@ -42,6 +42,15 @@ $assert($reject(fn()=>$protocol->decode('{"op":"subscribe","success":true,"req_i
 $assert($protocol->decode('{"op":"subscribe","success":true,"req_id":"cm-bybit-linear-6"}',$now)['kind']==='ack',
     'New generation ACK rejected.');
 $assert($protocol->decode($book(201),$now)['kind']==='quote','New generation did not recover.');
+$assert($reject(fn()=>$protocol->decode(str_replace('"type":"snapshot"','"type":"delta"',$book(202)),$now)),
+    'Derivative level-one channel must reject L2-like deltas.');
+$assert($reject(fn()=>$protocol->decode(str_replace('"s":"BTCUSDT"','"s":"ETHUSDT"',$book(203)),$now)),
+    'Perpetual BBO of another instrument accepted.');
+$assert($reject(fn()=>$protocol->decode(str_replace('"ts":'.$ts,'"ts":1',$book(204)),$now)),
+    'Stale Bybit provider timestamp must be rejected.');
+$assert($reject(fn()=>$protocol->decode('{"topic":"orderbook.1.BTCUSDT","type":"snapshot","data":[]}', $now)),
+    'Missing one-sided market book accepted.');
+
 $assert($protocol->decode($book(1),$now)['kind']==='reset','Provider restart must revoke old book.');
 $assert($protocol->decode('{"success":true,"ret_msg":"pong","op":"ping"}',$now)['kind']==='pong',
     'JSON ping/pong response not recognized.');

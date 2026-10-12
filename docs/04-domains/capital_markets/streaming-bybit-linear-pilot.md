@@ -6,7 +6,7 @@ kind: engineering
 updated: 2026-10-13
 ---
 
-# Bybit Linear Perpetual: WebSocket BBO
+# Потоковий BBO для безстрокових контрактів Bybit Linear
 
 Пілот працює з публічним каналом `orderbook.1.{symbol}` на `wss://stream.bybit.com/v5/public/linear`. Для контрактів linear перший рівень книги передається **повними знімками**, зокрема повторним знімком після трьох секунд без змін. Це джерело BBO, а не підтверджена багаторівнева книга заявок.
 
