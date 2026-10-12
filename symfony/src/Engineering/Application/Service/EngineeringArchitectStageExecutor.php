@@ -186,6 +186,21 @@ final readonly class EngineeringArchitectStageExecutor
             ],
         );
 
+        $this->journal->event(
+            $featureId,
+            $workflowId,
+            'RUNTIME',
+            'architect.preflight_evidence_ready',
+            'COMPLETED',
+            'Architect read-only repository and database evidence prepared.',
+            $correlationId,
+            [
+                'repository_revision' => $repositoryRevision,
+                'repository_file_count' => count($repositoryFiles),
+                'schema_sections' => array_keys($databaseSchema),
+            ],
+        );
+
         $humanDecisionHistory = array_slice(array_values(array_filter(
             $this->humanDecisions->historyForFeature($featureId),
             static fn (array $decision): bool =>
@@ -268,14 +283,32 @@ final readonly class EngineeringArchitectStageExecutor
             ],
         );
 
-        $engineeringRunId = $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $task, $correlationId): string {
-            $workflow = $this->workflows->get($workflowId);
-            if ($workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
-                throw new WorkflowAlreadyRunningException('Architect stage can run only from ARCHITECTURE_PENDING.');
-            }
-            $this->tasks->markRole($featureId, AgentRole::PRINCIPAL_ARCHITECT, 'RUNNING');
-            return $this->agentRuns->start($workflowId, $task, $correlationId);
-        });
+        try {
+            $engineeringRunId = $this->journal->around(
+                $featureId,
+                $workflowId,
+                'AGENT',
+                'architect.agent_run_start',
+                'Create Principal Architect AgentRun after read-only evidence collection',
+                $correlationId,
+                fn (): string => $this->lock->synchronized($featureId, function () use ($featureId, $workflowId, $task, $correlationId): string {
+                    $workflow = $this->workflows->get($workflowId);
+                    if ($workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
+                        throw new WorkflowAlreadyRunningException('Architect stage can run only from ARCHITECTURE_PENDING.');
+                    }
+                    $this->tasks->markRole($featureId, AgentRole::PRINCIPAL_ARCHITECT, 'RUNNING');
+                    return $this->agentRuns->start($workflowId, $task, $correlationId);
+                }),
+                details: static fn (string $runId): array => ['agent_run_id' => $runId],
+            );
+        } catch (\Throwable $error) {
+            $this->workflows->markRuntimeIssue(
+                $workflowId,
+                'STALLED',
+                'Architect AgentRun start failed after repository/database evidence: '.mb_substr($error->getMessage(), 0, 500),
+            );
+            throw $error;
+        }
 
         try {
             $evidencePolicy = new EngineeringArchitectEvidenceAuthorization();
