@@ -1960,6 +1960,27 @@ services:
   Domains\CapitalMarkets\Application\Contract\MarketDataProviderAvailabilityInterface:
     alias: Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability
 
+  # CM-STREAM-BINANCE pilot; feature-gated, no automatic production activation.
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingWorkerLease:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\StreamingWorkerLeaseInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingWorkerLease
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingTrustInvalidator:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\StreamingTrustInvalidatorInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingTrustInvalidator
+
+  Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
 
   Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~

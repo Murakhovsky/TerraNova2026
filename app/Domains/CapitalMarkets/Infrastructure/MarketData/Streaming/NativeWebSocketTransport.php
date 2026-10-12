@@ -28,6 +28,7 @@ final class NativeWebSocketTransport implements StreamingWorkerTransportInterfac
         private readonly \Closure $subscribeFrames,
         private readonly \Closure $onMessage,
         private readonly int $maxMessageBytes=2097152,
+        private readonly ?\Closure $onControl=null,
     ){
         $parsed=parse_url($url);
         if(!is_array($parsed)||($parsed['scheme']??'')!=='wss'
@@ -130,7 +131,11 @@ final class NativeWebSocketTransport implements StreamingWorkerTransportInterfac
         if($opcode>=8){
             if(!$fin||$length>125)throw new RuntimeException('Invalid control frame.');
             if($opcode===8)throw new RuntimeException('WebSocket server closed connection.');
-            if($opcode===9)$this->send(0xA,$payload);
+            if($opcode===9){
+                $this->send(0xA,$payload);
+                if($this->onControl!==null)($this->onControl)('PING',$generation);
+            }
+            if($opcode===10 && $this->onControl!==null)($this->onControl)('PONG',$generation);
             return true;
         }
         if($opcode===1){

@@ -40,6 +40,7 @@ final readonly class StreamingWorkerRunner
         callable $stopRequested,
         callable $onTick,
         int $leaseSeconds=30,int $renewMilliseconds=5000,int $pollMilliseconds=200,
+        ?callable $onLeaseAcquired=null,
     ):string{
         if($renewMilliseconds<50||$renewMilliseconds>($leaseSeconds*1000/2) ||
            $pollMilliseconds<1||$pollMilliseconds>$renewMilliseconds){
@@ -52,6 +53,7 @@ final readonly class StreamingWorkerRunner
         $status='STOPPED';
         $owned=true;
         try{
+            if($onLeaseAcquired!==null)$onLeaseAcquired($token);
             // A worker restart begins with stale data: never implicitly trust
             // retained current state before the new snapshot is validated.
             $this->invalidator->invalidate($organizationId,$sourceId,$shard,$workerId,$token,'SESSION_RESTART');
