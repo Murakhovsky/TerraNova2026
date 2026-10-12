@@ -1,7 +1,18 @@
-# Native WebSocket transport (experimental, disabled)
+---
+title: Захищений транспорт WebSocket
+description: Можливості та обмеження початкового транспортного шару для потокових ринкових даних.
+status: draft
+kind: engineering
+---
 
-Generic TLS-only RFC6455 transport created for streaming worker integration. Provides TLS verification, handshake validation, masked outbound frames, bounded inbound frames, message fragmentation, ping reply, close detection, and callback delivery to a provider decoder.
+# Захищений транспорт WebSocket
 
-**Not production ready.** There is no provider channel adapter, endpoint allowlist, per-provider heartbeat scheduler, read timeout/reconnect policy integration, raw event ingestion wiring or executable CLI command. Public URL hostname must come from a *separate trusted allowlist*, never tenant-supplied input. Frame handling must undergo protocol/interoperability tests (including partial reads/writes and all provider control frames). Current implementation handles text frames, not binary compression. Worker feature flag remains OFF.
+Створено транспорт із перевіркою TLS, підтвердженням початкового з'єднання, маскуванням вихідних повідомлень, обмеженням розміру кадрів, обробкою текстових фрагментів, сигналами ping/pong та виявленням закриття з'єднання.
 
-Do not describe this infrastructure class as an active Binance/Bybit/Kraken/Massive connector.
+Транспорт не визначає самостійно, чи можна довіряти котируванню. Це рішення приймають компоненти перевірки протоколу, якості та цілісності ринкових даних.
+
+## Передумови промислового використання
+
+Адреси підключення дозволено брати лише з перевіреного переліку провайдерів. Не можна приймати довільні адреси від користувача. Потрібні інтеграційні тести з неповними мережевими записами, таймаутами, контрольними кадрами, некоректними повідомленнями та повторними підключеннями.
+
+Двійкові стиснуті повідомлення цей початковий транспорт не обробляє. Поза пілотом Binance ще не готові адаптери відповідних біржових каналів. Прапорець потокового режиму залишається вимкненим за замовчуванням.

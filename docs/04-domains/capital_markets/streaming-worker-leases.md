@@ -1,12 +1,20 @@
-# Streaming worker lease (implementation slice)
+---
+title: Оренда потокових процесів та захист запису
+description: Транзакційне керування власником потоку та захист від застарілих процесів.
+status: draft
+kind: engineering
+---
 
-The MySQL lease is intended for a future supervised worker.
+# Оренда потокових процесів та захист запису
 
-- Lease key: organization, MarketSourceId, logical shard.
-- Acquiring uses transaction + row lock and increments fencing token even if the same owner reacquires.
-- Renew succeeds only while the same owner/token is unexpired. Losing ownership must close the session and revoke its trust.
-- Expiry is calculated in database UTC time; no local-clock trust.
-- Fencing token MUST be validated at the current-state durable write boundary, not just before opening a socket. This boundary is **not yet integrated**.
-- An owner lease does not verify a provider event or assert market-data integrity.
+Для одного поєднання організації, джерела та сегмента потоку допускається лише один поточний власник lease.
 
-**Safety:** Do not activate streaming. No long-running WebSocket runtime or provider integration is shipped in this slice. Apply the additive SQL migration via the standard module migration registry once reviewed.
+Отримання права виконується у транзакції MySQL із блокуванням рядка. Кожне повторне отримання збільшує `fencing_token`, навіть якщо ідентифікатор процесу не змінився. Продовження права допускається лише до закінчення терміну дії та за умови збігу власника й токена.
+
+Час завершення права визначається за годинником бази даних. Для потокового приймання використовується транзакція, яка утримує блокування lease до завершення запису стану.
+
+## Невирішені умови
+
+При втраті права процес повинен закрити з'єднання та припинити публікацію. Окремий механізм контролю повинен виявляти загибель процесу, коли він уже не може самостійно скинути довіру.
+
+Оренда не підтверджує цілісність біржових повідомлень. Промислове використання заборонене до завершення перевірок запису стану й протоколів.

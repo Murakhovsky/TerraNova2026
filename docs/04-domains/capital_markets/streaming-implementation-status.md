@@ -1,24 +1,27 @@
 ---
-title: Production streaming implementation status
+title: Стан впровадження потокових ринкових даних
+description: Фактична готовність компонентів потокового обміну та обмеження перед промисловим запуском.
 status: draft
-updated: 2026-10-12
 kind: engineering
+updated: 2026-10-12
 ---
 
-# CM-PRODUCTION-STREAMING implementation status
+# Стан впровадження потокових ринкових даних
 
-Source of truth: GitHub issue #360 and draft PR #361.
+Джерела контролю: завдання GitHub №360 та чернетка запиту на злиття №361.
 
-## Delivered as code, not yet integrated
-- Fail-closed StreamingRecoveryGate and session generation fencing.
-- StreamingSubscriptionReconciler for desired versus acknowledged subscriptions.
-- StreamingHeartbeatWatchdog for independent protocol liveness and market-data activity.
-- StreamingSubscriptionPlanner reading current tenant-scoped persistent subscriptions.
-- StreamingSessionCoordinator composing these components without opening sockets.
-- Standalone unit and architecture test scripts (not yet verified as executed).
+## Створені компоненти
 
-## Not delivered
-No live WebSocket transport, provider codec/reconstruction, persistent lease, process supervisor, durable recovery checkpoints, MarketState invalidation, data-plane persistence integration, health/readiness endpoint, production monitoring, soak evidence or connected provider tests. The coordinator's trusted() result cannot authorize MarketState publication without integration and provider-specific protocol evidence.
+Реалізовано машину станів відновлення, контроль поколінь підключення, узгодження підписок, контроль heartbeat і часу останнього повідомлення, читання підписок із наявного сховища, керування lease та захищені транзакційні операції.
 
-## Deployment safeguard
-`capital_markets.market_data.streaming.enabled` remains OFF. REST/polling is unchanged. Do not promote streaming to production or remove this disclaimer until verified worker integration and full protocol QA exist.
+Додано початковий WebSocket-транспорт та пілотний адаптер Binance Spot BBO для одного інструмента. Створені модульні й архітектурні тести не замінюють виконання інтеграційних перевірок.
+
+## Незавершені компоненти
+
+Немає завершеного відновлення ордербука, перевіреного промислового циклу перепідключення, адаптерів усіх провайдерів, повноцінної системи інцидентів та незалежного контролю неактивних процесів. Не підтверджено тривале тестування з реальними котируваннями.
+
+Результат окремого контролера стану не може самостійно дозволяти запис довірених котирувань без перевірки протоколу й власника lease.
+
+## Умови розгортання
+
+Прапорець `capital_markets.market_data.streaming.enabled` залишається вимкненим. REST-опитування не змінено. Промисловий запуск можливий лише після перевірених тестів безпеки, відновлення й приймання.
