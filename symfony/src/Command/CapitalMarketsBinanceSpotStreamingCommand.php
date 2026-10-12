@@ -159,6 +159,7 @@ final class CapitalMarketsBinanceSpotStreamingCommand extends Command
                     $session->tick($epoch,$clock(),true);
                 },
                 30,5000,200,static function(int $token)use(&$leaseToken):void{$leaseToken=$token;},
+                $source->reconnectPolicy,
             );
             $output->writeln(json_encode([
                 'status'=>$status,'accepted'=>$accepted,'source'=>$sourceName,'symbol'=>$symbol,

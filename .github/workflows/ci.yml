@@ -55,3 +55,13 @@ jobs:
           find app symfony/src tests/architecture tests/unit -type f -name '*.php' ! -path 'tests/history/*' -print0 | xargs -0 -n1 php -l
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: Capital Markets streaming core, reconnect and Binance protocol acceptance
+        run: |
+          php tests/unit/capital_markets_streaming_recovery_gate.php
+          php tests/unit/capital_markets_streaming_supervision.php
+          php tests/unit/capital_markets_streaming_session_coordinator.php
+          php tests/unit/capital_markets_streaming_reconnect_runner.php
+          php tests/unit/capital_markets_binance_spot_bbo_protocol.php
+          php tests/architecture/capital_markets_stream_runner_contract.php
+          php tests/architecture/capital_markets_binance_spot_streaming_contract.php
+          php tests/architecture/capital_markets_streaming_core_contract.php
