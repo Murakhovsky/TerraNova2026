@@ -22,6 +22,7 @@ $proto=new BinanceUsdmBboProtocol(
 $frames=$proto->subscribeFrames(['src|BTCUSDT|BBO'],5);
 $frame=json_decode($frames[0],true,32,JSON_THROW_ON_ERROR);
 $ok(($frame['params'][0]??null)==='btcusdt@bookTicker','Wrong Binance USD-M channel.');
+$ok(($frame['id']??null)==='cm-usdm-5','Binance USD-M subscribe ID must be a string.');
 $now=new DateTimeImmutable('2026-10-12T12:00:00+00:00');
 $millis=$now->getTimestamp()*1000;
 $payload=static fn(int $u,?int $st=1,string $symbol='BTCUSDT',string $bid='65000.123456789123'):
@@ -30,7 +31,7 @@ $payload=static fn(int $u,?int $st=1,string $symbol='BTCUSDT',string $bid='65000
         's'=>$symbol,'st'=>$st,'b'=>$bid,'B'=>'1.01','a'=>'65001.00','A'=>'0.5',
     ],JSON_THROW_ON_ERROR);
 $ok($reject(fn()=>$proto->decode($payload(101),$now)),'Pre-ACK data should be rejected.');
-$ok($proto->decode('{"result":null,"id":5}',$now)['kind']==='ack','Subscribe ACK rejected.');
+$ok($proto->decode('{"result":null,"id":"cm-usdm-5"}',$now)['kind']==='ack','Subscribe ACK rejected.');
 $quote=$proto->decode($payload(101),$now);
 $ok($quote['kind']==='quote','USD-M event not accepted.');
 $ok($quote['raw']->eventType==='binance.usdm.ticker.bbo','Futures/spot canonical route conflated.');
@@ -48,9 +49,9 @@ $ok($reject(fn()=>$proto->decode($payload(104,1,'BTCUSDT','not-a-price'),$now)),
     'Invalid future bid accepted.');
 $ok($reject(fn()=>$proto->decode($payload(100),$now)),'Out-of-order futures update accepted.');
 $proto->subscribeFrames(['src|BTCUSDT|BBO'],6);
-$ok($reject(fn()=>$proto->decode('{"result":null,"id":5}',$now)),
+$ok($reject(fn()=>$proto->decode('{"result":null,"id":"cm-usdm-5"}',$now)),
     'Prior generation Binance Futures ACK accepted.');
-$ok($proto->decode('{"result":null,"id":6}',$now)['kind']==='ack','New generation ACK failed.');
+$ok($proto->decode('{"result":null,"id":"cm-usdm-6"}',$now)['kind']==='ack','New generation ACK failed.');
 $ok($proto->decode($payload(10),$now)['kind']==='quote','Reconnected generation never recovered.');
 $stale=new DateTimeImmutable('2026-10-12T12:10:00+00:00');
 $ok($reject(fn()=>$proto->decode($payload(11),$stale)),'Stale futures timestamp accepted.');

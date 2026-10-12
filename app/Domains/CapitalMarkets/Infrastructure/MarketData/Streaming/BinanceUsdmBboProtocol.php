@@ -21,7 +21,7 @@ use JsonException;
  */
 final class BinanceUsdmBboProtocol
 {
-    private ?int $pendingId=null;
+    private ?string $pendingId=null;
     private bool $acknowledged=false;
     private ?string $lastUpdateId=null;
 
@@ -45,13 +45,13 @@ final class BinanceUsdmBboProtocol
         if($keys!==[$this->subscriptionKey]||$generation<1){
             throw new DomainException('Binance USD-M pilot requires one mapped BBO subscription.');
         }
-        $this->pendingId=$generation;
+        $this->pendingId='cm-usdm-'.$generation;
         $this->acknowledged=false;
         $this->lastUpdateId=null;
         return [json_encode([
             'method'=>'SUBSCRIBE',
             'params'=>[strtolower($this->symbol).'@bookTicker'],
-            'id'=>$generation,
+            'id'=>$this->pendingId,
         ],JSON_THROW_ON_ERROR)];
     }
 
@@ -62,7 +62,7 @@ final class BinanceUsdmBboProtocol
         catch(JsonException){throw new DomainException('Malformed Binance USD-M websocket JSON.');}
         if(!is_array($row)||array_is_list($row))throw new DomainException('Invalid Binance futures websocket message.');
         if(array_key_exists('id',$row)){
-            if($this->pendingId===null||(string)$row['id']!==(string)$this->pendingId
+            if($this->pendingId===null||!is_string($row['id'])||$row['id']!==$this->pendingId
                 ||!array_key_exists('result',$row)||$row['result']!==null
                 ||isset($row['code'])||isset($row['error'])||$this->acknowledged){
                 throw new DomainException('Binance USD-M subscribe ACK mismatch.');
