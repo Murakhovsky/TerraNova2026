@@ -5,6 +5,7 @@ namespace Domains\CapitalMarkets\Infrastructure\MarketData\Streaming;
 
 use DateTimeImmutable;
 use DomainException;
+use Domains\CapitalMarkets\Application\Contract\StreamingTrustInvalidatorInterface;
 use PDO;
 use Throwable;
 
@@ -16,7 +17,7 @@ use Throwable;
  * A prior owner is forbidden to invalidate a new owner's state: fencing.
  * The coordinator must invoke this on disconnect/staleness or lease loss.
  */
-final readonly class StreamingTrustInvalidator
+final readonly class StreamingTrustInvalidator implements StreamingTrustInvalidatorInterface
 {
     public function __construct(private PDO $pdo){}
 

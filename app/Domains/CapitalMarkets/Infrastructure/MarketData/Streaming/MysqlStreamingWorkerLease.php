@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Infrastructure\MarketData\Streaming;
 
 use DomainException;
+use Domains\CapitalMarkets\Application\Contract\StreamingWorkerLeaseInterface;
 use PDO;
 use RuntimeException;
 use Throwable;
@@ -15,7 +16,7 @@ use Throwable;
  * must invalidate source trust when losing ownership. The lease is NOT a
  * substitute for per-instrument sequence integrity.
  */
-final readonly class MysqlStreamingWorkerLease
+final readonly class MysqlStreamingWorkerLease implements StreamingWorkerLeaseInterface
 {
     public function __construct(private PDO $pdo){}
 
