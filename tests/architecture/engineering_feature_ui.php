@@ -122,4 +122,18 @@ if (!str_contains($commands, "'core.engineering'")) {
     throw new RuntimeException('Engineering command palette entry missing.');
 }
 
+// Engineering artifacts, agent I/O and action details must render human-readable
+// Ukrainian JSON instead of escaped \\uXXXX sequences. This is presentation-only.
+$jsonUnicodeFlags = "json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE'))";
+if (substr_count($template, $jsonUnicodeFlags) !== 6) {
+    throw new RuntimeException('Engineering JSON panels must render all six views with readable Unicode.');
+}
+if (str_contains($template, "json_encode(constant('JSON_PRETTY_PRINT'))")) {
+    throw new RuntimeException('Engineering still renders escaped Unicode JSON in a panel.');
+}
+$jsonExample = json_encode(['назва' => 'Привіт, Україно'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+if ($jsonExample === false || !str_contains($jsonExample, 'Привіт, Україно') || str_contains($jsonExample, '\\\\u')) {
+    throw new RuntimeException('Human-readable JSON Unicode contract failed.');
+}
+
 echo "Engineering feature UI contract passed.\n";
