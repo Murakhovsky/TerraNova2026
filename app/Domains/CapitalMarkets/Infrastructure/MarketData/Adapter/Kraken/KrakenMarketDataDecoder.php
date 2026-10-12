@@ -27,6 +27,7 @@ final readonly class KrakenMarketDataDecoder implements MarketDataDecoderInterfa
 
         return match($event->eventType){
             'kraken.spot.ticker.bbo'=>$this->bbo($event,$body,$timestamp,$status),
+            'kraken.spot.ws.ticker.bbo'=>$this->websocketBbo($event,$body,$timestamp,$status),
             'kraken.spot.ticker.volume'=>$this->volume($event,$body,$timestamp,$status),
             'kraken.spot.depth.snapshot'=>$this->book($event,$body,$timestamp,$status),
             default=>throw new InvalidArgumentException('Unsupported Kraken event type: '.$event->eventType),
@@ -40,6 +41,28 @@ final readonly class KrakenMarketDataDecoder implements MarketDataDecoderInterfa
             MarketEventType::Bbo,$event->externalInstrument,$timestamp,$event->sequence,
             ['bid_price'=>$ticker['bid'],'bid_quantity'=>$ticker['bid_size'],'ask_price'=>$ticker['ask'],'ask_quantity'=>$ticker['ask_size']],
             $event->mode,$status,MarketSession::Unknown,ReferenceType::ProviderReference
+        );
+    }
+
+    /** Streaming feed delivers canonical decimal strings, not REST ticker arrays. */
+    private function websocketBbo(
+        RawMarketEvent $event,string $body,\DateTimeImmutable $timestamp,MarketStatus $status,
+    ):DecodedMarketEvent{
+        try{$row=json_decode($body,true,32,JSON_THROW_ON_ERROR);}
+        catch(\JsonException){throw new InvalidArgumentException('Invalid Kraken WebSocket BBO.');}
+        if(!is_array($row)||array_is_list($row))throw new InvalidArgumentException('Invalid Kraken BBO object.');
+        $values=[];
+        foreach(['bid'=>'bid_price','bid_qty'=>'bid_quantity','ask'=>'ask_price','ask_qty'=>'ask_quantity'] as $field=>$output){
+            $value=$row[$field]??null;
+            if(!is_string($value)||preg_match('/^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$/D',$value)!==1
+                ||preg_match('/^0+(?:\\.0+)?$/D',$value)===1){
+                throw new InvalidArgumentException('Invalid Kraken BBO decimal evidence.');
+            }
+            $values[$output]=$value;
+        }
+        return new DecodedMarketEvent(
+            MarketEventType::Bbo,$event->externalInstrument,$timestamp,null,$values,
+            $event->mode,$status,MarketSession::Unknown,ReferenceType::ProviderReference,
         );
     }
 
