@@ -77,6 +77,14 @@ final class NativeWebSocketTransport implements StreamingWorkerTransportInterfac
         $this->epoch=$generation;
     }
 
+    /** Public feed heartbeat, used by Bybit JSON-level ping. */
+    public function sendText(string $payload,int $generation):void
+    {
+        $this->assertEpoch($generation);
+        if(strlen($payload)>4096)throw new RuntimeException('Provider control message too large.');
+        $this->send(0x1,$payload);
+    }
+
     public function subscribe(array $keys,int $generation):void
     {
         $this->assertEpoch($generation);
