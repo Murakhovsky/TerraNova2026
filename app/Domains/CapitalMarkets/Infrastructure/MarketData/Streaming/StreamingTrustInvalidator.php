@@ -45,7 +45,7 @@ final readonly class StreamingTrustInvalidator implements StreamingTrustInvalida
             foreach(['tn_capital_market_states','tn_capital_market_reference_states'] as $table){
                 $sql='SELECT '.($table==='tn_capital_market_states'?'venue_id,':'').
                     'instrument_id,state_json FROM '.$table.
-                    ' WHERE organization_id=:org AND source_id=:source AND trust_status=\'TRUSTED\' FOR UPDATE';
+                    ' WHERE organization_id=:org AND source_id=:source AND trust_status IN (\'TRUSTED\',\'DEGRADED\') FOR UPDATE';
                 $select=$this->pdo->prepare($sql);
                 $select->execute(['org'=>$organizationId,'source'=>$sourceId]);
                 foreach($select->fetchAll(PDO::FETCH_ASSOC) as $row){
@@ -72,7 +72,7 @@ final readonly class StreamingTrustInvalidator implements StreamingTrustInvalida
                         :' AND instrument_id=:instrument';
                     $update=$this->pdo->prepare('UPDATE '.$table.' SET state_json=:json,trust_status=\'UNTRUSTED\',
                         quality_score=0,state_version=:version,updated_at=UTC_TIMESTAMP(6)
-                        WHERE organization_id=:org AND source_id=:source'.$where.' AND trust_status=\'TRUSTED\'');
+                        WHERE organization_id=:org AND source_id=:source'.$where.' AND trust_status IN (\'TRUSTED\',\'DEGRADED\')');
                     $params=['json'=>json_encode($state,JSON_THROW_ON_ERROR),
                         'version'=>$state['state_version'],'org'=>$organizationId,'source'=>$sourceId,
                         'instrument'=>$row['instrument_id']];
@@ -81,6 +81,15 @@ final readonly class StreamingTrustInvalidator implements StreamingTrustInvalida
                     $changed+=$update->rowCount();
                 }
             }
+            // Current-state rows and source liveness must degrade atomically.
+            $health=$this->pdo->prepare(
+                'UPDATE tn_capital_market_source_health
+                 SET connection_state=\'DEGRADED\',last_error=:reason,
+                     failure_count=failure_count+1,error_count=error_count+1
+                 WHERE organization_id=:org AND source_id=:source'
+            );
+            $health->execute(['reason'=>'STREAM_'.$reason,'org'=>$organizationId,'source'=>$sourceId]);
+
             $this->pdo->commit();
             return $changed;
         }catch(Throwable $failure){

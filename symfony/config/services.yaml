@@ -1981,6 +1981,10 @@ services:
     arguments:
       $pdo: '@cos.database.pdo'
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlBinanceStreamingExpiredLeaseSweeper:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
 
   Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~
