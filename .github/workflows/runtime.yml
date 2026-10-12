@@ -93,6 +93,13 @@ jobs:
           docker compose run --rm --no-deps php sh -c 'test -r /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv && test "$(wc -l < /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv)" -eq 81'
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Capital Markets REST-vs-WS MySQL two-connection race
+        run: |
+          docker compose cp tests/integration/capital_markets_rest_stream_writer_gate_mysql.php php:/tmp/cm-rest-ws-race.php
+          docker compose exec -T \
+            -e COS_CM_WRITER_GATE_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-rest-ws-race.php
       - name: Capital Markets paper NAV persistence integration
         run: |
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
