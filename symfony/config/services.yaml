@@ -1965,6 +1965,14 @@ services:
     alias: Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability
 
   # CM-STREAM-BINANCE pilot; feature-gated, no automatic production activation.
+  # REST-vs-WS writer arbitration: source sentinel shares the worker-lease table.
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlMarketSourceWriterGate:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketSourceRestWriterGateInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlMarketSourceWriterGate
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingWorkerLease:
     arguments:
       $pdo: '@cos.database.pdo'

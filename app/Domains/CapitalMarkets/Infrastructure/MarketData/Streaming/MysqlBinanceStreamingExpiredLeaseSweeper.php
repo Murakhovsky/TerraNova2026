@@ -45,6 +45,9 @@ final readonly class MysqlBinanceStreamingExpiredLeaseSweeper
         $fenceToken=null;
         $this->pdo->beginTransaction();
         try{
+            // Same ordering as REST publication and lease acquisition:
+            // source sentinel first, stream shard second.
+            MysqlMarketSourceWriterGate::lockSource($this->pdo,$organizationId,$sourceId);
             $lock=$this->pdo->prepare(
                 'SELECT owner_id,fencing_token FROM tn_capital_market_stream_worker_leases
                  WHERE organization_id=:org AND source_id=:source AND shard_key=:shard

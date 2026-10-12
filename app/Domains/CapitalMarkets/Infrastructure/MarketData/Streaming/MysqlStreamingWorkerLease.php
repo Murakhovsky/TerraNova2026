@@ -32,8 +32,14 @@ final readonly class MysqlStreamingWorkerLease implements StreamingWorkerLeaseIn
         int $ttlSeconds=30,
     ):?int{
         $this->validate($organizationId,$sourceId,$shard,$workerId,$ttlSeconds);
+        if($shard===MysqlMarketSourceWriterGate::SOURCE_GUARD_SHARD){
+            throw new DomainException('Reserved source guard cannot be acquired as a worker shard.');
+        }
         $this->pdo->beginTransaction();
         try{
+            // Serialize lease acquisition with REST canonical writes. Lock
+            // source before shard to preserve a single global lock order.
+            MysqlMarketSourceWriterGate::lockSource($this->pdo,$organizationId,$sourceId);
             // The unique key ensures one row, even for simultaneous first
             // acquisition attempts. Both read and mutation share a row lock.
             $insert=$this->pdo->prepare(
