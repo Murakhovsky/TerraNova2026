@@ -2,6 +2,7 @@
 title: Захищений транспорт WebSocket
 description: Можливості та обмеження початкового транспортного шару для потокових ринкових даних.
 status: draft
+updated: 2026-10-12
 kind: engineering
 ---
 

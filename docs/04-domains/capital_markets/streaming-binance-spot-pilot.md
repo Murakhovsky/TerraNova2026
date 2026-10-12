@@ -2,6 +2,7 @@
 title: Пілот потокових котирувань Binance Spot
 description: Безпечний запуск одного потоку BBO Binance із контролем джерела, підписок та цілісності даних.
 status: draft
+updated: 2026-10-12
 kind: engineering
 ---
 
