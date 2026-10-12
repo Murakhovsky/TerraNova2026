@@ -63,6 +63,7 @@ jobs:
           php tests/unit/capital_markets_streaming_reconnect_runner.php
           php tests/unit/capital_markets_binance_spot_bbo_protocol.php
           php tests/unit/capital_markets_bybit_spot_bbo_protocol.php
+          php tests/unit/capital_markets_bybit_linear_bbo_protocol.php
           php tests/unit/capital_markets_kraken_spot_ticker_protocol.php
           php tests/unit/capital_markets_binance_usdm_bbo_protocol.php
           php tests/architecture/capital_markets_stream_runner_contract.php
@@ -70,5 +71,6 @@ jobs:
           php tests/architecture/capital_markets_streaming_core_contract.php
           php tests/architecture/capital_markets_stream_expired_sweeper_contract.php
           php tests/architecture/capital_markets_bybit_spot_streaming_contract.php
+          php tests/architecture/capital_markets_bybit_linear_streaming_contract.php
           php tests/architecture/capital_markets_kraken_streaming_contract.php
           php tests/architecture/capital_markets_binance_usdm_streaming_contract.php
