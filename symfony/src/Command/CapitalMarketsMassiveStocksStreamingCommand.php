@@ -127,6 +127,7 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
             $token=0;
             $accepted=0;
             $transport=null;
+            $lastPing=$clock();
             $transport=new NativeWebSocketTransport(
                 $mode===MarketDataMode::Live
                     ?'wss://socket.massive.com/stocks'
@@ -177,6 +178,10 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
                         if($stored->status==='ACCEPTED')$accepted++;
                     }
                 },
+                2097152,
+                function(string $kind,int $epoch)use($session,$clock):void{
+                    if($kind==='PONG')$session->pong($epoch,$clock());
+                },
             );
             $stop=false;
             if(function_exists('pcntl_async_signals')){
@@ -190,10 +195,15 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
                 static function()use(&$stop,$clock,$seconds,$started):bool{
                     return $stop||($seconds>0&&$clock()-$started>=$seconds*1000);
                 },
-                static function(int $epoch)use($session,$clock):void{
-                    // No assumption about exchange trading hours. Connection
-                    // liveness and source quote ages remain separate concerns.
-                    $session->tick($epoch,$clock(),false);
+                static function(int $epoch)use($session,$clock,$transport,&$lastPing):void{
+                    $now=$clock();
+                    if($now-$lastPing>=25000){
+                        $transport->sendPing($epoch);
+                        $lastPing=$now;
+                    }
+                    // A real PONG is required even outside trading hours;
+                    // market message inactivity is evaluated separately.
+                    $session->tick($epoch,$now,false);
                 },
                 30,5000,200,static function(int $value)use(&$token):void{$token=$value;},
                 $source->reconnectPolicy,

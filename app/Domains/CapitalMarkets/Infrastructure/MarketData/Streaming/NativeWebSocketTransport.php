@@ -85,6 +85,13 @@ final class NativeWebSocketTransport implements StreamingWorkerTransportInterfac
         $this->send(0x1,$payload);
     }
 
+    /** Request a real WebSocket PONG as independent transport liveness proof. */
+    public function sendPing(int $generation):void
+    {
+        $this->assertEpoch($generation);
+        $this->send(0x9,'cm');
+    }
+
     public function subscribe(array $keys,int $generation):void
     {
         $this->assertEpoch($generation);

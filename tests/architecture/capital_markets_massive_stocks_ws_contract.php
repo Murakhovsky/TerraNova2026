@@ -27,7 +27,7 @@ foreach(['COS_CM_STREAMING_MASSIVE_STOCKS_PILOT','MarketDataMassive',
     'MarketDataStreaming','TokenizedEquity','MarketSourceCredentialResolver',
     'ReferenceSource','TradingSource','MASSIVE_STOCKS_WS_Q_LIVE',
     'MASSIVE_STOCKS_WS_Q_DELAYED','wss://socket.massive.com/stocks',
-    'wss://delayed.massive.com/stocks','StreamingFencedIngestionGateway'] as $required){
+    'wss://delayed.massive.com/stocks','StreamingFencedIngestionGateway','sendPing(','kind===\'PONG\''] as $required){
     if(!str_contains($command,$required))throw new RuntimeException('Massive source guard missing '.$required);
 }
 if(!str_contains($sweeper,'massive-stocks-single-bbo')
