@@ -71,6 +71,7 @@ jobs:
           php tests/architecture/capital_markets_streaming_core_contract.php
           php tests/architecture/capital_markets_stream_expired_sweeper_contract.php
           php tests/architecture/capital_markets_stream_all_provider_sweeper_contract.php
+          php tests/architecture/capital_markets_stream_sweeper_profile_contract.php
           php tests/architecture/capital_markets_rest_stream_writer_gate_contract.php
           php tests/unit/capital_markets_market_intelligence_polling.php
           php tests/architecture/capital_markets_bybit_spot_streaming_contract.php

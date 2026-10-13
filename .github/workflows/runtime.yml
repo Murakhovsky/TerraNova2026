@@ -80,6 +80,8 @@ jobs:
           php tests/integration/capital_markets_decision_workspace_manager_acceptance.php
       - name: Compose validation
         run: docker compose config --quiet
+      - name: Validate optional Capital Markets streaming lease monitor
+        run: docker compose --profile cm-stream-sweeper config --quiet
       - name: Build runtime
         run: docker compose build php nginx
       - name: Start dependencies

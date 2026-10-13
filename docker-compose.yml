@@ -193,6 +193,22 @@ services:
     healthcheck: { disable: true }
     networks: [backend]
 
+  # OFF by default. Explicit profile only; never enables market streaming.
+  cm-stream-sweeper:
+    profiles: [cm-stream-sweeper]
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["sh", "-ec", "while true; do php bin/console cos:capital-markets:market-data:stream:sweep-expired --limit=100; sleep 60; done"]
+    environment:
+      <<: *app-environment
+      COS_CM_STREAM_SWEEPER_ENABLED: "1"
+    depends_on:
+      mysql: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [backend]
+
   spatial-worker:
     image: cos-symfony-php:local
     restart: unless-stopped

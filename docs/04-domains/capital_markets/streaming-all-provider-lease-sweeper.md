@@ -28,7 +28,20 @@ COS_CM_STREAM_SWEEPER_ENABLED=1 php symfony/bin/console cos:capital-markets:mark
 COS_CM_STREAM_SWEEPER_ENABLED=1 php symfony/bin/console cos:capital-markets:market-data:stream:sweep-expired --organization=ORG_ID --limit=100
 ```
 
-Оператор може налаштувати запуск через окремий cron або системний таймер приблизно раз на хвилину. **Автоматичне створення cron/timer ще не реалізовано**, тому вважати моніторинг запущеним без налаштування інфраструктури не можна.
+Для Docker Compose додано **окремий profile**, який не запускається разом із типовим COS. Щоб ввімкнути регулярну перевірку (раз на 60 секунд), адміністратор явно запускає:
+
+```bash
+docker compose --profile cm-stream-sweeper up -d cm-stream-sweeper
+docker compose logs -f cm-stream-sweeper
+```
+
+Сервіс запускає команду з внутрішнім дозволом лише в цьому opt-in profile. Якщо інвалідація повернула помилку, процес завершується з ненульовим кодом і Docker перезапускає його. Оператору потрібно контролювати перезапуски, помилки та насичення `--limit`. Зупинити моніторинг:
+
+```bash
+docker compose --profile cm-stream-sweeper stop cm-stream-sweeper
+```
+
+Для інших середовищ підходить окремий cron або системний таймер приблизно раз на хвилину. **У production profile ще не активований автоматично.**
 
 Відповідь містить лічильники `examined`, `invalidated`, `skipped`, `failed`. При ненульовому `failed` команда завершується помилкою. Високе значення `examined` на межі `--limit` може свідчити про затримку сканування; потрібна операційна сигналізація.
 
