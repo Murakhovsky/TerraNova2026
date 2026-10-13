@@ -60,4 +60,5 @@ jobs:
           php tests/unit/capital_markets_runtime_agent_team.php
           php tests/architecture/capital_markets_runtime_agent_team_contract.php
           php tests/architecture/capital_markets_agent_cycle_journal_contract.php
+          php tests/architecture/capital_markets_agent_cycle_status_contract.php
 

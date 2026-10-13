@@ -61,6 +61,15 @@ COS_CM_RUNTIME_AGENT_TEAM=1 php symfony/bin/console cos:capital-markets:agents:c
   --question="Ідентичне питання, як у першому запуску"
 ```
 
+Перевірити стан без нового LLM-виклику можна через read-only CLI:
+
+```bash
+COS_CM_RUNTIME_AGENT_TEAM=1 php symfony/bin/console \
+  cos:capital-markets:agents:status ORG_ID ПОПЕРЕДНІЙ_CORRELATION_ID
+```
+
+Команда повертає фактичний стан журналу, кількість спроб, список завершених етапів, їхні `run_id` та наступну дію. Показує тільки дані вказаної організації, не викликає жодного агента. Команда доступна лише для операторів із доступом до контейнера.
+
 Для `AWAITING_EXECUTION_EVIDENCE` та `FAILED` можна виконувати `--resume` після людської перевірки. Для `RUNNING` аварійне відновлення доступне лише після щонайменше 30 хвилин без нового checkpoint і тільки з явним `--resume`. Кожен старий власник відхиляється власним owner-token CAS. Перевірки MarketState, Risk Envelope та approval **виконуються знову** під час resume, навіть якщо LLM-етап було checkpointed.
 
 Увага: якщо LLM або дозволений Research Tool завершився безпосередньо перед записом checkpoint і процес аварійно зник, наступний запуск може повторити його. Тому це гарантія **at-least-once із захистом журналу, не exactly-once side effects**. Автоматичний таймер recovery не вмикаємо до окремої перевірки.
