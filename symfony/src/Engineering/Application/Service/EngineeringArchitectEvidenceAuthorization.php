@@ -11,7 +11,7 @@ use RuntimeException;
  */
 final class EngineeringArchitectEvidenceAuthorization
 {
-    public const MAX_ROUNDS = 2;
+    public const MAX_ROUNDS = 4;
     public const MAX_FILES_PER_ROUND = 6;
     public const MAX_ADDITIONAL_FILES = 12;
 

@@ -66,8 +66,8 @@ foreach ([
     }
 }
 
-if (EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS !== 2) {
-    throw new RuntimeException('Architect evidence rerun limit was accidentally changed.');
+if (EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS !== 4) {
+    throw new RuntimeException('Architect evidence rerun budget must allow four bounded read-only rounds.');
 }
 
 echo "Engineering Architect read-only evidence authorization passed.\n";
