@@ -30,7 +30,7 @@ updated: 2026-10-13
 1. Модуль Capital Markets повинен бути активний саме для організації, яка здійснює виклик.
 2. Після Observe мають існувати зареєстровані джерела й хоча б один справді `TRUSTED` / `LIVE` MarketState або ReferenceMarketState. Delayed і stale дані не відкривають шлях до угод.
 3. Detect проходить далі тільки з уже збереженою й не відхиленою Opportunity за потрібним ID.
-4. Assess / Allocate вимагають наявних Risk Snapshot, Risk Envelope, Capital State та Allocation Plan від детермінованої системи.
+4. Assess / Allocate вимагають наявних Risk Snapshot, Risk Envelope, Capital State та Allocation Plan від детермінованої системи. До розгляду виконання допускаються лише Opportunity зі статусом APPROVED/RESERVED/EXECUTING/EXECUTED та збереженим позитивним RiskDecision (APPROVE або APPROVE_WITH_LIMIT); для нових ордерів також перевіряється expires_at.
 5. Навіть після позитивної рекомендації `Execution Agent` виконання не створюється: процес повертає `AWAITING_EXECUTION_EVIDENCE`. Для переходу на Measure потрібен уже збережений **фіналізований paper execution** цього Opportunity.
 6. Будь-яке `BLOCKED` від агента також зупиняє цикл. Агентська рекомендація ніколи не може скасувати рішення детермінованого gate.
 7. Кожен новий агент має `allowedActionTypes=[]`, `maxActionsPerRun=0`, `configurationManaged=false` і validator. Tool request-и для нових агентів заборонені. Research/Portfolio зберігають попередню керовану двопрохідну логіку.

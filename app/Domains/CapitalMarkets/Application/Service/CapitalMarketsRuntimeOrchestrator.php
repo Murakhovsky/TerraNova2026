@@ -95,6 +95,12 @@ final readonly class CapitalMarketsRuntimeOrchestrator
         if(end($stages)['decision']==='BLOCKED'){
             return $this->stopped($correlationId,$stages,'AGENT_ASSESS_BLOCKED');
         }
+        // Persisted risk decision on THIS opportunity must be affirmative.
+        // An unrelated portfolio RiskEnvelope can never approve the trade.
+        $problem=$this->gates->paperReadiness(
+            $this->trading->getOpportunity($organizationId,$opportunityId)
+        );
+        if($problem!==null)return $this->stopped($correlationId,$stages,$problem);
         $problem=$this->gates->risk($this->capitalRisk->workspace($organizationId));
         if($problem!==null)return $this->stopped($correlationId,$stages,$problem);
 

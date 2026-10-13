@@ -63,6 +63,25 @@ $assert($gates->opportunity(null)==='OPPORTUNITY_NOT_PERSISTED',
     'Opportunity missing from DB did not block.');
 $assert($gates->opportunity(['status'=>'REJECTED'])==='OPPORTUNITY_NOT_ELIGIBLE',
     'Rejected opportunity passed deterministic gate.');
+$assert($gates->paperReadiness([
+    'status'=>'APPROVED','risk'=>['decision'=>'STOP'],
+    'expires_at'=>date(DATE_ATOM,time()+3600),
+])==='PERSISTED_OPPORTUNITY_RISK_REJECTED_OR_MISSING',
+    'Risk STOP falsely authorized downstream allocation.');
+$assert($gates->paperReadiness([
+    'status'=>'APPROVED','risk'=>['decision'=>'APPROVE'],
+    'expires_at'=>date(DATE_ATOM,time()-3600),
+])==='OPPORTUNITY_EXPIRED_BEFORE_PAPER_REVIEW',
+    'Expired approved opportunity was allowed into paper review.');
+$assert($gates->paperReadiness([
+    'status'=>'VALID','risk'=>['decision'=>'APPROVE'],
+    'expires_at'=>date(DATE_ATOM,time()+3600),
+])==='OPPORTUNITY_NOT_APPROVED_BY_RISK_ENGINE',
+    'Unapproved candidate passed the deterministic gate.');
+$assert($gates->paperReadiness([
+    'status'=>'APPROVED','risk'=>['decision'=>'APPROVE_WITH_LIMIT'],
+    'expires_at'=>date(DATE_ATOM,time()+3600),
+])===null,'Valid risk-limited paper review was rejected.');
 $assert($gates->risk(['risk'=>[],'risk_envelope'=>[]])
     ==='DETERMINISTIC_RISK_ENVELOPE_MISSING','Missing risk envelope was approved.');
 $assert($gates->risk(['risk'=>['x'=>1],'risk_envelope'=>['x'=>1],

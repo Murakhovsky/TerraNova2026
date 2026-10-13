@@ -50,6 +50,29 @@ final class CapitalMarketsRuntimeEvidenceGate
         return null;
     }
 
+    /** @param array<string,mixed>|null $opportunity */
+    public function paperReadiness(?array $opportunity):?string
+    {
+        if($opportunity===null)return 'OPPORTUNITY_NOT_PERSISTED';
+        $status=strtoupper((string)($opportunity['status']??''));
+        if(!in_array($status,['APPROVED','RESERVED','EXECUTING','EXECUTED'],true)){
+            return 'OPPORTUNITY_NOT_APPROVED_BY_RISK_ENGINE';
+        }
+        $assessment=$opportunity['risk']??null;
+        if(!is_array($assessment)||!in_array(strtoupper((string)($assessment['decision']??'')),
+            ['APPROVE','APPROVE_WITH_LIMIT'],true)){
+            return 'PERSISTED_OPPORTUNITY_RISK_REJECTED_OR_MISSING';
+        }
+        if(in_array($status,['APPROVED','RESERVED'],true)){
+            $expiry=$opportunity['expires_at']??null;
+            $expiresAt=is_string($expiry)?strtotime($expiry):false;
+            if($expiresAt===false||$expiresAt<=time()){
+                return 'OPPORTUNITY_EXPIRED_BEFORE_PAPER_REVIEW';
+            }
+        }
+        return null;
+    }
+
     /** @param array<string,mixed> $portfolio */
     public function risk(array $portfolio):?string
     {

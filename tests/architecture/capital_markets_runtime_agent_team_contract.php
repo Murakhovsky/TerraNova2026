@@ -28,7 +28,7 @@ foreach(["'Observe'","'Research'","'Detect'","'Assess'","'Allocate'","'Execute'"
     $pos=$i;
 }
 foreach(['gates->observation','gates->opportunity','gates->risk',
-    'gates->measuredExecution','getExecutionForOpportunity',
+    'gates->measuredExecution','gates->paperReadiness','getExecutionForOpportunity',
     'AgentRuntime','CapitalMarketsResearchAgentService','CapitalMarketsPortfolioAgentService',
     'PAPER_EXECUTION_PENDING_HUMAN_APPROVAL'] as $check){
     if(!str_contains($orchestrator,$check)&&$check!=='PAPER_EXECUTION_PENDING_HUMAN_APPROVAL'){
