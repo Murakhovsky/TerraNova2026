@@ -509,7 +509,7 @@
                                     {% if run.input_snapshot|default([]) is not empty %}
                                         <details class="engineering-details" style="margin:8px 0">
                                             <summary>Вхідний контекст агента</summary>
-                                            <div class="engineering-agent-output">{{ run.input_snapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                            <div class="engineering-agent-output">{{ run.input_snapshot|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                         </details>
                                     {% endif %}
                                     {% if run.runtime_steps|default([]) is not empty %}
@@ -521,11 +521,11 @@
                                                     {% if step.error|default('') %}<div class="engineering-danger">{{ step.error }}</div>{% endif %}
                                                     {% if step.input|default([]) is not empty %}
                                                         <div class="engineering-muted">Вхід</div>
-                                                        <div class="engineering-agent-output">{{ step.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                        <div class="engineering-agent-output">{{ step.input|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                                     {% endif %}
                                                     {% if step.output|default([]) is not empty %}
                                                         <div class="engineering-muted">Вихід</div>
-                                                        <div class="engineering-agent-output">{{ step.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                        <div class="engineering-agent-output">{{ step.output|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                                     {% endif %}
                                                 </details>
                                             {% endfor %}
@@ -538,7 +538,7 @@
                                     {% endif %}
                                     <details class="engineering-details" style="margin-top:6px">
                                         <summary>Структурований результат</summary>
-                                        <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
+                                        <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) : 'Structured output відсутній.' }}</div>
                                     </details>
                                     <div class="engineering-muted">trace: {{ run.trace_id|default('n/a') }}</div>
                                 </details>
@@ -624,7 +624,7 @@
                                 {% if event.details is not empty %}
                                     <details class="engineering-details">
                                         <summary>Деталі</summary>
-                                        <div class="engineering-agent-output">{{ event.details|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                        <div class="engineering-agent-output">{{ event.details|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                     </details>
                                 {% elseif not event.error %}
                                     <span class="engineering-muted">—</span>
@@ -703,7 +703,7 @@
                 {% for type, artifact in engineering.artifacts %}
                     <details class="engineering-details" style="margin-top:8px">
                         <summary>{{ type }} · v{{ artifact.version|default('?') }}</summary>
-                        <div class="engineering-agent-output">{{ artifact.content ? artifact.content|json_encode(constant('JSON_PRETTY_PRINT')) : 'No content' }}</div>
+                        <div class="engineering-agent-output">{{ artifact.content ? artifact.content|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) : 'No content' }}</div>
                     </details>
                 {% else %}
                     <p class="engineering-muted">Artifacts ще не створені.</p>
