@@ -12,6 +12,10 @@ foreach ([
     'symfony/src/Web/Experience/Governance/ProductUxGovernanceReport.php',
     'symfony/src/Web/Experience/Governance/ProductUxGovernanceService.php',
     'symfony/src/Web/Experience/Governance/ProductUxContextProvider.php',
+    'symfony/src/Web/Experience/Governance/UxDebtRegistry.php',
+    'symfony/src/Web/Experience/Governance/DesignSystemGapRegistry.php',
+    'symfony/src/Command/ExperienceUxDebtCommand.php',
+    'symfony/src/Command/ExperienceDesignSystemGapsCommand.php',
     'symfony/src/Command/ExperienceProductGovernanceCommand.php',
 ] as $file) {
     if (!is_file($root.'/'.$file)) {
@@ -75,6 +79,7 @@ foreach ([
     'product_ux',
     'ProductUxContextProvider',
     'Use Product UX personas, journeys and canonical terminology',
+    'design_system_gap_policy',
 ] as $marker) {
     if (!str_contains($context.$builder.$workflow, $marker)) {
         throw new RuntimeException('Autonomous UI delivery is missing Product UX context: '.$marker);

@@ -14,6 +14,8 @@ final readonly class ProductUxContextProvider
         #[Autowire('%kernel.project_dir%/../resources/experience/personas.yaml')] private string $personasManifest,
         #[Autowire('%kernel.project_dir%/../resources/experience/journeys.yaml')] private string $journeysManifest,
         #[Autowire('%kernel.project_dir%/../resources/experience/terminology.yaml')] private string $terminologyManifest,
+        private UxDebtRegistry $uxDebt,
+        private DesignSystemGapRegistry $designSystemGaps,
     ) {}
 
     /** @return array<string,mixed> */
@@ -58,6 +60,9 @@ final readonly class ProductUxContextProvider
             'personas' => $personas,
             'journeys' => $journeys,
             'terminology' => $terms,
+            'ux_debt' => $this->uxDebt->forPage($page),
+            'design_system_gap_policy' => $this->designSystemGaps->policy(),
+            'design_system_gaps' => $this->designSystemGaps->forPage($page),
         ];
     }
 
