@@ -201,9 +201,11 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
                         $transport->sendPing($epoch);
                         $lastPing=$now;
                     }
-                    // A real PONG is required even outside trading hours;
-                    // market message inactivity is evaluated separately.
-                    $session->tick($epoch,$now,false);
+                    // No verified US session calendar yet: fail closed after
+                    // market-message silence, even when WebSocket PONGs arrive.
+                    // This can stop the pilot after hours; never preserve
+                    // an indefinitely trusted quote merely because TLS is up.
+                    $session->tick($epoch,$now,true);
                 },
                 30,5000,200,static function(int $value)use(&$token):void{$token=$value;},
                 $source->reconnectPolicy,
