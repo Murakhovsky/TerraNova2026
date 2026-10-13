@@ -2222,10 +2222,21 @@ services:
       $modules: '@Kernel\Module\ActiveModuleResolver'
       $tools: '@Kernel\Tool\Contract\ToolRuntimeInterface'
 
+  Domains\CapitalMarkets\Infrastructure\Agent\CapitalMarketsSpecialistContextBuilder: ~
+  Domains\CapitalMarkets\Application\Service\CapitalMarketsRuntimeEvidenceGate: ~
+  Domains\CapitalMarkets\Application\Service\CapitalMarketsRuntimeOrchestrator:
+    arguments:
+      $runtime: '@Kernel\Agent\Service\AgentRuntime'
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $modules: '@Kernel\Module\ActiveModuleResolver'
+      $researchAgent: '@Domains\CapitalMarkets\Application\Service\CapitalMarketsResearchAgentService'
+      $portfolioAgent: '@Domains\CapitalMarkets\Application\Service\CapitalMarketsPortfolioAgentService'
+
   Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule:
     arguments:
       $researchAgentContext: '@Domains\CapitalMarkets\Infrastructure\Research\ResearchAgentContextBuilder'
       $portfolioAgentContext: '@Domains\CapitalMarkets\Infrastructure\Portfolio\PortfolioAgentContextBuilder'
+      $specialistAgentContext: '@Domains\CapitalMarkets\Infrastructure\Agent\CapitalMarketsSpecialistContextBuilder'
 
   App\Web\CapitalMarkets\CapitalMarketsPageController:
     public: true
