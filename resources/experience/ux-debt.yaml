@@ -4,7 +4,7 @@ status: active
 items:
   - id: UX-001
     severity: MAJOR
-    status: OPEN
+    status: CLOSED
     category: contract_quality
     scope: registry
     problem: "Auto-inventoried Page Contracts still contain generic primary-goal/page-purpose copy instead of page-specific product intent."
@@ -12,7 +12,7 @@ items:
 
   - id: UX-002
     severity: MAJOR
-    status: OPEN
+    status: CLOSED
     category: prioritization
     scope: registry
     problem: "P0/P1 currently covers most registered pages, weakening migration ordering and release signal."
