@@ -57,7 +57,7 @@ $assert($gates->observation(['sources'=>[['id'=>'source']], 'states'=>[
 ]])==='NO_TRUSTED_LIVE_MARKET_EVIDENCE',
     'Stale or delayed market data erroneously authorized the workflow.');
 $assert($gates->observation(['sources'=>[['id'=>'source']],'states'=>[
-    ['quality'=>['status'=>'TRUSTED'],'mode'=>'LIVE'],
+    ['quality_status'=>'TRUSTED','mode'=>'LIVE','source_timestamp'=>date(DATE_ATOM)],
 ]])===null,'Trustworthy live market evidence was rejected.');
 $assert($gates->opportunity(null)==='OPPORTUNITY_NOT_PERSISTED',
     'Opportunity missing from DB did not block.');

@@ -20,8 +20,15 @@ final class CapitalMarketsRuntimeEvidenceGate
             foreach($market[$type]??[] as $row){
                 if(!is_array($row))continue;
                 $quality=$row['quality']??null;
-                $status=is_array($quality)?strtoupper((string)($quality['status']??'')):'';
+                // Venue MarketState exposes quality_status at the top level;
+                // ReferenceMarketState exposes quality.status instead.
+                $status=strtoupper((string)(
+                    $row['quality_status']??(is_array($quality)?($quality['status']??''):'')
+                ));
                 $mode=strtoupper((string)($row['mode']??'LIVE'));
+                $timestamp=$row['source_timestamp']??null;
+                $epoch=is_string($timestamp)?strtotime($timestamp):false;
+                if($epoch===false || time()-$epoch>120 || $epoch-time()>5)continue;
                 if($status==='TRUSTED'&&$mode==='LIVE'){
                     return null;
                 }

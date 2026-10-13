@@ -6,7 +6,7 @@ kind: engineering
 updated: 2026-10-13
 ---
 
-# Runtime Agent Team Capital Markets
+# Команда агентів ринків капіталу
 
 Мета: об'єднати сім окремих зареєстрованих агентів через реальний `Kernel\\Agent\\Service\\AgentRuntime` і доменні джерела достовірних даних, а не через набір декоративних назв.
 
