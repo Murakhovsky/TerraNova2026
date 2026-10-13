@@ -62,6 +62,7 @@ final readonly class StreamingWorkerRunner
 
         $generation=null;
         $owned=true;
+        $invalidationFailed=false;
         $status='STOPPED';
         $reason='WORKER_STOP';
         $lastRenew=(int)$clockMs();
@@ -142,14 +143,14 @@ final readonly class StreamingWorkerRunner
                 }
 
                 if($owned){
-                    try{$invalidate($reason);}
+                    try{$invalidate($reason);$invalidationFailed=false;}
                     catch(DomainException $error){
                         if($error->getMessage()==='LEASE_LOST'){
                             $owned=false;$status='LEASE_LOST';
-                        }else $status='INVALIDATION_FAILED';
+                        }else {$status='INVALIDATION_FAILED';$invalidationFailed=true;}
                         $retry=false;
                     }catch(Throwable){
-                        $status='INVALIDATION_FAILED';
+                        $status='INVALIDATION_FAILED';$invalidationFailed=true;
                         $retry=false;
                     }
                 }
@@ -190,14 +191,17 @@ final readonly class StreamingWorkerRunner
         }finally{
             try{$transport->close();}catch(Throwable){}
             if($owned){
-                try{$invalidate($reason);}
+                try{$invalidate($reason);$invalidationFailed=false;}
                 catch(DomainException $error){
                     if($error->getMessage()==='LEASE_LOST'){
                         $owned=false;$status='LEASE_LOST';
-                    }else $status='INVALIDATION_FAILED';
-                }catch(Throwable){$status='INVALIDATION_FAILED';}
+                    }else {$status='INVALIDATION_FAILED';$invalidationFailed=true;}
+                }catch(Throwable){$status='INVALIDATION_FAILED';$invalidationFailed=true;}
             }
-            try{$this->leases->release($organizationId,$sourceId,$shard,$workerId,$token);}catch(Throwable){}
+            // Preserve an unexpired owner after a failed revocation. If the
+            // worker cannot invalidate, the independent expiry sweeper must
+            // still have a recoverable owner row rather than an empty lease.
+            if(!$invalidationFailed)try{$this->leases->release($organizationId,$sourceId,$shard,$workerId,$token);}catch(Throwable){}
         }
         return $status;
     }

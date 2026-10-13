@@ -111,4 +111,33 @@ $status=$runner->run('org','source','shard','worker',['bookTicker'],
 $assert($status==='LEASE_LOST','Lost lease during backoff must terminate.');
 $assert($lease->renewals>=1,'Lease renewal was skipped during backoff.');
 
+
+// Failed trust invalidation must NOT clear lease ownership. Otherwise the
+// independent sweeper cannot recover when the same worker has died.
+$beforeRelease=$lease->releases;
+$brokenInvalidator=new class implements StreamingTrustInvalidatorInterface{
+    public function invalidate(string $org,string $src,string $shard,string $worker,int $token,string $reason):int{
+        throw new RuntimeException('Simulated database trust invalidation outage.');
+    }
+};
+$failedRunner=new StreamingWorkerRunner($lease,$brokenInvalidator);
+$lease->failRenew=false;
+$status=$failedRunner->run(
+    'org','source','shard','worker',['bookTicker'],
+    new StreamingSessionCoordinator(new StreamingRecoveryGate(),
+        new StreamingSubscriptionReconciler(),new StreamingHeartbeatWatchdog(3000,3000)),
+    new class implements StreamingWorkerTransportInterface{
+        public function open(string $org,string $src,int $epoch):void{}
+        public function subscribe(array $keys,int $epoch):void{}
+        public function pump(int $epoch,int $time):void{}
+        public function close():void{}
+    },
+    static function()use(&$now):int{return $now;},
+    static fn():bool=>true,
+    static function(int $epoch):void{},
+);
+$assert($status==='INVALIDATION_FAILED','Trust outage was not signaled.');
+$assert($lease->releases===$beforeRelease,
+    'Worker cleared its lease after failed trust invalidation.');
+
 echo "Capital Markets reconnect worker passed.\n";
