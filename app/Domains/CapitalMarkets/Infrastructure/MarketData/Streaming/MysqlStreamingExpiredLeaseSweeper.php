@@ -28,6 +28,7 @@ final readonly class MysqlStreamingExpiredLeaseSweeper
         'kraken-spot-single-bbo',
         'binance-usdm-single-bbo',
         'bybit-linear-single-bbo',
+        'massive-stocks-single-bbo',
     ];
 
     public function __construct(

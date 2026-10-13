@@ -15,8 +15,31 @@ use JsonException;
  */
 final class StreamingExactJsonNumbers
 {
+    /** @return list<array<string,mixed>> */
+    public static function events(string $json):array
+    {
+        $result=self::decodeExact($json);
+        if(!array_is_list($result)||count($result)>500){
+            throw new DomainException('Streaming provider events must be a bounded JSON list.');
+        }
+        foreach($result as $item){
+            if(!is_array($item)||array_is_list($item)){
+                throw new DomainException('Streaming provider list includes invalid event.');
+            }
+        }
+        return $result;
+    }
+
     /** @return array<string,mixed> */
     public static function object(string $json):array
+    {
+        $result=self::decodeExact($json);
+        if(array_is_list($result))throw new DomainException('Streaming JSON must be an object.');
+        return $result;
+    }
+
+    /** @return array<mixed> */
+    private static function decodeExact(string $json):array
     {
         if(strlen($json)>2097152)throw new DomainException('Streaming JSON exceeds input limit.');
         try{
@@ -24,7 +47,7 @@ final class StreamingExactJsonNumbers
         }catch(JsonException){
             throw new DomainException('Streaming provider message is not valid JSON.');
         }
-        if(!is_array($test)||array_is_list($test))throw new DomainException('Streaming JSON must be an object.');
+        if(!is_array($test))throw new DomainException('Streaming JSON must be an object or array.');
 
         $length=strlen($json);$output='';
         for($i=0;$i<$length;){
@@ -52,7 +75,7 @@ final class StreamingExactJsonNumbers
         }
         try{$result=json_decode($output,true,32,JSON_THROW_ON_ERROR);}
         catch(JsonException){throw new DomainException('Failed to preserve provider numeric evidence.');}
-        if(!is_array($result)||array_is_list($result))throw new DomainException('Streaming JSON must remain an object.');
+        if(!is_array($result))throw new DomainException('Streaming JSON could not be decoded.');
         return $result;
     }
 }
