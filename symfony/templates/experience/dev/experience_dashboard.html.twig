@@ -66,9 +66,9 @@
         </div>
         {% if experience.productUx.priority_inflated %}
             <twig:CosAlert
-                variant="warning"
+                tone="warning"
                 title="Priority calibration required"
-                message="P0/P1 still covers more than 85% of active Experience contracts. Migration ordering needs a product pass before final release."
+                copy="P0/P1 still covers more than 85% of active Experience contracts. Migration ordering needs a product pass before final release."
             />
         {% endif %}
     </section>
