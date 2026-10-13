@@ -1,0 +1,22 @@
+version: 1
+status: governed
+
+personas:
+  visitor: { label: Visitor, kind: external, default_density: comfortable, surfaces: [public] }
+  authenticated_user: { label: Authenticated user, kind: internal, default_density: comfortable, surfaces: [workspace, portal] }
+  executive: { label: Executive, kind: internal, default_density: comfortable, surfaces: [workspace] }
+  manager: { label: Manager, kind: internal, default_density: comfortable, surfaces: [workspace, system] }
+  operator: { label: Operator, kind: internal, default_density: compact, surfaces: [workspace] }
+  specialist: { label: Specialist, kind: internal, default_density: compact, surfaces: [workspace, system] }
+  administrator: { label: Administrator, kind: internal, default_density: compact, surfaces: [workspace, system] }
+  executor: { label: Executor, kind: internal, default_density: compact, surfaces: [workspace] }
+  content_manager: { label: Content manager, kind: internal, default_density: comfortable, surfaces: [workspace, system] }
+  engineer: { label: Engineer, kind: internal, default_density: compact, surfaces: [workspace, system] }
+  engineering_manager: { label: Engineering manager, kind: internal, default_density: compact, surfaces: [workspace, system] }
+  sales_agent: { label: Sales agent, kind: internal, default_density: compact, surfaces: [workspace] }
+  sales_manager: { label: Sales manager, kind: internal, default_density: compact, surfaces: [workspace] }
+  growth_manager: { label: Growth manager, kind: internal, default_density: compact, surfaces: [workspace] }
+  capital_markets_user: { label: Capital Markets user, kind: internal, default_density: compact, surfaces: [workspace] }
+  portfolio_manager: { label: Portfolio manager, kind: internal, default_density: compact, surfaces: [workspace] }
+  risk_manager: { label: Risk manager, kind: internal, default_density: compact, surfaces: [workspace] }
+  researcher: { label: Researcher, kind: internal, default_density: compact, surfaces: [workspace] }
