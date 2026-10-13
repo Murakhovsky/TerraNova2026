@@ -14,6 +14,8 @@ use Kernel\Agent\Service\AgentRuntime;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\DomainModuleRegistry;
 use RuntimeException;
+use Throwable;
+use Domains\CapitalMarkets\Infrastructure\Agent\MysqlCapitalMarketsAgentCycleJournal;
 
 /**
  * Observe -> Research -> Detect -> Assess -> Allocate -> Execute
@@ -35,6 +37,7 @@ final readonly class CapitalMarketsRuntimeOrchestrator
         private MarketDataAdministrationService $marketData,
         private CapitalRiskService $capitalRisk,
         private CapitalMarketsTradingRepositoryInterface $trading,
+        private MysqlCapitalMarketsAgentCycleJournal $journal,
     ){}
 
     /** @return array<string,mixed> */
@@ -43,6 +46,7 @@ final readonly class CapitalMarketsRuntimeOrchestrator
         string $opportunityId,
         string $question,
         string $correlationId,
+        bool $resume=false,
     ):array{
         if(trim($organizationId)===''||trim($opportunityId)===''
             ||trim($question)===''||strlen($question)>4000
@@ -52,11 +56,45 @@ final readonly class CapitalMarketsRuntimeOrchestrator
         if(!$this->modules->isEnabled($organizationId,'capital_markets')){
             throw new RuntimeException('Capital Markets module is disabled.');
         }
+        $session=$this->journal->begin($organizationId,$correlationId,$opportunityId,$question,$resume);
+        if($session['kind']==='CACHED')return $session['result'];
+        if($session['kind']==='IN_PROGRESS'||$session['kind']==='RECOVERY_REQUIRED'){
+            return [
+                'status'=>$session['kind'],'correlation_id'=>$correlationId,
+                'stage_count'=>0,'stages'=>[],'next_action'=>$session['kind']==='IN_PROGRESS'
+                    ?'WAIT_FOR_CURRENT_AGENT_RUN':'EXPLICIT_RECOVERY_REQUIRED',
+                'live_trading_enabled'=>false,
+            ];
+        }
+        $token=$session['token'];
+        try{
+            $result=$this->runOwned($organizationId,$opportunityId,$question,$correlationId,$session);
+            $this->journal->finish($organizationId,$correlationId,$token,$result);
+            return $result;
+        }catch(Throwable $error){
+            // A failed stage can resume from its durable predecessor.
+            // The external LLM response could have completed just before
+            // checkpoint, so retries are intentionally manual.
+            try{$this->journal->failed($organizationId,$correlationId,$token);}
+            catch(Throwable $journalError){
+                throw new RuntimeException('Agent cycle journal failed to record stage failure.',0,$journalError);
+            }
+            throw $error;
+        }
+    }
+
+    /** @param array<string,mixed> $session @return array<string,mixed> */
+    private function runOwned(
+        string $organizationId,string $opportunityId,string $question,
+        string $correlationId,array $session,
+    ):array{
         $stages=[];
         $summaries=[];
-        $observe=$this->specialist(
+        $observe=$this->checkpointed($session,$organizationId,$correlationId,'Observe',count($stages),
+            fn():array=>$this->specialist(
             CapitalMarketsMarketIntelligenceAgent::NAME,'Observe',
             $organizationId,$opportunityId,$question,$correlationId,$summaries
+        )
         );
         $this->append($stages,$summaries,$observe);
         if(end($stages)['decision']==='BLOCKED'){
@@ -65,18 +103,22 @@ final readonly class CapitalMarketsRuntimeOrchestrator
         $problem=$this->gates->observation($this->marketData->dashboard($organizationId));
         if($problem!==null)return $this->stopped($correlationId,$stages,$problem);
 
-        $research=$this->researchAgent->run(
+        $researchStage=$this->checkpointed($session,$organizationId,$correlationId,'Research',count($stages),
+            fn():array=>$this->serviceStage('Research',$this->researchAgent->run(
             $organizationId,'opportunity',$opportunityId,$question,
             $correlationId.':research',
+        ))
         );
-        $this->append($stages,$summaries,$this->serviceStage('Research',$research));
+        $this->append($stages,$summaries,$researchStage);
         if(end($stages)['decision']==='BLOCKED'){
             return $this->stopped($correlationId,$stages,'AGENT_RESEARCH_BLOCKED');
         }
 
-        $detect=$this->specialist(
+        $detect=$this->checkpointed($session,$organizationId,$correlationId,'Detect',count($stages),
+            fn():array=>$this->specialist(
             CapitalMarketsOpportunityAgent::NAME,'Detect',
             $organizationId,$opportunityId,$question,$correlationId,$summaries
+        )
         );
         $this->append($stages,$summaries,$detect);
         if(end($stages)['decision']==='BLOCKED'){
@@ -87,9 +129,11 @@ final readonly class CapitalMarketsRuntimeOrchestrator
         );
         if($problem!==null)return $this->stopped($correlationId,$stages,$problem);
 
-        $assess=$this->specialist(
+        $assess=$this->checkpointed($session,$organizationId,$correlationId,'Assess',count($stages),
+            fn():array=>$this->specialist(
             CapitalMarketsRiskAgent::NAME,'Assess',
             $organizationId,$opportunityId,$question,$correlationId,$summaries
+        )
         );
         $this->append($stages,$summaries,$assess);
         if(end($stages)['decision']==='BLOCKED'){
@@ -104,20 +148,24 @@ final readonly class CapitalMarketsRuntimeOrchestrator
         $problem=$this->gates->risk($this->capitalRisk->workspace($organizationId));
         if($problem!==null)return $this->stopped($correlationId,$stages,$problem);
 
-        $allocation=$this->portfolioAgent->run(
+        $allocationStage=$this->checkpointed($session,$organizationId,$correlationId,'Allocate',count($stages),
+            fn():array=>$this->serviceStage('Allocate',$this->portfolioAgent->run(
             $organizationId,'opportunity',$opportunityId,$question,
             $correlationId.':allocate',
+        ))
         );
-        $this->append($stages,$summaries,$this->serviceStage('Allocate',$allocation));
+        $this->append($stages,$summaries,$allocationStage);
         if(end($stages)['decision']==='BLOCKED'){
             return $this->stopped($correlationId,$stages,'AGENT_ALLOCATE_BLOCKED');
         }
 
-        $execution=$this->specialist(
+        $execution=$this->checkpointed($session,$organizationId,$correlationId,'Execute',count($stages),
+            fn():array=>$this->specialist(
             CapitalMarketsExecutionAgent::NAME,'Execute',
             $organizationId,$opportunityId,
             $question.' Paper execution review ONLY: human authorization and deterministic services remain mandatory.',
             $correlationId,$summaries
+        )
         );
         $this->append($stages,$summaries,$execution);
         if(end($stages)['decision']==='BLOCKED'){
@@ -134,9 +182,11 @@ final readonly class CapitalMarketsRuntimeOrchestrator
             return $this->stopped($correlationId,$stages,$problem,'AWAITING_EXECUTION_EVIDENCE');
         }
 
-        $measure=$this->specialist(
+        $measure=$this->checkpointed($session,$organizationId,$correlationId,'Measure',count($stages),
+            fn():array=>$this->specialist(
             CapitalMarketsOrchestratorAgent::NAME,'Measure',
             $organizationId,$opportunityId,$question,$correlationId,$summaries
+        )
         );
         $this->append($stages,$summaries,$measure);
         if(end($stages)['decision']==='BLOCKED'){
@@ -145,18 +195,53 @@ final readonly class CapitalMarketsRuntimeOrchestrator
 
         // Learning uses the existing Research Agent and its governed tools.
         // No automatic strategy promotion; knowledge can only be proposed.
-        $learn=$this->researchAgent->run(
+        $learnStage=$this->checkpointed($session,$organizationId,$correlationId,'Learn',count($stages),
+            fn():array=>$this->serviceStage('Learn',$this->researchAgent->run(
             $organizationId,'opportunity',$opportunityId,
             'Learn from measured paper execution and previous stage evidence. '.$question,
             $correlationId.':learn',
+        ))
         );
-        $this->append($stages,$summaries,$this->serviceStage('Learn',$learn));
+        $this->append($stages,$summaries,$learnStage);
         return [
             'status'=>'REVIEW_REQUIRED','correlation_id'=>$correlationId,
             'stage_count'=>count($stages),'stages'=>$stages,
             'next_action'=>'HUMAN_REVIEW_RESEARCH_AND_PERFORMANCE',
             'live_trading_enabled'=>false,
         ];
+    }
+
+
+    /**
+     * Never repeat a checkpointed AgentRun on explicit cycle resume.
+     * Deterministic gates between stages are still re-evaluated each time.
+     *
+     * @param array<string,mixed> $session
+     * @param callable():array<string,mixed> $invoke
+     * @return array<string,mixed>
+     */
+    private function checkpointed(
+        array $session,string $org,string $correlation,string $stage,
+        int $index,callable $invoke,
+    ):array{
+        $past=$session['stages']??[];
+        if(array_key_exists($index,$past)){
+            $saved=$past[$index];
+            if(($saved['stage']??null)!==$stage
+                ||!is_string($saved['run_id']??null)||$saved['run_id']===''){
+                throw new RuntimeException('Agent workflow checkpoint ordering mismatch.');
+            }
+            return $saved;
+        }
+        if($index!==count($past)){
+            throw new RuntimeException('Agent workflow attempted to bypass an uncheckpointed stage.');
+        }
+        $result=$invoke();
+        if(($result['stage']??null)!==$stage){
+            throw new RuntimeException('Agent returned an unexpected stage identity.');
+        }
+        $this->journal->checkpoint($org,$correlation,(string)$session['token'],$result,$index);
+        return $result;
     }
 
     /** @param list<array<string,mixed>> $prior @return array<string,mixed> */

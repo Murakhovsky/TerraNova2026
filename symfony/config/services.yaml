@@ -2222,6 +2222,10 @@ services:
       $modules: '@Kernel\Module\ActiveModuleResolver'
       $tools: '@Kernel\Tool\Contract\ToolRuntimeInterface'
 
+  Domains\CapitalMarkets\Infrastructure\Agent\MysqlCapitalMarketsAgentCycleJournal:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\Agent\CapitalMarketsSpecialistContextBuilder: ~
   Domains\CapitalMarkets\Application\Service\CapitalMarketsRuntimeEvidenceGate: ~
   Domains\CapitalMarkets\Application\Service\CapitalMarketsRuntimeOrchestrator:

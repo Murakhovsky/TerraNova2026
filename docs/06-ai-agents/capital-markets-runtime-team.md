@@ -49,6 +49,22 @@ COS_CM_RUNTIME_AGENT_TEAM=1 php symfony/bin/console \
 
 Повертається `status`, `correlation_id`, `stage_count`, послідовність `stages[]`, `run_id` кожного виконаного агента й `next_action`. Позитивний вихід CLI не означає схвалення угоди. Для `BLOCKED` команда завершується з помилкою.
 
+## Збереження циклу та безпечне відновлення
+
+Кожен запуск із `correlation_id` зберігається в `tn_capital_market_agent_cycles`. Таблиця створюється Doctrine-міграцією `Version20261013211500`. Ідентифікатор унікальний у межах організації. Разом із ним фіксуються opportunity, хеш початкового запитання, власник запуску, статус і контрольні точки агентів. Змінити opportunity або питання зі старим correlation неможливо.
+
+Checkpoint записується в MySQL **відразу після успішного AgentRun**, включно з його `run_id`. При повторному запуску завершений статус повертається із журналу без нових LLM-викликів. Поки інший процес `RUNNING`, повторний виклик одержує `IN_PROGRESS`. Перерваний цикл відновлюється лише явно:
+
+```bash
+COS_CM_RUNTIME_AGENT_TEAM=1 php symfony/bin/console cos:capital-markets:agents:cycle ORG_ID OPPORTUNITY_ID \
+  --correlation=ПОПЕРЕДНІЙ_CORRELATION_ID --resume \
+  --question="Ідентичне питання, як у першому запуску"
+```
+
+Для `AWAITING_EXECUTION_EVIDENCE` та `FAILED` можна виконувати `--resume` після людської перевірки. Для `RUNNING` аварійне відновлення доступне лише після щонайменше 30 хвилин без нового checkpoint і тільки з явним `--resume`. Кожен старий власник відхиляється власним owner-token CAS. Перевірки MarketState, Risk Envelope та approval **виконуються знову** під час resume, навіть якщо LLM-етап було checkpointed.
+
+Увага: якщо LLM або дозволений Research Tool завершився безпосередньо перед записом checkpoint і процес аварійно зник, наступний запуск може повторити його. Тому це гарантія **at-least-once із захистом журналу, не exactly-once side effects**. Автоматичний таймер recovery не вмикаємо до окремої перевірки.
+
 ## Що ще необхідно для production-повноти
 
-Цей пакет реалізує реєстрацію агентів, ізольовані контексти, LLM-виклики, валідацію, safety gates, ручний координатор і тести. До повноцінної автономної команди ще потрібні: durable workflow aggregate із resume/idempotency між етапами, API/UI контролю кожного рішення, асинхронна черга та retry, policy-based human approval, реальне підключення контрольованого paper execution після зовнішнього approval, фінансова атрибуція з повним циклом вимірювання, end-to-end тест із реальною БД і LLM та production observability. Live trading заборонений до окремого приймання.
+Цей пакет реалізує реєстрацію агентів, ізольовані контексти, LLM-виклики, валідацію, safety gates, ручний координатор і тести. До повноцінної автономної команди ще потрібні: розширена state-machine з автоматичним retry/heartbeat, API/UI контролю кожного рішення, асинхронна черга та retry, policy-based human approval, реальне підключення контрольованого paper execution після зовнішнього approval, фінансова атрибуція з повним циклом вимірювання, end-to-end тест із реальною БД і LLM та production observability. Live trading заборонений до окремого приймання.

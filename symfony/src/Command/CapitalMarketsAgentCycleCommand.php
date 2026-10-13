@@ -31,6 +31,7 @@ final class CapitalMarketsAgentCycleCommand extends Command
             ->addArgument('opportunity',InputArgument::REQUIRED,'Persisted opportunity ID')
             ->addOption('question',null,InputOption::VALUE_REQUIRED,
                 'Research question','Review this opportunity using only persisted evidence.')
+            ->addOption('resume',null,InputOption::VALUE_NONE,'Explicitly resume a waiting or failed cycle')
             ->addOption('correlation',null,InputOption::VALUE_REQUIRED,
                 'Optional audit correlation ID');
     }
@@ -52,7 +53,7 @@ final class CapitalMarketsAgentCycleCommand extends Command
             return Command::INVALID;
         }
         try{
-            $result=$this->orchestrator->run($org,$opportunity,$question,$correlation);
+            $result=$this->orchestrator->run($org,$opportunity,$question,$correlation,(bool)$input->getOption('resume'));
             $output->writeln(json_encode($result,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
             return in_array($result['status']??'',[
                 'REVIEW_REQUIRED','AWAITING_EXECUTION_EVIDENCE'
