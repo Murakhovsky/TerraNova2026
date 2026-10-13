@@ -11,6 +11,7 @@ foreach ([
     'resources/experience/design-system/gaps.yaml',
     'symfony/src/Web/Experience/Governance/ProductUxGovernanceReport.php',
     'symfony/src/Web/Experience/Governance/ProductUxGovernanceService.php',
+    'symfony/src/Web/Experience/Governance/ProductUxContextProvider.php',
     'symfony/src/Command/ExperienceProductGovernanceCommand.php',
 ] as $file) {
     if (!is_file($root.'/'.$file)) {
@@ -64,6 +65,19 @@ foreach ([
 ] as $marker) {
     if (!str_contains($release, $marker)) {
         throw new RuntimeException('Experience release pre-acceptance gate missing: '.$marker);
+    }
+}
+
+$context = (string) file_get_contents($root.'/symfony/src/Web/Experience/Delivery/PageDeliveryContextPackage.php');
+$builder = (string) file_get_contents($root.'/symfony/src/Web/Experience/Delivery/PageDeliveryContextPackageBuilder.php');
+$workflow = (string) file_get_contents($root.'/symfony/src/Web/Experience/Delivery/PageDeliveryWorkflow.php');
+foreach ([
+    'product_ux',
+    'ProductUxContextProvider',
+    'Use Product UX personas, journeys and canonical terminology',
+] as $marker) {
+    if (!str_contains($context.$builder.$workflow, $marker)) {
+        throw new RuntimeException('Autonomous UI delivery is missing Product UX context: '.$marker);
     }
 }
 

@@ -40,6 +40,37 @@
         <twig:CosMetric label="Stable / frozen" value="{{ experience.designSystem.stable }}" />
         <twig:CosMetric label="Golden ready" value="{{ experience.golden.ready }}/{{ experience.golden.required }}" />
         <twig:CosMetric label="Golden structure" value="{{ experience.goldenStructure.passed }}/{{ experience.goldenStructure.total }}" />
+        <twig:CosMetric label="Personas" value="{{ experience.productUx.personas }}" />
+        <twig:CosMetric label="Journeys" value="{{ experience.productUx.journeys }}" />
+        <twig:CosMetric label="Generic contracts" value="{{ experience.productUx.generic_contract_copy_count }}" />
+    </section>
+
+    <section class="cos-page__section" aria-labelledby="experience-product-governance">
+        <div class="cos-page__section-head">
+            <div>
+                <h2 id="experience-product-governance">Product UX governance</h2>
+                <p>
+                    Structural state:
+                    <strong>{{ experience.productUx.structural_ready ? 'READY' : 'BLOCKED' }}</strong>.
+                    Human Golden acceptance remains a separate trust boundary.
+                </p>
+            </div>
+        </div>
+        <div class="cos-kpi-strip">
+            <twig:CosMetric label="Personas" value="{{ experience.productUx.personas }}" />
+            <twig:CosMetric label="Journeys" value="{{ experience.productUx.journeys }}" />
+            <twig:CosMetric label="Terminology" value="{{ experience.productUx.terminology_terms }}" />
+            <twig:CosMetric label="Open UX debt" value="{{ experience.productUx.open_ux_debt }}" />
+            <twig:CosMetric label="Design gaps" value="{{ experience.productUx.open_design_system_gaps }}" />
+            <twig:CosMetric label="Generic contracts" value="{{ experience.productUx.generic_contract_copy_count }}" />
+        </div>
+        {% if experience.productUx.priority_inflated %}
+            <twig:CosAlert
+                variant="warning"
+                title="Priority calibration required"
+                message="P0/P1 still covers more than 85% of active Experience contracts. Migration ordering needs a product pass before final release."
+            />
+        {% endif %}
     </section>
 
     <section class="cos-page__section" aria-labelledby="experience-domains">

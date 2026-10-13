@@ -53,6 +53,7 @@ final readonly class PageDeliveryWorkflow
                 'page_contract' => $contract,
                 'archetype' => $data['archetype'],
                 'patterns' => $data['patterns'],
+                'product_ux' => $data['product_ux'],
                 'quality_gate' => $data['quality_gate'],
                 'evidence_contract' => $evidence->toArray(),
                 'pull_request_template' => $pullRequestBody,

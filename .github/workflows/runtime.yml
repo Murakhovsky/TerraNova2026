@@ -179,6 +179,8 @@ jobs:
           grep -q 'cos_symfony_home' /tmp/routes.txt
           docker compose exec -T php php bin/console cos:experience:inventory --strict --compile --no-interaction
           docker compose exec -T php php bin/console cos:experience:coverage --no-interaction
+          docker compose exec -T php php bin/console cos:experience:product-governance --strict --json --no-interaction > /tmp/experience-product-governance.json
+          grep -q '"structural_ready": true' /tmp/experience-product-governance.json
           docker compose exec -T php php bin/console cos:experience:design-system:audit --strict --no-interaction
           docker compose exec -T php php bin/console cos:experience:golden --no-interaction
           docker compose exec -T php php bin/console cos:experience:golden:decisions --no-interaction
@@ -200,6 +202,7 @@ jobs:
           docker compose exec -T php php bin/console cos:web:design-system:smoke
           docker compose exec -T php php bin/console cos:experience:delivery growth.overview > /tmp/experience-delivery.json
           grep -q '"context_package"' /tmp/experience-delivery.json
+          grep -q '"product_ux"' /tmp/experience-delivery.json
           grep -q '"evidence_contract"' /tmp/experience-delivery.json
           grep -q '"pull_request_template"' /tmp/experience-delivery.json
           grep -q '"autonomy": "L2"' /tmp/experience-delivery.json

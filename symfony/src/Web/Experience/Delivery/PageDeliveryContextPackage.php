@@ -10,6 +10,7 @@ final readonly class PageDeliveryContextPackage
         public array $contract,
         public array $archetype,
         public array $patterns,
+        public array $productUx,
         public array $qualityGate,
         public array $agentConstraints,
     ) {}
@@ -21,6 +22,7 @@ final readonly class PageDeliveryContextPackage
             'page_contract' => $this->contract,
             'archetype' => $this->archetype,
             'patterns' => $this->patterns,
+            'product_ux' => $this->productUx,
             'quality_gate' => $this->qualityGate,
             'agent_constraints' => $this->agentConstraints,
         ];
