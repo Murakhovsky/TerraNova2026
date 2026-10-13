@@ -75,13 +75,14 @@ foreach ([
 $context = (string) file_get_contents($root.'/symfony/src/Web/Experience/Delivery/PageDeliveryContextPackage.php');
 $builder = (string) file_get_contents($root.'/symfony/src/Web/Experience/Delivery/PageDeliveryContextPackageBuilder.php');
 $workflow = (string) file_get_contents($root.'/symfony/src/Web/Experience/Delivery/PageDeliveryWorkflow.php');
+$provider = (string) file_get_contents($root.'/symfony/src/Web/Experience/Governance/ProductUxContextProvider.php');
 foreach ([
     'product_ux',
     'ProductUxContextProvider',
     'Use Product UX personas, journeys and canonical terminology',
     'design_system_gap_policy',
 ] as $marker) {
-    if (!str_contains($context.$builder.$workflow, $marker)) {
+    if (!str_contains($context.$builder.$workflow.$provider, $marker)) {
         throw new RuntimeException('Autonomous UI delivery is missing Product UX context: '.$marker);
     }
 }
