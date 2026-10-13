@@ -87,7 +87,14 @@ try{
     ];
     $b->finish($org,$corr,$current,$waiting);
     $cached=$a->begin($org,$corr,$opp,$question);
-    $check($cached['kind']==='CACHED'&&$cached['result']===$waiting,
+    $canonicalize=static function(mixed $value)use(&$canonicalize):mixed{
+        if(!is_array($value))return $value;
+        foreach($value as $key=>$child)$value[$key]=$canonicalize($child);
+        if(!array_is_list($value))ksort($value);
+        return $value;
+    };
+    $check($cached['kind']==='CACHED'
+        &&$canonicalize($cached['result'])===$canonicalize($waiting),
         'Idempotent WAITING response was not served from durable journal.');
     $again=$a->begin($org,$corr,$opp,$question,true);
     $check($again['kind']==='ACQUIRED'&&count($again['stages'])===6,
