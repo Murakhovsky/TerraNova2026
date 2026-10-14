@@ -54,16 +54,35 @@ final readonly class CrossVenueBboAdmissionFence
                  AND i.identifier_source=\'BINANCE_BSTOCKS_SEED\'
              INNER JOIN tn_capital_market_venues v
                  ON v.organization_id=s.organization_id AND v.venue_id=s.venue_id
-             INNER JOIN tn_capital_market_cross_venue_pool_candidates c
+                 AND v.code IN (\'BINANCE\',\'BINANCE_SPOT\',\'BYBIT\',\'BYBIT_SPOT\',\'KRAKEN\',\'KRAKEN_SPOT\')
+             LEFT JOIN tn_capital_market_cross_venue_pool_candidates c
                  ON c.organization_id=s.organization_id
                  AND c.pool_key=\'BINANCE_BSTOCKS_SEED\'
                  AND c.seed_token=i.identifier_value
                  AND (v.code=c.venue OR v.code=CONCAT(c.venue,\'_SPOT\'))
+             LEFT JOIN tn_capital_market_venue_instruments vi
+                 ON vi.organization_id=s.organization_id AND vi.venue_id=s.venue_id
+                 AND vi.instrument_id=s.instrument_id
+             LEFT JOIN tn_capital_market_pool_listing_reviews r
+                 ON r.id=(
+                    SELECT MAX(last_review.id) FROM tn_capital_market_pool_listing_reviews last_review
+                    WHERE last_review.organization_id=c.organization_id
+                      AND last_review.pool_key=c.pool_key
+                      AND last_review.seed_token=c.seed_token
+                      AND last_review.venue=c.venue
+                 )
              SET s.status=\'DISABLED\'
              WHERE s.organization_id=:org AND s.status=\'ACTIVE\' AND s.data_type=\'BBO\'
-               AND (c.verification_state<>\'REVIEWED_LISTING\'
+               AND (c.seed_token IS NULL
+                    OR c.verification_state<>\'REVIEWED_LISTING\'
                     OR c.listing_state<>\'LISTED_EXACT_TOKEN_SYMBOL\'
-                    OR c.source_as_of<:fresh_after)'
+                    OR c.source_as_of<:fresh_after
+                    OR r.id IS NULL OR r.decision<>\'APPROVE_LISTING\'
+                    OR r.venue_symbol<>c.venue_symbol
+                    OR r.quote_currency<>c.quote_currency
+                    OR r.reviewed_at<UTC_TIMESTAMP(6)-INTERVAL 48 HOUR
+                    OR vi.id IS NULL OR vi.status<>\'ACTIVE\'
+                    OR vi.venue_symbol<>c.venue_symbol)'
         );
         $update->execute(['org'=>$org,'fresh_after'=>$freshAfter]);
         return $update->rowCount();

@@ -72,11 +72,25 @@ final readonly class CrossVenuePoolCandidateRepository
         }
         $limit=max(1,min(500,$limit));
         $statement=$this->connection->prepare(
-            'SELECT seed_token,venue_symbol FROM tn_capital_market_cross_venue_pool_candidates
-             WHERE organization_id=:org AND pool_key=:pool AND venue=:venue
-               AND listing_state=:state AND verification_state=:verified
-               AND source_as_of>=:fresh_after AND venue_symbol IS NOT NULL
-             ORDER BY seed_token LIMIT '.$limit
+            'SELECT c.seed_token,c.venue_symbol
+             FROM tn_capital_market_cross_venue_pool_candidates c
+             INNER JOIN tn_capital_market_pool_listing_reviews r
+               ON r.id=(
+                 SELECT MAX(last_review.id)
+                 FROM tn_capital_market_pool_listing_reviews last_review
+                 WHERE last_review.organization_id=c.organization_id
+                   AND last_review.pool_key=c.pool_key
+                   AND last_review.seed_token=c.seed_token
+                   AND last_review.venue=c.venue
+               )
+             WHERE c.organization_id=:org AND c.pool_key=:pool AND c.venue=:venue
+               AND c.listing_state=:state AND c.verification_state=:verified
+               AND c.source_as_of>=:fresh_after AND c.venue_symbol IS NOT NULL
+               AND r.decision=\'APPROVE_LISTING\'
+               AND r.venue_symbol=c.venue_symbol
+               AND r.quote_currency=c.quote_currency
+               AND r.reviewed_at>=UTC_TIMESTAMP(6)-INTERVAL 48 HOUR
+             ORDER BY c.seed_token LIMIT '.$limit
         );
         $freshAfter=(new DateTimeImmutable('-48 hours',new DateTimeZone('UTC')))
             ->format('Y-m-d\TH:i:s.u\Z');
