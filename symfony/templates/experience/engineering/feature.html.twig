@@ -31,7 +31,8 @@
     'HUMAN_DECISION_REQUIRED': 'ПОТРІБНЕ РІШЕННЯ'|trans,
     'BLOCKED': 'ЗАБЛОКОВАНО'|trans,
     'ESCALATED': 'ЕСКАЛАЦІЯ'|trans,
-    'DONE': 'ГОТОВО'|trans
+    'DONE': 'ГОТОВО'|trans,
+    'NEW': 'НОВЕ'|trans
 } %}
 {% set roleLabels = {
     'ENGINEERING_MANAGER': 'Менеджер / координатор'|trans,
@@ -119,7 +120,7 @@
 
     <div class="engineering-head">
         <div>
-            <p class="cos-card__eyebrow">COS · Engineering</p>
+            <p class="cos-card__eyebrow">{{ 'engineering.eyebrow'|trans }}</p>
             <h1 class="engineering-head__title">{{ engineering.feature.title }}</h1>
             <div class="engineering-head__meta">
                 <span class="cos-badge">{{ engineering.feature.priority }}</span>
@@ -181,7 +182,7 @@
     </div>
 
     {% if statusMessage %}
-        <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Помилка Engineering' : 'Engineering оновлено' }}" copy="{{ statusMessage }}" tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
+        <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? ('Помилка Engineering'|trans) : ('Engineering оновлено'|trans) }}" copy="{{ statusMessage }}" tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
     {% endif %}
 
     <details class="engineering-panel engineering-details">

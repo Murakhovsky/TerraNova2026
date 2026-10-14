@@ -38,7 +38,7 @@
 
     <div class="engineering-toolbar">
         <div>
-            <p class="cos-card__eyebrow">COS · Engineering</p>
+            <p class="cos-card__eyebrow">{{ 'engineering.eyebrow'|trans }}</p>
             <h1 class="cos-page-title" style="margin:2px 0 4px">{{ '{{ 'Агент'|trans }}ська розробка'|trans }}</h1>
             <div class="engineering-pulse" aria-label="{{ '{{ 'Стан'|trans }} Engineering'|trans }}">
                 <strong>{{ workspaceStats.running }} {{ 'виконується'|trans }}</strong>
@@ -89,7 +89,7 @@
 
     {% if statusMessage %}
         <twig:CosAlert
-            title="{{ statusMessage starts with 'ERROR:' ? 'Помилка Engineering' : 'Engineering оновлено' }}"
+            title="{{ statusMessage starts with 'ERROR:' ? ('Помилка Engineering'|trans) : ('Engineering оновлено'|trans) }}"
             copy="{{ statusMessage }}"
             tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}"
         />
@@ -165,7 +165,7 @@
                         <tr data-engineering-feature-row="{{ feature.id }}">
                             <td class="engineering-table__title">
                                 <a href="/admin/engineering/{{ feature.id }}"><strong>{{ feature.title }}</strong></a>
-                                <span class="engineering-table__meta">{{ feature.priority }}{% if feature.workflow_type %} · {{ feature.workflow_type == 'ENGINEERING_IMMEDIATE' ? 'Immediate run'|trans : 'Queue'|trans }}{% endif %}</span>
+                                <span class="engineering-table__meta">{{ feature.priority }}{% if feature.workflow_type %} · {{ feature.workflow_type == 'ENGINEERING_IMMEDIATE' ? ('негайний запуск'|trans) : ('черга'|trans) }}{% endif %}</span>
                             </td>
                             <td><span class="cos-badge">{{ ('engineering.status.' ~ (feature.display_status|lower))|trans }}</span></td>
                             <td>

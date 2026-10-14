@@ -39,8 +39,8 @@ if (!str_contains($base, 'app.request.locale')) throw new RuntimeException('HTML
 
 foreach ([
     ['symfony/templates/experience/workspace_shell.html.twig', ['shell.language','shell.brand_name']],
-    ['symfony/templates/experience/engineering/index.html.twig', ['engineering.index.title','engineering.status.running']],
-    ['symfony/templates/experience/engineering/feature.html.twig', ['engineering.status.running','engineering.role.engineering_manager']],
+    ['symfony/templates/experience/engineering/index.html.twig', ['Агентська розробка','engineering.status.running']],
+    ['symfony/templates/experience/engineering/feature.html.twig', ['ВИКОНУЄТЬСЯ','Менеджер / координатор']],
     ['symfony/templates/experience/async/activity_center_frame.html.twig', ['Activity Center','engineering.status.completed']],
     ['symfony/templates/experience/ai/ai_panel_frame.html.twig', ['AI & Agent Center','available']],
 ] as [$path,$keys]) {
