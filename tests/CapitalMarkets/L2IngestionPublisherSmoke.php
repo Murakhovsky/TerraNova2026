@@ -15,7 +15,7 @@ use Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface;
 use Domains\CapitalMarkets\Application\DTO\MarketDataIngestionResult;
 use Domains\CapitalMarkets\Domain\MarketData\{MarketSourceId,RawMarketEvent};
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
-use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2DomainBookFactory,L2IngestionPublisher,L2VerifiedIngestionCallback};
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2DomainBookFactory,L2IngestionPublisher,L2VerifiedIngestionCallback,L2VerifiedMarketDataDecoder};
 class L2CaptureIngestion implements MarketDataIngestionInterface {
     public ?RawMarketEvent $received = null;
     public function ingest(string $organizationId, RawMarketEvent $raw): MarketDataIngestionResult {

@@ -24,15 +24,21 @@ final readonly class L2IngestionPublisher
         private MarketSourceId $sourceId,
         private ?VenueId $venueId,
         private string $symbol,
-        private string $eventType,
-    ) {}
+        private string $eventType = 'l2.verified.snapshot',
+    ) {
+        if ($eventType !== 'l2.verified.snapshot') throw new \\DomainException('Unsupported verified L2 event type.');
+    }
 
     public function publish(MarketOrderBook $book): MarketDataIngestionResult
     {
+        if ($book->type !== \\Domains\\CapitalMarkets\\Domain\\MarketData\\MarketEventType::OrderBookSnapshot) throw new \\DomainException('Verified ingestion requires a full book snapshot.');
         if ($book->sequence === null || $book->sequence === '') {
             throw new \DomainException('Verified L2 publication requires a sequence.');
         }
-        $payload = $book->toArray();
+        $payload = [
+            'bids' => array_map(static fn($level):array => ['price'=>$level->price->value->value(),'quantity'=>$level->quantity->value->value()],$book->bids),
+            'asks' => array_map(static fn($level):array => ['price'=>$level->price->value->value(),'quantity'=>$level->quantity->value->value()],$book->asks),
+        ];
         $event = new RawMarketEvent(
             'cm-l2-'.bin2hex(random_bytes(16)),
             $this->sourceId,

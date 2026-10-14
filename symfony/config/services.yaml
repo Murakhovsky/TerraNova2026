@@ -1945,9 +1945,12 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2VerifiedMarketDataDecoder: ~
+
   Domains\CapitalMarkets\Application\Service\MarketDataDecoderRegistry:
     arguments:
       $decoders:
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2VerifiedMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder'

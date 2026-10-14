@@ -25,3 +25,39 @@ jobs:
           find app/Domains/CapitalMarkets/Infrastructure/MarketData/L2 -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: L2 smoke tests
         run: bash tests/CapitalMarkets/L2RecoverySuite.sh
+
+  l2-mysql-ingestion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: testroot
+          MYSQL_DATABASE: l2_ingestion_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ptestroot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      L2_TEST_MYSQL_DSN: mysql:host=127.0.0.1;port=3306;dbname=l2_ingestion_test;charset=utf8mb4
+      L2_TEST_MYSQL_USER: root
+      L2_TEST_MYSQL_PASSWORD: testroot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Syntax-check integration scripts
+        run: |
+          php -l tests/integration/l2_verified_ingestion_mysql.php
+          php -l tests/integration/l2_verified_ingestion_service.php
+      - name: Verify actual ingestion and MySQL persistence
+        run: |
+          php tests/integration/l2_verified_ingestion_service.php
+          php tests/integration/l2_verified_ingestion_mysql.php
