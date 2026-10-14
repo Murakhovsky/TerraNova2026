@@ -70,3 +70,9 @@ Stocks Trading/tokenized-assets API Binance відрізняється від п
 Наступні пакети до повного виробничого приймання: авторизований Binance equity metadata, issuer/redemption review, автоматизація підписок і market data ingestion, контроль rate limits та scheduler, реальні Paper E2E угоди, monitor/replay і незалежне NAV reconciliation. Live Trading залишається вимкненим.
 
 Документація API: https://developers.binance.com/en/docs/products/spot/rest-api та https://developers.binance.com/en/docs/catalog/advanced-trading-stocks-trading/api/rest-api/market-data
+
+## Збережений кандидатний пул (CM-INSTRUMENT-POOL-RT, етап P0.1)
+
+Після ручного Discovery FOS тепер ідемпотентно оновлює `tn_capital_market_cross_venue_pool_candidates` у межах організації. Ключ запису: `(organization_id,pool_key,seed_token,venue)`; `pool_key=BINANCE_BSTOCKS_SEED`. Стани `LISTED_EXACT_TOKEN_SYMBOL`, `DISTINCT_TOKEN_REVIEW_REQUIRED`, `NOT_LISTED` зберігаються окремо для кожного venue. `UNAVAILABLE` не стирає останнє спостереження. Усі економічні зв'язки лишаються `UNVERIFIED` / `NOT_ESTABLISHED`; дані не створюють canonical Instrument або Opportunity. Окремий блок на сторінці `/capital-markets/discovery` відображає кількості за станами. Перед відкриттям сторінки після оновлення коду застосувати міграцію `20261014_000140_capital_markets_candidate_pool.sql`.
+
+Поточні обмеження: автоматичне розкладення Discovery, перевірка issuer evidence, канонічна registry reconciliation, Subscription Planner і real-time streams є наступними критеріями приймання, а не наявною функціональністю.

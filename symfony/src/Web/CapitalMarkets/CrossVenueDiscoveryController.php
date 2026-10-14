@@ -56,6 +56,7 @@ final readonly class CrossVenueDiscoveryController
         try {
             $watchlist=$this->universe->load($this->universeFile);
             $snapshot=$this->snapshots->latest($org);
+            $poolCandidateCounts=$this->poolCandidates->counts($org);
             $quoteSnapshot=$this->quotes->latest($org);
         } catch(Throwable $e) {
             error_log('capital_markets.cross_venue_discovery.read_failed '.get_class($e).' '.$e->getMessage());
@@ -73,6 +74,7 @@ final readonly class CrossVenueDiscoveryController
             $this->twig->render('experience/capital_markets/discovery.html.twig',[
                 'shell'=>$shell,'pageTitle'=>'Cross-Venue Discovery',
                 'watchlist'=>$watchlist,'snapshot'=>$snapshot,'quoteSnapshot'=>$quoteSnapshot,
+                'poolCandidateCounts'=>$poolCandidateCounts,
                 'canScan'=>$canScan,'csrfToken'=>$this->csrf->token($request),
                 'scanned'=>$request->query->getBoolean('scanned'),
                 'cooldown'=>$request->query->getBoolean('cooldown'),

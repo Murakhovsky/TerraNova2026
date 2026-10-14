@@ -35,6 +35,24 @@
     {% endif %}
   </div>
 
+  <section class="cos-panel">
+    <h2>Пул кандидатів (без торгового допуску)</h2>
+    <p>Збережені спостереження з останніх успішних перевірок лістингів. Сканування не підтверджує юридичну ідентичність, забезпечення, redemption чи виконуваність угод. При недоступності біржі попереднє спостереження не стирається.</p>
+    {% if poolCandidateCounts is empty %}
+      <p>Пул поки порожній. Запустіть Discovery для першого наповнення.</p>
+    {% else %}
+      <div class="cos-kpi-strip">
+        {% for status in poolCandidateCounts %}
+          <article class="cos-card">
+            <strong>{{ status.listing_state }}</strong>
+            <p>{{ status.count }} спостережень</p>
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <small>Стан верифікації: UNVERIFIED. Автоматичні підписки і trusted Market State ще не активовані цим модулем.</small>
+  </section>
+
   {% if scanned %}<div class="cos-alert cos-alert--success">Результат перевірки збережено.</div>{% endif %}
   {% if cooldown %}<div class="cos-alert cos-alert--warning">Зачекайте 90 секунд між перевірками.</div>{% endif %}
   {% if scanError %}<div class="cos-alert cos-alert--danger">Не вдалося провести сканування. Подивіться серверні журнали.</div>{% endif %}
