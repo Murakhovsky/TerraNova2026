@@ -264,6 +264,9 @@ services:
   # Durable Workflow foundation, fail closed; NOT connected to Federation/Engineering writers.
   Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
+  # Plan verifier stays fail-closed. Real Action receipt verifier is not promoted.
+  Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface:
+    alias: App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence
   Platform\Workflow\Contract\WorkflowRecoveryInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowRecoveryInspector
   Platform\Workflow\Contract\WorkflowReceiptVerifierInterface:

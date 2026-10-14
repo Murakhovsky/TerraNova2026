@@ -195,6 +195,8 @@ interface WorkflowRecoveryInterface
 
 **Shadow parity:** `WorkflowShadowParityComparator` порівнює read-only Federation legacy Run/Step із canonical snapshot, включно з tenant, version, Plan digest, Step binding, attempts, idempotency key та незалежно attested receipt references; без доказів результат `PARTIAL`, при невідповідності `DRIFT`, без канонічного Run `NO_TARGET`. Для Engineering технічний стан/trace/link порівнюється окремо, а stage/AgentRun/QA/human transitions **завжди залишаються PARTIAL** до доказової міграції. Жодного shadow writer чи dispatch не існує.
 
+**Read-only canonical Action receipt proof:** `DoctrineWorkflowActionReceiptVerifier` перевіряє існуючий Action із `wf:<stored-step-idempotency>`, pinned Step input/action binding, source/tenant/correlation, один COMPLETED attempt, latest `APPROVAL_REQUIRED` Policy і незалежне не прострочене `APPROVED` рішення. Перевірка Plan винесена у `WorkflowPlanApprovalEvidenceInterface`; **production default — `FailClosedWorkflowPlanApprovalEvidence`**, і основний `WorkflowReceiptVerifierInterface` залишається пов'язаний з `FailClosedWorkflowReceiptVerifier`. Без active module/handler, approved Plan adapter і окремого Action admission **не вмикати** цей proof як production-finalizer. Наявність receipt у БД не дає права виконувати Action.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0
