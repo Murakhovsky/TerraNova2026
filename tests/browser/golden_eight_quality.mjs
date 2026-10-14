@@ -75,6 +75,8 @@ const assertVisual = (buffer, label) => {
 
 const browser = await chromium.launch({ headless: true, executablePath });
 const failures = [];
+let evidenceProvenance = null;
+let evidenceFiles = [];
 
 try {
   const authContext = await browser.newContext({
@@ -241,7 +243,7 @@ try {
     }
   }
 
-  const evidenceProvenance = {
+  evidenceProvenance = {
     schema: 1,
     suite: 'COS Experience V1 Golden Eight browser QA',
     source: 'tests/browser/golden_eight_quality.mjs',
@@ -256,7 +258,7 @@ try {
     environment: process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
   };
 
-  const evidenceFiles = targets.flatMap((target) => profiles.map((profile) => ({
+  evidenceFiles = targets.flatMap((target) => profiles.map((profile) => ({
     page: target.name,
     route: target.path,
     viewport: profile.name,
