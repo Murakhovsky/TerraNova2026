@@ -64,4 +64,16 @@ if (!str_contains($stage, "'human_decision_required' => false")) throw new Runti
 if (!str_contains($stage, "markRuntimeIssue(") || !str_contains($stage, "'STALLED'")) throw new RuntimeException('Repository infrastructure failure must stall runtime explicitly.');
 if (str_contains($stage, "type: 'EXTERNAL_CREDENTIAL'")) throw new RuntimeException('Architect still creates EXTERNAL_CREDENTIAL human decisions for runtime configuration.');
 
+foreach ([
+    'EngineeringArchitectContextOptimizer',
+    'compactRevisionDiff($repositoryDiff, $repositoryFiles)',
+    "'repository_diff' => $compactRepositoryDiff",
+    'architect.context_size_profile',
+    'serializedBytesByComponent',
+] as $marker) {
+    if (!str_contains($stage, $marker)) {
+        throw new RuntimeException('Architect contextual evidence optimization missing '.$marker);
+    }
+}
+
 echo "Engineering Architect stage passed.\n";
