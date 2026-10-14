@@ -388,3 +388,8 @@
 "черга": "queue"
 "Immediate run": "Immediate run"
 "Queue": "Queue"
+"QA": "QA"
+"ЩЕ НЕ ДОСЯГНУТО": "Not reached"
+"Агент уже запускався, але облік токенів не зв’язаний із цим процесом. Це проблема correlation/ledger, а не нульове використання.": "An agent has run, but token usage is not linked to this workflow. This is a correlation/ledger issue, not zero usage."
+"Зараз система готує контекст для першого агента. Токени й вартість з’являться після першого виклику LLM.": "The system is preparing context for the first agent. Token usage and cost will appear after the first LLM call."
+"Провайдер не повернув вартість, а для цієї моделі немає налаштованої ставки. Кількість токенів показана фактично.": "The provider returned no cost, and no price is configured for this model. The token count is the actual reported usage."
