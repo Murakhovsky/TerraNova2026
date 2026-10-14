@@ -103,7 +103,7 @@ $catalog=new CanonicalCapabilityCatalog(new ModuleCatalog([
     ),
 ]));
 $modules=new ActiveModuleResolver(
-    new ModuleCatalog([new ModuleDefinition(new ModuleManifest('sales','Sales fixture','1.0.0'))]),
+    new ModuleCatalog([new ModuleDefinition(new ModuleManifest('sales','Sales fixture','1.0.0'),new ModuleContributions())]),
     new class implements ModuleStateRepositoryInterface {
         public function enabledOverride(string $organizationId,string $moduleId):?bool {return true;}
         public function setEnabled(string $organizationId,string $moduleId,bool $enabled):void {}
@@ -157,7 +157,7 @@ $store=new DoctrineWorkflowExecutionStore(
     $db,new FailClosedWorkflowReceiptVerifier(),new FailClosedWorkflowStepClaimAdmission(),
 );
 $reject=static function(callable $call,string $label):void{
-    try{$call();}catch(Throwable){return;}
+    try{$call();}catch(DomainException){return;}
     throw new RuntimeException('Unsafe predecessor was accepted: '.$label);
 };
 $actions=[];
