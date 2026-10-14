@@ -1982,6 +1982,7 @@ services:
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\CapitalMarkets\Application\Service\CrossVenueSubscriptionPlanner: ~
   Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader: ~
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository:
     arguments:

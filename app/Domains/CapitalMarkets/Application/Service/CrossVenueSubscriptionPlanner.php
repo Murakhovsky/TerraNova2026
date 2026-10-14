@@ -1,0 +1,130 @@
+<?php
+declare(strict_types=1);
+
+namespace Domains\CapitalMarkets\Application\Service;
+
+use Domains\CapitalMarkets\Application\Contract\MarketSourceRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\MarketInstrumentResolverInterface;
+use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
+use Domains\CapitalMarkets\Domain\Contract\InstrumentRepository;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentStatus;
+use Domains\CapitalMarkets\Domain\Venue\VenueInstrumentStatus;
+use Domains\CapitalMarkets\Domain\MarketData\MarketDataCapability;
+use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
+use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
+use Domains\CapitalMarkets\Domain\MarketData\MarketSubscriptionStatus;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
+use InvalidArgumentException;
+
+/**
+ * Fenced BBO planner for ALREADY verified canonical venue mappings.
+ * Listing discovery never creates canonical identity or subscribes unverified rows.
+ * Planned BBO is a configured REST/market-data subscription, not a websocket uptime claim.
+ */
+final readonly class CrossVenueSubscriptionPlanner
+{
+    public function __construct(
+        private CrossVenuePoolCandidateRepository $pool,
+        private MarketSourceRepositoryInterface $sources,
+        private MarketSubscriptionRepositoryInterface $subscriptions,
+        private VenueRepository $venues,
+        private InstrumentRepository $instruments,
+        private MarketInstrumentResolverInterface $resolver,
+        private MarketDataAdapterRegistry $adapters,
+        private MarketDataAdministrationService $administration,
+    ) {}
+
+    /** @return array{source:string,venue:string,total:int,create:int,existing:int,blocked:int,rows:list<array<string,string>>} */
+    public function plan(string $org,string $sourceId,int $limit=250): array
+    {
+        if ($org === '' || $sourceId === '' || $limit < 1 || $limit > 250) {
+            throw new InvalidArgumentException('Invalid BBO subscription planning scope.');
+        }
+        $source=$this->sources->get($org,MarketSourceId::fromString($sourceId));
+        if ($source===null) throw new InvalidArgumentException('Unknown market data source.');
+        $venue=match($source->adapterType) {
+            'binance.spot.rest'=>'BINANCE',
+            'bybit.spot.v5'=>'BYBIT',
+            'kraken.spot.rest'=>'KRAKEN',
+            default=>throw new InvalidArgumentException('Adapter is not eligible for this pool.'),
+        };
+        $items=$this->pool->listedForVenue($org,$venue,500);
+        if (count($items)>$limit) {
+            throw new InvalidArgumentException('Verified monitoring candidates exceed requested planning capacity.');
+        }
+        $result=['source'=>$sourceId,'venue'=>$venue,'total'=>count($items),
+            'create'=>0,'existing'=>0,'blocked'=>0,'rows'=>[]];
+        if (!$source->enabled || $source->venueId===null) {
+            foreach($items as $item) {
+                $result['rows'][]=['seed_token'=>$item['seed_token'],'venue_symbol'=>$item['venue_symbol'],
+                    'instrument_id'=>'','status'=>'BLOCKED_SOURCE_NOT_READY'];
+                ++$result['blocked'];
+            }
+            return $result;
+        }
+        $mappings=[];
+        foreach ($this->venues->instruments($org,$source->venueId) as $mapped) {
+            $key=strtoupper($mapped->venueSymbol);
+            $mappings[$key][]=$mapped;
+        }
+        $existing=[];
+        foreach ($this->subscriptions->forSource($org,$source->id) as $subscription) {
+            if ($subscription->dataType !== MarketEventType::Bbo) continue;
+            $existing[$subscription->instrumentId->value()]=$subscription->status;
+        }
+        $adapter=$this->adapters->get($source->adapterType);
+        foreach ($items as $item) {
+            $symbol=(string)$item['venue_symbol'];
+            $mapped=$mappings[strtoupper($symbol)] ?? [];
+            $instrumentId='';
+            $status='BLOCKED_MAPPING_REQUIRED';
+            if (count($mapped)===1) {
+                $venueInstrument=$mapped[0];
+                $instrumentId=$venueInstrument->instrumentId->value();
+                $instrument=$this->instruments->get($org,$venueInstrument->instrumentId);
+                if ($instrument===null || $instrument->status!==InstrumentStatus::Active
+                    || $venueInstrument->status!==VenueInstrumentStatus::Active) {
+                    $status='BLOCKED_INACTIVE_CANONICAL_INSTRUMENT';
+                } elseif (isset($existing[$instrumentId])) {
+                    $status=$existing[$instrumentId]===MarketSubscriptionStatus::Active
+                        ? 'ALREADY_ACTIVE' : 'BLOCKED_EXISTING_SUBSCRIPTION';
+                } else {
+                    $target=$this->resolver->target($org,$source,$instrument->id);
+                    if ($target===null || strcasecmp($target->externalSymbol,$symbol)!==0
+                        || !$adapter->supports(MarketDataCapability::Bbo,$target)) {
+                        $status='BLOCKED_ADAPTER_MAPPING';
+                    } else {
+                        $status='PLAN_CREATE';
+                    }
+                }
+            } elseif (count($mapped)>1) {
+                $status='BLOCKED_AMBIGUOUS_MAPPING';
+            }
+            $result['rows'][]=['seed_token'=>(string)$item['seed_token'],
+                'venue_symbol'=>$symbol,'instrument_id'=>$instrumentId,'status'=>$status];
+            if ($status==='PLAN_CREATE') ++$result['create'];
+            elseif ($status==='ALREADY_ACTIVE') ++$result['existing'];
+            else ++$result['blocked'];
+        }
+        return $result;
+    }
+
+    /** Creates only PLAN_CREATE entries via existing audited subscription boundary. */
+    public function apply(string $org,int $actor,string $sourceId,int $limit=250): array
+    {
+        if ($actor < 1) throw new InvalidArgumentException('Authorized operator required.');
+        $plan=$this->plan($org,$sourceId,$limit);
+        $created=0;
+        foreach ($plan['rows'] as $row) {
+            if ($row['status']!=='PLAN_CREATE') continue;
+            $this->administration->createSubscription(
+                $org,$actor,'cm-pool-'.substr(hash('sha256',$org.'|'.$sourceId.'|'.$row['instrument_id']),0,32),
+                $sourceId,['instrument_id'=>$row['instrument_id'],'data_type'=>'BBO']
+            );
+            ++$created;
+        }
+        return ['created'=>$created,'plan'=>$plan,
+            'transport_state'=>'CONFIGURED_SUBSCRIPTIONS_NOT_STREAMING_CONFIRMED'];
+    }
+}

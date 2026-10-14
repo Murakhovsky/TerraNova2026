@@ -45,6 +45,26 @@ final readonly class CrossVenuePoolCandidateRepository
         return count($rows);
     }
 
+    /** @return list<array{seed_token:string,venue_symbol:string}> */
+    public function listedForVenue(string $organizationId,string $venue,int $limit=500): array
+    {
+        if ($organizationId==='' || !in_array($venue,['BINANCE','BYBIT','KRAKEN'],true)) {
+            throw new RuntimeException('Invalid subscription planning scope.');
+        }
+        $limit=max(1,min(500,$limit));
+        $statement=$this->connection->prepare(
+            'SELECT seed_token,venue_symbol FROM tn_capital_market_cross_venue_pool_candidates
+             WHERE organization_id=:org AND pool_key=:pool AND venue=:venue
+               AND listing_state=:state AND venue_symbol IS NOT NULL
+             ORDER BY seed_token LIMIT '.$limit
+        );
+        $statement->execute([
+            'org'=>$organizationId,'pool'=>'BINANCE_BSTOCKS_SEED',
+            'venue'=>$venue,'state'=>'LISTED_EXACT_TOKEN_SYMBOL',
+        ]);
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function counts(string $organizationId): array
     {
         $query=$this->connection->prepare(
