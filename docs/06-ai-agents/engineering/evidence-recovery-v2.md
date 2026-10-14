@@ -1,8 +1,16 @@
-# Engineering Evidence Orchestration & Recovery V2
+---
+title: Відновлення та бюджетування доказів Engineering V2
+description: Правила запитів файлів репозиторію для головного архітектора COS.
+status: active
+updated: 2026-10-14
+kind: guide
+---
+
+# Контроль доказів і відновлення архітектора V2
 
 Implementation scope: Manager-owned read-only repository evidence for Principal Architect.
 
-## Separate output contracts
+## Контракти проміжних відповідей
 
 `NEEDS_REPOSITORY_EVIDENCE` is an **intermediate request**, not an Architecture Decision.
 The agent supplies `status` and 1–6 exact `requested_repository_files`, without
@@ -11,7 +19,7 @@ or `data_flow`. Only final architecture verdicts need full architecture and
 handoff fields. `APPROVED` and `APPROVED_WITH_CONDITIONS` still require the
 full independently validated developer handoff.
 
-## Deterministic evidence budget
+## Керування бюджетом доказів
 
 - Up to 4 evidence rounds and 6 paths per request, with 12 additional files total.
 - Initial context selection gives domain/feature context map higher precedence than
@@ -26,7 +34,7 @@ full independently validated developer handoff.
   typed Manager technical outcomes instead of creating human approval requests.
   They do not automatically increase the evidence budget.
 
-## Recovery semantics
+## Семантика технічного відновлення
 
 `EVIDENCE_BUDGET_EXHAUSTED` and `EVIDENCE_REQUEST_REJECTED` are
 Manager-owned technical outcomes, never authorization or architecture approval.
@@ -36,7 +44,7 @@ are not overwritten by a provisional technical outcome. After the underlying
 scoped evidence issue is addressed, an operator may explicitly resume. Do not
 automatically rerun an unchanged expensive Architect request.
 
-## Events & UI
+## Події та інтерфейс
 
 - `architect.evidence_request_evaluated`: selected file paths, rejected
   path hashes, budget and selection reason.
@@ -46,7 +54,7 @@ automatically rerun an unchanged expensive Architect request.
 - Engineering terminal displays the latest evidence stop with the file/round
   counters. Completed provider calls are not Architecture Gate approvals.
 
-## Acceptance
+## Приймальні перевірки
 
 Tests: `engineering_architect_evidence_planner.php`,
 `engineering_agent_output_validation.php`, `engineering_agent_contracts.php`,
