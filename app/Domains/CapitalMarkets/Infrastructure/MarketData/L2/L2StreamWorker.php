@@ -47,7 +47,9 @@ final readonly class L2StreamWorker
             $acknowledgements = $this->acknowledgements ?? new L2SubscriptionAcknowledgement();
             for ($i = 0; $i < $maxMessages; ++$i) {
                 if ($shouldStop()) return $published;
+                $this->assertNotStale($published);
                 $frame = $this->transport->readText();
+                $this->assertNotStale($published);
                 if (!$subscriptionReady) {
                     if ($acknowledgements->accepted($this->config->venue, $frame)) {
                         $subscriptionReady = true;
@@ -102,6 +104,14 @@ final readonly class L2StreamWorker
             } finally {
                 $this->transport->close();
             }
+        }
+    }
+
+    private function assertNotStale(int $publications): void
+    {
+        if ($publications > 0 && $this->watchdog !== null
+            && $this->watchdog->isStale(intdiv(hrtime(true), 1000000))) {
+            throw new DomainException('L2 verified publication stalled; reconnect required.');
         }
     }
 }

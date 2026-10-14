@@ -86,4 +86,37 @@ if ($stoppedWorker->run(static function(): void { throw new RuntimeException('St
     || count($stoppedTransport->sent) !== 0) {
     throw new RuntimeException('Stopped L2 worker initiated work.');
 }
+
+class SlowControlOnlyTransport extends FixtureL2Transport {
+    public function readText(): string {
+        if (count($this->messages) === 1) usleep(180000);
+        return parent::readText();
+    }
+}
+$slowTransport = new SlowControlOnlyTransport();
+$slowTransport->messages = [
+    '{"op":"subscribe","success":true}',
+    '{"topic":"orderbook.50.BTCUSDT","type":"snapshot","data":{"s":"BTCUSDT","u":10,"seq":100,"b":[["100","1"]],"a":[["110","1"]]}}',
+    '{"op":"pong"}'
+];
+$slowSession = new L2RecoverySession();
+$slowWorker = new L2StreamWorker(
+    new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
+    new L2SubscriptionEncoder(),$slowTransport,
+    new BybitL2StreamProcessor(
+        new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT',50),'BYBIT_LINEAR'),
+        new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
+        new BybitL2RecoveryCoordinator($slowSession),$slowSession
+    ),null,null,new L2PublicationWatchdog(100)
+);
+$slowPublished = 0;
+$stalenessDetected = false;
+try {
+    $slowWorker->run(static function($book) use (&$slowPublished):void { ++$slowPublished; },3);
+} catch (DomainException $error) {
+    $stalenessDetected = str_contains($error->getMessage(),'stalled');
+}
+if (!$stalenessDetected || $slowPublished !== 1) {
+    throw new RuntimeException('Control-only L2 frames must not mask a stale verified book.');
+}
 echo "L2 stream worker smoke passed\n";
