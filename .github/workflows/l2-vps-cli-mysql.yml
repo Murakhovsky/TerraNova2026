@@ -81,7 +81,9 @@ jobs:
               php php -d memory_limit=224M "$@"
           }
           echo '=== VALIDATE ACTUAL SYMFONY CLI COMMAND ==='
-          run_php bin/console list --raw | grep -q '^cos:capital-markets:l2:stream '
+          run_php bin/console list --raw > "$STAGE/cli-commands.txt"
+          grep -q '^cos:capital-markets:l2:stream ' "$STAGE/cli-commands.txt"
+          echo 'Symfony command registered.'
           echo '=== BOOTSTRAP ACCEPTANCE-ONLY SOURCE/MAPPING ==='
           run_php /tmp/l2_acceptance.php bootstrap
           echo '=== CLI PREFLIGHT WITH ACTUAL SOURCE ==='
