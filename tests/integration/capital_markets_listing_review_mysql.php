@@ -102,6 +102,24 @@ try {
         && $history($org)===5,
         'Urgent revocation must succeed without source freshness, evidence URL or active provider.');
 
+    // Operator must be able to review every row in the tenant pool, not only top 40.
+    $many=$pdo->prepare(
+        "INSERT INTO tn_capital_market_cross_venue_pool_candidates
+         (organization_id,pool_key,seed_token,underlying_symbol,venue,venue_symbol,quote_currency,
+          listing_state,verification_state,economic_equivalence,source_as_of,observed_at)
+         VALUES (:org,'BINANCE_BSTOCKS_SEED',:token,'ZZ','BINANCE',:symbol,'USDT',
+                 'LISTED_EXACT_TOKEN_SYMBOL','UNVERIFIED','NOT_ESTABLISHED',:asof,UTC_TIMESTAMP(6))"
+    );
+    for ($i=0;$i<41;$i++) {
+        $name=sprintf('REV%03dB',$i);
+        $many->execute(['org'=>$org,'token'=>$name,'symbol'=>$name.'USDT','asof'=>$source]);
+    }
+    $pageOne=$review->pending($org,40,0);
+    $pageTwo=$review->pending($org,40,40);
+    $assert(count($pageOne)===40 && count($pageTwo)===2,
+        'Review pagination lost records above the first 40.');
+    $assert($review->pending($other)===[],
+        'Review queue must not leak records from a different tenant.');
     echo "MySQL listing review: RBAC boundary contract, evidence, CAS, quote drift, expiry, revoke and tenant isolation passed.\n";
 } finally {
     foreach (['tn_capital_market_pool_listing_reviews','tn_capital_market_cross_venue_pool_candidates'] as $table) {
