@@ -41,7 +41,7 @@ foreach ([
     ['symfony/templates/experience/workspace_shell.html.twig', ['shell.language','shell.brand_name']],
     ['symfony/templates/experience/engineering/index.html.twig', ['Агентська розробка',"'engineering.status.' ~"]],
     ['symfony/templates/experience/engineering/feature.html.twig', ['ВИКОНУЄТЬСЯ','Менеджер / координатор']],
-    ['symfony/templates/experience/async/activity_center_frame.html.twig', ['Activity Center','engineering.status.completed']],
+    ['symfony/templates/experience/async/activity_center_frame.html.twig', ['Activity Center',"'engineering.status.' ~"]],
     ['symfony/templates/experience/ai/ai_panel_frame.html.twig', ['AI & Agent Center','available']],
 ] as [$path,$keys]) {
     $template = $read($path);

@@ -46,8 +46,8 @@
                         <small>{{ selected.type }}</small>
                         <strong>{{ ('engineering.status.' ~ (selected.status.value|lower))|trans }}</strong>
                     </div>
-                    <span class="cos-activity-center__status" data-status="{{ ('engineering.status.' ~ (selected.status.value|lower))|trans }}">
-                        {{ selected.status.value }}
+                    <span class="cos-activity-center__status" data-status="{{ selected.status.value }}">
+                        {{ ('engineering.status.' ~ (selected.status.value|lower))|trans }}
                     </span>
                 </div>
 
