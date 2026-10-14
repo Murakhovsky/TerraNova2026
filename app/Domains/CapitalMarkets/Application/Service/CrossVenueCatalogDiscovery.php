@@ -29,7 +29,8 @@ final readonly class CrossVenueCatalogDiscovery
      * @param list<array{underlying:string,token:string,market:string,asset_type:string,leverage:string,risk_class:string}> $candidates
      * @return array<string,mixed>
      */
-    public function scan(string $organizationId, array $candidates): array
+    public function scan(string $organizationId, array $candidates,
+        string $seedSourceAsOf='2026-09-27T17:53:00Z',string $origin='BOOTSTRAP_CSV'): array
     {
         if ($organizationId === '' || $candidates === [] || count($candidates) > 500) {
             throw new InvalidArgumentException('Invalid cross-venue discovery scope.');
@@ -120,9 +121,10 @@ final readonly class CrossVenueCatalogDiscovery
 
         return [
             'dataset'=>'cross_venue_candidate_discovery',
-            'universe'=>'BINANCE_BSTOCKS_2026_09_27',
+            'universe'=>$origin==='IMPORTED_MYSQL'?'BINANCE_BSTOCKS_IMPORTED':'BINANCE_BSTOCKS_2026_09_27',
+            'universe_origin'=>$origin,
             'as_of_utc'=>(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format(DATE_ATOM),
-            'historical_input_as_of_utc'=>'2026-09-27T17:53:00Z',
+            'historical_input_as_of_utc'=>$seedSourceAsOf,
             'source_health'=>$health,'total'=>count($items),'rows'=>$items,
             'constraints'=>[
                 'NO_AUTOMATIC_IDENTITY_MERGE','NO_AUTOMATIC_ECONOMIC_LINK','NO_TRADE_OR_ALLOCATION',

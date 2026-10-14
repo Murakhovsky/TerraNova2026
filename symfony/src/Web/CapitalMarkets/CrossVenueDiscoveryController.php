@@ -9,6 +9,7 @@ use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
 use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
+use Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse;
 use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
 use Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository;
@@ -45,6 +46,7 @@ final readonly class CrossVenueDiscoveryController
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private CrossVenueUniverse $universe,
+        private CrossVenueActiveUniverse $activeUniverse,
         private BStocksSeedFileReader $seedReader,
         private BStocksCanonicalDraftService $canonicalDrafts,
         private BStocksSeedImportRepository $seedImports,
@@ -65,7 +67,8 @@ final readonly class CrossVenueDiscoveryController
         if($tenant instanceof Response)return $tenant;
         $org=$tenant->organizationId()->value();
         try {
-            $watchlist=$this->universe->load($this->universeFile);
+            $universe=$this->activeUniverse->load($org,$this->universeFile);
+            $watchlist=$universe['rows'];
             $snapshot=$this->snapshots->latest($org);
             $poolCandidateCounts=$this->poolCandidates->counts($org);
             $listingReviewRows=$this->listingReviews->pending($org);
@@ -89,6 +92,7 @@ final readonly class CrossVenueDiscoveryController
             $this->twig->render('experience/capital_markets/discovery.html.twig',[
                 'shell'=>$shell,'pageTitle'=>'Cross-Venue Discovery',
                 'watchlist'=>$watchlist,'snapshot'=>$snapshot,'quoteSnapshot'=>$quoteSnapshot,
+                'universeOrigin'=>$universe['origin'],'universeAsOf'=>$universe['source_as_of'],
                 'poolCandidateCounts'=>$poolCandidateCounts,
                 'listingReviewRows'=>$listingReviewRows,
                 'canReviewListings'=>$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage)
@@ -114,14 +118,14 @@ final readonly class CrossVenueDiscoveryController
         if(!$this->csrf->isValid($request))return new Response('Invalid CSRF token.',403);
         $org=$tenant->organizationId()->value();
         $actor=(int)$tenant->userId()->value();
+        $limit=(string)$request->request->get('limit','10');
+        if(!in_array($limit,['10','all'],true))return new Response('Invalid scan scope.',400);
         if(!$this->snapshots->reserveScan($org,$actor))return new RedirectResponse('/capital-markets/discovery?cooldown=1',303);
 
-        $limit=(string)$request->request->get('limit','10');
-        if(!in_array($limit,['10','80'],true))return new Response('Invalid scan scope.',400);
-
         try {
-            $candidates=$this->universe->load($this->universeFile);
-            $snapshot=$this->scanner->scan($org,array_slice($candidates,0,(int)$limit));
+            $universe=$this->activeUniverse->load($org,$this->universeFile);
+            $candidates=$limit==='10'?array_slice($universe['rows'],0,10):$universe['rows'];
+            $snapshot=$this->scanner->scan($org,$candidates,$universe['source_as_of'],$universe['origin']);
             $this->snapshots->record($org,$actor,$snapshot);
             $this->poolCandidates->reconcile($org,$snapshot);
         } catch(Throwable $e) {

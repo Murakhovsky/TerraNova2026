@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
+use Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
@@ -26,7 +26,7 @@ use Throwable;
 final class CapitalMarketsInstrumentDiscoveryCommand extends Command
 {
     public function __construct(
-        private readonly CrossVenueUniverse $universe,
+        private readonly CrossVenueActiveUniverse $universe,
         private readonly CrossVenueCatalogDiscovery $discovery,
         private readonly CrossVenueDiscoverySnapshotRepository $snapshots,
         private readonly CrossVenuePoolCandidateRepository $pool,
@@ -39,7 +39,7 @@ final class CapitalMarketsInstrumentDiscoveryCommand extends Command
     {
         $this->addArgument('organization', InputArgument::REQUIRED, 'Tenant organization ID')
             ->addArgument('actor', InputArgument::REQUIRED, 'Authorized operator/service actor ID')
-            ->addOption('limit', null, InputOption::VALUE_REQUIRED, '10 or 80 candidates', '80');
+            ->addOption('limit', null, InputOption::VALUE_REQUIRED, '10, 80 or all candidates (max 500)', 'all');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -48,7 +48,7 @@ final class CapitalMarketsInstrumentDiscoveryCommand extends Command
         $actor = filter_var($input->getArgument('actor'), FILTER_VALIDATE_INT);
         $limit = (string)$input->getOption('limit');
         if ($org === '' || strlen($org) > 190 || $actor === false || $actor < 1
-            || !in_array($limit, ['10','80'], true)) {
+            || !in_array($limit, ['10','80','all'], true)) {
             $output->writeln('INVALID_SCOPE');
             return Command::INVALID;
         }
@@ -62,8 +62,10 @@ final class CapitalMarketsInstrumentDiscoveryCommand extends Command
                 $output->writeln('RATE_LIMITED');
                 return Command::FAILURE;
             }
-            $seeds = $this->universe->load($this->file);
-            $result = $this->discovery->scan($org, array_slice($seeds, 0, (int)$limit));
+            $universe = $this->universe->load($org,$this->file);
+            $seeds = $limit==='all'?$universe['rows']
+                :array_slice($universe['rows'],0,(int)$limit);
+            $result = $this->discovery->scan($org,$seeds,$universe['source_as_of'],$universe['origin']);
             $this->snapshots->record($org, $actor, $result);
             $count = $this->pool->reconcile($org, $result);
             $output->writeln(json_encode([

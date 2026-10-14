@@ -15,7 +15,7 @@
   <div class="cos-panel">
     <h2>Початковий каталог</h2>
     <p><strong>{{ watchlist|length }}</strong> кандидатів із файлу bStocks Binance.
-      Час даних: <strong>27.09.2026 17:53 UTC</strong>. Це не актуальні котирування та не підтвердження прав на токен.</p>
+      Джерело: <strong>{{ universeOrigin }}</strong>, дата файлу: <strong>{{ universeAsOf }}</strong>. Це не актуальні котирування та не підтвердження прав на токен.</p>
     <p><a href="/capital-markets/market-data">Налаштувати джерела котирувань</a> ·
       <a href="/capital-markets/instruments">Реєстр інструментів</a> ·
       <a href="/capital-markets/markets">Market Explorer</a></p>
@@ -25,11 +25,11 @@
         <label for="discovery-limit">Обсяг сканування:</label>
         <select class="form-select" id="discovery-limit" name="limit">
           <option value="10">Перші 10 кандидатів</option>
-          <option value="80">Усі 80 кандидатів</option>
+          <option value="all">Усі {{ watchlist|length }} кандидатів</option>
         </select>
         <button class="btn btn-primary" type="submit">Перевірити лістинги через API</button>
       </form>
-      <p><small>Три публічні каталоги. Запуск лише вручну, не частіше ніж раз на 90 секунд для організації.</small></p>
+      <p><small>Три публічні каталоги. Планове сканування також підтримується; ручний повтор не частіше ніж раз на 90 секунд для організації.</small></p>
     {% else %}
       <p>Для запуску перевірки потрібен дозвіл Market Data Manage.</p>
     {% endif %}

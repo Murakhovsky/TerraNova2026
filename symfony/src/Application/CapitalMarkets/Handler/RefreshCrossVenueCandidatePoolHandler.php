@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Application\CapitalMarkets\Handler;
 
 use App\Application\CapitalMarkets\Command\RefreshCrossVenueCandidatePool;
-use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
+use Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
@@ -18,7 +18,7 @@ use Psr\Log\LoggerInterface;
 final readonly class RefreshCrossVenueCandidatePoolHandler
 {
     public function __construct(
-        private CrossVenueUniverse $universe,
+        private CrossVenueActiveUniverse $universe,
         private CrossVenueCatalogDiscovery $discovery,
         private CrossVenueDiscoverySnapshotRepository $snapshots,
         private CrossVenuePoolCandidateRepository $pool,
@@ -41,7 +41,9 @@ final readonly class RefreshCrossVenueCandidatePoolHandler
             $this->logger->info('Cross-venue discovery cooldown active.', ['organization_id'=>$message->organizationId]);
             return;
         }
-        $snapshot = $this->discovery->scan($message->organizationId, $this->universe->load($this->file));
+        $universe = $this->universe->load($message->organizationId,$this->file);
+        $snapshot = $this->discovery->scan($message->organizationId,$universe['rows'],
+            $universe['source_as_of'],$universe['origin']);
         $this->snapshots->record($message->organizationId, $message->actorId, $snapshot);
         $count = $this->pool->reconcile($message->organizationId, $snapshot);
         $this->logger->info('Cross-venue candidate observations saved.', [
