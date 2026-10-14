@@ -11,7 +11,7 @@ use DomainException;
  */
 final class L2WebSocketFrameRouter
 {
-    public function __construct(private readonly string $venue, private readonly string $symbol) {}
+    public function __construct(private readonly string $venue, private readonly string $symbol, private readonly ?int $depth = null) {}
 
     /** @return array<string,mixed> */
     public function decode(string $json): array
@@ -48,7 +48,7 @@ final class L2WebSocketFrameRouter
     {
         $topic = $frame['topic'] ?? null;
         $parts = is_string($topic) ? explode('.', $topic) : [];
-        if (count($parts) !== 3 || $parts[0] !== 'orderbook' || !ctype_digit($parts[1]) || $parts[2] !== $this->symbol) {
+        if (count($parts) !== 3 || $parts[0] !== 'orderbook' || !ctype_digit($parts[1]) || $parts[2] !== $this->symbol || ($this->depth !== null && (int) $parts[1] !== $this->depth)) {
             throw new DomainException('Bybit L2 topic mismatch.');
         }
         $row = $frame['data'] ?? null;
