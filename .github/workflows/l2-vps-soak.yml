@@ -143,7 +143,7 @@ jobs:
           YAML
           COMPOSE=(-f "$ROOT/docker-compose.yml" -f "$PERSIST/soak.override.yml" --env-file "$ROOT/.env")
           $D compose "${COMPOSE[@]}" config --quiet
-          $D compose "${COMPOSE[@]}" config --format json | python3 -c '
+          $D compose "${COMPOSE[@]}" --profile l2 config --format json | python3 -c '
           import json,sys
           obj=json.load(sys.stdin)["services"]["l2-soak"]
           keys=obj.get("environment",{})
