@@ -82,6 +82,8 @@
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
         <button class="btn btn-secondary" name="draft_mode" value="preview" type="submit">Перевірити план чернеток</button>
         <button class="btn btn-primary" name="draft_mode" value="apply" type="submit">Створити DRAFT у реєстрі</button>
+        <button class="btn btn-secondary" name="draft_mode" value="underlying-preview" type="submit">Перевірити reference ETF/акції</button>
+        <button class="btn btn-primary" name="draft_mode" value="underlying-apply" type="submit">Створити DRAFT reference</button>
       </form>
       <small>Перед створенням імпортуйте файл. Якщо є конфлікт ідентичності, зміни блокуються.</small>
     {% else %}

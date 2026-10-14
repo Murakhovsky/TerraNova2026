@@ -74,12 +74,33 @@ try {
     $repeat=$drafts->apply($org,1,100);
     $assert($repeat['created']===0 && $drafts->plan($org)['existing']===80,
         'Canonical draft replay must be idempotent.');
-    $assert($audit->count===80 && $events->count===80,
-        'Actual Foundation boundary must audit and publish each draft exactly once.');
+    $planReference=$drafts->planUnderlying($org);
+    $assert($planReference['total']===80 && $planReference['create']===80,
+        'Historical 80 underlying equity/ETF references require separate drafts.');
+    $registered=$drafts->applyUnderlyings($org,1,100);
+    $assert($registered['created']===80,'Canonical reference drafts were not all registered.');
+    $assert($count('tn_capital_market_instruments',$org)===160,
+        'Token and parent reference must have separate registry identities.');
+    $referenceSql=$pdo->prepare('SELECT family,status FROM tn_capital_market_instruments
+        WHERE organization_id=:org AND symbol=:symbol LIMIT 1');
+    $referenceSql->execute(['org'=>$org,'symbol'=>'AAPL']);
+    $referenceAapl=$referenceSql->fetch(PDO::FETCH_ASSOC);
+    $assert($referenceAapl['family']==='equity' && $referenceAapl['status']==='DRAFT',
+        'Underlying AAPL reference must be an unverified equity DRAFT.');
+    $referenceSql->execute(['org'=>$org,'symbol'=>'QQQ']);
+    $referenceQqq=$referenceSql->fetch(PDO::FETCH_ASSOC);
+    $assert($referenceQqq['family']==='fund' && $referenceQqq['status']==='DRAFT',
+        'Underlying QQQ must be a fund, not an active stock.');
+    $assert($drafts->applyUnderlyings($org,1,100)['created']===0
+        && $drafts->planUnderlying($org)['existing']===80,
+        'Repeated reference drafts must be idempotent.');
+    $assert($audit->count===160 && $events->count===160,
+        'Both token and reference draft paths must be fully audited.');
+
     $q=$pdo->prepare('SELECT COUNT(*) FROM tn_capital_market_instruments
         WHERE organization_id=:org AND symbol=:symbol');
     $q->execute(['org'=>$org,'symbol'=>'AAPL']);
-    $assert((int)$q->fetchColumn()===0,'Underlying AAPL was incorrectly created from AAPLB.');
+    $assert((int)$q->fetchColumn()===1,'Expected exactly one independent underlying reference DRAFT.');
     $assert($seeds->apply($conflictOrg,1,$seed)['new']===80,'Conflict tenant seed import failed.');
     $foundation->createInstrument(new CreateInstrument($conflictOrg,1,'collision-fixture',[
         'id'=>'external-stock-symbol-collision','symbol'=>'AAPLB','canonical_symbol'=>'AAPLB',

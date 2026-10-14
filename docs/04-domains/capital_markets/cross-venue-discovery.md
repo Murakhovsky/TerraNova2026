@@ -129,3 +129,14 @@ Runtime CI містить MySQL acceptance: створення 80 DRAFT, пов�
 У `CosScheduleProvider` є **вимкнений за замовчуванням** фоновий контур тільки для публічних REST Bid/Ask. Він використовує наявні `MarketSourcePollingService`, ingestion і Market State. Для ввімкнення потрібен чинний service actor із `MarketDataManage`, активне джерело, активні BBO-підписки та квоти. Налаштування: `COS_CM_BBO_POLL_SCHEDULER_ENABLED=1`, `COS_CM_BBO_POLL_ACTOR_ID=<ID>`, `COS_CM_BBO_POLL_INTERVAL_MINUTES=15`; організація визначається `COS_ORGANIZATION_ID`. Не більше трьох REST-джерел і десяти BBO-targets на джерело. Джерела з іншими активними типами підписок блокуються для цього контуру. Бюджет обраховується консервативно з урахуванням додаткових REST-запитів і повторів. Для безпеки використовуються MySQL advisory lock, tenant/source-scoped cooldown та запис останнього стану в `tn_capital_market_bbo_poll_gates`; необхідна міграція `20261014_000142_capital_markets_bbo_poll_gate.sql`.
 
 **Цей механізм не є production WebSocket:** стан `OK` означає успішний REST-цикл, а не безперервний L2/orderbook чи гарантію актуальності. Для переходу до масового Opportunity scanning потрібні незалежне приймання WebSocket workers/recovery, timestamp/freshness, book-gap detection, source entitlement і перевірений економічний mapping.
+
+## Батьківські акції та ETF окремо від токенів
+
+Кандидати містять два незалежні класи майбутніх інструментів: tokenized-security і reference asset. Кожен базовий тикер з імпортованих рядків можна створити окремим `DRAFT` у канонічному реєстрі. Для `Stock` family=`equity`, для `ETF` family=`fund`; leveraged/inverse ETF ніколи не стають звичайними акціями. Повторне створення ідентифікується за `PROVIDER_ID` з namespace `BINANCE_BSTOCKS_UNDERLYING_SEED`. Користувач має окрему дію на сторінці Discovery або CLI:
+
+```bash
+php symfony/bin/console cos:capital-markets:instruments:seed-drafts ORG_ID ACTOR_ID --underlyings
+php symfony/bin/console cos:capital-markets:instruments:seed-drafts ORG_ID ACTOR_ID --underlyings --apply
+```
+
+Цей шлях не створює автоматичний зв'язок `AAPL↔AAPLB` та не допускає виконання угод. Для отримання NBBO базових акцій потрібно окреме перевірене reference-data venue/provider mapping і доступ до ринкових даних.

@@ -126,12 +126,16 @@ final readonly class CrossVenueDiscoveryController
         if ($tenant instanceof Response) return $tenant;
         if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.',403);
         $mode=(string)$request->request->get('draft_mode','');
-        if (!in_array($mode,['preview','apply'],true)) return new Response('Invalid draft action.',400);
+        if (!in_array($mode,['preview','apply','underlying-preview','underlying-apply'],true)) return new Response('Invalid draft action.',400);
         $org=$tenant->organizationId()->value();
         $actor=(int)$tenant->userId()->value();
         try {
-            $result=$mode==='preview' ? ['status'=>'DRY_RUN','plan'=>$this->canonicalDrafts->plan($org)]
-                :$this->canonicalDrafts->apply($org,$actor,100);
+            $result=match($mode) {
+                'preview'=>['status'=>'DRY_RUN','plan'=>$this->canonicalDrafts->plan($org)],
+                'apply'=>$this->canonicalDrafts->apply($org,$actor,100),
+                'underlying-preview'=>['status'=>'DRY_RUN','plan'=>$this->canonicalDrafts->planUnderlying($org)],
+                'underlying-apply'=>$this->canonicalDrafts->applyUnderlyings($org,$actor,100),
+            };
             $request->getSession()->getFlashBag()->add('canonical_drafts',json_encode($result,JSON_THROW_ON_ERROR));
             return new RedirectResponse('/capital-markets/discovery?draftsProcessed=1',303);
         } catch (Throwable $e) {

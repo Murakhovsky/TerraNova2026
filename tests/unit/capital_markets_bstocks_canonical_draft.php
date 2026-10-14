@@ -41,4 +41,22 @@ foreach ([
         throw new RuntimeException('Unsafe seed draft accepted.');
     } catch (InvalidArgumentException) {}
 }
+$ref=$projection->createUnderlyingInput('tenant-1',$fixture);
+$assert($ref['status']==='DRAFT' && $ref['family']==='equity'
+    && $ref['symbol']==='AAPL' && $ref['id']!==$x['id'],
+    'Parent reference equity must be a separate DRAFT canonical instrument.');
+$assert($ref['metadata']['economic_link_status']==='UNVERIFIED'
+    && $ref['metadata']['eligible_for_execution']===false,
+    'Parent draft cannot become executable or economically approved.');
+$assert($ref['identifiers'][0]['source']==='BINANCE_BSTOCKS_UNDERLYING_SEED',
+    'Parent reference ID must not be merged into token namespace.');
+$etf=$fixture;
+$etf['row']['token_symbol']='QQQB';
+$etf['row']['underlying_symbol']='QQQ';
+$etf['row']['venue_symbol']='QQQBUSDT';
+$etf['row']['declared_instrument_type']='ETF';
+$etf['row']['declared_leverage']=1;
+$etfReference=$projection->createUnderlyingInput('tenant-1',$etf);
+$assert($etfReference['family']==='fund' && $etfReference['symbol']==='QQQ',
+    'ETF reference must not be classified as a corporate equity.');
 echo "Canonical DRAFT bStock projection and identity isolation passed.\n";
