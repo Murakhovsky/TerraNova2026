@@ -28,9 +28,9 @@ kind: architecture
 
 ## 2. Контракти та межі їх володіння
 
-Нижче конкретизовано **логічні** контракти. Розташування рекомендується \`Platform\Workflow\Contract\` для orchestration/persistence, \`Kernel\Action\Contract\` для side-effect admission, \`Platform\Goal\Contract\` для outcome. Наявний \`Kernel\Workflow\Contract\WorkflowEngineInterface\` не вилучати без deprecation adapter.
+Нижче конкретизовано **логічні** контракти. Розташування рекомендується `Platform\Workflow\Contract` для orchestration/persistence, `Kernel\Action\Contract` для side-effect admission, `Platform\Goal\Contract` для outcome. Наявний `Kernel\Workflow\Contract\WorkflowEngineInterface` не вилучати без deprecation adapter.
 
-\`\`\`php
+```php
 <?php
 // Proposal, NOT committed PHP API.
 namespace Platform\Workflow\Contract;
@@ -79,7 +79,7 @@ interface WorkflowRecoveryInterface
     /** Only trusted reconciliation, never blind external replay. */
     public function reconcile(ReconcileWorkflowCommand $command): WorkflowRecoveryAssessment;
 }
-\`\`\`
+```
 
 Назви є чернеткою API; **не створювати окремий компонент, якщо існуючий Kernel/Platform contract уже надає еквівалентну семантику**. Вимагати ADR або compatibility decision для зміни чинних інтерфейсів.
 
@@ -87,51 +87,51 @@ interface WorkflowRecoveryInterface
 
 | DTO | Поля | Вимоги |
 | --- | --- | --- |
-| \`WorkflowRunIdentity\` | \`organizationId\`, \`runId\` | nonempty, tenant bound, immutable |
-| \`WorkflowRunDraft\` | identity, \`definitionId\`, \`definitionVersion\`, \`inputDigest\`, \`ownerActorId\`, \`correlationId\`, \`causationId\`, \`sourcePlanRef?\`, \`approvalRef?\` | frozen source/definition, no user-supplied grants |
-| \`WorkflowRunSnapshot\` | identity, \`status\`, \`revision\`, \`definitionVersion\`, \`planDigest?\`, \`currentStepId?\`, \`createdAt\`, \`updatedAt\` | immutable read projection; revision >= 1 |
-| \`WorkflowStepSnapshot\` | run identity, \`stepId\`, \`state\`, \`capabilityId\`, \`capabilityVersion\`, \`sideEffectLevel\`, \`dependencies\`, \`attempts\`, \`idempotencyKey\`, \`resultRef?\`, \`checkpoint?\`, \`revision\` | step identity + immutable binding; preserve legacy idempotency |
-| \`WorkflowDefinitionSnapshot\` | \`id\`, \`version\`, \`nodes\`, \`edges\`, \`inputSchemaRef\`, \`digest\` | version pinning and validated DAG |
-| \`WorkflowTransitionCommand\` | identity, expected revision/state, next state, trusted actor, reason, causation | optimistic concurrency; fail closed |
-| \`WorkflowStepClaimCommand\` | identity, step ID, expected state/revision, worker identity, lease, claim token | exactly one authoritative claim, token fenced |
-| \`WorkflowCheckpointCommand\` | identity, step ID, expected revision/claim token, outcome status, verified receipt, timestamp | atomic receipt/state update |
-| \`WorkflowStepDecision\` | \`kind\` (ready/wait/complete/blocked/ambiguous), optional step ID, completed predecessor IDs, reason | deterministic; no I/O |
-| \`WorkflowActionIntent\` | identity, step ID, input digest, capability/version, approved plan reference | no raw arbitrary handler resolution |
-| \`AuthorizedActionBinding\` | owner module, handler binding, policy/approval evidence, idempotency key, input reference | non-forgeable server-side evaluation |
-| \`WorkflowReceiptAttestation\` | provider reference, action ID, proof type, attempt evidence, verified flag, verification timestamp, source digest | \`completed\` flag alone insufficient |
-| \`WorkflowRecoveryAssessment\` | identity, status, blocked reason, safe choices, trusted receipts, operator decision required | read-only inspection |
-| \`ResumeWorkflowCommand\` | identity, expected revision, signal/decision reference, verified actor/capability, correlation | arbitrary resume payload is NOT authorization |
-| \`ReconcileWorkflowCommand\` | identity, expected revision, actor + scope, authoritative receipt references, reason | idempotent, audited |
+| `WorkflowRunIdentity` | `organizationId`, `runId` | nonempty, tenant bound, immutable |
+| `WorkflowRunDraft` | identity, `definitionId`, `definitionVersion`, `inputDigest`, `ownerActorId`, `correlationId`, `causationId`, `sourcePlanRef?`, `approvalRef?` | frozen source/definition, no user-supplied grants |
+| `WorkflowRunSnapshot` | identity, `status`, `revision`, `definitionVersion`, `planDigest?`, `currentStepId?`, `createdAt`, `updatedAt` | immutable read projection; revision >= 1 |
+| `WorkflowStepSnapshot` | run identity, `stepId`, `state`, `capabilityId`, `capabilityVersion`, `sideEffectLevel`, `dependencies`, `attempts`, `idempotencyKey`, `resultRef?`, `checkpoint?`, `revision` | step identity + immutable binding; preserve legacy idempotency |
+| `WorkflowDefinitionSnapshot` | `id`, `version`, `nodes`, `edges`, `inputSchemaRef`, `digest` | version pinning and validated DAG |
+| `WorkflowTransitionCommand` | identity, expected revision/state, next state, trusted actor, reason, causation | optimistic concurrency; fail closed |
+| `WorkflowStepClaimCommand` | identity, step ID, expected state/revision, worker identity, lease, claim token | exactly one authoritative claim, token fenced |
+| `WorkflowCheckpointCommand` | identity, step ID, expected revision/claim token, outcome status, verified receipt, timestamp | atomic receipt/state update |
+| `WorkflowStepDecision` | `kind` (ready/wait/complete/blocked/ambiguous), optional step ID, completed predecessor IDs, reason | deterministic; no I/O |
+| `WorkflowActionIntent` | identity, step ID, input digest, capability/version, approved plan reference | no raw arbitrary handler resolution |
+| `AuthorizedActionBinding` | owner module, handler binding, policy/approval evidence, idempotency key, input reference | non-forgeable server-side evaluation |
+| `WorkflowReceiptAttestation` | provider reference, action ID, proof type, attempt evidence, verified flag, verification timestamp, source digest | `completed` flag alone insufficient |
+| `WorkflowRecoveryAssessment` | identity, status, blocked reason, safe choices, trusted receipts, operator decision required | read-only inspection |
+| `ResumeWorkflowCommand` | identity, expected revision, signal/decision reference, verified actor/capability, correlation | arbitrary resume payload is NOT authorization |
+| `ReconcileWorkflowCommand` | identity, expected revision, actor + scope, authoritative receipt references, reason | idempotent, audited |
 
-**Типи:** identifiers та digests як validated \`string\`; timestamps як UTC immutable timestamps; status як типізовані enum/VO; serialized JSON only through versioned DTO serializer. Secrets and policy grants are never trusted from a browser payload.
+**Типи:** identifiers та digests як validated `string`; timestamps як UTC immutable timestamps; status як типізовані enum/VO; serialized JSON only through versioned DTO serializer. Secrets and policy grants are never trusted from a browser payload.
 
 ### 2.2. Семантична модель станів
 
 **Run:**
-- \`CREATED\` → \`RUNNING\` / \`CANCELLED\`;
-- \`RUNNING\` → \`WAITING\` / \`AMBIGUOUS\` / \`COMPLETED\` / \`FAILED\` / \`CANCELLED\`;
-- \`WAITING\` → \`RUNNING\` / \`FAILED\` / \`CANCELLED\`;
-- \`AMBIGUOUS\` → \`WAITING\` або інший явно дозволений стан **тільки після trusted reconciliation**;
-- terminal \`COMPLETED\`, \`FAILED\`, \`CANCELLED\` незмінні. Визначити policy переходу до RUNNING після reconciliation на етапі contract finalization, заборонити автоматичне перезапускання.
+- `CREATED` → `RUNNING` / `CANCELLED`;
+- `RUNNING` → `WAITING` / `AMBIGUOUS` / `COMPLETED` / `FAILED` / `CANCELLED`;
+- `WAITING` → `RUNNING` / `FAILED` / `CANCELLED`;
+- `AMBIGUOUS` → `WAITING` або інший явно дозволений стан **тільки після trusted reconciliation**;
+- terminal `COMPLETED`, `FAILED`, `CANCELLED` незмінні. Визначити policy переходу до RUNNING після reconciliation на етапі contract finalization, заборонити автоматичне перезапускання.
 
-**Step:** \`PENDING\` → \`CLAIMED\` → (\`WAITING\`, \`AMBIGUOUS\`, \`COMPLETED\`, \`FAILED\`); \`WAITING\` → \`CLAIMED\` тільки після authorized resume; terminal immutable. Технічний стан \`READY\` можна обчислювати, не обов'язково зберігати. P0: максимум одна зовнішня claim на Run; паралельність — окремий pack.
+**Step:** `PENDING` → `CLAIMED` → (`WAITING`, `AMBIGUOUS`, `COMPLETED`, `FAILED`); `WAITING` → `CLAIMED` тільки після authorized resume; terminal immutable. Технічний стан `READY` можна обчислювати, не обов'язково зберігати. P0: максимум одна зовнішня claim на Run; паралельність — окремий pack.
 
-**Engineering:** \`EngineeringWorkflowState\` (\`ANALYSIS\`, \`ARCHITECTURE_PENDING\`, \`QA_FAILED\`, \`READY_FOR_HUMAN_APPROVAL\` тощо) залишається окремою **семантикою бізнес-процесу**. Не створювати фіктивний Step для кожної історичної transition.
+**Engineering:** `EngineeringWorkflowState` (`ANALYSIS`, `ARCHITECTURE_PENDING`, `QA_FAILED`, `READY_FOR_HUMAN_APPROVAL` тощо) залишається окремою **семантикою бізнес-процесу**. Не створювати фіктивний Step для кожної історичної transition.
 
 ### 2.3. Класифікація помилок
 
 | Клас помилки | Код | Обробка |
 | --- | --- | --- |
-| Tenant/capability/policy denied | \`EXEC_AUTH_DENIED\` | Permanent, audit, no dispatch |
-| Immutable definition/plan changed | \`EXEC_SNAPSHOT_DRIFT\` | Fail-closed, manual replanning |
-| Concurrent or stale revision | \`EXEC_CONCURRENCY_CONFLICT\` | Safe reread; **not** side-effect replay |
-| Invalid graph/step prerequisites | \`EXEC_DEPENDENCY_INVALID\` | Reject before claim/dispatch |
-| Verified prior effect absent/forged | \`EXEC_RECEIPT_UNTRUSTED\` | Block completion/next step |
-| Unknown external outcome | \`EXEC_OUTCOME_AMBIGUOUS\` | Manual reconciliation, no blind retry |
-| Transient infrastructure failure prior to effect | \`EXEC_RETRYABLE_PRE_EFFECT\` | Queue backoff under checked budget |
-| Incompatible legacy row | \`EXEC_LEGACY_MAPPING_UNSAFE\` | Quarantine, no mapping assumption |
+| Tenant/capability/policy denied | `EXEC_AUTH_DENIED` | Permanent, audit, no dispatch |
+| Immutable definition/plan changed | `EXEC_SNAPSHOT_DRIFT` | Fail-closed, manual replanning |
+| Concurrent or stale revision | `EXEC_CONCURRENCY_CONFLICT` | Safe reread; **not** side-effect replay |
+| Invalid graph/step prerequisites | `EXEC_DEPENDENCY_INVALID` | Reject before claim/dispatch |
+| Verified prior effect absent/forged | `EXEC_RECEIPT_UNTRUSTED` | Block completion/next step |
+| Unknown external outcome | `EXEC_OUTCOME_AMBIGUOUS` | Manual reconciliation, no blind retry |
+| Transient infrastructure failure prior to effect | `EXEC_RETRYABLE_PRE_EFFECT` | Queue backoff under checked budget |
+| Incompatible legacy row | `EXEC_LEGACY_MAPPING_UNSAFE` | Quarantine, no mapping assumption |
 
-Спільний Error DTO містить code, immutable run/step/tenant references, classification, safe retry flag, diagnostic reference, correlation. Не змінювати вже наявну \`ExecutionFailureKind\` без мапи сумісності.
+Спільний Error DTO містить code, immutable run/step/tenant references, classification, safe retry flag, diagnostic reference, correlation. Не змінювати вже наявну `ExecutionFailureKind` без мапи сумісності.
 
 ## 3. Інваріанти контрактного пакета
 
@@ -140,7 +140,7 @@ interface WorkflowRecoveryInterface
 3. **Атомарність на локальній транзакції:** CAS/claim/checkpoint/outbox разом там, де це одна DB; зовнішній API не можна вважати частиною DB transaction.
 4. **Безпечний retry:** delivery at-least-once, effect exactly-once НЕ гарантується без remote idempotency/proof; unknown зовнішній стан блокує replay.
 5. **Похідний статус ≠ доказ:** completed Step без canonical Action receipt не дозволяє dependent side effect і finalization.
-6. **Два різні результати:** \`Workflow COMPLETED\` та \`Goal ACHIEVED\` різні факти.
+6. **Два різні результати:** `Workflow COMPLETED` та `Goal ACHIEVED` різні факти.
 7. **Незмінні входи:** hashes/version of Plan/Graph/Action params; idempotency key/stored action key unchanged during migration.
 8. **Engineering бізнес-гейти:** незалежний Review/QA, final merge approval, budget, no self-approval зберегти.
 9. **Одна tenant boundary:** every query/command/claim/receipt checks organization.
@@ -148,7 +148,7 @@ interface WorkflowRecoveryInterface
 
 ## 4. Реєстр дублювання та відповідальності
 
-Машинозчитуваний документ: [реєстр дублювань](../../resources/architecture/cos-execution-duplication-registry.json). Реєстр початково містить конкретні перевірені класи і **одного перевіреного прикладного споживача**, не стверджує повне покриття call graph. Для кожного пункту зафіксовані \`implementation\`, \`known_consumer\`, \`target_owner\`, \`decision\`, \`guardrail\`, \`baseline_test\`, \`migration_status\`, \`runtime_consumers_verified\`. Порожня runtime verification повинна блокувати RETIRE, а не автоматично дозволяти видалення.
+Машинозчитуваний документ: [реєстр дублювань](../../resources/architecture/cos-execution-duplication-registry.json). Реєстр початково містить конкретні перевірені класи і **одного перевіреного прикладного споживача**, не стверджує повне покриття call graph. Для кожного пункту зафіксовані `implementation`, `known_consumer`, `target_owner`, `decision`, `guardrail`, `baseline_test`, `migration_status`, `runtime_consumers_verified`. Порожня runtime verification повинна блокувати RETIRE, а не автоматично дозволяти видалення.
 
 **KEEP**: спеціалізована бізнес-семантика Engineering, Goal/Plan/Outcome, trusted evidences.  
 **ADAPT**: Engineering stage orchestration, policy guard, наявна інфраструктура locks.  
@@ -157,41 +157,41 @@ interface WorkflowRecoveryInterface
 **RETIRE**: тільки після consumer cutover і rollback; не означає видалення зараз.  
 **UNKNOWN**: доказів недостатньо, жодного destructive cleanup.
 
-Не нав'язувати універсальний scheduler Engineering business state machine: його \`EngineeringWorkflowDefinition\` описує, **що робити**, а спільний runtime має визначати, **як безпечно виконувати**.
+Не нав'язувати універсальний scheduler Engineering business state machine: його `EngineeringWorkflowDefinition` описує, **що робити**, а спільний runtime має визначати, **як безпечно виконувати**.
 
 ## 5. Міграція станів
 
 Обов'язковий [State Migration Map](./cos-execution-state-migration-map.md) визначає source fields, ключі/унікальності, mappings, алгоритм phased cutover, Engineering transitional adapter та unsafe cases. У P0 map НЕ є migration SQL.
 
 Обов'язково зберегти:
-- \`cos_federation_runs.organization_id + plan_id\` unique і зв'язок legacy Run до Goal/Plan.
-- \`cos_federation_steps.idempotency_key\` SHA256 для \`org\0run\0step\`, зовнішній Action \`fed:\` + hash; **не переобчислювати зі зміненого Run ID**.
-- \`cos_engineering_workflows.id\`, \`feature_id\`, optimistic \`version\`, resume state і transition history.
+- `cos_federation_runs.organization_id + plan_id` unique і зв'язок legacy Run до Goal/Plan.
+- `cos_federation_steps.idempotency_key` SHA256 для `org\0run\0step`, зовнішній Action `fed:` + hash; **не переобчислювати зі зміненого Run ID**.
+- `cos_engineering_workflows.id`, `feature_id`, optimistic `version`, resume state і transition history.
 - Engineering AgentRun logical attempt, task and repository/GitHub side-effect receipts; без цього resume автоматизувати не можна.
 
 ## 6. Parity Tests: дві незалежні фази
 
 Джерело сценаріїв: [Parity Test Registry](../../resources/architecture/cos-execution-parity-cases.json).
 
-**Фаза 0, зараз:** перевірити що сценарій зареєстрований, baseline test anchor існує, AS-IS інваріанти не втрачені; провести на поточному коді окремі baseline unit/architecture/MySQL tests. \`baseline_anchor\` не дорівнює повному доказу зазначеного test case.
+**Фаза 0, зараз:** перевірити що сценарій зареєстрований, baseline test anchor існує, AS-IS інваріанти не втрачені; провести на поточному коді окремі baseline unit/architecture/MySQL tests. `baseline_anchor` не дорівнює повному доказу зазначеного test case.
 
-**Фаза 1, лише після canonical runtime:** запустити ті самі golden fixtures через старий (read-only/shadow) і новий executors, порівняти decisions/states/receipts/tenant/side-effect counts. Для side effects запускати тільки controlled fakes або дозволений staging, **ніколи два production dispatchers**. \`target_status\` лишається \`NOT_IMPLEMENTED\`, доки реальний новий runtime не існує.
+**Фаза 1, лише після canonical runtime:** запустити ті самі golden fixtures через старий (read-only/shadow) і новий executors, порівняти decisions/states/receipts/tenant/side-effect counts. Для side effects запускати тільки controlled fakes або дозволений staging, **ніколи два production dispatchers**. `target_status` лишається `NOT_IMPLEMENTED`, доки реальний новий runtime не існує.
 
 Приклади блокувальних тестів: cycle/injected DAG, CAS race, forged approval, stale Policy, duplicate Action receipt, crash before/after external effect, ambiguous remote result, tenant isolation, Engineered QA/rework loop, human merge, Golden50 native evidence, old↔new link compatibility й rollback.
 
-**Тест \`tests/architecture/cos_execution_consolidation_pack.php\`** лише перевіряє формат і source anchors цього контрактного пакета. Його green output **не означає green runtime parity**.
+**Тест `tests/architecture/cos_execution_consolidation_pack.php`** лише перевіряє формат і source anchors цього контрактного пакета. Його green output **не означає green runtime parity**.
 
 ## 7. Порядок виконання та критерій закриття P0
 
 | Gate | Артефакт | Умова завершення |
 | --- | --- | --- |
 | P0-0 | Contract spec reviewed | interfaces/DTO/errors/semantics погоджені; жоден unsafe assumption не залишився невирішеним |
-| P0-1 | Registry exhaustive | перевірені реальні production consumers, DI, queues, CLI/supervisor, SQL writers у трьох контурах; \`runtime_consumers_verified=true\` або explicit waiver |
+| P0-1 | Registry exhaustive | перевірені реальні production consumers, DI, queues, CLI/supervisor, SQL writers у трьох контурах; `runtime_consumers_verified=true` або explicit waiver |
 | P0-2 | State map signed | reversible algorithm, idempotency/CAS, immutable provenance, Engineering staged mapping, rollback points |
 | P0-3 | Baseline locked | old tests green на поточному HEAD, нові scenarios мапляться на fixtures; negative tests визначені |
 | P0-4 | Architecture review | Manager → Architect → Developer/QA plan → Security/Reviewer → Manager acceptance; ownership confirmed |
 
-**Тільки після P0-0..4 дозволено починати створення durable Workflow executor.** Full target parity буде gate окремого implementation pack перед production cutover. Не ставити parity \`PASS\` на етапі написання специфікації.
+**Тільки після P0-0..4 дозволено починати створення durable Workflow executor.** Full target parity буде gate окремого implementation pack перед production cutover. Не ставити parity `PASS` на етапі написання специфікації.
 
 ## 8. Обов'язковий checklist для кожного майбутнього PR
 
