@@ -88,7 +88,8 @@
       "guardrail": "retain conditional transitions; introduce dependency-ready decisions without hidden second cursor",
       "baseline_test": "tests/unit/kernel_workflow_engine.php",
       "migration_status": "NOT_STARTED",
-      "runtime_consumers_verified": false
+      "runtime_consumers_verified": false,
+      "implementation_note": "Technical pure DAG step selection now delegates to Platform\\Workflow\\Service\\WorkflowStepScheduler through FederationStepCursor; compare baseline parity tests before expanding runtime."
     },
     {
       "id": "EX-005",
@@ -107,7 +108,8 @@
       "guardrail": "preserve deterministic approved-order and one active external step until concurrency policy exists",
       "baseline_test": "tests/unit/federation_step_cursor.php",
       "migration_status": "NOT_STARTED",
-      "runtime_consumers_verified": false
+      "runtime_consumers_verified": false,
+      "implementation_note": "Technical pure DAG step selection now delegates to Platform\\Workflow\\Service\\WorkflowStepScheduler through FederationStepCursor; compare baseline parity tests before expanding runtime."
     },
     {
       "id": "EX-006",
@@ -394,5 +396,6 @@
       "migration_status": "NOT_STARTED",
       "runtime_consumers_verified": false
     }
-  ]
+  ],
+  "contract_iteration": "2026-10-15: shared stateless DAG selector, typed immutable selection DTO, Federation adapter; no persisted durable workflow or Engineering migration"
 }

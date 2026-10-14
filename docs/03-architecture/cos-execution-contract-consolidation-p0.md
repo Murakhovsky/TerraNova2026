@@ -181,6 +181,14 @@ interface WorkflowRecoveryInterface
 
 **Тест `tests/architecture/cos_execution_consolidation_pack.php`** лише перевіряє формат і source anchors цього контрактного пакета. Його green output **не означає green runtime parity**.
 
+## 6.1. Реалізований інкремент P0: спільний DAG selector
+
+У поточній гілці реалізовано `Platform\\Workflow\\Service\\WorkflowStepScheduler`, `WorkflowDependencyGraph`, `WorkflowStepSchedulerInterface`, DTO `WorkflowDefinitionSnapshot`, `WorkflowStepSnapshot`, `WorkflowStepDecision` і `WorkflowStepSelectionState`. `FederationStepCursor` і `FederationStepDependencyGraph` стали compatibility adapters та використовують **той самий** pure algorithm. Action, Approval, Claim, Receipt, CAS і Worker gates не переписані; це не новий execution engine.
+
+Новий unit contract `tests/unit/workflow_shared_dag_contract.php` перевіряє прямий canonical selector та той самий Federation cursor, invalid DAG, injected steps, mixed read-only, ambiguity, exclusion of parallel claims і відсутність side effects. Старий `tests/unit/federation_step_cursor.php` залишається обов'язковим regression gate.
+
+**Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
+
 ## 7. Порядок виконання та критерій закриття P0
 
 | Gate | Артефакт | Умова завершення |

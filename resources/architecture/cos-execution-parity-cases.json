@@ -283,5 +283,6 @@
       "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
       "blocking": true
     }
-  ]
+  ],
+  "contract_iteration": "2026-10-15: unit-level shared DAG adapter parity covered separately; target durable runtime parity still NOT_IMPLEMENTED"
 }
