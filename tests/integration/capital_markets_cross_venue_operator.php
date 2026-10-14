@@ -95,9 +95,11 @@ $assert(str_contains($planner,'InstrumentStatus::Active')
     && str_contains($planner,'createSubscription'),
     'BBO planner must use existing audited source and canonical identity gates.');
 $bboSweep=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/BoundedBboSweepService.php');
+$bboPolicy=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/BoundedBboSweepPolicy.php');
 $assert(str_contains($bboSweep,'MarketSourcePollingService')
-    && str_contains($bboSweep,'BLOCKED_BUDGET')
-    && str_contains($bboSweep,'BLOCKED_MIXED_SUBSCRIPTIONS'),
+    && str_contains($bboSweep,'BoundedBboSweepPolicy')
+    && str_contains($bboPolicy,'BLOCKED_BUDGET')
+    && str_contains($bboPolicy,'BLOCKED_MIXED_SUBSCRIPTIONS'),
     'BBO fallback must use canonical ingestion, bounded budget and typed subscriptions.');
 $assert(str_contains($scheduler,'SampleBStockBboQuotes')
     && str_contains($scheduler,'capitalMarketsBboPollEnabled'),
