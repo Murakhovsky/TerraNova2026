@@ -1,0 +1,163 @@
+name: FOS L2 VPS 24h Bounded Soak Start
+
+on:
+  push:
+    branches: [feature/fos-l2-orderbook-recovery]
+    paths:
+      - '.github/workflows/l2-vps-soak.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  start-soak:
+    name: Start guarded 24h Bybit L2 -> MySQL soak on VPS
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - name: Start bounded monitored collector via SSH without touching main COS
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            if [ -z "${!key:-}" ]; then echo "::error::Missing $key"; exit 1; fi
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/l2_soak_key
+          chmod 600 ~/.ssh/l2_soak_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -i ~/.ssh/l2_soak_key \
+            -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" bash -s -- "$DEV_PATH" <<'REMOTE'
+          set -Eeuo pipefail
+          ROOT="$1"
+          PERSIST="$HOME/.local/share/fos-l2"
+          if [ ! -f "$PERSIST/current-image" ] || [ ! -f "$ROOT/.env" ]; then
+            echo "::error::L2 CLI image or COS environment not deployed"; exit 1
+          fi
+          D='docker'
+          if ! docker info >/dev/null 2>&1; then
+            if sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
+            else echo "::error::Docker unavailable"; exit 1; fi
+          fi
+          IMAGE="$(cat "$PERSIST/current-image")"
+          if ! [[ "$IMAGE" =~ ^cos-fos-l2:[a-f0-9]{12}$ ]]; then
+            echo "::error::Unsafe L2 image name"; exit 1
+          fi
+          $D image inspect "$IMAGE" --format '{{.Id}}' >/dev/null
+          AVAILABLE="$(free -m | awk 'NR==2 { print $7 }')"
+          DISK_AVAILABLE_KB="$(df -Pk / | awk 'NR==2 { print $4 }')"
+          echo "vps_available_ram_before_mib: $AVAILABLE"
+          echo "vps_available_disk_before_kib: $DISK_AVAILABLE_KB"
+          if [ "$AVAILABLE" -lt 300 ] || [ "$DISK_AVAILABLE_KB" -lt 5000000 ]; then
+            echo "::error::Insufficient VPS headroom for isolated soak"; exit 1
+          fi
+          ORG="$($D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<'SQL'
+          SELECT s.organization_id
+          FROM tn_capital_market_data_sources s
+          INNER JOIN tn_capital_market_canonical_events e
+            ON s.organization_id=e.organization_id AND s.source_id=e.source_id
+          WHERE s.source_id='source:l2-vps-bybit-spot'
+            AND s.adapter_type='l2.verified' AND s.enabled=1
+            AND s.organization_id LIKE 'l2-vps-accept-%'
+          ORDER BY e.id DESC LIMIT 1;
+          SQL
+          )"
+          if ! [[ "$ORG" =~ ^l2-vps-accept-[0-9]{8}-[a-f0-9]{8}$ ]]; then
+            echo "::error::No previously accepted isolated L2 MySQL source"; exit 1
+          fi
+          echo "accepted_test_organization: $ORG"
+          if $D ps -a --format '{{.Names}}' | grep -Fxq cos-l2-soak-1; then
+            echo "::error::Existing L2 soak container must be inspected before another starts"; exit 1
+          fi
+          cat > "$PERSIST/soak.sh" <<'SCRIPT'
+          #!/bin/sh
+          set -eu
+          END=$(( $(date +%s) + 86400 ))
+          echo "L2_SOAK_STARTED_UTC=$(date -u +%FT%TZ)"
+          echo "L2_SOAK_DEADLINE_UTC=$(date -u -d "@$END" +%FT%TZ)"
+          ERRORS=0
+          SESSIONS=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            set +e
+            php -d memory_limit=160M bin/console cos:capital-markets:l2:stream \
+              --organization="$FOS_L2_ACCEPTANCE_ORG" \
+              --source=source:l2-vps-bybit-spot \
+              --venue=BYBIT_SPOT --symbol=BTCUSDT --base=BTC --quote=USDT \
+              --message-budget=5000 --max-attempts=10 --stale-seconds=35 \
+              --min-publication-interval-ms=2000
+            RC=$?
+            set -e
+            SESSIONS=$(( SESSIONS + 1 ))
+            echo "L2_SOAK_SESSION=$SESSIONS EXIT=$RC TIME=$(date -u +%FT%TZ)"
+            if [ "$RC" -ne 0 ]; then
+              ERRORS=$(( ERRORS + 1 ))
+              if [ "$ERRORS" -ge 4 ]; then
+                echo "L2_SOAK_FAILED consecutive-or-cumulative-errors=$ERRORS"
+                exit 1
+              fi
+            fi
+            sleep 5
+          done
+          echo "L2_SOAK_24H_COMPLETE sessions=$SESSIONS errors=$ERRORS"
+          SCRIPT
+          chmod 700 "$PERSIST/soak.sh"
+          cat > "$PERSIST/soak.override.yml" <<YAML
+          services:
+            php:
+              image: $IMAGE
+            l2-soak:
+              extends:
+                service: php
+              image: $IMAGE
+              profiles: ["l2"]
+              container_name: cos-l2-soak-1
+              init: true
+              restart: "no"
+              mem_limit: 192m
+              cpus: "0.35"
+              pids_limit: 64
+              stop_grace_period: 45s
+              command: ["sh","/opt/fos-l2/soak.sh"]
+              environment:
+                FOS_L2_ENABLED: "1"
+                FOS_L2_ALERT_ENABLED: "0"
+                FOS_L2_ACCEPTANCE_ORG: $ORG
+              volumes:
+                - "$PERSIST/soak.sh:/opt/fos-l2/soak.sh:ro"
+              healthcheck:
+                disable: true
+          YAML
+          COMPOSE=(-f "$ROOT/docker-compose.yml" -f "$PERSIST/soak.override.yml" --env-file "$ROOT/.env")
+          $D compose "${COMPOSE[@]}" config --quiet
+          # Only the new isolated L2 service. Never recreate php/mysql/nginx.
+          $D compose "${COMPOSE[@]}" --profile l2 up -d --no-deps --no-build l2-soak </dev/null
+          sleep 45
+          STATE="$($D inspect -f '{{.State.Status}}' cos-l2-soak-1)"
+          AVAILABLE_AFTER="$(free -m | awk 'NR==2 { print $7 }')"
+          echo "l2_soak_state: $STATE"
+          echo "vps_available_ram_after_mib: $AVAILABLE_AFTER"
+          $D stats --no-stream --format '{{.Name}}|{{.MemUsage}}|{{.CPUPerc}}' cos-l2-soak-1
+          $D logs --tail=12 cos-l2-soak-1 2>&1 | tail -n 14
+          if [ "$STATE" != "running" ] || [ "$AVAILABLE_AFTER" -lt 180 ]; then
+            $D stop -t 20 cos-l2-soak-1 >/dev/null || true
+            echo "::error::Soak worker stopped by resource/health safety gate"; exit 1
+          fi
+          COUNT="$($D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<SQL
+          SELECT COUNT(*) FROM tn_capital_market_canonical_events WHERE organization_id='$ORG';
+          SQL
+          )"
+          echo "l2_mysql_canonical_rows_after_start: $COUNT"
+          if ! [[ "$COUNT" =~ ^[0-9]+$ ]] || [ "$COUNT" -lt 2 ]; then
+            $D stop -t 20 cos-l2-soak-1 >/dev/null || true
+            echo "::error::Live soak not persisting further canonical observations"; exit 1
+          fi
+          echo "L2_SOAK_24H_STARTED_AND_VERIFIED"
+          REMOTE
