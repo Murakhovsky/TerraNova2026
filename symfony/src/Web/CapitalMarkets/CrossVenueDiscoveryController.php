@@ -12,6 +12,7 @@ use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
 use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
 use Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlBoundedBboSweepGate;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository;
@@ -46,6 +47,7 @@ final readonly class CrossVenueDiscoveryController
         private BStocksSeedFileReader $seedReader,
         private BStocksCanonicalDraftService $canonicalDrafts,
         private BStocksSeedImportRepository $seedImports,
+        private MysqlBoundedBboSweepGate $bboPollGate,
         private CrossVenueCatalogDiscovery $scanner,
         private CrossVenueDiscoverySnapshotRepository $snapshots,
         private CrossVenuePoolCandidateRepository $poolCandidates,
@@ -64,6 +66,8 @@ final readonly class CrossVenueDiscoveryController
             $watchlist=$this->universe->load($this->universeFile);
             $snapshot=$this->snapshots->latest($org);
             $poolCandidateCounts=$this->poolCandidates->counts($org);
+            $canonicalCoverage=$this->seedImports->canonicalCoverage($org);
+            $bboPollHealth=$this->bboPollGate->recent($org);
             $quoteSnapshot=$this->quotes->latest($org);
         } catch(Throwable $e) {
             error_log('capital_markets.cross_venue_discovery.read_failed '.get_class($e).' '.$e->getMessage());
@@ -83,6 +87,7 @@ final readonly class CrossVenueDiscoveryController
                 'shell'=>$shell,'pageTitle'=>'Cross-Venue Discovery',
                 'watchlist'=>$watchlist,'snapshot'=>$snapshot,'quoteSnapshot'=>$quoteSnapshot,
                 'poolCandidateCounts'=>$poolCandidateCounts,
+                'canonicalCoverage'=>$canonicalCoverage,'bboPollHealth'=>$bboPollHealth,
                 'canScan'=>$canScan,'canSeedDrafts'=>$canSeedDrafts,
                 'csrfToken'=>$this->csrf->token($request),
                 'scanned'=>$request->query->getBoolean('scanned'),

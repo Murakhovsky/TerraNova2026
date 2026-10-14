@@ -111,6 +111,28 @@ final readonly class BStocksSeedImportRepository
         return $items;
     }
 
+    /** Read-only coverage of seed namespaces within the canonical registry. */
+    public function canonicalCoverage(string $org): array
+    {
+        if ($org==='' || strlen($org)>190) throw new InvalidArgumentException('Invalid tenant.');
+        $q=$this->connection->prepare(
+            'SELECT x.identifier_source AS source,i.status,COUNT(*) AS total
+             FROM tn_capital_market_instrument_identifiers x
+             INNER JOIN tn_capital_market_instruments i
+               ON i.organization_id=x.organization_id AND i.instrument_id=x.instrument_id
+             WHERE x.organization_id=:org AND x.identifier_type=:type
+               AND x.identifier_source IN (:token_source,:reference_source)
+             GROUP BY x.identifier_source,i.status
+             ORDER BY x.identifier_source,i.status'
+        );
+        $q->execute([
+            'org'=>$org,'type'=>'PROVIDER_ID',
+            'token_source'=>'BINANCE_BSTOCKS_SEED',
+            'reference_source'=>'BINANCE_BSTOCKS_UNDERLYING_SEED',
+        ]);
+        return $q->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     private function validate(string $org,array $seed): void
     {
         if ($org === '' || strlen($org)>190 || count($seed['rows'] ?? []) < 1

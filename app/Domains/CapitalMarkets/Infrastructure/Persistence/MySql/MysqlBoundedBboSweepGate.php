@@ -12,6 +12,21 @@ final readonly class MysqlBoundedBboSweepGate
 {
     public function __construct(private PDO $connection) {}
 
+    /** Recent tenant-scoped REST poll outcomes for operator monitoring. */
+    public function recent(string $organizationId,int $limit=20): array
+    {
+        if ($organizationId==='' || strlen($organizationId)>190 || $limit<1 || $limit>100) {
+            throw new RuntimeException('Invalid BBO health lookup.');
+        }
+        $statement=$this->connection->prepare(
+            'SELECT source_id,last_attempt_at,last_completed_at,last_status
+             FROM tn_capital_market_bbo_poll_gates
+             WHERE organization_id=:org ORDER BY last_attempt_at DESC LIMIT '.$limit
+        );
+        $statement->execute(['org'=>$organizationId]);
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /** @return array{state:string,status:?string} */
     public function run(string $organizationId,string $sourceId,int $cooldownSeconds,callable $poll): array
     {
