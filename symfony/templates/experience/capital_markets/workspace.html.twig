@@ -6,24 +6,24 @@
 <div class="cos-page__stack cos-capital-markets" data-csrf="{{ csrfToken }}">
   <header class="cos-growth-header">
     <div>
-      <small>{{ 'Capital Markets'|trans }} · Research + Risk + Paper Execution</small>
+      <small>{{ 'Capital Markets'|trans }} {{ '· Research + Risk + Paper Execution'|trans }}</small>
       <h1>{{ pageTitle }}</h1>
       <p>Canonical instruments, economic relationships, trusted market data and guarded paper research. Live execution remains disabled.</p>
     </div>
     <nav class="cos-growth-actions" aria-label="{{ 'Capital Markets'|trans }} navigation">
       <a class="btn btn-outline-secondary" href="/capital-markets">{{ 'Overview'|trans }}</a>
-      <a class="btn btn-outline-secondary" href="/capital-markets/instruments">Instruments</a>
-      <a class="btn btn-outline-secondary" href="/capital-markets/relationships">Relationships</a>
-      <a class="btn btn-outline-secondary" href="/capital-markets/venues">Venues</a>
-      <a class="btn btn-outline-secondary" href="/capital-markets/market-data">Market Data</a>
-      <a class="btn btn-outline-secondary" href="/capital-markets/tokenized-equities">Tokenized Equity</a>
-      <a class="btn btn-outline-secondary" href="/capital-markets/crypto-spot-perpetual">Crypto Spot / Perpetual</a>
-      <a class="btn btn-outline-secondary" href="/capital-markets/research">Research Lab</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/instruments">{{ 'Instruments'|trans }}</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/relationships">{{ 'Relationships'|trans }}</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/venues">{{ 'Venues'|trans }}</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/market-data">{{ 'Market Data'|trans }}</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/tokenized-equities">{{ 'Tokenized Equity'|trans }}</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/crypto-spot-perpetual">{{ 'Crypto Spot / Perpetual'|trans }}</a>
+      <a class="btn btn-outline-secondary" href="/capital-markets/research">{{ 'Research Lab'|trans }}</a>
     </nav>
   </header>
 
   {% if query.saved|default(false) %}
-    <div class="alert alert-success">Changes saved and written to COS Audit.</div>
+    <div class="alert alert-success">{{ 'Changes saved and written to COS Audit.'|trans }}</div>
   {% endif %}
   {% if query.error|default('') %}
     <div class="alert alert-danger">{{ query.error }}</div>
@@ -34,7 +34,7 @@
       <strong>{{ failureCode|default(500) }}</strong>
       <h2>{{ failureTitle|default('Capital Markets unavailable') }}</h2>
       <p>{{ failureMessage|default('The Foundation workspace could not be loaded.') }}</p>
-      <a href="/capital-markets" class="btn btn-primary">Back to {{ 'Capital Markets'|trans }}</a>
+      <a href="/capital-markets" class="btn btn-primary">{{ 'Back to'|trans }} {{ 'Capital Markets'|trans }}</a>
     </section>
 
   {% elseif cmView == 'overview' %}
@@ -46,19 +46,19 @@
     </section>
 
     <section class="cos-panel">
-      <h2>System status</h2>
-      <p><strong>Foundation + Market Intelligence ready.</strong> The domain understands instruments, relationships, venues and trusted market-state semantics.</p>
+      <h2>{{ 'System status'|trans }}</h2>
+      <p><strong>{{ 'Foundation + Market Intelligence ready.'|trans }}</strong> {{ 'The domain understands instruments, relationships, venues and trusted market-state semantics.'|trans }}</p>
       <p>External provider sources remain tenant-configured and explicitly gated. Paper Trading, Live Trading and Auto Execution remain disabled.</p>
     </section>
 
     <section class="cos-panel">
-      <h2>Recently registered instruments</h2>
+      <h2>{{ 'Recently registered instruments'|trans }}</h2>
       {% if w.recent_instruments|default([]) is empty %}
-        <p>No instruments yet. Create the first canonical instrument in the Instrument Registry.</p>
+        <p>{{ 'No instruments yet. Create the first canonical instrument in the Instrument Registry.'|trans }}</p>
       {% else %}
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Symbol</th><th>{{ 'Name'|trans }}</th><th>Family</th><th>{{ 'Status'|trans }}</th></tr></thead>
+            <thead><tr><th>{{ 'Symbol'|trans }}</th><th>{{ 'Name'|trans }}</th><th>{{ 'Family'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead>
             <tbody>
             {% for item in w.recent_instruments %}
               <tr>
@@ -80,7 +80,7 @@
         <div class="col-md-5"><input class="form-control" name="q" value="{{ query.q|default('') }}" placeholder="Search symbol or name"></div>
         <div class="col-md-3">
           <select class="form-select" name="family">
-            <option value="">All families</option>
+            <option value="">{{ 'All families'|trans }}</option>
             {% for family in ['equity','tokenized_security','crypto_asset','stablecoin','spot_market','future','perpetual','option','fixed_income','tokenized_fixed_income','fund','rwa','fx','commodity','index'] %}
               <option value="{{ family }}" {% if query.family|default('') == family %}selected{% endif %}>{{ family|upper }}</option>
             {% endfor %}
@@ -88,7 +88,7 @@
         </div>
         <div class="col-md-2">
           <select class="form-select" name="status">
-            <option value="">All statuses</option>
+            <option value="">{{ 'All statuses'|trans }}</option>
             {% for status in ['DRAFT','ACTIVE','SUSPENDED','DELISTED','UNKNOWN'] %}
               <option value="{{ status }}" {% if query.status|default('') == status %}selected{% endif %}>{{ status }}</option>
             {% endfor %}
@@ -100,7 +100,7 @@
 
     {% if canManageInstruments %}
       <section class="cos-panel">
-        <h2>Create instrument</h2>
+        <h2>{{ 'Create instrument'|trans }}</h2>
         <form method="post" action="/capital-markets/instruments" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
           <div class="col-md-2"><input class="form-control" name="symbol" placeholder="AAPL" required></div>
@@ -121,21 +121,21 @@
           <div class="col-md-2"><input class="form-control" name="currency" placeholder="USD"></div>
           <div class="col-md-2"><input class="form-control" name="quote_asset" placeholder="USD / USDT"></div>
           <div class="col-md-3"><input class="form-control" name="issuer_reference" placeholder="Issuer reference"></div>
-          <div class="col-md-2"><input class="form-control" name="jurisdiction" placeholder="Jurisdiction"></div>
-          <div class="col-md-3"><input class="form-control" name="primary_venue_reference" placeholder="Primary venue reference"></div>
-          <div class="col-md-12"><button class="btn btn-primary">Create instrument</button></div>
+          <div class="col-md-2"><input class="form-control" name="jurisdiction" placeholder="{{ 'Jurisdiction'|trans }}"></div>
+          <div class="col-md-3"><input class="form-control" name="primary_venue_reference" placeholder="{{ 'Primary venue'|trans }} reference"></div>
+          <div class="col-md-12"><button class="btn btn-primary">{{ 'Create instrument'|trans }}</button></div>
         </form>
       </section>
     {% endif %}
 
     <section class="cos-panel">
-      <h2>Instrument Registry</h2>
+      <h2>{{ 'Instrument Registry'|trans }}</h2>
       {% if w.instruments|default([]) is empty %}
-        <p>No instruments match the current filters.</p>
+        <p>{{ 'No instruments match the current filters.'|trans }}</p>
       {% else %}
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Symbol</th><th>{{ 'Name'|trans }}</th><th>Family</th><th>{{ 'Status'|trans }}</th><th>Identifiers</th><th>{{ 'Updated'|trans }}</th></tr></thead>
+            <thead><tr><th>{{ 'Symbol'|trans }}</th><th>{{ 'Name'|trans }}</th><th>{{ 'Family'|trans }}</th><th>{{ 'Status'|trans }}</th><th>{{ 'Identifiers'|trans }}</th><th>{{ 'Updated'|trans }}</th></tr></thead>
             <tbody>
             {% for item in w.instruments %}
               <tr>
@@ -160,24 +160,24 @@
         <div>
           <small>{{ i.family|upper }}</small>
           <h2>{{ i.symbol }} · {{ i.name }}</h2>
-          <p>Canonical symbol: <strong>{{ i.canonical_symbol }}</strong> · {{ 'Status:'|trans }} <strong>{{ i.status }}</strong></p>
+          <p>{{ 'Canonical symbol:'|trans }} <strong>{{ i.canonical_symbol }}</strong> · {{ 'Status:'|trans }} <strong>{{ i.status }}</strong></p>
         </div>
-        <a class="btn btn-outline-secondary" href="/capital-markets/instruments">Back to registry</a>
+        <a class="btn btn-outline-secondary" href="/capital-markets/instruments">{{ 'Back to registry'|trans }}</a>
       </div>
     </section>
 
     <section class="cos-panel">
-      <h2>Identity</h2>
+      <h2>{{ 'Identity'|trans }}</h2>
       <dl class="row">
-        <dt class="col-sm-3">Internal ID</dt><dd class="col-sm-9">{{ i.id }}</dd>
-        <dt class="col-sm-3">Currency</dt><dd class="col-sm-9">{{ i.currency|default('—') }}</dd>
-        <dt class="col-sm-3">Quote asset</dt><dd class="col-sm-9">{{ i.quote_asset|default('—') }}</dd>
-        <dt class="col-sm-3">Issuer</dt><dd class="col-sm-9">{{ i.issuer_reference|default('—') }}</dd>
-        <dt class="col-sm-3">Jurisdiction</dt><dd class="col-sm-9">{{ i.jurisdiction|default('—') }}</dd>
-        <dt class="col-sm-3">Primary venue</dt><dd class="col-sm-9">{{ i.primary_venue_reference|default('—') }}</dd>
+        <dt class="col-sm-3">{{ 'Internal ID'|trans }}</dt><dd class="col-sm-9">{{ i.id }}</dd>
+        <dt class="col-sm-3">{{ 'Currency'|trans }}</dt><dd class="col-sm-9">{{ i.currency|default('—') }}</dd>
+        <dt class="col-sm-3">{{ 'Quote asset'|trans }}</dt><dd class="col-sm-9">{{ i.quote_asset|default('—') }}</dd>
+        <dt class="col-sm-3">{{ 'Issuer'|trans }}</dt><dd class="col-sm-9">{{ i.issuer_reference|default('—') }}</dd>
+        <dt class="col-sm-3">{{ 'Jurisdiction'|trans }}</dt><dd class="col-sm-9">{{ i.jurisdiction|default('—') }}</dd>
+        <dt class="col-sm-3">{{ 'Primary venue'|trans }}</dt><dd class="col-sm-9">{{ i.primary_venue_reference|default('—') }}</dd>
       </dl>
-      <h3>Identifiers</h3>
-      {% if i.identifiers is empty %}<p>No external identifiers.</p>{% endif %}
+      <h3>{{ 'Identifiers'|trans }}</h3>
+      {% if i.identifiers is empty %}<p>{{ 'No external identifiers.'|trans }}</p>{% endif %}
       <ul>
         {% for identifier in i.identifiers %}
           <li><strong>{{ identifier.type }}</strong>: {{ identifier.value }}{% if identifier.source %} · {{ identifier.source }}{% endif %}</li>
@@ -187,7 +187,7 @@
 
     {% if canManageInstruments %}
       <section class="cos-panel">
-        <h2>Edit instrument</h2>
+        <h2>{{ 'Edit instrument'|trans }}</h2>
         <form method="post" action="/capital-markets/instruments/{{ i.id|url_encode }}" class="row g-2">
           <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
           <div class="col-md-2"><input class="form-control" name="symbol" value="{{ i.symbol }}" required></div>
@@ -209,21 +209,21 @@
           </div>
           <div class="col-md-2"><input class="form-control" name="currency" value="{{ i.currency|default('') }}" placeholder="USD"></div>
           <div class="col-md-2"><input class="form-control" name="quote_asset" value="{{ i.quote_asset|default('') }}" placeholder="USDT"></div>
-          <div class="col-md-3"><input class="form-control" name="issuer_reference" value="{{ i.issuer_reference|default('') }}" placeholder="Issuer"></div>
-          <div class="col-md-2"><input class="form-control" name="jurisdiction" value="{{ i.jurisdiction|default('') }}" placeholder="Jurisdiction"></div>
-          <div class="col-md-3"><input class="form-control" name="primary_venue_reference" value="{{ i.primary_venue_reference|default('') }}" placeholder="Primary venue"></div>
-          <div class="col-md-12"><button class="btn btn-primary">Save instrument</button></div>
+          <div class="col-md-3"><input class="form-control" name="issuer_reference" value="{{ i.issuer_reference|default('') }}" placeholder="{{ 'Issuer'|trans }}"></div>
+          <div class="col-md-2"><input class="form-control" name="jurisdiction" value="{{ i.jurisdiction|default('') }}" placeholder="{{ 'Jurisdiction'|trans }}"></div>
+          <div class="col-md-3"><input class="form-control" name="primary_venue_reference" value="{{ i.primary_venue_reference|default('') }}" placeholder="{{ 'Primary venue'|trans }}"></div>
+          <div class="col-md-12"><button class="btn btn-primary">{{ 'Save instrument'|trans }}</button></div>
         </form>
       </section>
     {% endif %}
 
     <section class="cos-panel">
-      <h2>Related financial exposures</h2>
+      <h2>{{ 'Related financial exposures'|trans }}</h2>
       {% if i.relationships is empty %}
-        <p>No economic relationships registered.</p>
+        <p>{{ 'No economic relationships registered.'|trans }}</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Source</th><th>Relationship</th><th>Target</th><th>Strength</th><th>{{ 'Status'|trans }}</th></tr></thead>
+          <thead><tr><th>{{ 'Source'|trans }}</th><th>{{ 'Relationship'|trans }}</th><th>{{ 'Target'|trans }}</th><th>{{ 'Strength'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead>
           <tbody>
           {% for rel in i.relationships %}
             <tr>
@@ -240,9 +240,9 @@
     </section>
 
     <section class="cos-panel">
-      <h2>Venue availability</h2>
+      <h2>{{ 'Venue availability'|trans }}</h2>
       {% if i.venues is empty %}
-        <p>This instrument is not registered on a venue yet.</p>
+        <p>{{ 'This instrument is not registered on a venue yet.'|trans }}</p>
       {% else %}
         <ul>
           {% for mapping in i.venues %}
@@ -253,12 +253,12 @@
     </section>
 
     <section class="cos-panel">
-      <h2>Audit history</h2>
+      <h2>{{ 'Audit history'|trans }}</h2>
       {% if w.audit|default([]) is empty %}
         <p>No {{ 'Capital Markets'|trans }} audit entries for this instrument yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>{{ 'Time'|trans }}</th><th>Actor</th><th>{{ 'Correlation'|trans }}</th><th>{{ 'Category'|trans }}</th></tr></thead>
+          <thead><tr><th>{{ 'Time'|trans }}</th><th>{{ 'Actor'|trans }}</th><th>{{ 'Correlation'|trans }}</th><th>{{ 'Category'|trans }}</th></tr></thead>
           <tbody>
           {% for row in w.audit %}
             <tr><td>{{ row.created_at|default('—') }}</td><td>{{ row.actor_id|default('—') }}</td><td>{{ row.correlation_id|default('—') }}</td><td>{{ row.category|default('platform_activity') }}</td></tr>
@@ -283,7 +283,7 @@
     {% set promotions = w.promotion_decisions|default([]) %}
     {% set metrics = w.metrics|default({}) %}
 
-    <section class="cos-kpi-strip" aria-label="Research Lab state">
+    <section class="cos-kpi-strip" aria-label="{{ 'Research Lab'|trans }} state">
       <twig:CosMetric label="Hypotheses" value="{{ metrics.hypothesis_count|default(hypotheses|length) }}" hint="formal research objects" />
       <twig:CosMetric label="Experiments" value="{{ metrics.experiment_count|default(experiments|length) }}" hint="immutable specifications" />
       <twig:CosMetric label="Backtests" value="{{ metrics.backtest_count|default(runs|length) }}" hint="historical replay runs" />
@@ -297,12 +297,12 @@
       <div class="d-flex justify-content-between gap-3 flex-wrap">
         <div>
           <small>CM-RESEARCH-LAB</small>
-          <h2>Research Pipeline</h2>
-          <p>Idea → Hypothesis → Experiment → Frozen Dataset → Backtest → OOS → Paper → Decision → Knowledge.</p>
+          <h2>{{ 'Research Pipeline'|trans }}</h2>
+          <p>{{ 'Idea → Hypothesis → Experiment → Frozen Dataset → Backtest → OOS → Paper → Decision → Knowledge.'|trans }}</p>
           <p>Positive and negative results are retained. Promotion is deterministic and auditable. Live activation is outside this workspace.</p>
         </div>
         <div>
-          <span class="badge text-bg-info">RESEARCH</span>
+          <span class="badge text-bg-info">{{ 'RESEARCH'|trans }}</span>
           <span class="badge text-bg-warning">PAPER GATED</span>
           <span class="badge text-bg-danger">LIVE OFF</span>
         </div>
@@ -462,7 +462,7 @@
         <p>No frozen ResearchDataset snapshots yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Dataset</th><th>Period</th><th>Quality</th><th>Sources</th><th>Instruments</th><th>Snapshot hash</th></tr></thead>
+          <thead><tr><th>Dataset</th><th>Period</th><th>Quality</th><th>Sources</th><th>{{ 'Instruments'|trans }}</th><th>Snapshot hash</th></tr></thead>
           <tbody>
           {% for d in datasets %}
             <tr>
@@ -558,7 +558,7 @@
         <p>No completed research results yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Experiment</th><th>{{ 'Status'|trans }}</th><th>Confidence</th><th>Fidelity</th><th>Expected P&amp;L</th><th>Max drawdown</th><th>Limitations</th></tr></thead>
+          <thead><tr><th>Experiment</th><th>{{ 'Status'|trans }}</th><th>{{ 'Confidence'|trans }}</th><th>Fidelity</th><th>Expected P&amp;L</th><th>Max drawdown</th><th>Limitations</th></tr></thead>
           <tbody>
           {% for result in results %}
             <tr>
@@ -634,7 +634,7 @@
             <p>No scorecards yet.</p>
           {% else %}
             <div class="table-responsive"><table class="table">
-              <thead><tr><th>Strategy Version</th><th>Score</th><th>Profit</th><th>Consistency</th><th>Risk</th><th>Execution</th><th>Robustness</th><th>Data</th><th>Weights</th></tr></thead>
+              <thead><tr><th>Strategy Version</th><th>Score</th><th>Profit</th><th>Consistency</th><th>{{ 'Risk'|trans }}</th><th>Execution</th><th>Robustness</th><th>Data</th><th>Weights</th></tr></thead>
               <tbody>
               {% for s in scorecards %}
                 <tr>
@@ -720,7 +720,7 @@
   {% elseif cmView == 'tokenized_equity' %}
     {% set r = w.research|default({}) %}
     {% set portfolio = w.paper_portfolio|default(null) %}
-    <section class="cos-kpi-strip" aria-label="Tokenized Equity research state">
+    <section class="cos-kpi-strip" aria-label="{{ 'Tokenized Equity'|trans }} research state">
       <twig:CosMetric label="Candidates" value="{{ r.candidate_count|default(0) }}" hint="H1 + H2 observations" />
       <twig:CosMetric label="Opportunities" value="{{ r.opportunity_count|default(0) }}" hint="validated research records" />
       <twig:CosMetric label="Positive net" value="{{ r.positive_net_opportunity_count|default(0) }}" hint="after explicit costs" />
@@ -731,8 +731,8 @@
       <div class="d-flex justify-content-between gap-3 flex-wrap">
         <div>
           <small>VERTICAL SLICE #1</small>
-          <h2>Tokenized Equity</h2>
-          <p><strong>H1</strong> Equity ↔ Tokenized Equity dislocation · <strong>H2</strong> cross-venue tokenized-equity arbitrage.</p>
+          <h2>{{ 'Tokenized Equity'|trans }}</h2>
+          <p><strong>H1</strong> Equity ↔ {{ 'Tokenized Equity'|trans }} dislocation · <strong>H2</strong> cross-venue tokenized-equity arbitrage.</p>
           <p>Gross spread is only a candidate. Opportunities survive data quality, economic relationship, fees, liquidity and deterministic risk gates before paper execution.</p>
         </div>
         <div>
@@ -782,13 +782,13 @@
       <h2>Paper portfolio</h2>
       {% if portfolio %}
         <div class="row g-3">
-          <div class="col-md-3"><strong>Currency</strong><br>{{ portfolio.currency }}</div>
+          <div class="col-md-3"><strong>{{ 'Currency'|trans }}</strong><br>{{ portfolio.currency }}</div>
           <div class="col-md-3"><strong>{{ 'Available'|trans }}</strong><br>{{ portfolio.available_capital }}</div>
           <div class="col-md-3"><strong>Reserved</strong><br>{{ portfolio.reserved_capital }}</div>
           <div class="col-md-3"><strong>Realized P&L</strong><br>{{ portfolio.realized_pnl }}</div>
         </div>
       {% else %}
-        <p>No paper portfolio initialized. Use the Tokenized Equity API to initialize research capital before paper execution.</p>
+        <p>No paper portfolio initialized. Use the {{ 'Tokenized Equity'|trans }} API to initialize research capital before paper execution.</p>
       {% endif %}
       {% if portfolio and portfolio.venue_balances|default([]) is not empty %}
         <hr>
@@ -819,7 +819,7 @@
             <thead>
               <tr>
                 <th>Hypothesis</th><th>Relationship / legs</th><th>Gross edge</th><th>Net edge</th>
-                <th>Expected P&L</th><th>Capital</th><th>Risk</th><th>TTL</th><th>{{ 'Status'|trans }}</th>
+                <th>Expected P&L</th><th>Capital</th><th>{{ 'Risk'|trans }}</th><th>TTL</th><th>{{ 'Status'|trans }}</th>
               </tr>
             </thead>
             <tbody>
@@ -957,7 +957,7 @@
       <div class="d-flex justify-content-between gap-3 flex-wrap">
         <div>
           <small>VERTICAL SLICE #2</small>
-          <h2>Crypto Spot / Perpetual</h2>
+          <h2>{{ 'Crypto Spot / Perpetual'|trans }}</h2>
           <p><strong>H4</strong> Spot/Perpetual Basis · <strong>H5</strong> Funding Capture · <strong>H6</strong> Cross-Venue Funding.</p>
           <p>Execution economics use bid/ask and order-book depth. Mark price, index price and last price remain separate reference concepts.</p>
         </div>
@@ -974,7 +974,7 @@
         <p>No H4/H5/H6 opportunities recorded yet. Poll trusted spot/perpetual sources and run a scan through the VS2 API.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Hypothesis</th><th>{{ 'Type'|trans }}</th><th>{{ 'Status'|trans }}</th><th>Strategy</th><th>Expected net P&amp;L</th><th>Capital</th><th>Risk</th><th>Expires</th></tr></thead>
+          <thead><tr><th>Hypothesis</th><th>{{ 'Type'|trans }}</th><th>{{ 'Status'|trans }}</th><th>Strategy</th><th>Expected net P&amp;L</th><th>Capital</th><th>{{ 'Risk'|trans }}</th><th>Expires</th></tr></thead>
           <tbody>
           {% for item in opportunities %}
             <tr>
@@ -1077,7 +1077,7 @@
         <p>No realized paper funding cashflows yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Settlement</th><th>Position</th><th>Venue</th><th>Rate</th><th>Notional</th><th>Side</th><th>Cashflow</th><th>Currency</th></tr></thead>
+          <thead><tr><th>Settlement</th><th>Position</th><th>Venue</th><th>Rate</th><th>Notional</th><th>Side</th><th>Cashflow</th><th>{{ 'Currency'|trans }}</th></tr></thead>
           <tbody>
           {% for row in settlements|slice(0,100) %}
             <tr>
@@ -1285,7 +1285,7 @@
         <p>No reference state yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Source</th><th>Instrument</th><th>Session</th><th>Reference</th><th>Trust</th><th>{{ 'Updated'|trans }}</th></tr></thead>
+          <thead><tr><th>{{ 'Source'|trans }}</th><th>Instrument</th><th>Session</th><th>Reference</th><th>Trust</th><th>{{ 'Updated'|trans }}</th></tr></thead>
           <tbody>
           {% for state in w.reference_states %}
             <tr>
@@ -1347,7 +1347,7 @@
         <p>No directed relationships have been registered.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Source</th><th>{{ 'Type'|trans }}</th><th>Target</th><th>Strength</th><th>{{ 'Status'|trans }}</th></tr></thead>
+          <thead><tr><th>{{ 'Source'|trans }}</th><th>{{ 'Type'|trans }}</th><th>{{ 'Target'|trans }}</th><th>{{ 'Strength'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead>
           <tbody>
           {% for rel in w.relationships %}
             <tr>
@@ -1378,7 +1378,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-2"><input class="form-control" name="jurisdiction" placeholder="Jurisdiction"></div>
+          <div class="col-md-2"><input class="form-control" name="jurisdiction" placeholder="{{ 'Jurisdiction'|trans }}"></div>
           <div class="col-md-2"><input class="form-control" name="timezone" value="UTC" placeholder="Timezone"></div>
           <div class="col-md-12">
             {% for cap in ['MARKET_DATA','ORDER_BOOK','TRADING','HISTORICAL_DATA','STREAMING','FUNDING_DATA','MARGIN','DEPOSIT','WITHDRAWAL','SETTLEMENT'] %}

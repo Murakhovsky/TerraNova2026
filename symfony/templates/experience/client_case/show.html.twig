@@ -76,18 +76,18 @@
                                             <form action="/cos/action/{{ action.id }}/execute" method="post">
                                                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                                 <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
-                                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Execute</button>
+                                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">{{ 'Execute'|trans }}</button>
                                             </form>
                                         {% elseif action.status == 'PENDING_APPROVAL' and action.approvalStatus == 'PENDING' %}
                                             <form action="/cos/approval/{{ action.approvalId }}/approve" method="post">
                                                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                                 <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
-                                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Approve</button>
+                                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">{{ 'Approve'|trans }}</button>
                                             </form>
                                             <form action="/cos/approval/{{ action.approvalId }}/reject" method="post">
                                                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                                 <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
-                                                <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Reject</button>
+                                                <button class="cos-button cos-button--ghost cos-button--sm" type="submit">{{ 'Reject'|trans }}</button>
                                             </form>
                                         {% endif %}
                                     </twig:CosActionBar>
@@ -114,7 +114,7 @@
                         <div class="cos-section-grid">
                             <label class="cos-field"><span>Людина</span><input class="cos-input" name="full_name" type="text" maxlength="160" required value="{{ case.form.full_name }}"></label>
                             <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" maxlength="50" value="{{ case.form.phone }}"></label>
-                            <label class="cos-field"><span>Email</span><input class="cos-input" name="email" type="email" maxlength="160" value="{{ case.form.email }}"></label>
+                            <label class="cos-field"><span>{{ 'Email'|trans }}</span><input class="cos-input" name="email" type="email" maxlength="160" value="{{ case.form.email }}"></label>
                             <label class="cos-field"><span>Telegram</span><input class="cos-input" name="telegram" type="text" maxlength="80" value="{{ case.form.telegram }}"></label>
                             <label class="cos-field"><span>Назва кейсу</span><input class="cos-input" name="title" type="text" maxlength="220" value="{{ case.form.title }}"></label>
 
@@ -275,7 +275,7 @@
                                         <input type="hidden" name="slug" value="{{ match.slug }}">
                                         <input type="hidden" name="variant" value="client">
                                         <input type="hidden" name="return_url" value="client-case/show/{{ case.id }}">
-                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit" name="channel" value="email">Email</button>
+                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit" name="channel" value="email">{{ 'Email'|trans }}</button>
                                         <button class="cos-button cos-button--ghost cos-button--sm" type="submit" name="channel" value="telegram">Telegram</button>
                                         <button class="cos-button cos-button--ghost cos-button--sm" type="submit" name="channel" value="viber">Viber</button>
                                     </form>

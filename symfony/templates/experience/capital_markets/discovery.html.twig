@@ -31,7 +31,7 @@
       </form>
       <p><small>Три публічні каталоги. Запуск лише вручну, не частіше ніж раз на 90 секунд для організації.</small></p>
     {% else %}
-      <p>Для запуску перевірки потрібен дозвіл Market Data Manage.</p>
+      <p>Для запуску перевірки потрібен дозвіл {{ 'Market Data'|trans }} Manage.</p>
     {% endif %}
   </div>
 
@@ -143,8 +143,8 @@
     </section>
     <section class="cos-panel">
       <h2>Що далі?</h2>
-      <p>Підтверджені символи вручну співвідносяться з реєстром COS. Після перевірки ідентичності, типу інструмента та біржових правил налаштовуються Market Data subscriptions і збираються Bid/Ask. Лише тоді їх можна передавати до Opportunity Engine.</p>
-      <a href="/capital-markets/market-data">Перейти до налаштування Market Data →</a>
+      <p>Підтверджені символи вручну співвідносяться з реєстром COS. Після перевірки ідентичності, типу інструмента та біржових правил налаштовуються {{ 'Market Data'|trans }} subscriptions і збираються Bid/Ask. Лише тоді їх можна передавати до Opportunity Engine.</p>
+      <a href="/capital-markets/market-data">Перейти до налаштування {{ 'Market Data'|trans }} →</a>
     </section>
   {% endif %}
 </div>
