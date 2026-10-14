@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Infrastructure\MarketData\L2;
 
 use DomainException;
-use Domains\CapitalMarkets\Domain\Service\KrakenL2BookRecovery;
 
 /**
  * Strict wire-frame decoder. Network clients own TLS, reconnect and backoff.
