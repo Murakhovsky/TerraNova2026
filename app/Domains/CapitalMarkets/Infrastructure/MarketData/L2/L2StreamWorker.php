@@ -19,6 +19,7 @@ final readonly class L2StreamWorker
         private BinanceL2StreamProcessor|BybitL2StreamProcessor|KrakenL2StreamProcessor $processor,
         private ?BinanceL2SnapshotClient $snapshotClient = null,
         private ?L2SubscriptionAcknowledgement $acknowledgements = null,
+        private ?L2PublicationWatchdog $watchdog = null,
     ) {}
 
     /**
@@ -78,7 +79,12 @@ final readonly class L2StreamWorker
                 $version = $diagnostics['version'] ?? null;
                 if (!is_int($version)) throw new DomainException('Missing L2 book version.');
                 if ($version <= $lastVersion) continue;
+                $nowMs = intdiv(hrtime(true), 1000000);
+                if ($this->watchdog !== null && $published > 0 && $this->watchdog->isStale($nowMs)) {
+                    throw new DomainException('L2 verified publication stalled; reconnect required.');
+                }
                 $publish($book);
+                $this->watchdog?->published($nowMs);
                 $lastVersion = $version;
                 ++$published;
             }
@@ -86,6 +92,7 @@ final readonly class L2StreamWorker
             if ($snapshot !== null || $snapshotPending) throw new DomainException('Binance snapshot recovery incomplete.');
             return $published;
         } finally {
+            $this->watchdog?->reset();
             try {
                 $this->processor->begin();
             } finally {

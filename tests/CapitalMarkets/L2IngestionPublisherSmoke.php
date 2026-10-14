@@ -10,11 +10,12 @@ require_once $base.'Domains/CapitalMarkets/Application/DTO/MarketDataIngestionRe
 require_once $base.'Domains/CapitalMarkets/Application/Contract/MarketDataIngestionInterface.php';
 require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/L2DomainBookFactory.php';
 require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/L2IngestionPublisher.php';
+require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/L2VerifiedIngestionCallback.php';
 use Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface;
 use Domains\CapitalMarkets\Application\DTO\MarketDataIngestionResult;
 use Domains\CapitalMarkets\Domain\MarketData\{MarketSourceId,RawMarketEvent};
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
-use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2DomainBookFactory,L2IngestionPublisher};
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2DomainBookFactory,L2IngestionPublisher,L2VerifiedIngestionCallback};
 class L2CaptureIngestion implements MarketDataIngestionInterface {
     public ?RawMarketEvent $received = null;
     public function ingest(string $organizationId, RawMarketEvent $raw): MarketDataIngestionResult {
@@ -32,4 +33,17 @@ if ($result->status !== 'ACCEPTED' || $adapter->received?->sequence !== '42'
     || $adapter->received?->transportMetadata['recovery'] !== 'VERIFIED') {
     throw new RuntimeException('L2 ingestion bridge regression.');
 }
+(new L2VerifiedIngestionCallback($publisher))($book);
+$rejectedAdapter = new class implements MarketDataIngestionInterface {
+    public function ingest(string $organizationId, RawMarketEvent $raw): MarketDataIngestionResult {
+        return new MarketDataIngestionResult('REJECTED',true,false,false);
+    }
+};
+$rejected = false;
+try {
+    (new L2VerifiedIngestionCallback(
+        new L2IngestionPublisher($rejectedAdapter,'test-org',MarketSourceId::fromString('test-source'),null,'BTCUSDT','binance.spot.depth.snapshot')
+    ))($book);
+} catch (DomainException $e) { $rejected = true; }
+if (!$rejected) throw new RuntimeException('Rejected ingestion counted as published.');
 echo "L2 ingestion publisher smoke passed\n";

@@ -5,10 +5,10 @@ require_once $base.'Kernel/Shared/Domain/ValueObject.php';
 foreach (['Decimal','AssetCode','Price','Quantity'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Value/'.$name.'.php';
 foreach (['MarketEventType','MarketObservation','OrderBookLevel','MarketOrderBook'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/MarketData/'.$name.'.php';
 foreach (['OrderBookRebuilder','L2RecoverySession','BybitL2RecoveryCoordinator'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Service/'.$name.'.php';
-foreach (['L2SubscriptionConfig','L2SubscriptionEncoder','L2SubscriptionAcknowledgement','L2WebSocketTransport','L2FrameSizeGuard','L2ControlFrameFilter','L2WebSocketFrameRouter','L2FrameDispatch','L2DomainBookFactory','BybitL2StreamProcessor','BinanceL2SnapshotDecoder','BinanceL2SnapshotClient','BinanceL2StreamProcessor','KrakenL2StreamProcessor','L2StreamWorker'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
+foreach (['L2SubscriptionConfig','L2SubscriptionEncoder','L2SubscriptionAcknowledgement','L2PublicationWatchdog','L2WebSocketTransport','L2FrameSizeGuard','L2ControlFrameFilter','L2WebSocketFrameRouter','L2FrameDispatch','L2DomainBookFactory','BybitL2StreamProcessor','BinanceL2SnapshotDecoder','BinanceL2SnapshotClient','BinanceL2StreamProcessor','KrakenL2StreamProcessor','L2StreamWorker'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
 use Domains\CapitalMarkets\Domain\Service\{L2RecoverySession,BybitL2RecoveryCoordinator};
-use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2SubscriptionConfig,L2SubscriptionEncoder,L2WebSocketTransport,L2FrameSizeGuard,L2ControlFrameFilter,L2WebSocketFrameRouter,L2FrameDispatch,L2DomainBookFactory,BybitL2StreamProcessor,L2StreamWorker};
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2SubscriptionConfig,L2SubscriptionEncoder,L2WebSocketTransport,L2FrameSizeGuard,L2ControlFrameFilter,L2WebSocketFrameRouter,L2FrameDispatch,L2DomainBookFactory,BybitL2StreamProcessor,L2StreamWorker,L2PublicationWatchdog};
 class FixtureL2Transport extends L2WebSocketTransport {
     public array $messages = [
         '{"op":"subscribe","success":true}',
@@ -23,6 +23,7 @@ class FixtureL2Transport extends L2WebSocketTransport {
 }
 $session = new L2RecoverySession();
 $transport = new FixtureL2Transport();
+$watchdog = new L2PublicationWatchdog();
 $worker = new L2StreamWorker(
     new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
     new L2SubscriptionEncoder(), $transport,
@@ -30,11 +31,11 @@ $worker = new L2StreamWorker(
         new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT'),'BYBIT_LINEAR'),
         new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
         new BybitL2RecoveryCoordinator($session),$session
-    )
+    ), null, null, $watchdog
 );
 $published = [];
 $count = $worker->run(static function($book) use (&$published):void {$published[]=$book->bids[0]->quantity->value->value();},3);
-if ($count !== 2 || $published !== ['1','2'] || count($transport->sent) !== 1) throw new RuntimeException('L2 worker publication regression.');
+if ($count !== 2 || $published !== ['1','2'] || count($transport->sent) !== 1 || $watchdog->diagnostics()['publications'] !== 2 || !$watchdog->isStale(intdiv(hrtime(true),1000000))) throw new RuntimeException('L2 worker publication regression.');
 $badTransport = new FixtureL2Transport();
 $badTransport->messages = ['{"op":"subscribe","success":false}'];
 $badSession = new L2RecoverySession();
