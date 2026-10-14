@@ -27,9 +27,10 @@ final readonly class EngineeringArchitectEvidencePlanner
     /**
      * @param mixed $requested
      * @param list<string> $alreadyRead
+     * @param null|callable(list<string>):list<string> $resolveExisting
      * @return array{status:string,reason:string,paths:list<string>,rejected:list<array<string,string>>,partial:bool,budget:array<string,mixed>}
      */
-    public function plan(mixed $requested, array $alreadyRead, int $filesUsed, int $round): array
+    public function plan(mixed $requested, array $alreadyRead, int $filesUsed, int $round, ?callable $resolveExisting = null): array
     {
         $budget = $this->budget($round, $filesUsed, $alreadyRead);
         if (!is_array($requested) || $requested === []
@@ -62,6 +63,22 @@ final readonly class EngineeringArchitectEvidencePlanner
                 continue;
             }
             $accepted[] = $path;
+        }
+        if ($accepted !== [] && $resolveExisting !== null) {
+            $existing = $resolveExisting($accepted);
+            if (!is_array($existing)) {
+                throw new \RuntimeException('Repository returned invalid path availability evidence.');
+            }
+            $knownExisting = array_fill_keys($existing, true);
+            $valid = [];
+            foreach ($accepted as $path) {
+                if (!isset($knownExisting[$path])) {
+                    $rejected[] = ['path_sha256' => hash('sha256', $path), 'reason' => 'NOT_FOUND_AT_PINNED_REVISION'];
+                } else {
+                    $valid[] = $path;
+                }
+            }
+            $accepted = $valid;
         }
         if ($accepted === []) {
             return ['status' => 'REJECTED', 'reason' => 'NO_USABLE_PATHS',
