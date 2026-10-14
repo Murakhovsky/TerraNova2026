@@ -76,4 +76,12 @@ foreach ([
     }
 }
 
+foreach ([
+    'EngineeringArchitectEvidencePlanner',
+    'architect.evidence_request_evaluated',
+    'architect.evidence_collection_stopped',
+    'repository_evidence_budget',
+] as $marker) {
+    if (!str_contains($stage, $marker)) throw new RuntimeException('Evidence recovery V2 not wired: '.$marker);
+}
 echo "Engineering Architect stage passed.\n";

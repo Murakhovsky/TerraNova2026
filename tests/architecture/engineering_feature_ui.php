@@ -136,4 +136,8 @@ if ($jsonExample === false || !str_contains($jsonExample, 'Привіт, Укр�
     throw new RuntimeException('Human-readable JSON Unicode contract failed.');
 }
 
+if (!str_contains($template, 'data-engineering-evidence-status')
+    || !str_contains($template, 'architect.evidence_collection_stopped')) {
+    throw new RuntimeException('Engineering terminal does not surface evidence recovery status.');
+}
 echo "Engineering feature UI contract passed.\n";

@@ -124,13 +124,14 @@ final readonly class EngineeringArchitectStageExecutor
             );
         }
 
+        // Prioritize feature-owned paths ahead of unrelated revision changes.
         $contextPaths = self::CANONICAL_ARCHITECTURE_CONTEXT;
-        foreach (is_array($repositoryDiff['files'] ?? null) ? $repositoryDiff['files'] : [] as $file) {
+        foreach (is_array($contextMap['content']['files'] ?? null) ? $contextMap['content']['files'] : [] as $file) {
             if (is_array($file) && isset($file['path']) && is_string($file['path'])) {
                 $contextPaths[] = $file['path'];
             }
         }
-        foreach (is_array($contextMap['content']['files'] ?? null) ? $contextMap['content']['files'] : [] as $file) {
+        foreach (is_array($repositoryDiff['files'] ?? null) ? $repositoryDiff['files'] : [] as $file) {
             if (is_array($file) && isset($file['path']) && is_string($file['path'])) {
                 $contextPaths[] = $file['path'];
             }
@@ -211,6 +212,11 @@ final readonly class EngineeringArchitectStageExecutor
         $contextOptimizer = new EngineeringArchitectContextOptimizer();
         $compactRepositoryDiff = $contextOptimizer->compactRevisionDiff($repositoryDiff, $repositoryFiles);
 
+        $initialEvidencePaths = array_values(array_filter(array_map(
+            static fn (mixed $file): ?string => is_array($file) && is_string($file['path'] ?? null) ? $file['path'] : null,
+            $repositoryFiles,
+        )));
+        $evidencePlanner = new EngineeringArchitectEvidencePlanner();
         $previousArchitectureHash = (string) ($previousArchitecture['content_hash'] ?? 'none');
         $task = new EngineeringAgentTask(
             id: EngineeringId::generate(),
@@ -231,6 +237,7 @@ final readonly class EngineeringArchitectStageExecutor
                 ],
                 'repository_diff' => $compactRepositoryDiff,
                 'repository_files' => $repositoryFiles,
+                'repository_evidence_budget' => $evidencePlanner->budget(0, 0, $initialEvidencePaths),
                 'database_schema' => $databaseSchema,
                 'human_decisions' => $humanDecisionHistory,
                 'tasks' => $this->tasks->forFeature($featureId),
@@ -335,7 +342,7 @@ final readonly class EngineeringArchitectStageExecutor
 
         try {
             $evidencePolicy = new EngineeringArchitectEvidenceAuthorization();
-            $seenPaths = $contextPaths;
+            $seenPaths = $initialEvidencePaths;
             $extraPaths = [];
             $round = 0;
             while (true) {
@@ -452,16 +459,65 @@ final readonly class EngineeringArchitectStageExecutor
                 if (($run->structuredOutput['status'] ?? null) !== 'NEEDS_REPOSITORY_EVIDENCE') {
                     break;
                 }
-                if ($round >= EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS) {
-                    throw new RuntimeException('Read-only repository evidence rerun budget exhausted; no human gate required.');
+                $plan = $evidencePlanner->plan(
+                    $run->structuredOutput['requested_repository_files'] ?? [],
+                    $seenPaths,
+                    count($extraPaths),
+                    $round,
+                );
+                $this->journal->event(
+                    $featureId, $workflowId, 'MANAGER', 'architect.evidence_request_evaluated',
+                    'COMPLETED', 'Manager evaluated read-only evidence request against safety and budget.',
+                    $correlationId,
+                    [
+                        'accepted_paths' => $plan['paths'],
+                        'rejected' => $plan['rejected'],
+                        'reason' => $plan['reason'],
+                        'budget' => $plan['budget'],
+                    ],
+                    $engineeringRunId,
+                );
+                if ($plan['status'] !== 'COLLECT') {
+                    // No new LLM call and no fake Human Gate or architecture artifacts.
+                    $stopStatus = $plan['status'] === 'EXHAUSTED'
+                        ? 'EVIDENCE_BUDGET_EXHAUSTED' : 'EVIDENCE_REQUEST_REJECTED';
+                    $out = $run->structuredOutput;
+                    $out['status'] = $stopStatus;
+                    $out['requested_repository_files'] = [];
+                    $out['required_human_decisions'] = [];
+                    $out['evidence_exhaustion'] = [
+                        'reason' => $plan['reason'],
+                        'budget' => $plan['budget'],
+                        'rejected' => $plan['rejected'],
+                        'repository_revision' => $repositoryRevision,
+                        'recovery' => 'Review scoped evidence plan before explicitly resuming; do not auto-repeat Architect.',
+                    ];
+                    $run = new EngineeringAgentRunResult(
+                        runId: $run->runId,
+                        role: $run->role,
+                        status: $run->status,
+                        structuredOutput: $out,
+                        provider: $run->provider,
+                        model: $run->model,
+                        usage: $run->usage,
+                        error: $run->error,
+                        technicalRetries: $run->technicalRetries,
+                        steps: $run->steps,
+                    );
+                    $this->validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput);
+                    $this->journal->event(
+                        $featureId, $workflowId, 'MANAGER', 'architect.evidence_collection_stopped',
+                        'BLOCKED', 'Evidence budget or safe-path policy stopped another full LLM retry.',
+                        $correlationId,
+                        $out['evidence_exhaustion'] + ['status' => $stopStatus],
+                        $engineeringRunId,
+                    );
+                    break;
                 }
                 if (!$this->repository->available() || $repositoryRevision === '' || $repositoryRevision === 'unknown') {
                     throw new RuntimeException('Repository evidence collection requires existing access and a pinned valid revision.');
                 }
-                $paths = $evidencePolicy->authorize($run->structuredOutput['requested_repository_files'] ?? null, $seenPaths);
-                if (count($extraPaths) + count($paths) > EngineeringArchitectEvidenceAuthorization::MAX_ADDITIONAL_FILES) {
-                    throw new RuntimeException('Repository evidence file budget exhausted.');
-                }
+                $paths = $plan['paths'];
                 $currentRevision = $this->repository->currentBaseRevision($targetBranch !== '' ? $targetBranch : null);
                 if ($currentRevision !== $repositoryRevision) {
                     throw new RuntimeException('Repository revision changed during evidence collection; Architect must revalidate.');
@@ -519,6 +575,12 @@ final readonly class EngineeringArchitectStageExecutor
                             'revision' => $repositoryRevision,
                             'additional_paths' => $extraPaths,
                             'round' => $round,
+                        ],
+                        'repository_evidence_budget' => $evidencePlanner->budget($round, count($extraPaths), $seenPaths),
+                        'repository_evidence_feedback' => [
+                            'rejected' => $plan['rejected'],
+                            'partially_collected' => $plan['partial'],
+                            'new_paths' => $paths,
                         ],
                     ]),
                     contextRefs: $task->contextRefs,

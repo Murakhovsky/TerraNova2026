@@ -360,6 +360,21 @@
                     · <span data-engineering-live-target="pollStatus">автооновлення кожні 10 с</span>
                 </span>
             </div>
+            {% set lastEvidenceStop = null %}
+            {% for evidenceEvent in engineering.execution_events %}
+                {% if lastEvidenceStop is null and evidenceEvent.action|default('') == 'architect.evidence_collection_stopped' %}
+                    {% set lastEvidenceStop = evidenceEvent %}
+                {% endif %}
+            {% endfor %}
+            {% if lastEvidenceStop %}
+                <div class="engineering-panel__body" data-engineering-evidence-status>
+                    <strong>Остання технічна зупинка evidence collection</strong>
+                    <p>Причина: {{ lastEvidenceStop.details.reason|default('EVIDENCE_POLICY') }}
+                        · Додаткові файли: {{ lastEvidenceStop.details.budget.files_used|default('—') }}/{{ lastEvidenceStop.details.budget.files_max|default('—') }}
+                        · Раунди: {{ lastEvidenceStop.details.budget.rounds_used|default('—') }}/{{ lastEvidenceStop.details.budget.rounds_max|default('—') }}</p>
+                    <p class="engineering-muted">Це не рішення Architect і не Human Gate. Перед відновленням потрібно скоригувати evidence plan.</p>
+                </div>
+            {% endif %}
             <div class="engineering-terminal" data-engineering-live-target="terminal">
                 {% if engineering.timeline is empty %}
                     <div class="engineering-terminal__muted">Подій виконання ще немає.</div>
