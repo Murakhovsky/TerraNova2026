@@ -107,7 +107,7 @@ final readonly class WorkflowShadowParityComparator
      *
      * @param array<string,mixed> $legacy DoctrineEngineeringWorkflowStore::view()
      */
-    public function engineering(array $legacy, ?WorkflowRunSnapshot $target, ?string $linkedLegacyId): WorkflowParityReport
+    public function engineering(array $legacy, ?WorkflowRunSnapshot $target, ?string $linkedLegacyId, ?string $verifiedOrganizationId): WorkflowParityReport
     {
         $id = (string) ($legacy['id'] ?? '');
         if ($target === null) {
@@ -115,6 +115,14 @@ final readonly class WorkflowShadowParityComparator
                 ['canonical_run_not_created']);
         }
         $drift = [];
+        if ($verifiedOrganizationId === null || $verifiedOrganizationId !== $target->identity->organizationId) {
+            $drift[] = 'engineering_tenant_evidence_missing_or_mismatched';
+        }
+        if (!is_string($legacy['feature_id'] ?? null) || $legacy['feature_id'] === ''
+            || !is_string($legacy['state'] ?? null) || $legacy['state'] === ''
+            || (int) ($legacy['version'] ?? 0) < 1) {
+            $drift[] = 'engineering_business_stage_evidence_missing';
+        }
         if ($linkedLegacyId === null || $linkedLegacyId !== $id) {
             $drift[] = 'missing_or_incorrect_engineering_legacy_link';
         }

@@ -47,13 +47,17 @@ $altered=$legacy;
 $altered['steps'][]=$altered['steps'][0];
 $assert($c->federation($altered,$run,$steps,$planDigest,['step-1'=>'action:abc'])->status === WorkflowParityStatus::DRIFT, 'Duplicate legacy Step should not match.');
 $eng = ['id'=>'engineering-1','status'=>'WAITING','trace_id'=>'engine-trace',
-    'state'=>'HUMAN_DECISION_REQUIRED','version'=>7];
+    'state'=>'HUMAN_DECISION_REQUIRED','feature_id'=>'feature-1','version'=>7];
 $target = new WorkflowRunSnapshot(new WorkflowRunIdentity($org,'tech-1'),
     'engineering.stage','1',WorkflowStatus::WAITING,2,'engine-trace');
-$assert($c->engineering($eng,$target,'engineering-1')->status === WorkflowParityStatus::PARTIAL,
+$assert($c->engineering($eng,$target,'engineering-1',$org)->status === WorkflowParityStatus::PARTIAL,
     'Engineering business stage/approval evidence must not claim full parity.');
-$assert($c->engineering($eng,$target,null)->status === WorkflowParityStatus::DRIFT,
+$assert($c->engineering($eng,$target,'engineering-1',null)->status === WorkflowParityStatus::DRIFT,
+    'Engineering tenant provenance required.');
+$assert($c->engineering($eng,$target,'engineering-1','foreign-tenant')->status === WorkflowParityStatus::DRIFT,
+    'Engineering cross-tenant evidence must fail closed.');
+$assert($c->engineering($eng,$target,null,$org)->status === WorkflowParityStatus::DRIFT,
     'Engineering projection needs trusted legacy link.');
-$assert($c->engineering($eng,null,'engineering-1')->status === WorkflowParityStatus::NO_TARGET,
+$assert($c->engineering($eng,null,'engineering-1',$org)->status === WorkflowParityStatus::NO_TARGET,
     'Unmigrated Engineering technical run not to be inferred.');
 echo "Three-way Workflow shadow parity passed: source links, Action keys, immutable digests, drift and Engineering partial state.\n";
