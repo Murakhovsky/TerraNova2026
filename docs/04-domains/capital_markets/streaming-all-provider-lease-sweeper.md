@@ -3,12 +3,12 @@ title: Незалежний контроль протермінованих по
 description: Операційне відновлення недіючих потоків Binance, Bybit та Kraken з контрольованим захопленням lease.
 status: draft
 kind: engineering
-updated: 2026-10-13
+updated: 2026-10-14
 ---
 
 # Незалежне відновлення потокових процесів Capital Markets
 
-Незалежний sweeper перевіряє протерміновані lease для шести **відомих односимвольних BBO-пілотів**: Binance Spot, Bybit Spot, Kraken Spot/xStocks, Binance USD-M, Bybit Linear Perpetual та Massive Stocks NBBO. Це не перевірка всіх можливих типів підписок у майбутньому.
+Незалежний sweeper перевіряє протерміновані lease для семи **відомих pilot shards**: шість односимвольних BBO-пілотів (Binance Spot, Bybit Spot, Kraken Spot/xStocks, Binance USD-M, Bybit Linear Perpetual, Massive Stocks NBBO) та один batch shard Massive Stocks NBBO на 2–25 акцій. Це не перевірка всіх можливих типів підписок у майбутньому.
 
 Процес спочатку зчитує кандидатів, потім у транзакції блокує загальний source guard і рядок конкретного shard. Якщо інший worker уже подовжив або перехопив lease, подія пропускається без зміни стану. Інакше sweeper змінює власника з новим `fencing_token`, після чого відкликає довіру через наявний `StreamingTrustInvalidator`.
 
