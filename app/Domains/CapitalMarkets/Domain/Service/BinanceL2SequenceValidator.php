@@ -18,8 +18,8 @@ final class BinanceL2SequenceValidator
     public function acceptFirst(string $snapshotId, string $first, string $last): bool
     {
         $this->validate($snapshotId, $first, $last);
-        if ($this->compare($last, $snapshotId) <= 0) return false;
-        $next = $this->increment($snapshotId);
+        if ($this->compare($last, $snapshotId) < ($this->futures ? 0 : 1)) return false;
+        $next = $this->futures ? $snapshotId : $this->increment($snapshotId);
         if ($this->compare($first, $next) > 0 || $this->compare($last, $next) < 0) {
             throw new DomainException('Binance snapshot/delta bridge gap.');
         }
