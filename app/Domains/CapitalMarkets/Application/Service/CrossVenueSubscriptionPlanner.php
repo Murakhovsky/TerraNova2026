@@ -10,6 +10,7 @@ use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
 use Domains\CapitalMarkets\Domain\Contract\InstrumentRepository;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentStatus;
 use Domains\CapitalMarkets\Domain\Venue\VenueInstrumentStatus;
+use Domains\CapitalMarkets\Domain\Venue\VenueStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataCapability;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
@@ -55,7 +56,10 @@ final readonly class CrossVenueSubscriptionPlanner
         }
         $result=['source'=>$sourceId,'venue'=>$venue,'total'=>count($items),
             'create'=>0,'existing'=>0,'blocked'=>0,'rows'=>[]];
-        if (!$source->enabled || $source->venueId===null) {
+        $venueDescriptor=$source->venueId===null ? null : $this->venues->get($org,$source->venueId);
+        if (!$source->enabled || $venueDescriptor===null
+            || $venueDescriptor->status!==VenueStatus::Active
+            || !in_array($venueDescriptor->code,[$venue,$venue.'_SPOT'],true)) {
             foreach($items as $item) {
                 $result['rows'][]=['seed_token'=>$item['seed_token'],'venue_symbol'=>$item['venue_symbol'],
                     'instrument_id'=>'','status'=>'BLOCKED_SOURCE_NOT_READY'];
