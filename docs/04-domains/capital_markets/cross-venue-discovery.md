@@ -76,3 +76,13 @@ Stocks Trading/tokenized-assets API Binance відрізняється від п
 Після ручного Discovery FOS тепер ідемпотентно оновлює `tn_capital_market_cross_venue_pool_candidates` у межах організації. Ключ запису: `(organization_id,pool_key,seed_token,venue)`; `pool_key=BINANCE_BSTOCKS_SEED`. Стани `LISTED_EXACT_TOKEN_SYMBOL`, `DISTINCT_TOKEN_REVIEW_REQUIRED`, `NOT_LISTED` зберігаються окремо для кожного venue. `UNAVAILABLE` не стирає останнє спостереження. Усі економічні зв'язки лишаються `UNVERIFIED` / `NOT_ESTABLISHED`; дані не створюють canonical Instrument або Opportunity. Окремий блок на сторінці `/capital-markets/discovery` відображає кількості за станами. Перед відкриттям сторінки після оновлення коду застосувати міграцію `20261014_000140_capital_markets_candidate_pool.sql`.
 
 Поточні обмеження: автоматичне розкладення Discovery, перевірка issuer evidence, канонічна registry reconciliation, Subscription Planner і real-time streams є наступними критеріями приймання, а не наявною функціональністю.
+
+## CLI Discovery
+
+Для керованого повторного сканування доступна команда:
+
+```bash
+php symfony/bin/console cos:capital-markets:discovery:run ORGANIZATION_ID ACTOR_ID --limit=80
+```
+
+Використовувати тільки з дозволеним service actor та в межах tenant. Результат `RECORDED` означає збереження доказів, але не означає, що всі джерела доступні: `source_health` має бути перевірений окремо. Паралельні виклики обмежуються існуючим reservation gate (90 секунд). Перевірку operator permissions для фонового service actor та розклад у Kernel Scheduler необхідно реалізувати до production-автоматизації; CLI самостійно не надає торгового допуску.
