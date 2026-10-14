@@ -81,11 +81,41 @@ try {
                 'venue'=>$id,'fingerprint'=>hash('sha256',$org.'|'.$source)]);
     }
     $assert($getStates()===['BINANCE'=>'ACTIVE','BYBIT'=>'ACTIVE'],'Fixture subscriptions not active.');
+    // A fresh public discovery cannot silently renew an old HUMAN review.
+    $pdo->prepare("UPDATE tn_capital_market_pool_listing_reviews
+        SET reviewed_at=UTC_TIMESTAMP(6)-INTERVAL 49 HOUR
+        WHERE organization_id=:org AND venue='BYBIT' AND decision='APPROVE_LISTING'")
+        ->execute(['org'=>$org]);
+    $assert($pool->listedForVenue($org,'BYBIT')===[],
+        'Fresh source observations incorrectly renewed a 49-hour-old human approval.');
+    $assert(count($pool->listedForVenue($org,'BINANCE'))===1,
+        'Expiry of Bybit approval contaminated independently reviewed Binance.');
+    $assert($fence->disableUnapproved($org)===1,
+        'Expired human review must immediately disable the active Bybit subscription.');
+    $assert($getStates()===['BINANCE'=>'ACTIVE','BYBIT'=>'DISABLED'],
+        'Expired reviewer approval disabled the wrong venue.');
+    $review->decide($org,17,'AAPLB','BYBIT',$stamp,'APPROVE_LISTING',
+        'https://www.bybit.com/en/trade/spot/AAPLB/USDT',hash('sha256','Renewed Bybit evidence'));
+    $pdo->prepare("UPDATE tn_capital_market_subscriptions SET status='ACTIVE'
+        WHERE organization_id=:org AND subscription_id='subscription:BYBIT'")
+        ->execute(['org'=>$org]);
+    $assert($getStates()===['BINANCE'=>'ACTIVE','BYBIT'=>'ACTIVE'],
+        'Fresh explicit reviewer approval did not re-admit a valid Bybit subscription.');
+
     $revoked=$review->revoke($org,17,'AAPLB','BINANCE','Operator emergency suspension of invalid listing.');
     $assert($revoked['disabled_subscriptions']===1,
         'Revocation must disable exactly the affected venue BBO.');
     $assert($getStates()===['BINANCE'=>'DISABLED','BYBIT'=>'ACTIVE'],
         'Revocation contaminated healthy other venue or failed to fence Binance.');
+    // A newer discovery with identical symbol must not resurrect an operator veto.
+    $identical=$snapshot;
+    $identical['as_of_utc']=(new DateTimeImmutable('+1 second',new DateTimeZone('UTC')))
+        ->format('Y-m-d\TH:i:s\Z');
+    $pool->reconcile($org,$identical);
+    $assert($pool->listedForVenue($org,'BINANCE')===[]
+        && $getStates()===['BINANCE'=>'DISABLED','BYBIT'=>'ACTIVE'],
+        'Discovery incorrectly resurrected an explicitly revoked listing.');
+
     $changed=$snapshot;
     $changed['as_of_utc']=(new DateTimeImmutable('+3 seconds',new DateTimeZone('UTC')))
         ->format('Y-m-d\TH:i:s\Z');
