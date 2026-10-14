@@ -1983,6 +1983,8 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\CrossVenueSubscriptionPlanner: ~
+  Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftProjection: ~
+  Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService: ~
   Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader: ~
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository:
     arguments:

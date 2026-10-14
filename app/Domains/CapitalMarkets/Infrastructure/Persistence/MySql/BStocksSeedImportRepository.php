@@ -87,6 +87,30 @@ final readonly class BStocksSeedImportRepository
         }
     }
 
+    /**
+     * Source-backed candidate rows for canonical draft creation; never trading authority.
+     * @return list<array{row:array<string,mixed>,file_sha256:string,source_as_of:string}>
+     */
+    public function listForCanonicalDraft(string $org): array
+    {
+        if ($org==='' || strlen($org)>190) throw new InvalidArgumentException('Invalid tenant.');
+        $statement=$this->connection->prepare(
+            'SELECT row_evidence_json,file_sha256,reported_as_of
+             FROM tn_capital_market_seed_import_evidence
+             WHERE organization_id=:org AND pool_key=:pool ORDER BY token_symbol LIMIT 501'
+        );
+        $statement->execute(['org'=>$org,'pool'=>'BINANCE_BSTOCKS_SEED']);
+        $items=[];
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $evidence=json_decode((string)$row['row_evidence_json'],true,64,JSON_THROW_ON_ERROR);
+            if (!is_array($evidence)||array_is_list($evidence)) throw new RuntimeException('Corrupt seed evidence.');
+            $items[]=['row'=>$evidence,'file_sha256'=>(string)$row['file_sha256'],
+                'source_as_of'=>(string)$row['reported_as_of']];
+        }
+        if (count($items)>500) throw new RuntimeException('Seed candidate pool exceeds 500.');
+        return $items;
+    }
+
     private function validate(string $org,array $seed): void
     {
         if ($org === '' || strlen($org)>190 || count($seed['rows'] ?? []) < 1
