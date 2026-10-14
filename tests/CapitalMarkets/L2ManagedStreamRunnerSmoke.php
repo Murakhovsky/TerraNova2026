@@ -2,15 +2,17 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2).'/app/Domains/CapitalMarkets/Infrastructure/MarketData/L2/';
-foreach (['L2ReconnectPolicy', 'L2StreamSupervisor', 'L2ManagedStreamRunner'] as $name) {
+foreach (['L2ReconnectPolicy', 'L2StreamSupervisor', 'L2ManagedStreamRunner', 'L2OperationalMetrics'] as $name) {
     require_once $root.$name.'.php';
 }
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2ReconnectPolicy;
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2StreamSupervisor;
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2ManagedStreamRunner;
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2OperationalMetrics;
 
 $policy = new L2ReconnectPolicy(100, 400, 3);
-$runner = new L2ManagedStreamRunner(new L2StreamSupervisor($policy), $policy);
+$metrics = new L2OperationalMetrics();
+$runner = new L2ManagedStreamRunner(new L2StreamSupervisor($policy), $policy, $metrics);
 $attempts = [];
 $delays = [];
 $books = [];
@@ -27,7 +29,9 @@ $count = $runner->run(
     static function (string $book) use (&$books): void { $books[] = $book; },
     static function (int $delay) use (&$delays): void { $delays[] = $delay; }
 );
-if ($count !== 2 || $books !== ['first','second'] || $delays !== [100]
+if ($metrics->snapshot()['connections'] !== 2 || $metrics->snapshot()['reconnects'] !== 1
+    || $metrics->snapshot()['publications'] !== 2 || $metrics->snapshot()['failures'] !== 1
+    || $count !== 2 || $books !== ['first','second'] || $delays !== [100]
     || count(array_unique($attempts)) !== 2 || $runner->diagnostics()['state'] !== 'STOPPED') {
     throw new RuntimeException('Managed runner reconnect regression.');
 }
