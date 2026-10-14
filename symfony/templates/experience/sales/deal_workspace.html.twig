@@ -86,7 +86,7 @@
                     </article>
 
                     <article class="cos-card">
-                        <p class="cos-card__eyebrow">Owner</p>
+                        <p class="cos-card__eyebrow">{{ 'Owner'|trans }}</p>
                         <form
                             class="cos-pattern-stack"
                             data-sales-operation-form
@@ -94,7 +94,7 @@
                             data-action="submit->sales-deal#operation"
                         >
                             <label class="cos-field">
-                                <span>Owner</span>
+                                <span>{{ 'Owner'|trans }}</span>
                                 <select class="cos-select" name="owner_id">
                                     <option value="">Choose</option>
                                     {% for owner in deal.owners %}
@@ -116,7 +116,7 @@
                             data-action="submit->sales-deal#operation"
                         >
                             <label class="cos-field">
-                                <span>Priority</span>
+                                <span>{{ 'Priority'|trans }}</span>
                                 <select class="cos-select" name="priority">
                                     {% for value in ['low','normal','high','urgent'] %}
                                         <option value="{{ value }}" {% if deal.priority == value %}selected{% endif %}>{{ value|capitalize }}</option>
@@ -264,7 +264,7 @@
 
             {% if deal.approvals is not empty %}
                 <section class="cos-page__section" aria-labelledby="approvals-title">
-                    <h2 id="approvals-title" class="cos-section-title">Потрібне рішення менеджера</h2>
+                    <h2 id="approvals-title" class="cos-section-title">{{ 'Потрібне рішення'|trans }} менеджера</h2>
                     <div class="cos-pattern-stack">
                         {% for approval in deal.approvals %}
                             <article class="cos-card" data-sales-approval data-approval-id="{{ approval.id }}">

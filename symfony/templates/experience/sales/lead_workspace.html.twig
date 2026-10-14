@@ -25,7 +25,7 @@
         />
 
         <section class="cos-card cos-primitive-stack">
-            <p class="cos-card__eyebrow">Operations</p>
+            <p class="cos-card__eyebrow">{{ 'Operations'|trans }}</p>
             <h2>Lead actions</h2>
             <twig:CosActionBar label="Lead operations">
                 {% if (lead.status ?? 'new') == 'new' %}
@@ -42,7 +42,7 @@
             </twig:CosActionBar>
 
             <label class="cos-field">
-                <span>Owner</span>
+                <span>{{ 'Owner'|trans }}</span>
                 <select class="cos-select" data-sales-lead-owner data-action="change->sales-lead#owner">
                     <option value="">Оберіть</option>
                     {% for owner in owners %}
