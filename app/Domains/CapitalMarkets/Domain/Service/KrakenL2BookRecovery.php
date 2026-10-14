@@ -126,16 +126,32 @@ final class KrakenL2BookRecovery
         try {
             $bids = $this->sorted($this->bids, true);
             $asks = $this->sorted($this->asks, false);
-            if ($bids !== [] && $asks !== [] && $this->normalize($bids[0]['price']) === $this->normalize($asks[0]['price'])) {
+            if ($bids !== [] && $asks !== [] && $this->comparePrices($bids[0]['price'], $asks[0]['price']) >= 0) {
                 throw new DomainException('Crossed Kraken book.');
             }
             $this->checksum->assertMatches($asks, $bids, $crc);
+            $this->bids = [];
+            $this->asks = [];
+            foreach ($bids as $row) $this->bids[$this->normalize($row['price'])] = $row;
+            foreach ($asks as $row) $this->asks[$this->normalize($row['price'])] = $row;
             $this->trusted = true;
             ++$this->version;
         } catch (\Throwable $e) {
             $this->invalidate('CHECKSUM_OR_BOOK_INVALID');
             throw $e;
         }
+    }
+
+    private function comparePrices(string $a, string $b): int
+    {
+        [$ai, $af] = array_pad(explode('.', $this->normalize($a), 2), 2, '');
+        [$bi, $bf] = array_pad(explode('.', $this->normalize($b), 2), 2, '');
+        $cmp = strlen($ai) <=> strlen($bi);
+        if ($cmp !== 0) return $cmp;
+        $cmp = strcmp($ai, $bi);
+        if ($cmp !== 0) return $cmp;
+        $width = max(strlen($af), strlen($bf));
+        return strcmp(str_pad($af, $width, '0'), str_pad($bf, $width, '0'));
     }
 
     private function invalidate(string $reason): void
