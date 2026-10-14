@@ -51,12 +51,14 @@ final readonly class FederationGoalAggregateProjector
             $run = $subject['run_id'] ?? null;
             $runState = $subject['run_state'] ?? null;
             $receipts = $subject['verified_actions'] ?? null;
+            $sourceVerified = $subject['source_provenance_verified'] ?? null;
             if (!is_string($candidate) || $candidate === ''
                 || !is_string($account) || $account === ''
                 || !is_string($sourceHash) || !preg_match('/^[a-f0-9]{64}$/D', $sourceHash)
                 || !is_string($plan) || $plan === ''
                 || !in_array($state,['proposed','approved'],true)
                 || !is_array($receipts)
+                || !is_bool($sourceVerified)
                 || array_keys($receipts) !== self::STAGES
                 || !is_bool($subject['native_handoff_verified'] ?? null)
                 || !is_bool($subject['native_proposal_verified'] ?? null)
@@ -91,7 +93,7 @@ final readonly class FederationGoalAggregateProjector
             $proposal = $subject['native_proposal_verified'];
             $leadId = $subject['sales_lead_id'] ?? null;
             $documentId = $subject['document_id'] ?? null;
-            if ($handoff && (!$fullChain || $runState !== 'completed'
+            if ($handoff && (!$fullChain || !$sourceVerified || $runState !== 'completed'
                 || !is_string($leadId) || !ctype_digit($leadId) || (int)$leadId < 1)) {
                 throw new DomainException('Native Sales outcome has no attested completed Action chain.');
             }
@@ -120,6 +122,7 @@ final readonly class FederationGoalAggregateProjector
             $items[] = [
                 'plan_id' => $plan,'candidate_id' => $candidate,
                 'source_hash' => $sourceHash,
+                'source_provenance_verified' => $sourceVerified,
                 'plan_state' => $state,'run_id' => $run,'run_state' => $runState,
                 'verified_action_count' => count(array_filter($receipts)),
                 'native_sales_handoff_verified' => $handoff,

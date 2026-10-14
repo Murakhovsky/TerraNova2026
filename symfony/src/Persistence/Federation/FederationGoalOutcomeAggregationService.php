@@ -6,12 +6,14 @@ namespace App\Persistence\Federation;
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Domains\Growth\Application\Contract\GrowthHandoffBoundary;
+use Domains\Growth\Application\Contract\GrowthMarketDiscoveryBoundary;
 use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Documents\Contract\DocumentsRepositoryInterface;
 use Platform\Orchestration\Goal\FederationGoalAggregateProjector;
+use Platform\Orchestration\Goal\FederationDiscoverySourceMatcher;
 use Platform\Orchestration\Goal\GoalOutcomeEvaluator;
 
 /**
@@ -37,6 +39,8 @@ final readonly class FederationGoalOutcomeAggregationService
         private ActiveModuleResolver $modules,
         private FederationExternalActionReceiptReconciler $receipts,
         private GrowthHandoffBoundary $growth,
+        private GrowthMarketDiscoveryBoundary $market,
+        private FederationDiscoverySourceMatcher $sourceMatcher,
         private SalesProposalLeadReadModelInterface $sales,
         private DocumentsRepositoryInterface $documents,
         private FederationGoalAggregateProjector $projector,
@@ -74,6 +78,7 @@ final readonly class FederationGoalOutcomeAggregationService
             throw new DomainException('Goal has more Plans than the bounded read-only projection supports.');
         }
         $subjects=[];
+        $sourceSnapshots=[];
         foreach ($rows as $row) {
             $plan=json_decode((string)$row['plan_json'],true,32,JSON_THROW_ON_ERROR);
             if (!is_array($plan) || array_is_list($plan)) {
@@ -138,7 +143,10 @@ final readonly class FederationGoalOutcomeAggregationService
             $runState=$row['run_state']===null?null:(string)$row['run_state'];
             $actions=array_fill_keys($names,false);
             $ids=[];
+            $sourceVerified=false;
             if ($row['plan_state']==='approved' && $runId!==null && $runState==='completed') {
+                $this->assertNativeDiscovery($actor,$goalId,$goal->version,$lineage,$sourceSnapshots);
+                $sourceVerified=true;
                 $actualSteps=$this->db->fetchAllAssociative(
                     'SELECT step_id,capability_id,state FROM cos_federation_steps
                      WHERE organization_id=:org AND run_id=:run',
@@ -235,6 +243,7 @@ final readonly class FederationGoalOutcomeAggregationService
                 'candidate_id'=>$candidate,
                 'account_id'=>$lineage['account_id'],
                 'source_hash'=>$lineage['source_hash'],
+                'source_provenance_verified'=>$sourceVerified,
                 'plan_state'=>(string)$row['plan_state'],
                 'run_id'=>$runId,
                 'run_state'=>$runState,
@@ -253,6 +262,88 @@ final readonly class FederationGoalOutcomeAggregationService
         $aggregate['read_only']=true;
         return $aggregate;
     }
+    /**
+     * Native Discovery remains the owning evidence source. Re-attest the
+     * approved parent Action and its immutable native run identity before
+     * awarding any completed candidate commercial outcome. Cache bounded
+     * read-only snapshots per parent source Run within this inspection.
+     *
+     * @param array<string,mixed> $lineage
+     * @param array<string,array<string,mixed>> $cache
+     */
+    private function assertNativeDiscovery(
+        TenantContext $actor, string $goalId, int $version,
+        array $lineage, array &$cache,
+    ): void {
+        $org=$actor->organizationId()->value();
+        $runId=(string)$lineage['source_federation_run'];
+        $stepId=(string)$lineage['source_federation_step'];
+        $cacheKey=$runId."\0".$stepId;
+        if (!isset($cache[$cacheKey])) {
+            $source=$this->db->fetchAssociative(
+                'SELECT r.goal_id,r.state AS run_state,p.state AS plan_state,
+                        p.spec_version,s.state AS step_state,s.capability_id,
+                        s.side_effect_level,s.idempotency_key,s.result_reference
+                 FROM cos_federation_runs r
+                 JOIN cos_federation_plans p
+                   ON p.organization_id=r.organization_id AND p.plan_id=r.plan_id
+                 JOIN cos_federation_steps s
+                   ON s.organization_id=r.organization_id AND s.run_id=r.run_id
+                 WHERE r.organization_id=:org AND r.run_id=:run AND s.step_id=:step',
+                ['org'=>$org,'run'=>$runId,'step'=>$stepId],
+            );
+            if (!$source || $source['goal_id']!==$goalId
+                || $source['run_state']!=='completed'
+                || $source['plan_state']!=='approved'
+                || (int)$source['spec_version']!==$version
+                || $source['step_state']!=='completed'
+                || $source['capability_id']!=='growth.market.discovery'
+                || $source['side_effect_level']!=='external'
+                || !is_string($source['idempotency_key']??null)
+                || !preg_match('/^[a-f0-9]{64}$/D',$source['idempotency_key'])) {
+                throw new DomainException('Candidate native source has no finalized approved Discovery Run.');
+            }
+            $receipt=$this->receipts->reconcile($actor,$runId,$stepId);
+            $actionId=$receipt['action_id']??null;
+            if (($receipt['status']??null)!=='completed'
+                || !is_string($actionId)
+                || !preg_match('/^[a-f0-9]{32}$/D',$actionId)
+                || $source['result_reference']!=='action:'.$actionId) {
+                throw new DomainException('Candidate source has no attested completed Discovery Action.');
+            }
+            $key='fed:'.$source['idempotency_key'];
+            $action=$this->db->fetchAssociative(
+                'SELECT type,status,target_type,target_id,idempotency_key
+                 FROM cos_actions WHERE organization_id=:org AND id=:id',
+                ['org'=>$org,'id'=>$actionId],
+            );
+            if (!$action || $action['type']!=='growth.market.discovery'
+                || $action['status']!=='COMPLETED'
+                || $action['target_type']!=='growth_market_universe'
+                || !is_string($action['target_id']??null)
+                || $action['target_id']===''
+                || $action['idempotency_key']!==$key) {
+                throw new DomainException('Candidate Discovery native Action identity has drifted.');
+            }
+            $nativeRun='GMRN-'.strtoupper(substr(hash('sha256',
+                $org.':market_run:'.$key),0,20));
+            $cache[$cacheKey]=[
+                'universe_id'=>$action['target_id'],
+                'native_run_id'=>$nativeRun,
+                'brief'=>$this->market->universeBrief($org,$action['target_id']),
+            ];
+        }
+        $snapshot=$cache[$cacheKey];
+        if (($lineage['native_discovery_run']??null)!==$snapshot['native_run_id']) {
+            throw new DomainException('Candidate lineage native Discovery Run differs from source Action.');
+        }
+        $this->sourceMatcher->assertMatch(
+            $org,$snapshot['universe_id'],$snapshot['native_run_id'],
+            (string)$lineage['candidate_id'],(string)$lineage['account_id'],
+            (string)$lineage['source_hash'],$snapshot['brief'],
+        );
+    }
+
     /**
      * Independently requested, evidence-only business outcome evaluation.
      * Never authorizes or replays an Action. No user-supplied metric or

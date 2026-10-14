@@ -21,6 +21,7 @@ for($i=1;$i<=50;$i++){
     $rows[]=[
         'candidate_id'=>$candidate,'account_id'=>'account-'.sprintf('%03d',$i),
         'source_hash'=>hash('sha256','source-'.sprintf('%03d',$i)),
+        'source_provenance_verified'=>true,
         'plan_id'=>$plan,'plan_state'=>'approved','run_id'=>'run-'.sprintf('%03d',$i),
         'run_state'=>'completed',
         'verified_actions'=>array_fill_keys(FederationGoalAggregateProjector::STAGES,true),
@@ -42,6 +43,7 @@ $onePending=$rows;
 $onePending[49]['run_state']='pending';
 $onePending[49]['verified_actions']=array_fill_keys(FederationGoalAggregateProjector::STAGES,false);
 $onePending[49]['native_handoff_verified']=false;
+$onePending[49]['source_provenance_verified']=false;
 $onePending[49]['native_proposal_verified']=false;
 $onePending[49]['sales_lead_id']=null;
 $onePending[49]['document_id']=null;
@@ -66,6 +68,10 @@ catch(DomainException){}
 $duplicate=$rows;
 $duplicate[49]['document_id']=$duplicate[0]['document_id'];
 try{$p->project($goal,$duplicate);throw new RuntimeException('Duplicate Document earned double credit.');}
+catch(DomainException){}
+$fake=$rows;
+$fake[10]['source_provenance_verified']=false;
+try{$p->project($goal,$fake);throw new RuntimeException('Unattested native Discovery sourced a Sales Lead.');}
 catch(DomainException){}
 $fake=$rows;
 $fake[10]['verified_actions']['prepare']=false;
