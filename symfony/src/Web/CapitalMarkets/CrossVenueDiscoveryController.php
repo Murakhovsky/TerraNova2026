@@ -8,7 +8,6 @@ use App\Web\Experience\Extension\Model\WebExtensionContext;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
-use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
 use Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse;
 use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
 use Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService;
@@ -47,7 +46,6 @@ final readonly class CrossVenueDiscoveryController
         private CapitalMarketsAccessControlInterface $access,
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
-        private CrossVenueUniverse $universe,
         private CrossVenueActiveUniverse $activeUniverse,
         private BStocksSeedFileReader $seedReader,
         private BStocksCanonicalDraftService $canonicalDrafts,
