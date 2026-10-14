@@ -12,6 +12,7 @@ use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\GoalSpecification;
+use Platform\Orchestration\Goal\FederationGolden50GoalProfile;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -163,13 +164,19 @@ final readonly class GoalsWorkspaceController
         }
 
         try {
+            $allowedCapabilities = FederationGolden50GoalProfile::capabilities($criterion,$target);
+        } catch (DomainException) {
+            return new RedirectResponse('/workspace/goals?error=invalid_input',303);
+        }
+
+        try {
             $goal = new GoalSpecification(
                 goalId: 'goal-' . bin2hex(random_bytes(12)),
                 organizationId: $tenant->organizationId()->value(),
                 ownerId: $tenant->userId()->value(),
                 desiredResult: $desired,
                 criteria: [['id' => $criterion, 'operator' => 'at_least', 'expected' => $target]],
-                allowedCapabilities: [],
+                allowedCapabilities: $allowedCapabilities,
             );
             $this->goals->createGoal($tenant, $goal);
             return new RedirectResponse('/workspace/goals?created=1', 303);
