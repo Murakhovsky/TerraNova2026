@@ -2002,6 +2002,7 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader: ~
+  Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse: ~
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository:
     arguments:
       $connection: '@cos.database.pdo'
