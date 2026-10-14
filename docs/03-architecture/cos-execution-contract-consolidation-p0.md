@@ -187,6 +187,8 @@ interface WorkflowRecoveryInterface
 
 Новий unit contract `tests/unit/workflow_shared_dag_contract.php` перевіряє прямий canonical selector та той самий Federation cursor, invalid DAG, injected steps, mixed read-only, ambiguity, exclusion of parallel claims і відсутність side effects. Старий `tests/unit/federation_step_cursor.php` залишається обов'язковим regression gate.
 
+Реальні PHP-контракти для майбутнього persistent Run/Step: `WorkflowExecutionStoreInterface`, `WorkflowExecutionCoordinatorInterface`, `WorkflowReceiptVerifierInterface`, `WorkflowRecoveryInterface`. Додано immutable DTO у `Platform\\Workflow\\Model` та статуси `AMBIGUOUS` / `CLAIMED` до чинних Kernel enum. **Це лише contracts і vocabulary, не реалізація сховища або активна заміна dispatcher.** Дозвіл на операцію в DTO не видається: перевірка Policy/Approval/Action залишається в canonical execution boundary.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0
