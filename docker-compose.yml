@@ -219,6 +219,9 @@ services:
   # Run: docker compose --profile l2 up -d l2-stream
   l2-stream:
     image: cos-symfony-php:local
+    build:
+      context: .
+      dockerfile: docker/symfony/php/Dockerfile
     profiles: ["l2"]
     init: true
     restart: unless-stopped

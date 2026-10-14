@@ -1,11 +1,11 @@
 name: L2 Live Venue Reconnect
 
 # External-network acceptance is intentionally separate from deterministic CI.
-# On this feature branch it runs after changes to L2 transport/live probe.
+# Run on the feature pull request or by explicit manual dispatch.
 on:
   workflow_dispatch:
-  push:
-    branches: [feature/fos-l2-orderbook-recovery]
+  pull_request:
+    branches: [main]
     paths:
       - 'app/Domains/CapitalMarkets/Infrastructure/MarketData/L2/**'
       - 'tests/live/l2_public_reconnect.php'
