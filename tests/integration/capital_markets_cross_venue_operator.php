@@ -126,6 +126,7 @@ $listingReview=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infr
 $assert(str_contains($listingReview,'FOR UPDATE')
     && str_contains($listingReview,'REVIEWED_LISTING')
     && str_contains($listingReview,'APPROVE_LISTING')
+    && str_contains($listingReview,'function revoke(')
     && str_contains($controller,'CapitalMarketsCapability::InstrumentManage')
     && str_contains($controller,'function reviewListing(Request $request)'),
     'Verified listing must require explicit human evidence review and concurrent-safe operator authorization.');

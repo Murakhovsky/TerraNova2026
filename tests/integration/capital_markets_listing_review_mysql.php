@@ -85,7 +85,7 @@ try {
     $newSource=$get($org)['source_as_of'];
     $reviewDecision($org,$newSource,'APPROVE_LISTING',$url);
     $assert(count($pool->listedForVenue($org,'BINANCE'))===1,'New evidence cannot be reviewed.');
-    $reviewDecision($org,$newSource,'REVOKE_LISTING',$url);
+    $review->revoke($org,17,'AAPLB','BINANCE','Operator found inconsistent official listing evidence.');
     $assert($pool->listedForVenue($org,'BINANCE')===[], 'Operator revocation did not gate subscriptions.');
     $assert($history($org)===3,'Immutable review decisions missing.');
     $reviewDecision($org,$newSource,'APPROVE_LISTING',$url);
@@ -95,6 +95,12 @@ try {
         ->execute(['org'=>$org]);
     $assert($pool->listedForVenue($org,'BINANCE')===[],
         'Historical reviewer decision remained eligible after freshness expiry.');
+    $urgent=$review->revoke($org,17,'AAPLB','BINANCE',
+        'Reference source is stale, revoke monitoring authorization immediately.');
+    $assert($urgent['status']==='UNVERIFIED' && $get($org)['verification_state']==='UNVERIFIED'
+        && $history($org)===5,
+        'Urgent revocation must succeed without source freshness, evidence URL or active provider.');
+
     echo "MySQL listing review: RBAC boundary contract, evidence, CAS, quote drift, expiry, revoke and tenant isolation passed.\n";
 } finally {
     foreach (['tn_capital_market_pool_listing_reviews','tn_capital_market_cross_venue_pool_candidates'] as $table) {

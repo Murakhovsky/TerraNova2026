@@ -176,3 +176,7 @@ php symfony/bin/console cos:capital-markets:subscriptions:reference-plan ORG_ID 
 ```
 
 У вебінтерфейсі `/capital-markets/discovery` обидва види підписок (token BBO та reference BBO) можна спочатку перевірити через dry-run, а потім створити окремою дією. Використання платного Massive endpoint та реальних credentials залишається зовнішнім production acceptance gate.
+
+## Термінове відкликання лістингу
+
+На відміну від підтвердження, відмова від довіри до лістингу не повинна вимагати активного API, свіжого Discovery або SHA-256 стороннього документа. Оператор із правами InstrumentManage + MarketDataManage вводить пояснення від 10 символів і використовує «Негайно відкликати допуск» у списку review. Сервер атомарно переводить candidate у `UNVERIFIED`, додає незмінний audit-запис `REVOKE_LISTING` із SHA-256 пояснення та відхиляє його від наступних subscription plans. Увага: це відкликає право на **створення нових підписок** через пул, але не замінює адміністративне призупинення вже активного Market Data source/subscription. Повне автоматичне зняття існуючих WS-підписок залишається предметом інтеграції з PR #361.
