@@ -271,8 +271,14 @@ services:
     alias: App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence
   Platform\Workflow\Contract\WorkflowRecoveryInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowRecoveryInspector
+  # Domain-owned read-only evidence registry. Unknown kinds/modules still fail closed.
+  App\Persistence\Workflow\WorkflowNonActionReceiptRegistry:
+    arguments:
+      $adapters:
+        - '@App\Persistence\Workflow\DocumentSignatureNonActionEvidence'
+        - '@App\Persistence\Workflow\CapitalResearchNonActionEvidence'
   Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface:
-    alias: App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence
+    alias: App\Persistence\Workflow\WorkflowNonActionReceiptRegistry
   Platform\Workflow\Contract\WorkflowReceiptVerifierInterface:
     alias: App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier
   Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface:
