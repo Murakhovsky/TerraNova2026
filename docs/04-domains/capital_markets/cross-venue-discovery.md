@@ -151,3 +151,9 @@ php symfony/bin/console cos:capital-markets:instruments:seed-drafts ORG_ID ACTOR
 6. Production WebSocket/L2/порівняння з базовими акціями приймаються **окремо**, після підключення прав провайдера та завершення streaming PR. Без цього заборонено запускати масовий Opportunity-пошук.
 
 Це інструкція для ручного приймання, а не свідчення, що production ці дії вже виконав.
+
+## Ручне підтвердження лістингу (без підтвердження економічної тотожності)
+
+Для переходу від Discovery до підписки BBO необхідні три незалежні умови: (1) точний venue listing із Discovery не старше 48 годин; (2) явне рішення `REVIEWED_LISTING` від оператора, який має одночасно `MarketDataManage` і `InstrumentManage`, з HTTPS-посиланням офіційної біржі й SHA-256 збереженого доказу; (3) окремо ACTIVE canonical tokenized-security, із відповідним provider identifier і ACTIVE VenueInstrument mapping. Операторський інтерфейс `/capital-markets/discovery` містить список для review, кнопку підтвердження лише лістингу та відкликання. MySQL журнал `tn_capital_market_pool_listing_reviews` незмінно фіксує actor, venue, symbol, quote, source timestamp і evidence digest. При зміні listing/symbol/quote source-ревізії раніше встановлений review скидається. За відсутності підтвердження BBO planner повертає порожній план, а не підключає інструмент.
+
+Це **не** перевірка емітента, базового забезпечення, redemption, equivalence або торгового дозволу. Вони мають окремі acceptance gates. Міграція: `20261015_000143_capital_markets_listing_review.sql`.

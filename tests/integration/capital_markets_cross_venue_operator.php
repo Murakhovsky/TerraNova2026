@@ -34,6 +34,8 @@ $files=[
     'symfony/src/Application/CapitalMarkets/Handler/SampleBStockBboQuotesHandler.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenuePoolProjection.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php',
+    'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueListingReviewRepository.php',
+    'app/migrations/20261015_000143_capital_markets_listing_review.sql',
     'symfony/src/Command/CapitalMarketsInstrumentDiscoveryCommand.php',
     'symfony/src/Application/CapitalMarkets/Command/RefreshCrossVenueCandidatePool.php',
     'symfony/src/Application/CapitalMarkets/Handler/RefreshCrossVenueCandidatePoolHandler.php',
@@ -43,7 +45,7 @@ $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueCatalogDiscovery','CrossVenueDiscoverySnapshotRepository',
     'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
-    'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository',
+    'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository','CrossVenueListingReviewRepository',
     'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',
     'BStocksCanonicalDraftProjection','BStocksCanonicalDraftService','BoundedBboSweepService',
     'MysqlBoundedBboSweepGate',"$".'connection: '."'@cos.database.pdo'"] as $needle){
@@ -52,6 +54,7 @@ foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
 foreach(['/capital-markets/discovery','/capital-markets/discovery/scan',
     'CrossVenueDiscoveryController::index','CrossVenueDiscoveryController::scan',
+    '/capital-markets/discovery/listing-review','CrossVenueDiscoveryController::reviewListing',
     '/capital-markets/discovery/import','CrossVenueDiscoveryController::importSeed',
     '/capital-markets/discovery/canonical-drafts','CrossVenueDiscoveryController::seedCanonicalDrafts',
     '/capital-markets/discovery/quotes','CrossVenueDiscoveryController::observeQuotes'] as $needle){
@@ -112,4 +115,15 @@ $assert(str_contains($controller,'function seedCanonicalDrafts(Request $request)
 $assert(str_contains($tpl,'Пул кандидатів') && str_contains($tpl,'Стан канонічного пулу')
     && str_contains($tpl,'Стан контрольованого REST BBO'),
     'Discovery UI must surface all three instrument, canonical and quote readiness levels.');
+$listingReview=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueListingReviewRepository.php');
+$assert(str_contains($listingReview,'FOR UPDATE')
+    && str_contains($listingReview,'REVIEWED_LISTING')
+    && str_contains($listingReview,'APPROVE_LISTING')
+    && str_contains($controller,'CapitalMarketsCapability::InstrumentManage')
+    && str_contains($controller,'function reviewListing(Request $request)'),
+    'Verified listing must require explicit human evidence review and concurrent-safe operator authorization.');
+$poolRepo=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php');
+$assert(str_contains($poolRepo,"'verified'=>'REVIEWED_LISTING'")
+    && str_contains($poolRepo,"'fresh_after'"),
+    'Unreviewed or expired listings cannot enter BBO subscription planning.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
