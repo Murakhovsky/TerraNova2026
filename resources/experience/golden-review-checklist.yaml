@@ -1,0 +1,126 @@
+version: 1
+status: ready_for_human_review
+source_golden_set: resources/experience/golden-set.yaml
+decision_record: resources/experience/golden-decisions.yaml
+rule: "This checklist prepares a review; it does not record acceptance. Automated browser results never substitute for human review."
+decision_values: [PENDING, ACCEPT, REQUEST_CHANGES]
+required_record_fields: [page_id, route, reviewer, reviewed_at, commit_sha, viewport, browser, criteria, evidence, notes]
+acceptance_rule: "ACCEPT requires every required criterion to pass with dated evidence for the exact reviewed commit. Any failed required criterion or unresolved blocker means REQUEST_CHANGES."
+criteria:
+  task_success:
+    required: true
+    check: "A target persona can complete the page's primary task without an undocumented workaround."
+    evidence: "Record the scenario and observed result; include a screenshot or recording when useful."
+  visual_hierarchy:
+    required: true
+    check: "The primary task, current status, key information, and next action are visually clear."
+    evidence: "Capture the rendered page and note any ambiguity, clipping, or competing emphasis."
+  responsive_behavior:
+    required: true
+    check: "The page remains usable at desktop, tablet, and mobile widths without hidden actions or unintended horizontal overflow."
+    evidence: "Record viewport dimensions and screenshots for each tested width."
+  keyboard_access:
+    required: true
+    check: "Primary actions and interactive controls are reachable and usable by keyboard, with visible focus and meaningful names."
+    evidence: "Record the tested keyboard path and any focus or semantics failure."
+  states:
+    required: true
+    check: "Applicable loading, empty, error, and permission-denied states are understandable and recoverable."
+    evidence: "Record each applicable state and its observed recovery path; mark not applicable with rationale."
+  content_clarity:
+    required: true
+    check: "Labels, statuses, units, and instructions are understandable and consistent with the canonical terminology."
+    evidence: "Record confusing or conflicting wording and the expected replacement."
+  data_integrity:
+    required: true
+    check: "Displayed values and actions match the canonical record and do not imply success before the operation succeeds."
+    evidence: "Record the source record or test fixture and the observed result."
+pages:
+  core.executive.dashboard:
+    route: /admin
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null
+  sales.dashboard:
+    route: /sales/dashboard
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null
+  sales.today:
+    route: /sales/today
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null
+  sales.leads.collection:
+    route: /sales/leads
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null
+  sales.deal.workspace:
+    route: "/sales/deals/{id}"
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null
+  sales.pipeline:
+    route: /sales/pipeline
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null
+  growth.overview:
+    route: /growth
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null
+  property.map:
+    route: /property/map
+    decision: PENDING
+    reviewer: null
+    reviewed_at: null
+    commit_sha: null
+    viewport: null
+    browser: null
+    criteria: { task_success: PENDING, visual_hierarchy: PENDING, responsive_behavior: PENDING, keyboard_access: PENDING, states: PENDING, content_clarity: PENDING, data_integrity: PENDING }
+    evidence: []
+    notes: null

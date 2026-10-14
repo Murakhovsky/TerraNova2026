@@ -17,6 +17,8 @@ This workstream is intentionally safe to complete before the human visual review
 - Enabling mass migration that explicitly depends on Golden acceptance.
 - Any claim that a page has been visually accepted without a recorded human review.
 
+The review template is `resources/experience/golden-review-checklist.yaml`. It is deliberately initialized to `PENDING` for all eight pages and does not change the Golden decision ledger.
+
 ## Registry contracts
 
 - Personas describe roles and their jobs, not internal implementation teams.

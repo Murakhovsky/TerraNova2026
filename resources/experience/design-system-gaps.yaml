@@ -16,4 +16,4 @@ gaps:
     status: open
     affected_pages: [core.executive.dashboard, sales.dashboard, sales.today, sales.leads.collection, sales.deal.workspace, sales.pipeline, growth.overview, property.map]
     missing: [task_success, visual_hierarchy, responsive_behavior, keyboard_access, error_empty_loading_states]
-    acceptance: "A reviewer can record ACCEPT or REQUEST_CHANGES with dated evidence for each criterion."
+    acceptance: "Use resources/experience/golden-review-checklist.yaml to record each criterion, exact commit, viewport, reviewer, and dated evidence; acceptance remains a separate human decision."

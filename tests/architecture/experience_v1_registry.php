@@ -20,6 +20,10 @@ $requiredFiles = [
     'resources/experience/pages/core/golden.yaml',
     'resources/experience/pages/sales/golden.yaml',
     'resources/experience/pages/inventory.yaml',
+    'resources/experience/golden-review-checklist.yaml',
+    'resources/experience/journeys.yaml',
+    'resources/experience/design-system-gaps.yaml',
+    'resources/experience/priority-policy.yaml',
 ];
 
 foreach ($requiredFiles as $file) {
@@ -119,6 +123,30 @@ foreach ($pageGoals[1] as $goal) {
 }
 if (!is_file($root . '/resources/experience/priority-policy.yaml')) {
     throw new RuntimeException('Experience priority policy is missing.');
+}
+
+
+$journeys = (string) file_get_contents($root . '/resources/experience/journeys.yaml');
+if (substr_count($journeys, 'decision_points:') !== 4 || substr_count($journeys, 'default_outcome:') < 8) {
+    throw new RuntimeException('Experience journeys must define decision outcomes and safe defaults.');
+}
+$designGaps = (string) file_get_contents($root . '/resources/experience/design-system-gaps.yaml');
+if (substr_count($designGaps, 'owner:') < 2) {
+    throw new RuntimeException('Every active design-system gap must have an accountable owner.');
+}
+$reviewChecklist = (string) file_get_contents($root . '/resources/experience/golden-review-checklist.yaml');
+foreach (['task_success', 'visual_hierarchy', 'responsive_behavior', 'keyboard_access', 'states', 'content_clarity', 'data_integrity', 'PENDING', 'REQUEST_CHANGES'] as $marker) {
+    if (!str_contains($reviewChecklist, $marker)) {
+        throw new RuntimeException('Golden human-review checklist missing marker: ' . $marker);
+    }
+}
+foreach (['core.executive.dashboard', 'sales.dashboard', 'sales.today', 'sales.leads.collection', 'sales.deal.workspace', 'sales.pipeline', 'growth.overview', 'property.map'] as $goldenId) {
+    if (!str_contains($reviewChecklist, '  ' . $goldenId . ':')) {
+        throw new RuntimeException('Golden human-review checklist missing page: ' . $goldenId);
+    }
+}
+if (!str_contains($reviewChecklist, 'Automated browser results never substitute for human review.')) {
+    throw new RuntimeException('Golden review checklist must keep human acceptance independent from automation.');
 }
 
 echo sprintf("Experience V1 registry contract OK (%d production HTML routes covered)\n", count($production));
