@@ -34,7 +34,7 @@
 
     <twig:CosFilterBar action="/sales/pipeline" label="Pipeline filters">
         <label class="cos-field">
-            <span>Pipeline</span>
+            <span>{{ 'Pipeline'|trans }}</span>
             <select class="cos-select" name="pipeline_id">
                 {% for option in pipeline.pipelineOptions %}
                     <option value="{{ option.id }}" {% if option.id == pipeline.filters.pipeline_id %}selected{% endif %}>{{ option.label }}</option>
@@ -42,9 +42,9 @@
             </select>
         </label>
         <label class="cos-field">
-            <span>Owner</span>
+            <span>{{ 'Owner'|trans }}</span>
             <select class="cos-select" name="owner_id">
-                <option value="">All</option>
+                <option value="">{{ 'All'|trans }}</option>
                 {% for option in pipeline.ownerOptions %}
                     <option value="{{ option.id }}" {% if option.id ~ '' == pipeline.filters.owner_id %}selected{% endif %}>{{ option.label }}</option>
                 {% endfor %}
@@ -53,14 +53,14 @@
         <label class="cos-field">
             <span>Risk</span>
             <select class="cos-select" name="risk">
-                <option value="">All</option>
+                <option value="">{{ 'All'|trans }}</option>
                 <option value="high" {% if pipeline.filters.risk == 'high' %}selected{% endif %}>High</option>
             </select>
         </label>
         <label class="cos-field">
-            <span>Priority</span>
+            <span>{{ 'Priority'|trans }}</span>
             <select class="cos-select" name="priority">
-                <option value="">All</option>
+                <option value="">{{ 'All'|trans }}</option>
                 {% for value in ['low','normal','high','urgent'] %}
                     <option value="{{ value }}" {% if pipeline.filters.priority == value %}selected{% endif %}>{{ value|capitalize }}</option>
                 {% endfor %}
@@ -79,10 +79,10 @@
             <input class="cos-input" name="source" value="{{ pipeline.filters.source }}">
         </label>
         <label class="cos-field">
-            <span>Search</span>
+            <span>{{ 'Search'|trans }}</span>
             <input class="cos-input" type="search" name="q" value="{{ pipeline.filters.q }}">
         </label>
-        <button class="cos-button cos-button--primary" type="submit">Apply</button>
+        <button class="cos-button cos-button--primary" type="submit">{{ 'Apply'|trans }}</button>
     </twig:CosFilterBar>
 
     <p class="cos-card__copy" data-sales-pipeline-target="status" data-sales-pipeline-status aria-live="polite"></p>

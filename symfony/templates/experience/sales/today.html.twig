@@ -14,7 +14,7 @@
 >
     <twig:CosPageHeader
         eyebrow="Sales · Operational inbox"
-        title="Today"
+        title="{{ 'Today'|trans }}"
         subtitle="Сигнал → рішення → дія. Усі пріоритетні Sales queues в одному Operational Queue."
         metaValue="{{ today.total }}"
         metaLabel="операційних сигналів"
@@ -33,7 +33,7 @@
             class="cos-button {{ today.scope == 'team' ? 'cos-button--primary' : 'cos-button--ghost' }}"
             href="/sales/today?scope=team"
             {% if today.scope == 'team' %}aria-current="page"{% endif %}
-        >Team</a>
+        >{{ 'Team'|trans }}</a>
     </nav>
 
     {% if today.error %}

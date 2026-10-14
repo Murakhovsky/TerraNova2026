@@ -43,7 +43,7 @@
         <input type="hidden" name="id" value="{{ scene.id|default(0) }}">
         <twig:CosFormSection title="Конфігурація" description="Identity, renderer, provider та базова camera configuration.">
             <div class="cos-form__grid">
-                <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" type="text" maxlength="220" value="{{ scene.title|default('') }}" required></label>
+                <label class="cos-field"><span>{{ 'Назва'|trans }}</span><input class="cos-input" name="title" type="text" maxlength="220" value="{{ scene.title|default('') }}" required></label>
                 <label class="cos-field"><span>Slug</span><input class="cos-input" name="slug" type="text" maxlength="190" value="{{ scene.slug|default('') }}" placeholder="генерується"></label>
                 <label class="cos-field"><span>Обʼєкт</span><select class="cos-select" name="property_id"><option value="0">Не привʼязано</option>{% for property in properties %}<option value="{{ property.id }}" {% if scene.property_id|default(0) == property.id %}selected{% endif %}>{{ property.public_id }} / {{ property.city }} / {{ property.title }}</option>{% endfor %}</select></label>
                 <label class="cos-field"><span>Тип сцени</span><select class="cos-select" name="scene_type">{% for code,label in {'model':'3D-модель','digital_twin':'Digital twin','roomplan':'RoomPlan','panorama':'360° panorama','gaussian_splat':'Gaussian splat','mixed':'Mixed'} %}<option value="{{ code }}" {% if scene.scene_type|default('model') == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
@@ -75,7 +75,7 @@
                         <small data-spatial-file-name>Файл не вибрано</small>
                     </div>
                     <div class="cos-spatial-upload-options">
-                        <label class="cos-field"><span>Роль</span><select class="cos-select" name="asset_type"><option value="">Автоматично</option>{% for type in ['source','model_web','model_ar','texture','point_cloud','gaussian_splat','panorama','floorplan','poster','video','other'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
+                        <label class="cos-field"><span>{{ 'Роль'|trans }}</span><select class="cos-select" name="asset_type"><option value="">Автоматично</option>{% for type in ['source','model_web','model_ar','texture','point_cloud','gaussian_splat','panorama','floorplan','poster','video','other'] %}<option value="{{ type }}">{{ type }}</option>{% endfor %}</select></label>
                         <label class="cos-field"><span>Версія</span><select class="cos-select" name="version_id"><option value="0">Остання</option>{% for version in scene.versions|default([]) %}<option value="{{ version.id }}">v{{ version.version_number }} / {{ version.label }}</option>{% endfor %}</select></label>
                         <label class="cos-field"><span><input name="is_primary" type="checkbox" value="1" checked> Основний asset</span></label>
                         <button class="cos-button cos-button--primary" type="submit">Завантажити</button>
@@ -115,7 +115,7 @@
                     <div>
                         <strong>{{ asset.asset_type }}{% if asset.is_primary %} / primary{% endif %}</strong>
                         <span>{{ asset.format }} / {{ asset.status }} / {{ (asset.size_bytes / 1048576)|number_format(1) }} MB</span>
-                        <a href="{{ asset.uri }}" target="_blank" rel="noopener">Відкрити</a>
+                        <a href="{{ asset.uri }}" target="_blank" rel="noopener">{{ 'Відкрити'|trans }}</a>
                         {% if asset.error_message %}<small>{{ asset.error_message }}</small>{% endif %}
                     </div>
                 {% else %}
@@ -220,7 +220,7 @@
                 </div>
             </article>
             <article class="cos-card">
-                <p class="cos-card__eyebrow">Worker</p>
+                <p class="cos-card__eyebrow">{{ 'Worker'|trans }}</p>
                 <h2 class="cos-card__title">Processing jobs</h2>
                 <div class="cos-spatial-timeline">
                     {% for job in scene.jobs|default([]) %}
