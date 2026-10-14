@@ -37,6 +37,10 @@ final class BybitL2RecoveryCoordinator
             $this->session->invalidate('BYBIT_INVALID_SNAPSHOT');
             throw new DomainException('Bybit snapshot expected.');
         }
+        if ($this->session->diagnostics()['buffered'] !== 0) {
+            $this->session->invalidate('BYBIT_UNRECONCILED_BUFFER');
+            throw new DomainException('Bybit snapshot requires replay of buffered deltas.');
+        }
         $this->session->drain($epoch);
         $this->updateId = $updateId;
         $this->crossSequence = $crossSequence;
@@ -45,7 +49,12 @@ final class BybitL2RecoveryCoordinator
 
     public function delta(int $epoch, MarketOrderBook $delta, string $updateId, string $crossSequence): void
     {
-        $this->validate($updateId, $crossSequence);
+        try {
+            $this->validate($updateId, $crossSequence);
+        } catch (\\Throwable $error) {
+            $this->session->invalidate('BYBIT_INVALID_SEQUENCE');
+            throw $error;
+        }
         $book = $this->session->trustedBook($epoch);
         if ($book === null) throw new DomainException('Bybit book is not trusted.');
         try {

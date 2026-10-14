@@ -91,6 +91,10 @@ final class L2RecoverySession
             $this->invalidate('SEQUENCE_ROLLBACK');
             throw new DomainException('L2 sequence rolled back.');
         }
+        if ($this->buffer !== []) {
+            $this->invalidate('PENDING_DELTAS_AT_PUBLICATION');
+            throw new DomainException('Cannot publish L2 while buffered deltas remain.');
+        }
         $this->book = $book;
         $this->lastSequence = $sequence;
         ++$this->version;
@@ -101,10 +105,13 @@ final class L2RecoverySession
     {
         $this->status = 'INVALID';
         $this->failure = $reason;
+        $this->lastSequence = null;
         $this->book = null;
         $this->buffer = [];
         $this->bufferBytes = 0;
     }
+
+    public function status(): string { return $this->status; }
 
     public function trustedBook(int $epoch): ?MarketOrderBook
     {
