@@ -203,7 +203,9 @@ final readonly class CrossVenueDiscoveryController
                 trim((string)$request->request->get('evidence_sha256','')),
             );
             $request->getSession()->getFlashBag()->add('listing_review',
-                $result['seed_token'].' / '.$result['venue'].' → '.$result['status']);
+                $result['seed_token'].' / '.$result['venue'].' → '.$result['status']
+                .(isset($result['disabled_subscriptions'])
+                    ?' · disabled BBO: '.$result['disabled_subscriptions'] :''));
             return new RedirectResponse('/capital-markets/discovery?listingReviewed=1',303);
         } catch (Throwable $e) {
             error_log('capital_markets.listing_review.failed '.get_class($e).' '.$e->getMessage());
