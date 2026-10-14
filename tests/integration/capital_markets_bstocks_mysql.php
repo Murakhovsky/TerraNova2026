@@ -129,6 +129,10 @@ try {
     $imported=$active->load($org,$seedPath);
     $assert($imported['origin']==='IMPORTED_MYSQL' && count($imported['rows'])===80,
         'Manual and scheduled discovery must switch to imported tenant evidence.');
+    $assert(count(array_filter($imported['rows'],
+        static fn(array $row):bool=>$row['risk_class']==='LEVERAGED_OR_INVERSE'))===9,
+        'Imported universe must preserve negative-leverage inverse ETF classification.');
+
     $extended=$seed;
     $extended['rows'][]=[
         'underlying_symbol'=>'TEST','token_symbol'=>'TESTB','venue_symbol'=>'TESTBUSDT',

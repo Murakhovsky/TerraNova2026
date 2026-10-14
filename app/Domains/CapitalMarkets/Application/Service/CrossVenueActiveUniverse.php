@@ -53,7 +53,7 @@ final readonly class CrossVenueActiveUniverse
             $unique[$token]=true;
             $rows[]=['underlying'=>$underlying,'token'=>$token,'market'=>$market,
                 'asset_type'=>$type,'leverage'=>(string)$leverage,
-                'risk_class'=>abs($leverage)!==1?'LEVERAGED_OR_INVERSE':'STANDARD_CANDIDATE'];
+                'risk_class'=>($leverage<0 || abs($leverage)!==1)?'LEVERAGED_OR_INVERSE':'STANDARD_CANDIDATE'];
             if ($asOf===null || $asOf<$timestamp) $asOf=$timestamp;
         }
         if (count($rows)>500) throw new RuntimeException('Imported seed universe exceeds 500.');
