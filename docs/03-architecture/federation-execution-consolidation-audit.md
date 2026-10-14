@@ -6,7 +6,7 @@ updated: 2026-10-14
 kind: architecture
 ---
 
-# Architecture Reconciliation: federation is a system property, not an execution domain
+# Узгодження архітектури: федеративність є властивістю системи, а не окремим доменом
 
 **Scope:** PR #346, head `bb99d5161c3cf06f61190acb41f4a51c81e1b196`. Цей документ фіксує архітектурне рішення та інвентаризацію, **не** стверджує, що код уже мігрований, і не замінює runtime acceptance.
 
@@ -53,7 +53,7 @@ kind: architecture
 - **Зберегти за змістом, перейменування необов'язкове на цьому етапі:** `GoalSpecification`, `GoalPlanValidator`, `GoalOutcomeEvaluator`, `GoalOutcomeEvidenceProviderInterface`, Domain-owned outcome providers, `FederatedActionAdmission` (як verified-plan worker guard), immutable approvals, policies, consent/tenant checks, Experience data contracts.
 - **Не чіпати без окремого доказу:** Engineering-specific state machine, existing Kernel Action/Queue, Sales legacy read adapters. Старі SQL-таблиці можуть залишитись за ports; приховані direct writes треба аудитувати.
 
-## TO-BE
+## Цільова архітектура
 
 ```text
 Federated COS = topology + contracts + ownership + governance (architecture property)
@@ -115,7 +115,7 @@ User/API/Agent -> Goal Management (Goal, success criteria, immutable Plan)
 7. **No parallel runtime before proof:** жодного окремого Federation supervisor/scheduler/job stream.
 8. **Compatibility first:** контрактна міграція additive, destructive cleanup тільки після заміни consumer і rollback plan.
 
-## Acceptance gates
+## Критерії приймання
 
 - Реальний багатоетапний Goal із щонайменше трьома Domain-owned handlers, збереженим independent Outcome та audited evidence.
 - Duplicate submission і повтор після crash не створюють другого бізнес-ефекту.
@@ -125,7 +125,7 @@ User/API/Agent -> Goal Management (Goal, success criteria, immutable Plan)
 - Одна canonical execution state/projection, відсутній другий production scheduler; CI/Runtime/MySQL/Browser proof та rollout/rollback checklist.
 - До green acceptance **ніякого автоматичного merge** та ніяких видалень runtime-класів/таблиць.
 
-## Evidence links
+## Посилання на вихідний код
 
 - `app/Kernel/Workflow/Service/WorkflowEngine.php`, `app/Kernel/Workflow/Model/WorkflowExecution.php`, `WorkflowDefinition.php`
 - `symfony/src/Infrastructure/Workflow/SymfonyWorkflowStateManager.php`
