@@ -364,3 +364,14 @@ Successful GitHub Actions live checks prove the five exchange endpoints were
 reachable *from that GitHub runner at the run time*. They do not prove that
 the operator's production deployment has the correct organization/source
 records or that its server can maintain the same streams indefinitely.
+
+## VPS SSH / public L2 verification (2026-10-15)
+
+Read-only SSH preflight from the **feature branch push** succeeded: [run #38642147425](https://github.com/Murakhovsky/TerraNova2026/actions/runs/38642147425).
+The environment `AWS TN2026` allows that branch's direct push jobs but rejected its `pull_request` deployment context before any shell steps. The VPS audit is therefore intentionally `push`/manual only, not a blocking PR gate.
+
+The host (PHP 8.3.6) was reachable via the existing SSH credentials. Docker/Compose was available, with about 595 MiB available RAM and 18 GB free disk at audit time. Public Binance Spot and Futures HTTPS snapshot checks both returned 200. The target deployed source tree did **not** yet contain the L2 Symfony command, so no live ingestion deployment was attempted.
+
+An independent non-production L2 public market-data check executed on the **VPS itself** using a clean temporary source directory, deleted after testing: [run #38642460602](https://github.com/Murakhovsky/TerraNova2026/actions/runs/38642460602). **All 5/5 PASS:** BINANCE_SPOT, BINANCE_FUTURES, BYBIT_SPOT, BYBIT_LINEAR and KRAKEN_SPOT. Each test established a real WSS connection, verified an L2 book, injected an actual socket-close/read failure, required BACKOFF, opened a new epoch and verified the restored TRUSTED book. The tests ran sequentially under a 192 MiB PHP memory limit with lower CPU scheduling priority; they did not change production services or database records.
+
+**Not yet proven on the VPS:** registered L2 MarketSource and instrument mapping, deployed Symfony CLI, canonical MySQL ingestion from real exchange books, live email delivery, long-duration soak and sustained multi-instrument capacity. The audit also observed `cos-worker-1` and `cos-kernel-worker-1` restarting; those are pre-existing unrelated process-health issues worth investigating before scaling collectors.
