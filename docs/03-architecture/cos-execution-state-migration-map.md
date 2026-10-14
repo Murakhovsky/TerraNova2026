@@ -46,7 +46,7 @@ kind: architecture
 
 **Ідемпотентність:** вихідний key \`hash('sha256', $org . "\0" . $runId . "\0" . $stepId)\`; canonical \`Action.idempotency_key = 'fed:' . $storedStepKey\`. При зміні target Run ID *не* recompute. Потрібний mapping для кореляції, а не повторне створення Action.
 
-## 3. Federation Run/Step transition map
+## 3. Відповідність переходів станів запусків і кроків Federation
 
 | Старий статус | Новий technical статус | Особлива умова |
 | --- | --- | --- |
