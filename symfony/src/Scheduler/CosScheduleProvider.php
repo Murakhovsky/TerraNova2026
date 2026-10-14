@@ -15,6 +15,7 @@ use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
 use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
 use App\Application\CapitalMarkets\Command\CapturePaperNavSnapshot;
 use App\Application\CapitalMarkets\Command\RefreshCrossVenueCandidatePool;
+use App\Application\CapitalMarkets\Command\SampleBStockBboQuotes;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -59,6 +60,10 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly string $capitalMarketsDiscoveryOrganizationId = '',
         private readonly int $capitalMarketsDiscoveryActorId = 0,
         private readonly int $capitalMarketsDiscoveryIntervalMinutes = 1440,
+        private readonly bool $capitalMarketsBboPollEnabled = false,
+        private readonly string $capitalMarketsBboPollOrganizationId = '',
+        private readonly int $capitalMarketsBboPollActorId = 0,
+        private readonly int $capitalMarketsBboPollIntervalMinutes = 15,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
@@ -104,6 +109,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if ($this->capitalMarketsDiscoveryIntervalMinutes < 15 || $this->capitalMarketsDiscoveryIntervalMinutes > 1440) {
             throw new InvalidArgumentException('Capital Markets Discovery interval must be 15..1440 minutes.');
+        }
+        if ($this->capitalMarketsBboPollIntervalMinutes < 5 || $this->capitalMarketsBboPollIntervalMinutes > 1440) {
+            throw new InvalidArgumentException('Bounded BBO poll interval must be 5..1440 minutes.');
+        }
+        if ($this->capitalMarketsBboPollEnabled
+            && (trim($this->capitalMarketsBboPollOrganizationId)==='' || $this->capitalMarketsBboPollActorId<1)) {
+            throw new InvalidArgumentException('Bounded BBO poll requires explicit tenant and actor.');
         }
         if ($this->capitalMarketsDiscoveryEnabled
             && (trim($this->capitalMarketsDiscoveryOrganizationId) === '' || $this->capitalMarketsDiscoveryActorId < 1)) {
@@ -195,6 +207,17 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthAutonomousOutreachIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthAutonomousOutreachCommand('scheduler'), 'async'),
+            );
+        }
+
+        if ($this->capitalMarketsBboPollEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsBboPollIntervalMinutes.' minutes',
+                new RedispatchMessage(
+                    new SampleBStockBboQuotes($this->capitalMarketsBboPollOrganizationId,
+                        $this->capitalMarketsBboPollActorId,$this->capitalMarketsBboPollIntervalMinutes*60),
+                    'async',
+                ),
             );
         }
 
