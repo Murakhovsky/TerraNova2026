@@ -47,7 +47,9 @@ final class CrossVenueDiscoveryFakeClient implements MarketJsonHttpClientInterfa
         ++$this->calls;
         if ($organizationId !== 'tenant-alpha' || !in_array((string)parse_url($url,PHP_URL_HOST),$allowedHosts,true)
             || $headers!==[])throw new RuntimeException('Unexpected discovery HTTP authority.');
-        return $this->data[$serviceKey]??throw new RuntimeException('Provider offline.');
+        parse_str((string)(parse_url($url,PHP_URL_QUERY) ?? ''),$query);
+        $key=$serviceKey.(isset($query['cursor'])?'|'.$query['cursor']:'');
+        return $this->data[$key]??throw new RuntimeException('Provider offline.');
     }
 }
 $http=new CrossVenueDiscoveryFakeClient();
@@ -79,6 +81,16 @@ $assert($result['rows'][0]['economic_link']==='UNVERIFIED'
     && $result['rows'][0]['executable']===false
     && $result['rows'][0]['net_edge']===null,
     'Listing discovery must not publish executable investment recommendations or fake P&L.');
+$http->data['capital_markets.discovery.bybit']=json_encode(['retCode'=>0,'result'=>['list'=>[],'nextPageCursor'=>'second']],JSON_THROW_ON_ERROR);
+$http->data['capital_markets.discovery.bybit|second']=json_encode(['retCode'=>0,'result'=>['list'=>[
+    ['symbol'=>'AAPLXUSDT','baseCoin'=>'AAPLX','quoteCoin'=>'USDT','status'=>'Trading']
+],'nextPageCursor'=>'']],JSON_THROW_ON_ERROR);
+$paged=$scanner->scan('tenant-alpha',[$aapl]);
+$assert($paged['source_health']['BYBIT']['pages']===2 && $paged['rows'][0]['venues'][1]['status']==='DISTINCT_TOKEN_REVIEW_REQUIRED','Paginated Bybit item was missed.');
+$http->data['capital_markets.discovery.bybit|second']=json_encode(['retCode'=>0,'result'=>['list'=>[],'nextPageCursor'=>'second']],JSON_THROW_ON_ERROR);
+$bad=$scanner->scan('tenant-alpha',[$aapl]);
+$assert($bad['source_health']['BYBIT']['state']==='UNAVAILABLE' && $bad['rows'][0]['venues'][1]['status']==='UNAVAILABLE','Cyclic pagination must fail closed.');
+$http->data['capital_markets.discovery.bybit']=json_encode(['retCode'=>0,'result'=>['list'=>[]]],JSON_THROW_ON_ERROR);
 unset($http->data['capital_markets.discovery.kraken']);
 $degraded=$scanner->scan('tenant-alpha',[$aapl]);
 $assert($degraded['source_health']['KRAKEN']['state']==='UNAVAILABLE'

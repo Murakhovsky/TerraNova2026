@@ -41,10 +41,38 @@ final readonly class CrossVenueCatalogDiscovery
                 $host = (string)parse_url($url, PHP_URL_HOST);
                 $body = $this->http->get($organizationId, 'capital_markets.discovery.'.strtolower($name), $url, [], [$host]);
                 if (strlen($body) > 8000000) throw new InvalidArgumentException('Provider catalog exceeds size cap.');
-                $catalogs[$name] = self::catalog($name, $body);
+                $catalog = self::catalog($name, $body);
+                $pages = 1;
+                $hashes = [hash('sha256', $body)];
+                if ($name === 'BYBIT') {
+                    $decoded = json_decode($body, true, 64, JSON_THROW_ON_ERROR);
+                    $cursor = (string)($decoded['result']['nextPageCursor'] ?? '');
+                    $seen = [];
+                    while ($cursor !== '') {
+                        if (isset($seen[$cursor]) || $pages >= 25) {
+                            throw new InvalidArgumentException('Bybit catalog pagination incomplete or cyclic.');
+                        }
+                        $seen[$cursor] = true;
+                        $pageUrl = self::SOURCES['BYBIT'].'&cursor='.rawurlencode($cursor);
+                        $page = $this->http->get($organizationId, 'capital_markets.discovery.bybit', $pageUrl, [], ['api.bybit.com']);
+                        if (strlen($page) > 8000000) throw new InvalidArgumentException('Bybit catalog page too large.');
+                        $next = json_decode($page, true, 64, JSON_THROW_ON_ERROR);
+                        if (!is_array($next)) throw new InvalidArgumentException('Invalid Bybit page.');
+                        foreach (self::catalog('BYBIT', $page) as $key => $item) {
+                            if (isset($catalog[$key]) && $catalog[$key] !== $item) {
+                                throw new InvalidArgumentException('Conflicting Bybit catalog pages.');
+                            }
+                            $catalog[$key] = $item;
+                        }
+                        $hashes[] = hash('sha256', $page);
+                        $cursor = (string)($next['result']['nextPageCursor'] ?? '');
+                        ++$pages;
+                    }
+                }
+                $catalogs[$name] = $catalog;
                 $health[$name] = [
                     'state'=>'AVAILABLE','count'=>count($catalogs[$name]),
-                    'evidence_sha256'=>hash('sha256',$body),
+                    'pages'=>$pages, 'evidence_sha256'=>hash('sha256',implode(':',$hashes)),
                 ];
             } catch (Throwable $e) {
                 // No silent upgrade of missing catalog to empty/zero coverage.
