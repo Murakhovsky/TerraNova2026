@@ -119,21 +119,12 @@ final class L2RecoverySession
     }
 
 
-    /** @return list<array{U:string,u:string}> */
-    public function bufferedSequenceRanges(int $epoch): array
+    /** @return list<mixed> Read-only recovery buffer payloads for protocol adapters. */
+    public function bufferedPayloads(int $epoch): array
     {
         $this->requireEpoch($epoch);
-        if (!in_array($this->status, ['BUFFERING','SYNCING'], true)) return [];
-        $ranges = [];
-        foreach ($this->buffer as $entry) {
-            $payload = $entry['payload'];
-            if (!is_array($payload) || !isset($payload['U'], $payload['u'])
-                || !is_string($payload['U']) || !is_string($payload['u'])) {
-                throw new DomainException('Unexpected L2 sequence buffer entry.');
-            }
-            $ranges[] = ['U'=>$payload['U'], 'u'=>$payload['u']];
-        }
-        return $ranges;
+        if (!in_array($this->status, ['BUFFERING', 'SYNCING'], true)) return [];
+        return array_map(static fn(array $entry): mixed => $entry['payload'], $this->buffer);
     }
 
     public function status(): string { return $this->status; }

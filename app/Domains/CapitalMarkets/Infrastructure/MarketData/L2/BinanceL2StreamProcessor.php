@@ -55,7 +55,7 @@ final class BinanceL2StreamProcessor
     public function canBridge(string $snapshotId): bool
     {
         $target = $this->increment($snapshotId);
-        foreach ($this->session->bufferedSequenceRanges($this->epoch) as $range) {
+        foreach ($this->bufferedRanges() as $range) {
             if ($this->compare($range['U'], $target) <= 0 && $this->compare($range['u'], $target) >= 0) {
                 return true;
             }
@@ -66,8 +66,22 @@ final class BinanceL2StreamProcessor
     public function snapshotTooOld(string $snapshotId): bool
     {
         $target = $this->increment($snapshotId);
-        $ranges = $this->session->bufferedSequenceRanges($this->epoch);
+        $ranges = $this->bufferedRanges();
         return $ranges !== [] && $this->compare($ranges[0]['U'], $target) > 0;
+    }
+
+    /** @return list<array{U:string,u:string}> */
+    private function bufferedRanges(): array
+    {
+        $ranges = [];
+        foreach ($this->session->bufferedPayloads($this->epoch) as $payload) {
+            if (!is_array($payload) || !isset($payload['U'], $payload['u'])
+                || !is_string($payload['U']) || !is_string($payload['u'])) {
+                throw new DomainException('Invalid Binance buffered sequence range.');
+            }
+            $ranges[] = ['U' => $payload['U'], 'u' => $payload['u']];
+        }
+        return $ranges;
     }
 
     private function compare(string $a, string $b): int
