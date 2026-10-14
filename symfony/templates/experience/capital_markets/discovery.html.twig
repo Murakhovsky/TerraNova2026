@@ -107,7 +107,7 @@
       </div>
       <nav aria-label="Сторінки перевірки лістингів" class="d-flex gap-2">
         {% if listingPage > 1 %}<a href="/capital-markets/discovery?listingPage={{ listingPage - 1 }}">Попередні 40</a>{% endif %}
-        {% if listingReviewRows|length == 40 and listingPage < 13 %}<a href="/capital-markets/discovery?listingPage={{ listingPage + 1 }}">Наступні 40</a>{% endif %}
+        {% if listingReviewRows|length == 40 and listingPage < 38 %}<a href="/capital-markets/discovery?listingPage={{ listingPage + 1 }}">Наступні 40</a>{% endif %}
       </nav>
     {% endif %}
   </section>

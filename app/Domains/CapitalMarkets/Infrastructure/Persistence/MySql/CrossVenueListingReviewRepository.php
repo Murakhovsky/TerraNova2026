@@ -22,7 +22,7 @@ final readonly class CrossVenueListingReviewRepository
     public function pending(string $organizationId,int $limit=40,int $offset=0):array
     {
         if ($organizationId==='' || strlen($organizationId)>190 || $limit<1 || $limit>100
-            || $offset<0 || $offset>500) {
+            || $offset<0 || $offset>1480) {
             throw new InvalidArgumentException('Invalid listing review scope.');
         }
         $statement=$this->connection->prepare(

@@ -68,7 +68,7 @@ final readonly class CrossVenueDiscoveryController
         $tenant=$this->authorized(CapitalMarketsCapability::MarketDataView);
         if($tenant instanceof Response)return $tenant;
         $org=$tenant->organizationId()->value();
-        $page=min(13,max(1,$request->query->getInt('listingPage',1)));
+        $page=min(38,max(1,$request->query->getInt('listingPage',1)));
         try {
             $universe=$this->activeUniverse->load($org,$this->universeFile);
             $watchlist=$universe['rows'];
