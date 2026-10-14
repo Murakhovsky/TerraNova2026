@@ -5,6 +5,8 @@ namespace Domains\CapitalMarkets\Infrastructure\Persistence\MySql;
 
 use Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection;
 use PDO;
+use DateTimeImmutable;
+use DateTimeZone;
 use RuntimeException;
 
 final readonly class CrossVenuePoolCandidateRepository
@@ -70,12 +72,16 @@ final readonly class CrossVenuePoolCandidateRepository
         $statement=$this->connection->prepare(
             'SELECT seed_token,venue_symbol FROM tn_capital_market_cross_venue_pool_candidates
              WHERE organization_id=:org AND pool_key=:pool AND venue=:venue
-               AND listing_state=:state AND venue_symbol IS NOT NULL
+               AND listing_state=:state AND verification_state=:verified
+               AND source_as_of>=:fresh_after AND venue_symbol IS NOT NULL
              ORDER BY seed_token LIMIT '.$limit
         );
+        $freshAfter=(new DateTimeImmutable('-48 hours',new DateTimeZone('UTC')))
+            ->format('Y-m-d\TH:i:s.u\Z');
         $statement->execute([
             'org'=>$organizationId,'pool'=>'BINANCE_BSTOCKS_SEED',
             'venue'=>$venue,'state'=>'LISTED_EXACT_TOKEN_SYMBOL',
+            'verified'=>'REVIEWED_LISTING','fresh_after'=>$freshAfter,
         ]);
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }

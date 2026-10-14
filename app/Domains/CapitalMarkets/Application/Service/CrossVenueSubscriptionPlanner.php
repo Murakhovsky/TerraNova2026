@@ -9,6 +9,8 @@ use Domains\CapitalMarkets\Application\Contract\MarketInstrumentResolverInterfac
 use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
 use Domains\CapitalMarkets\Domain\Contract\InstrumentRepository;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentStatus;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentIdentifier;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentIdentifierType;
 use Domains\CapitalMarkets\Domain\Venue\VenueInstrumentStatus;
 use Domains\CapitalMarkets\Domain\Venue\VenueStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataCapability;
@@ -19,7 +21,7 @@ use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandid
 use InvalidArgumentException;
 
 /**
- * Fenced BBO planner for ALREADY verified canonical venue mappings.
+ * Fenced BBO planner for human-reviewed fresh listing + ACTIVE canonical venue mapping.
  * Listing discovery never creates canonical identity or subscribes unverified rows.
  * Planned BBO is a configured REST/market-data subscription, not a websocket uptime claim.
  */
@@ -90,6 +92,12 @@ final readonly class CrossVenueSubscriptionPlanner
                 if ($instrument===null || $instrument->status!==InstrumentStatus::Active
                     || $venueInstrument->status!==VenueInstrumentStatus::Active) {
                     $status='BLOCKED_INACTIVE_CANONICAL_INSTRUMENT';
+                } elseif (($instrument->metadata['origin']??null)!=='BINANCE_BSTOCKS_SEED'
+                    || ($instrument->metadata['underlying_reference_symbol']??null)===''
+                    || $this->instruments->findByIdentifier($org,
+                        new InstrumentIdentifier(InstrumentIdentifierType::ProviderId,
+                            (string)$item['seed_token'],'BINANCE_BSTOCKS_SEED'))?->id->value()!==$instrumentId) {
+                    $status='BLOCKED_CANONICAL_SEED_IDENTITY';
                 } elseif (isset($existing[$instrumentId])) {
                     $status=$existing[$instrumentId]===MarketSubscriptionStatus::Active
                         ? 'ALREADY_ACTIVE' : 'BLOCKED_EXISTING_SUBSCRIPTION';
