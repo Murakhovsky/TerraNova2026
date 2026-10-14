@@ -8,6 +8,7 @@ on:
       - 'app/Domains/CapitalMarkets/**'
       - 'symfony/src/Command/CapitalMarketsL2StreamCommand.php'
       - 'symfony/config/services.yaml'
+      - 'app/Infrastructure/Platform/Notification/BuiltinNotificationTemplateRepository.php'
       - 'tests/CapitalMarkets/**'
       - '.github/workflows/l2-recovery-smoke.yml'
 jobs:
@@ -26,6 +27,7 @@ jobs:
         run: |
           find app/Domains/CapitalMarkets/Infrastructure/MarketData/L2 -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l symfony/src/Command/CapitalMarketsL2StreamCommand.php
+          php -l app/Infrastructure/Platform/Notification/BuiltinNotificationTemplateRepository.php
       - name: L2 smoke tests
         run: bash tests/CapitalMarkets/L2RecoverySuite.sh
 

@@ -3453,3 +3453,4 @@ services:
     alias: App\Infrastructure\Health\DatabaseDependencyHealthCheck
 
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2LiveWorkerFactory: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2AlertDelivery: ~

@@ -16,6 +16,7 @@ $runner = new L2ManagedStreamRunner(new L2StreamSupervisor($policy), $policy, $m
 $attempts = [];
 $delays = [];
 $books = [];
+$events = [];
 $count = $runner->run(
     static function (int $epoch, callable $publish) use (&$attempts): int {
         $attempts[] = $epoch;
@@ -27,16 +28,20 @@ $count = $runner->run(
         return 1;
     },
     static function (string $book) use (&$books): void { $books[] = $book; },
-    static function (int $delay) use (&$delays): void { $delays[] = $delay; }
+    static function (int $delay) use (&$delays): void { $delays[] = $delay; },
+    null,
+    static function (string $event, array $context) use (&$events): void { $events[] = $event; }
 );
 if ($metrics->snapshot()['connections'] !== 2 || $metrics->snapshot()['reconnects'] !== 1
     || $metrics->snapshot()['publications'] !== 2 || $metrics->snapshot()['failures'] !== 1
     || $count !== 2 || $books !== ['first','second'] || $delays !== [100]
+    || $events !== ['DEGRADED','RECOVERED']
     || count(array_unique($attempts)) !== 2 || $runner->diagnostics()['state'] !== 'STOPPED') {
     throw new RuntimeException('Managed runner reconnect regression.');
 }
 
 $failed = false;
+$exhaustionEvents = [];
 $failRunner = new L2ManagedStreamRunner(new L2StreamSupervisor($policy), $policy);
 try {
     $failRunner->run(
@@ -44,12 +49,15 @@ try {
             throw new DomainException('Persistent failure.');
         },
         static function (mixed $book): void { throw new RuntimeException('Unexpected book.'); },
-        static function (int $delay): void {}
+        static function (int $delay): void {},
+        null,
+        static function (string $event, array $context) use (&$exhaustionEvents): void { $exhaustionEvents[] = $event; }
     );
 } catch (DomainException $error) {
     $failed = $error->getPrevious() instanceof DomainException;
 }
-if (!$failed || $failRunner->diagnostics()['state'] !== 'STOPPED') {
+if (!$failed || $exhaustionEvents !== ['DEGRADED','DEGRADED','DEGRADED','EXHAUSTED']
+    || $failRunner->diagnostics()['state'] !== 'STOPPED') {
     throw new RuntimeException('Managed runner did not fail closed.');
 }
 

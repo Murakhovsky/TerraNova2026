@@ -156,3 +156,54 @@ Failed ingestion aborts the connection; SIGTERM and SIGINT request shutdown.
 Production process-manager installation, external exchange live acceptance and
 long-duration operations testing are separate deployment gates and are not
 implied by registering this command.
+
+## Durable L2 operator alerts (2026-10-14)
+
+CLI execution emits operational transitions only for actual stream incidents:
+`DEGRADED` for connection/ingestion failures, `STALE` after a publication
+staleness failure, `EXHAUSTED` when the retry budget is used up, and
+`RECOVERED` only after a subsequent verified book is successfully ingested.
+Deliberate SIGTERM/SIGINT shutdown does not generate a false failure alert.
+
+The `L2AlertLifecycle` suppresses repeated transition emails within a single
+process incident. It retries transient notification enqueue errors using
+the **same** notification ID and payload, so the existing n8n outbox enforces
+durable idempotency. Each new incident gets a distinct correlation ID.
+Failure of the notification infrastructure does not force an exchange
+reconnect. An enqueue failure is logged; remaining unsent alerts are tracked
+in `alerts.pending` and produce an unsuccessful command exit when detected.
+This is per-process incident deduplication, not global cross-process
+incident coordination.
+
+Enable alerts explicitly in the environment provided to the Symfony PHP
+process (Docker Compose forwards these variables to its application services):
+
+```dotenv
+FOS_L2_ENABLED=1
+FOS_L2_ALERT_ENABLED=1
+FOS_L2_ALERT_EMAIL=operator@example.com
+FOS_L2_ALERT_LOCALE=uk
+```
+
+With `FOS_L2_ALERT_ENABLED=1`, a valid alert email address is mandatory;
+supported locales are `uk` and `en`. With alerts disabled, the market
+data command continues but **no operator email is queued**. The CLI
+`--dry-run` preflight validates the settings and reports `alerts_enabled`.
+
+Operational delivery path:
+
+```text
+L2ManagedStreamRunner → L2AlertLifecycle → L2AlertDelivery
+  → Platform Notification Dispatcher → N8nEmailNotificationChannel
+  → tn_integration_outbox (notification.email)
+  → integration-worker / cos:integration:n8n:process
+  → configured N8N_OUTBOUND_URL → n8n provider email workflow
+```
+
+A successful alert enqueue means durable `QUEUED` acceptance, **not**
+that the email has reached the operator. Confirm `integration-worker`
+is running, `N8N_OUTBOUND_URL` / `N8N_OUTBOUND_SECRET` are configured,
+and the target n8n workflow processes `notification.email` envelopes.
+Inspect `tn_integration_outbox` and `cos_notification_deliveries`
+to diagnose failures. Live provider email delivery is not exercised
+by the fake-dispatcher smoke tests.

@@ -19,6 +19,7 @@ final readonly class L2ManagedWorker
      * @param callable(MarketOrderBook):void $publish
      * @param callable(int):void|null $sleep
      * @param callable():bool|null $shouldStop
+     * @param callable(string,array<string,mixed>):void|null $onTransition
      */
     public function run(
         callable $workerFactory,
@@ -26,6 +27,7 @@ final readonly class L2ManagedWorker
         int $messageBudget = 1000,
         ?callable $sleep = null,
         ?callable $shouldStop = null,
+        ?callable $onTransition = null,
     ): int {
         if ($messageBudget < 1 || $messageBudget > 1000000) {
             throw new DomainException('Invalid managed worker message budget.');
@@ -41,6 +43,7 @@ final readonly class L2ManagedWorker
             $publish,
             $sleep,
             $shouldStop,
+            $onTransition,
         );
     }
 
