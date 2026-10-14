@@ -191,6 +191,8 @@ interface WorkflowRecoveryInterface
 
 **Durable MySQL foundation:** адитивна міграція `Version20261015011500` створює `cos_workflow_runs` і `cos_workflow_steps` окремо від Federation/Engineering. `DoctrineWorkflowExecutionStore` реалізує atomic create, scoped snapshots, CAS Run transitions, serialized DAG step claim, claim tokens/leases/checkpoint та repeated receipt attestation для finalization. Відмовний canonical Claim Admission і Receipt Verifier wired у Symfony за замовчуванням: зовнішні ефекти **не активовано**. `tests/integration/workflow_durable_store_mysql.php` запускається в Docker CI з фактичною MySQL. Це фундамент без queue/dispatch/recovery/cutover.
 
+**Recovery inspection:** новий `DoctrineWorkflowRecoveryInspector` реалізує `WorkflowRecoveryInterface` тільки для tenant-scoped read-only аналізу. Перевіряє очікувану Run revision, активні та expired claims, uncertainty зовнішнього результату й повторно перевіряє completed receipts; `reconcile()` наразі жорстко забороняє зміни. MySQL integration покриває stale revision, foreign tenant, claimed read-only/external, forged receipt і terminal status. Автоматичне requeue/replay, завершення чи відновлення не активовані.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0

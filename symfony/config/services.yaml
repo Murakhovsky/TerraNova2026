@@ -264,6 +264,8 @@ services:
   # Durable Workflow foundation, fail closed; NOT connected to Federation/Engineering writers.
   Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
+  Platform\Workflow\Contract\WorkflowRecoveryInterface:
+    alias: App\Persistence\Workflow\DoctrineWorkflowRecoveryInspector
   Platform\Workflow\Contract\WorkflowReceiptVerifierInterface:
     alias: App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier
   Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface:

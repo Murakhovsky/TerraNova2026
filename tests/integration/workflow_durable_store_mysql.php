@@ -8,6 +8,7 @@ declare(strict_types=1);
 require (string) (getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__, 2) . '/symfony/vendor/autoload.php');
 
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
+use App\Persistence\Workflow\DoctrineWorkflowRecoveryInspector;
 use App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier;
 use App\Persistence\Workflow\FailClosedWorkflowStepClaimAdmission;
 use Doctrine\DBAL\DriverManager;
@@ -88,6 +89,8 @@ $trustedVerifier = new class implements WorkflowReceiptVerifierInterface {
     }
 };
 $store = new DoctrineWorkflowExecutionStore($connection, $trustedVerifier, $spyAdmission);
+$inspector = new DoctrineWorkflowRecoveryInspector($connection, $trustedVerifier);
+$inspectorFailClosed = new DoctrineWorkflowRecoveryInspector($connection, new FailClosedWorkflowReceiptVerifier());
 $failClosed = new DoctrineWorkflowExecutionStore(
     $connection, new FailClosedWorkflowReceiptVerifier(), new FailClosedWorkflowStepClaimAdmission(),
 );
@@ -120,6 +123,12 @@ $command = static fn(int $revision): WorkflowRunCommand =>
 try {
     $run = $store->create($draft, $actor);
     $expect($run->revision === 1 && $run->status === WorkflowStatus::CREATED, 'Initial Run must be created at revision 1.');
+    $idle = $inspector->inspect($command(1));
+    $expect($idle->disposition === \Platform\Workflow\Model\WorkflowRecoveryDisposition::NO_ACTION,
+        'Created Workflow may not auto-dispatch from recovery inspection.');
+    $reject(static fn() => $inspector->inspect(new WorkflowRunCommand($identity, $intruder, 1, 'foreign')),
+        'foreign tenant recovery inspection');
+
     $expect(count($store->steps($identity)) === 2, 'Atomic Run creation must persist all steps.');
     $expect($store->get(new WorkflowRunIdentity($intruder->organizationId()->value(), $identity->runId)) === null,
         'Foreign tenant read revealed canonical Workflow Run.');
@@ -149,6 +158,15 @@ try {
     $expect($review->state === StepStatus::CLAIMED->value && $review->claimToken !== null,
         'Claim token not issued.');
     $expect($store->get($identity)?->revision === 3, 'Claim must advance Run revision.');
+    $active = $inspector->inspect($command(3));
+    $expect($active->reason === 'read_only_claim_in_flight'
+        && !$active->externalOutcomeUnknown,
+        'Read-only claim inspection must not invent remote side effects.');
+    $reject(static fn() => $inspector->reconcile($command(3)),
+        'unsupported automatic claim recovery');
+    $expect($store->get($identity)?->revision === 3,
+        'Read-only recovery changed persisted revision.');
+
     $expect($store->steps($identity)[0]->claimToken === null, 'Read-only Step projection exposed secret claim token.');
     $reject(static fn() => $store->claim(new WorkflowStepClaim($command(2), 'review', 'worker-B', 120)),
         'second worker stale claim');
@@ -167,6 +185,13 @@ try {
     $expect($store->get($identity)?->revision === 4, 'Denied external Action admission mutated Run.');
     $publish = $store->claim(new WorkflowStepClaim($command(4), 'publish', 'worker-A', 120));
     $expect($spyAdmission->calls === 1 && $publish->claimToken !== null, 'Expected exactly one authorized external claim.');
+    $external = $inspector->inspect($command(5));
+    $expect($external->disposition === \Platform\Workflow\Model\WorkflowRecoveryDisposition::RECONCILE_ONLY
+        && $external->externalOutcomeUnknown
+        && $external->reason === 'external_claim_outcome_pending',
+        'External claimed Action must never be automatically replayed.');
+    $reject(static fn() => $inspector->inspect($command(4)), 'stale inspection revision');
+
     $reject(static fn() => $failClosed->checkpoint(new WorkflowStepCheckpoint(
         $command(5), 'publish', (string) $publish->claimToken,
         StepStatus::COMPLETED, 'action:verified:publish',
@@ -187,6 +212,12 @@ try {
         'UPDATE cos_workflow_steps SET result_reference=:forged WHERE organization_id=:org AND run_id=:run AND step_id=:step',
         ['forged' => 'action:tampered', 'org' => $tenant, 'run' => $identity->runId, 'step' => 'publish'],
     );
+    $tamperedAssessment = $inspector->inspect($command(6));
+    $expect($tamperedAssessment->reason === 'completed_step_untrusted_receipt',
+        'Recovery must re-attest completed receipts and detect tampering.');
+    $untrustedAssessment = $inspectorFailClosed->inspect($command(6));
+    $expect($untrustedAssessment->disposition === \Platform\Workflow\Model\WorkflowRecoveryDisposition::MANUAL_REQUIRED,
+        'Unwired receipts must fail closed during recovery inspection.');
     $reject(static fn() => $store->compareAndTransition(new WorkflowRunTransition(
         $command(6), WorkflowStatus::RUNNING, WorkflowStatus::COMPLETED, 'tampered completion',
     )), 'tampered completed Step receipt');
@@ -198,6 +229,11 @@ try {
         $command(6), WorkflowStatus::RUNNING, WorkflowStatus::COMPLETED, 'independently verified finalization',
     ));
     $expect($done->revision === 7 && $done->status === WorkflowStatus::COMPLETED, 'Final CAS + attested receipts failed.');
+    $terminal = $inspector->inspect($command(7));
+    $expect($terminal->reason === 'terminal_receipts_verified'
+        && $terminal->disposition === \Platform\Workflow\Model\WorkflowRecoveryDisposition::NO_ACTION,
+        'Completed Workflow must be independently verified without replay.');
+
     $reject(static fn() => $store->compareAndTransition(new WorkflowRunTransition(
         $command(7), WorkflowStatus::COMPLETED, WorkflowStatus::RUNNING, 'illegal terminal restart',
     )), 'terminal state rewrite');
