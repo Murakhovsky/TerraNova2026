@@ -27,7 +27,7 @@ if (class_exists(ZipArchive::class) && class_exists(DOMDocument::class)) {
     $check($zip->open($file,ZipArchive::CREATE | ZipArchive::OVERWRITE)===true,'Fixture ZIP creation failed.');
     $ns='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
     $zip->addFromString('xl/sharedStrings.xml','<?xml version="1.0"?><sst xmlns="'.$ns.'"><si><t>AAPL</t></si><si><t>AAPLB</t></si><si><t>AAPLBUSDT</t></si><si><t>TRADING</t></si><si><t>https://www.binance.com/en/trade/AAPLB_USDT</t></si><si><t>Apple Inc.</t></si><si><t>Stock</t></si><si><t>name</t></si><si><t>type</t></si><si><t>leverage</t></si></sst>');
-    $zip->addFromString('xl/worksheets/sheet1.xml','<?xml version="1.0"?><worksheet xmlns="'.$ns.'"><sheetData><row r="3"><c r="G3" t="s"><v>7</v></c><c r="H3" t="s"><v>8</v></c><c r="I3" t="s"><v>9</v></c></row><row r="4"><c r="B4" t="s"><v>0</v></c><c r="C4" t="s"><v>1</v></c><c r="D4" t="s"><v>2</v></c><c r="E4" t="s"><v>3</v></c><c r="F4" t="s"><v>4</v></c><c r="G4" t="s"><v>5</v></c><c r="H4" t="s"><v>6</v></c><c r="I4"><v>1</v></c></row></sheetData></worksheet>');
+    $zip->addFromString('xl/worksheets/sheet1.xml','<?xml version="1.0"?><worksheet xmlns="'.$ns.'"><sheetData><row r="2"><c r="A2" t="inlineStr"><is><t>Станом на 2026-09-27 17:53 UTC</t></is></c></row><row r="3"><c r="G3" t="s"><v>7</v></c><c r="H3" t="s"><v>8</v></c><c r="I3" t="s"><v>9</v></c></row><row r="4"><c r="B4" t="s"><v>0</v></c><c r="C4" t="s"><v>1</v></c><c r="D4" t="s"><v>2</v></c><c r="E4" t="s"><v>3</v></c><c r="F4" t="s"><v>4</v></c><c r="G4" t="s"><v>5</v></c><c r="H4" t="s"><v>6</v></c><c r="I4"><v>1</v></c></row></sheetData></worksheet>');
     $zip->close();
     try {
         $parsed=$reader->read($file);
