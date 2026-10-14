@@ -56,7 +56,7 @@ php tests/CapitalMarkets/L2WebSocketTransportSmoke.php
 
 Do not label the package production-ready before these gates pass.
 
-## Verification checkpoint (2026-10-14)
+## Historical verification checkpoint (2026-10-14)
 
 The current feature branch includes fail-closed subscription acknowledgement,
 a worker budget check for incomplete Binance recovery, a verified ingestion
@@ -79,3 +79,28 @@ Remaining acceptance gates:
    a managed worker process with graceful shutdown.
 5. Validate stale-data revocation and replay idempotency across process
    restarts. Do not merge or deploy as production-ready before these gates.
+
+## Exchange adapter boundary (2026-10-14)
+
+The pure Domain owns `L2RecoverySession`, `MarketOrderBook`, and
+`OrderBookRebuilder`. It must not depend on any venue identifier or wire
+protocol. `L2RecoverySession::bufferedPayloads()` exposes generic recovery
+payloads; the Binance stream processor interprets `U/u` fields in
+Infrastructure.
+
+The following exchange-specific components live under
+`Infrastructure/MarketData/L2` and must not be moved back into Domain:
+`BinanceL2SequenceValidator`, `BinanceL2RecoveryCoordinator`,
+`BybitL2RecoveryCoordinator`, `KrakenL2Checksum`, and
+`KrakenL2BookRecovery`. Stream processors and smoke fixtures import their
+Infrastructure namespaces. The existing Capital Markets architecture gate
+enforces the absence of venue-specific names in the pure Domain.
+
+### Observed CI evidence
+
+PR #367 runs `L2 Recovery Smoke` with a MySQL 8.4 service. Commit
+`d49d5ae158835411c01cf4d82f398639511f8179` has passing
+`l2-smoke` and `l2-mysql-ingestion` jobs in workflow run
+`38553506247`. This verifies ingestion persistence but does not prove
+live-venue operational readiness. Runtime and other repository checks must
+be checked independently before merging.
