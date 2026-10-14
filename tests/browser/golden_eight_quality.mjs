@@ -1,6 +1,6 @@
 import { chromium } from 'playwright-core';
 import AxeBuilder from '@axe-core/playwright';
-import { access, mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { resolve } from 'node:path';
 import pngjs from 'pngjs';
@@ -232,11 +232,45 @@ try {
     await context.close();
   }
 
+  let eventPayload = {};
+  if (process.env.GITHUB_EVENT_PATH) {
+    try {
+      eventPayload = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
+    } catch {
+      eventPayload = {};
+    }
+  }
+
+  const evidenceProvenance = {
+    schema: 1,
+    suite: 'COS Experience V1 Golden Eight browser QA',
+    source: 'tests/browser/golden_eight_quality.mjs',
+    source_commit_sha: eventPayload.pull_request?.head?.sha || process.env.GITHUB_SHA || null,
+    tested_checkout_sha: process.env.GITHUB_SHA || null,
+    workflow_run_id: process.env.GITHUB_RUN_ID || null,
+    workflow_run_attempt: process.env.GITHUB_RUN_ATTEMPT || null,
+    workflow: process.env.GITHUB_WORKFLOW || null,
+    ref: process.env.GITHUB_REF || null,
+    observed_at: new Date().toISOString(),
+    base_url: new URL(baseUrl).origin,
+    environment: process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+  };
+
+  const evidenceFiles = targets.flatMap((target) => profiles.map((profile) => ({
+    page: target.name,
+    route: target.path,
+    viewport: profile.name,
+    screenshot: `${profile.name}-${target.name}.png`,
+    accessibility: `${profile.name}-${target.name}.axe.json`,
+  })));
+
   await writeFile(
     resolve(outputDir, 'summary.json'),
     JSON.stringify({
       ok: failures.length === 0,
       suite: 'COS Experience V1 Golden Eight browser QA',
+      evidence_provenance: evidenceProvenance,
+      evidence_files: evidenceFiles,
       profiles: profiles.map((profile) => profile.name),
       pages: targets.map((target) => ({
         name: target.name,
@@ -258,6 +292,8 @@ if (failures.length) {
 console.log(JSON.stringify({
   ok: true,
   suite: 'COS Experience V1 Golden Eight browser QA',
+  evidence_provenance: evidenceProvenance,
+  evidence_files: evidenceFiles,
   profiles: profiles.map((profile) => profile.name),
   pages: 8,
   checks: ['http', 'archetype', 'responsive-overflow', 'keyboard', 'axe-wcag-aa', 'screenshot', 'browser-errors'],

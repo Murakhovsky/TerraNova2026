@@ -23,5 +23,5 @@ items:
     status: open
     affected: [resources/experience/pages, tests]
     user_cost: "Dashboards under-report verified checks or confuse automated verification with human acceptance."
-    evidence: "Golden browser checks and Page Contract QA fields can diverge."
+    evidence: "Golden Eight browser artifacts now record source commit, tested checkout, workflow run/attempt, timestamp, and per-page screenshot/accessibility artifact paths; Page Contract QA fields are still not linked to those artifacts."
     closure: "Automated QA results carry run/source/timestamp provenance; human acceptance remains a separate decision."
