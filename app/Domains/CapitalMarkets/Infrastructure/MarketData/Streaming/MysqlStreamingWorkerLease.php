@@ -40,6 +40,23 @@ final readonly class MysqlStreamingWorkerLease implements StreamingWorkerLeaseIn
             // Serialize lease acquisition with REST canonical writes. Lock
             // source before shard to preserve a single global lock order.
             MysqlMarketSourceWriterGate::lockSource($this->pdo,$organizationId,$sourceId);
+            // A source may have only one live WebSocket shard. Massive batch
+            // and the legacy one-symbol worker must never publish concurrently.
+            $active=$this->pdo->prepare(
+                "SELECT 1 FROM tn_capital_market_stream_worker_leases
+                 WHERE organization_id=:org AND source_id=:source
+                   AND shard_key<>:current_shard AND shard_key<>:guard_shard
+                   AND owner_id<>'' AND expires_at>UTC_TIMESTAMP(6)
+                 LIMIT 1 FOR UPDATE"
+            );
+            $active->execute([
+                'org'=>$organizationId,'source'=>$sourceId,
+                'current_shard'=>$shard,'guard_shard'=>MysqlMarketSourceWriterGate::SOURCE_GUARD_SHARD,
+            ]);
+            if($active->fetchColumn()!==false){
+                $this->pdo->commit();
+                return null;
+            }
             // The unique key ensures one row, even for simultaneous first
             // acquisition attempts. Both read and mutation share a row lock.
             $insert=$this->pdo->prepare(
