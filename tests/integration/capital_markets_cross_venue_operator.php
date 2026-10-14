@@ -160,4 +160,12 @@ $assert(str_contains($revocationFence,'disableForCandidate')
     && str_contains($revocationFence,'disableUnapproved')
     && str_contains($revocationFence,"s.status=\\'DISABLED\\'"),
     'Listing revocation must fence existing BBO subscription rows.');
+$plannerSource=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/CrossVenueSubscriptionPlanner.php');
+$adminSource=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/MarketDataAdministrationService.php');
+$assert(str_contains($plannerSource,'PLAN_REENABLE')
+    && str_contains($plannerSource,"'PLAN_CREATE','PLAN_REENABLE'")
+    && str_contains($plannerSource,'$this->pool->listedForVenue($org,$plan[\'venue\'],500)')
+    && str_contains($adminSource,'$previous??[]')
+    && str_contains($adminSource,'MarketSubscriptionStatus::Active'),
+    'An explicitly reviewed listing must support operator-only re-enable with previous-state audit and recheck.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
