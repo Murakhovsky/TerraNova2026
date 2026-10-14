@@ -74,7 +74,7 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             $this->db->insert('cos_workflow_runs', [
                 'organization_id' => $id->organizationId, 'run_id' => $id->runId,
                 'definition_id' => $draft->definitionId, 'definition_version' => $draft->definitionVersion,
-                'definition_json' => $serialized, 'definition_digest' => hash('sha256', $serialized),
+                'definition_json' => $serialized, 'definition_digest' => self::definitionDigest($definition->steps),
                 'input_digest' => $draft->inputDigest, 'actor_id' => $draft->actorId,
                 'correlation_id' => $draft->correlationId, 'state' => WorkflowStatus::CREATED->value,
                 'revision' => 1, 'source_plan_id' => $draft->sourcePlanId,
@@ -158,7 +158,7 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             $plan = json_decode((string) $run['definition_json'], true, 512, JSON_THROW_ON_ERROR);
             if (!is_array($plan) || !array_is_list($plan)
                 || !hash_equals((string) $run['definition_digest'],
-                    hash('sha256', (string) $run['definition_json']))) {
+                    self::definitionDigest($plan))) {
                 throw new DomainException('Pinned Workflow definition has been modified.');
             }
             $byId = [];
@@ -350,8 +350,27 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
         return ['org' => $identity->organizationId, 'run' => $identity->runId];
     }
 
+    /**
+     * MySQL JSON columns may reformat object keys/whitespace. Digest the
+     * semantic immutable graph rather than its transport serialization.
+     *
+     * @param list<array<string,mixed>> $steps
+     */
+    private static function definitionDigest(array $steps): string
+    {
+        return hash('sha256', json_encode(self::stableJson($steps), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
+    }
+
+    private static function stableJson(mixed $node): mixed
+    {
+        if (!is_array($node)) return $node;
+        if (!array_is_list($node)) ksort($node, SORT_STRING);
+        foreach ($node as $key => $value) $node[$key] = self::stableJson($value);
+        return $node;
+    }
+
     private static function now(): string
     {
-        return gmdate('Y-m-d H:i:s.u');
+        return (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s.u');
     }
 }
