@@ -123,3 +123,9 @@ php symfony/bin/console cos:capital-markets:instruments:seed-drafts ORG_ID ACTOR
 ```
 
 Runtime CI містить MySQL acceptance: створення 80 DRAFT, повторний запуск без нових записів, окремість underlying, аудит/події, відсутність зв'язків/підписок і блокування конфлікту канонічного символу без часткової вставки. Наявність тесту не дорівнює проходженню: перевіряти підсумок на останньому SHA.
+
+## Резервний контрольований збір BBO
+
+У `CosScheduleProvider` є **вимкнений за замовчуванням** фоновий контур тільки для публічних REST Bid/Ask. Він використовує наявні `MarketSourcePollingService`, ingestion і Market State. Для ввімкнення потрібен чинний service actor із `MarketDataManage`, активне джерело, активні BBO-підписки та квоти. Налаштування: `COS_CM_BBO_POLL_SCHEDULER_ENABLED=1`, `COS_CM_BBO_POLL_ACTOR_ID=<ID>`, `COS_CM_BBO_POLL_INTERVAL_MINUTES=15`; організація визначається `COS_ORGANIZATION_ID`. Не більше трьох REST-джерел і десяти BBO-targets на джерело. Джерела з іншими активними типами підписок блокуються для цього контуру. Бюджет обраховується консервативно з урахуванням додаткових REST-запитів і повторів. Для безпеки використовуються MySQL advisory lock, tenant/source-scoped cooldown та запис останнього стану в `tn_capital_market_bbo_poll_gates`; необхідна міграція `20261014_000142_capital_markets_bbo_poll_gate.sql`.
+
+**Цей механізм не є production WebSocket:** стан `OK` означає успішний REST-цикл, а не безперервний L2/orderbook чи гарантію актуальності. Для переходу до масового Opportunity scanning потрібні незалежне приймання WebSocket workers/recovery, timestamp/freshness, book-gap detection, source entitlement і перевірений економічний mapping.

@@ -27,6 +27,11 @@ $files=[
     'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftProjection.php',
     'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftService.php',
     'symfony/src/Command/CapitalMarketsCanonicalDraftCommand.php',
+    'app/Domains/CapitalMarkets/Application/Service/BoundedBboSweepService.php',
+    'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlBoundedBboSweepGate.php',
+    'app/migrations/20261014_000142_capital_markets_bbo_poll_gate.sql',
+    'symfony/src/Application/CapitalMarkets/Command/SampleBStockBboQuotes.php',
+    'symfony/src/Application/CapitalMarkets/Handler/SampleBStockBboQuotesHandler.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenuePoolProjection.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php',
     'symfony/src/Command/CapitalMarketsInstrumentDiscoveryCommand.php',
@@ -40,7 +45,8 @@ foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
     'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository',
     'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',
-    'BStocksCanonicalDraftProjection','BStocksCanonicalDraftService',"$".'connection: '."'@cos.database.pdo'"] as $needle){
+    'BStocksCanonicalDraftProjection','BStocksCanonicalDraftService','BoundedBboSweepService',
+    'MysqlBoundedBboSweepGate',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
 }
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
@@ -88,4 +94,12 @@ $assert(str_contains($planner,'InstrumentStatus::Active')
     && str_contains($planner,'BLOCKED_AMBIGUOUS_MAPPING')
     && str_contains($planner,'createSubscription'),
     'BBO planner must use existing audited source and canonical identity gates.');
+$bboSweep=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/BoundedBboSweepService.php');
+$assert(str_contains($bboSweep,'MarketSourcePollingService')
+    && str_contains($bboSweep,'BLOCKED_BUDGET')
+    && str_contains($bboSweep,'BLOCKED_MIXED_SUBSCRIPTIONS'),
+    'BBO fallback must use canonical ingestion, bounded budget and typed subscriptions.');
+$assert(str_contains($scheduler,'SampleBStockBboQuotes')
+    && str_contains($scheduler,'capitalMarketsBboPollEnabled'),
+    'Bounded BBO must be opt-in through the existing scheduler.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
