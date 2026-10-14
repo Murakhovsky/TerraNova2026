@@ -118,6 +118,24 @@ final class L2RecoverySession
         $this->bufferBytes = 0;
     }
 
+
+    /** @return list<array{U:string,u:string}> */
+    public function bufferedBinanceRanges(int $epoch): array
+    {
+        $this->requireEpoch($epoch);
+        if (!in_array($this->status, ['BUFFERING','SYNCING'], true)) return [];
+        $ranges = [];
+        foreach ($this->buffer as $entry) {
+            $payload = $entry['payload'];
+            if (!is_array($payload) || !isset($payload['U'], $payload['u'])
+                || !is_string($payload['U']) || !is_string($payload['u'])) {
+                throw new DomainException('Unexpected Binance recovery buffer entry.');
+            }
+            $ranges[] = ['U'=>$payload['U'], 'u'=>$payload['u']];
+        }
+        return $ranges;
+    }
+
     public function status(): string { return $this->status; }
 
     public function trustedBook(int $epoch): ?MarketOrderBook

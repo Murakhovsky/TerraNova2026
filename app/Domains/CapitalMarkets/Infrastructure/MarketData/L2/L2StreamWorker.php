@@ -38,15 +38,22 @@ final readonly class L2StreamWorker
             $subscribe = $this->encoder->encode($this->config);
             if ($subscribe !== null) $this->transport->sendText($subscribe);
             $snapshotPending = str_starts_with($this->config->venue, 'BINANCE_');
+            $snapshot = null;
             for ($i = 0; $i < $maxMessages; ++$i) {
                 $frame = $this->transport->readText();
                 $this->processor->receive($frame);
                 if ($snapshotPending) {
+                    // Fetch after the first diff; retain the recovery buffer while
+                    // awaiting a diff that actually bridges the REST snapshot.
+                    $snapshot = $this->snapshotClient->fetch($this->config);
                     $snapshotPending = false;
-                    $this->processor->reconcile($this->snapshotClient->fetch($this->config));
-                    if ($this->processor->trustedBook() === null) {
-                        throw new DomainException('Binance snapshot bridge not established; reconnect required.');
-                    }
+                }
+                if ($snapshot !== null && $this->processor->canBridge($snapshot['sequence'])) {
+                    $this->processor->reconcile($snapshot);
+                    $snapshot = null;
+                }
+                if ($snapshot !== null && $this->processor->snapshotTooOld($snapshot['sequence'])) {
+                    throw new DomainException('Binance snapshot fell behind buffered diffs; reconnect required.');
                 }
                 $book = $this->processor->trustedBook();
                 if ($book === null) continue;
