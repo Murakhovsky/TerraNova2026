@@ -6,6 +6,7 @@ namespace Kernel\Action\Service;
 use Kernel\Action\Action;
 use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Contract\FederatedActionAdmissionInterface;
+use Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface;
 use Kernel\Execution\ExecutionFailureException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\DomainModuleRegistry;
@@ -16,6 +17,7 @@ final readonly class ModuleActionExecutionGate implements ActionExecutionGateInt
         private DomainModuleRegistry $domains,
         private ActiveModuleResolver $modules,
         private ?FederatedActionAdmissionInterface $federation = null,
+        private ?WorkflowActionWorkerAdmissionInterface $workflow = null,
     ) {
     }
 
@@ -34,6 +36,13 @@ final readonly class ModuleActionExecutionGate implements ActionExecutionGateInt
                 $moduleId,
                 $action->organizationId,
             ));
+        }
+        if ($action->idempotencyKey !== null
+            && str_starts_with($action->idempotencyKey, 'wf:')) {
+            if ($this->workflow === null) {
+                throw ExecutionFailureException::policyDenied('Workflow Action worker admission is not installed.');
+            }
+            $this->workflow->assertAuthorized($action);
         }
         if ($action->idempotencyKey !== null
             && str_starts_with($action->idempotencyKey, 'fed:')) {

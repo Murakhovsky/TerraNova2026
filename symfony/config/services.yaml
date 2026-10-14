@@ -262,6 +262,8 @@ services:
     alias: App\Infrastructure\Messenger\SymfonyEventBus
 
   # Durable Workflow foundation, fail closed; NOT connected to Federation/Engineering writers.
+  Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface:
+    alias: App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission
   Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
   # Plan verifier stays fail-closed. Real Action receipt verifier is not promoted.
@@ -2512,6 +2514,7 @@ services:
       $domains: '@Kernel\Module\DomainModuleRegistry'
       $modules: '@Kernel\Module\ActiveModuleResolver'
       $federation: '@App\Persistence\Federation\FederatedActionAdmission'
+      $workflow: '@App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission'
 
   Kernel\Action\Service\ActionExecutor:
     arguments:

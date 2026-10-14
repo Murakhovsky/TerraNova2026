@@ -8,11 +8,15 @@ declare(strict_types=1);
 require (string) (getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__, 2) . '/symfony/vendor/autoload.php');
 
 use App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission;
+use App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
 use App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier;
 use App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence;
 use App\Persistence\Workflow\FailClosedWorkflowStepClaimAdmission;
 use Doctrine\DBAL\DriverManager;
+use Kernel\Action\Action;
+use Kernel\Action\ActionStatus;
+use Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository;
 use Kernel\Identity\Model\OrganizationRole;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
@@ -218,7 +222,119 @@ try {
     if($db->fetchOne('SELECT status FROM cos_actions WHERE organization_id=:org AND id=:action',$keys)!=='QUEUED') {
         throw new RuntimeException('Admission unexpectedly mutated or dispatched the canonical Action.');
     }
-    echo "Workflow Action claim MySQL passed: queued canonical Action, Plan evidence, live modules, immutable inputs, approval, policy, zero attempts and fenced claim.\n";
+
+    // The worker runs after the canonical Action repository records attempt 1.
+    $db->executeStatement(
+        'UPDATE cos_actions SET status="RUNNING",started_at=NOW(6)
+         WHERE organization_id=:org AND id=:action', $keys,
+    );
+    $db->executeStatement(
+        'INSERT INTO cos_action_attempts
+         (organization_id,action_id,attempt,worker_id,status,started_at)
+         VALUES (:org,:action,1,"action-worker","RUNNING",NOW(6))', $keys,
+    );
+    $worker=new DoctrineWorkflowActionWorkerAdmission(
+        $db,$knownPlan,new CanonicalCapabilityCatalog($catalog),$modules,
+    );
+    $untrustedWorker=new DoctrineWorkflowActionWorkerAdmission(
+        $db,new FailClosedWorkflowPlanApprovalEvidence(),new CanonicalCapabilityCatalog($catalog),$modules,
+    );
+    $action=new Action(
+        $actionId,$org,'test.publish','case','123',['approved'=>true,'count'=>2],
+        'USER',$actorId,'APPROVAL_REQUIRED','HIGH',
+        'wf:'.$step->idempotencyKey,new DateTimeImmutable(),ActionStatus::Running,$draft->correlationId,
+    );
+    $worker->assertAuthorized($action);
+    $reject(static fn()=> $untrustedWorker->assertAuthorized($action),'worker untrusted Plan proof');
+    $permissionState->setEnabled($org,'sales',false);
+    $reject(static fn()=> $worker->assertAuthorized($action),'worker disabled module after Action claim');
+    $permissionState->setEnabled($org,'sales',true);
+    $db->executeStatement(
+        'UPDATE cos_approvals SET decided_by_id=:actor WHERE organization_id=:org AND action_id=:action',
+        ['actor'=>$actorId,...$keys],
+    );
+    $reject(static fn()=> $worker->assertAuthorized($action),'worker self approved Action');
+    $db->executeStatement(
+        'UPDATE cos_approvals SET decided_by_id=:actor WHERE organization_id=:org AND action_id=:action',
+        ['actor'=>$approvedBy,...$keys],
+    );
+    $db->executeStatement(
+        'UPDATE cos_policy_evaluations SET decision="DENIED" WHERE organization_id=:org AND action_id=:action',
+        $keys,
+    );
+    $reject(static fn()=> $worker->assertAuthorized($action),'worker Policy denied after Action claim');
+    $db->executeStatement(
+        'UPDATE cos_policy_evaluations SET decision="APPROVAL_REQUIRED" WHERE organization_id=:org AND action_id=:action',
+        $keys,
+    );
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps SET claim_expires_at=DATE_SUB(NOW(6),INTERVAL 1 SECOND)
+         WHERE organization_id=:org AND run_id=:run AND step_id="send"',
+        ['org'=>$org,'run'=>$identity->runId],
+    );
+    $reject(static fn()=> $worker->assertAuthorized($action),'expired technical step claim');
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps SET claim_expires_at=DATE_ADD(NOW(6),INTERVAL 90 SECOND)
+         WHERE organization_id=:org AND run_id=:run AND step_id="send"',
+        ['org'=>$org,'run'=>$identity->runId],
+    );
+    $db->executeStatement(
+        'INSERT INTO cos_action_attempts
+         (organization_id,action_id,attempt,worker_id,status,started_at)
+         VALUES (:org,:action,2,"second-worker","RUNNING",NOW(6))', $keys,
+    );
+    $reject(static fn()=> $worker->assertAuthorized($action),'second Action worker attempt');
+    $db->executeStatement(
+        'DELETE FROM cos_action_attempts WHERE organization_id=:org AND action_id=:action AND attempt=2',
+        $keys,
+    );
+    $db->executeStatement(
+        'UPDATE cos_actions SET parameters=:params WHERE organization_id=:org AND id=:action',
+        ['params'=>json_encode(['approved'=>false,'count'=>2],JSON_THROW_ON_ERROR),...$keys],
+    );
+    $reject(static fn()=> $worker->assertAuthorized($action),'worker canonical Action input drift');
+    $db->executeStatement(
+        'UPDATE cos_actions SET parameters=:params WHERE organization_id=:org AND id=:action',
+        ['params'=>json_encode(['approved'=>true,'count'=>2],JSON_THROW_ON_ERROR),...$keys],
+    );
+    $worker->assertAuthorized($action);
+
+    // Global stale recovery must quarantine federation/workflow external
+    // effects for reconciliation while preserving ordinary retry behavior.
+    $db->executeStatement(
+        'UPDATE cos_actions SET started_at=DATE_SUB(NOW(6),INTERVAL 15 MINUTE)
+         WHERE organization_id=:org AND id=:action', $keys,
+    );
+    $fedId=bin2hex(random_bytes(16));
+    $plainId=bin2hex(random_bytes(16));
+    foreach ([$fedId=>'fed:'.hash('sha256','federation-'.$token),
+              $plainId=>'normal:'.hash('sha256','normal-'.$token)] as $extraId=>$extraKey) {
+        $db->executeStatement(
+            'INSERT INTO cos_actions
+             (id,organization_id,type,target_type,target_id,parameters,source_type,source_id,
+              status,execution_mode,risk_level,idempotency_key,correlation_id,started_at)
+             VALUES (:id,:org,"test.publish","case","123",:params,"USER",:actor,
+                     "RUNNING","APPROVAL_REQUIRED","HIGH",:key,:correlation,
+                     DATE_SUB(NOW(6),INTERVAL 15 MINUTE))',
+            ['id'=>$extraId,'org'=>$org,
+             'params'=>json_encode(['count'=>2,'approved'=>true],JSON_THROW_ON_ERROR),
+             'actor'=>$actorId,'key'=>$extraKey,'correlation'=>$draft->correlationId],
+        );
+    }
+    $pdo=$db->getNativeConnection();
+    if(!$pdo instanceof PDO) throw new RuntimeException('Expected native PDO-backed MySQL store.');
+    (new MysqlActionRepository($pdo))->requeueStale(60);
+    $statuses=$db->fetchAllKeyValue(
+        'SELECT id,status FROM cos_actions WHERE organization_id=:org AND id IN (:wf,:fed,:plain)',
+        ['org'=>$org,'wf'=>$actionId,'fed'=>$fedId,'plain'=>$plainId],
+    );
+    if(($statuses[$actionId]??null)!=='RUNNING'
+        || ($statuses[$fedId]??null)!=='RUNNING'
+        || ($statuses[$plainId]??null)!=='QUEUED') {
+        throw new RuntimeException('Stale recovery replay protection or normal retry behavior regressed.');
+    }
+
+    echo "Workflow Action claim + worker gate MySQL passed: preclaim, live Policy/Approval, no second attempts, expired lease and protected stale requeue.\n";
 } finally {
     $db->executeStatement('DELETE FROM cos_approvals WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_policy_evaluations WHERE organization_id=:org',['org'=>$org]);

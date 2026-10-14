@@ -201,6 +201,8 @@ interface WorkflowRecoveryInterface
 
 **Кандидат канонічного Action claim admission:** `DoctrineWorkflowActionClaimAdmission` робить read-only перевірку pinned Run/Step/Plan, `CanonicalCapabilityCatalog`, `ActiveModuleResolver`, єдиного QUEUED Action з `wf:` idempotency key, нульових попередніх attempts, latest Policy і незалежного людського Approval. **Цей кандидат не є штатним DI alias і не відправляє Action**. До production cutover потрібен окремий останній worker-side gate, який повторює Policy/Approval/Plan без TOCTOU.
 
+**Worker re-admission і safe recovery:** `ModuleActionExecutionGate` тепер визначає `wf:` Action та викликає окремий `WorkflowActionWorkerAdmissionInterface` безпосередньо перед Domain handler. Symfony production використовує `FailClosedWorkflowActionWorkerAdmission`: до завершення parity жоден Workflow-owned Action не виконається. `MysqlActionRepository::requeueStale()` більше **не** перестворює спроби для `fed:` і `wf:`: такі RUNNING ефекти потребують ручного звіряння. Це не змінює звичайний retry для інших Action. Новий кандидат read-only admission (тільки для першого зовнішнього кроку, до доказової підтримки predecessor receipts) і MySQL тести окремі від production alias.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0

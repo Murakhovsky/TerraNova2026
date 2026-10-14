@@ -212,7 +212,10 @@ final readonly class MysqlActionRepository implements ActionRepositoryInterface
         return $this->transactional(function () use ($cutoff): int {
             $select = $this->connection->prepare(
                 "SELECT id, organization_id FROM cos_actions "
-                . "WHERE status = 'RUNNING' AND started_at < :cutoff ORDER BY started_at FOR UPDATE"
+                . "WHERE status = 'RUNNING' AND started_at < :cutoff "
+                . "AND (idempotency_key IS NULL OR "
+                . "(idempotency_key NOT LIKE 'fed:%' AND idempotency_key NOT LIKE 'wf:%')) "
+                . "ORDER BY started_at FOR UPDATE"
             );
             $select->execute(['cutoff' => $cutoff->format('Y-m-d H:i:s.u')]);
             $rows = $select->fetchAll(PDO::FETCH_ASSOC);
