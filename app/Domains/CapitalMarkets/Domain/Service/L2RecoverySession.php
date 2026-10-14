@@ -101,6 +101,13 @@ final class L2RecoverySession
         $this->status = 'TRUSTED';
     }
 
+    public function invalidateIfCurrent(int $epoch, string $reason): bool
+    {
+        if ($epoch !== $this->epoch) return false;
+        $this->invalidate($reason);
+        return true;
+    }
+
     public function invalidate(string $reason): void
     {
         $this->status = 'INVALID';

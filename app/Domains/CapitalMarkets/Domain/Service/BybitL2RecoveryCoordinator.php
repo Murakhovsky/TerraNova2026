@@ -34,11 +34,11 @@ final class BybitL2RecoveryCoordinator
     {
         $this->validate($updateId, $crossSequence);
         if ($snapshot->eventType() !== MarketEventType::OrderBookSnapshot) {
-            $this->session->invalidate('BYBIT_INVALID_SNAPSHOT');
+            $this->session->invalidateIfCurrent($epoch, 'BYBIT_INVALID_SNAPSHOT');
             throw new DomainException('Bybit snapshot expected.');
         }
         if ($this->session->diagnostics()['buffered'] !== 0) {
-            $this->session->invalidate('BYBIT_UNRECONCILED_BUFFER');
+            $this->session->invalidateIfCurrent($epoch, 'BYBIT_UNRECONCILED_BUFFER');
             throw new DomainException('Bybit snapshot requires replay of buffered deltas.');
         }
         $this->session->drain($epoch);
@@ -52,7 +52,7 @@ final class BybitL2RecoveryCoordinator
         try {
             $this->validate($updateId, $crossSequence);
         } catch (\Throwable $error) {
-            $this->session->invalidate('BYBIT_INVALID_SEQUENCE');
+            $this->session->invalidateIfCurrent($epoch, 'BYBIT_INVALID_SEQUENCE');
             throw $error;
         }
         $book = $this->session->trustedBook($epoch);
@@ -73,7 +73,7 @@ final class BybitL2RecoveryCoordinator
             $this->updateId = $updateId;
             $this->crossSequence = $crossSequence;
         } catch (\Throwable $error) {
-            $this->session->invalidate('BYBIT_SEQUENCE_INVALID');
+            $this->session->invalidateIfCurrent($epoch, 'BYBIT_SEQUENCE_INVALID');
             throw $error;
         }
     }
