@@ -155,11 +155,11 @@
                             <label class="cos-field"><span>Наступний контакт</span><input class="cos-input" name="next_contact_at" type="datetime-local" value="{{ case.form.next_contact_at }}"></label>
                         </div>
 
-                        <label class="cos-field"><span>Description</span><textarea class="cos-textarea" name="description" rows="5">{{ case.form.description }}</textarea></label>
-                        <label class="cos-field"><span>Нотатки по людині</span><textarea class="cos-textarea" name="person_notes" rows="3">{{ case.form.person_notes }}</textarea></label>
+                        <label class="cos-field"><span>{{ 'Description'|trans }}</span><textarea class="cos-textarea" name="description" rows="5">{{ case.form.description }}</textarea>textarea</label>
+                        <label class="cos-field"><span>Нотатки по людині</span><textarea class="cos-textarea" name="person_notes" rows="3">{{ case.form.person_notes }}</textarea>textarea</label>
 
                         <twig:CosActionBar label="Збереження кейсу" align="start">
-                            <button class="cos-button cos-button--primary" type="submit">Зберегти</button>
+                            <button class="cos-button cos-button--primary" type="submit">{{ 'Зберегти'|trans }}</button>
                         </twig:CosActionBar>
                     </form>
                 </article>
@@ -188,12 +188,12 @@
                             <label class="cos-field"><span>Тип</span><select class="cos-select" name="activity_type">
                                 {% for code,label in case.activityOptions %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
                             </select></label>
-                            <label class="cos-field"><span>Назва</span><input class="cos-input" name="title" type="text" maxlength="180" required></label>
+                            <label class="cos-field"><span>{{ 'Назва'|trans }}</span><input class="cos-input" name="title" type="text" maxlength="180" required></label>
                             <label class="cos-field"><span>Коли</span><input class="cos-input" name="due_at" type="datetime-local"></label>
                             <label class="cos-field"><span>Тривалість дзвінка, сек.</span><input class="cos-input" name="duration_seconds" type="number" min="0" step="1"></label>
                             <label class="cos-field"><span>Результат дзвінка</span><input class="cos-input" name="call_result" type="text" maxlength="100" placeholder="client_thinking"></label>
                         </div>
-                        <label class="cos-field"><span>Опис</span><textarea class="cos-textarea" name="body" rows="4"></textarea></label>
+                        <label class="cos-field"><span>{{ 'Опис'|trans }}</span><textarea class="cos-textarea" name="body" rows="4"></textarea>textarea</label>
                         <label class="cos-checkbox"><input name="completed" type="checkbox" value="1"><span>Виконано зараз</span></label>
                         <button class="cos-button cos-button--primary" type="submit">Додати дію</button>
                     </form>
