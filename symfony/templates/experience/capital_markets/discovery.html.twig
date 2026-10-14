@@ -65,7 +65,7 @@
     {% if listingReviewRows is empty %}
       <p>Жодного актуального точного лістингу не знайдено. Запустіть Discovery.</p>
     {% else %}
-      <p>Показано до 40 кандидатів. Для кожного лістингу потрібне окреме рішення з доказами.</p>
+      <p>Сторінка {{ listingPage }}. Показано до 40 записів; неперевірені йдуть першими. Кожен лістинг потребує окремого доказу.</p>
       <div class="table-responsive">
         <table class="table">
           <thead><tr><th>Токен</th><th>Біржа</th><th>Пара</th><th>Дані UTC</th><th>Перевірка</th><th>Рішення</th></tr></thead>
@@ -105,6 +105,10 @@
           </tbody>
         </table>
       </div>
+      <nav aria-label="Сторінки перевірки лістингів" class="d-flex gap-2">
+        {% if listingPage > 1 %}<a href="/capital-markets/discovery?listingPage={{ listingPage - 1 }}">Попередні 40</a>{% endif %}
+        {% if listingReviewRows|length == 40 and listingPage < 13 %}<a href="/capital-markets/discovery?listingPage={{ listingPage + 1 }}">Наступні 40</a>{% endif %}
+      </nav>
     {% endif %}
   </section>
 

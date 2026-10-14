@@ -68,12 +68,13 @@ final readonly class CrossVenueDiscoveryController
         $tenant=$this->authorized(CapitalMarketsCapability::MarketDataView);
         if($tenant instanceof Response)return $tenant;
         $org=$tenant->organizationId()->value();
+        $page=min(13,max(1,$request->query->getInt('listingPage',1)));
         try {
             $universe=$this->activeUniverse->load($org,$this->universeFile);
             $watchlist=$universe['rows'];
             $snapshot=$this->snapshots->latest($org);
             $poolCandidateCounts=$this->poolCandidates->counts($org);
-            $listingReviewRows=$this->listingReviews->pending($org);
+            $listingReviewRows=$this->listingReviews->pending($org,40,($page-1)*40);
             $canonicalCoverage=$this->seedImports->canonicalCoverage($org);
             $bboPollHealth=$this->bboPollGate->recent($org);
             $quoteSnapshot=$this->quotes->latest($org);
@@ -97,6 +98,7 @@ final readonly class CrossVenueDiscoveryController
                 'universeOrigin'=>$universe['origin'],'universeAsOf'=>$universe['source_as_of'],
                 'poolCandidateCounts'=>$poolCandidateCounts,
                 'listingReviewRows'=>$listingReviewRows,
+                'listingPage'=>$page,
                 'canReviewListings'=>$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage)
                     && $this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage),
                 'canonicalCoverage'=>$canonicalCoverage,'bboPollHealth'=>$bboPollHealth,

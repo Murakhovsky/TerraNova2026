@@ -19,9 +19,10 @@ final readonly class CrossVenueListingReviewRepository
     public function __construct(private PDO $connection,private CrossVenueBboAdmissionFence $fence) {}
 
     /** @return list<array<string,mixed>> */
-    public function pending(string $organizationId,int $limit=40):array
+    public function pending(string $organizationId,int $limit=40,int $offset=0):array
     {
-        if ($organizationId==='' || strlen($organizationId)>190 || $limit<1 || $limit>100) {
+        if ($organizationId==='' || strlen($organizationId)>190 || $limit<1 || $limit>100
+            || $offset<0 || $offset>500) {
             throw new InvalidArgumentException('Invalid listing review scope.');
         }
         $statement=$this->connection->prepare(
@@ -30,7 +31,8 @@ final readonly class CrossVenueListingReviewRepository
              FROM tn_capital_market_cross_venue_pool_candidates
              WHERE organization_id=:org AND pool_key=:pool
                AND listing_state='LISTED_EXACT_TOKEN_SYMBOL'
-             ORDER BY verification_state,seed_token,venue LIMIT ".$limit
+             ORDER BY CASE verification_state WHEN 'UNVERIFIED' THEN 0 ELSE 1 END,
+                      seed_token,venue LIMIT ".$limit." OFFSET ".$offset
         );
         $statement->execute(['org'=>$organizationId,'pool'=>self::POOL]);
         return $statement->fetchAll(PDO::FETCH_ASSOC);
