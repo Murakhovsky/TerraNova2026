@@ -75,7 +75,7 @@
     </div>
     <div class="col-lg-6">
       <h3>By strategy</h3>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Strategy</th><th>Exposure</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Strategy'|trans }}</th><th>Exposure</th></tr></thead><tbody>
       {% for key,value in e.by_strategy|default({}) %}<tr><td>{{ key }}</td><td>{{ value }}</td></tr>{% else %}<tr><td colspan="2">No strategy exposure.</td></tr>{% endfor %}
       </tbody></table></div>
     </div>
@@ -99,7 +99,7 @@
     <div class="col-lg-6">
       <h3>By strategy</h3>
       <div class="table-responsive"><table class="table">
-        <thead><tr><th>Strategy</th><th>P&L</th><th>Capital</th><th>Risk consumed</th></tr></thead>
+        <thead><tr><th>{{ 'Strategy'|trans }}</th><th>P&L</th><th>Capital</th><th>Risk consumed</th></tr></thead>
         <tbody>
         {% for key,x in perf.by_strategy|default({}) %}
           <tr><td>{{ key }}</td><td>{{ x.pnl|default('0') }}</td><td>{{ x.deployed_capital|default('0') }}</td><td>{{ x.risk_consumed|default('0') }}</td></tr>
@@ -134,7 +134,7 @@
     <div>
       <small>OPPORTUNITY</small>
       <h2>{{ o.hypothesis|default(o.type|default(o.opportunity_type|default('Opportunity'))) }}</h2>
-      <p><code>{{ o.opportunity_id|default('—') }}</code> · standalone status <strong>{{ o.status|default('—') }}</strong></p>
+      <p><code>{{ o.opportunity_id|default('—') }}</code>code · standalone status <strong>{{ o.status|default('—') }}</strong></p>
     </div>
     <div>
       <strong>Portfolio decision:</strong>
@@ -162,8 +162,8 @@
       </tbody>
     </table></div>
     <div class="row g-3">
-      <div class="col-lg-6"><h3>Venue exposure after</h3><pre>{{ impact.venue_exposure_after|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
-      <div class="col-lg-6"><h3>Strategy exposure after</h3><pre>{{ impact.strategy_exposure_after|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+      <div class="col-lg-6"><h3>Venue exposure after</h3><pre>{{ impact.venue_exposure_after|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>pre</div>
+      <div class="col-lg-6"><h3>Strategy exposure after</h3><pre>{{ impact.strategy_exposure_after|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>pre</div>
     </div>
   {% else %}
     <div class="alert alert-warning">Portfolio impact cannot be projected because this opportunity has no positive capital requirement.</div>
@@ -175,7 +175,7 @@
   {% if item %}
     <p><strong>{{ item.decision }}</strong> · requested {{ item.requested_capital|default('—') }} · approved {{ item.approved_capital|default('—') }}</p>
     <p>{{ item.reason|default('') }}</p>
-    <p><small>Allocation Plan: <code>{{ w.allocation_plan_id|default('—') }}</code></small></p>
+    <p><small>Allocation Plan: <code>{{ w.allocation_plan_id|default('—') }}</code>code</small></p>
   {% else %}
     <p>This opportunity is not present in the latest Allocation Plan.</p>
   {% endif %}
@@ -187,7 +187,7 @@
     <thead><tr><th>Reservation</th><th>Amount</th><th>{{ 'Status'|trans }}</th><th>Expires</th></tr></thead>
     <tbody>
     {% for reservation in w.reservations|default([]) %}
-      <tr><td><code>{{ reservation.reservation_id }}</code></td><td>{{ reservation.amount }}</td><td>{{ reservation.status }}</td><td>{{ reservation.expires_at|default('—') }}</td></tr>
+      <tr><td><code>{{ reservation.reservation_id }}</code>code</td><td>{{ reservation.amount }}</td><td>{{ reservation.status }}</td><td>{{ reservation.expires_at|default('—') }}</td></tr>
     {% else %}
       <tr><td colspan="4">No capital reservation yet.</td></tr>
     {% endfor %}
@@ -195,7 +195,7 @@
   </table></div>
   {% set execution=w.execution|default({}) %}
   {% if execution %}
-    <p><strong>Execution:</strong> <code>{{ execution.execution_id|default(execution.id|default('—')) }}</code> · {{ execution.status|default('—') }}</p>
+    <p><strong>Execution:</strong> <code>{{ execution.execution_id|default(execution.id|default('—')) }}</code>code · {{ execution.status|default('—') }}</p>
   {% else %}
     <p>No execution has been created. Allocator does not execute orders itself.</p>
   {% endif %}
@@ -245,10 +245,10 @@
 <section class="cos-panel">
   <h2>Allocation plan</h2>
   {% if a %}
-    <p><strong>{{ a.status }}</strong> · policy {{ a.policy_version }} · fingerprint <code>{{ a.input_fingerprint|default('—') }}</code></p>
+    <p><strong>{{ a.status }}</strong> · policy {{ a.policy_version }} · fingerprint <code>{{ a.input_fingerprint|default('—') }}</code>code</p>
     <p>{{ a.reasoning_summary }}</p>
     <div class="table-responsive"><table class="table">
-      <thead><tr><th>{{ 'Priority'|trans }}</th><th>Strategy</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Decision</th><th>Reason</th></tr></thead>
+      <thead><tr><th>{{ 'Priority'|trans }}</th><th>{{ 'Strategy'|trans }}</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Decision</th><th>Reason</th></tr></thead>
       <tbody>
       {% for x in a.allocations|default([]) %}
         <tr><td>{{ x.priority }}</td><td>{{ x.strategy_version_id }}</td><td>{{ x.opportunity_id }}</td><td>{{ x.requested_capital }}</td><td>{{ x.approved_capital }}</td><td><strong>{{ x.decision }}</strong></td><td>{{ x.reason }}</td></tr>

@@ -244,7 +244,7 @@
     <section class="cos-panel">
       <h2>Active Strategies</h2>
       <div class="table-responsive"><table class="table">
-        <thead><tr><th>Strategy</th><th>Allocated</th><th>Deployed</th><th>{{ 'Available'|trans }}</th><th>Net P&L</th><th>Risk Used</th><th>{{ 'Status'|trans }}</th></tr></thead>
+        <thead><tr><th>{{ 'Strategy'|trans }}</th><th>Allocated</th><th>Deployed</th><th>{{ 'Available'|trans }}</th><th>Net P&L</th><th>Risk Used</th><th>{{ 'Status'|trans }}</th></tr></thead>
         <tbody>
         {% for s in w.active_strategies|default([]) %}
           <tr><td>{{ s.strategy_version_id }}</td><td>{{ s.allocated_capital|default('—') }}</td><td>{{ s.deployed|default('—') }}</td><td>{{ s.available|default('—') }}</td><td>{{ s.net_pnl is not null ? s.net_pnl : '—' }}</td><td>{{ s.risk_used is not null ? s.risk_used : '—' }}</td><td>{{ s.status|default('—') }}</td></tr>
@@ -295,7 +295,7 @@
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-risk">{{ 'Risk'|trans }}</label><input id="cm-op-risk" class="form-control" name="risk" value="{{ query.risk|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-status">{{ 'Status'|trans }}</label><input id="cm-op-status" class="form-control" name="status" value="{{ query.status|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-decision">Decision</label><input id="cm-op-decision" class="form-control" name="decision" value="{{ query.decision|default('') }}"></div>
-        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-strategy">Strategy</label><input id="cm-op-strategy" class="form-control" name="strategy" value="{{ query.strategy|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-strategy">{{ 'Strategy'|trans }}</label><input id="cm-op-strategy" class="form-control" name="strategy" value="{{ query.strategy|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-instrument">Instrument</label><input id="cm-op-instrument" class="form-control" name="instrument" value="{{ query.instrument|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-venue">Venue</label><input id="cm-op-venue" class="form-control" name="venue" value="{{ query.venue|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-min-net">Min expected net</label><input id="cm-op-min-net" class="form-control" name="min_net" inputmode="decimal" value="{{ query.min_net|default('') }}"></div>
@@ -441,7 +441,7 @@
     </section>
 
     <section class="cos-panel">
-      <h2>Evidence</h2>
+      <h2>{{ 'Evidence'|trans }}</h2>
       <div class="table-responsive"><table class="table">
         <thead><tr><th>Instrument</th><th>Venue / Source</th><th>Mid / Reference</th><th>Age</th><th>Trust</th><th>Mode</th></tr></thead>
         <tbody>
@@ -662,7 +662,7 @@
       <h2>Rejected Research</h2>
       <p>Rejected hypotheses are first-class knowledge, not a drawer where inconvenient results go to die.</p>
       <div class="table-responsive"><table class="table">
-        <thead><tr><th>Hypothesis</th><th>Reason</th><th>Result</th></tr></thead>
+        <thead><tr><th>{{ 'Hypothesis'|trans }}</th><th>Reason</th><th>{{ 'Result'|trans }}</th></tr></thead>
         <tbody>
         {% for h in research.rejections|default([]) %}
           <tr><td>{{ h.hypothesis_id|default(h.id|default('—')) }}</td><td>{{ h.reason|default(h.rejection_reason|default('—')) }}</td><td>{{ h.result|default(h.status|default('REJECTED')) }}</td></tr>
@@ -680,17 +680,17 @@
     </section>
     <div class="row g-3">
       <div class="col-lg-7"><section class="cos-panel h-100"><small>WHY SHOULD THIS EDGE EXIST?</small><h2>Economic Thesis</h2><p>{{ h.economic_reason|default(h.thesis|default('No economic rationale stored.')) }}</p><h3>Edge Source</h3><p>{{ h.edge_source|default('—') }}</p></section></div>
-      <div class="col-lg-5"><section class="cos-panel h-100"><h2>Criteria</h2><p><strong>Success:</strong> {{ h.success_criteria is iterable ? h.success_criteria|json_encode : h.success_criteria|default('—') }}</p><p><strong>Failure:</strong> {{ h.failure_criteria is iterable ? h.failure_criteria|json_encode : h.failure_criteria|default('—') }}</p></section></div>
+      <div class="col-lg-5"><section class="cos-panel h-100"><h2>Criteria</h2><p><strong>{{ 'Success:'|trans }}</strong> {{ h.success_criteria is iterable ? h.success_criteria|json_encode : h.success_criteria|default('—') }}</p><p><strong>{{ 'Failure:'|trans }}</strong> {{ h.failure_criteria is iterable ? h.failure_criteria|json_encode : h.failure_criteria|default('—') }}</p></section></div>
     </div>
     <section class="cos-panel">
-      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap"><h2>Experiments</h2><strong>Decision: {{ w.research_decision|default('UNAVAILABLE') }}</strong></div>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Experiment</th><th>{{ 'Type'|trans }}</th><th>Strategy Version</th><th>Dataset</th><th>{{ 'Status'|trans }}</th></tr></thead><tbody>
+      <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap"><h2>{{ 'Experiments'|trans }}</h2><strong>Decision: {{ w.research_decision|default('UNAVAILABLE') }}</strong></div>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Experiment'|trans }}</th><th>{{ 'Type'|trans }}</th><th>{{ 'Strategy Version'|trans }}</th><th>{{ 'Dataset'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead><tbody>
       {% for x in w.experiments|default([]) %}<tr><td>{{ x.experiment_id|default(x.id|default('—')) }}</td><td>{{ x.type|default('—') }}</td><td>{{ x.strategy_version_id|default('—') }}</td><td>{{ x.dataset_id|default('—') }}</td><td>{{ x.status|default('—') }}</td></tr>{% else %}<tr><td colspan="5">No experiments yet.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
     <section class="cos-panel">
       <h2>Results</h2>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Result</th><th>Experiment</th><th>{{ 'Status'|trans }}</th><th>Summary</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Result'|trans }}</th><th>{{ 'Experiment'|trans }}</th><th>{{ 'Status'|trans }}</th><th>Summary</th></tr></thead><tbody>
       {% for x in w.results|default([]) %}<tr><td>{{ x.result_id|default(x.id|default('—')) }}</td><td>{{ x.experiment_id|default('—') }}</td><td>{{ x.status|default(x.decision|default('—')) }}</td><td>{{ x.summary|default(x.outcome|default(x.metrics|default({})|json_encode)) }}</td></tr>{% else %}<tr><td colspan="4">No completed result is stored for this hypothesis yet.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
@@ -699,7 +699,7 @@
       <h2>Audit</h2>
       <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Time'|trans }}</th><th>Action</th><th>{{ 'Actor'|trans }}</th><th>Reason</th><th>{{ 'Correlation'|trans }}</th></tr></thead><tbody>
       {% for a in w.audit|default([]) %}
-        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
+        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code>code</td></tr>
       {% else %}<tr><td colspan="5">No audit activity is recorded for this hypothesis.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
@@ -708,7 +708,7 @@
     <section class="cos-panel">
       <h2>Strategy Lab</h2>
       <div class="table-responsive"><table class="table align-middle">
-        <thead><tr><th>Strategy</th><th>Version</th><th>Mode</th><th>Capital</th><th>Net P&L</th><th>Drawdown</th><th>Score</th><th>Capacity</th><th>{{ 'Status'|trans }}</th><th>Decision</th></tr></thead>
+        <thead><tr><th>{{ 'Strategy'|trans }}</th><th>{{ 'Version'|trans }}</th><th>Mode</th><th>Capital</th><th>Net P&L</th><th>Drawdown</th><th>Score</th><th>Capacity</th><th>{{ 'Status'|trans }}</th><th>Decision</th></tr></thead>
         <tbody>
         {% for s in w.strategies|default([]) %}
           <tr><td><a href="/capital-markets/strategies/{{ s.id|url_encode }}"><strong>{{ s.strategy }}</strong></a></td><td>{{ s.version is not null ? s.version : '—' }}</td><td>{{ s.mode }}</td><td>{{ s.capital is not null ? s.capital : '—' }}</td><td>{{ s.net_pnl is not null ? s.net_pnl : '—' }}</td><td>{{ s.drawdown is not null ? s.drawdown : '—' }}</td><td>{{ s.score is not null ? s.score : '—' }}</td><td>{{ s.capacity is not null ? s.capacity : '—' }}</td><td>{{ s.status }}</td><td>{{ s.decision }}</td></tr>
@@ -736,7 +736,7 @@
     <section class="cos-panel">
       <h2>Version Comparison</h2>
       <p>Compare canonical strategy versions side-by-side. Missing evidence remains unavailable rather than being inferred.</p>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Version</th><th>Mode / Stage</th><th>{{ 'Status'|trans }}</th><th>Logic / Parameters</th><th>{{ 'Created'|trans }}</th><th>{{ 'Open'|trans }}</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Version'|trans }}</th><th>Mode / Stage</th><th>{{ 'Status'|trans }}</th><th>Logic / Parameters</th><th>{{ 'Created'|trans }}</th><th>{{ 'Open'|trans }}</th></tr></thead><tbody>
       {% for v in w.version_comparison|default([]) %}
         {% set vid = v.strategy_version_id|default(v.id|default('')) %}
         <tr><td><strong>{{ v.version|default(v.version_number|default(vid ?: '—')) }}</strong></td><td>{{ v.mode|default(v.stage|default('—')) }}</td><td>{{ v.status|default('—') }}</td><td>{{ v.parameters|default(v.logic|default({})) is iterable ? v.parameters|default(v.logic|default({}))|json_encode : v.parameters|default(v.logic|default('—')) }}</td><td>{{ v.created_at|default('—') }}</td><td>{% if vid %}<a href="/capital-markets/strategies/{{ vid|url_encode }}">{{ 'Details'|trans }}</a>{% else %}—{% endif %}</td></tr>
@@ -748,7 +748,7 @@
       <h2>Audit</h2>
       <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Time'|trans }}</th><th>Action</th><th>{{ 'Actor'|trans }}</th><th>Reason</th><th>{{ 'Correlation'|trans }}</th></tr></thead><tbody>
       {% for a in w.audit|default([]) %}
-        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
+        <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code>code</td></tr>
       {% else %}<tr><td colspan="5">No audit activity is recorded for this strategy version.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
@@ -768,7 +768,7 @@
       <twig:CosMetric label="Risk State" value="{{ p.risk.status|default('NOT CALCULATED') }}" hint="deterministic portfolio authority" />
     </section>
     <section class="cos-panel"><h2>Capital Map</h2><div class="table-responsive"><table class="table"><thead><tr><th>State</th><th>Amount</th></tr></thead><tbody>{% for item in w.capital_map|default([]) %}<tr><td>{{ item.key }}</td><td>{{ item.value is not null ? item.value : '—' }}</td></tr>{% endfor %}</tbody></table></div></section>
-    <section class="cos-panel"><h2>Strategy Allocation</h2><div class="table-responsive"><table class="table"><thead><tr><th>Strategy</th><th>Allocated</th><th>Reserved</th><th>Deployed</th><th>{{ 'Available'|trans }}</th><th>Risk Used</th><th>P&L</th></tr></thead><tbody>{% for s in w.strategy_allocations|default([]) %}<tr><td>{{ s.strategy_version_id }}</td><td>{{ s.allocated_capital|default('—') }}</td><td>{{ s.reserved|default('—') }}</td><td>{{ s.deployed|default('—') }}</td><td>{{ s.available|default('—') }}</td><td>{{ s.risk_used is not null ? s.risk_used : '—' }}</td><td>{{ s.net_pnl is not null ? s.net_pnl : '—' }}</td></tr>{% else %}<tr><td colspan="7">No strategy allocation yet.</td></tr>{% endfor %}</tbody></table></div></section>
+    <section class="cos-panel"><h2>Strategy Allocation</h2><div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Strategy'|trans }}</th><th>Allocated</th><th>Reserved</th><th>Deployed</th><th>{{ 'Available'|trans }}</th><th>Risk Used</th><th>P&L</th></tr></thead><tbody>{% for s in w.strategy_allocations|default([]) %}<tr><td>{{ s.strategy_version_id }}</td><td>{{ s.allocated_capital|default('—') }}</td><td>{{ s.reserved|default('—') }}</td><td>{{ s.deployed|default('—') }}</td><td>{{ s.available|default('—') }}</td><td>{{ s.risk_used is not null ? s.risk_used : '—' }}</td><td>{{ s.net_pnl is not null ? s.net_pnl : '—' }}</td></tr>{% else %}<tr><td colspan="7">No strategy allocation yet.</td></tr>{% endfor %}</tbody></table></div></section>
     <section class="cos-panel">
       <h2>Economic Exposure</h2>
       <p>Gross <strong>{{ e.gross_exposure|default('—') }}</strong> · Net <strong>{{ e.net_exposure|default('—') }}</strong>. Both remain visible together.</p>
@@ -788,7 +788,7 @@
       {% if plan %}
         <p><strong>{{ plan.status|default('—') }}</strong> · policy {{ plan.policy_version|default('—') }}</p>
         <p>{{ plan.reasoning_summary|default('') }}</p>
-        <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Priority'|trans }}</th><th>Strategy</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Difference</th><th>Decision</th><th>Reason</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Priority'|trans }}</th><th>{{ 'Strategy'|trans }}</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Difference</th><th>Decision</th><th>Reason</th></tr></thead><tbody>
         {% for x in plan.allocations|default([]) %}
           <tr><td>{{ x.priority|default('—') }}</td><td>{{ x.strategy_version_id|default('—') }}</td><td><a href="/capital-markets/opportunities/{{ x.opportunity_id|default('')|url_encode }}">{{ x.opportunity_id|default('—') }}</a></td><td>{{ x.requested_capital|default('—') }}</td><td>{{ x.approved_capital|default('—') }}</td><td>backend canonical values</td><td><strong>{{ x.decision|default('—') }}</strong></td><td>{{ x.reason|default('—') }}</td></tr>
         {% endfor %}
@@ -827,7 +827,7 @@
   {% elseif cmView == 'execution' %}
     <section class="cos-panel">
       <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap"><h2>Execution Groups</h2><div><a href="/capital-markets/export/executions.csv">Export CSV</a> · <a href="/capital-markets/export/executions.json">JSON</a></div></div>
-      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Execution</th><th>Strategy</th><th>Opportunity</th><th>Legs</th><th>Capital</th><th>State</th><th>Hedge</th><th>Duration</th><th>P&L</th><th>{{ 'Updated'|trans }}</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Execution</th><th>{{ 'Strategy'|trans }}</th><th>Opportunity</th><th>Legs</th><th>Capital</th><th>State</th><th>Hedge</th><th>Duration</th><th>P&L</th><th>{{ 'Updated'|trans }}</th></tr></thead><tbody>
       {% for x in w.executions|default([]) %}
         <tr><td><a href="/capital-markets/execution/{{ x.id|url_encode }}">{{ x.id ?: '—' }}</a></td><td>{{ x.strategy is not null ? x.strategy : '—' }}</td><td>{% if x.opportunity_id %}<a href="/capital-markets/opportunities/{{ x.opportunity_id|url_encode }}">{{ x.opportunity_id }}</a>{% else %}—{% endif %}</td><td>{{ x.legs is iterable ? x.legs|length : '—' }}</td><td>{{ x.capital is not null ? x.capital : '—' }}</td><td><strong>{{ x.state }}</strong></td><td>{{ x.hedge is not null ? x.hedge : '—' }}</td><td>{{ x.duration is not null ? x.duration : '—' }}</td><td>{{ x.pnl is not null ? x.pnl : '—' }}</td><td>{{ x.updated_at is not null ? x.updated_at : '—' }}</td></tr>
       {% else %}<tr><td colspan="10">No executions.</td></tr>{% endfor %}
@@ -909,12 +909,12 @@
       </div>
       <p class="small">Last observation: {{ paperLatest.valued_at|default('unavailable') }} · {{ paperLatest.currency|default('—') }}. Historical windows require real simulated observations near both UTC boundaries, with no backdating.</p>
       <div class="table-responsive"><table class="table">
-        <thead><tr><th>Period</th><th>State</th><th>Simulated Net P&amp;L</th><th>Reason</th></tr></thead>
+        <thead><tr><th>{{ 'Period'|trans }}</th><th>State</th><th>Simulated Net P&amp;L</th><th>Reason</th></tr></thead>
         <tbody>{% for period, value in paperWindows %}
           <tr><td>{{ period == 'today' ? 'Today UTC' : 'Rolling 30D' }}</td><td>{{ value.status|default('UNAVAILABLE') }}</td><td>{{ value.net_pnl is defined and value.net_pnl is not null ? value.net_pnl : '—' }}</td><td>{{ value.reason|default('—') }}</td></tr>
         {% else %}<tr><td colspan="4">No simulated NAV observations yet.</td></tr>{% endfor %}</tbody>
       </table></div>
-      <p class="small">Collector: <code>cos:capital-markets:paper:nav:snapshot</code>. Existing financial certification and historical NAV exports remain completely separate.</p>
+      <p class="small">Collector: <code>cos:capital-markets:paper:nav:snapshot</code>code. Existing financial certification and historical NAV exports remain completely separate.</p>
     </section>
     {% set certifiedNav = perf.latest_certified_nav|default({}) %}
     <section class="cos-panel" aria-label="Independently certified latest NAV">
@@ -975,7 +975,7 @@
                   <td>{{ task.owner_role }}</td>
                   <td>{{ task.action }}</td>
                   <td>{{ task.required_evidence }}</td>
-                  <td><code>{{ task.issue_codes|default([])|join(', ') }}</code></td>
+                  <td><code>{{ task.issue_codes|default([])|join(', ') }}</code>code</td>
                 </tr>
               {% else %}
                 <tr><td colspan="6">Немає сформованого плану. Це не означає, що NAV вже затверджений.</td></tr>
@@ -1005,7 +1005,7 @@
         </table>
       </div>
       <p class="small">Candidate external flows: {{ sourcePreview.candidate_cumulative_external_flow is defined and sourcePreview.candidate_cumulative_external_flow is not null ? sourcePreview.candidate_cumulative_external_flow : '—' }}; candidate liabilities: {{ sourcePreview.candidate_liability_balance is defined and sourcePreview.candidate_liability_balance is not null ? sourcePreview.candidate_liability_balance : '—' }}; authority: {{ sourcePreview.financial_authority|default('OBSERVATION_ONLY') }}. Neither figure enters P&amp;L until independently reconciled.</p>
-      <p class="small">Status is diagnostic only; preflight never writes a snapshot. CLI: <code>cos:capital-markets:nav:collect</code>.</p>
+      <p class="small">Status is diagnostic only; preflight never writes a snapshot. CLI: <code>cos:capital-markets:nav:collect</code>code.</p>
     </section>
 
     {% set navWindows = perf.portfolio_nav_windows|default({}) %}
@@ -1082,7 +1082,7 @@
     <section class="cos-panel">
       <h2>Agent Authority</h2>
       <p>Authority is explicit. General View shows run summaries; audited tool inputs, outputs and raw results require Audit View. Hidden chain-of-thought is not exposed.</p>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Agent</th><th>Profile</th><th>Version</th><th>Authority</th><th>Execution Mode</th><th>Max autonomous actions</th><th>State</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Agent</th><th>Profile</th><th>{{ 'Version'|trans }}</th><th>Authority</th><th>Execution Mode</th><th>Max autonomous actions</th><th>State</th></tr></thead><tbody>
       {% for a in agents.definitions|default([]) %}<tr><td><strong>{{ a.name }}</strong></td><td>{{ a.profile }}</td><td>{{ a.version }}</td><td>{{ a.authority }}</td><td>{{ a.execution_mode }}</td><td>{{ a.max_actions_per_run }}</td><td>{{ a.enabled ? 'ENABLED' : 'DISABLED' }}</td></tr>{% else %}<tr><td colspan="7">No {{ 'Capital Markets'|trans }} agents registered.</td></tr>{% endfor %}
       </tbody></table></div>
     </section>
@@ -1097,7 +1097,7 @@
           <td>{{ run.status|default('—') }}</td>
           <td><strong>{{ run.decision|default('—') }}</strong>{% if run.confidence is not null %}<br><small>confidence {{ run.confidence }}</small>{% endif %}</td>
           <td>{{ run.recommendation|default('—') }}</td>
-          <td>{% for tool in run.tools|default([]) %}<code>{{ tool.name }}</code>{% if not loop.last %}<br>{% endif %}{% else %}<span>—</span>{% endfor %}</td>
+          <td>{% for tool in run.tools|default([]) %}<code>{{ tool.name }}</code>code{% if not loop.last %}<br>{% endif %}{% else %}<span>—</span>{% endfor %}</td>
           <td>{{ run.cost_amount is not null ? run.cost_amount ~ ' ' ~ run.cost_currency|default('') : '—' }}{% if run.input_tokens is not null or run.output_tokens is not null %}<br><small>{{ run.input_tokens|default(0) }} in / {{ run.output_tokens|default(0) }} out</small>{% endif %}</td>
           <td>{{ run.error|default('—') }}</td>
         </tr>
@@ -1107,24 +1107,24 @@
             <details>
               <summary>Run evidence · {{ run.audit_event_count|default(0) }} audit event(s)</summary>
               <div class="row g-3 mt-1">
-                <div class="col-lg-4"><strong>Findings</strong><ul>{% for finding in run.findings|default([]) %}<li>{{ finding }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul></div>
-                <div class="col-lg-4"><strong>Limitations</strong><ul>{% for limitation in run.limitations|default([]) %}<li>{{ limitation }}</li>{% else %}<li>None recorded.</li>{% endfor %}</ul></div>
-                <div class="col-lg-4"><strong>Requested Tools</strong><ul>{% for tool in run.requested_tools|default([]) %}<li><code>{{ tool }}</code></li>{% else %}<li>None requested in this pass.</li>{% endfor %}</ul></div>
+                <div class="col-lg-4"><strong>Findings</strong><ul>{% for finding in run.findings|default([]) %}<li>{{ finding }}</li>{% else %}<li>{{ 'None recorded.'|trans }}</li>{% endfor %}</ul></div>
+                <div class="col-lg-4"><strong>Limitations</strong><ul>{% for limitation in run.limitations|default([]) %}<li>{{ limitation }}</li>{% else %}<li>{{ 'None recorded.'|trans }}</li>{% endfor %}</ul></div>
+                <div class="col-lg-4"><strong>Requested Tools</strong><ul>{% for tool in run.requested_tools|default([]) %}<li><code>{{ tool }}</code>code</li>{% else %}<li>None requested in this pass.</li>{% endfor %}</ul></div>
               </div>
               {% for tool in run.tools|default([]) %}
                 <details class="mt-2">
-                  <summary><code>{{ tool.name }}</code> · audited tool call</summary>
+                  <summary><code>{{ tool.name }}</code>code · audited tool call</summary>
                   <div class="row g-3 mt-1">
-                    <div class="col-lg-6"><strong>Input</strong><pre>{{ tool.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
-                    <div class="col-lg-6"><strong>Output</strong><pre>{{ tool.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></div>
+                    <div class="col-lg-6"><strong>Input</strong><pre>{{ tool.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>pre</div>
+                    <div class="col-lg-6"><strong>Output</strong><pre>{{ tool.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>pre</div>
                   </div>
                 </details>
               {% endfor %}
               <details class="mt-2">
                 <summary>Structured Result</summary>
-                <pre class="mt-2 mb-0"><code>{{ run.output|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</code></pre>
+                <pre class="mt-2 mb-0"><code>{{ run.output|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</code></pre>pre
               </details>
-              <p class="mt-2"><small>Correlation: <code>{{ run.correlation_id }}</code> · Duration {{ run.duration_ms is not null ? run.duration_ms ~ ' ms' : '—' }}</small></p>
+              <p class="mt-2"><small>Correlation: <code>{{ run.correlation_id }}</code>code · Duration {{ run.duration_ms is not null ? run.duration_ms ~ ' ms' : '—' }}</small></p>
             </details>
           </td>
         </tr>
@@ -1144,7 +1144,7 @@
       <twig:CosMetric label="Critical Issues" value="{{ q.critical_issues|default(0) }}" />
     </section>
     <section class="cos-panel">
-      <h2>Sources</h2>
+      <h2>{{ 'Sources'|trans }}</h2>
       <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Source'|trans }}</th><th>{{ 'Role'|trans }}</th><th>Connection</th><th>Last Event</th><th>Latency</th><th>Errors</th><th>Reconnects</th><th>Rate Limit</th><th>Clock / Last Error</th></tr></thead><tbody>
       {% for s in w.sources|default([]) %}
         {% set h=s.health|default({}) %}

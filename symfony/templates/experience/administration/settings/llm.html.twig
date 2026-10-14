@@ -11,10 +11,10 @@
         .llm-catalog th{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);background:var(--cos-surface-subtle,#f8f9fb)}
         .llm-catalog tr:last-child td{border-bottom:0}
         .llm-catalog__muted{display:block;color:var(--cos-text-secondary,#667085);font-size:.72rem;margin-top:2px}
-    </style>
+    </style>style
     <twig:CosPageHeader
         eyebrow="Platform Settings · AI"
-        title="LLM runtime"
+        title="{{ 'LLM runtime'|trans }}"
         subtitle="Runtime-конфігурація моделей та provider credentials без рестарту контейнерів."
     >
         <twig:CosButton label="Platform Settings" href="/admin/settings" variant="ghost" />
@@ -121,7 +121,7 @@
                         <th>{{ 'Модель'|trans }}</th>
                         <th>{{ 'Input / 1M'|trans }}</th>
                         <th>{{ 'Output / 1M'|trans }}</th>
-                        <th>Context</th>
+                        <th>{{ 'Context'|trans }}</th>
                         <th>{{ 'Max output'|trans }}</th>
                         <th>{{ 'Reasoning'|trans }}</th>
                         <th>{{ 'Knowledge cutoff'|trans }}</th>
@@ -132,7 +132,7 @@
                         <tr>
                             <td>
                                 <strong>{{ model.name }}</strong>
-                                <span class="llm-catalog__muted"><code>{{ model.model }}</code></span>
+                                <span class="llm-catalog__muted"><code>{{ model.model }}</code>code</span>
                             </td>
                             <td>{{ model.currency }} {{ model.input_per_million|number_format(model.input_per_million < 1 ? 1 : 0, '.', '') }}</td>
                             <td>{{ model.currency }} {{ model.output_per_million|number_format(model.output_per_million < 1 ? 1 : 0, '.', '') }}</td>

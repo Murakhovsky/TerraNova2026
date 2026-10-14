@@ -83,7 +83,7 @@
         <div class="cos-card">
             <p class="cos-card__eyebrow">Рольова модель</p>
             <h2 id="role-model-title" class="cos-card__title">Права доступу</h2>
-            <p class="cos-card__copy">Огляд effective capabilities для базових ролей.</p>
+            <p class="cos-card__copy">{{ 'Огляд effective capabilities для базових ролей.'|trans }}</p>
         </div>
         <twig:CosDataGrid
             id="administration-role-capabilities"
@@ -102,7 +102,7 @@
             <div>
                 <p class="cos-card__eyebrow">Новий доступ</p>
                 <h2 id="create-user-title" class="cos-card__title">Створити користувача</h2>
-                <p class="cos-card__copy">Новий акаунт створюється тільки через admin mutation із CSRF-перевіркою.</p>
+                <p class="cos-card__copy">{{ 'Новий акаунт створюється тільки через admin mutation із CSRF-перевіркою.'|trans }}</p>
             </div>
         </div>
         <form class="cos-section-grid" action="/admin/createUser" method="post">
