@@ -23,6 +23,12 @@ final readonly class CrossVenuePoolCandidateRepository
              VALUES (:org,\'BINANCE_BSTOCKS_SEED\',:token,:underlying,:venue,:symbol,:quote,
                      :state,\'UNVERIFIED\',\'NOT_ESTABLISHED\',:source_as_of,UTC_TIMESTAMP(6))
              ON DUPLICATE KEY UPDATE
+              verification_state=IF(underlying_symbol <=> VALUES(underlying_symbol)
+                    AND venue_symbol <=> VALUES(venue_symbol)
+                    AND listing_state <=> VALUES(listing_state),verification_state,'UNVERIFIED'),
+              economic_equivalence=IF(underlying_symbol <=> VALUES(underlying_symbol)
+                    AND venue_symbol <=> VALUES(venue_symbol)
+                    AND listing_state <=> VALUES(listing_state),economic_equivalence,'NOT_ESTABLISHED'),
               underlying_symbol=VALUES(underlying_symbol),venue_symbol=VALUES(venue_symbol),
               quote_currency=VALUES(quote_currency),listing_state=VALUES(listing_state),
               source_as_of=VALUES(source_as_of),observed_at=VALUES(observed_at)'
