@@ -105,4 +105,20 @@ foreach ($production as $routeName) {
     }
 }
 
+
+$experienceInventory = (string) file_get_contents($root . '/resources/experience/pages/inventory.yaml');
+preg_match_all('/^\\s+- id:\\s*(.+)$/m', $experienceInventory, $pageIds);
+preg_match_all('/^\\s+primary_goal:\\s+"([^"]+)"/m', $experienceInventory, $pageGoals);
+if (count($pageIds[1]) !== count($pageGoals[1])) {
+    throw new RuntimeException('Experience inventory must define exactly one primary goal per page contract.');
+}
+foreach ($pageGoals[1] as $goal) {
+    if (preg_match('/^(Complete the primary task|Do the primary task|View page)\\b/i', $goal)) {
+        throw new RuntimeException('Experience inventory contains a generated generic primary goal: ' . $goal);
+    }
+}
+if (!is_file($root . '/resources/experience/priority-policy.yaml')) {
+    throw new RuntimeException('Experience priority policy is missing.');
+}
+
 echo sprintf("Experience V1 registry contract OK (%d production HTML routes covered)\n", count($production));

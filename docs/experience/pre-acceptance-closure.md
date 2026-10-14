@@ -20,9 +20,11 @@ This workstream is intentionally safe to complete before the human visual review
 ## Registry contracts
 
 - Personas describe roles and their jobs, not internal implementation teams.
-- Journeys describe trigger, user goal, steps, decision points, success state, and failure/recovery paths.
+- Journeys describe trigger, user goal, steps, explicit decision criteria/outcomes, success state, and failure/recovery paths.
 - Terminology establishes canonical user-facing labels and prohibited ambiguous alternatives.
 - UX debt items must identify a real user cost, affected routes, severity, evidence, and closure criteria.
-- Design-system gaps identify a reusable pattern/component deficiency, affected pages, owner, and acceptance test.
+- Design-system gaps identify a reusable pattern/component deficiency, affected pages, accountable owner, and acceptance test.
+- Route priorities follow `resources/experience/priority-policy.yaml`; priority changes require reviewable impact, frequency, workaround, and failure-cost evidence.
+- Inventory goals must describe the actual user outcome for each route. A route-specific goal alone does not prove the primary action, states, or success condition are implemented.
 
 Registries are machine-readable planning inputs. Their existence does not imply the referenced UI is implemented or accepted.

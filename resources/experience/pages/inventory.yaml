@@ -11,7 +11,7 @@ pages:
     status: CONTRACTED
     personas: [authenticated_user]
     product:
-      primary_goal: "Complete the primary task for /workspace/search without leaving the canonical COS experience."
+      primary_goal: "Find relevant COS records, narrow the results with available filters, and open the correct item."
       page_purpose: "Canonical Core collection surface for /workspace/search."
     archetype: collection
     patterns:
@@ -33,7 +33,7 @@ pages:
     status: CONTRACTED
     personas: [authenticated_user]
     product:
-      primary_goal: "Complete the primary task for /workspace/activity-center without leaving the canonical COS experience."
+      primary_goal: "Review notifications and assigned activity, identify what needs attention, and open each item in context."
       page_purpose: "Canonical Core operational queue surface for /workspace/activity-center."
     archetype: operational_queue
     patterns:
@@ -55,7 +55,7 @@ pages:
     status: CONTRACTED
     personas: [authenticated_user]
     product:
-      primary_goal: "Complete the primary task for /workspace/ai without leaving the canonical COS experience."
+      primary_goal: "Inspect available AI capabilities and execution state, then safely manage the AI-assisted operations available to this user."
       page_purpose: "Canonical AI system control surface surface for /workspace/ai."
     archetype: system_control_surface
     patterns:
@@ -77,7 +77,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /auth/login without leaving the canonical COS experience."
+      primary_goal: "Authenticate securely and return to the intended COS destination."
       page_purpose: "Canonical Identity form editor surface for /auth/login."
     archetype: form_editor
     patterns:
@@ -99,7 +99,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /auth/register without leaving the canonical COS experience."
+      primary_goal: "Create a COS account with valid details and receive clear confirmation of the next step."
       page_purpose: "Canonical Identity form editor surface for /auth/register."
     archetype: form_editor
     patterns:
@@ -121,7 +121,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for / without leaving the canonical COS experience."
+      primary_goal: "Explain COS's core value and guide visitors to a relevant product, service, or diagnostic entry point."
       page_purpose: "Canonical Public public detail marketing surface for /."
     archetype: public_detail_marketing
     patterns:
@@ -143,7 +143,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /terra-nova without leaving the canonical COS experience."
+      primary_goal: "Explain Terra Nova's role in the COS ecosystem and direct interested visitors to relevant services."
       page_purpose: "Canonical Public public detail marketing surface for /terra-nova."
     archetype: public_detail_marketing
     patterns:
@@ -165,7 +165,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /agency without leaving the canonical COS experience."
+      primary_goal: "Help prospective real-estate clients understand the agency's services and initiate a qualified enquiry."
       page_purpose: "Canonical Public public detail marketing surface for /agency."
     archetype: public_detail_marketing
     patterns:
@@ -187,7 +187,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /services without leaving the canonical COS experience."
+      primary_goal: "Help visitors compare available services and choose the right engagement path."
       page_purpose: "Canonical Public public detail marketing surface for /services."
     archetype: public_detail_marketing
     patterns:
@@ -209,7 +209,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /partners without leaving the canonical COS experience."
+      primary_goal: "Explain the partner model and capture qualified partnership enquiries."
       page_purpose: "Canonical Public public detail marketing surface for /partners."
     archetype: public_detail_marketing
     patterns:
@@ -231,7 +231,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /team without leaving the canonical COS experience."
+      primary_goal: "Build trust by introducing the team, its areas of responsibility, and ways to make contact."
       page_purpose: "Canonical Public public detail marketing surface for /team."
     archetype: public_detail_marketing
     patterns:
@@ -253,7 +253,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /cases without leaving the canonical COS experience."
+      primary_goal: "Show credible outcomes and help visitors inspect customer cases relevant to their needs."
       page_purpose: "Canonical Public public detail marketing surface for /cases."
     archetype: public_detail_marketing
     patterns:
@@ -275,7 +275,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /vacancies without leaving the canonical COS experience."
+      primary_goal: "Present open roles, explain requirements, and let suitable candidates submit an application."
       page_purpose: "Canonical Public public detail marketing surface for /vacancies."
     archetype: public_detail_marketing
     patterns:
@@ -297,7 +297,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /contacts without leaving the canonical COS experience."
+      primary_goal: "Provide clear contact channels and a reliable way to send an enquiry."
       page_purpose: "Canonical Public public detail marketing surface for /contacts."
     archetype: public_detail_marketing
     patterns:
@@ -319,7 +319,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /it without leaving the canonical COS experience."
+      primary_goal: "Explain IT capabilities and route visitors to a relevant technical service or contact path."
       page_purpose: "Canonical Public public detail marketing surface for /it."
     archetype: public_detail_marketing
     patterns:
@@ -341,7 +341,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /art without leaving the canonical COS experience."
+      primary_goal: "Present art-related work and help visitors explore available works or initiatives."
       page_purpose: "Canonical Public public detail marketing surface for /art."
     archetype: public_detail_marketing
     patterns:
@@ -363,7 +363,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /cos without leaving the canonical COS experience."
+      primary_goal: "Introduce COS, its target users, core capabilities, and the most useful next step."
       page_purpose: "Canonical Public public detail marketing surface for /cos."
     archetype: public_detail_marketing
     patterns:
@@ -385,7 +385,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /cos/lang without leaving the canonical COS experience."
+      primary_goal: "Present the localized COS overview and help visitors navigate to a relevant domain."
       page_purpose: "Canonical Public public detail marketing surface for /cos/{lang}."
     archetype: public_detail_marketing
     patterns:
@@ -407,7 +407,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /cos/lang/domains/slug without leaving the canonical COS experience."
+      primary_goal: "Explain the selected COS domain, its capabilities, and related actions or services."
       page_purpose: "Canonical Public public detail marketing surface for /cos/{lang}/domains/{slug}."
     archetype: public_detail_marketing
     patterns:
@@ -429,7 +429,7 @@ pages:
     status: CONTRACTED
     personas: [authenticated_user]
     product:
-      primary_goal: "Complete the primary task for /cabinet without leaving the canonical COS experience."
+      primary_goal: "Give an authenticated user a clear overview of their account, submissions, and outstanding actions."
       page_purpose: "Canonical Account portal surface for /cabinet."
     archetype: portal
     patterns:
@@ -451,7 +451,7 @@ pages:
     status: CONTRACTED
     personas: [authenticated_user]
     product:
-      primary_goal: "Complete the primary task for /account/access without leaving the canonical COS experience."
+      primary_goal: "Let users review and manage account access details and understand any required security action."
       page_purpose: "Canonical Account portal surface for /account/access."
     archetype: portal
     patterns:
@@ -473,7 +473,7 @@ pages:
     status: DEPRECATED
     personas: [authenticated_user]
     product:
-      primary_goal: "Complete the primary task for /cabinet/submission/id without leaving the canonical COS experience."
+      primary_goal: "Let a user inspect a previously submitted request and understand its current status and next required step."
       page_purpose: "Canonical Account portal surface for /cabinet/submission/{id}."
     archetype: portal
     patterns:
@@ -495,7 +495,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, content_manager]
     product:
-      primary_goal: "Complete the primary task for /admin/content without leaving the canonical COS experience."
+      primary_goal: "Find, review, and manage content records while making publication state clear."
       page_purpose: "Canonical Content collection surface for /admin/content."
     archetype: collection
     patterns:
@@ -517,7 +517,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, content_manager]
     product:
-      primary_goal: "Complete the primary task for /admin/content/edit without leaving the canonical COS experience."
+      primary_goal: "Create a content item, validate required fields, and save a draft with clear feedback."
       page_purpose: "Canonical Content form editor surface for /admin/content/edit."
     archetype: form_editor
     patterns:
@@ -539,7 +539,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, content_manager]
     product:
-      primary_goal: "Complete the primary task for /admin/content/edit/id without leaving the canonical COS experience."
+      primary_goal: "Edit an existing content item, validate changes, and save or publish it deliberately."
       page_purpose: "Canonical Content form editor surface for /admin/content/edit/{id}."
     archetype: form_editor
     patterns:
@@ -561,7 +561,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /blog without leaving the canonical COS experience."
+      primary_goal: "Help visitors discover relevant articles and open the full article they choose."
       page_purpose: "Canonical Content public catalog surface for /blog."
     archetype: public_catalog
     patterns:
@@ -583,7 +583,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /blog/slug without leaving the canonical COS experience."
+      primary_goal: "Present a readable article with its context and clear paths to related content or the next action."
       page_purpose: "Canonical Content public detail marketing surface for /blog/{slug}."
     archetype: public_detail_marketing
     patterns:
@@ -605,7 +605,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /guide/slug without leaving the canonical COS experience."
+      primary_goal: "Help visitors follow the selected guide and reach the relevant next step or related resource."
       page_purpose: "Canonical Content public detail marketing surface for /guide/{slug}."
     archetype: public_detail_marketing
     patterns:
@@ -627,7 +627,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/candidates without leaving the canonical COS experience."
+      primary_goal: "Review candidate opportunities, compare their evidence and fit, and decide which deserve follow-up."
       page_purpose: "Canonical Growth collection surface for /growth/candidates."
     archetype: collection
     patterns:
@@ -649,7 +649,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/candidates/id without leaving the canonical COS experience."
+      primary_goal: "Inspect one candidate's evidence and qualification, record the decision, and define the next action."
       page_purpose: "Canonical Growth entity workspace surface for /growth/candidates/{id}."
     archetype: entity_workspace
     patterns:
@@ -671,7 +671,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/accounts without leaving the canonical COS experience."
+      primary_goal: "Find and prioritize target accounts using their fit, status, and available relationship evidence."
       page_purpose: "Canonical Growth collection surface for /growth/accounts."
     archetype: collection
     patterns:
@@ -693,7 +693,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/accounts/id without leaving the canonical COS experience."
+      primary_goal: "Review an account's context, opportunities, and outreach history, then record the next justified action."
       page_purpose: "Canonical Growth entity workspace surface for /growth/accounts/{id}."
     archetype: entity_workspace
     patterns:
@@ -715,7 +715,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/signals without leaving the canonical COS experience."
+      primary_goal: "Review market signals, assess relevance and freshness, and route qualified signals into opportunities."
       page_purpose: "Canonical Growth collection surface for /growth/signals."
     archetype: collection
     patterns:
@@ -737,7 +737,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/collectors without leaving the canonical COS experience."
+      primary_goal: "Configure signal collectors and inspect their execution health, freshness, and failure state."
       page_purpose: "Canonical Growth system control surface surface for /growth/collectors."
     archetype: system_control_surface
     patterns:
@@ -759,7 +759,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/learning without leaving the canonical COS experience."
+      primary_goal: "Review growth outcomes and feedback to identify reusable lessons and improve future decisions."
       page_purpose: "Canonical Growth collection surface for /growth/learning."
     archetype: collection
     patterns:
@@ -781,7 +781,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/experiments without leaving the canonical COS experience."
+      primary_goal: "Compare growth experiments by hypothesis, status, and observed outcome to decide what to run or stop."
       page_purpose: "Canonical Growth collection surface for /growth/experiments."
     archetype: collection
     patterns:
@@ -803,7 +803,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/experiments/id without leaving the canonical COS experience."
+      primary_goal: "Inspect an experiment's hypothesis, execution, and evidence, then record a clear continue, change, or stop decision."
       page_purpose: "Canonical Growth entity workspace surface for /growth/experiments/{id}."
     archetype: entity_workspace
     patterns:
@@ -825,7 +825,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/market without leaving the canonical COS experience."
+      primary_goal: "Explore market context and relevant signals to identify evidence-backed opportunities."
       page_purpose: "Canonical Growth collection surface for /growth/market."
     archetype: collection
     patterns:
@@ -847,7 +847,7 @@ pages:
     status: CONTRACTED
     personas: [growth_manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /growth/settings without leaving the canonical COS experience."
+      primary_goal: "Configure growth-domain behavior and integrations while making the effects of each setting explicit."
       page_purpose: "Canonical Growth system control surface surface for /growth/settings."
     archetype: system_control_surface
     patterns:
@@ -869,7 +869,7 @@ pages:
     status: CONTRACTED
     personas: [administrator]
     product:
-      primary_goal: "Complete the primary task for /admin/users without leaving the canonical COS experience."
+      primary_goal: "Find user accounts, inspect their status, and manage access through explicit and auditable actions."
       page_purpose: "Canonical Identity collection surface for /admin/users."
     archetype: collection
     patterns:
@@ -891,7 +891,7 @@ pages:
     status: CONTRACTED
     personas: [executive, manager]
     product:
-      primary_goal: "Complete the primary task for /admin/analytics without leaving the canonical COS experience."
+      primary_goal: "Understand platform usage and operational trends, inspect material changes, and drill into supporting data."
       page_purpose: "Canonical Core domain dashboard surface for /admin/analytics."
     archetype: domain_dashboard
     patterns:
@@ -913,7 +913,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, engineering_manager]
     product:
-      primary_goal: "Complete the primary task for /admin/engineering without leaving the canonical COS experience."
+      primary_goal: "Inspect engineering capabilities and their operational state, then identify configuration or health issues."
       page_purpose: "Canonical Engineering system control surface surface for /admin/engineering."
     archetype: system_control_surface
     patterns:
@@ -935,7 +935,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, engineering_manager]
     product:
-      primary_goal: "Complete the primary task for /admin/engineering/id without leaving the canonical COS experience."
+      primary_goal: "Review a specific engineering capability, its configuration and status, and the next corrective action."
       page_purpose: "Canonical Engineering entity workspace surface for /admin/engineering/{id}."
     archetype: entity_workspace
     patterns:
@@ -957,7 +957,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, sales_agent]
     product:
-      primary_goal: "Complete the primary task for /client-case without leaving the canonical COS experience."
+      primary_goal: "Find client cases and track their ownership, status, and required follow-up."
       page_purpose: "Canonical Sales collection surface for /client-case."
     archetype: collection
     patterns:
@@ -979,7 +979,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, sales_agent]
     product:
-      primary_goal: "Complete the primary task for /client-case/inbox without leaving the canonical COS experience."
+      primary_goal: "Triage incoming client cases, assign ownership, and ensure every actionable case has a next step."
       page_purpose: "Canonical Sales operational queue surface for /client-case/inbox."
     archetype: operational_queue
     patterns:
@@ -1001,7 +1001,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, sales_agent]
     product:
-      primary_goal: "Complete the primary task for /client-case/show/id without leaving the canonical COS experience."
+      primary_goal: "Review a client case's context and history, record a decision, and move it toward a clear outcome."
       page_purpose: "Canonical Sales entity workspace surface for /client-case/show/{id}."
     archetype: entity_workspace
     patterns:
@@ -1023,7 +1023,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property without leaving the canonical COS experience."
+      primary_goal: "Discover available property listings and navigate to a suitable property or category."
       page_purpose: "Canonical Property public catalog surface for /property."
     archetype: public_catalog
     patterns:
@@ -1045,7 +1045,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/catalog without leaving the canonical COS experience."
+      primary_goal: "Filter and compare property listings by relevant criteria, then open a listing for details."
       page_purpose: "Canonical Property public catalog surface for /property/catalog."
     archetype: public_catalog
     patterns:
@@ -1067,7 +1067,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/favour without leaving the canonical COS experience."
+      primary_goal: "Review saved or favorite properties and return to the listings that matter to the user."
       page_purpose: "Canonical Property public catalog surface for /property/favour."
     archetype: public_catalog
     patterns:
@@ -1089,7 +1089,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/show/slug without leaving the canonical COS experience."
+      primary_goal: "Help a prospective buyer understand a property's key facts, media, location, and available next step."
       page_purpose: "Canonical Property public detail marketing surface for /property/show/{slug}."
     archetype: public_detail_marketing
     patterns:
@@ -1111,7 +1111,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/presentation/slug without leaving the canonical COS experience."
+      primary_goal: "Present a property in a focused, shareable format that supports evaluation and enquiry."
       page_purpose: "Canonical Property public detail marketing surface for /property/presentation/{slug}."
     archetype: public_detail_marketing
     patterns:
@@ -1133,7 +1133,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/type/code without leaving the canonical COS experience."
+      primary_goal: "Browse properties within the selected type and narrow the results to suitable listings."
       page_purpose: "Canonical Property public catalog surface for /property/type/{code}."
     archetype: public_catalog
     patterns:
@@ -1155,7 +1155,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/city/slug without leaving the canonical COS experience."
+      primary_goal: "Browse property listings for the selected city and compare relevant options."
       page_purpose: "Canonical Property public catalog surface for /property/city/{slug}."
     archetype: public_catalog
     patterns:
@@ -1177,7 +1177,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /nerukhomist/location/type without leaving the canonical COS experience."
+      primary_goal: "Show relevant properties for the selected location and property type, with a clear route to details or enquiry."
       page_purpose: "Canonical Property public catalog surface for /nerukhomist/{location}/{type}."
     archetype: public_catalog
     patterns:
@@ -1199,7 +1199,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/submit without leaving the canonical COS experience."
+      primary_goal: "Submit a property listing with the required facts and media, and receive clear validation feedback."
       page_purpose: "Canonical Property form editor surface for /property/submit."
     archetype: form_editor
     patterns:
@@ -1221,7 +1221,7 @@ pages:
     status: SUPERSEDED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /property/create without leaving the canonical COS experience."
+      primary_goal: "Route property creation through the canonical submission workflow without creating a duplicate path."
       page_purpose: "Canonical Property form editor surface for /property/create."
     archetype: form_editor
     patterns:
@@ -1243,7 +1243,7 @@ pages:
     status: SUPERSEDED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /submit-property without leaving the canonical COS experience."
+      primary_goal: "Route property submissions through the canonical workflow and preserve clear validation and confirmation."
       page_purpose: "Canonical Property form editor surface for /submit-property."
     archetype: form_editor
     patterns:
@@ -1265,7 +1265,7 @@ pages:
     status: CONTRACTED
     personas: [manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /property/manage without leaving the canonical COS experience."
+      primary_goal: "Review managed properties, identify data or publication issues, and open the record requiring action."
       page_purpose: "Canonical Property collection surface for /property/manage."
     archetype: collection
     patterns:
@@ -1287,7 +1287,7 @@ pages:
     status: CONTRACTED
     personas: [manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /property/listing without leaving the canonical COS experience."
+      primary_goal: "Review property listing records and their publication status, then open a listing to correct or publish it."
       page_purpose: "Canonical Property collection surface for /property/listing."
     archetype: collection
     patterns:
@@ -1309,7 +1309,7 @@ pages:
     status: CONTRACTED
     personas: [manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /property/submissions without leaving the canonical COS experience."
+      primary_goal: "Triage incoming property submissions by status and completeness, and assign the next action."
       page_purpose: "Canonical Property collection surface for /property/submissions."
     archetype: collection
     patterns:
@@ -1331,7 +1331,7 @@ pages:
     status: CONTRACTED
     personas: [manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /property/submission/id without leaving the canonical COS experience."
+      primary_goal: "Review one property submission, resolve validation issues, and decide whether it is ready for publication."
       page_purpose: "Canonical Property entity workspace surface for /property/submission/{id}."
     archetype: entity_workspace
     patterns:
@@ -1353,7 +1353,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, operator]
     product:
-      primary_goal: "Complete the primary task for /cos/control-center without leaving the canonical COS experience."
+      primary_goal: "Inspect cross-domain operational health, identify blocked work, and navigate to the responsible control surface."
       page_purpose: "Canonical Operations system control surface surface for /cos/control-center."
     archetype: system_control_surface
     patterns:
@@ -1375,7 +1375,7 @@ pages:
     status: SUPERSEDED
     personas: [sales_manager, sales_agent]
     product:
-      primary_goal: "Complete the primary task for /sales without leaving the canonical COS experience."
+      primary_goal: "Review the sales work queue and prioritize the next lead, deal, or follow-up that needs action."
       page_purpose: "Canonical Sales operational queue surface for /sales."
     archetype: operational_queue
     patterns:
@@ -1397,7 +1397,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, sales_agent]
     product:
-      primary_goal: "Complete the primary task for /sales/leads/id without leaving the canonical COS experience."
+      primary_goal: "Review a lead's contact context and history, update qualification, and record an owned next action."
       page_purpose: "Canonical Sales entity workspace surface for /sales/leads/{id}."
     archetype: entity_workspace
     patterns:
@@ -1419,7 +1419,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, sales_agent]
     product:
-      primary_goal: "Complete the primary task for /sales/deals without leaving the canonical COS experience."
+      primary_goal: "Find and compare deals by stage, owner, and expected outcome, then open a deal requiring attention."
       page_purpose: "Canonical Sales collection surface for /sales/deals."
     archetype: collection
     patterns:
@@ -1441,7 +1441,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, sales_agent]
     product:
-      primary_goal: "Complete the primary task for /sales/director without leaving the canonical COS experience."
+      primary_goal: "Understand sales performance and pipeline risks, inspect material variance, and direct corrective action."
       page_purpose: "Canonical Sales domain dashboard surface for /sales/director."
     archetype: domain_dashboard
     patterns:
@@ -1463,7 +1463,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin without leaving the canonical COS experience."
+      primary_goal: "Manage sales-domain configuration and governance while making operational effects and ownership visible."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin."
     archetype: system_control_surface
     patterns:
@@ -1485,7 +1485,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/pipelines without leaving the canonical COS experience."
+      primary_goal: "Review and configure sales pipelines, their stages, and the rules that govern deal progression."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin/pipelines."
     archetype: system_control_surface
     patterns:
@@ -1507,7 +1507,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/pipelines/id without leaving the canonical COS experience."
+      primary_goal: "Inspect and edit one pipeline's stages and settings, then validate the configuration before saving."
       page_purpose: "Canonical Sales entity workspace surface for /sales/admin/pipelines/{id}."
     archetype: entity_workspace
     patterns:
@@ -1529,7 +1529,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/rules without leaving the canonical COS experience."
+      primary_goal: "Review and manage sales automation rules, including their activation state and expected effects."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin/rules."
     archetype: system_control_surface
     patterns:
@@ -1551,7 +1551,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/rules/id without leaving the canonical COS experience."
+      primary_goal: "Inspect one sales rule's conditions and actions, validate its behavior, and save changes deliberately."
       page_purpose: "Canonical Sales entity workspace surface for /sales/admin/rules/{id}."
     archetype: entity_workspace
     patterns:
@@ -1573,7 +1573,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/agents without leaving the canonical COS experience."
+      primary_goal: "Review sales agents and their operational state, and identify configuration or execution issues."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin/agents."
     archetype: system_control_surface
     patterns:
@@ -1595,7 +1595,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/agents/name without leaving the canonical COS experience."
+      primary_goal: "Inspect one sales agent's configuration and health, then make a controlled corrective change."
       page_purpose: "Canonical Sales entity workspace surface for /sales/admin/agents/{name}."
     archetype: entity_workspace
     patterns:
@@ -1617,7 +1617,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/actions without leaving the canonical COS experience."
+      primary_goal: "Review available sales actions and their execution state to diagnose failures or missing automation."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin/actions."
     archetype: system_control_surface
     patterns:
@@ -1639,7 +1639,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/teams without leaving the canonical COS experience."
+      primary_goal: "Manage sales teams and assignments so ownership and responsibility remain explicit."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin/teams."
     archetype: system_control_surface
     patterns:
@@ -1661,7 +1661,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/integrations without leaving the canonical COS experience."
+      primary_goal: "Inspect sales integrations, connection health, and sync status, then resolve failures safely."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin/integrations."
     archetype: system_control_surface
     patterns:
@@ -1683,7 +1683,7 @@ pages:
     status: CONTRACTED
     personas: [sales_manager, administrator]
     product:
-      primary_goal: "Complete the primary task for /sales/admin/health without leaving the canonical COS experience."
+      primary_goal: "Identify sales-system health issues, their impact, and the next recovery action."
       page_purpose: "Canonical Sales system control surface surface for /sales/admin/health."
     archetype: system_control_surface
     patterns:
@@ -1705,7 +1705,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, engineer]
     product:
-      primary_goal: "Complete the primary task for /cos/architecture without leaving the canonical COS experience."
+      primary_goal: "Inspect COS architecture boundaries and dependencies to understand how capabilities are organized."
       page_purpose: "Canonical Architecture system control surface surface for /cos/architecture."
     archetype: system_control_surface
     patterns:
@@ -1727,7 +1727,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, engineer]
     product:
-      primary_goal: "Complete the primary task for /cos/architecture/graph without leaving the canonical COS experience."
+      primary_goal: "Explore the COS dependency graph to trace relationships and locate affected components."
       page_purpose: "Canonical Architecture system control surface surface for /cos/architecture/graph."
     archetype: system_control_surface
     patterns:
@@ -1749,7 +1749,7 @@ pages:
     status: CONTRACTED
     personas: [administrator, engineer]
     product:
-      primary_goal: "Complete the primary task for /cos/architecture/health without leaving the canonical COS experience."
+      primary_goal: "Review architecture and runtime health signals to identify degraded or disconnected components."
       page_purpose: "Canonical Architecture system control surface surface for /cos/architecture/health."
     archetype: system_control_surface
     patterns:
@@ -1771,7 +1771,7 @@ pages:
     status: CONTRACTED
     personas: [manager, specialist]
     product:
-      primary_goal: "Complete the primary task for /diagnostics/session/report without leaving the canonical COS experience."
+      primary_goal: "Understand the diagnostic findings, inspect supporting evidence, and follow the recommended next step."
       page_purpose: "Canonical Diagnostic public detail marketing surface for /diagnostics/{session}/report."
     archetype: public_detail_marketing
     patterns:
@@ -1793,7 +1793,7 @@ pages:
     status: CONTRACTED
     personas: [specialist, manager]
     product:
-      primary_goal: "Complete the primary task for /spatial/manage without leaving the canonical COS experience."
+      primary_goal: "Explore and manage spatial assets on the map, locate the target area, and open the relevant record."
       page_purpose: "Canonical Spatial map spatial surface for /spatial/manage."
     archetype: map_spatial
     patterns:
@@ -1815,7 +1815,7 @@ pages:
     status: CONTRACTED
     personas: [specialist, manager]
     product:
-      primary_goal: "Complete the primary task for /spatial/edit without leaving the canonical COS experience."
+      primary_goal: "Create a spatial record with valid geometry and metadata, and confirm that it is saved correctly."
       page_purpose: "Canonical Spatial form editor surface for /spatial/edit."
     archetype: form_editor
     patterns:
@@ -1837,7 +1837,7 @@ pages:
     status: CONTRACTED
     personas: [specialist, manager]
     product:
-      primary_goal: "Complete the primary task for /spatial/edit/id without leaving the canonical COS experience."
+      primary_goal: "Edit a spatial record's geometry and metadata, validate the result, and save the intended changes."
       page_purpose: "Canonical Spatial form editor surface for /spatial/edit/{id}."
     archetype: form_editor
     patterns:
@@ -1859,7 +1859,7 @@ pages:
     status: CONTRACTED
     personas: [visitor]
     product:
-      primary_goal: "Complete the primary task for /spatial/scene/slug without leaving the canonical COS experience."
+      primary_goal: "Explore the selected spatial scene and understand its location, context, and related assets."
       page_purpose: "Canonical Spatial public detail marketing surface for /spatial/scene/{slug}."
     archetype: public_detail_marketing
     patterns:

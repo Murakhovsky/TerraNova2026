@@ -3,6 +3,7 @@ status: active
 gaps:
   - id: DSG-001
     title: "Golden Growth dashboard has incomplete quality evidence"
+    owner: growth_product
     severity: high
     status: open
     affected_pages: [growth.overview]
@@ -10,6 +11,7 @@ gaps:
     acceptance: "Automated evidence is attached to the contract and a human can review the rendered page; no human decision is synthesized."
   - id: DSG-002
     title: "Golden page acceptance needs a repeatable review checklist"
+    owner: experience_design
     severity: high
     status: open
     affected_pages: [core.executive.dashboard, sales.dashboard, sales.today, sales.leads.collection, sales.deal.workspace, sales.pipeline, growth.overview, property.map]
