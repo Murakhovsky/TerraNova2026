@@ -2,7 +2,7 @@
 title: "ADR-0015: COS Federation Architecture"
 description: "Федеративна архітектура COS із незалежними доменами та адаптивним інтерфейсом."
 status: accepted
-updated: 2026-10-08
+updated: 2026-10-14
 kind: adr
 ---
 
@@ -45,3 +45,11 @@ Roll out additively: audit, contracts, graph/CI, execution reliability, goals, e
 - [Package B: Progressive Disclosure](../03-architecture/cos-progressive-disclosure-adaptive-experience.md) — Expert Reference Workspace → Process View → Result View → Adaptive Experience; існуючий UI proof-of-concept не є остаточним критерієм приймання.
 
 Попередню вимогу `three experience modes` із загального Federation DoD перенесено до Package B. Для Package A достатньо сумісних versioned presentation contracts та доступного людського контролю через чинні службові інтерфейси. Усі режими працюють з одними Goal/Run/Outcome, без UI-side authorization.
+
+## Нормативне уточнення: федеративність усієї COS, а не окремий виконавець
+
+Федерація є **формою організації всієї COS**: спільне governance, децентралізовані Domain data/business ownership та виконання через канонічні Kernel/Platform primitives. Вона **не вимагає** окремого Federation Domain, Scheduler, Event Bus або другого Workflow Engine.
+
+Існуючий Federation Domain у PR #346 вважається тимчасовим технічним adapter для Goal Plan approval і поточного persisted execution, а не цільовим центром архітектури. Goal Management залишається прикладним сервісом; майбутній універсальний Run/Step належить єдиному Platform Workflow Execution. Заміна здійснюється тільки після durable/safety parity і перенесення існуючих даних, ніколи шляхом негайного видалення виконуваних гарантій.
+
+**Обов'язкове ТЗ подальшої реалізації:** [Федеративна архітектура COS — нормативне ТЗ](../03-architecture/cos-federated-architecture-implementation-spec.md). Попередні implementation-specific згадки «Federation coordinates/owns Runs» слід читати як опис поточного перехідного адаптера, не як target ownership.

@@ -2,7 +2,7 @@
 title: COS Federation & Goal Execution Foundation — Package A
 description: P0 контракт виконання бізнес-цілей і перевірки результатів; без вимоги будувати повний Progressive Disclosure.
 status: active
-updated: 2026-10-09
+updated: 2026-10-14
 kind: architecture
 ---
 
@@ -12,7 +12,7 @@ kind: architecture
 
 ## Архітектурна відповідальність
 
-Kernel/Platform retains identity, tenant, command/event transport, human approvals, Policy, Workflow, Action and Agent dispatch. Each Domain owns its business semantics and authoritative Outcome. Federation validates and coordinates an immutable approved plan but never generates its own arbitrary domain outcomes. Experience sees read-only canonical projections and metadata; no view grants permissions.
+Kernel/Platform retains identity, tenant, command/event transport, human approvals, Policy, Workflow, Action and Agent dispatch. Each Domain owns its business semantics and authoritative Outcome. **Goal Management** validates the immutable approved Plan and evaluates trusted outcomes; **Platform Workflow Execution** owns technical Run/Step state and scheduling. The current Federation-specific persisted runner remains a transitional implementation until parity and safe cutover. Experience sees read-only canonical projections and metadata; no view grants permissions.
 
 ## Канонічна модель виконання
 
@@ -34,7 +34,11 @@ Verified Domain Outcome + scoped evidence → OutcomeEvaluation
 Single Goal state / execution state / source references
 ```
 
-Federation stores one authoritative Run with step state, provenance, immutable approvals and evidence. A completed workflow does **not** equal a successful business goal; unverifiable evidence is explicitly unknown and must not be interpreted as zero or success.
+**Цільова модель:** один authoritative Workflow Run/Step owner у Platform. Наявні cos_federation_runs/steps поки є перехідним persisted джерелом, яке не можна видаляти до доведеного cutover. A completed workflow does **not** equal a successful business goal; unverifiable evidence is explicitly unknown and must not be interpreted as zero or success.
+
+## Пріоритет консолідації архітектури
+
+До нарощування автономного Federation scheduler і нового execution layer обов'язково реалізувати [нормативне ТЗ федеративної архітектури COS](./cos-federated-architecture-implementation-spec.md). Package A приймається як консолідований Workflow foundation + Goal Management + verified cross-domain Outcome, **не** як новий загальний Federation Engine. Golden 50 залишається еталонним бізнес-сценарієм, але не причиною створити другий runtime.
 
 ## Мінімальні контракти Experience у пакеті A
 
