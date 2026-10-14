@@ -320,6 +320,6 @@ final readonly class EngineeringStatusService
             return $bTime <=> $aTime;
         });
 
-        return array_slice($events, 0, 250);
+        return (new EngineeringTimelineGrouper())->group(array_slice($events, 0, 250), $agentRuns);
     }
 }

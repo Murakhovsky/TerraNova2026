@@ -207,4 +207,7 @@ if (!str_contains($engineeringFeatureController, 'recoverStalledForOrganization(
     throw new RuntimeException('Engineering Resume can still be blocked by a zombie RUNNING AgentRun.');
 }
 
+if (!str_contains($status, 'EngineeringTimelineGrouper')) {
+    throw new RuntimeException('Engineering runtime timeline is missing run-attribution grouping.');
+}
 echo "Engineering runtime truth and observability contract passed.\n";

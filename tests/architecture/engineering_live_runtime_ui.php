@@ -167,4 +167,8 @@ if (!str_contains($productStage, 'AgentRun start failed after repository discove
     throw new RuntimeException('Engineering Product stage does not surface pre-AgentRun start failures.');
 }
 
+if (!str_contains($controller, 'group_key') || !str_contains($controller, 'group_label')
+    || !str_contains($controller, 'evidence_round')) {
+    throw new RuntimeException('Engineering live timeline drops grouping metadata.');
+}
 echo "Engineering live runtime UI contract passed.\n";

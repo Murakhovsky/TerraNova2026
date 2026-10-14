@@ -100,6 +100,8 @@
         .engineering-table th{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);background:var(--cos-surface-subtle,#f8f9fb)}
         .engineering-terminal{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.45;max-height:420px;overflow:auto;background:#111827;color:#e5e7eb;padding:10px 12px}
         .engineering-terminal__row{display:grid;grid-template-columns:115px 105px minmax(0,1fr);gap:8px;padding:2px 0}
+        .engineering-terminal__group{position:sticky;top:0;z-index:1;margin:9px 0 3px;padding:7px 4px;background:#243248;border-top:1px solid #475569;color:#e2e8f0;font-weight:700}
+        .engineering-terminal__round{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:4px;background:#334155;color:#e2e8f0;font-size:.7rem}
         .engineering-terminal__muted{color:#94a3b8}
         .engineering-muted{color:var(--cos-text-secondary,#667085)}
         .engineering-warning{font-weight:700}
@@ -379,7 +381,14 @@
                 {% if engineering.timeline is empty %}
                     <div class="engineering-terminal__muted">Подій виконання ще немає.</div>
                 {% else %}
+                    {% set previousGroup = null %}
                     {% for event in engineering.timeline %}
+                        {% if event.group_key|default('system') != previousGroup %}
+                            <div class="engineering-terminal__group" data-engineering-group="{{ event.group_key|default('system') }}">
+                                {{ event.group_label|default('Системні та неатрибутовані події') }}
+                            </div>
+                            {% set previousGroup = event.group_key|default('system') %}
+                        {% endif %}
                         <div class="engineering-terminal__row">
                             <span
                                 class="engineering-terminal__muted"
@@ -390,6 +399,7 @@
                                 {{ event.title|default('') }}
                                 {% if event.status|default('') %} · {{ statusLabels[event.status]|default(event.status) }}{% endif %}
                                 {% if event.detail|default('') %} · {{ event.detail }}{% endif %}
+                                {% if event.evidence_round is not null %}<span class="engineering-terminal__round">Evidence #{{ event.evidence_round }}</span>{% endif %}
                             </span>
                         </div>
                     {% endfor %}
