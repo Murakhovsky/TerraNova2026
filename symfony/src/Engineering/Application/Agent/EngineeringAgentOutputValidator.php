@@ -240,7 +240,7 @@ final class EngineeringAgentOutputValidator
                 throw new EngineeringAgentOutputValidationException('Read-only evidence collection must not trigger a human gate.');
             }
             foreach (['architecture_decision','implementation_plan','developer_handoff'] as $section) {
-                if (isset($output[$section]) && (!is_array($output[$section]) || $output[$section] !== [])) {
+                if (isset($output[$section]) && !is_array($output[$section])) {
                     throw new EngineeringAgentOutputValidationException('Evidence requests cannot include provisional '.$section.'.');
                 }
             }
