@@ -284,7 +284,7 @@ try {
   try {
     await assertOk(await discoveryPage.goto(absolute('/capital-markets/discovery'), { waitUntil: 'domcontentloaded' }), 'cross-venue discovery');
     const content = await discoveryPage.locator('main').innerText();
-    const universeCount = content.match(/\b([1-9]\d{0,2}) кандидатів\b/);
+    const universeCount = content.match(/\b([1-9]\d{0,2}) кандидатів/);
     if (!content.includes('Пошук інструментів на різних біржах')
       || !universeCount || Number(universeCount[1]) > 500
       || (!content.includes('Немає виконаних сканувань')
