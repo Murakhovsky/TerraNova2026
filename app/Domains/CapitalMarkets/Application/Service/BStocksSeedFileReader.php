@@ -35,7 +35,10 @@ final class BStocksSeedFileReader
         if (!in_array($ext, ['csv','xlsx','xlsm'], true)) {
             throw new InvalidArgumentException('Only CSV and OOXML XLSX/XLSM are supported.');
         }
-        $rows = $ext === 'csv' ? $this->csv($file) : $this->ooxml($file);
+        $loaded = $ext === 'csv'
+            ? ['rows'=>$this->csv($file),'as_of'=>'2026-09-27T17:53:00Z']
+            : $this->ooxml($file);
+        $rows = $loaded['rows'];
         $seen = [];
         foreach ($rows as $row) {
             if (isset($seen[$row['token_symbol']])) {
@@ -47,7 +50,7 @@ final class BStocksSeedFileReader
             throw new InvalidArgumentException('Seed row count outside 1..500.');
         }
         return ['format'=>$ext,'sha256'=>hash_file('sha256',$file),
-            'source_as_of'=>'2026-09-27T17:53:00Z','rows'=>$rows];
+            'source_as_of'=>$loaded['as_of'],'rows'=>$rows];
     }
 
     /** @return list<array<string,mixed>> */
@@ -113,14 +116,15 @@ final class BStocksSeedFileReader
             $xp->registerNamespace('x','http://schemas.openxmlformats.org/spreadsheetml/2006/main');
             $rows = [];
             $header = [];
+            $sourceAsOf = null;
             foreach ($xp->query('//x:sheetData/x:row') as $row) {
                 $rowNumber = (int)$row->getAttribute('r');
-                if ($rowNumber < 3) continue;
+                if ($rowNumber < 2) continue;
                 if ($rowNumber > 5500) break;
                 $cells = [];
                 foreach ($xp->query('./x:c',$row) as $cell) {
                     $ref = $cell->getAttribute('r');
-                    if (!preg_match('/^([A-Z]{1,3})[0-9]+$/D',$ref,$m) || !in_array($m[1],self::COLUMNS,true)) continue;
+                    if (!preg_match('/^([A-Z]{1,3})[0-9]+$/D',$ref,$m) || !in_array($m[1],array_merge(['A'],self::COLUMNS),true)) continue;
                     if ($xp->query('./x:f',$cell)->length > 0) throw new InvalidArgumentException('Formula cells are not importable.');
                     $v = $xp->query('./x:v',$cell)->item(0);
                     $raw = $v?->textContent ?? '';
@@ -135,6 +139,14 @@ final class BStocksSeedFileReader
                     }
                     $cells[$m[1]] = trim($raw);
                 }
+                if ($rowNumber === 2) {
+                    $description = (string)($cells['A'] ?? '');
+                    if (preg_match('/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s*UTC/u',$description,$matches)!==1) {
+                        throw new InvalidArgumentException('Missing workbook source timestamp.');
+                    }
+                    $sourceAsOf=$matches[1].'T'.$matches[2].':00Z';
+                    continue;
+                }
                 if ($rowNumber === 3) { $header = $cells; continue; }
                 if (($cells['B'] ?? '') === '' && ($cells['C'] ?? '') === '') continue;
                 if (count($rows) >= self::MAX_ROWS) throw new InvalidArgumentException('OOXML seed row limit exceeded.');
@@ -148,7 +160,8 @@ final class BStocksSeedFileReader
                 || strtolower($header['I'] ?? '') !== 'leverage') {
                 throw new InvalidArgumentException('Unexpected bStocks worksheet schema.');
             }
-            return $rows;
+            if ($sourceAsOf === null) throw new InvalidArgumentException('Workbook timestamp was not verified.');
+            return ['rows'=>$rows,'as_of'=>$sourceAsOf];
         } finally {
             $zip->close();
         }

@@ -34,6 +34,7 @@ if (class_exists(ZipArchive::class) && class_exists(DOMDocument::class)) {
         $check(count($parsed['rows'])===1,'OOXML row count wrong.');
         $check($parsed['rows'][0]['issuer_or_instrument_name']==='Apple Inc.','OOXML strings not decoded.');
         $check($parsed['rows'][0]['declared_status']==='TRADING','OOXML status lost.');
+        $check($parsed['source_as_of']==='2026-09-27T17:53:00Z','OOXML timestamp missing.');
     } finally { @unlink($file); }
 }
 echo "Safe bStocks CSV/OOXML seed validation passed.\n";
