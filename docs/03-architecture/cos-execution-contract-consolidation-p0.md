@@ -193,6 +193,8 @@ interface WorkflowRecoveryInterface
 
 **Recovery inspection:** новий `DoctrineWorkflowRecoveryInspector` реалізує `WorkflowRecoveryInterface` тільки для tenant-scoped read-only аналізу. Перевіряє очікувану Run revision, активні та expired claims, uncertainty зовнішнього результату й повторно перевіряє completed receipts; `reconcile()` наразі жорстко забороняє зміни. MySQL integration покриває stale revision, foreign tenant, claimed read-only/external, forged receipt і terminal status. Автоматичне requeue/replay, завершення чи відновлення не активовані.
 
+**Shadow parity:** `WorkflowShadowParityComparator` порівнює read-only Federation legacy Run/Step із canonical snapshot, включно з tenant, version, Plan digest, Step binding, attempts, idempotency key та незалежно attested receipt references; без доказів результат `PARTIAL`, при невідповідності `DRIFT`, без канонічного Run `NO_TARGET`. Для Engineering технічний стан/trace/link порівнюється окремо, а stage/AgentRun/QA/human transitions **завжди залишаються PARTIAL** до доказової міграції. Жодного shadow writer чи dispatch не існує.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0

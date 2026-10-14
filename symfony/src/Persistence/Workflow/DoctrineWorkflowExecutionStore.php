@@ -333,6 +333,7 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             (int) $row['attempts'], (int) $row['revision'],
             $row['result_reference'] === null ? null : (string) $row['result_reference'],
             $withClaimToken && $row['claim_token'] !== null ? (string) $row['claim_token'] : null,
+            (string) $row['idempotency_key'],
         );
     }
 
