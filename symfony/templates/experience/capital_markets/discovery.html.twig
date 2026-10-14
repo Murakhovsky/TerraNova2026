@@ -1,12 +1,12 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}Cross-Venue Discovery · Capital Markets{% endblock %}
+{% block title %}Cross-Venue Discovery · {{ 'Capital Markets'|trans }}{% endblock %}
 
 {% block workspace_content %}
 <div class="cos-page__stack cos-capital-markets">
   <header class="cos-growth-header">
     <div>
-      <small>Capital Markets · Market Intelligence</small>
+      <small>{{ 'Capital Markets'|trans }} · Market Intelligence</small>
       <h1>Пошук інструментів на різних біржах</h1>
       <p>Історичний каталог bStocks → перевірка актуального лістингу на Binance, Bybit і Kraken.</p>
     </div>
@@ -72,7 +72,7 @@
       </div>
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Underlying</th><th>Інструмент</th><th>Venue</th><th>Котирування</th><th>Bid</th><th>Ask</th><th>Bid Qty</th><th>Ask Qty</th><th>Статус</th></tr></thead>
+          <thead><tr><th>Underlying</th><th>Інструмент</th><th>Venue</th><th>Котирування</th><th>Bid</th><th>Ask</th><th>Bid Qty</th><th>Ask Qty</th><th>{{ 'Статус'|trans }}</th></tr></thead>
           <tbody>
           {% for row in quoteSnapshot.rows %}
             {% for venue in row.venues %}
@@ -121,7 +121,7 @@
       <p>Статус «LISTED» означає лише наявність символу в публічному каталозі. Ідентичність токенів, його забезпечення, конвертація валют і можливість виконання угоди <strong>не перевірені</strong>.</p>
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Underlying</th><th>Binance bStock</th><th>Плече</th><th>Binance</th><th>Bybit</th><th>Kraken</th><th>Стан</th></tr></thead>
+          <thead><tr><th>Underlying</th><th>Binance bStock</th><th>Плече</th><th>Binance</th><th>Bybit</th><th>Kraken</th><th>{{ 'Стан'|trans }}</th></tr></thead>
           <tbody>
             {% for row in snapshot.rows %}
               <tr>

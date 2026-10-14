@@ -41,7 +41,7 @@
                 </div>
                 <div class="cos-form__grid">
                     <label class="cos-field">
-                        <span>Назва</span>
+                        <span>{{ 'Назва'|trans }}</span>
                         <input class="cos-input" name="title" type="text" maxlength="240" value="{{ editor.item.title ?? '' }}" required>
                     </label>
                     <label class="cos-field">
@@ -52,7 +52,7 @@
                         </select>
                     </label>
                     <label class="cos-field">
-                        <span>Статус</span>
+                        <span>{{ 'Статус'|trans }}</span>
                         <select class="cos-select" name="status">
                             {% for code, label in {'draft':'Чернетка','review':'На перевірці','published':'Опубліковано','archived':'Архів'} %}
                                 <option value="{{ code }}" {% if (editor.item.status ?? '') == code %}selected{% endif %}>{{ label }}</option>
@@ -60,7 +60,7 @@
                         </select>
                     </label>
                     <label class="cos-field"><span>Slug</span><input class="cos-input" name="slug" type="text" maxlength="190" value="{{ editor.item.slug ?? '' }}" placeholder="генерується автоматично"></label>
-                    <label class="cos-field"><span>Категорія</span><input class="cos-input" name="category" type="text" maxlength="120" value="{{ editor.item.category ?? '' }}"></label>
+                    <label class="cos-field"><span>{{ 'Категорія'|trans }}</span><input class="cos-input" name="category" type="text" maxlength="120" value="{{ editor.item.category ?? '' }}"></label>
                     <label class="cos-field"><span>Короткий опис</span><textarea class="cos-textarea" name="excerpt" rows="3" maxlength="2000">{{ editor.item.excerpt ?? '' }}</textarea></label>
                     <label class="cos-field"><span>Дата публікації</span><input class="cos-input" name="published_at" type="datetime-local" value="{{ editor.item.published_at_input ?? '' }}"></label>
                     <label class="cos-field"><span>Запланувати</span><input class="cos-input" name="scheduled_at" type="datetime-local" value="{{ editor.item.scheduled_at_input ?? '' }}"></label>
@@ -122,7 +122,7 @@
 
             <div class="cos-form__actions">
                 <twig:CosButton label="До контенту" href="/admin/content" variant="ghost" />
-                <button class="cos-button cos-button--primary" type="submit">Зберегти</button>
+                <button class="cos-button cos-button--primary" type="submit">{{ 'Зберегти'|trans }}</button>
             </div>
         </form>
     {% endif %}

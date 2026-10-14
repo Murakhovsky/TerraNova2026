@@ -6,12 +6,12 @@
 <div class="cos-page__stack cos-capital-markets" data-csrf="{{ csrfToken }}">
   <header class="cos-growth-header">
     <div>
-      <small>Capital Markets · Research + Risk + Paper Execution</small>
+      <small>{{ 'Capital Markets'|trans }} · Research + Risk + Paper Execution</small>
       <h1>{{ pageTitle }}</h1>
       <p>Canonical instruments, economic relationships, trusted market data and guarded paper research. Live execution remains disabled.</p>
     </div>
-    <nav class="cos-growth-actions" aria-label="Capital Markets navigation">
-      <a class="btn btn-outline-secondary" href="/capital-markets">Overview</a>
+    <nav class="cos-growth-actions" aria-label="{{ 'Capital Markets'|trans }} navigation">
+      <a class="btn btn-outline-secondary" href="/capital-markets">{{ 'Overview'|trans }}</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/instruments">Instruments</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/relationships">Relationships</a>
       <a class="btn btn-outline-secondary" href="/capital-markets/venues">Venues</a>
@@ -34,11 +34,11 @@
       <strong>{{ failureCode|default(500) }}</strong>
       <h2>{{ failureTitle|default('Capital Markets unavailable') }}</h2>
       <p>{{ failureMessage|default('The Foundation workspace could not be loaded.') }}</p>
-      <a href="/capital-markets" class="btn btn-primary">Back to Capital Markets</a>
+      <a href="/capital-markets" class="btn btn-primary">Back to {{ 'Capital Markets'|trans }}</a>
     </section>
 
   {% elseif cmView == 'overview' %}
-    <section class="cos-kpi-strip" aria-label="Capital Markets foundation state">
+    <section class="cos-kpi-strip" aria-label="{{ 'Capital Markets'|trans }} foundation state">
       <twig:CosMetric label="Instruments" value="{{ w.instrument_count|default(0) }}" hint="canonical identities" />
       <twig:CosMetric label="Relationships" value="{{ w.relationship_count|default(0) }}" hint="directed economic links" />
       <twig:CosMetric label="Venues" value="{{ w.venue_count|default(0) }}" hint="registered venues" />
@@ -58,7 +58,7 @@
       {% else %}
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Symbol</th><th>Name</th><th>Family</th><th>Status</th></tr></thead>
+            <thead><tr><th>Symbol</th><th>{{ 'Name'|trans }}</th><th>Family</th><th>{{ 'Status'|trans }}</th></tr></thead>
             <tbody>
             {% for item in w.recent_instruments %}
               <tr>
@@ -94,7 +94,7 @@
             {% endfor %}
           </select>
         </div>
-        <div class="col-md-2"><button class="btn btn-primary w-100">Filter</button></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100">{{ 'Filter'|trans }}</button></div>
       </form>
     </section>
 
@@ -135,7 +135,7 @@
       {% else %}
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Symbol</th><th>Name</th><th>Family</th><th>Status</th><th>Identifiers</th><th>Updated</th></tr></thead>
+            <thead><tr><th>Symbol</th><th>{{ 'Name'|trans }}</th><th>Family</th><th>{{ 'Status'|trans }}</th><th>Identifiers</th><th>{{ 'Updated'|trans }}</th></tr></thead>
             <tbody>
             {% for item in w.instruments %}
               <tr>
@@ -160,7 +160,7 @@
         <div>
           <small>{{ i.family|upper }}</small>
           <h2>{{ i.symbol }} · {{ i.name }}</h2>
-          <p>Canonical symbol: <strong>{{ i.canonical_symbol }}</strong> · Status: <strong>{{ i.status }}</strong></p>
+          <p>Canonical symbol: <strong>{{ i.canonical_symbol }}</strong> · {{ 'Status:'|trans }} <strong>{{ i.status }}</strong></p>
         </div>
         <a class="btn btn-outline-secondary" href="/capital-markets/instruments">Back to registry</a>
       </div>
@@ -223,7 +223,7 @@
         <p>No economic relationships registered.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Source</th><th>Relationship</th><th>Target</th><th>Strength</th><th>Status</th></tr></thead>
+          <thead><tr><th>Source</th><th>Relationship</th><th>Target</th><th>Strength</th><th>{{ 'Status'|trans }}</th></tr></thead>
           <tbody>
           {% for rel in i.relationships %}
             <tr>
@@ -255,10 +255,10 @@
     <section class="cos-panel">
       <h2>Audit history</h2>
       {% if w.audit|default([]) is empty %}
-        <p>No Capital Markets audit entries for this instrument yet.</p>
+        <p>No {{ 'Capital Markets'|trans }} audit entries for this instrument yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Time</th><th>Actor</th><th>Correlation</th><th>Category</th></tr></thead>
+          <thead><tr><th>{{ 'Time'|trans }}</th><th>Actor</th><th>{{ 'Correlation'|trans }}</th><th>{{ 'Category'|trans }}</th></tr></thead>
           <tbody>
           {% for row in w.audit %}
             <tr><td>{{ row.created_at|default('—') }}</td><td>{{ row.actor_id|default('—') }}</td><td>{{ row.correlation_id|default('—') }}</td><td>{{ row.category|default('platform_activity') }}</td></tr>
@@ -434,7 +434,7 @@
       {% else %}
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Code</th><th>Title</th><th>Edge source</th><th>Priority</th><th>Status</th><th>Revision</th><th>Economic thesis</th></tr></thead>
+            <thead><tr><th>Code</th><th>{{ 'Title'|trans }}</th><th>Edge source</th><th>{{ 'Priority'|trans }}</th><th>{{ 'Status'|trans }}</th><th>Revision</th><th>Economic thesis</th></tr></thead>
             <tbody>
             {% for h in hypotheses %}
               <tr>
@@ -485,7 +485,7 @@
         <p>No immutable StrategyVersion records yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Strategy</th><th>Version</th><th>Status</th><th>Logic hash</th><th>Parameters</th><th>Created</th></tr></thead>
+          <thead><tr><th>Strategy</th><th>Version</th><th>{{ 'Status'|trans }}</th><th>Logic hash</th><th>Parameters</th><th>{{ 'Created'|trans }}</th></tr></thead>
           <tbody>
           {% for v in strategyVersions %}
             <tr>
@@ -509,7 +509,7 @@
       {% else %}
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Experiment</th><th>Hypothesis</th><th>Type</th><th>Dataset</th><th>Strategy Version</th><th>Status</th><th>Period</th></tr></thead>
+            <thead><tr><th>Experiment</th><th>Hypothesis</th><th>{{ 'Type'|trans }}</th><th>Dataset</th><th>Strategy Version</th><th>{{ 'Status'|trans }}</th><th>Period</th></tr></thead>
             <tbody>
             {% for e in experiments %}
               <tr>
@@ -531,10 +531,10 @@
     <section class="cos-panel">
       <h2>Backtest Runtime</h2>
       {% if runs is empty %}
-        <p>No backtest runs yet. Historical replay is available through the Research API and uses the production Capital Markets economics stack.</p>
+        <p>No backtest runs yet. Historical replay is available through the Research API and uses the production {{ 'Capital Markets'|trans }} economics stack.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Run</th><th>Experiment</th><th>Partition</th><th>Status</th><th>Strategy</th><th>Dataset</th><th>Result</th></tr></thead>
+          <thead><tr><th>{{ 'Run'|trans }}</th><th>Experiment</th><th>Partition</th><th>{{ 'Status'|trans }}</th><th>Strategy</th><th>Dataset</th><th>Result</th></tr></thead>
           <tbody>
           {% for run in runs %}
             <tr>
@@ -558,7 +558,7 @@
         <p>No completed research results yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Experiment</th><th>Status</th><th>Confidence</th><th>Fidelity</th><th>Expected P&amp;L</th><th>Max drawdown</th><th>Limitations</th></tr></thead>
+          <thead><tr><th>Experiment</th><th>{{ 'Status'|trans }}</th><th>Confidence</th><th>Fidelity</th><th>Expected P&amp;L</th><th>Max drawdown</th><th>Limitations</th></tr></thead>
           <tbody>
           {% for result in results %}
             <tr>
@@ -582,7 +582,7 @@
         <p>No isolated OOS runs yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Run</th><th>Experiment</th><th>Strategy</th><th>Dataset</th><th>Period</th><th>Status</th><th>Result</th></tr></thead>
+          <thead><tr><th>{{ 'Run'|trans }}</th><th>Experiment</th><th>Strategy</th><th>Dataset</th><th>Period</th><th>{{ 'Status'|trans }}</th><th>Result</th></tr></thead>
           <tbody>
           {% for run in oosRuns %}
             <tr>
@@ -606,7 +606,7 @@
         <p>No research Paper runs yet. Paper executions are linked here only after an OOS-tested strategy enters a forward paper experiment.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Run</th><th>Experiment</th><th>Strategy</th><th>Status</th><th>Executions</th><th>Net P&amp;L</th><th>Drawdown</th><th>Result</th></tr></thead>
+          <thead><tr><th>{{ 'Run'|trans }}</th><th>Experiment</th><th>Strategy</th><th>{{ 'Status'|trans }}</th><th>Executions</th><th>Net P&amp;L</th><th>Drawdown</th><th>Result</th></tr></thead>
           <tbody>
           {% for run in paperRuns %}
             <tr>
@@ -659,7 +659,7 @@
             <p>No promotion decisions yet.</p>
           {% else %}
             <div class="table-responsive"><table class="table">
-              <thead><tr><th>Strategy Version</th><th>Transition</th><th>Status</th><th>Approver</th></tr></thead>
+              <thead><tr><th>Strategy Version</th><th>Transition</th><th>{{ 'Status'|trans }}</th><th>Approver</th></tr></thead>
               <tbody>
               {% for p in promotions %}
                 <tr><td>{{ p.strategy_version_id|default('—') }}</td><td>{{ p.from|default('—') }} → {{ p.to|default('—') }}</td><td><strong>{{ p.status|default('—') }}</strong></td><td>{{ p.approver|default('—') }}</td></tr>
@@ -700,7 +700,7 @@
       {% else %}
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Type</th><th>Finding</th><th>Experiments</th><th>Strategy Versions</th><th>Created</th></tr></thead>
+            <thead><tr><th>{{ 'Type'|trans }}</th><th>Finding</th><th>Experiments</th><th>Strategy Versions</th><th>{{ 'Created'|trans }}</th></tr></thead>
             <tbody>
             {% for item in knowledge %}
               <tr>
@@ -750,7 +750,7 @@
       <div class="table-responsive">
         <table class="table">
           <thead>
-            <tr><th>Hypothesis</th><th>Verdict</th><th>Observable scans</th><th>Unobservable</th><th>Detected</th><th>Executable</th><th>Attempts</th><th>Realized</th><th>Invalidated</th><th>Completion</th><th>Avg expected P&amp;L</th><th>Avg realized / attempt</th></tr>
+            <tr><th>Hypothesis</th><th>Verdict</th><th>Observable scans</th><th>Unobservable</th><th>Detected</th><th>Executable</th><th>{{ 'Attempts'|trans }}</th><th>Realized</th><th>Invalidated</th><th>Completion</th><th>Avg expected P&amp;L</th><th>Avg realized / attempt</th></tr>
           </thead>
           <tbody>
           {% for code in ['H1','H2'] %}
@@ -783,7 +783,7 @@
       {% if portfolio %}
         <div class="row g-3">
           <div class="col-md-3"><strong>Currency</strong><br>{{ portfolio.currency }}</div>
-          <div class="col-md-3"><strong>Available</strong><br>{{ portfolio.available_capital }}</div>
+          <div class="col-md-3"><strong>{{ 'Available'|trans }}</strong><br>{{ portfolio.available_capital }}</div>
           <div class="col-md-3"><strong>Reserved</strong><br>{{ portfolio.reserved_capital }}</div>
           <div class="col-md-3"><strong>Realized P&L</strong><br>{{ portfolio.realized_pnl }}</div>
         </div>
@@ -794,7 +794,7 @@
         <hr>
         <h3>Pre-funded venue balances</h3>
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Venue</th><th>Asset / instrument</th><th>Available</th><th>Reserved</th></tr></thead>
+          <thead><tr><th>Venue</th><th>Asset / instrument</th><th>{{ 'Available'|trans }}</th><th>Reserved</th></tr></thead>
           <tbody>
           {% for balance in portfolio.venue_balances %}
             <tr>
@@ -819,7 +819,7 @@
             <thead>
               <tr>
                 <th>Hypothesis</th><th>Relationship / legs</th><th>Gross edge</th><th>Net edge</th>
-                <th>Expected P&L</th><th>Capital</th><th>Risk</th><th>TTL</th><th>Status</th>
+                <th>Expected P&L</th><th>Capital</th><th>Risk</th><th>TTL</th><th>{{ 'Status'|trans }}</th>
               </tr>
             </thead>
             <tbody>
@@ -855,8 +855,8 @@
     <section class="cos-panel">
       <h2>Execution performance</h2>
       <div class="row g-3">
-        <div class="col-md-2"><strong>Attempts</strong><br>{{ perf.execution_attempts|default(0) }}</div>
-        <div class="col-md-2"><strong>Completed</strong><br>{{ perf.completed|default(0) }}</div>
+        <div class="col-md-2"><strong>{{ 'Attempts'|trans }}</strong><br>{{ perf.execution_attempts|default(0) }}</div>
+        <div class="col-md-2"><strong>{{ 'Completed'|trans }}</strong><br>{{ perf.completed|default(0) }}</div>
         <div class="col-md-2"><strong>Compensated</strong><br>{{ perf.compensated|default(0) }}</div>
         <div class="col-md-2"><strong>Completion</strong><br>{{ perf.completion_rate|default('0') }}</div>
         <div class="col-md-2"><strong>Realized P&L</strong><br>{{ perf.realized_pnl|default('0') }}</div>
@@ -870,7 +870,7 @@
         <p>No paper executions yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Execution</th><th>Status</th><th>Checkpoint</th><th>Requested</th><th>Buy fill</th><th>Sell fill</th><th>Compensated</th><th>Realized P&L</th><th>Edge capture</th></tr></thead>
+          <thead><tr><th>Execution</th><th>{{ 'Status'|trans }}</th><th>Checkpoint</th><th>Requested</th><th>Buy fill</th><th>Sell fill</th><th>Compensated</th><th>Realized P&L</th><th>Edge capture</th></tr></thead>
           <tbody>
           {% for e in w.executions|slice(0,25) %}
             <tr>
@@ -896,7 +896,7 @@
         <p>No persisted strategy positions yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Instrument</th><th>Venue</th><th>Status</th><th>Quantity</th><th>Avg entry</th><th>Mark</th><th>Market value</th><th>Realized</th><th>Unrealized</th></tr></thead>
+          <thead><tr><th>Instrument</th><th>Venue</th><th>{{ 'Status'|trans }}</th><th>Quantity</th><th>Avg entry</th><th>Mark</th><th>Market value</th><th>Realized</th><th>Unrealized</th></tr></thead>
           <tbody>
           {% for p in w.positions %}
             <tr>
@@ -974,7 +974,7 @@
         <p>No H4/H5/H6 opportunities recorded yet. Poll trusted spot/perpetual sources and run a scan through the VS2 API.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Hypothesis</th><th>Type</th><th>Status</th><th>Strategy</th><th>Expected net P&amp;L</th><th>Capital</th><th>Risk</th><th>Expires</th></tr></thead>
+          <thead><tr><th>Hypothesis</th><th>{{ 'Type'|trans }}</th><th>{{ 'Status'|trans }}</th><th>Strategy</th><th>Expected net P&amp;L</th><th>Capital</th><th>Risk</th><th>Expires</th></tr></thead>
           <tbody>
           {% for item in opportunities %}
             <tr>
@@ -1030,7 +1030,7 @@
         <p>No funding observations persisted yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Venue</th><th>Instrument</th><th>Rate</th><th>Status</th><th>Interval</th><th>Next settlement</th><th>Quality</th></tr></thead>
+          <thead><tr><th>Venue</th><th>Instrument</th><th>Rate</th><th>{{ 'Status'|trans }}</th><th>Interval</th><th>Next settlement</th><th>Quality</th></tr></thead>
           <tbody>
           {% for row in funding|slice(0,100) %}
             <tr>
@@ -1054,7 +1054,7 @@
         <p>No VS2 paper executions yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Execution</th><th>Hypothesis</th><th>Status</th><th>Strategy</th><th>Hedge group</th><th>Realized P&amp;L</th></tr></thead>
+          <thead><tr><th>Execution</th><th>Hypothesis</th><th>{{ 'Status'|trans }}</th><th>Strategy</th><th>Hedge group</th><th>Realized P&amp;L</th></tr></thead>
           <tbody>
           {% for row in executions|slice(0,100) %}
             <tr>
@@ -1097,7 +1097,7 @@
     </section>
 
   {% elseif cmView == 'market_data' %}
-    <section class="cos-kpi-strip" aria-label="Capital Markets market data state">
+    <section class="cos-kpi-strip" aria-label="{{ 'Capital Markets'|trans }} market data state">
       <twig:CosMetric label="Sources" value="{{ w.sources|default([])|length }}" hint="configured providers" />
       <twig:CosMetric label="Trading states" value="{{ w.states|default([])|length }}" hint="venue + instrument" />
       <twig:CosMetric label="Reference states" value="{{ w.reference_states|default([])|length }}" hint="source + instrument" />
@@ -1140,7 +1140,7 @@
               <option value="DELAYED">DELAYED</option>
             </select>
           </div>
-          <div class="col-md-2"><input class="form-control" type="number" min="0" max="10000" name="priority" value="100" placeholder="Priority"></div>
+          <div class="col-md-2"><input class="form-control" type="number" min="0" max="10000" name="priority" value="100" placeholder="{{ 'Priority'|trans }}"></div>
           <div class="col-md-2"><input class="form-control" type="number" min="1" name="request_budget" value="60" placeholder="Requests"></div>
           <div class="col-md-2"><input class="form-control" type="number" min="1" name="window_seconds" value="60" placeholder="Window sec"></div>
           <div class="col-md-8"><input class="form-control" name="license_profile" value="UNSPECIFIED" placeholder="License profile"></div>
@@ -1168,7 +1168,7 @@
                 {% endif %}
                 {% for role in source.roles %}<span class="badge text-bg-light me-1">{{ role }}</span>{% endfor %}
               </p>
-              <p>Venue: <strong>{{ source.venue_id|default('reference / none') }}</strong> · Priority: {{ source.priority }} · License: {{ source.license_profile }}</p>
+              <p>Venue: <strong>{{ source.venue_id|default('reference / none') }}</strong> · {{ 'Priority:'|trans }} {{ source.priority }} · License: {{ source.license_profile }}</p>
               <p>Capabilities: {% if source.capabilities is empty %}—{% else %}{{ source.capabilities|join(', ') }}{% endif %}</p>
               {% if source.credentials_configured %}<p>Credentials: <strong>configured</strong> via Platform Credential Vault.</p>{% endif %}
             </div>
@@ -1218,7 +1218,7 @@
             <p>No subscriptions configured.</p>
           {% else %}
             <div class="table-responsive"><table class="table">
-              <thead><tr><th>Instrument</th><th>Data type</th><th>Status</th><th>Last event</th></tr></thead>
+              <thead><tr><th>Instrument</th><th>Data type</th><th>{{ 'Status'|trans }}</th><th>Last event</th></tr></thead>
               <tbody>
               {% for subscription in source.subscriptions %}
                 <tr>
@@ -1262,7 +1262,7 @@
         <p>No trading state yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Venue</th><th>Instrument</th><th>Mid</th><th>Spread bps</th><th>Trust</th><th>Updated</th></tr></thead>
+          <thead><tr><th>Venue</th><th>Instrument</th><th>Mid</th><th>Spread bps</th><th>Trust</th><th>{{ 'Updated'|trans }}</th></tr></thead>
           <tbody>
           {% for state in w.states %}
             <tr>
@@ -1285,7 +1285,7 @@
         <p>No reference state yet.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Source</th><th>Instrument</th><th>Session</th><th>Reference</th><th>Trust</th><th>Updated</th></tr></thead>
+          <thead><tr><th>Source</th><th>Instrument</th><th>Session</th><th>Reference</th><th>Trust</th><th>{{ 'Updated'|trans }}</th></tr></thead>
           <tbody>
           {% for state in w.reference_states %}
             <tr>
@@ -1347,7 +1347,7 @@
         <p>No directed relationships have been registered.</p>
       {% else %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Source</th><th>Type</th><th>Target</th><th>Strength</th><th>Status</th></tr></thead>
+          <thead><tr><th>Source</th><th>{{ 'Type'|trans }}</th><th>Target</th><th>Strength</th><th>{{ 'Status'|trans }}</th></tr></thead>
           <tbody>
           {% for rel in w.relationships %}
             <tr>

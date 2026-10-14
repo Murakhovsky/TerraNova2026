@@ -49,16 +49,16 @@
         <label class="cos-field">
             <span>Тип</span>
             <select class="cos-select" name="type">
-                <option value="">Усі</option>
+                <option value="">{{ 'Усі'|trans }}</option>
                 {% for code, label in content.typeLabels %}
                     <option value="{{ code }}" {% if content.filters.type == code %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="cos-field">
-            <span>Статус</span>
+            <span>{{ 'Статус'|trans }}</span>
             <select class="cos-select" name="status">
-                <option value="">Усі</option>
+                <option value="">{{ 'Усі'|trans }}</option>
                 {% for code, label in content.statusLabels %}
                     <option value="{{ code }}" {% if content.filters.status == code %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -94,7 +94,7 @@
             </div>
         </div>
         {% if content.deliveries is empty %}
-            <twig:CosEmptyState title="Викликів ще немає" copy="Webhook deliveries з’являться тут після першої синхронізації." />
+            <twig:CosEmptyState title="Викликів {{ 'ще немає'|trans }}" copy="Webhook deliveries з’являться тут після першої синхронізації." />
         {% else %}
             <div class="cos-entity-list" role="list">
                 {% for delivery in content.deliveries %}

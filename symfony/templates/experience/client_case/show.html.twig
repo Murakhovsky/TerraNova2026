@@ -121,13 +121,13 @@
                             <label class="cos-field"><span>Тип</span><select class="cos-select" name="type">
                                 {% for code,label in case.typeOptions %}<option value="{{ code }}" {% if case.form.type == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
                             </select></label>
-                            <label class="cos-field"><span>Статус</span><select class="cos-select" name="status">
+                            <label class="cos-field"><span>{{ 'Статус'|trans }}</span><select class="cos-select" name="status">
                                 {% for code,label in case.statusOptions %}<option value="{{ code }}" {% if case.form.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
                             </select></label>
-                            <label class="cos-field"><span>Етап</span><select class="cos-select" name="stage_id">
+                            <label class="cos-field"><span>{{ 'Етап'|trans }}</span><select class="cos-select" name="stage_id">
                                 {% for option in case.stageOptions %}<option value="{{ option.id }}" {% if case.form.stage_id == option.id %}selected{% endif %}>{{ option.label }}</option>{% endfor %}
                             </select></label>
-                            <label class="cos-field"><span>Пріоритет</span><select class="cos-select" name="priority">
+                            <label class="cos-field"><span>{{ 'Пріоритет'|trans }}</span><select class="cos-select" name="priority">
                                 {% for code,label in case.priorityOptions %}<option value="{{ code }}" {% if case.form.priority == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
                             </select></label>
                             <label class="cos-field"><span>Відповідальний</span><select class="cos-select" name="assigned_user_id">
@@ -202,7 +202,7 @@
                 <article class="cos-card cos-pattern-stack">
                     <h2 class="cos-card__title">Історія</h2>
                     {% if case.timeline is empty %}
-                        <twig:CosEmptyState title="Дій ще немає" copy="Нова активність зʼявиться тут після першого контакту або нотатки." />
+                        <twig:CosEmptyState title="Дій {{ 'ще немає'|trans }}" copy="Нова активність зʼявиться тут після першого контакту або нотатки." />
                     {% else %}
                         <twig:CosTimeline :items="case.timeline" label="Client Case history" />
                     {% endif %}
@@ -234,7 +234,7 @@
                             {% if request.message %}<p class="cos-card__copy">{{ request.message }}</p>{% endif %}
                         </article>
                     {% else %}
-                        <twig:CosEmptyState title="Заявок ще немає" copy="До кейсу ще не привʼязано вхідних заявок." />
+                        <twig:CosEmptyState title="Заявок {{ 'ще немає'|trans }}" copy="До кейсу ще не привʼязано вхідних заявок." />
                     {% endfor %}
                 </article>
 
@@ -283,7 +283,7 @@
                             </twig:CosActionBar>
                         </article>
                     {% else %}
-                        <twig:CosEmptyState title="Підборів ще немає" copy="Додайте обʼєкт у кейс із каталогу або картки обʼєкта." />
+                        <twig:CosEmptyState title="Підборів {{ 'ще немає'|trans }}" copy="Додайте обʼєкт у кейс із каталогу або картки обʼєкта." />
                     {% endfor %}
                 </article>
             </section>
