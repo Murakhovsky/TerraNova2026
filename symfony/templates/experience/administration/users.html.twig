@@ -26,7 +26,7 @@
             <a class="cos-button cos-button--ghost cos-button--sm" href="#role-model">Рольова модель</a>
         {% endblock %}
         {% block end %}
-            <a class="cos-button cos-button--ghost cos-button--sm" href="/admin/users">Reset filters</a>
+            <a class="cos-button cos-button--ghost cos-button--sm" href="/admin/users">{{ 'Reset filters'|trans }}</a>
         {% endblock %}
     </twig:CosToolbar>
 
@@ -48,7 +48,7 @@
     <twig:CosFilterBar action="/admin/users" label="Users filters">
         <label class="cos-field">
             <span>Пошук</span>
-            <input class="cos-input" type="search" name="q" value="{{ users.filters.q }}" placeholder="Імʼя, email, телефон">
+            <input class="cos-input" type="search" name="q" value="{{ users.filters.q }}" placeholder="{{ 'Імʼя, email, телефон'|trans }}">
         </label>
         <label class="cos-field">
             <span>{{ 'Роль'|trans }}</span>
@@ -108,7 +108,7 @@
         <form class="cos-section-grid" action="/admin/createUser" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
             <label class="cos-field"><span>Імʼя</span><input class="cos-input" name="full_name" type="text" maxlength="160" required></label>
-            <label class="cos-field"><span>Email</span><input class="cos-input" name="email" type="email" maxlength="160" required></label>
+            <label class="cos-field"><span>{{ 'Email'|trans }}</span><input class="cos-input" name="email" type="email" maxlength="160" required></label>
             <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" maxlength="50"></label>
             <label class="cos-field"><span>Пароль</span><input class="cos-input" name="password" type="password" minlength="8" autocomplete="new-password" required></label>
             <label class="cos-field">

@@ -37,7 +37,7 @@
     </div>
     <div class="d-flex gap-2 align-items-center flex-wrap" aria-label="{{ 'Capital Markets'|trans }} workspace mode">
       <span class="badge text-bg-{{ g.mode|default('PAPER') == 'RESEARCH' ? 'info' : 'secondary' }}">MODE: {{ g.mode|default('PAPER') }}</span>
-      <span class="badge text-bg-light">RESEARCH</span>
+      <span class="badge text-bg-light">{{ 'RESEARCH'|trans }}</span>
       <span class="badge text-bg-light">PAPER</span>
       <span class="badge text-bg-light" title="Live execution is disabled by policy">LIVE · DISABLED</span>
       <label class="small" for="cm-density">Density</label>
@@ -50,13 +50,13 @@
 
   <nav class="cos-growth-actions" aria-label="{{ 'Capital Markets'|trans }} primary workspace navigation">
     {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'overview' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets">{{ 'Overview'|trans }}</a>{% endif %}
-    {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['opportunities','opportunity'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/opportunities">Opportunities</a>{% endif %}
+    {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['opportunities','opportunity'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/opportunities">{{ 'Opportunities'|trans }}</a>{% endif %}
     {% if permissions.market_data_view|default(false) %}<a class="btn {{ cmView in ['markets','market_detail','relationship_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/markets">Markets</a>{% endif %}
     {% if permissions.research_view|default(false) %}<a class="btn {{ cmView in ['research','hypothesis'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/research">Research</a><a class="btn {{ cmView in ['strategies','strategy'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/strategies">Strategies</a>{% endif %}
     {% if permissions.portfolio_view|default(false) %}<a class="btn {{ cmView == 'portfolio' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/portfolio">Portfolio</a><a class="btn {{ cmView == 'performance' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/performance">Performance</a>{% endif %}
     {% if permissions.allocation_view|default(false) %}<a class="btn {{ cmView == 'allocation' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/allocation">Allocation</a>{% endif %}
     {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['execution','execution_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/execution">Execution</a>{% endif %}
-    {% if permissions.risk_view|default(false) %}<a class="btn {{ cmView == 'risk' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/risk">Risk</a>{% endif %}
+    {% if permissions.risk_view|default(false) %}<a class="btn {{ cmView == 'risk' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/risk">{{ 'Risk'|trans }}</a>{% endif %}
     {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'agents' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/agents">Agents</a>{% endif %}
     {% if permissions.market_data_quality_view|default(false) %}<a class="btn {{ cmView == 'data_quality' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/data-quality">Data Quality</a>{% endif %}
   </nav>
@@ -164,7 +164,7 @@
           {% endif %}
           <div class="table-responsive">
             <table class="table align-middle">
-              <thead><tr><th>Opportunity</th><th>Expected Net</th><th>Capital</th><th>Approved</th><th>Risk</th><th>Portfolio</th><th>Action</th></tr></thead>
+              <thead><tr><th>Opportunity</th><th>Expected Net</th><th>Capital</th><th>Approved</th><th>{{ 'Risk'|trans }}</th><th>Portfolio</th><th>Action</th></tr></thead>
               <tbody>
               {% for o in w.top_opportunities|default([]) %}
                 <tr>
@@ -228,7 +228,7 @@
         <section class="cos-panel h-100">
           <h2>Material Risks</h2>
           <div class="table-responsive"><table class="table">
-            <thead><tr><th>Risk</th><th>Current</th><th>Limit</th><th>Utilization</th><th>State</th></tr></thead>
+            <thead><tr><th>{{ 'Risk'|trans }}</th><th>Current</th><th>Limit</th><th>Utilization</th><th>State</th></tr></thead>
             <tbody>
             {% for item in w.material_risks|default([]) %}
               <tr><td>{{ item.metric }}</td><td>{{ item.current is not null ? item.current : '—' }}</td><td>{{ item.limit is not null ? item.limit : '—' }}</td><td>{{ item.utilization is not null ? item.utilization : '—' }}</td><td><strong>{{ item.state }}</strong></td></tr>
@@ -260,7 +260,7 @@
     <section class="cos-panel" aria-label="Portfolio NAV PnL evidence">
       <h2>Portfolio NAV time-window evidence</h2>
       <p>Includes realized and unrealized returns, adjusted for external cash flows, when reconciled opening and closing NAV snapshots exist.</p>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>{{ 'Status'|trans }}</th><th>Net P&amp;L</th><th>Currency</th><th>Reason</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>{{ 'Status'|trans }}</th><th>Net P&amp;L</th><th>{{ 'Currency'|trans }}</th><th>Reason</th></tr></thead><tbody>
         {% for code,entry in navWindows %}
           <tr><td>{{ code == 'today' ? 'Today UTC' : '30D UTC' }}</td><td>{{ entry.status }}</td><td>{{ entry.net_pnl is not null ? entry.net_pnl : '—' }}</td><td>{{ entry.currency|default('—') }}</td><td>{{ entry.reason|default('—') }}</td></tr>
         {% else %}<tr><td colspan="5">Reconciled NAV snapshots unavailable.</td></tr>{% endfor %}
@@ -292,7 +292,7 @@
       </div>
       <form class="row g-2 align-items-end mb-3" method="get" action="/capital-markets/opportunities" aria-label="Opportunity filters">
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-type">{{ 'Type'|trans }}</label><input id="cm-op-type" class="form-control" name="type" value="{{ query.type|default('') }}"></div>
-        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-risk">Risk</label><input id="cm-op-risk" class="form-control" name="risk" value="{{ query.risk|default('') }}"></div>
+        <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-risk">{{ 'Risk'|trans }}</label><input id="cm-op-risk" class="form-control" name="risk" value="{{ query.risk|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-status">{{ 'Status'|trans }}</label><input id="cm-op-status" class="form-control" name="status" value="{{ query.status|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-decision">Decision</label><input id="cm-op-decision" class="form-control" name="decision" value="{{ query.decision|default('') }}"></div>
         <div class="col-xl-2 col-md-4"><label class="form-label" for="cm-op-strategy">Strategy</label><input id="cm-op-strategy" class="form-control" name="strategy" value="{{ query.strategy|default('') }}"></div>
@@ -330,7 +330,7 @@
       </div>
       <div class="table-responsive">
         <table class="table align-middle" data-cm-table="opportunities">
-          <thead><tr><th data-cm-col="priority">{{ 'Priority'|trans }}</th><th data-cm-col="opportunity">Opportunity</th><th data-cm-col="type">{{ 'Type'|trans }}</th><th data-cm-col="market">Instruments / Venues</th><th data-cm-col="expected_net">Expected Net</th><th data-cm-col="return">Return</th><th data-cm-col="capital">Capital</th><th data-cm-col="capacity">Capacity</th><th data-cm-col="risk">Risk</th><th data-cm-col="portfolio_impact">Portfolio Impact</th><th data-cm-col="ttl">TTL</th><th data-cm-col="status">{{ 'Status'|trans }}</th></tr></thead>
+          <thead><tr><th data-cm-col="priority">{{ 'Priority'|trans }}</th><th data-cm-col="opportunity">Opportunity</th><th data-cm-col="type">{{ 'Type'|trans }}</th><th data-cm-col="market">Instruments / Venues</th><th data-cm-col="expected_net">Expected Net</th><th data-cm-col="return">Return</th><th data-cm-col="capital">Capital</th><th data-cm-col="capacity">Capacity</th><th data-cm-col="risk">{{ 'Risk'|trans }}</th><th data-cm-col="portfolio_impact">Portfolio Impact</th><th data-cm-col="ttl">TTL</th><th data-cm-col="status">{{ 'Status'|trans }}</th></tr></thead>
           <tbody>
           {% for o in w.opportunities|default([]) %}
             <tr>
@@ -474,7 +474,7 @@
       {% if marketView == 'relationship' %}
         {% if permissions.relationship_view|default(false) %}
         <div class="table-responsive"><table class="table">
-          <thead><tr><th>Source</th><th>Relationship</th><th>Target</th><th>Strength / Ratio</th><th>Reference / Conversion</th><th>{{ 'Status'|trans }}</th></tr></thead>
+          <thead><tr><th>{{ 'Source'|trans }}</th><th>{{ 'Relationship'|trans }}</th><th>{{ 'Target'|trans }}</th><th>Strength / Ratio</th><th>Reference / Conversion</th><th>{{ 'Status'|trans }}</th></tr></thead>
           <tbody>
           {% for rel in w.relationships|default([]) %}
             <tr>
@@ -538,12 +538,12 @@
       </div>
       <p>Recorded canonical QUOTE, BBO, CANDLE, REFERENCE, MARK, INDEX and FUNDING observations only. Source, mode and quality are preserved; no synthetic points or currency conversion.</p>
       {% if not permissions.market_data_history_view|default(false) %}
-        <p>Historical market evidence is restricted to users with Market Data History View authority.</p>
+        <p>Historical market evidence is restricted to users with {{ 'Market Data'|trans }} History View authority.</p>
       {% else %}
         <div data-capital-markets-workspace-target="historyChart" data-history-rows="{{ w.history_rows|default([])|json_encode|e('html_attr') }}" role="group" aria-label="Canonical historical market series chart"></div>
         <div class="table-responsive">
           <table class="table" aria-label="Canonical market history for last seven days">
-            <thead><tr><th>Source time (UTC)</th><th>Event</th><th>Venue</th><th>Source</th><th>Observed value</th><th>Quote / Unit</th><th>Spread (bps)</th><th>Mode</th><th>Quality flags</th></tr></thead>
+            <thead><tr><th>Source time (UTC)</th><th>Event</th><th>Venue</th><th>{{ 'Source'|trans }}</th><th>Observed value</th><th>Quote / Unit</th><th>Spread (bps)</th><th>Mode</th><th>Quality flags</th></tr></thead>
             <tbody>
               {% for item in w.history_rows|default([])|slice(-150) %}
                 <tr>
@@ -568,8 +568,8 @@
     </section>
     {% if permissions.relationship_view|default(false) %}
     <section class="cos-panel">
-      <h2>Relationships</h2>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Relationship</th><th>Source</th><th>Target</th><th>Reference Mechanism</th><th>Settlement</th><th>Hedgeability</th></tr></thead><tbody>
+      <h2>{{ 'Relationships'|trans }}</h2>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Relationship'|trans }}</th><th>{{ 'Source'|trans }}</th><th>{{ 'Target'|trans }}</th><th>Reference Mechanism</th><th>Settlement</th><th>Hedgeability</th></tr></thead><tbody>
       {% for rel in w.instrument_relationships|default([]) %}
         {% set rid = rel.id|default(rel.relationship_id|default('')) %}
         <tr><td>{% if rid %}<a href="/capital-markets/relationships/{{ rid|url_encode }}">{{ rel.type|default(rel.relationship_type|default(rid)) }}</a>{% else %}{{ rel.type|default(rel.relationship_type|default('—')) }}{% endif %}</td><td>{{ rel.source_instrument.id|default(rel.source_instrument_id|default(rel.from_instrument_id|default('—'))) }}</td><td>{{ rel.target_instrument.id|default(rel.target_instrument_id|default(rel.to_instrument_id|default('—'))) }}</td><td>{{ rel.metadata.reference_mechanism|default('—') }}</td><td>{{ rel.metadata.settlement|default('—') }}</td><td>{{ rel.metadata.hedgeability|default('—') }}</td></tr>
@@ -577,7 +577,7 @@
       </tbody></table></div>
     </section>
 
-      {% else %}<section class="cos-panel"><h2>Relationships</h2><p>Relationship View permission is required.</p></section>{% endif %}
+      {% else %}<section class="cos-panel"><h2>{{ 'Relationships'|trans }}</h2><p>Relationship View permission is required.</p></section>{% endif %}
 {% elseif cmView == 'relationship_detail' %}
     {% set rel = w.relationship|default({}) %}
     <section class="cos-panel">
@@ -600,7 +600,7 @@
       </tbody></table></div>
     </section>
 
-      {% else %}<section class="cos-panel"><h2>Price Comparison</h2><p>Market Data View permission is required. Quotes are not available to this role.</p></section>{% endif %}
+      {% else %}<section class="cos-panel"><h2>Price Comparison</h2><p>{{ 'Market Data'|trans }} View permission is required. Quotes are not available to this role.</p></section>{% endif %}
     <section class="cos-panel" aria-label="Historical Relationship Basis">
       {% set basis = w.historical_basis|default({}) %}
       <div class="d-flex gap-3 flex-wrap justify-content-between align-items-center">
@@ -609,7 +609,7 @@
       </div>
       <p>Canonical, time-aligned observations only. Up to 30 seconds of skew; comparable quoted currency and an explicitly verified economic conversion are mandatory. This chart is not an executable arbitrage signal.</p>
       {% if not permissions.market_data_view|default(false) or not permissions.market_data_history_view|default(false) %}
-        <p>Market Data View and Market Data History View permissions are required.</p>
+        <p>{{ 'Market Data'|trans }} View and {{ 'Market Data'|trans }} History View permissions are required.</p>
       {% elseif basis.status|default('NOT COMPARABLE') != 'OBSERVATIONS_AVAILABLE' %}
         <twig:CosAlert title="NOT COMPARABLE" copy="{{ basis.reason|default('Canonical comparable history unavailable') }}. No historical basis or synthetic price is invented." tone="warning" />
       {% else %}
@@ -639,7 +639,7 @@
       <twig:CosMetric label="Rejected" value="{{ research.metrics.rejected_hypotheses|default(0) }}" hint="negative knowledge remains visible" />
     </section>
     <section class="cos-panel">
-      <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap"><h2>Research Pipeline</h2><div><a href="/capital-markets/export/research-results.csv">Export results CSV</a> · <a href="/capital-markets/export/research-results.json">JSON</a></div></div>
+      <div class="d-flex justify-content-between gap-3 align-items-center flex-wrap"><h2>{{ 'Research Pipeline'|trans }}</h2><div><a href="/capital-markets/export/research-results.csv">Export results CSV</a> · <a href="/capital-markets/export/research-results.json">JSON</a></div></div>
       <div class="row g-3">
       {% for stage, items in w.pipeline|default({}) %}
         <div class="col-xl col-md-4 col-sm-6">
@@ -697,7 +697,7 @@
     <twig:CosDecisionTrace :steps="w.decision_trace|default([])" emptyCopy="No downstream research decision is traceable yet." />
     <section class="cos-panel">
       <h2>Audit</h2>
-      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Time'|trans }}</th><th>Action</th><th>Actor</th><th>Reason</th><th>{{ 'Correlation'|trans }}</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Time'|trans }}</th><th>Action</th><th>{{ 'Actor'|trans }}</th><th>Reason</th><th>{{ 'Correlation'|trans }}</th></tr></thead><tbody>
       {% for a in w.audit|default([]) %}
         <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
       {% else %}<tr><td colspan="5">No audit activity is recorded for this hypothesis.</td></tr>{% endfor %}
@@ -722,7 +722,7 @@
     <section class="cos-panel"><twig:CosEntityHeader eyebrow="Strategy" identity="{{ s.strategy_version_id|default(s.id|default(entityId|default('—'))) }}" title="{{ s.name|default(s.strategy_name|default('Strategy Version')) }}" subtitle="{{ s.description|default('') }}" statusLabel="{{ s.status|default('UNKNOWN') }}" statusTone="info" /></section>
     <section class="cos-panel">
       <h2>Scorecards</h2>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Scorecard</th><th>Profitability</th><th>Consistency</th><th>Risk</th><th>Execution</th><th>Capital Efficiency</th><th>Capacity</th><th>Robustness</th><th>Data Confidence</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Scorecard</th><th>Profitability</th><th>Consistency</th><th>{{ 'Risk'|trans }}</th><th>Execution</th><th>Capital Efficiency</th><th>Capacity</th><th>Robustness</th><th>Data Confidence</th></tr></thead><tbody>
       {% for x in w.scorecards|default([]) %}
         <tr><td>{{ x.scorecard_id|default(x.id|default('—')) }}</td><td>{{ x.profitability|default(x.dimensions.profitability|default('—')) }}</td><td>{{ x.consistency|default(x.dimensions.consistency|default('—')) }}</td><td>{{ x.risk|default(x.dimensions.risk|default('—')) }}</td><td>{{ x.execution|default(x.dimensions.execution|default('—')) }}</td><td>{{ x.capital_efficiency|default(x.dimensions.capital_efficiency|default('—')) }}</td><td>{{ x.capacity|default(x.dimensions.capacity|default('—')) }}</td><td>{{ x.robustness|default(x.dimensions.robustness|default('—')) }}</td><td>{{ x.data_confidence|default(x.dimensions.data_confidence|default('—')) }}</td></tr>
       {% else %}<tr><td colspan="9">No scorecard exists for this version.</td></tr>{% endfor %}
@@ -746,7 +746,7 @@
     <section class="cos-panel"><h2>Promotion Gate</h2>{% for x in w.promotion_decisions|default([]) %}<p><strong>{{ x.status|default('—') }}</strong> · {{ x.from_stage|default('—') }} → {{ x.to_stage|default('—') }} · {{ x.reason|default('') }}</p>{% else %}<p>No promotion decision yet.</p>{% endfor %}</section>
     <section class="cos-panel">
       <h2>Audit</h2>
-      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Time'|trans }}</th><th>Action</th><th>Actor</th><th>Reason</th><th>{{ 'Correlation'|trans }}</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Time'|trans }}</th><th>Action</th><th>{{ 'Actor'|trans }}</th><th>Reason</th><th>{{ 'Correlation'|trans }}</th></tr></thead><tbody>
       {% for a in w.audit|default([]) %}
         <tr><td>{{ a.timestamp|default('—') }}</td><td>{{ a.action|default('—') }}</td><td>{{ a.actor.type|default('—') }} · {{ a.actor.id|default('—') }}</td><td>{{ a.reason|default('—') }}</td><td><code>{{ a.correlation_id|default('—') }}</code></td></tr>
       {% else %}<tr><td colspan="5">No audit activity is recorded for this strategy version.</td></tr>{% endfor %}
@@ -875,7 +875,7 @@
     </section>
     <section class="cos-panel"><h2>Limits / Headroom</h2><div class="table-responsive"><table class="table"><thead><tr><th>Metric</th><th>Current</th><th>Soft / Hard Limit</th><th>Headroom</th><th>Utilization</th><th>Authority</th><th>State</th></tr></thead><tbody>{% for key,x in snap.risk_limit_utilization|default({}) %}<tr><td>{{ x.metric|default(key) }}</td><td>{{ x.current|default('—') }}</td><td>{{ x.limit|default('—') }}</td><td>{{ x.headroom|default('—') }}</td><td>{{ x.utilization|default('—') }}</td><td>{{ x.hard|default(false) ? 'HARD' : 'SOFT' }}</td><td><strong>{{ x.breached|default(false) ? 'BREACHED' : 'OK' }}</strong></td></tr>{% else %}<tr><td colspan="7">No risk snapshot. Configure and calculate a Risk Envelope.</td></tr>{% endfor %}</tbody></table></div></section>
     <section class="cos-panel"><h2>Top Risks</h2><ol>{% for item in rr.top_risks|default([]) %}<li><strong>{{ item.metric }}</strong> · {{ item.current is not null ? item.current : '—' }} / {{ item.limit is not null ? item.limit : '—' }} · {{ item.state }}</li>{% else %}<li>No material limit utilization item to surface.</li>{% endfor %}</ol></section>
-    <section class="cos-panel"><h2>Stress Tests</h2><div class="table-responsive"><table class="table"><thead><tr><th>Scenario</th><th>Estimated Loss</th><th>Margin Impact</th><th>Positions</th><th>Venues</th><th>Limits / Capital</th></tr></thead><tbody>{% for x in rr.stress_results|default([]) %}<tr><td>{{ x.name|default(x.scenario_id|default('—')) }}</td><td>{{ x.estimated_loss|default('—') }}</td><td>{{ x.margin_impact|default('—') }}</td><td>{{ x.positions_affected|default([])|length }}</td><td>{{ x.venues_affected|default([])|join(', ') }}</td><td>{{ x.capital_remaining|default('—') }}</td></tr>{% else %}<tr><td colspan="6">No stress result yet.</td></tr>{% endfor %}</tbody></table></div></section>
+    <section class="cos-panel"><h2>Stress Tests</h2><div class="table-responsive"><table class="table"><thead><tr><th>Scenario</th><th>Estimated Loss</th><th>Margin Impact</th><th>Positions</th><th>{{ 'Venues'|trans }}</th><th>Limits / Capital</th></tr></thead><tbody>{% for x in rr.stress_results|default([]) %}<tr><td>{{ x.name|default(x.scenario_id|default('—')) }}</td><td>{{ x.estimated_loss|default('—') }}</td><td>{{ x.margin_impact|default('—') }}</td><td>{{ x.positions_affected|default([])|length }}</td><td>{{ x.venues_affected|default([])|join(', ') }}</td><td>{{ x.capital_remaining|default('—') }}</td></tr>{% else %}<tr><td colspan="6">No stress result yet.</td></tr>{% endfor %}</tbody></table></div></section>
 
   {% elseif cmView == 'performance' %}
     {% set perf = w.performance|default({}) %}
@@ -1012,7 +1012,7 @@
     <section class="cos-panel" aria-label="Portfolio NAV performance windows">
       <h2>Portfolio Net P&amp;L Today / 30D · reconciled NAV</h2>
       <p>Includes mark-to-market of open positions and realized results, adjusted for external cashflows. Incomplete opening or closing valuation means unavailable.</p>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>State</th><th>Net P&amp;L</th><th>Currency</th><th>Reason</th><th>Boundary evidence</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>Window</th><th>State</th><th>Net P&amp;L</th><th>{{ 'Currency'|trans }}</th><th>Reason</th><th>Boundary evidence</th></tr></thead><tbody>
       {% for code,entry in navWindows %}
         <tr><td>{{ code == 'today' ? 'Today UTC' : '30D UTC' }}</td><td>{{ entry.status }}</td><td>{{ entry.net_pnl is not null ? entry.net_pnl : '—' }}</td><td>{{ entry.currency|default('—') }}</td><td>{{ entry.reason|default('—') }}</td><td>{{ entry.opening_valued_at|default('—') }} → {{ entry.closing_valued_at|default('—') }}</td></tr>
       {% else %}<tr><td colspan="6">No reconciled portfolio valuations available.</td></tr>{% endfor %}
@@ -1145,7 +1145,7 @@
     </section>
     <section class="cos-panel">
       <h2>Sources</h2>
-      <div class="table-responsive"><table class="table"><thead><tr><th>Source</th><th>{{ 'Role'|trans }}</th><th>Connection</th><th>Last Event</th><th>Latency</th><th>Errors</th><th>Reconnects</th><th>Rate Limit</th><th>Clock / Last Error</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table"><thead><tr><th>{{ 'Source'|trans }}</th><th>{{ 'Role'|trans }}</th><th>Connection</th><th>Last Event</th><th>Latency</th><th>Errors</th><th>Reconnects</th><th>Rate Limit</th><th>Clock / Last Error</th></tr></thead><tbody>
       {% for s in w.sources|default([]) %}
         {% set h=s.health|default({}) %}
         <tr>
