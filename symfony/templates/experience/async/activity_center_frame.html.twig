@@ -9,44 +9,44 @@
     >
         <header class="cos-activity-center__header">
             <div>
-                <p class="cos-activity-center__eyebrow">Async Operations</p>
-                <h2>{{ tab == 'notifications' ? 'Notifications' : 'Activity Center' }}</h2>
+                <p class="cos-activity-center__eyebrow">{{ 'Async {{ 'Operation'|trans }}s'|trans }}</p>
+                <h2>{{ tab == 'notifications' ? ('Notifications'|trans) : ('Activity Center'|trans) }}</h2>
             </div>
             <button
                 class="cos-shell__icon-button"
                 type="button"
-                aria-label="Close Activity Center"
+                aria-label="Close {{ 'Activity Center'|trans }}"
                 data-action="click->workspace-shell#closeActivityCenter"
             >×</button>
         </header>
 
-        <nav class="cos-activity-center__tabs" aria-label="Activity Center views">
+        <nav class="cos-activity-center__tabs" aria-label="{{ '{{ 'Activity Center'|trans }} views'|trans }}">
             <a
                 href="{{ path('cos_web_activity_center', {tab: 'activity'}) }}"
                 class="{% if tab == 'activity' %}is-active{% endif %}"
                 {% if tab == 'activity' %}aria-current="page"{% endif %}
-            >Activity <span>{{ activity|length }}</span></a>
+            >{{ 'Activity'|trans }} <span>{{ activity|length }}</span></a>
             <a
                 href="{{ path('cos_web_activity_center', {tab: 'notifications'}) }}"
                 class="{% if tab == 'notifications' %}is-active{% endif %}"
                 {% if tab == 'notifications' %}aria-current="page"{% endif %}
-            >Notifications <span>{{ notifications|length }}</span></a>
+            >{{ 'Notifications'|trans }} <span>{{ notifications|length }}</span></a>
         </nav>
 
         {% if retried %}
             <div class="cos-alert cos-alert--success" role="status">
-                Operation returned to the canonical queue.
+                {{ '{{ 'Operation'|trans }} returned to the canonical queue.'|trans }}
             </div>
         {% endif %}
 
         {% if selected %}
-            <section class="cos-activity-center__detail" aria-label="Selected async operation">
+            <section class="cos-activity-center__detail" aria-label="{{ 'Selected async operation'|trans }}">
                 <div class="cos-activity-center__detail-head">
                     <div>
                         <small>{{ selected.type }}</small>
-                        <strong>{{ selected.status.value|capitalize }}</strong>
+                        <strong>{{ ('engineering.status.' ~ (selected.status.value|lower))|trans }}</strong>
                     </div>
-                    <span class="cos-activity-center__status" data-status="{{ selected.status.value }}">
+                    <span class="cos-activity-center__status" data-status="{{ ('engineering.status.' ~ (selected.status.value|lower))|trans }}">
                         {{ selected.status.value }}
                     </span>
                 </div>
@@ -54,21 +54,21 @@
                 {% if selected.progress is not null %}
                     <twig:CosProgress
                         :value="selected.progress"
-                        label="{{ selected.progress }}% complete"
+                        label="{{ '%percent% complete'|trans({'%percent%': selected.progress}) }}"
                     />
                 {% else %}
-                    <p class="cos-activity-center__muted">Progress is indeterminate for this operation type.</p>
+                    <p class="cos-activity-center__muted">{{ 'Progress is indeterminate for this operation type.'|trans }}</p>
                 {% endif %}
 
                 <dl class="cos-activity-center__facts">
-                    <div><dt>Operation</dt><dd><code>{{ selected.id }}</code></dd></div>
-                    <div><dt>Attempts</dt><dd>{{ selected.attempts }} / {{ selected.maxAttempts }}</dd></div>
-                    <div><dt>Correlation</dt><dd><code>{{ selected.correlationId }}</code></dd></div>
-                    {% if selected.workerId %}<div><dt>Worker</dt><dd>{{ selected.workerId }}</dd></div>{% endif %}
+                    <div><dt>{{ 'Operation'|trans }}</dt><dd><code>{{ selected.id }}</code></dd></div>
+                    <div><dt>{{ '{{ 'Attempt'|trans }}s'|trans }}</dt><dd>{{ selected.attempts }} / {{ selected.maxAttempts }}</dd></div>
+                    <div><dt>{{ 'Correlation'|trans }}</dt><dd><code>{{ selected.correlationId }}</code></dd></div>
+                    {% if selected.workerId %}<div><dt>{{ 'Worker'|trans }}</dt><dd>{{ selected.workerId }}</dd></div>{% endif %}
                     {% if selected.entityType and selected.entityId %}
-                        <div><dt>Entity</dt><dd>{{ selected.entityType }}:{{ selected.entityId }}</dd></div>
+                        <div><dt>{{ 'Entity'|trans }}</dt><dd>{{ selected.entityType }}:{{ selected.entityId }}</dd></div>
                     {% endif %}
-                    <div><dt>Updated</dt><dd>{{ selected.updatedAt|date('Y-m-d H:i:s') }}</dd></div>
+                    <div><dt>{{ 'Updated'|trans }}</dt><dd>{{ selected.updatedAt|date('Y-m-d H:i:s') }}</dd></div>
                 </dl>
 
                 {% if selected.error %}
@@ -81,8 +81,8 @@
                         action="{{ path('cos_web_async_operation_retry', {id: selected.id}) }}"
                         data-turbo-frame="cos-activity-center-frame"
                     >
-                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                        <button class="cos-button cos-button--primary" type="submit">Retry operation</button>
+                        <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                        <button class="cos-button cos-button--primary" type="submit">{{ 'Retry operation'|trans }}</button>
                     </form>
                 {% endif %}
             </section>
@@ -104,7 +104,7 @@
                         {% if item.occurredAt %}<time datetime="{{ item.occurredAt|date('c') }}">{{ item.occurredAt|date('H:i') }}</time>{% endif %}
                     </a>
                 {% else %}
-                    <div class="cos-activity-center__empty">No operation notifications.</div>
+                    <div class="cos-activity-center__empty">{{ 'No operation notifications.'|trans }}</div>
                 {% endfor %}
             </div>
         {% else %}
@@ -120,7 +120,7 @@
                             <strong>{{ item.label }}</strong>
                             {% if item.detail %}<small>{{ item.detail }}</small>{% endif %}
                             {% if item.progress is not null %}
-                                <span class="cos-activity-center__mini-progress" aria-label="{{ item.progress }}% complete">
+                                <span class="cos-activity-center__mini-progress" aria-label="{{ '%percent% complete'|trans({'%percent%': item.progress}) }}">
                                     <span style="width:{{ item.progress }}%"></span>
                                 </span>
                             {% endif %}
@@ -128,7 +128,7 @@
                         {% if item.occurredAt %}<time datetime="{{ item.occurredAt|date('c') }}">{{ item.occurredAt|date('H:i') }}</time>{% endif %}
                     </a>
                 {% else %}
-                    <div class="cos-activity-center__empty">No async operations yet.</div>
+                    <div class="cos-activity-center__empty">{{ 'No async operations yet.'|trans }}</div>
                 {% endfor %}
             </div>
         {% endif %}

@@ -1,6 +1,6 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}Engineering | COS{% endblock %}
+{% block title %}{{ 'engineering.eyebrow'|trans }} | COS{% endblock %}
 
 {% block workspace_content %}
 <section
@@ -39,29 +39,29 @@
     <div class="engineering-toolbar">
         <div>
             <p class="cos-card__eyebrow">COS · Engineering</p>
-            <h1 class="cos-page-title" style="margin:2px 0 4px">Агентська розробка</h1>
-            <div class="engineering-pulse" aria-label="Стан Engineering">
-                <strong>{{ workspaceStats.running }} виконується</strong>
+            <h1 class="cos-page-title" style="margin:2px 0 4px">{{ '{{ 'Агент'|trans }}ська розробка'|trans }}</h1>
+            <div class="engineering-pulse" aria-label="{{ '{{ 'Стан'|trans }} Engineering'|trans }}">
+                <strong>{{ workspaceStats.running }} {{ 'виконується'|trans }}</strong>
                 <span>·</span>
-                <strong>{{ workspaceStats.queued }} у черзі</strong>
+                <strong>{{ workspaceStats.queued }} {{ 'у черзі'|trans }}</strong>
                 <span>·</span>
-                <strong class="{{ workspaceStats.attention > 0 ? 'engineering-warning' : '' }}">{{ workspaceStats.attention }} потребує уваги</strong>
+                <strong class="{{ workspaceStats.attention > 0 ? 'engineering-warning' : '' }}">{{ workspaceStats.attention }} {{ 'потребує уваги'|trans }}</strong>
                 <span>·</span>
-                <span class="engineering-muted">{{ workspaceStats.completed }} завершено</span>
+                <span class="engineering-muted">{{ workspaceStats.completed }} {{ 'завершено'|trans }}</span>
             </div>
         </div>
         <details class="engineering-create cos-card" style="padding:10px 14px;min-width:180px">
-            <summary>+ Нове завдання</summary>
+            <summary>{{ '+ Нове завдання'|trans }}</summary>
             <div class="engineering-create__body">
                 <form class="cos-form" method="post" action="/admin/engineering/create" data-engineering-create>
-                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
                         <label class="cos-field">
-                            <span>Назва</span>
-                            <input class="cos-input" name="title" maxlength="255" placeholder="Наприклад: Закрити UI cutover">
+                            <span>{{ 'Назва'|trans }}</span>
+                            <input class="cos-input" name="title" maxlength="255" placeholder="{{ 'Наприклад: Закрити UI cutover'|trans }}">
                         </label>
                         <label class="cos-field">
-                            <span>Пріоритет</span>
+                            <span>{{ 'Пріоритет'|trans }}</span>
                             <select class="cos-select" name="priority">
                                 {% for priority in ['P0','P1','P2','P3'] %}
                                     <option value="{{ priority }}" {{ priority == 'P2' ? 'selected' : '' }}>{{ priority }}</option>
@@ -69,19 +69,19 @@
                             </select>
                         </label>
                         <label class="cos-field">
-                            <span>Після створення</span>
+                            <span>{{ 'Після створення'|trans }}</span>
                             <select class="cos-select" name="execution_mode">
-                                <option value="queue" selected>Додати в чергу</option>
-                                <option value="immediate">Запустити зараз</option>
-                                <option value="draft">Зберегти чернеткою</option>
+                                <option value="queue" selected>{{ 'Додати в чергу'|trans }}</option>
+                                <option value="immediate">{{ '{{ 'Запустити'|trans }} зараз'|trans }}</option>
+                                <option value="draft">{{ '{{ 'Зберегти'|trans }} чернеткою'|trans }}</option>
                             </select>
                         </label>
                         <label class="cos-field" style="grid-column:1/-1">
-                            <span>Вимоги та критерії приймання</span>
-                            <textarea class="cos-textarea" name="description" rows="6" required placeholder="Результат, обмеження, критерії приймання."></textarea>
+                            <span>{{ 'Вимоги та критерії приймання'|trans }}</span>
+                            <textarea class="cos-textarea" name="description" rows="6" required placeholder="{{ '{{ 'Результат'|trans }}, обмеження, критерії приймання.'|trans }}"></textarea>
                         </label>
                     </div>
-                    <button class="cos-button cos-button--primary" type="submit">Створити</button>
+                    <button class="cos-button cos-button--primary" type="submit">{{ 'Створити'|trans }}</button>
                 </form>
             </div>
         </details>
@@ -98,24 +98,24 @@
     <section class="cos-page__section" aria-labelledby="engineering-workspace-list" data-engineering-workspace-list>
         <div class="engineering-toolbar" style="margin-bottom:8px">
             <div>
-                <h2 id="engineering-workspace-list" class="cos-section-title" style="margin:0">Процеси</h2>
-                <p class="cos-card__copy" style="margin:2px 0 0">Один список для черги, активних, проблемних і завершених workflow. Стан береться з runtime, а не з декоративної картки.</p>
+                <h2 id="engineering-workspace-list" class="cos-section-title" style="margin:0">{{ 'Процеси'|trans }}</h2>
+                <p class="cos-card__copy" style="margin:2px 0 0">{{ 'Один список для черги, активних, проблемних і завершених workflow. {{ 'Стан'|trans }} береться з runtime, а не з декоративної картки.'|trans }}</p>
             </div>
             <div class="engineering-pulse">
                 <span class="cos-badge">P0 → P1 → P2 → P3</span>
-                <span class="cos-badge">FIFO в межах пріоритету</span>
+                <span class="cos-badge">{{ 'FIFO в межах пріоритету'|trans }}</span>
             </div>
         </div>
 
         <div class="engineering-toolbar" style="margin-bottom:10px">
-            <nav class="engineering-views" aria-label="Фільтри Engineering">
+            <nav class="engineering-views" aria-label="{{ 'Фільтри Engineering'|trans }}">
                 {% set views = {
-                    'all': ['Усі', workspaceStats.total],
-                    'running': ['Активні', workspaceStats.running],
-                    'queued': ['Черга', workspaceStats.queued],
-                    'attention': ['Потребують уваги', workspaceStats.attention],
-                    'completed': ['Завершені', workspaceStats.completed],
-                    'cancelled': ['Скасовані', workspaceStats.cancelled]
+                    'all': ['Усі'|trans, workspaceStats.total],
+                    'running': ['Активні'|trans, workspaceStats.running],
+                    'queued': ['Черга'|trans, workspaceStats.queued],
+                    'attention': ['Потребують уваги'|trans, workspaceStats.attention],
+                    'completed': ['Завершені'|trans, workspaceStats.completed],
+                    'cancelled': ['Скасовані'|trans, workspaceStats.cancelled]
                 } %}
                 {% for key, item in views %}
                     <a
@@ -127,10 +127,10 @@
             </nav>
             <form class="engineering-search" method="get" action="/admin/engineering">
                 <input type="hidden" name="view" value="{{ workspaceView }}">
-                <input class="cos-input" type="search" name="q" value="{{ workspaceQuery }}" placeholder="Пошук за назвою, етапом, агентом">
-                <button class="cos-button cos-button--ghost" type="submit">Знайти</button>
+                <input class="cos-input" type="search" name="q" value="{{ workspaceQuery }}" placeholder="{{ 'Пошук за назвою, етапом, агентом'|trans }}">
+                <button class="cos-button cos-button--ghost" type="submit">{{ 'Знайти'|trans }}</button>
                 {% if workspaceQuery %}
-                    <a class="cos-button cos-button--ghost" href="/admin/engineering?view={{ workspaceView }}">Очистити</a>
+                    <a class="cos-button cos-button--ghost" href="/admin/engineering?view={{ workspaceView }}">{{ 'Очистити'|trans }}</a>
                 {% endif %}
             </form>
         </div>
@@ -145,17 +145,17 @@
                 <table class="engineering-table">
                     <thead>
                     <tr>
-                        <th>Завдання</th>
-                        <th>Стан</th>
-                        <th>Стан runtime</th>
-                        <th>Етап</th>
-                        <th>Агент</th>
-                        <th>Задачі</th>
-                        <th>Запуски</th>
-                        <th>Використання</th>
-                        <th>Активність</th>
-                        <th>Черга</th>
-                        <th style="text-align:right">Дії</th>
+                        <th>{{ 'Завдання'|trans }}</th>
+                        <th>{{ 'Стан'|trans }}</th>
+                        <th>{{ '{{ 'Стан'|trans }} runtime'|trans }}</th>
+                        <th>{{ 'Етап'|trans }}</th>
+                        <th>{{ 'Агент'|trans }}</th>
+                        <th>{{ 'Задачі'|trans }}</th>
+                        <th>{{ 'Запуски'|trans }}</th>
+                        <th>{{ 'Використання'|trans }}</th>
+                        <th>{{ '{{ 'Активні'|trans }}сть'|trans }}</th>
+                        <th>{{ 'Черга'|trans }}</th>
+                        <th style="text-align:right">{{ 'Дії'|trans }}</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -165,83 +165,83 @@
                         <tr data-engineering-feature-row="{{ feature.id }}">
                             <td class="engineering-table__title">
                                 <a href="/admin/engineering/{{ feature.id }}"><strong>{{ feature.title }}</strong></a>
-                                <span class="engineering-table__meta">{{ feature.priority }}{% if feature.workflow_type %} · {{ feature.workflow_type == 'ENGINEERING_IMMEDIATE' ? 'негайний запуск' : 'черга' }}{% endif %}</span>
+                                <span class="engineering-table__meta">{{ feature.priority }}{% if feature.workflow_type %} · {{ feature.workflow_type == 'ENGINEERING_IMMEDIATE' ? 'Immediate run'|trans : 'Queue'|trans }}{% endif %}</span>
                             </td>
-                            <td><span class="cos-badge">{{ feature.display_status }}</span></td>
+                            <td><span class="cos-badge">{{ ('engineering.status.' ~ (feature.display_status|lower))|trans }}</span></td>
                             <td>
                                 {% if feature.health in ['STALLED','STALE'] %}
-                                    <span class="cos-badge engineering-warning">⚠ {{ feature.health }}</span>
+                                    <span class="cos-badge engineering-warning">⚠ {{ ('engineering.status.' ~ (feature.health|lower))|trans }}</span>
                                     {% if feature.runtime_reason %}<span class="engineering-table__meta">{{ feature.runtime_reason }}</span>{% endif %}
-                                    {% if feature.stalled_at %}<span class="engineering-table__meta">since {{ feature.stalled_at }}</span>{% endif %}
+                                    {% if feature.stalled_at %}<span class="engineering-table__meta">{{ 'since'|trans }} {{ feature.stalled_at }}</span>{% endif %}
                                 {% else %}
                                     <span class="engineering-muted">{{ feature.health }}</span>
                                     {% if feature.runtime_reason %}<span class="engineering-table__meta">{{ feature.runtime_reason }}</span>{% endif %}
                                 {% endif %}
                             </td>
-                            <td>{{ feature.workflow_state|default('—') }}</td>
+                            <td>{% if feature.workflow_state|default('') %}{{ ('engineering.status.' ~ (feature.workflow_state|lower))|trans }}{% else %}—{% endif %}</td>
                             <td>
-                                {{ feature.latest_agent_role|default('—') }}
-                                {% if feature.latest_agent_status %}<span class="engineering-table__meta">{{ feature.latest_agent_status }}</span>{% endif %}
+                                {% if feature.latest_agent_role|default('') %}{{ ('engineering.role.' ~ (feature.latest_agent_role|lower))|trans }}{% else %}—{% endif %}
+                                {% if feature.latest_agent_status %}<span class="engineering-table__meta">{{ ('engineering.status.' ~ (feature.latest_agent_status|lower))|trans }}</span>{% endif %}
                             </td>
                             <td>{{ feature.tasks_completed }}/{{ feature.tasks_total }}</td>
                             <td>{{ feature.agent_runs }}</td>
                             <td>
                                 {% if usage.total_tokens is not null %}
-                                    {{ usage.total_tokens|number_format(0, '.', ' ') }} tok
+                                    {{ usage.total_tokens|number_format(0, '.', ' ') }} {{ 'tok'|trans }}
                                     <span class="engineering-table__meta">
                                         {% if usage.cost_amount is not null %}
                                             {{ usage.cost_currency|default('USD') }} {{ usage.cost_amount|number_format(4, '.', '') }}
                                         {% else %}
-                                            вартість невідома
+                                            {{ 'вартість невідома'|trans }}
                                         {% endif %}
                                     </span>
                                 {% else %}
-                                    <span class="engineering-muted">облік недоступний</span>
+                                    <span class="engineering-muted">{{ 'облік недоступний'|trans }}</span>
                                 {% endif %}
                             </td>
                             <td>{{ feature.workflow_last_activity_at|default(feature.updated_at|default('—')) }}</td>
                             <td>{{ feature.queue_position ? ('#' ~ feature.queue_position) : '—' }}</td>
                             <td>
                                 <div class="engineering-actions">
-                                    <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ feature.id }}">Відкрити</a>
+                                    <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ feature.id }}">{{ 'Відкрити'|trans }}</a>
                                     {% if actions.queue|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/queue">
-                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                            <button class="cos-button cos-button--primary" type="submit">У чергу</button>
+                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <button class="cos-button cos-button--primary" type="submit">{{ 'У чергу'|trans }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.run|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
-                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                            <button class="cos-button cos-button--ghost" type="submit">Запустити</button>
+                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <button class="cos-button cos-button--ghost" type="submit">{{ 'Запустити'|trans }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.resolve_human|default(false) %}
-                                        <span class="cos-badge">Потрібне рішення</span>
+                                        <span class="cos-badge">{{ 'Потрібне рішення'|trans }}</span>
                                     {% endif %}
                                     {% if actions.finalize|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/finalize">
-                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                            <button class="cos-button cos-button--primary" type="submit">Перевірити merge</button>
+                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <button class="cos-button cos-button--primary" type="submit">{{ 'Перевірити merge'|trans }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.retry|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
-                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                            <button class="cos-button cos-button--primary" type="submit">Повторити</button>
+                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <button class="cos-button cos-button--primary" type="submit">{{ '{{ 'Повтори'|trans }}ти'|trans }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.resume|default(false) or actions.continue|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
-                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--primary" type="submit">{{ actions.resume|default(false) ? 'Відновити' : 'Продовжити' }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.cancel|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/cancel">
-                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
-                                            <input type="hidden" name="reason" value="Скасовано з Engineering Workspace.">
-                                            <button class="cos-button cos-button--danger" type="submit">Скасувати</button>
+                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <input type="hidden" name="reason" value="{{ 'Скасовано з Engineering {{ 'Workspace'|trans }}.'|trans }}">
+                                            <button class="cos-button cos-button--danger" type="submit">{{ 'Скасувати'|trans }}</button>
                                         </form>
                                     {% endif %}
                                 </div>
