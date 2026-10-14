@@ -43,6 +43,19 @@ cos_federation_goals_evaluate:
   methods: [POST]
   requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
 
+# Canonical manager-operated source Plan: no Action submission or Discovery execution.
+cos_federation_discovery_plan_propose:
+  path: /api/v1/federation/discovery/plans/propose
+  controller: App\Web\Federation\FederationDiscoveryPlanController::propose
+  methods: [POST]
+
+# Human Plan approval REQUEST; never an approval decision.
+cos_federation_plan_request_approval:
+  path: /api/v1/federation/plans/{planId}/request-approval
+  controller: App\Web\Federation\FederationPlanApprovalRequestController::request
+  methods: [POST]
+  requirements: { planId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 # COS Federation: manager-triggered sequential orchestration, CSRF protected.
 # Read-only, manager-authorized preview of 1..50 sourced scored candidates.
 cos_federation_candidate_fanout_preview:

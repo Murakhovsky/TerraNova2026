@@ -3339,6 +3339,7 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  Platform\Orchestration\Goal\FederationDiscoveryPlanFactory: ~
   Platform\Orchestration\Goal\FederationCandidateFanoutPlanner: ~
   Platform\Orchestration\Goal\FederationGoalAggregateProjector: ~
   Platform\Orchestration\Goal\FederationDiscoverySourceMatcher: ~
@@ -3436,6 +3437,14 @@ services:
         - '@cos.federation.native_origin.documents'
         - '@Domains\CapitalMarkets\Application\Service\CapitalResearchValidatedOutcomeEvidenceProvider'
         - '@Platform\Documents\Service\DocumentSignatureOutcomeEvidenceProvider'
+
+  App\Web\Federation\FederationDiscoveryPlanController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Federation\FederationPlanApprovalRequestController:
+    public: true
+    tags: ['controller.service_arguments']
 
   App\Web\Federation\FederationCandidateFanoutController:
     public: true
