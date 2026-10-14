@@ -3451,3 +3451,5 @@ services:
 
   App\Application\System\Contract\DependencyHealthCheckInterface:
     alias: App\Infrastructure\Health\DatabaseDependencyHealthCheck
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2LiveWorkerFactory: ~

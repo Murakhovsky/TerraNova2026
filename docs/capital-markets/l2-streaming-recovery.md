@@ -134,3 +134,25 @@ Only a trusted stream with a sufficiently recent publication is healthy.
 send notifications itself; alert delivery and persistence remain an
 integration gate. No simulated market data should be published as live
 trusted data during recovery.
+
+## Symfony CLI integration
+
+Canonical entrypoint: `symfony/bin/console cos:capital-markets:l2:stream`.
+Run inside the Symfony application directory.
+
+```bash
+FOS_L2_ENABLED=0 php bin/console cos:capital-markets:l2:stream --organization=ORG --source=source:REGISTERED_L2 --venue=BINANCE_SPOT --symbol=BTCUSDT --base=BTC --quote=USDT --dry-run
+FOS_L2_ENABLED=1 php bin/console cos:capital-markets:l2:stream --organization=ORG --source=source:REGISTERED_L2 --venue=BINANCE_SPOT --symbol=BTCUSDT --base=BTC --quote=USDT
+```
+
+The source must exist, be enabled, and have adapter type `l2.verified`.
+The organization, instrument mapping and ingestion database must be provisioned.
+Dry-run validates source and options without connecting to an exchange.
+Live operation requires `FOS_L2_ENABLED=1` and the CLI pcntl extension.
+The worker factory creates a new socket, processor and recovery state on each attempt.
+Verified books flow through `L2VerifiedIngestionCallback` to the canonical ingestion service.
+Failed ingestion aborts the connection; SIGTERM and SIGINT request shutdown.
+
+Production process-manager installation, external exchange live acceptance and
+long-duration operations testing are separate deployment gates and are not
+implied by registering this command.
