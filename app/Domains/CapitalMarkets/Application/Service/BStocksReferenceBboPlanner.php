@@ -90,8 +90,11 @@ final readonly class BStocksReferenceBboPlanner
                         $symbol,'BINANCE_BSTOCKS_UNDERLYING_SEED'))?->id->value()!==$id->value()) {
                 $status='BLOCKED_CANONICAL_REFERENCE_REQUIRED';
             } elseif (isset($existing[$id->value()])) {
-                $status=$existing[$id->value()]===MarketSubscriptionStatus::Active
-                    ? 'ALREADY_ACTIVE' : 'BLOCKED_EXISTING_SUBSCRIPTION';
+                $status=match($existing[$id->value()]) {
+                    MarketSubscriptionStatus::Active=>'ALREADY_ACTIVE',
+                    MarketSubscriptionStatus::Disabled=>'PLAN_REENABLE',
+                    default=>'BLOCKED_EXISTING_SUBSCRIPTION',
+                };
             } else {
                 $target=$this->resolver->target($organizationId,$source,$id);
                 if ($target===null || $target->venueInstrument!==null
@@ -103,7 +106,7 @@ final readonly class BStocksReferenceBboPlanner
                 }
             }
             $out['rows'][]=['symbol'=>$symbol,'instrument_id'=>$id->value(),'status'=>$status];
-            if ($status==='PLAN_CREATE') ++$out['create'];
+            if ($status==='PLAN_CREATE' || $status==='PLAN_REENABLE') ++$out['create'];
             elseif ($status==='ALREADY_ACTIVE') ++$out['existing'];
             else ++$out['blocked'];
         }
@@ -117,7 +120,16 @@ final readonly class BStocksReferenceBboPlanner
         $plan=$this->plan($organizationId,$sourceId,$limit);
         $created=0;
         foreach ($plan['rows'] as $row) {
-            if ($row['status']!=='PLAN_CREATE') continue;
+            if (!in_array($row['status'],['PLAN_CREATE','PLAN_REENABLE'],true)) continue;
+            $fresh=$this->plan($organizationId,$sourceId,$limit);
+            $approved=false;
+            foreach ($fresh['rows'] as $current) {
+                if ($current['instrument_id']===$row['instrument_id']
+                    && in_array($current['status'],['PLAN_CREATE','PLAN_REENABLE'],true)) {
+                    $approved=true;break;
+                }
+            }
+            if (!$approved) throw new InvalidArgumentException('Reference BBO eligibility changed during apply.');
             $this->administration->createSubscription(
                 $organizationId,$actorId,
                 'cm-underlying-bbo-'.substr(hash('sha256',$organizationId.'|'.$sourceId.'|'.$row['instrument_id']),0,32),
