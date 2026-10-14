@@ -102,8 +102,11 @@ final readonly class CrossVenueSubscriptionPlanner
                             (string)$item['seed_token'],'BINANCE_BSTOCKS_SEED'))?->id->value()!==$instrumentId) {
                     $status='BLOCKED_CANONICAL_SEED_IDENTITY';
                 } elseif (isset($existing[$instrumentId])) {
-                    $status=$existing[$instrumentId]===MarketSubscriptionStatus::Active
-                        ? 'ALREADY_ACTIVE' : 'BLOCKED_EXISTING_SUBSCRIPTION';
+                    $status=match($existing[$instrumentId]) {
+                        MarketSubscriptionStatus::Active=>'ALREADY_ACTIVE',
+                        MarketSubscriptionStatus::Disabled=>'PLAN_REENABLE',
+                        default=>'BLOCKED_EXISTING_SUBSCRIPTION',
+                    };
                 } else {
                     $target=$this->resolver->target($org,$source,$instrument->id);
                     if ($target===null || strcasecmp($target->externalSymbol,$symbol)!==0
@@ -118,7 +121,7 @@ final readonly class CrossVenueSubscriptionPlanner
             }
             $result['rows'][]=['seed_token'=>(string)$item['seed_token'],
                 'venue_symbol'=>$symbol,'instrument_id'=>$instrumentId,'status'=>$status];
-            if ($status==='PLAN_CREATE') ++$result['create'];
+            if ($status==='PLAN_CREATE' || $status==='PLAN_REENABLE') ++$result['create'];
             elseif ($status==='ALREADY_ACTIVE') ++$result['existing'];
             else ++$result['blocked'];
         }
@@ -133,7 +136,15 @@ final readonly class CrossVenueSubscriptionPlanner
         $plan=$this->plan($org,$sourceId,$limit);
         $created=0;
         foreach ($plan['rows'] as $row) {
-            if ($row['status']!=='PLAN_CREATE') continue;
+            if (!in_array($row['status'],['PLAN_CREATE','PLAN_REENABLE'],true)) continue;
+            // Recheck current reviewer decision just before activating; never
+            // use a stale whole-plan snapshot to resurrect a disabled BBO.
+            $allowed=$this->pool->listedForVenue($org,$plan['venue'],500);
+            if (!array_any($allowed,static fn(array $candidate):bool=>
+                $candidate['seed_token']===$row['seed_token']
+                && $candidate['venue_symbol']===$row['venue_symbol'])) {
+                throw new InvalidArgumentException('Listing changed during BBO subscription apply.');
+            }
             $this->administration->createSubscription(
                 $org,$actor,'cm-pool-'.substr(hash('sha256',$org.'|'.$sourceId.'|'.$row['instrument_id']),0,32),
                 $sourceId,['instrument_id'=>$row['instrument_id'],'data_type'=>'BBO']

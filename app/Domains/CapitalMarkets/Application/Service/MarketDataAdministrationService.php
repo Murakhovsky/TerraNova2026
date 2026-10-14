@@ -176,11 +176,20 @@ final readonly class MarketDataAdministrationService
                 $subscriptionId,$sourceKey,$source->venueId,$instrumentId,$eventType,
                 MarketSubscriptionStatus::Active,$this->clock->now()
             );
+            $previous=null;
+            foreach ($this->subscriptions->forSource($organizationId,$sourceKey) as $current) {
+                if (!$current->id->equals($subscriptionId)) continue;
+                if ($current->status===MarketSubscriptionStatus::Active) {
+                    throw new DomainException('Market-data subscription already active.');
+                }
+                $previous=$this->subscriptionArray($current);
+                break;
+            }
             $this->subscriptions->save($organizationId,$subscription);
             $next=$this->subscriptionArray($subscription);
             $this->audit->record(
                 $organizationId,$actorId,CapitalMarketsAuditAction::MarketDataSubscriptionSaved,
-                CapitalMarketsAuditResourceType::MarketDataSubscription,$subscriptionId->value(),[],$next,$correlationId
+                CapitalMarketsAuditResourceType::MarketDataSubscription,$subscriptionId->value(),$previous??[],$next,$correlationId
             );
             return $next;
         });
