@@ -22,13 +22,13 @@ $pdo=new PDO($dsn,getenv('L2_TEST_MYSQL_USER')?:'',getenv('L2_TEST_MYSQL_PASSWOR
 $pdo->exec('CREATE TABLE IF NOT EXISTS tn_migrations (migration VARCHAR(190) PRIMARY KEY) ENGINE=InnoDB');
 $pdo->exec('CREATE TABLE IF NOT EXISTS tn_capital_market_data_sources (
     organization_id VARCHAR(190) NOT NULL,source_id VARCHAR(190) NOT NULL,
-    PRIMARY KEY (organization_id,source_id)) ENGINE=InnoDB');
+    PRIMARY KEY (organization_id,source_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 $pdo->exec('CREATE TABLE IF NOT EXISTS tn_capital_market_venues (
     organization_id VARCHAR(190) NOT NULL,venue_id VARCHAR(190) NOT NULL,
-    PRIMARY KEY (organization_id,venue_id)) ENGINE=InnoDB');
+    PRIMARY KEY (organization_id,venue_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 $pdo->exec('CREATE TABLE IF NOT EXISTS tn_capital_market_instruments (
     organization_id VARCHAR(190) NOT NULL,instrument_id VARCHAR(190) NOT NULL,
-    PRIMARY KEY (organization_id,instrument_id)) ENGINE=InnoDB');
+    PRIMARY KEY (organization_id,instrument_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 $migration=file_get_contents(dirname(__DIR__,2).'/app/migrations/20261006_000126_capital_markets_market_events.sql');
 foreach (array_filter(array_map('trim',explode(';',$migration))) as $sql) $pdo->exec($sql);
 $clock->time=new DateTimeImmutable('now');
