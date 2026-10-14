@@ -639,6 +639,17 @@ final readonly class EngineeringArchitectStageExecutor
                 $engineeringRunId,
             );
             $architectStatus = (string) ($run->structuredOutput['status'] ?? '');
+            if (in_array($architectStatus, ['EVIDENCE_BUDGET_EXHAUSTED','EVIDENCE_REQUEST_REJECTED'], true)) {
+                $this->tasks->markRole($featureId, AgentRole::PRINCIPAL_ARCHITECT, 'BLOCKED', [
+                    'status' => $architectStatus,
+                ]);
+                $next = $this->coordinator->acceptAgentResult(
+                    $workflow, AgentRole::PRINCIPAL_ARCHITECT, $run->structuredOutput,
+                );
+                $this->persistTransitions($workflow, $next->transitions);
+                $this->features->updateStatus($featureId, $workflow->currentState()->value);
+                return $next;
+            }
             $this->tasks->markRole(
                 $featureId,
                 AgentRole::PRINCIPAL_ARCHITECT,
