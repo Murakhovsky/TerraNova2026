@@ -6,7 +6,7 @@ namespace Domains\CapitalMarkets\Infrastructure\MarketData\L2;
 use DomainException;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook;
-use Domains\CapitalMarkets\Domain\Service\KrakenL2BookRecovery;
+
 
 /** Kraken v2 CRC-verified order-book stream. */
 final class KrakenL2StreamProcessor

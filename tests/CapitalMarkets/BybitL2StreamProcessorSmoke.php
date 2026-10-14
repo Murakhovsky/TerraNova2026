@@ -4,12 +4,13 @@ $base = dirname(__DIR__,2).'/app/';
 require_once $base.'Kernel/Shared/Domain/ValueObject.php';
 foreach (['Decimal','AssetCode','Price','Quantity'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Value/'.$name.'.php';
 foreach (['MarketEventType','MarketObservation','OrderBookLevel','MarketOrderBook'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/MarketData/'.$name.'.php';
-foreach (['OrderBookRebuilder','L2RecoverySession','BinanceL2SequenceValidator','BinanceL2RecoveryCoordinator','BybitL2RecoveryCoordinator'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Service/'.$name.'.php';
+foreach (['OrderBookRebuilder','L2RecoverySession'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Service/'.$name.'.php';
+foreach (['BinanceL2SequenceValidator','BinanceL2RecoveryCoordinator','BybitL2RecoveryCoordinator'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
 foreach (['L2FrameSizeGuard','L2ControlFrameFilter','L2WebSocketFrameRouter','L2FrameDispatch','L2DomainBookFactory','BinanceL2StreamProcessor','BybitL2StreamProcessor'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
 
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
 use Domains\CapitalMarkets\Domain\Service\L2RecoverySession;
-use Domains\CapitalMarkets\Domain\Service\BybitL2RecoveryCoordinator;
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\BybitL2RecoveryCoordinator;
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2FrameSizeGuard,L2ControlFrameFilter,L2WebSocketFrameRouter,L2FrameDispatch,L2DomainBookFactory,BybitL2StreamProcessor};
 $session = new L2RecoverySession();
 $processor = new BybitL2StreamProcessor(

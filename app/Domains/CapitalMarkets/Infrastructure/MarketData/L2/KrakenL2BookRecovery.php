@@ -1,9 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Domains\CapitalMarkets\Domain\Service;
+namespace Domains\CapitalMarkets\Infrastructure\MarketData\L2;
 
 use DomainException;
+use Domains\CapitalMarkets\Domain\Service\L2RecoverySession;
+use Domains\CapitalMarkets\Domain\Service\OrderBookRebuilder;
 
 /**
  * Kraken WS v2 raw-decimal order book. Snapshot and update frames must be

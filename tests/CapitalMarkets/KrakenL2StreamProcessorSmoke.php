@@ -4,10 +4,12 @@ $base = dirname(__DIR__,2).'/app/';
 require_once $base.'Kernel/Shared/Domain/ValueObject.php';
 foreach (['Decimal','AssetCode','Price','Quantity'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Value/'.$name.'.php';
 foreach (['MarketEventType','MarketObservation','OrderBookLevel','MarketOrderBook'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/MarketData/'.$name.'.php';
-foreach (['KrakenL2Checksum','KrakenL2BookRecovery'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Service/'.$name.'.php';
+
+foreach (['KrakenL2Checksum','KrakenL2BookRecovery'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
 foreach (['L2FrameSizeGuard','L2ControlFrameFilter','L2WebSocketFrameRouter','L2FrameDispatch','L2DomainBookFactory','KrakenL2StreamProcessor'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
-use Domains\CapitalMarkets\Domain\Service\{KrakenL2Checksum,KrakenL2BookRecovery};
+
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{KrakenL2Checksum,KrakenL2BookRecovery};
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2FrameSizeGuard,L2ControlFrameFilter,L2WebSocketFrameRouter,L2FrameDispatch,L2DomainBookFactory,KrakenL2StreamProcessor};
 $checksum = new KrakenL2Checksum();
 $processor = new KrakenL2StreamProcessor(

@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Infrastructure\MarketData\L2;
 
 use DomainException;
-use Domains\CapitalMarkets\Domain\Service\BybitL2RecoveryCoordinator;
+
 use Domains\CapitalMarkets\Domain\Service\L2RecoverySession;
 
 /** Serial Bybit snapshot/delta pipeline. */

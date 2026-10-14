@@ -1,9 +1,11 @@
 <?php
 declare(strict_types=1);
 
-namespace Domains\CapitalMarkets\Domain\Service;
+namespace Domains\CapitalMarkets\Infrastructure\MarketData\L2;
 
 use DomainException;
+use Domains\CapitalMarkets\Domain\Service\L2RecoverySession;
+use Domains\CapitalMarkets\Domain\Service\OrderBookRebuilder;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook;
 

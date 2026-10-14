@@ -120,7 +120,7 @@ final class L2RecoverySession
 
 
     /** @return list<array{U:string,u:string}> */
-    public function bufferedBinanceRanges(int $epoch): array
+    public function bufferedSequenceRanges(int $epoch): array
     {
         $this->requireEpoch($epoch);
         if (!in_array($this->status, ['BUFFERING','SYNCING'], true)) return [];
@@ -129,7 +129,7 @@ final class L2RecoverySession
             $payload = $entry['payload'];
             if (!is_array($payload) || !isset($payload['U'], $payload['u'])
                 || !is_string($payload['U']) || !is_string($payload['u'])) {
-                throw new DomainException('Unexpected Binance recovery buffer entry.');
+                throw new DomainException('Unexpected L2 sequence buffer entry.');
             }
             $ranges[] = ['U'=>$payload['U'], 'u'=>$payload['u']];
         }

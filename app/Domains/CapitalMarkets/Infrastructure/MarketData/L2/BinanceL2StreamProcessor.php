@@ -5,7 +5,7 @@ namespace Domains\CapitalMarkets\Infrastructure\MarketData\L2;
 
 use DomainException;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
-use Domains\CapitalMarkets\Domain\Service\BinanceL2RecoveryCoordinator;
+
 use Domains\CapitalMarkets\Domain\Service\L2RecoverySession;
 
 /**
@@ -55,7 +55,7 @@ final class BinanceL2StreamProcessor
     public function canBridge(string $snapshotId): bool
     {
         $target = $this->increment($snapshotId);
-        foreach ($this->session->bufferedBinanceRanges($this->epoch) as $range) {
+        foreach ($this->session->bufferedSequenceRanges($this->epoch) as $range) {
             if ($this->compare($range['U'], $target) <= 0 && $this->compare($range['u'], $target) >= 0) {
                 return true;
             }
@@ -66,7 +66,7 @@ final class BinanceL2StreamProcessor
     public function snapshotTooOld(string $snapshotId): bool
     {
         $target = $this->increment($snapshotId);
-        $ranges = $this->session->bufferedBinanceRanges($this->epoch);
+        $ranges = $this->session->bufferedSequenceRanges($this->epoch);
         return $ranges !== [] && $this->compare($ranges[0]['U'], $target) > 0;
     }
 
