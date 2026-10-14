@@ -189,6 +189,8 @@ interface WorkflowRecoveryInterface
 
 Реальні PHP-контракти для майбутнього persistent Run/Step: `WorkflowExecutionStoreInterface`, `WorkflowExecutionCoordinatorInterface`, `WorkflowReceiptVerifierInterface`, `WorkflowRecoveryInterface`. Додано immutable DTO у `Platform\\Workflow\\Model` та статуси `AMBIGUOUS` / `CLAIMED` до чинних Kernel enum. **Це лише contracts і vocabulary, не реалізація сховища або активна заміна dispatcher.** Дозвіл на операцію в DTO не видається: перевірка Policy/Approval/Action залишається в canonical execution boundary.
 
+**Durable MySQL foundation:** адитивна міграція `Version20261015011500` створює `cos_workflow_runs` і `cos_workflow_steps` окремо від Federation/Engineering. `DoctrineWorkflowExecutionStore` реалізує atomic create, scoped snapshots, CAS Run transitions, serialized DAG step claim, claim tokens/leases/checkpoint та repeated receipt attestation для finalization. Відмовний canonical Claim Admission і Receipt Verifier wired у Symfony за замовчуванням: зовнішні ефекти **не активовано**. `tests/integration/workflow_durable_store_mysql.php` запускається в Docker CI з фактичною MySQL. Це фундамент без queue/dispatch/recovery/cutover.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0

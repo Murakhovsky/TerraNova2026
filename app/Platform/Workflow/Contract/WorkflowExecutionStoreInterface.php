@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Platform\Workflow\Contract;
 
 use Platform\Workflow\Model\WorkflowRunDraft;
+use Kernel\Tenant\Model\TenantContext;
 use Platform\Workflow\Model\WorkflowRunIdentity;
 use Platform\Workflow\Model\WorkflowRunSnapshot;
 use Platform\Workflow\Model\WorkflowRunTransition;
@@ -17,7 +18,7 @@ use Platform\Workflow\Model\WorkflowStepSnapshot;
  */
 interface WorkflowExecutionStoreInterface
 {
-    public function create(WorkflowRunDraft $draft): WorkflowRunSnapshot;
+    public function create(WorkflowRunDraft $draft, TenantContext $actor): WorkflowRunSnapshot;
     public function get(WorkflowRunIdentity $identity): ?WorkflowRunSnapshot;
     /** @return list<WorkflowStepSnapshot> */
     public function steps(WorkflowRunIdentity $identity): array;

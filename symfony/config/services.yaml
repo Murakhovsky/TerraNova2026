@@ -261,6 +261,14 @@ services:
   Kernel\Application\Bus\EventBusInterface:
     alias: App\Infrastructure\Messenger\SymfonyEventBus
 
+  # Durable Workflow foundation, fail closed; NOT connected to Federation/Engineering writers.
+  Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
+    alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
+  Platform\Workflow\Contract\WorkflowReceiptVerifierInterface:
+    alias: App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier
+  Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface:
+    alias: App\Persistence\Workflow\FailClosedWorkflowStepClaimAdmission
+
   Kernel\Workflow\Contract\WorkflowStateManagerInterface:
     alias: App\Infrastructure\Workflow\SymfonyWorkflowStateManager
 

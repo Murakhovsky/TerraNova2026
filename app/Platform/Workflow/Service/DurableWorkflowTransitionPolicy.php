@@ -9,6 +9,7 @@ use InvalidArgumentException;
 final class DurableWorkflowTransitionPolicy
 {
     private const RUN_TRANSITIONS = [
+        'created' => ['running', 'cancelled'],
         'pending' => ['running', 'cancelled'],
         'running' => ['waiting', 'completed', 'failed', 'ambiguous', 'cancelled'],
         'waiting' => ['running', 'cancelled', 'failed'],

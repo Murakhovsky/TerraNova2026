@@ -16,11 +16,18 @@ final readonly class WorkflowStepSnapshot
         public string $capabilityVersion,
         public string $sideEffectLevel,
         public string $state,
+        public int $attempts = 0,
+        public int $revision = 1,
+        public ?string $resultReference = null,
+        public ?string $claimToken = null,
     ) {
         foreach ([$stepId, $capabilityId, $capabilityVersion, $sideEffectLevel, $state] as $field) {
             if ($field === '') {
                 throw new DomainException('Workflow persisted step fields cannot be empty.');
             }
+        }
+        if ($attempts < 0 || $revision < 1) {
+            throw new DomainException('Workflow persisted step version/attempt is invalid.');
         }
     }
 
