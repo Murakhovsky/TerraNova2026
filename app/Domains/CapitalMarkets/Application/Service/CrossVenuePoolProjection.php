@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace Domains\CapitalMarkets\Application\Service;
 
 use InvalidArgumentException;
+use DateTimeImmutable;
+use DateTimeZone;
 
 /** Converts discovery evidence into unverified, venue-scoped monitoring candidates. */
 final class CrossVenuePoolProjection
@@ -13,6 +15,17 @@ final class CrossVenuePoolProjection
     {
         if (($snapshot['dataset'] ?? null) !== 'cross_venue_candidate_discovery' || !is_array($snapshot['rows'] ?? null)) {
             throw new InvalidArgumentException('Invalid discovery snapshot.');
+        }
+        $rawAsOf=$snapshot['as_of_utc']??null;
+        if (!is_string($rawAsOf)
+            || preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+\\-]\\d{2}:\\d{2})$/D',$rawAsOf)!==1) {
+            throw new InvalidArgumentException('Invalid discovery timestamp authority.');
+        }
+        try {
+            $asOf=(new DateTimeImmutable($rawAsOf))
+                ->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\\TH:i:s.u\\Z');
+        } catch (\\Exception) {
+            throw new InvalidArgumentException('Invalid discovery UTC timestamp.');
         }
         $out = [];
         $dedupe = [];
@@ -43,7 +56,7 @@ final class CrossVenuePoolProjection
                     'listing_state'=>$status,
                     'verification_state'=>'UNVERIFIED',
                     'economic_equivalence'=>'NOT_ESTABLISHED',
-                    'source_as_of'=>(string)($snapshot['as_of_utc'] ?? ''),
+                    'source_as_of'=>$asOf,
                 ];
             }
         }
