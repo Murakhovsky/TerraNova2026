@@ -207,3 +207,93 @@ and the target n8n workflow processes `notification.email` envelopes.
 Inspect `tn_integration_outbox` and `cos_notification_deliveries`
 to diagnose failures. Live provider email delivery is not exercised
 by the fake-dispatcher smoke tests.
+
+
+## Supervised CLI and live-venue acceptance (2026-10-14)
+
+**Verified code boundary:** `symfony/src/Command/CapitalMarketsL2StreamCommand.php`
+registers `cos:capital-markets:l2:stream` through Symfony `#[AsCommand]`
+and injects `MarketDataIngestionInterface`, registered sources, an L2
+worker factory and Platform Notification alerts. The optional Compose
+`l2-stream` service now provides real process supervision (PID 1 init,
+SIGTERM, restart, database dependencies) under profile `l2`.
+`L2ManagedWorker` still performs in-process reconnect with fresh epochs.
+They are complementary: **a process restart is not a recovery of an old trusted book**.
+
+### Enable the supervised worker (no auto-enablement)
+
+Populate the following settings in the Docker Compose environment file:
+
+```dotenv
+FOS_L2_ENABLED=1
+FOS_L2_ORGANIZATION=default
+FOS_L2_SOURCE_ID=source:registered-binance-btc
+FOS_L2_VENUE=BINANCE_SPOT
+FOS_L2_SYMBOL=BTCUSDT
+FOS_L2_BASE=BTC
+FOS_L2_QUOTE=USDT
+FOS_L2_DEPTH=50
+FOS_L2_MESSAGE_BUDGET=1000000
+FOS_L2_MAX_ATTEMPTS=20
+FOS_L2_STALE_SECONDS=30
+```
+
+The example source ID is a **placeholder**, not a provisioned source.
+First register an enabled `l2.verified` source in the correct organization,
+with a supported instrument and venue mapping. Production ingestion cannot
+start successfully against an unregistered source. No API keys are required
+for the selected public order-book endpoints.
+
+```bash
+docker compose --env-file .env.docker --profile l2 config --quiet
+docker compose --env-file .env.docker --profile l2 up -d --build l2-stream
+docker compose --env-file .env.docker --profile l2 ps l2-stream
+docker compose --env-file .env.docker --profile l2 logs -f l2-stream
+docker compose --env-file .env.docker --profile l2 stop l2-stream
+```
+
+The dedicated service attaches to `frontend` for outgoing TLS exchange
+connections and `backend` for private MySQL. The service is not started
+in the default Compose profile and `FOS_L2_ENABLED` defaults to `0`.
+Compose restarts the finite-run CLI when it exits, while the CLI handles
+individual connection retries internally. SIGTERM triggers graceful stop.
+The `Runtime` workflow verifies that the command is *actually registered*
+in the Symfony container and rejects a dry-run with a nonexistent source.
+
+### Real public WebSocket reconnect acceptance
+
+`tests/live/l2_public_reconnect.php` uses production L2 parsers,
+checksums, subscription acknowledgement and REST snapshot recovery.
+The test opens a **real public WSS** connection for the selected venue,
+accepts only a verified full book, deliberately breaks the next socket read,
+requires `BACKOFF`, reconnects with a fresh session and obtains a second
+verified full book before reporting PASS. It performs no orders or writes to
+the production ingestion database.
+
+The test covers `BINANCE_SPOT`, `BINANCE_FUTURES`, `BYBIT_SPOT`,
+`BYBIT_LINEAR`, and `KRAKEN_SPOT`. Binance Spot uses the officially
+supported WSS port 443 instead of port 9443.
+
+```bash
+composer install
+FOS_L2_LIVE_TEST_ENABLED=1 timeout 120s \
+  php tests/live/l2_public_reconnect.php --venue=BINANCE_SPOT
+FOS_L2_LIVE_TEST_ENABLED=1 timeout 120s \
+  php tests/live/l2_public_reconnect.php --venue=BYBIT_SPOT
+FOS_L2_LIVE_TEST_ENABLED=1 timeout 120s \
+  php tests/live/l2_public_reconnect.php --venue=KRAKEN_SPOT
+```
+
+The dedicated GitHub Actions workflow `L2 Live Venue Reconnect`
+also runs a five-venue strict matrix after changes on this feature branch
+and on manual `workflow_dispatch`; evidence logs are retained as
+individual artifacts. Venue failures fail the corresponding job, including
+if geographic/IP access restrictions prevent testing from GitHub runners.
+**Only observed PASS evidence proves external live acceptance.**
+The `L2 Forced Reconnect Smoke` runs offline and separately verifies
+epoch change, trust revocation, forced socket failure, close, and recovery.
+
+Operational caveats: the current Binance WebSocket->REST bridge is
+sequential (REST fetch temporarily blocks socket reads); extended
+live-duration testing, multi-stream coordination and an automated
+deployment to your own host remain distinct acceptance gates.

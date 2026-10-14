@@ -10,7 +10,7 @@ use Domains\CapitalMarkets\Domain\Value\AssetCode;
 /** A new socket and recovery session for every reconnect attempt. */
 final readonly class L2LiveWorkerFactory
 {
-    public function create(L2SubscriptionConfig $config, AssetCode $base, AssetCode $quote, int $staleSeconds): L2StreamWorker
+    public function create(L2SubscriptionConfig $config, AssetCode $base, AssetCode $quote, int $staleSeconds, ?L2WebSocketTransport $transport = null): L2StreamWorker
     {
         $session = new L2RecoverySession();
         $frames = new L2FrameDispatch(
@@ -31,7 +31,7 @@ final readonly class L2LiveWorkerFactory
             default => throw new DomainException('Unsupported L2 venue.'),
         };
         return new L2StreamWorker(
-            $config, new L2SubscriptionEncoder(), new L2WebSocketTransport(), $processor,
+            $config, new L2SubscriptionEncoder(), $transport ?? new L2WebSocketTransport(), $processor,
             str_starts_with($config->venue, 'BINANCE_')
                 ? new BinanceL2SnapshotClient(new BinanceL2SnapshotDecoder()) : null,
             new L2SubscriptionAcknowledgement(), new L2PublicationWatchdog($staleSeconds * 1000),

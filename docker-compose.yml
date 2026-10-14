@@ -214,6 +214,39 @@ services:
       - spatial_uploads:/var/www/html/public/uploads/spatial
     networks: [backend]
 
+  # Public market-data ingress; opt-in. The application image owns Symfony CLI;
+  # Compose provides process restart, stop signalling and internet egress.
+  # Run: docker compose --profile l2 up -d l2-stream
+  l2-stream:
+    image: cos-symfony-php:local
+    profiles: ["l2"]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 45s
+    command:
+      - php
+      - bin/console
+      - cos:capital-markets:l2:stream
+      - "--organization=${FOS_L2_ORGANIZATION:-}"
+      - "--source=${FOS_L2_SOURCE_ID:-}"
+      - "--venue=${FOS_L2_VENUE:-}"
+      - "--symbol=${FOS_L2_SYMBOL:-}"
+      - "--base=${FOS_L2_BASE:-}"
+      - "--quote=${FOS_L2_QUOTE:-}"
+      - "--depth=${FOS_L2_DEPTH:-50}"
+      - "--message-budget=${FOS_L2_MESSAGE_BUDGET:-1000000}"
+      - "--max-attempts=${FOS_L2_MAX_ATTEMPTS:-20}"
+      - "--stale-seconds=${FOS_L2_STALE_SECONDS:-30}"
+    environment:
+      <<: *app-environment
+      MESSENGER_CONSUMER_NAME: l2-stream-1
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    # backend is internal-only; frontend is essential for outgoing public WSS/HTTPS.
+    networks: [frontend, backend]
+
   integration-worker:
     image: cos-symfony-php:local
     restart: unless-stopped

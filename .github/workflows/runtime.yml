@@ -175,6 +175,15 @@ jobs:
       - name: Container and routes
         run: |
           docker compose exec -T php php bin/console lint:container
+          docker compose --profile l2 config --quiet
+          docker compose exec -T php php bin/console list --raw | grep -q '^cos:capital-markets:l2:stream '
+          # The command must be invokable in the real Symfony container, not just PHP linted.
+          if docker compose exec -T -e FOS_L2_ENABLED=0 php php bin/console cos:capital-markets:l2:stream \
+            --organization=default --source=source:nonexistent --venue=BINANCE_SPOT \
+            --symbol=BTCUSDT --base=BTC --quote=USDT --dry-run; then
+            echo 'L2 preflight accepted an unregistered source.' >&2
+            exit 1
+          fi
           docker compose exec -T php php bin/console debug:router > /tmp/routes.txt
           grep -q 'cos_symfony_home' /tmp/routes.txt
           docker compose exec -T php php bin/console cos:experience:inventory --strict --compile --no-interaction

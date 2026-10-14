@@ -10,6 +10,8 @@ on:
       - 'symfony/config/services.yaml'
       - 'app/Infrastructure/Platform/Notification/BuiltinNotificationTemplateRepository.php'
       - 'tests/CapitalMarkets/**'
+      - 'tests/live/l2_public_reconnect.php'
+      - 'docker-compose.yml'
       - '.github/workflows/l2-recovery-smoke.yml'
 jobs:
   l2-smoke:

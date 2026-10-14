@@ -12,7 +12,7 @@ final readonly class L2SubscriptionConfig {
     }
     public function websocketUrl(): string {
         return match ($this->venue) {
-            'BINANCE_SPOT' => 'wss://stream.binance.com:9443/ws/'.strtolower($this->symbol).'@depth@100ms',
+            'BINANCE_SPOT' => 'wss://stream.binance.com:443/ws/'.strtolower($this->symbol).'@depth@100ms',
             'BINANCE_FUTURES' => 'wss://fstream.binance.com/ws/'.strtolower($this->symbol).'@depth@100ms',
             'BYBIT_SPOT' => 'wss://stream.bybit.com/v5/public/spot',
             'BYBIT_LINEAR' => 'wss://stream.bybit.com/v5/public/linear',
