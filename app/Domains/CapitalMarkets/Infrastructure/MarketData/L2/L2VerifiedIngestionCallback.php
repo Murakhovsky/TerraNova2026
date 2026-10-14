@@ -18,7 +18,7 @@ final readonly class L2VerifiedIngestionCallback
     {
         $result = $this->publisher->publish($book);
         if (!$result->rawStored || !$result->canonicalStored || !$result->stateUpdated) {
-            throw new DomainException('Verified L2 ingestion did not update canonical market state: '.$result->status);
+            throw new DomainException('Verified L2 ingestion did not update canonical market state: '.$result->status.($result->reason !== null ? ' ('.$result->reason.')' : ''));
         }
     }
 }
