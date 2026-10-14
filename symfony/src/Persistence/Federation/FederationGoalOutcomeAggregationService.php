@@ -234,6 +234,7 @@ final readonly class FederationGoalOutcomeAggregationService
                 'plan_id'=>(string)$row['plan_id'],
                 'candidate_id'=>$candidate,
                 'account_id'=>$lineage['account_id'],
+                'source_hash'=>$lineage['source_hash'],
                 'plan_state'=>(string)$row['plan_state'],
                 'run_id'=>$runId,
                 'run_state'=>$runState,

@@ -20,6 +20,7 @@ for($i=1;$i<=50;$i++){
         $goal->organizationId."\0".$goal->goalId."\0".$candidate),0,24);
     $rows[]=[
         'candidate_id'=>$candidate,'account_id'=>'account-'.sprintf('%03d',$i),
+        'source_hash'=>hash('sha256','source-'.sprintf('%03d',$i)),
         'plan_id'=>$plan,'plan_state'=>'approved','run_id'=>'run-'.sprintf('%03d',$i),
         'run_state'=>'completed',
         'verified_actions'=>array_fill_keys(FederationGoalAggregateProjector::STAGES,true),
@@ -53,6 +54,14 @@ if($partial['native_proposals_prepared']!==49
 $duplicate=$rows;
 $duplicate[49]['sales_lead_id']=$duplicate[0]['sales_lead_id'];
 try{$p->project($goal,$duplicate);throw new RuntimeException('Duplicate Lead earned double credit.');}
+catch(DomainException){}
+$duplicate=$rows;
+$duplicate[49]['source_hash']=$duplicate[0]['source_hash'];
+try{$p->project($goal,$duplicate);throw new RuntimeException('Duplicate Growth source earned double credit.');}
+catch(DomainException){}
+$malformed=$rows;
+$malformed[9]['source_hash']='not-a-sha256';
+try{$p->project($goal,$malformed);throw new RuntimeException('Invalid source evidence earned Goal credit.');}
 catch(DomainException){}
 $duplicate=$rows;
 $duplicate[49]['document_id']=$duplicate[0]['document_id'];

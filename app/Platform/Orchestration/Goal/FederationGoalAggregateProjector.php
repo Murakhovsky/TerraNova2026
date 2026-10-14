@@ -30,6 +30,7 @@ final readonly class FederationGoalAggregateProjector
         }
         $seenCandidates = [];
         $seenAccounts = [];
+        $seenSources = [];
         $seenRuns = [];
         $seenLeads = [];
         $seenDocuments = [];
@@ -44,6 +45,7 @@ final readonly class FederationGoalAggregateProjector
         foreach ($subjects as $subject) {
             $candidate = $subject['candidate_id'] ?? null;
             $account = $subject['account_id'] ?? null;
+            $sourceHash = $subject['source_hash'] ?? null;
             $plan = $subject['plan_id'] ?? null;
             $state = $subject['plan_state'] ?? null;
             $run = $subject['run_id'] ?? null;
@@ -51,6 +53,7 @@ final readonly class FederationGoalAggregateProjector
             $receipts = $subject['verified_actions'] ?? null;
             if (!is_string($candidate) || $candidate === ''
                 || !is_string($account) || $account === ''
+                || !is_string($sourceHash) || !preg_match('/^[a-f0-9]{64}$/D', $sourceHash)
                 || !is_string($plan) || $plan === ''
                 || !in_array($state,['proposed','approved'],true)
                 || !is_array($receipts)
@@ -67,11 +70,13 @@ final readonly class FederationGoalAggregateProjector
                 $goal->organizationId . "\0" . $goal->goalId . "\0" . $candidate
             ),0,24);
             if ($plan !== $expectedId || isset($seenCandidates[$candidate])
-                || isset($seenAccounts[$account]) || ($run !== null && isset($seenRuns[$run]))) {
+                || isset($seenAccounts[$account]) || isset($seenSources[$sourceHash])
+                || ($run !== null && isset($seenRuns[$run]))) {
                 throw new DomainException('Duplicate or mismatched Goal candidate lineage.');
             }
             $seenCandidates[$candidate] = true;
             $seenAccounts[$account] = true;
+            $seenSources[$sourceHash] = true;
             if ($run !== null) $seenRuns[$run] = true;
 
             $fullChain = true;
@@ -114,6 +119,7 @@ final readonly class FederationGoalAggregateProjector
             elseif ($run !== null) ++$states['running'];
             $items[] = [
                 'plan_id' => $plan,'candidate_id' => $candidate,
+                'source_hash' => $sourceHash,
                 'plan_state' => $state,'run_id' => $run,'run_state' => $runState,
                 'verified_action_count' => count(array_filter($receipts)),
                 'native_sales_handoff_verified' => $handoff,
