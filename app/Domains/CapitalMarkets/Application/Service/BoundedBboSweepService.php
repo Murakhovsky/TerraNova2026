@@ -23,6 +23,7 @@ final readonly class BoundedBboSweepService
         private MarketSourcePollingService $polling,
         private MysqlBoundedBboSweepGate $gate,
         private BoundedBboSweepPolicy $policy,
+        private CrossVenueMarketSourceAdmission $admission,
     ) {}
 
     /** @return array<string,mixed> */
@@ -42,6 +43,11 @@ final readonly class BoundedBboSweepService
         }
         $rows=[];
         foreach ($active as $source) {
+            $blocked=$this->admission->reason($org,$source,true);
+            if ($blocked!==null) {
+                $rows[]=['source'=>$source->id->value(),'state'=>'BLOCKED_'.$blocked];
+                continue;
+            }
             $admission=$this->policy->evaluate(
                 $this->subscriptions->forSource($org,$source->id,true),
                 $source->rateLimitPolicy,$maxTargets,$cooldownSeconds

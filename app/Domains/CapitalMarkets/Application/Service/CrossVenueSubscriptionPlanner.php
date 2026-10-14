@@ -36,6 +36,7 @@ final readonly class CrossVenueSubscriptionPlanner
         private MarketInstrumentResolverInterface $resolver,
         private MarketDataAdapterRegistry $adapters,
         private MarketDataAdministrationService $administration,
+        private CrossVenueMarketSourceAdmission $sourceAdmission,
     ) {}
 
     /** @return array{source:string,venue:string,total:int,create:int,existing:int,blocked:int,rows:list<array<string,string>>} */
@@ -59,7 +60,7 @@ final readonly class CrossVenueSubscriptionPlanner
         $result=['source'=>$sourceId,'venue'=>$venue,'total'=>count($items),
             'create'=>0,'existing'=>0,'blocked'=>0,'rows'=>[]];
         $venueDescriptor=$source->venueId===null ? null : $this->venues->get($org,$source->venueId);
-        if (!$source->enabled || $venueDescriptor===null
+        if ($this->sourceAdmission->reason($org,$source)!==null || $venueDescriptor===null
             || $venueDescriptor->status!==VenueStatus::Active
             || !in_array($venueDescriptor->code,[$venue,$venue.'_SPOT'],true)) {
             foreach($items as $item) {
