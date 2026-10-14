@@ -25,9 +25,6 @@ levels:
   P3:
     meaning: "Occasional, low-impact workflow where failure has a small and recoverable cost."
     evidence_required: [frequency, failure_cost, accountable_owner]
-  P4:
-    meaning: "Low-use convenience or non-production/internal-only support capability."
-    evidence_required: [usage_context, failure_cost, accountable_owner]
 review:
   cadence: "At each release-planning cycle and when usage or failure evidence materially changes."
   decision_record_fields: [route_id, current_priority, proposed_priority, evidence, rationale, reviewer, reviewed_at]

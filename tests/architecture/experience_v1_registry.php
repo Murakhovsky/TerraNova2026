@@ -149,4 +149,15 @@ if (!str_contains($reviewChecklist, 'Automated browser results never substitute 
     throw new RuntimeException('Golden review checklist must keep human acceptance independent from automation.');
 }
 
+
+$priorityPolicy = (string) file_get_contents($root . '/resources/experience/priority-policy.yaml');
+foreach (['P0:', 'P1:', 'P2:', 'P3:', 'impact:', 'frequency:', 'failure_cost:', 'decision_record_fields:'] as $marker) {
+    if (!str_contains($priorityPolicy, $marker)) {
+        throw new RuntimeException('Experience priority policy missing marker: ' . $marker);
+    }
+}
+if (str_contains($priorityPolicy, 'P4:')) {
+    throw new RuntimeException('Experience priority policy must match the supported P0-P3 contract levels.');
+}
+
 echo sprintf("Experience V1 registry contract OK (%d production HTML routes covered)\n", count($production));
