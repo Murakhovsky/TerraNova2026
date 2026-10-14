@@ -6,6 +6,8 @@ require (getenv('COS_TEST_AUTOLOAD') ?: $root.'/vendor/autoload.php');
 
 use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository;
+use Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
 
 $assert=static function(bool $condition,string $message): void {
     if (!$condition) throw new RuntimeException($message);
@@ -57,9 +59,45 @@ try {
     $batch=$pdo->prepare('SELECT COUNT(*) FROM tn_capital_market_seed_import_batches WHERE organization_id=:org');
     $batch->execute(['org'=>$org]);
     $assert((int)$batch->fetchColumn()===1,'Repeated file should retain one immutable batch record.');
+    $candidates=new CrossVenuePoolCandidateRepository($pdo,new CrossVenuePoolProjection());
+    $snapshot=[
+        'dataset'=>'cross_venue_candidate_discovery','as_of_utc'=>'2026-10-14T20:00:00Z',
+        'rows'=>[['candidate'=>['token'=>'AAPLB','underlying'=>'AAPL'],
+            'venues'=>[
+                ['venue'=>'BINANCE','status'=>'LISTED_EXACT_TOKEN_SYMBOL',
+                    'symbol'=>'AAPLBUSDT','quote'=>'USDT'],
+                ['venue'=>'BYBIT','status'=>'UNAVAILABLE'],
+                ['venue'=>'KRAKEN','status'=>'NOT_LISTED','symbol'=>null],
+            ],
+        ]],
+    ];
+    $assert($candidates->reconcile($org,$snapshot)===2,'Unavailable source must not create a false listing.');
+    $assert($candidates->reconcile($org,$snapshot)===2,'Repeat candidate reconciliation failed.');
+    $summary=$candidates->counts($org);
+    $assert(count($summary)===2,'Expected exact listed and not-listed observations.');
+    $pdo->prepare("UPDATE tn_capital_market_cross_venue_pool_candidates SET verification_state='VERIFIED',
+      economic_equivalence='VERIFIED' WHERE organization_id=:org AND venue='BINANCE'")
+      ->execute(['org'=>$org]);
+    $changed=$snapshot;
+    $changed['rows'][0]['venues'][0]=['venue'=>'BINANCE','status'=>'NOT_LISTED',
+        'symbol'=>null,'quote'=>null];
+    $candidates->reconcile($org,$changed);
+    $check=$pdo->prepare("SELECT verification_state,economic_equivalence,listing_state
+      FROM tn_capital_market_cross_venue_pool_candidates
+      WHERE organization_id=:org AND venue='BINANCE'");
+    $check->execute(['org'=>$org]);
+    $current=$check->fetch(PDO::FETCH_ASSOC);
+    $assert($current['verification_state']==='UNVERIFIED'
+        && $current['economic_equivalence']==='NOT_ESTABLISHED'
+        && $current['listing_state']==='NOT_LISTED','Listing drift did not revoke stale verification.');
+    $againDown=$changed;
+    $againDown['rows'][0]['venues'][0]=['venue'=>'BINANCE','status'=>'UNAVAILABLE'];
+    $candidates->reconcile($org,$againDown);
+    $check->execute(['org'=>$org]);
+    $assert($check->fetch(PDO::FETCH_ASSOC)===$current,'Provider outage replaced last known observation.');
     echo "MySQL seed import: 80 inserted, 80 unchanged, tenant isolation, rollback and conflicts passed.\n";
 } finally {
-    foreach (['tn_capital_market_seed_import_batches','tn_capital_market_seed_import_evidence'] as $table) {
+    foreach (['tn_capital_market_seed_import_batches','tn_capital_market_seed_import_evidence','tn_capital_market_cross_venue_pool_candidates'] as $table) {
         $pdo->prepare('DELETE FROM '.$table.' WHERE organization_id IN (:org,:other)')
             ->execute(['org'=>$org,'other'=>$otherOrg]);
     }
