@@ -23,6 +23,7 @@ final class BinanceL2SequenceValidator
         if ($this->compare($first, $next) > 0 || $this->compare($last, $next) < 0) {
             throw new DomainException('Binance snapshot/delta bridge gap.');
         }
+        if ($this->compare($first, $last) > 0) throw new DomainException('Inverted update ID range.');
         $this->last = $last;
         return true;
     }
@@ -31,6 +32,7 @@ final class BinanceL2SequenceValidator
     {
         if ($this->last === null) throw new DomainException('Binance sequence is not initialized.');
         $this->validate($this->last, $first, $last);
+        if ($this->compare($first, $last) > 0) throw new DomainException('Inverted update ID range.');
         if ($this->compare($last, $this->last) <= 0) return false;
         if ($this->futures) {
             if ($previousFinal === null || $this->compare($previousFinal, $this->last) !== 0) {
