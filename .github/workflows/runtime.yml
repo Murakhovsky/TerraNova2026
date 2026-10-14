@@ -93,6 +93,18 @@ jobs:
           docker compose run --rm --no-deps php sh -c 'test -r /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv && test "$(wc -l < /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv)" -eq 81'
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Capital Markets bStocks seed import MySQL acceptance
+        run: |
+          docker compose cp tests/integration/capital_markets_bstocks_mysql.php php:/tmp/capital_markets_bstocks_mysql.php
+          docker compose exec -T \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            -e COS_SEED_TEST_CSV=/var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv \
+            -e DB_HOST=mysql \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE="$MYSQL_DATABASE" \
+            -e DB_USERNAME="$MYSQL_USER" \
+            -e DB_PASSWORD="$MYSQL_PASSWORD" \
+            php php /tmp/capital_markets_bstocks_mysql.php
       - name: Capital Markets paper NAV persistence integration
         run: |
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "

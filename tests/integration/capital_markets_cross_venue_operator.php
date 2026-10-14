@@ -18,6 +18,10 @@ $files=[
     'symfony/templates/experience/capital_markets/discovery.html.twig',
     'app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql',
     'app/migrations/20261014_000140_capital_markets_candidate_pool.sql',
+    'app/migrations/20261014_000141_capital_markets_seed_evidence.sql',
+    'app/Domains/CapitalMarkets/Application/Service/BStocksSeedFileReader.php',
+    'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/BStocksSeedImportRepository.php',
+    'symfony/src/Command/CapitalMarketsSeedImportCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenuePoolProjection.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php',
     'symfony/src/Command/CapitalMarketsInstrumentDiscoveryCommand.php',
@@ -29,12 +33,14 @@ $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueCatalogDiscovery','CrossVenueDiscoverySnapshotRepository',
     'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
-    'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository',"$".'connection: '."'@cos.database.pdo'"] as $needle){
+    'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository',
+    'BStocksSeedFileReader','BStocksSeedImportRepository',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
 }
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
 foreach(['/capital-markets/discovery','/capital-markets/discovery/scan',
     'CrossVenueDiscoveryController::index','CrossVenueDiscoveryController::scan',
+    '/capital-markets/discovery/import','CrossVenueDiscoveryController::importSeed',
     '/capital-markets/discovery/quotes','CrossVenueDiscoveryController::observeQuotes'] as $needle){
     $assert(str_contains($routes,$needle),'Missing discovery route: '.$needle);
 }
@@ -65,4 +71,8 @@ $assert(str_contains($scheduler,'RefreshCrossVenueCandidatePool') && str_contain
 $handler=(string)file_get_contents($root.'/symfony/src/Application/CapitalMarkets/Handler/RefreshCrossVenueCandidatePoolHandler.php');
 $assert(str_contains($handler,'reserveScan') && str_contains($handler,'reconcile'),
     'Scheduled discovery must use atomic cooldown and candidate reconciliation.');
+$assert(str_contains($controller,'function importSeed(Request $request)')
+    && str_contains($controller,"$".'this->seedImports->apply($org,$actor,$seed)')
+    && str_contains($controller,"$".'this->seedImports->preview($org,$seed)'),
+    'Operator import must support both preview and committed evidence.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";

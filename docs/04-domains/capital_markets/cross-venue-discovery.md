@@ -90,3 +90,14 @@ php symfony/bin/console cos:capital-markets:discovery:run ORGANIZATION_ID ACTOR_
 ## Автоматичне оновлення пулу
 
 Планувальник `CosScheduleProvider` підтримує повідомлення `RefreshCrossVenueCandidatePool` із явним tenant і service actor. За замовчуванням вимкнено. Після створення та перевірки service actor, налаштування транспорту `async` і застосування міграції встановити `COS_CM_POOL_DISCOVERY_SCHEDULER_ENABLED=1`, `COS_CM_POOL_DISCOVERY_ACTOR_ID=<ідентифікатор>` та `COS_CM_POOL_DISCOVERY_INTERVAL_MINUTES=1440`. Organization ID береться з уже наявного `COS_ORGANIZATION_ID`. Підтримується інтервал 15–1440 хвилин. Повідомлення виконує сканування повного seed-набору, зберігає snapshot і синхронізує candidate pool із cooldown guard; навіть успішний запуск не встановлює VERIFIED і не передає торговий сигнал.
+
+## Безпечний імпорт історичного XLSM
+
+У розділі `/capital-markets/discovery` доступні завантаження XLSM/XLSX/CSV, перевірка без запису та окрема дія імпорту. Вимагаються чинна сесія, CSRF і право Market Data Manage. Оригінальні макроси не виконуються. Імпорт зберігає лише історичні заявлені атрибути; перевірений економічний зв'язок або live listing із нього не виникає. Максимум 5 МіБ і 500 записів. Повторне завантаження не створює нових рядків, суперечливі або старіші ідентифікатори блокуються. Міграція: `20261014_000141_capital_markets_seed_evidence.sql`. Команда для адміністратора:
+
+```bash
+php symfony/bin/console cos:capital-markets:instruments:import ORG_ID ACTOR_ID --file=/path/to/catalog.xlsm
+php symfony/bin/console cos:capital-markets:instruments:import ORG_ID ACTOR_ID --file=/path/to/catalog.xlsm --apply
+```
+
+У CI додано реальний MySQL-тест історичного CSV на 80 записів, повторення, відокремлення організацій, блокування конфліктів і відкат транзакції. Проходження цього тесту перевіряється окремо за відповідним SHA.
