@@ -10,6 +10,7 @@ use Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
 use Platform\Workflow\Model\WorkflowReceiptAttestation;
 use Platform\Workflow\Model\WorkflowReceiptRequest;
+use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 
 /**
  * Independent READ-ONLY canonical Action receipt attestation.
@@ -36,7 +37,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         $keys = ['org' => $request->identity->organizationId,
             'run' => $request->identity->runId, 'step' => $request->stepId];
         $context = $this->db->fetchAssociative(
-            'SELECT r.state AS run_state, r.input_digest, r.definition_json,
+            'SELECT r.state AS run_state, r.input_digest, r.definition_json, r.definition_digest,
                     r.source_plan_id, r.source_plan_digest, r.approval_reference,
                     r.actor_id, r.correlation_id,
                     s.state AS step_state, s.capability_id, s.capability_version,
@@ -71,6 +72,10 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         $definition = json_decode((string) $context['definition_json'], true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($definition) || !array_is_list($definition)) {
             throw new DomainException('Workflow immutable definition cannot be decoded.');
+        }
+        if (!hash_equals((string) $context['definition_digest'],
+            WorkflowDefinitionFingerprint::digest($definition))) {
+            throw new DomainException('Immutable Workflow definition digest does not match persisted graph.');
         }
         $step = null;
         foreach ($definition as $candidate) {

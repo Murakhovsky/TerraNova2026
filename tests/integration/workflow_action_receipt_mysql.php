@@ -220,6 +220,22 @@ try {
         'UPDATE cos_workflow_runs SET source_plan_digest=:valid WHERE organization_id=:org AND run_id=:run',
         [...$keys,'valid'=>$planDigest],
     );
+    $savedDefinition=$connection->fetchOne(
+        'SELECT definition_json FROM cos_workflow_runs WHERE organization_id=:org AND run_id=:run',
+        $keys,
+    );
+    if(!is_string($savedDefinition)) throw new RuntimeException('Missing Workflow graph fixture.');
+    $corrupt=json_decode($savedDefinition,true,512,JSON_THROW_ON_ERROR);
+    $corrupt[0]['input']['parameters']['approved']=false;
+    $connection->executeStatement(
+        'UPDATE cos_workflow_runs SET definition_json=:changed WHERE organization_id=:org AND run_id=:run',
+        [...$keys,'changed'=>json_encode($corrupt,JSON_THROW_ON_ERROR)],
+    );
+    $expectDenied(static fn()=> $verifier->attest($proofRequest),'mutated immutable Workflow graph');
+    $connection->executeStatement(
+        'UPDATE cos_workflow_runs SET definition_json=:original WHERE organization_id=:org AND run_id=:run',
+        [...$keys,'original'=>$savedDefinition],
+    );
     if(!$verifier->attest($proofRequest)->verified) {
         throw new RuntimeException('Canonical Action receipt did not recover after restored trusted evidence.');
     }
