@@ -52,7 +52,7 @@ final readonly class WorkflowNonActionReceiptRegistry implements WorkflowNonActi
             $owner=$adapter;
         }
         if($owner===null || ($pinnedStep['owner_domain']??null)!==$owner->ownerDomain()
-            || ($owner->ownerDomain()!=='platform.documents'
+            || (!in_array($owner->ownerDomain(), ['platform.documents','platform.engineering'], true)
                 && !$this->modules->isEnabled($identity->organizationId,$owner->ownerDomain()))) {
             throw new DomainException('Missing or disabled Domain-owned evidence verifier.');
         }

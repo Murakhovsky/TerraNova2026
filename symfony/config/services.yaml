@@ -277,6 +277,9 @@ services:
       $adapters:
         - '@App\Persistence\Workflow\DocumentSignatureNonActionEvidence'
         - '@App\Persistence\Workflow\CapitalResearchNonActionEvidence'
+        - '@App\Persistence\Workflow\SalesWonDealNonActionEvidence'
+        - '@App\Persistence\Workflow\GrowthInboundResponseNonActionEvidence'
+        - '@App\Persistence\Workflow\EngineeringArtifactNonActionEvidence'
   Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface:
     alias: App\Persistence\Workflow\WorkflowNonActionReceiptRegistry
   Platform\Workflow\Contract\WorkflowReceiptVerifierInterface:
