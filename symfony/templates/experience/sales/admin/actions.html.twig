@@ -47,9 +47,9 @@
                                     <label class="cos-field"><span>Execution Mode</span><select class="cos-select" name="decision">{% for decision in catalog.decisions ?? [] %}<option value="{{ decision.value }}" {% if policy.decision == decision.value %}selected{% endif %}>{{ decision.label }}</option>{% endfor %}</select></label>
                                     <label class="cos-field"><span>Reason</span><input class="cos-input" name="reason" value="{{ policy.decision_reason ?? '' }}"></label>
                                     <label class="cos-field"><span>{{ 'Priority'|trans }}</span><input class="cos-input" name="priority" type="number" value="{{ policy.priority }}"></label>
-                                    <label class="cos-field"><span>Conditions</span><textarea class="cos-textarea" name="conditions" rows="4">{{ policy.conditions|json_encode }}</textarea></label>
+                                    <label class="cos-field"><span>Conditions</span><textarea class="cos-textarea" name="conditions" rows="4">{{ policy.conditions|json_encode }}</textarea>textarea</label>
                                     <twig:CosActionBar label="Policy actions" align="start">
-                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">Save</button>
+                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">{{ 'Save'|trans }}</button>
                                         <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="click->sales-admin-policies#archive">Archive</button>
                                     </twig:CosActionBar>
                                     <span class="cos-card__copy" data-status aria-live="polite"></span>
@@ -73,8 +73,8 @@
                     <label class="cos-field"><span>{{ 'Pipeline'|trans }}</span><select class="cos-select" name="pipeline_id"><option value="">Any</option>{% for pipeline in catalog.pipelines ?? [] %}<option value="{{ pipeline.id }}">{{ pipeline.name }}</option>{% endfor %}</select></label>
                     <label class="cos-field"><span>Risk Limit</span><select class="cos-select" name="risk_limit"><option value="">Any</option>{% for risk in catalog.risks ?? [] %}<option>{{ risk }}</option>{% endfor %}</select></label>
                     <label class="cos-field"><span>Reason</span><input class="cos-input" name="reason"></label>
-                    <label class="cos-field"><span>Priority</span><input class="cos-input" name="priority" type="number" value="100"></label>
-                    <label class="cos-field"><span>Extra Conditions JSON</span><textarea class="cos-textarea" name="conditions" rows="3">[]</textarea></label>
+                    <label class="cos-field"><span>{{ 'Priority'|trans }}</span><input class="cos-input" name="priority" type="number" value="100"></label>
+                    <label class="cos-field"><span>Extra Conditions JSON</span><textarea class="cos-textarea" name="conditions" rows="3">[]</textarea>textarea</label>
                     <button class="cos-button cos-button--primary" type="submit">Create Policy</button>
                     <span class="cos-card__copy" data-create-status aria-live="polite"></span>
                 </form>
@@ -90,7 +90,7 @@
                     <label class="cos-field"><span>{{ 'Risk'|trans }}</span><select class="cos-select" name="risk_level">{% for risk in catalog.risks ?? [] %}<option>{{ risk }}</option>{% endfor %}</select></label>
                     <button class="cos-button cos-button--ghost" type="submit">Test Policy</button>
                 </form>
-                <pre data-preview-result class="cos-card__copy"></pre>
+                <pre data-preview-result class="cos-card__copy"></pre>pre
             </article>
         </section>
     {% endif %}

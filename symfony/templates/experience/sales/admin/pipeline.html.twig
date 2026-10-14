@@ -21,7 +21,7 @@
             <p class="cos-card__eyebrow">{{ 'Pipeline'|trans }}</p><h2 class="cos-card__title">Configuration</h2>
             <form class="cos-section-grid" data-admin-json data-method="PATCH" data-endpoint="/api/v1/sales/admin/pipelines/{{ p.id }}" data-action="submit->sales-admin-pipeline#saveForm">
                 <input type="hidden" name="version" value="{{ p.configuration_version }}">
-                <label class="cos-field"><span>Code</span><input class="cos-input" value="{{ p.code }}" disabled></label>
+                <label class="cos-field"><span>{{ 'Code'|trans }}</span><input class="cos-input" value="{{ p.code }}" disabled></label>
                 <label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" value="{{ p.name }}"></label>
                 <label class="cos-field"><span>{{ 'Status'|trans }}</span><select class="cos-select" name="status">{% for value in ['DRAFT','ACTIVE','DISABLED','ARCHIVED'] %}<option {% if p.status == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
                 <label class="cos-field"><span>Initial</span><select class="cos-select" name="initial_stage_id"><option value="">—</option>{% for stage in activeStages %}<option value="{{ stage.id }}" {% if (p.initial_stage_id ?? '') == stage.id %}selected{% endif %}>{{ stage.name }} · {{ stage.code }}</option>{% endfor %}</select></label>
@@ -43,7 +43,7 @@
             {% endfor %}
             <form class="cos-card cos-pattern-stack" data-admin-json data-method="POST" data-endpoint="/api/v1/sales/admin/pipelines/{{ p.id }}/stages" data-action="submit->sales-admin-pipeline#saveForm">
                 <p class="cos-card__eyebrow">Add stage</p><input type="hidden" name="pipeline_version" value="{{ p.configuration_version }}">
-                <label class="cos-field"><span>Code</span><input class="cos-input" name="code" required></label><label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" required></label>
+                <label class="cos-field"><span>{{ 'Code'|trans }}</span><input class="cos-input" name="code" required></label><label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" required></label>
                 <label class="cos-field"><span>Sort</span><input class="cos-input" name="sort_order" type="number" value="100"></label><label class="cos-field"><span>Probability</span><input class="cos-input" name="probability_default" type="number" value="0"></label>
                 <label class="cos-field"><span>Terminal</span><select class="cos-select" name="terminal_type"><option>NONE</option><option>WON</option><option>LOST</option></select></label><button class="cos-button cos-button--primary cos-button--sm" type="submit">Add stage</button>
             </form>
@@ -73,7 +73,7 @@
                     <label class="cos-field"><span>Sort</span><input class="cos-input" name="sort_order" type="number" value="{{ reason.sort_order }}"></label><label class="cos-field"><span>{{ 'Status'|trans }}</span><select class="cos-select" name="status">{% for value in ['ACTIVE','ARCHIVED'] %}<option {% if reason.status == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
                     <button class="cos-button cos-button--ghost cos-button--sm" type="submit">{{ 'Save'|trans }}</button></form>{% endfor %}
                 <form class="cos-pattern-stack" data-admin-json data-method="POST" data-endpoint="/api/v1/sales/admin/pipelines/{{ p.id }}/lost-reasons" data-action="submit->sales-admin-pipeline#saveForm">
-                    <input type="hidden" name="pipeline_version" value="{{ p.configuration_version }}"><label class="cos-field"><span>Code</span><input class="cos-input" name="code" required></label><label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" required></label><label class="cos-field"><span>Sort</span><input class="cos-input" name="sort_order" type="number" value="100"></label><button class="cos-button cos-button--primary cos-button--sm" type="submit">Add reason</button>
+                    <input type="hidden" name="pipeline_version" value="{{ p.configuration_version }}"><label class="cos-field"><span>{{ 'Code'|trans }}</span><input class="cos-input" name="code" required></label><label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" required></label><label class="cos-field"><span>Sort</span><input class="cos-input" name="sort_order" type="number" value="100"></label><button class="cos-button cos-button--primary cos-button--sm" type="submit">Add reason</button>
                 </form>
             </article>
             <article class="cos-card"><p class="cos-card__eyebrow">Validation</p><h2 class="cos-card__title">{{ (p.validation.valid ?? false) ? '✓ Valid' : '✕ Invalid' }}</h2>
