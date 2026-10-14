@@ -200,11 +200,14 @@ $minimalEvidence = [
     'required_human_decisions' => [],
 ];
 $validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $minimalEvidence);
+$legacyIntermediate = $minimalEvidence;
+$legacyIntermediate['architecture_decision'] = ['data_flow' => []];
+$validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $legacyIntermediate);
 $invalidIntermediate = $minimalEvidence;
-$invalidIntermediate['architecture_decision'] = ['data_flow' => []];
+$invalidIntermediate['architecture_decision'] = 'invalid type';
 try {
     $validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $invalidIntermediate);
-    throw new RuntimeException('Intermediate Architect request accepted a partial architecture.');
+    throw new RuntimeException('Intermediate Architect request accepted a non-object architecture section.');
 } catch (EngineeringAgentOutputValidationException) {}
 $technicalStop = [
     'status' => 'EVIDENCE_BUDGET_EXHAUSTED',
