@@ -4,12 +4,15 @@ declare(strict_types=1);
 namespace App\Persistence\Workflow;
 
 use Doctrine\DBAL\Connection;
+use Kernel\Action\Action;
+use Kernel\Action\ActionStatus;
 use DomainException;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
 use Platform\Workflow\Model\WorkflowReceiptAttestation;
 use Platform\Workflow\Model\WorkflowReceiptRequest;
+use Platform\Workflow\Model\WorkflowRunIdentity;
 use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 
 /**
@@ -31,11 +34,47 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         if (!$request->actor->isManager() || !$request->actor->allows(TenantPermissions::MANAGE)) {
             throw new DomainException('Workflow Action receipt requires tenant manager authorization.');
         }
-        if (!preg_match('/^action:([a-f0-9]{32})$/', $request->resultReference, $matched)) {
+        return $this->attestTrusted(
+            $request->identity, $request->stepId, $request->resultReference, $request->inputDigest,
+        );
+    }
+
+    /**
+     * Worker-only read-only attestation. The current RUNNING Action identity
+     * is itself checked against the tenant and pinned Run owner/correlation.
+     * No synthetic TenantContext or forged user privileges are introduced.
+     */
+    public function attestForWorker(
+        Action $currentAction,
+        WorkflowRunIdentity $identity,
+        string $stepId,
+        string $reference,
+        string $inputDigest,
+    ): WorkflowReceiptAttestation {
+        if ($currentAction->status !== ActionStatus::Running
+            || $currentAction->organizationId !== $identity->organizationId
+            || !is_string($currentAction->idempotencyKey)
+            || !preg_match('/^wf:[a-f0-9]{64}$/', $currentAction->idempotencyKey)
+            || $currentAction->sourceType !== 'USER'
+            || $currentAction->executionMode !== 'APPROVAL_REQUIRED') {
+            throw new DomainException('Worker predecessor attestation requires a trusted active Action.');
+        }
+        return $this->attestTrusted($identity, $stepId, $reference, $inputDigest, $currentAction);
+    }
+
+    private function attestTrusted(
+        WorkflowRunIdentity $identity,
+        string $stepId,
+        string $reference,
+        string $inputDigest,
+        ?Action $workerAction = null,
+    ): WorkflowReceiptAttestation
+    {
+        if (!preg_match('/^action:([a-f0-9]{32})$/', $reference, $matched)) {
             throw new DomainException('Workflow Action receipt has an invalid canonical identifier.');
         }
-        $keys = ['org' => $request->identity->organizationId,
-            'run' => $request->identity->runId, 'step' => $request->stepId];
+        $keys = ['org' => $identity->organizationId,
+            'run' => $identity->runId, 'step' => $stepId];
         $context = $this->db->fetchAssociative(
             'SELECT r.state AS run_state, r.input_digest, r.definition_json, r.definition_digest,
                     r.source_plan_id, r.source_plan_digest, r.approval_reference,
@@ -52,20 +91,27 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             || !in_array($context['run_state'], ['running','waiting','completed'], true)
             || !in_array($context['step_state'], ['claimed','completed'], true)
             || $context['side_effect_level'] !== 'external'
-            || $context['input_digest'] !== $request->inputDigest
+            || $context['input_digest'] !== $inputDigest
             || !preg_match('/^[a-f0-9]{64}$/', (string) $context['idempotency_key'])
             || ($context['result_reference'] !== null
-                && $context['result_reference'] !== $request->resultReference)
+                && $context['result_reference'] !== $reference)
             || !is_string($context['source_plan_id']) || $context['source_plan_id'] === ''
             || !preg_match('/^[a-f0-9]{64}$/', (string) $context['source_plan_digest'])
             || !is_string($context['approval_reference']) || $context['approval_reference'] === '') {
             throw new DomainException('Workflow receipt has no pinned, tenant-owned approved external Step.');
         }
 
+        if ($workerAction !== null
+            && ($context['actor_id'] !== $workerAction->sourceId
+                || $context['correlation_id'] !== $workerAction->correlationId
+                || $workerAction->organizationId !== $identity->organizationId)) {
+            throw new DomainException('Worker predecessor belongs to a different Action source or Run.');
+        }
+
         // The active Plan verification port must revalidate immutable plan
         // provenance and real human approvals, NOT only a plan's text flag.
         $this->plans->assertTrusted(
-            $request->identity, (string) $context['source_plan_id'],
+            $identity, (string) $context['source_plan_id'],
             (string) $context['source_plan_digest'], (string) $context['approval_reference'],
         );
 
@@ -79,7 +125,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
         }
         $step = null;
         foreach ($definition as $candidate) {
-            if (($candidate['id'] ?? null) === $request->stepId) {
+            if (($candidate['id'] ?? null) === $stepId) {
                 if ($step !== null) throw new DomainException('Duplicate approved Workflow Step.');
                 $step = $candidate;
             }
@@ -151,8 +197,8 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             throw new DomainException('Canonical Action lacks independent valid human Approval.');
         }
         return new WorkflowReceiptAttestation(
-            $request->identity, $request->stepId, true, 'canonical-action',
-            $request->resultReference, (string) $context['correlation_id'],
+            $identity, $stepId, true, 'canonical-action',
+            $reference, (string) $context['correlation_id'],
         );
     }
 

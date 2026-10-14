@@ -9,6 +9,9 @@ require (string) (getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__, 2) . '/symfony
 
 use App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission;
 use App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission;
+use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
+use App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence;
+use App\Persistence\Workflow\WorkflowPredecessorReceiptVerifier;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
 use App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier;
 use App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence;
@@ -233,11 +236,15 @@ try {
          (organization_id,action_id,attempt,worker_id,status,started_at)
          VALUES (:org,:action,1,"action-worker","RUNNING",NOW(6))', $keys,
     );
+    $predecessors = new WorkflowPredecessorReceiptVerifier(
+        new DoctrineWorkflowActionReceiptVerifier($db,$knownPlan),
+        new FailClosedWorkflowNonActionReceiptEvidence(),
+    );
     $worker=new DoctrineWorkflowActionWorkerAdmission(
-        $db,$knownPlan,new CanonicalCapabilityCatalog($catalog),$modules,
+        $db,$knownPlan,new CanonicalCapabilityCatalog($catalog),$modules,$predecessors,
     );
     $untrustedWorker=new DoctrineWorkflowActionWorkerAdmission(
-        $db,new FailClosedWorkflowPlanApprovalEvidence(),new CanonicalCapabilityCatalog($catalog),$modules,
+        $db,new FailClosedWorkflowPlanApprovalEvidence(),new CanonicalCapabilityCatalog($catalog),$modules,$predecessors,
     );
     $action=new Action(
         $actionId,$org,'test.publish','case','123',['approved'=>true,'count'=>2],

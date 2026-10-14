@@ -19,7 +19,7 @@ use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 use Platform\Workflow\Service\WorkflowStepScheduler;
 
 /**
- * Candidate last-moment worker admission for the FIRST external Workflow step.
+ * Candidate last-moment admission with verified receipts of ALL completed DAG Steps.
  *
  * READ ONLY. The worker has already claimed canonical Action RUNNING and
  * recorded its first RUNNING attempt before this check. Nothing is executed
@@ -36,6 +36,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         private WorkflowPlanApprovalEvidenceInterface $plans,
         private CanonicalCapabilityCatalog $catalog,
         private ActiveModuleResolver $modules,
+        private WorkflowPredecessorReceiptVerifier $predecessors,
     ) {}
 
     public function assertAuthorized(Action $action): void
@@ -51,7 +52,7 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
         $key = $matched[1];
         $row = $this->db->fetchAssociative(
             'SELECT r.run_id,r.state AS run_state,r.actor_id,r.correlation_id,
-                    r.definition_id,r.definition_version,r.definition_json,r.definition_digest,
+                    r.definition_id,r.definition_version,r.definition_json,r.definition_digest,r.input_digest,
                     r.source_plan_id,r.source_plan_digest,r.approval_reference,
                     s.step_id,s.state AS step_state,s.attempts AS step_attempts,
                     s.claim_token,s.claimed_by,s.claim_expires_at,
@@ -84,7 +85,8 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             throw new DomainException('Workflow immutable graph has been modified.');
         }
         $steps = $this->db->fetchAllAssociative(
-            'SELECT step_id,capability_id,capability_version,side_effect_level,state
+            'SELECT step_id,capability_id,capability_version,side_effect_level,state,
+                    attempts,revision,idempotency_key,result_reference
              FROM cos_workflow_steps WHERE organization_id=:org AND run_id=:run ORDER BY ordinal_no',
             ['org'=>$org,'run'=>$row['run_id']],
         );
@@ -96,12 +98,14 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             $snapshots, ['none','external'],
         );
         if ($decision->state !== WorkflowStepSelectionState::CLAIMED
-            || $decision->stepId !== $row['step_id']
-            || $decision->completed !== []) {
-            // A prior completed Step needs worker-side canonical attestation
-            // before a later Domain handler is permitted. Do not guess.
-            throw new DomainException('Workflow worker step is not the sole claimed first DAG action.');
+            || $decision->stepId !== $row['step_id']) {
+            throw new DomainException('Workflow worker step is not the uniquely claimed valid DAG action.');
         }
+        $this->predecessors->assertVerified(
+            $action, new WorkflowRunIdentity($org, (string) $row['run_id']),
+            (string) $row['input_digest'], $graph, $decision->completed, $steps,
+        );
+
         $pinned = null;
         foreach ($graph as $candidate) {
             if (($candidate['id'] ?? null) !== $row['step_id']) continue;
