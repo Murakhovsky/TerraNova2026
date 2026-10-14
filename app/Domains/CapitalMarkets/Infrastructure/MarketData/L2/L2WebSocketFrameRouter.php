@@ -46,7 +46,9 @@ final class L2WebSocketFrameRouter
     /** @param array<string,mixed> $frame @return array<string,mixed> */
     private function bybit(array $frame): array
     {
-        if (!is_string($frame['topic'] ?? null) || preg_match('/^orderbook\\.[0-9]+\\.'.preg_quote($this->symbol, '/').'$/D', $frame['topic']) !== 1) {
+        $topic = $frame['topic'] ?? null;
+        $parts = is_string($topic) ? explode('.', $topic) : [];
+        if (count($parts) !== 3 || $parts[0] !== 'orderbook' || !ctype_digit($parts[1]) || $parts[2] !== $this->symbol) {
             throw new DomainException('Bybit L2 topic mismatch.');
         }
         $row = $frame['data'] ?? null;
