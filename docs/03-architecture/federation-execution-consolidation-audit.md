@@ -2,7 +2,7 @@
 title: COS Federation Execution — architecture reconciliation audit
 description: Фактичне зіставлення Federation Goal Execution з Kernel Workflow, Engineering Workflow, Action/Queue і план усунення паралельної оркестрації.
 status: proposed
-updated: 2026-10-14
+updated: 2026-10-15
 kind: architecture
 ---
 
@@ -33,6 +33,32 @@ kind: architecture
 | Business goal | У Kernel Workflow немає Goal success criteria | `GoalSpecification`, `GoalPlanValidator`, `GoalOutcomeEvaluator`, evidence providers | **Не дубль.** Зберегти в Goal Management поза Kernel business primitives |
 | Cross-domain native outcome | Kernel Action COMPLETED означає завершення технічної дії, не бізнес-цілі | Domain-owned read models; `FederationGoalOutcomeAggregationService` має hard-coded Growth/Sales/Documents | **Потрібна декомпозиція**: scenario profile + provider-owned criteria/receipts |
 | Engineering workflow | `symfony/src/Engineering/Domain/Workflow/*`, persistent `EngineeringWorkflowStoreInterface`, workflow-specific stages | Не використовується Golden 50 | **Окремий bounded context**, не автоматичний кандидат на видалення |
+
+### Обов'язкове зіставлення трьох runtime-контурів: Kernel, Federation, Engineering
+
+Це **P0 scope**, а не факультативний аналіз Engineering. Мета: знайти дублювання технічного виконання **в усіх трьох**, залишивши спеціалізовану бізнес-семантику Engineering та Goal Management. Початкове зіставлення на основі реальних класів нижче; повний runtime invocation/write graph ще потребує виконання.
+
+| Технічний механізм | Kernel / Platform | Federation | Engineering (команда AI-розробників) | Цільове рішення |
+| --- | --- | --- | --- | --- |
+| Стан процесу | \`WorkflowExecution\` / \`WorkflowStatus\`, здебільшого in-memory | \`cos_federation_runs\` / \`cos_federation_steps\`, revision/CAS | \`EngineeringWorkflowState\`, \`WorkflowExecution\`, \`cos_engineering_workflows\`, \`DoctrineEngineeringWorkflowStore\` | Єдина **технічна** модель Run/Step, за винятком бізнес-станів Engineering та Goal; state migration окремо |
+| Граф і переходи | \`WorkflowDefinition\` + \`WorkflowEngine::advance\` | \`FederationStepDependencyGraph\` + \`FederationStepCursor\` | \`EngineeringWorkflowDefinition\`, \`WorkflowTransitionGuard\`, \`EngineeringWorkflowEngine\` | Спільний механізм технічних залежностей/переходів, Engineering stage graph лишається конфігурацією/бізнес-правилами |
+| Координація | \`WorkflowEngine::start/resume/cancel\` | \`FederationSequentialOrchestrator\` | \`EngineeringOrchestrator\`, \`EngineeringWorkflowCoordinator\`, \`EngineeringAutonomousProgressionService\` | Спільні runtime claim/checkpoint/dispatch; Engineering coordinator лишає role/stage рішення, не стає другим generic executor |
+| Збереження / версія | Нема доведеного спільного durable Workflow store | \`FederationGoalStore\` та persisted Run/Step | \`EngineeringWorkflowStoreInterface\` + \`DoctrineEngineeringWorkflowStore\` + версії/історія переходів | Спільний execution persistence contract + adapters; не втратити Engineering transition history / health |
+| Блокування / конкурентність | Queue lease/recovery + Action claim; Workflow-specific durable claim ще не доведено | DB lock/CAS/step claim | \`EngineeringWorkflowLockInterface\` → \`MySqlEngineeringWorkflowLock\` → спільний \`MySqlAdvisoryLock\` | Повторно використати lock/claim primitives, не переписувати вже спільний MySQL helper |
+| Retry / recovery | Queue retry classification і worker lease | Manual reconciliation для ambiguous Action | \`EngineeringRetryPolicy\`, \`EngineeringContinueService\` (stale AgentRun handling) | Єдина технічна класифікація failures та безпечний recover; **Engineering fix/review/QA cycles і agent autonomy budgets зберегти як бізнес-політику** |
+| Виконання agent / tools | Kernel Agent/Tool та Queue/Action контракти | Працює через канонічні Actions; лише inert Kernel Workflow bridge | \`EngineeringAutonomousProgressionService\` викликає спеціалізовані stage executors і specialist roles | Порівняти фактичні AgentRun, tool/repository side effects, идempotency; не прирівнювати GitHub repository mutation до звичайного business Action без ADR |
+| Human gates / approval | Kernel Policy / Approval | Plan approval та незалежне Action approval | \`EngineeringHumanDecisionStoreInterface\`, \`ReadyForHumanApprovalGuard\`, human decision / final merge confirmation | Спільний trusted authorization/evidence interface там, де семантика збігається; **no-self-approval та human merge gate залишаються обов'язковими** |
+| Audit / observability | canonical trace, Action attempts, Job metrics | immutable approved Plan + Action receipt lineage | saved \`WorkflowTransition\`, workflow health/reason, AgentRun/feature links | Спільні correlation, trace, status projection; Engineering evidence і Role-attribution не втрачати |
+
+**Архітектурне розділення:**
+- **KEEP** у Engineering: \`EngineeringWorkflowDefinition\`, правила переходів і станів, \`EngineeringWorkflowCoordinator\` як власник бізнес-етапів, \`EngineeringRetryPolicy\` для development/review/QA loops, specialist assignment, human gates, approval/merge discipline.
+- **ADAPT/CONSOLIDATE після доказів:** transport/dispatch, generic scheduling, worker claims, технічне resume, failure classification, heartbeat/stale detection, persistence Run/Step primitives, tracing і audit envelope.
+- **НЕ ОГОЛОШУВАТИ dead code:** \`EngineeringAutonomousProgressionService\`, \`EngineeringContinueService\`, \`DoctrineEngineeringWorkflowStore\`, \`MySqlEngineeringWorkflowLock\`. Вони мають активні функції й мають пройти consumer/runtime audit, а не механічне видалення.
+- **Відомий ризик:** Engineering самостійно позначає stale AgentRun як failed і продовжує за станом; без перевірки зовнішніх side effects (наприклад repository changes) та idempotency це не еквівалентно безпечному retry Federation Action. Міграція допускається лише після failure-injection proof.
+
+**Обов'язковий inventory для Engineering:** \`EngineeringOrchestrator\`, \`EngineeringWorkflowEngine\`, \`EngineeringWorkflowCoordinator\`, \`EngineeringWorkflowDefinition\`, \`WorkflowTransitionGuard\`, \`WorkflowExecution\`, \`EngineeringWorkflowStoreInterface\`, \`DoctrineEngineeringWorkflowStore\`, \`EngineeringWorkflowLockInterface\`, \`MySqlEngineeringWorkflowLock\`, \`EngineeringAutonomousProgressionService\`, \`EngineeringContinueService\`, \`EngineeringAgentRunStoreInterface\`, \`EngineeringRetryPolicy\`, усі stage executors і worker/CLI entrypoints.
+
+**Критерій консолідації третього контуру:** довести, що одна generic runtime infrastructure працює для Goal і Engineering без подвійного persistent technical execution state та без зміни Engineering stage semantics. Не конвертувати бізнес-статуси Engineering у універсальний \`WorkflowStatus\` один-до-одного. Якщо повна міграція Engineering не потрібна для першого релізу, допустимий **тонкий adapter** до спільних primitives із явним sunset plan дублювання, а не ще одна паралельна модель, визнана канонічною.
 
 ### Шість обговорюваних складових
 

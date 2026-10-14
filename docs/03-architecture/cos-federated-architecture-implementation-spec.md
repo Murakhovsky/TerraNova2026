@@ -2,7 +2,7 @@
 title: Федеративна архітектура COS — нормативне ТЗ впровадження та консолідації
 description: Архітектурні принципи, межі відповідальності, єдине виконання процесів, міграція дублювання, контроль legacy та критерії приймання COS.
 status: active
-updated: 2026-10-14
+updated: 2026-10-15
 kind: architecture
 ---
 
@@ -119,6 +119,27 @@ COS — federated modular monolith (архітектурний принцип д
 Тому заборонено бездумно замінити persisted Federation Run на in-memory Kernel Workflow: це регресія безпеки. **Перший крок — матриця фактичних гарантій і gaps, другий — їх перенесення, третій — cleanup.**
 
 Обов'язково створити машинозчитуваний inventory (клас, package, source owner, runtime consumers, DB writes, queues, states, hazards, migration decision) для всіх Workflow/Federation/Engineering/Agent/Queue компонентів.
+
+## 5.1. Третій обов'язковий контур аудиту: AI Engineering Workflow
+
+**Scope P0:** аудит та обов'язкова contract/consolidation матриця охоплюють **одночасно** три механізми: \`Kernel\Workflow\WorkflowEngine\`, \`FederationSequentialOrchestrator\`, \`EngineeringWorkflowEngine\` + \`EngineeringWorkflowCoordinator\` з \`EngineeringOrchestrator\` та \`EngineeringAutonomousProgressionService\`. Неповна матриця тільки Kernel/Federation **не проходить** етап 1.
+
+Перевірити на рівні методів, моделей, таблиць, DI та runtime:
+1. **Життєвий цикл:** start/resume/cancel, persisted state, transitions, waiting/human decision, errors/terminal state, version, retries і continuity.
+2. **Технічні primitives:** durable Run/Step, claim/lock/CAS, queue, dispatch, timeout, heartbeat/stale recovery, result/evidence checks, outbox/tracing/correlation.
+3. **Engineering business semantics:** Product Requirements → QA Planning → Architect → Developer → Reviewer → QA, specialists, rework loops, agent autonomy budgets, independent review, no-self-approval, human merge/acceptance. Зберегти незалежно від технічної консолідації.
+4. **Джерело правди:** \`DoctrineEngineeringWorkflowStore\`, таблиці \`cos_engineering_workflows\`, AgentRun store, transitions та health; встановити власника кожного запису й точку можливого дублювання з canonical Workflow.
+5. **Виконання зовнішніх ефектів:** фактичні Engineering stage executor → agent/tool/repository/GitHub operations. Не стверджувати Action parity, доки не порівняні gate, idempotency та remote outcome uncertainty.
+6. **План migration:** KEEP для доменних правил Engineering, ADAPT/CONSOLIDATE для доведених generic technical primitives, RETIRE лише після безпечного cutover й regression. Можлива staged adaptation; негайне злиття state machines заборонено.
+
+Результат етапу 1: **трьохстороння** таблиця Kernel / Federation / Engineering → canonical owner → конкретний interface/adapter → duplicated state → risk → test → migration phase. Обов'язкова матриця наведена в [аудиті](./federation-execution-consolidation-audit.md).
+
+**Додаткові критерії приймання Engineering:**
+- відновлення stale AgentRun не повторює вже здійснених repository side effects;
+- діють незалежні Architect/Reviewer/QA та human approval/merge gates;
+- не змінюється рольова модель, логічні бюджети циклів та policy no-self-approval;
+- Engineering progress/recovery та audit history після migration не втрачають доказів;
+- жодного другого generic worker/queue/scheduler або dual writer для нового universal Workflow state.
 
 ## 6. Вимоги до єдиного виконання процесів
 
