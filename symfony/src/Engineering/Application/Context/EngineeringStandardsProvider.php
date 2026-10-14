@@ -29,4 +29,22 @@ final readonly class EngineeringStandardsProvider
     {
         return self::PATHS;
     }
+
+    /**
+     * Architecture receives only the standards governing design and safety.
+     * Developer/Reviewer/QA retain all eight canonical standards via all().
+     *
+     * @return list<array{path:string,content:string,complete:bool,size:int,sha256:string}>
+     */
+    public function forArchitect(): array
+    {
+        return $this->repositoryFiles->readMany([
+            'docs/06-ai-agents/engineering/architecture-standard.md',
+            'docs/06-ai-agents/engineering/security-standard.md',
+            'docs/06-ai-agents/engineering/testing-standard.md',
+            'docs/06-ai-agents/engineering/git-standard.md',
+            'docs/06-ai-agents/engineering/definition-of-done.md',
+            'docs/06-ai-agents/engineering/agent-permissions.md',
+        ]);
+    }
 }

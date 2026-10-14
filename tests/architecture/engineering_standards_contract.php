@@ -26,4 +26,11 @@ foreach ([$manager,$architect,$developer,$reviewer,$qa] as $consumer) {
     if (!str_contains($consumer, 'engineering_standards')) throw new RuntimeException('Engineering role does not receive canonical standards.');
 }
 
+if (!str_contains($provider, 'function forArchitect()') || !str_contains($architect, "standards->forArchitect()")) {
+    throw new RuntimeException('Architect must receive a role-specific subset of standards.');
+}
+if (!str_contains($provider, 'function all()')) {
+    throw new RuntimeException('Other Engineering agents must keep all canonical standards.');
+}
+
 echo "Engineering standards contract passed.\n";

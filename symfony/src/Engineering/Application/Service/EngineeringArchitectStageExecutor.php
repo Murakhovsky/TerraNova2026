@@ -208,6 +208,9 @@ final readonly class EngineeringArchitectStageExecutor
                 && ($decision['evidence']['requested_by_agent'] ?? null) === AgentRole::PRINCIPAL_ARCHITECT->value,
         )), -20);
 
+        $contextOptimizer = new EngineeringArchitectContextOptimizer();
+        $compactRepositoryDiff = $contextOptimizer->compactRevisionDiff($repositoryDiff, $repositoryFiles);
+
         $previousArchitectureHash = (string) ($previousArchitecture['content_hash'] ?? 'none');
         $task = new EngineeringAgentTask(
             id: EngineeringId::generate(),
@@ -217,7 +220,7 @@ final readonly class EngineeringArchitectStageExecutor
             inputs: [
                 'feature_spec' => $featureSpec['content'],
                 'qa_test_plan' => $testPlan['content'],
-                'engineering_standards' => $this->standards->all(),
+                'engineering_standards' => $this->standards->forArchitect(),
                 'context_map' => $contextMap['content'],
                 'domain_context_pack' => $domainContext['content'] ?? null,
                 'repository_state' => [
@@ -226,7 +229,7 @@ final readonly class EngineeringArchitectStageExecutor
                     'revalidation' => $previousArchitecture !== null,
                     'target_branch' => $targetBranch !== '' ? $targetBranch : $this->repository->configuredBaseBranch(),
                 ],
-                'repository_diff' => $repositoryDiff,
+                'repository_diff' => $compactRepositoryDiff,
                 'repository_files' => $repositoryFiles,
                 'database_schema' => $databaseSchema,
                 'human_decisions' => $humanDecisionHistory,
@@ -280,6 +283,26 @@ final readonly class EngineeringArchitectStageExecutor
                 'repository_revision' => $repositoryRevision,
                 'previous_architecture_artifact_id' => $previousArchitecture['id'] ?? null,
                 'logical_attempt' => $logicalAttempt,
+            ],
+        );
+
+        $componentBytes = $contextOptimizer->serializedBytesByComponent($task->inputs);
+        $this->journal->event(
+            $featureId,
+            $workflowId,
+            'RUNTIME',
+            'architect.context_size_profile',
+            'COMPLETED',
+            'Architect input component sizes recorded before LLM execution.',
+            $correlationId,
+            [
+                'component_bytes' => $componentBytes,
+                'total_input_bytes' => array_sum($componentBytes),
+                'complete_repository_files' => count(array_filter(
+                    $repositoryFiles,
+                    static fn (array $file): bool => ($file['complete'] ?? false) === true,
+                )),
+                'repository_revision' => $repositoryRevision,
             ],
         );
 
