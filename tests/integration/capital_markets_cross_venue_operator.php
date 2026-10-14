@@ -26,6 +26,8 @@ $files=[
     'app/Domains/CapitalMarkets/Application/Service/BStocksReferenceBboPlanner.php',
     'symfony/src/Command/CapitalMarketsReferenceBboPlanCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenueMarketSourceAdmission.php',
+    'symfony/src/Application/CapitalMarkets/Command/SweepBStockBboAdmissions.php',
+    'symfony/src/Application/CapitalMarkets/Handler/SweepBStockBboAdmissionsHandler.php',
     'symfony/src/Command/CapitalMarketsSubscriptionPlanCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftProjection.php',
     'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftService.php',
@@ -168,4 +170,11 @@ $assert(str_contains($plannerSource,'PLAN_REENABLE')
     && str_contains($adminSource,'$previous??[]')
     && str_contains($adminSource,'MarketSubscriptionStatus::Active'),
     'An explicitly reviewed listing must support operator-only re-enable with previous-state audit and recheck.');
+$fenceHandler=(string)file_get_contents($root.'/symfony/src/Application/CapitalMarkets/Handler/SweepBStockBboAdmissionsHandler.php');
+$assert(str_contains($scheduler,'SweepBStockBboAdmissions')
+    && str_contains($scheduler,'capitalMarketsBboFenceEnabled')
+    && str_contains($services,'COS_CM_BBO_FENCE_SCHEDULER_ENABLED')
+    && str_contains($fenceHandler,'MarketDataManage')
+    && str_contains($fenceHandler,'disableUnapproved($org)'),
+    'Subscription review expiry must be enforceable independently of discovery and REST polling.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";

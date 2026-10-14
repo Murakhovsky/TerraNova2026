@@ -184,3 +184,9 @@ php symfony/bin/console cos:capital-markets:subscriptions:reference-plan ORG_ID 
 ## Операторське повторне ввімкнення після відкликання
 
 `DISABLED` BBO-підписка не оживає при новому Discovery чи повторному reviewer approval. Після нового схвалення, актуального source/venue mapping і контрольованого `dry-run` планувальник показує `PLAN_REENABLE` замість `BLOCKED_EXISTING_SUBSCRIPTION`. Оператор окремою дією Apply відновлює підписку через стандартний `MarketDataAdministrationService` із попереднім і новим станом в аудиті. Без `REVIEWED_LISTING` і останнього чинного рішення оператора `PLAN_REENABLE` недоступний. `DEGRADED`/`FAILED` не реактивуються цим шляхом без окремої діагностики.
+
+## Плановий expiry-fence для вже активних BBO
+
+За умови запущеного COS Scheduler + Messenger задайте `COS_CM_BBO_FENCE_SCHEDULER_ENABLED=1`, `COS_CM_BBO_FENCE_ACTOR_ID=<service actor>`, `COS_CM_BBO_FENCE_INTERVAL_MINUTES=5`, `COS_ORGANIZATION_ID=<tenant>`. Актор повинен мати `MarketDataManage` або `Manage`. Це незалежна від Discovery й REST опитувань задача: до однієї хвилини можна зменшити інтервал контролю, максимальний інтервал 60 хвилин. Після строку review 48 годин, зміни source або порушення venue mapping виконується `ACTIVE → DISABLED` і warning з кількістю відключених підписок. Задача вимкнена за замовчуванням до призначення організації й актора. Для production-потоку її необхідно увімкнути та перевірити факт виконання worker на VPS; тільки конфігурація env не гарантує, що Messenger працює.
+
+**Важливо:** цей контролер обмежує persisted desired subscriptions. Лише streaming reconciler з PR #361 після фактичного unsubscribe ACK і invalidation Market State може підтвердити, що мережевий потік припинився. До виконання того acceptance gate масовий Opportunity Engine не має використовувати ці котирування як trusted.
