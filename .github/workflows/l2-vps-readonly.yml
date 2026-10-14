@@ -1,6 +1,10 @@
 name: FOS L2 VPS Read-only Preflight
 
 on:
+  push:
+    branches: [feature/fos-l2-orderbook-recovery]
+    paths:
+      - '.github/workflows/l2-vps-readonly.yml'
   pull_request:
     branches: [main]
     paths:
@@ -17,7 +21,7 @@ jobs:
     timeout-minutes: 7
     # Environment secrets are not repository secrets. Require the protected
     # AWS TN2026 environment to explicitly permit this feature branch.
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feature/fos-l2-orderbook-recovery')
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/feature/fos-l2-orderbook-recovery') || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feature/fos-l2-orderbook-recovery')
     environment: AWS TN2026
     steps:
       - name: Validate SSH credentials (without disclosing them)
