@@ -24,6 +24,9 @@ $files=[
     'symfony/src/Command/CapitalMarketsSeedImportCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenueSubscriptionPlanner.php',
     'symfony/src/Command/CapitalMarketsSubscriptionPlanCommand.php',
+    'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftProjection.php',
+    'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftService.php',
+    'symfony/src/Command/CapitalMarketsCanonicalDraftCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenuePoolProjection.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php',
     'symfony/src/Command/CapitalMarketsInstrumentDiscoveryCommand.php',
@@ -36,13 +39,15 @@ foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueCatalogDiscovery','CrossVenueDiscoverySnapshotRepository',
     'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
     'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository',
-    'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',"$".'connection: '."'@cos.database.pdo'"] as $needle){
+    'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',
+    'BStocksCanonicalDraftProjection','BStocksCanonicalDraftService',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
 }
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
 foreach(['/capital-markets/discovery','/capital-markets/discovery/scan',
     'CrossVenueDiscoveryController::index','CrossVenueDiscoveryController::scan',
     '/capital-markets/discovery/import','CrossVenueDiscoveryController::importSeed',
+    '/capital-markets/discovery/canonical-drafts','CrossVenueDiscoveryController::seedCanonicalDrafts',
     '/capital-markets/discovery/quotes','CrossVenueDiscoveryController::observeQuotes'] as $needle){
     $assert(str_contains($routes,$needle),'Missing discovery route: '.$needle);
 }

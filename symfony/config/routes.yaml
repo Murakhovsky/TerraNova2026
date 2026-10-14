@@ -2656,6 +2656,11 @@ capital_markets_discovery_import:
   controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::importSeed
   methods: [POST]
 
+capital_markets_discovery_drafts:
+  path: /capital-markets/discovery/canonical-drafts
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::seedCanonicalDrafts
+  methods: [POST]
+
 # Capital Markets CM-FOUNDATION UI
 capital_markets_overview:
   path: /capital-markets

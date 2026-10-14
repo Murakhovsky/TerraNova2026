@@ -10,6 +10,7 @@ use App\Web\Experience\Shell\WorkspaceShellFactory;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
 use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
 use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
+use Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler;
@@ -43,6 +44,7 @@ final readonly class CrossVenueDiscoveryController
         private WorkspaceShellFactory $shells,
         private CrossVenueUniverse $universe,
         private BStocksSeedFileReader $seedReader,
+        private BStocksCanonicalDraftService $canonicalDrafts,
         private BStocksSeedImportRepository $seedImports,
         private CrossVenueCatalogDiscovery $scanner,
         private CrossVenueDiscoverySnapshotRepository $snapshots,
@@ -69,6 +71,7 @@ final readonly class CrossVenueDiscoveryController
         }
         $actor=(int)$tenant->userId()->value();
         $canScan=$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage);
+        $canSeedDrafts=$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage);
         $context=new WebExtensionContext($org,$tenant->role()->value(),'workspace','capital-markets','capital-markets-discovery');
         $shell=$this->shells->create($tenant,$context,'Cross-Venue Discovery',[
             new ShellBreadcrumb('Workspace','/admin'),
@@ -80,7 +83,8 @@ final readonly class CrossVenueDiscoveryController
                 'shell'=>$shell,'pageTitle'=>'Cross-Venue Discovery',
                 'watchlist'=>$watchlist,'snapshot'=>$snapshot,'quoteSnapshot'=>$quoteSnapshot,
                 'poolCandidateCounts'=>$poolCandidateCounts,
-                'canScan'=>$canScan,'csrfToken'=>$this->csrf->token($request),
+                'canScan'=>$canScan,'canSeedDrafts'=>$canSeedDrafts,
+                'csrfToken'=>$this->csrf->token($request),
                 'scanned'=>$request->query->getBoolean('scanned'),
                 'cooldown'=>$request->query->getBoolean('cooldown'),
                 'scanError'=>$request->query->getBoolean('error'),
@@ -114,6 +118,26 @@ final readonly class CrossVenueDiscoveryController
             return new RedirectResponse('/capital-markets/discovery?error=1',303);
         }
         return new RedirectResponse('/capital-markets/discovery?scanned=1',303);
+    }
+
+    public function seedCanonicalDrafts(Request $request): Response
+    {
+        $tenant=$this->authorized(CapitalMarketsCapability::InstrumentManage);
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.',403);
+        $mode=(string)$request->request->get('draft_mode','');
+        if (!in_array($mode,['preview','apply'],true)) return new Response('Invalid draft action.',400);
+        $org=$tenant->organizationId()->value();
+        $actor=(int)$tenant->userId()->value();
+        try {
+            $result=$mode==='preview' ? ['status'=>'DRY_RUN','plan'=>$this->canonicalDrafts->plan($org)]
+                :$this->canonicalDrafts->apply($org,$actor,100);
+            $request->getSession()->getFlashBag()->add('canonical_drafts',json_encode($result,JSON_THROW_ON_ERROR));
+            return new RedirectResponse('/capital-markets/discovery?draftsProcessed=1',303);
+        } catch (Throwable $e) {
+            error_log('capital_markets.canonical_drafts.failed '.get_class($e).' '.$e->getMessage());
+            return new RedirectResponse('/capital-markets/discovery?draftError=1',303);
+        }
     }
 
     public function importSeed(Request $request): Response

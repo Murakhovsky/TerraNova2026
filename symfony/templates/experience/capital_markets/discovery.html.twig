@@ -73,6 +73,28 @@
     {% if app.request.query.get('seedError') %}<p class="cos-alert cos-alert--danger">Імпорт відхилено: помилка формату, доступу, бази даних або конфлікт ідентичності. Причину записано в журнал.</p>{% endif %}
   </section>
 
+  <section class="cos-panel">
+    <h2>Канонічні записи для перевірки</h2>
+    <p>Перенесення з імпортованих історичних кандидатів створює лише чернетки (DRAFT).
+       Воно не підтверджує токенізований актив, не пов'язує його з базовою акцією, не підписується на котирування й не вмикає виконання угод.</p>
+    {% if canSeedDrafts %}
+      <form method="post" action="/capital-markets/discovery/canonical-drafts" class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <button class="btn btn-secondary" name="draft_mode" value="preview" type="submit">Перевірити план чернеток</button>
+        <button class="btn btn-primary" name="draft_mode" value="apply" type="submit">Створити DRAFT у реєстрі</button>
+      </form>
+      <small>Перед створенням імпортуйте файл. Якщо є конфлікт ідентичності, зміни блокуються.</small>
+    {% else %}
+      <p>Для створення чернеток потрібен дозвіл на керування інструментами.</p>
+    {% endif %}
+    {% for result in app.flashes('canonical_drafts') %}
+      <p class="cos-alert cos-alert--success">Результат: {{ result }}</p>
+    {% endfor %}
+    {% if app.request.query.get('draftError') %}
+      <p class="cos-alert cos-alert--danger">Реєстрацію чернеток відхилено; перевірте журнал і повторіть dry-run.</p>
+    {% endif %}
+  </section>
+
   {% if scanned %}<div class="cos-alert cos-alert--success">Результат перевірки збережено.</div>{% endif %}
   {% if cooldown %}<div class="cos-alert cos-alert--warning">Зачекайте 90 секунд між перевірками.</div>{% endif %}
   {% if scanError %}<div class="cos-alert cos-alert--danger">Не вдалося провести сканування. Подивіться серверні журнали.</div>{% endif %}
