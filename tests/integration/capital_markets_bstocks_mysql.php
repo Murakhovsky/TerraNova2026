@@ -10,6 +10,7 @@ use Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection;
 use Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse;
 use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueBboAdmissionFence;
 
 $assert=static function(bool $condition,string $message): void {
     if (!$condition) throw new RuntimeException($message);
@@ -61,7 +62,7 @@ try {
     $batch=$pdo->prepare('SELECT COUNT(*) FROM tn_capital_market_seed_import_batches WHERE organization_id=:org');
     $batch->execute(['org'=>$org]);
     $assert((int)$batch->fetchColumn()===1,'Repeated file should retain one immutable batch record.');
-    $candidates=new CrossVenuePoolCandidateRepository($pdo,new CrossVenuePoolProjection());
+    $candidates=new CrossVenuePoolCandidateRepository($pdo,new CrossVenuePoolProjection(),new CrossVenueBboAdmissionFence($pdo));
     $snapshot=[
         'dataset'=>'cross_venue_candidate_discovery','as_of_utc'=>'2026-10-14T20:00:00Z',
         'rows'=>[['candidate'=>['token'=>'AAPLB','underlying'=>'AAPL'],

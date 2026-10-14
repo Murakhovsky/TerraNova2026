@@ -5,6 +5,7 @@ require (getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__,2).'/vendor/autoload.php
 
 use Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueBboAdmissionFence;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueListingReviewRepository;
 
 $pdo=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
@@ -14,8 +15,8 @@ $pdo=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
 $assert=static function(bool $ok,string $why):void { if (!$ok) throw new RuntimeException($why); };
 $org='cm-listing-ci-'.bin2hex(random_bytes(5));
 $other=$org.'-foreign';
-$pool=new CrossVenuePoolCandidateRepository($pdo,new CrossVenuePoolProjection());
-$review=new CrossVenueListingReviewRepository($pdo);
+$pool=new CrossVenuePoolCandidateRepository($pdo,new CrossVenuePoolProjection(),new CrossVenueBboAdmissionFence($pdo));
+$review=new CrossVenueListingReviewRepository($pdo,new CrossVenueBboAdmissionFence($pdo));
 $now=(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s\Z');
 $snapshot=['dataset'=>'cross_venue_candidate_discovery','as_of_utc'=>$now,
     'rows'=>[['candidate'=>['token'=>'AAPLB','underlying'=>'AAPL'],
