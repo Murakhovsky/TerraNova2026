@@ -18,6 +18,7 @@ final readonly class L2StreamWorker
         private L2WebSocketTransport $transport,
         private BinanceL2StreamProcessor|BybitL2StreamProcessor|KrakenL2StreamProcessor $processor,
         private ?BinanceL2SnapshotClient $snapshotClient = null,
+        private ?L2SubscriptionAcknowledgement $acknowledgements = null,
     ) {}
 
     /**
@@ -39,8 +40,24 @@ final readonly class L2StreamWorker
             if ($subscribe !== null) $this->transport->sendText($subscribe);
             $snapshotPending = str_starts_with($this->config->venue, 'BINANCE_');
             $snapshot = null;
+            $subscriptionReady = $subscribe === null;
+            $acknowledgements = $this->acknowledgements ?? new L2SubscriptionAcknowledgement();
             for ($i = 0; $i < $maxMessages; ++$i) {
                 $frame = $this->transport->readText();
+                if (!$subscriptionReady) {
+                    if ($acknowledgements->accepted($this->config->venue, $frame)) {
+                        $subscriptionReady = true;
+                        continue;
+                    }
+                    $control = json_decode($frame, true, 128, JSON_THROW_ON_ERROR);
+                    if (!is_array($control) || array_is_list($control)) {
+                        throw new DomainException('Malformed L2 subscription response.');
+                    }
+                    if (isset($control['topic']) || ($control['channel'] ?? null) === 'book') {
+                        throw new DomainException('L2 data arrived before subscription acknowledgement.');
+                    }
+                    continue;
+                }
                 $this->processor->receive($frame);
                 if ($snapshotPending) {
                     // Fetch after the first diff; retain the recovery buffer while
@@ -67,8 +84,11 @@ final readonly class L2StreamWorker
             }
             return $published;
         } finally {
-            $this->processor->begin();
-            $this->transport->close();
+            try {
+                $this->processor->begin();
+            } finally {
+                $this->transport->close();
+            }
         }
     }
 }

@@ -30,6 +30,9 @@ class L2WebSocketTransport
             throw new DomainException('Only credential-free wss URLs are permitted.');
         }
         $host = $parts['host'];
+        if (!preg_match('/^[A-Za-z0-9.-]+$/D', $host)) {
+            throw new DomainException('Invalid websocket host.');
+        }
         $port = $parts['port'] ?? 443;
         if ($port < 1 || $port > 65535) throw new DomainException('Invalid websocket port.');
         $path = ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
@@ -95,6 +98,7 @@ class L2WebSocketTransport
             if ($opcode >= 8 && (!$fin || $length > 125)) throw new DomainException('Invalid websocket control frame.');
             $payload = $this->readExact($length);
             if ($opcode === 8) throw new DomainException('Websocket closed by peer.');
+            if ($opcode !== 0 && $opcode !== 1 && $opcode !== 9 && $opcode !== 10) throw new DomainException('Unsupported websocket opcode.');
             if ($opcode === 9) { $this->sendFrame(10, $payload); continue; }
             if ($opcode === 10) continue;
             if ($opcode === 1 && !$started) $started = true;

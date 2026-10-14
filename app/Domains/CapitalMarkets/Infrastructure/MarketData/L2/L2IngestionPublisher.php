@@ -29,6 +29,9 @@ final readonly class L2IngestionPublisher
 
     public function publish(MarketOrderBook $book): MarketDataIngestionResult
     {
+        if ($book->sequence === null || $book->sequence === '') {
+            throw new \DomainException('Verified L2 publication requires a sequence.');
+        }
         $payload = $book->toArray();
         $event = new RawMarketEvent(
             'cm-l2-'.bin2hex(random_bytes(16)),

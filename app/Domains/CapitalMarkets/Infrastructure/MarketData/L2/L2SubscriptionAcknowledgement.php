@@ -12,11 +12,13 @@ final class L2SubscriptionAcknowledgement
         if (!is_array($f) || array_is_list($f)) throw new DomainException('Invalid subscription acknowledgement.');
         if (str_starts_with($venue, 'BINANCE_')) return true;
         if (str_starts_with($venue, 'BYBIT_')) {
+            if (isset($f['retCode']) && $f['retCode'] !== 0) throw new DomainException('Bybit subscription error code.');
             if (($f['op'] ?? null) !== 'subscribe') return false;
             if (($f['success'] ?? null) !== true) throw new DomainException('Bybit subscription rejected.');
             return true;
         }
         if ($venue === 'KRAKEN_SPOT') {
+            if (isset($f['error'])) throw new DomainException('Kraken subscription error.');
             if (($f['method'] ?? null) !== 'subscribe') return false;
             if (($f['success'] ?? null) !== true) throw new DomainException('Kraken subscription rejected.');
             return true;
