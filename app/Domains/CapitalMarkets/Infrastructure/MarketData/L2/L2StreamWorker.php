@@ -44,27 +44,35 @@ final readonly class L2StreamWorker
             $snapshotPending = str_starts_with($this->config->venue, 'BINANCE_');
             $snapshot = null;
             $subscriptionReady = $subscribe === null;
+            $preAckDataFrames = 0;
             $acknowledgements = $this->acknowledgements ?? new L2SubscriptionAcknowledgement();
             for ($i = 0; $i < $maxMessages; ++$i) {
                 if ($shouldStop()) return $published;
                 $this->assertNotStale($published);
                 $frame = $this->transport->readText();
                 $this->assertNotStale($published);
+                $acknowledgedFrame = false;
                 if (!$subscriptionReady) {
                     if ($acknowledgements->accepted($this->config->venue, $frame)) {
                         $subscriptionReady = true;
+                        $acknowledgedFrame = true;
+                    } else {
+                        $control = json_decode($frame, true, 128, JSON_THROW_ON_ERROR);
+                        if (!is_array($control) || array_is_list($control)) {
+                            throw new DomainException('Malformed L2 subscription response.');
+                        }
+                        if (isset($control['topic']) || ($control['channel'] ?? null) === 'book') {
+                            if (++$preAckDataFrames > 32) {
+                                throw new DomainException('L2 subscription acknowledgement delayed past data limit.');
+                            }
+                            // Exchanges can send a snapshot before the control ACK.
+                            // Validate/build it, but NEVER publish until ACK is received.
+                            $this->processor->receive($frame);
+                        }
                         continue;
                     }
-                    $control = json_decode($frame, true, 128, JSON_THROW_ON_ERROR);
-                    if (!is_array($control) || array_is_list($control)) {
-                        throw new DomainException('Malformed L2 subscription response.');
-                    }
-                    if (isset($control['topic']) || ($control['channel'] ?? null) === 'book') {
-                        throw new DomainException('L2 data arrived before subscription acknowledgement.');
-                    }
-                    continue;
                 }
-                $this->processor->receive($frame);
+                if (!$acknowledgedFrame) $this->processor->receive($frame);
                 if ($snapshotPending) {
                     // Fetch after the first diff; retain the recovery buffer while
                     // awaiting a diff that actually bridges the REST snapshot.

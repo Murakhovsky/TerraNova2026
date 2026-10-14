@@ -16,6 +16,9 @@ final class L2WebSocketFrameRouter
     /** @return array<string,mixed> */
     public function decode(string $json): array
     {
+        if ($this->venue === 'KRAKEN_SPOT') {
+            $json = $this->preserveKrakenDecimals($json);
+        }
         $frame = json_decode($json, true, 128, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
         if (!is_array($frame) || array_is_list($frame)) throw new DomainException('Invalid L2 frame.');
         return match ($this->venue) {
@@ -24,6 +27,55 @@ final class L2WebSocketFrameRouter
             'KRAKEN_SPOT' => $this->kraken($frame),
             default => throw new DomainException('Unsupported L2 venue.'),
         };
+    }
+
+    /**
+     * Kraken WS v2 sends prices and quantities as JSON numbers. Preserve
+     * their literal bytes before json_decode can round through floats.
+     * Scan JSON strings rather than regexing values inside quoted text.
+     */
+    private function preserveKrakenDecimals(string $json): string
+    {
+        $length = strlen($json);
+        $out = '';
+        for ($i = 0; $i < $length;) {
+            if ($json[$i] !== '"') {
+                $out .= $json[$i++];
+                continue;
+            }
+            $start = $i++;
+            $escaped = false;
+            while ($i < $length) {
+                $char = $json[$i++];
+                if ($escaped) { $escaped = false; continue; }
+                if ($char === '\\') { $escaped = true; continue; }
+                if ($char === '"') break;
+            }
+            $key = substr($json, $start, $i - $start);
+            $out .= $key;
+            if ($key !== '"price"' && $key !== '"qty"') continue;
+            $look = $i;
+            while ($look < $length && ctype_space($json[$look])) ++$look;
+            if ($look >= $length || $json[$look] !== ':') continue;
+            ++$look;
+            while ($look < $length && ctype_space($json[$look])) ++$look;
+            if ($look >= $length || $json[$look] === '"') continue;
+            $rest = substr($json, $look);
+            if (preg_match('/\A-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/', $rest, $match) !== 1) {
+                continue; // Venue-specific level validation remains fail-closed.
+            }
+            $literal = $match[0];
+            $end = $look + strlen($literal);
+            $delimiter = $end;
+            while ($delimiter < $length && ctype_space($json[$delimiter])) ++$delimiter;
+            if ($delimiter < $length && !in_array($json[$delimiter], [',', '}', ']'], true)) continue;
+            if (strpbrk($literal, 'eE') !== false) {
+                throw new DomainException('Kraken exponent decimal requires exact conversion.');
+            }
+            $out .= substr($json, $i, $look - $i).'"'.$literal.'"';
+            $i = $end;
+        }
+        return $out;
     }
 
     /** @param array<string,mixed> $frame @return array<string,mixed> */

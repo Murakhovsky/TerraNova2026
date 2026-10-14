@@ -297,3 +297,29 @@ Operational caveats: the current Binance WebSocket->REST bridge is
 sequential (REST fetch temporarily blocks socket reads); extended
 live-duration testing, multi-stream coordination and an automated
 deployment to your own host remain distinct acceptance gates.
+
+### Live-venue findings and adapter corrections (2026-10-14)
+
+The first actual five-venue GitHub Actions matrix exposed differences not
+visible in static fixture tests:
+
+- **Bybit Spot:** PASS on real WSS with exactly two validated snapshots,
+  forced socket loss, BACKOFF and fresh TRUSTED recovery.
+- **Bybit Linear:** sends a data frame before its control acknowledgement.
+  The worker now validates such frames internally but never publishes an
+  order book before the subscription is acknowledged. This is bounded to
+  32 pre-ACK data frames.
+- **Kraken Spot:** v2 JSON book levels can be JSON numeric literals, rather
+  than the strings used by Bybit/Binance. The Kraken infrastructure adapter
+  preserves exact numeric lexemes before decoding to avoid float rounding
+  and checksum corruption; exponent syntax is rejected, never rounded.
+- **Binance Spot:** uses Binance's official unauthenticated market-data-only
+  WSS and REST hosts `data-stream.binance.vision` and
+  `data-api.binance.vision`.
+- **Binance Futures:** upgraded to the post-April-2026 public depth stream
+  path `fstream.binance.com/public/ws/...`. REST snapshots still require
+  the Binance futures REST endpoint. A provider HTTP 403/451 due to runner
+  geolocation remains an external acceptance failure, not a passing test.
+
+Re-run the strict `L2 Live Venue Reconnect` workflow after these updates.
+An offline smoke pass is not evidence of public exchange availability.

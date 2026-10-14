@@ -13,4 +13,12 @@ foreach ([['BYBIT_SPOT','BTCUSDT',10],['KRAKEN_SPOT','BTC/USD',50],['BINANCE_SPO
     try { new L2SubscriptionConfig(...$args); } catch (DomainException $e) { $rejected = true; }
     if (!$rejected) throw new RuntimeException('Invalid subscription accepted');
 }
+
+$binanceSpot = new L2SubscriptionConfig('BINANCE_SPOT','BTCUSDT',50);
+$binanceFutures = new L2SubscriptionConfig('BINANCE_FUTURES','BTCUSDT',50);
+if (!str_starts_with($binanceSpot->websocketUrl(), 'wss://data-stream.binance.vision:443/ws/')
+    || !str_starts_with((string)$binanceSpot->snapshotUrl(), 'https://data-api.binance.vision/api/v3/depth')
+    || !str_starts_with($binanceFutures->websocketUrl(), 'wss://fstream.binance.com/public/ws/')) {
+    throw new RuntimeException('Binance market-data endpoints are not current.');
+}
 echo "L2 subscription config smoke passed\n";

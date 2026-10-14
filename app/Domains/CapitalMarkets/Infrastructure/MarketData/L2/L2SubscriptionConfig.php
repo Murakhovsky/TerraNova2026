@@ -12,8 +12,8 @@ final readonly class L2SubscriptionConfig {
     }
     public function websocketUrl(): string {
         return match ($this->venue) {
-            'BINANCE_SPOT' => 'wss://stream.binance.com:443/ws/'.strtolower($this->symbol).'@depth@100ms',
-            'BINANCE_FUTURES' => 'wss://fstream.binance.com/ws/'.strtolower($this->symbol).'@depth@100ms',
+            'BINANCE_SPOT' => 'wss://data-stream.binance.vision:443/ws/'.strtolower($this->symbol).'@depth@100ms',
+            'BINANCE_FUTURES' => 'wss://fstream.binance.com/public/ws/'.strtolower($this->symbol).'@depth@100ms',
             'BYBIT_SPOT' => 'wss://stream.bybit.com/v5/public/spot',
             'BYBIT_LINEAR' => 'wss://stream.bybit.com/v5/public/linear',
             'KRAKEN_SPOT' => 'wss://ws.kraken.com/v2',
@@ -28,7 +28,7 @@ final readonly class L2SubscriptionConfig {
     }
     public function snapshotUrl(): ?string {
         return match ($this->venue) {
-            'BINANCE_SPOT' => 'https://api.binance.com/api/v3/depth?symbol='.$this->symbol.'&limit=1000',
+            'BINANCE_SPOT' => 'https://data-api.binance.vision/api/v3/depth?symbol='.$this->symbol.'&limit=1000',
             'BINANCE_FUTURES' => 'https://fapi.binance.com/fapi/v1/depth?symbol='.$this->symbol.'&limit=1000',
             default => null,
         };
