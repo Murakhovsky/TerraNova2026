@@ -23,6 +23,8 @@ $files=[
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/BStocksSeedImportRepository.php',
     'symfony/src/Command/CapitalMarketsSeedImportCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenueSubscriptionPlanner.php',
+    'app/Domains/CapitalMarkets/Application/Service/BStocksReferenceBboPlanner.php',
+    'symfony/src/Command/CapitalMarketsReferenceBboPlanCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenueMarketSourceAdmission.php',
     'symfony/src/Command/CapitalMarketsSubscriptionPlanCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftProjection.php',
@@ -50,7 +52,7 @@ foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository','CrossVenueListingReviewRepository',
     'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',
     'CrossVenueActiveUniverse',
-    'CrossVenueMarketSourceAdmission',
+    'CrossVenueMarketSourceAdmission','BStocksReferenceBboPlanner',
     'BStocksCanonicalDraftProjection','BStocksCanonicalDraftService','BoundedBboSweepService',
     'MysqlBoundedBboSweepGate',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
@@ -59,6 +61,7 @@ $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
 foreach(['/capital-markets/discovery','/capital-markets/discovery/scan',
     'CrossVenueDiscoveryController::index','CrossVenueDiscoveryController::scan',
     '/capital-markets/discovery/listing-review','CrossVenueDiscoveryController::reviewListing',
+    '/capital-markets/discovery/subscription-plan','CrossVenueDiscoveryController::planPoolBbo',
     '/capital-markets/discovery/import','CrossVenueDiscoveryController::importSeed',
     '/capital-markets/discovery/canonical-drafts','CrossVenueDiscoveryController::seedCanonicalDrafts',
     '/capital-markets/discovery/quotes','CrossVenueDiscoveryController::observeQuotes'] as $needle){
@@ -143,4 +146,10 @@ $assert(str_contains($activeUniverse,'IMPORTED_MYSQL')
     && str_contains($manual,'CrossVenueActiveUniverse')
     && str_contains($controller,'$this->activeUniverse->load($org,$this->universeFile)'),
     'All manual/scheduled discovery entrypoints must use the imported tenant universe.');
+$referencePlanner=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/BStocksReferenceBboPlanner.php');
+$assert(str_contains($referencePlanner,'massive.stocks.v2')
+    && str_contains($referencePlanner,'MarketDataAdministrationService')
+    && str_contains($referencePlanner,'Reference')
+    && str_contains($controller,'function planPoolBbo(Request $request)'),
+    'Reference BBO must reuse audited subscriptions and require explicit source/tenant.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";

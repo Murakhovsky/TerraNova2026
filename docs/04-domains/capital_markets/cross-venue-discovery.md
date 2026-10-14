@@ -165,3 +165,14 @@ php symfony/bin/console cos:capital-markets:instruments:seed-drafts ORG_ID ACTOR
 ## Universe після XLSM: автоматичний перехід від CSV до MySQL
 
 Модуль `CrossVenueActiveUniverse` використовує ізольовані за організацією імпортовані seed-записи MySQL як джерело списку кандидатів. Якщо для організації імпорту ще немає, він явно показує `BOOTSTRAP_CSV` і використовує початковий CSV. Після імпорту UI, ручний POST-скан, CLI і `RefreshCrossVenueCandidatePoolHandler` одержують **однаковий** поточний набір MySQL. Додаючи 81-й інструмент, не потрібно редагувати CSV або код scheduler. Залишаються обмеження 500 seed-записів, структурна валідація типу/символу і окремі review gates. Інформація `universe_origin` і `historical_input_as_of_utc` записується в Discovery snapshot; жоден історичний файл сам собою не підтверджує, що лістинг актуальний.
+
+## Підписки reference equity/ETF через Massive
+
+Модуль `BStocksReferenceBboPlanner` готує незалежні BBO-підписки тільки для ACTIVE reference equity/ETF із provider ID `BINANCE_BSTOCKS_UNDERLYING_SEED`. Він використовує вже наявний адаптер `massive.stocks.v2`, джерело `venue_id=null`, `role=REFERENCE_SOURCE`, явно вказаний `license_profile`, `metadata.data_mode=LIVE` або `DELAYED` і налаштоване посилання на credentials. Потрібні права `InstrumentManage` і `MarketDataManage`. Створення відбувається через існуючий `MarketDataAdministrationService`. Жодного автоматичного зв'язку між токеном і акцією або торгового допуску не виникає.
+
+```bash
+php symfony/bin/console cos:capital-markets:subscriptions:reference-plan ORG_ID ACTOR_ID --source=MASSIVE_SOURCE_ID
+php symfony/bin/console cos:capital-markets:subscriptions:reference-plan ORG_ID ACTOR_ID --source=MASSIVE_SOURCE_ID --apply
+```
+
+У вебінтерфейсі `/capital-markets/discovery` обидва види підписок (token BBO та reference BBO) можна спочатку перевірити через dry-run, а потім створити окремою дією. Використання платного Massive endpoint та реальних credentials залишається зовнішнім production acceptance gate.

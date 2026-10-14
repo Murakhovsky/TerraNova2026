@@ -167,6 +167,33 @@
   </section>
 
   <section class="cos-panel">
+    <h2>Планування Bid/Ask підписок</h2>
+    <p>Цей крок лише створює підписки в наявному Market Data runtime. Для токенів потрібні REVIEWED_LISTING, ACTIVE canonical token і venue mapping. Для базових акцій/ETF потрібен ACTIVE reference canonical, налаштований Massive source і права на reference data. Підписка ще не означає, що WebSocket або REST працює.</p>
+    {% if canPlanBbo %}
+      <form method="post" action="/capital-markets/discovery/subscription-plan" class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label for="cm-bbo-kind">Група</label>
+        <select id="cm-bbo-kind" name="kind" class="form-select">
+          <option value="TOKEN_BBO">Токени: Binance/Bybit/Kraken</option>
+          {% if canSeedDrafts %}<option value="REFERENCE_BBO">Базові акції/ETF: Massive</option>{% endif %}
+        </select>
+        <label for="cm-bbo-source">ID налаштованого джерела</label>
+        <input id="cm-bbo-source" name="source_id" class="form-control" type="text" maxlength="190" required placeholder="source_id із Market Data">
+        <button class="btn btn-secondary" type="submit" name="action" value="preview">Перевірити план</button>
+        <button class="btn btn-primary" type="submit" name="action" value="apply">Створити BBO-підписки</button>
+      </form>
+    {% else %}
+      <p>Потрібен дозвіл Market Data Manage.</p>
+    {% endif %}
+    {% for result in app.flashes('pool_bbo') %}
+      <p class="cos-alert cos-alert--success">Підсумок плану: {{ result }}</p>
+    {% endfor %}
+    {% if app.request.query.get('bboPlanError') %}
+      <p class="cos-alert cos-alert--danger">План заблоковано. Перевірте права, реєстр, лістинг, source/license і серверний журнал.</p>
+    {% endif %}
+  </section>
+
+  <section class="cos-panel">
     <h2>Стан контрольованого REST BBO</h2>
     <p>Результати обмеженого fallback polling. Це не WebSocket і не підтвердження безперервного потоку.</p>
     {% if bboPollHealth is empty %}
