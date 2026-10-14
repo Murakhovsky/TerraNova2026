@@ -20,7 +20,7 @@ final readonly class L2RetryRunner
         for ($number = 1; $number <= $this->policy->maxAttempts(); ++$number) {
             try {
                 return $attempt($number);
-            } catch (\Throwable $error) {
+            } catch (DomainException $error) {
                 if ($number === $this->policy->maxAttempts()) {
                     throw new DomainException('L2 reconnect budget exhausted.', 0, $error);
                 }

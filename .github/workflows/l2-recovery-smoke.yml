@@ -1,0 +1,27 @@
+name: L2 Recovery Smoke
+on:
+  push:
+    branches:
+      - feature/fos-l2-orderbook-recovery
+  pull_request:
+    paths:
+      - 'app/Domains/CapitalMarkets/**'
+      - 'tests/CapitalMarkets/**'
+      - '.github/workflows/l2-recovery-smoke.yml'
+jobs:
+  l2-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, openssl
+          coverage: none
+      - name: Syntax-check L2 PHP files
+        run: |
+          find app/Domains/CapitalMarkets/Infrastructure/MarketData/L2 -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: L2 smoke tests
+        run: bash tests/CapitalMarkets/L2RecoverySuite.sh
