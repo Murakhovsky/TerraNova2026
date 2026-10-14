@@ -375,3 +375,35 @@ The host (PHP 8.3.6) was reachable via the existing SSH credentials. Docker/Comp
 An independent non-production L2 public market-data check executed on the **VPS itself** using a clean temporary source directory, deleted after testing: [run #38642460602](https://github.com/Murakhovsky/TerraNova2026/actions/runs/38642460602). **All 5/5 PASS:** BINANCE_SPOT, BINANCE_FUTURES, BYBIT_SPOT, BYBIT_LINEAR and KRAKEN_SPOT. Each test established a real WSS connection, verified an L2 book, injected an actual socket-close/read failure, required BACKOFF, opened a new epoch and verified the restored TRUSTED book. The tests ran sequentially under a 192 MiB PHP memory limit with lower CPU scheduling priority; they did not change production services or database records.
 
 **Not yet proven on the VPS:** registered L2 MarketSource and instrument mapping, deployed Symfony CLI, canonical MySQL ingestion from real exchange books, live email delivery, long-duration soak and sustained multi-instrument capacity. The audit also observed `cos-worker-1` and `cos-kernel-worker-1` restarting; those are pre-existing unrelated process-health issues worth investigating before scaling collectors.
+
+## Controlled VPS deployment and live MySQL acceptance
+
+Feature-branch workflow `FOS L2 VPS Isolated CLI and MySQL Acceptance`
+installs a **separately tagged additive Docker image** based on the already
+installed COS Symfony image, without redeploying or restarting the existing
+website/worker containers. The installed image includes the real Symfony CLI
+entrypoint and all L2 adapters. It uses GitHub Environment `AWS TN2026`
+SSH credentials only on the trusted feature-branch push / manual workflow.
+
+The acceptance test provisions exactly one newly named test organization
+`l2-vps-accept-YYYYMMDD-xxxxxxxx`, source `l2.verified`, venue `BYBIT_SPOT`,
+an active BTCUSDT instrument and mapping in the **existing VPS MySQL**.
+The source and test rows are explicitly separated from the regular tenant.
+It then executes the real Symfony CLI with live market data and validates
+persisted raw, canonical, quality and market-state records by querying MySQL.
+These acceptance records are retained for audit; no production tenant records
+are deleted or modified. The workflow never runs `deploy/dev.sh`.
+
+To control I/O on small VPS nodes, `cos:capital-markets:l2:stream` supports
+`--min-publication-interval-ms=0..60000`, default 0. A throttled
+publication returns `false` to the managed stream runner, which **does not**
+count it as an accepted ingestion or falsely announce recovery. The in-memory
+venue processor still receives every order-book update, so skipped persistence
+does not create sequence gaps.
+
+After successful acceptance, the image and a disabled-by-default Compose
+sidecar manifest remain available under the SSH account's
+`~/.local/share/fos-l2`. This is separate from the COS main deployment.
+Starting continuous collection is deliberately gated on evidence that
+resource headroom and the current workers are stable. The manifest's
+`FOS_L2_ENABLED` defaults to 0.

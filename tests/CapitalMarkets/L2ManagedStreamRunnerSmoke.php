@@ -81,4 +81,23 @@ if ($count !== 1 || $stoppedBooks !== ['first'] || $stopRunner->diagnostics()['s
     throw new RuntimeException('Managed runner graceful stop regression.');
 }
 
+$sampleMetrics = new L2OperationalMetrics();
+$sampleRunner = new L2ManagedStreamRunner(
+    new L2StreamSupervisor(new L2ReconnectPolicy(1,1,1)), new L2ReconnectPolicy(1,1,1), $sampleMetrics
+);
+$samples = 0;
+$sampleCount = $sampleRunner->run(
+    static function (int $epoch, callable $publish): int {
+        $publish('sample-a');
+        $publish('sample-b');
+        return 2;
+    },
+    static function (string $book) use (&$samples): bool {
+        return ++$samples === 2;
+    },
+);
+if ($sampleCount !== 1 || $sampleMetrics->snapshot()['publications'] !== 1) {
+    throw new RuntimeException('A deliberately skipped DB publication was counted as persisted.');
+}
+
 echo "L2 managed runner smoke passed\n";

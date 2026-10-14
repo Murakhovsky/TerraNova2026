@@ -21,7 +21,7 @@ final readonly class L2ManagedStreamRunner
 
     /**
      * @param callable(int, callable(mixed):void):int $session
-     * @param callable(mixed):void $publish
+     * @param callable(mixed):bool|void $publish
      * @param callable(int):void|null $sleep
      * @param callable():bool|null $shouldStop
      * @param callable(string,array<string,mixed>):void|null $onTransition
@@ -53,7 +53,8 @@ final readonly class L2ManagedStreamRunner
                         if (!$this->supervisor->mayPublish($epoch)) {
                             throw new DomainException('Untrusted L2 publication epoch.');
                         }
-                        $publish($book);
+                        $accepted = $publish($book);
+                        if ($accepted === false) return;
                         $this->metrics?->publication();
                         ++$total;
                         if ($incidentOpen) {

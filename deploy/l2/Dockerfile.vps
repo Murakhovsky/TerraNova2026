@@ -1,0 +1,11 @@
+# Small additive image. Never overwrites or restarts the COS production PHP image.
+FROM cos-symfony-php:local
+USER root
+COPY app/ /var/www/html/app/
+COPY symfony/src/ /var/www/html/symfony/src/
+COPY symfony/config/ /var/www/html/symfony/config/
+RUN cd /var/www/html/symfony \
+    && composer dump-autoload --no-dev --classmap-authoritative --no-interaction --no-scripts \
+    && rm -rf var/cache/prod
+USER www-data
+WORKDIR /var/www/html/symfony

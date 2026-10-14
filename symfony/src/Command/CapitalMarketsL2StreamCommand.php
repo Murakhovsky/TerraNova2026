@@ -6,6 +6,10 @@ namespace App\Command;
 use DomainException;
 use Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketSourceRepositoryInterface;
+use Domains\CapitalMarkets\Application\Contract\MarketInstrumentResolverInterface;
+use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentStatus;
+use Domains\CapitalMarkets\Domain\Venue\VenueInstrumentStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2AlertDelivery,L2AlertLifecycle,L2HealthEvaluator,L2IngestionPublisher,L2LiveWorkerFactory,L2ManagedStreamRunner,L2ManagedWorker,L2OperationalMetrics,L2ReconnectPolicy,L2ShutdownSignal,L2StreamSupervisor,L2VerifiedIngestionCallback,L2WorkerRuntimeConfig};
@@ -25,6 +29,8 @@ final class CapitalMarketsL2StreamCommand extends Command
         private readonly MarketSourceRepositoryInterface $sources,
         private readonly L2LiveWorkerFactory $factory,
         private readonly L2AlertDelivery $alertDelivery,
+        private readonly VenueRepository $venues,
+        private readonly MarketInstrumentResolverInterface $instrumentResolver,
     ) { parent::__construct(); }
 
     protected function configure(): void
@@ -40,6 +46,7 @@ final class CapitalMarketsL2StreamCommand extends Command
             ->addOption('message-budget', null, InputOption::VALUE_REQUIRED, 'Messages per connection.', '1000')
             ->addOption('max-attempts', null, InputOption::VALUE_REQUIRED, 'Maximum reconnect attempts.', '20')
             ->addOption('stale-seconds', null, InputOption::VALUE_REQUIRED, 'Maximum silence after verified publication.', '30')
+            ->addOption('min-publication-interval-ms', null, InputOption::VALUE_REQUIRED, 'Optional minimum interval between accepted DB writes.', '0')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Validate configuration and source without opening sockets.');
     }
 
@@ -84,10 +91,35 @@ final class CapitalMarketsL2StreamCommand extends Command
                 || $descriptor->adapterType !== \Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2VerifiedMarketDataDecoder::ADAPTER_TYPE) {
                 throw new DomainException('An enabled verified L2 market source must be registered before starting.');
             }
+            if ($descriptor->venueId === null) {
+                throw new DomainException('Verified L2 market source requires a venue.');
+            }
+            $venue = $this->venues->get($required['organization'], $descriptor->venueId);
+            if ($venue === null || $venue->code !== $config->subscription->venue) {
+                throw new DomainException('Source venue does not match the requested L2 venue.');
+            }
+            $mapped = $this->instrumentResolver->resolve(
+                $required['organization'], $descriptor, $config->subscription->symbol,
+            );
+            if ($mapped === null || $mapped->venueInstrument === null
+                || $mapped->instrument->status !== InstrumentStatus::Active
+                || $mapped->venueInstrument->status !== VenueInstrumentStatus::Active
+                || $mapped->venueInstrument->venueSymbol !== $config->subscription->symbol) {
+                throw new DomainException('No active venue/instrument mapping for requested L2 symbol.');
+            }
+            if ($mapped->instrument->quoteAsset?->value() !== $quote->value()) {
+                throw new DomainException('Mapped instrument quote asset does not match L2 configuration.');
+            }
+            $intervalRaw = (string) $input->getOption('min-publication-interval-ms');
+            if (!preg_match('/^(?:0|[1-9][0-9]{0,4})$/D', $intervalRaw)
+                || (int) $intervalRaw > 60000) {
+                throw new DomainException('Invalid minimum L2 publication interval.');
+            }
+            $minimumPublicationIntervalNs = (int) $intervalRaw * 1000000;
             if ($input->getOption('dry-run')) {
                 $output->writeln(json_encode(['status'=>'VALIDATED','enabled'=>$config->enabled,
                     'venue'=>$config->subscription->venue,'symbol'=>$config->subscription->symbol,
-                    'source'=>$required['source'], 'alerts_enabled'=>$alertsEnabled], JSON_THROW_ON_ERROR));
+                    'source'=>$required['source'], 'instrument'=>$mapped->instrument->id->value(), 'alerts_enabled'=>$alertsEnabled], JSON_THROW_ON_ERROR));
                 return Command::SUCCESS;
             }
             if (!$config->enabled) throw new DomainException('L2 disabled: set FOS_L2_ENABLED=1 explicitly.');
@@ -103,6 +135,20 @@ final class CapitalMarketsL2StreamCommand extends Command
                 $this->ingestion, $required['organization'], $sourceId, $descriptor->venueId,
                 $config->subscription->symbol,
             ));
+            $lastAcceptedNs = null;
+            $verifiedPublisher = $publish;
+            $publish = static function (\Domains\CapitalMarkets\Domain\MarketData\MarketOrderBook $book) use (
+                $verifiedPublisher, &$lastAcceptedNs, $minimumPublicationIntervalNs,
+            ): bool {
+                $now = hrtime(true);
+                if ($minimumPublicationIntervalNs > 0 && $lastAcceptedNs !== null
+                    && $now - $lastAcceptedNs < $minimumPublicationIntervalNs) {
+                    return false;
+                }
+                $verifiedPublisher($book);
+                $lastAcceptedNs = $now;
+                return true;
+            };
             $alerts = $alertsEnabled ? new L2AlertLifecycle(
                 $this->alertDelivery, $required['organization'], $alertEmail,
                 $required['source'], $config->subscription->venue, $config->subscription->symbol,
@@ -137,6 +183,7 @@ final class CapitalMarketsL2StreamCommand extends Command
             $output->writeln(json_encode(['status'=>'STOPPED','published'=>$count,
                 'diagnostics'=>$managed->diagnostics(),
                 'alerts'=>['enabled'=>$alertsEnabled,'pending'=>$alerts?->pendingCount() ?? 0],
+                'min_publication_interval_ms'=>(int)$intervalRaw,
                 'health'=>(new L2HealthEvaluator($config->staleAfterSeconds))->evaluate(
                     $managed->diagnostics(), $metrics->snapshot(),
                 )], JSON_THROW_ON_ERROR));
