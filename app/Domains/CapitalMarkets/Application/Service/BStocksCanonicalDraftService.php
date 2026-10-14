@@ -68,6 +68,7 @@ final readonly class BStocksCanonicalDraftService
                     && $identified->family->value===$input['family']
                     && (($identified->metadata['origin']??null)===$input['metadata']['origin'])
                     && (($identified->metadata['underlying_reference_symbol']??null)===$input['metadata']['underlying_reference_symbol'])
+                    && (($identified->metadata['unverified_venue_symbol']??null)===($input['metadata']['unverified_venue_symbol']??null))
                     && (($identified->metadata['historical_asset_type']??null)===$input['metadata']['historical_asset_type'])
                     && (($identified->metadata['historical_leverage_factor']??null)===$input['metadata']['historical_leverage_factor'])
                     && (($identified->metadata['source_sha256']??null)===$input['metadata']['source_sha256'])

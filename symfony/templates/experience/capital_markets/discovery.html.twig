@@ -122,7 +122,7 @@
     {% else %}
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Джерело</th><th>Остання спроба (UTC)</th><th>Завершення (UTC)</th><th>Статус</th></tr></thead>
+          <thead><tr><th>Джерело</th><th>Остання спроба (UTC)</th><th>Завершення (UTC)</th><th>Статус</th><th>Свіжість</th></tr></thead>
           <tbody>
             {% for item in bboPollHealth %}
               <tr>
@@ -130,6 +130,7 @@
                 <td>{{ item.last_attempt_at }}</td>
                 <td>{{ item.last_completed_at|default('—') }}</td>
                 <td>{{ item.last_status }}</td>
+                <td>{{ item.freshness }}</td>
               </tr>
             {% endfor %}
           </tbody>

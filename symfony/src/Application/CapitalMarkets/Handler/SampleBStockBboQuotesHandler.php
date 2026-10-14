@@ -30,8 +30,16 @@ final readonly class SampleBStockBboQuotesHandler
             throw new RuntimeException('Bounded BBO sweep actor lacks MarketDataManage capability.');
         }
         $result=$this->sweep->run($message->organizationId,3,10,$message->intervalSeconds);
-        $this->logger->info('Bounded public BBO sweep finished.',[
-            'organization_id'=>$message->organizationId,'summary'=>$result,
-        ]);
+        $degraded=false;
+        foreach ($result['rows'] as $row) {
+            if (!in_array($row['state']??'', ['POLLED','COOLDOWN','NO_ACTIVE_BBO'],true)
+                || (($row['state']??'')==='POLLED' && ($row['status']??'')!=='OK')) {
+                $degraded=true;
+                break;
+            }
+        }
+        $context=['organization_id'=>$message->organizationId,'summary'=>$result];
+        if ($degraded) $this->logger->warning('Bounded public BBO sweep degraded.', $context);
+        else $this->logger->info('Bounded public BBO sweep finished.', $context);
     }
 }

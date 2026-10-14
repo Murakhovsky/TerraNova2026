@@ -13,17 +13,21 @@ final readonly class MysqlBoundedBboSweepGate
     public function __construct(private PDO $connection) {}
 
     /** Recent tenant-scoped REST poll outcomes for operator monitoring. */
-    public function recent(string $organizationId,int $limit=20): array
+    public function recent(string $organizationId,int $limit=20,int $staleAfterSeconds=1800): array
     {
-        if ($organizationId==='' || strlen($organizationId)>190 || $limit<1 || $limit>100) {
+        if ($organizationId==='' || strlen($organizationId)>190 || $limit<1 || $limit>100
+            || $staleAfterSeconds<60 || $staleAfterSeconds>86400) {
             throw new RuntimeException('Invalid BBO health lookup.');
         }
         $statement=$this->connection->prepare(
-            'SELECT source_id,last_attempt_at,last_completed_at,last_status
+            'SELECT source_id,last_attempt_at,last_completed_at,last_status,
+                CASE WHEN last_completed_at IS NULL THEN \'UNKNOWN\'
+                     WHEN TIMESTAMPDIFF(SECOND,last_completed_at,UTC_TIMESTAMP())>:freshness THEN \'STALE\'
+                     ELSE \'RECENT\' END AS freshness
              FROM tn_capital_market_bbo_poll_gates
              WHERE organization_id=:org ORDER BY last_attempt_at DESC LIMIT '.$limit
         );
-        $statement->execute(['org'=>$organizationId]);
+        $statement->execute(['org'=>$organizationId,'freshness'=>$staleAfterSeconds]);
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
