@@ -52,7 +52,7 @@
 
         <section class="cos-page__section cos-section-grid" aria-label="Operational attention">
             <article class="cos-card">
-                <p class="cos-card__eyebrow">Today</p>
+                <p class="cos-card__eyebrow">{{ 'Today'|trans }}</p>
                 <h2 class="cos-card__title">Операційний фокус</h2>
                 {% set salesState = dashboard.sectionStates.sales %}
                 {% if salesState.state == 'normal' %}
@@ -118,7 +118,7 @@
                             <strong>{{ dashboard.propertySummary.published }}</strong>
                         </div>
                         <div class="cos-entity-summary__item">
-                            <span>Active</span>
+                            <span>{{ 'Active'|trans }}</span>
                             <strong>{{ dashboard.propertySummary.active }}</strong>
                         </div>
                     </div>

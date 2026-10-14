@@ -10,12 +10,12 @@
 <div class="cos-page__stack cos-capital-markets" data-csrf="{{ csrfToken }}">
 <header class="cos-growth-header">
   <div>
-    <small>Capital Markets · Capital Allocation & Risk</small>
+    <small>{{ 'Capital Markets'|trans }} · Capital Allocation & Risk</small>
     <h1>{{ pageTitle }}</h1>
     <p>Portfolio-aware capital decisions with deterministic risk constraints. AI can explain and propose, never override hard limits.</p>
   </div>
   <nav class="cos-growth-actions">
-    <a class="btn btn-outline-secondary" href="/capital-markets">Overview</a>
+    <a class="btn btn-outline-secondary" href="/capital-markets">{{ 'Overview'|trans }}</a>
     <a class="btn btn-outline-secondary" href="/capital-markets/portfolio">Portfolio</a>
     <a class="btn btn-outline-secondary" href="/capital-markets/risk">Risk</a>
     <a class="btn btn-outline-secondary" href="/capital-markets/allocation">Allocation</a>
@@ -52,7 +52,7 @@
 <section class="cos-panel">
   <h2>Capital by location</h2>
   <div class="table-responsive"><table class="table">
-    <thead><tr><th>Venue</th><th>Asset</th><th>Available</th><th>Reserved</th></tr></thead>
+    <thead><tr><th>Venue</th><th>Asset</th><th>{{ 'Available'|trans }}</th><th>Reserved</th></tr></thead>
     <tbody>
       {% for x in c.by_location|default([]) %}
         <tr><td>{{ x.venue_id }}</td><td>{{ x.asset_key }}</td><td>{{ x.available }}</td><td>{{ x.reserved }}</td></tr>
@@ -184,7 +184,7 @@
 <section class="cos-panel">
   <h2>Execution cockpit handoff</h2>
   <div class="table-responsive"><table class="table">
-    <thead><tr><th>Reservation</th><th>Amount</th><th>Status</th><th>Expires</th></tr></thead>
+    <thead><tr><th>Reservation</th><th>Amount</th><th>{{ 'Status'|trans }}</th><th>Expires</th></tr></thead>
     <tbody>
     {% for reservation in w.reservations|default([]) %}
       <tr><td><code>{{ reservation.reservation_id }}</code></td><td>{{ reservation.amount }}</td><td>{{ reservation.status }}</td><td>{{ reservation.expires_at|default('—') }}</td></tr>
@@ -212,7 +212,7 @@
 <section class="cos-panel">
   <h2>Risk headroom</h2>
   <div class="table-responsive"><table class="table">
-    <thead><tr><th>Metric</th><th>Current</th><th>Limit</th><th>Headroom</th><th>Utilization</th><th>Authority</th><th>Status</th></tr></thead>
+    <thead><tr><th>Metric</th><th>Current</th><th>Limit</th><th>Headroom</th><th>Utilization</th><th>Authority</th><th>{{ 'Status'|trans }}</th></tr></thead>
     <tbody>
     {% for key,x in r.risk_limit_utilization|default({}) %}
       <tr>
@@ -248,7 +248,7 @@
     <p><strong>{{ a.status }}</strong> · policy {{ a.policy_version }} · fingerprint <code>{{ a.input_fingerprint|default('—') }}</code></p>
     <p>{{ a.reasoning_summary }}</p>
     <div class="table-responsive"><table class="table">
-      <thead><tr><th>Priority</th><th>Strategy</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Decision</th><th>Reason</th></tr></thead>
+      <thead><tr><th>{{ 'Priority'|trans }}</th><th>Strategy</th><th>Opportunity</th><th>Requested</th><th>Approved</th><th>Decision</th><th>Reason</th></tr></thead>
       <tbody>
       {% for x in a.allocations|default([]) %}
         <tr><td>{{ x.priority }}</td><td>{{ x.strategy_version_id }}</td><td>{{ x.opportunity_id }}</td><td>{{ x.requested_capital }}</td><td>{{ x.approved_capital }}</td><td><strong>{{ x.decision }}</strong></td><td>{{ x.reason }}</td></tr>
@@ -263,7 +263,7 @@
 <section class="cos-panel">
   <h2>Strategy allocations</h2>
   <div class="table-responsive"><table class="table">
-    <thead><tr><th>Strategy version</th><th>Allocated</th><th>Reserved</th><th>Deployed</th><th>Available</th><th>Status</th></tr></thead>
+    <thead><tr><th>Strategy version</th><th>Allocated</th><th>Reserved</th><th>Deployed</th><th>{{ 'Available'|trans }}</th><th>{{ 'Status'|trans }}</th></tr></thead>
     <tbody>
     {% for x in w.strategy_allocations|default([]) %}
       <tr><td>{{ x.strategy_version_id }}</td><td>{{ x.allocated_capital|default('—') }}</td><td>{{ x.reserved|default('—') }}</td><td>{{ x.deployed|default('—') }}</td><td>{{ x.available|default('—') }}</td><td>{{ x.status|default('—') }}</td></tr>

@@ -83,9 +83,9 @@
             </label>
         </twig:CosFormSection>
 
-        <twig:CosFormSection title="Моделі Engineering Agents" description="Порожнє поле повертає роль до ENV/default model.">
+        <twig:CosFormSection title="Моделі {{ 'Engineering Agents'|trans }}" description="Порожнє поле повертає роль до ENV/default model.">
             <div class="cos-pattern-stack">
-                <p class="cos-card__eyebrow">Engineering Agents</p>
+                <p class="cos-card__eyebrow">{{ 'Engineering Agents'|trans }}</p>
                 <h2 class="cos-card__title">Моделі за ролями</h2>
                 <p class="cos-card__copy">Порожнє поле повертає роль до ENV/default model.</p>
             </div>
@@ -95,7 +95,7 @@
                 <label class="cos-field"><span>Architect</span><input class="cos-input" name="architect_model" value="{{ settings.architect_model }}" list="openai-model-catalog"></label>
                 <label class="cos-field"><span>Developer</span><input class="cos-input" name="developer_model" value="{{ settings.developer_model }}" list="openai-model-catalog"></label>
                 <label class="cos-field"><span>Reviewer</span><input class="cos-input" name="reviewer_model" value="{{ settings.reviewer_model }}" list="openai-model-catalog"></label>
-                <label class="cos-field"><span>QA</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}" list="openai-model-catalog"></label>
+                <label class="cos-field"><span>{{ 'QA'|trans }}</span><input class="cos-input" name="qa_model" value="{{ settings.qa_model }}" list="openai-model-catalog"></label>
             </div>
         </twig:CosFormSection>
 
@@ -118,12 +118,12 @@
                 <table class="llm-catalog" data-llm-model-catalog>
                     <thead>
                     <tr>
-                        <th>Модель</th>
+                        <th>{{ 'Модель'|trans }}</th>
                         <th>Input / 1M</th>
                         <th>Output / 1M</th>
                         <th>Context</th>
                         <th>Max output</th>
-                        <th>Reasoning</th>
+                        <th>{{ 'Reasoning'|trans }}</th>
                         <th>Knowledge cutoff</th>
                     </tr>
                     </thead>
@@ -148,7 +148,7 @@
         </twig:CosFormSection>
 
         <twig:CosStickyActions label="Save LLM settings">
-            <a class="cos-button cos-button--ghost" href="/admin/settings">Скасувати</a>
+            <a class="cos-button cos-button--ghost" href="/admin/settings">{{ 'Скасувати'|trans }}</a>
             <button class="cos-button cos-button--primary" type="submit">Зберегти налаштування</button>
         </twig:CosStickyActions>
     </form>
