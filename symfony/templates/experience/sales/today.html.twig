@@ -72,8 +72,8 @@
                                     {% if item.approvalId %}
                                         <twig:CosActionBar label="Approval actions">
                                             <div data-sales-approval data-approval-id="{{ item.approvalId }}">
-                                                <button type="button" class="cos-button cos-button--primary cos-button--sm" data-decision="approve" data-action="click->sales-today#approval">Approve</button>
-                                                <button type="button" class="cos-button cos-button--ghost cos-button--sm" data-decision="reject" data-action="click->sales-today#approval">Reject</button>
+                                                <button type="button" class="cos-button cos-button--primary cos-button--sm" data-decision="approve" data-action="click->sales-today#approval">{{ 'Approve'|trans }}</button>
+                                                <button type="button" class="cos-button cos-button--ghost cos-button--sm" data-decision="reject" data-action="click->sales-today#approval">{{ 'Reject'|trans }}</button>
                                             </div>
                                         </twig:CosActionBar>
                                     {% elseif item.activityId and item.dealId %}

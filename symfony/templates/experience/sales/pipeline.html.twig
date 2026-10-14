@@ -51,7 +51,7 @@
             </select>
         </label>
         <label class="cos-field">
-            <span>Risk</span>
+            <span>{{ 'Risk'|trans }}</span>
             <select class="cos-select" name="risk">
                 <option value="">{{ 'All'|trans }}</option>
                 <option value="high" {% if pipeline.filters.risk == 'high' %}selected{% endif %}>High</option>
@@ -75,7 +75,7 @@
             <input class="cos-input" type="number" min="0" step="100" name="value_max" value="{{ pipeline.filters.value_max }}">
         </label>
         <label class="cos-field">
-            <span>Source</span>
+            <span>{{ 'Source'|trans }}</span>
             <input class="cos-input" name="source" value="{{ pipeline.filters.source }}">
         </label>
         <label class="cos-field">
