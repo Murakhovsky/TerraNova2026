@@ -12,6 +12,7 @@ use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
 use Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Kernel\Module\ActiveModuleResolver;
@@ -40,6 +41,7 @@ final readonly class CrossVenueDiscoveryController
         private CrossVenueUniverse $universe,
         private CrossVenueCatalogDiscovery $scanner,
         private CrossVenueDiscoverySnapshotRepository $snapshots,
+        private CrossVenuePoolCandidateRepository $poolCandidates,
         private CrossVenueQuoteSampler $sampler,
         private CrossVenueQuoteSnapshotRepository $quotes,
         #[Autowire('%kernel.project_dir%/../resources/capital-markets/universes/binance-bstocks-2026-09-27.csv')]
@@ -99,6 +101,7 @@ final readonly class CrossVenueDiscoveryController
             $candidates=$this->universe->load($this->universeFile);
             $snapshot=$this->scanner->scan($org,array_slice($candidates,0,(int)$limit));
             $this->snapshots->record($org,$actor,$snapshot);
+            $this->poolCandidates->reconcile($org,$snapshot);
         } catch(Throwable $e) {
             error_log('capital_markets.cross_venue_discovery.scan_failed '.get_class($e).' '.$e->getMessage());
             return new RedirectResponse('/capital-markets/discovery?error=1',303);

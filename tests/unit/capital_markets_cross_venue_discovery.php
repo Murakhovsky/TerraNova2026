@@ -96,4 +96,11 @@ $degraded=$scanner->scan('tenant-alpha',[$aapl]);
 $assert($degraded['source_health']['KRAKEN']['state']==='UNAVAILABLE'
     && $degraded['rows'][0]['venues'][2]['status']==='UNAVAILABLE',
     'Provider outage must not be rendered as not listed.');
+$projection=new \Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection();
+$projected=$projection->candidates($result);
+$assert(count($projected)===3 && $projected[1]['verification_state']==='UNVERIFIED'
+    && $projected[1]['economic_equivalence']==='NOT_ESTABLISHED',
+    'Discovery projection must never approve token economics.');
+$projectedDown=$projection->candidates($degraded);
+$assert(count($projectedDown)===2,'Provider outages must not remove last-known pool candidate.');
 echo "Cross-venue 80-row historical universe, Binance market payload and discovery policy passed.\n";
