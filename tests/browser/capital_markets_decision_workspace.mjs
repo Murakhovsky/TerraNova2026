@@ -284,9 +284,11 @@ try {
   try {
     await assertOk(await discoveryPage.goto(absolute('/capital-markets/discovery'), { waitUntil: 'domcontentloaded' }), 'cross-venue discovery');
     const content = await discoveryPage.locator('main').innerText();
+    const universeCount = content.match(/\b([1-9]\d{0,2}) кандидатів\b/);
     if (!content.includes('Пошук інструментів на різних біржах')
-      || !content.includes('80') || !content.includes('Немає виконаних сканувань')
-      && !content.includes('Остання перевірка')) {
+      || !universeCount || Number(universeCount[1]) > 500
+      || (!content.includes('Немає виконаних сканувань')
+        && !content.includes('Остання перевірка'))) {
       throw new Error('Cross-venue discovery operator page is incomplete.');
     }
     const form = discoveryPage.locator('form[action="/capital-markets/discovery/scan"]');
@@ -294,7 +296,7 @@ try {
       const token = await form.locator('input[name="csrf_token"]').inputValue();
       if (!token) throw new Error('Discovery scan mutation is missing CSRF token.');
       const options = await form.locator('select[name="limit"] option').evaluateAll(nodes => nodes.map(n => n.value));
-      if (options.join('|') !== '10|80') throw new Error('Discovery scan must bound operator scope.');
+      if (options.join('|') !== '10|all') throw new Error('Discovery scan must bound operator scope to 10 or the active tenant universe.');
     }
   } finally {
     await discoveryContext.close();
