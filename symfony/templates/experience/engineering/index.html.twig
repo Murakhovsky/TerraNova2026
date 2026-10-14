@@ -1,6 +1,6 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}{{ 'engineering.eyebrow'|trans }} | COS{% endblock %}
+{% block title %}{{ 'Engineering'|trans }} | {{ 'COS'|trans }}{% endblock %}
 
 {% block workspace_content %}
 <section
@@ -38,9 +38,9 @@
 
     <div class="engineering-toolbar">
         <div>
-            <p class="cos-card__eyebrow">{{ 'engineering.eyebrow'|trans }}</p>
-            <h1 class="cos-page-title" style="margin:2px 0 4px">{{ '{{ 'Агент'|trans }}ська розробка'|trans }}</h1>
-            <div class="engineering-pulse" aria-label="{{ '{{ 'Стан'|trans }} Engineering'|trans }}">
+            <p class="cos-card__eyebrow">{{ 'COS'|trans }} · {{ 'Engineering'|trans }}</p>
+            <h1 class="cos-page-title" style="margin:2px 0 4px">{{ 'Агентська розробка'|trans }}</h1>
+            <div class="engineering-pulse" aria-label="{{ 'Стан Engineering'|trans }}">
                 <strong>{{ workspaceStats.running }} {{ 'виконується'|trans }}</strong>
                 <span>·</span>
                 <strong>{{ workspaceStats.queued }} {{ 'у черзі'|trans }}</strong>
@@ -54,7 +54,7 @@
             <summary>{{ '+ Нове завдання'|trans }}</summary>
             <div class="engineering-create__body">
                 <form class="cos-form" method="post" action="/admin/engineering/create" data-engineering-create>
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
                         <label class="cos-field">
                             <span>{{ 'Назва'|trans }}</span>
@@ -72,13 +72,13 @@
                             <span>{{ 'Після створення'|trans }}</span>
                             <select class="cos-select" name="execution_mode">
                                 <option value="queue" selected>{{ 'Додати в чергу'|trans }}</option>
-                                <option value="immediate">{{ '{{ 'Запустити'|trans }} зараз'|trans }}</option>
-                                <option value="draft">{{ '{{ 'Зберегти'|trans }} чернеткою'|trans }}</option>
+                                <option value="immediate">{{ 'Запустити зараз'|trans }}</option>
+                                <option value="draft">{{ 'Зберегти чернеткою'|trans }}</option>
                             </select>
                         </label>
                         <label class="cos-field" style="grid-column:1/-1">
                             <span>{{ 'Вимоги та критерії приймання'|trans }}</span>
-                            <textarea class="cos-textarea" name="description" rows="6" required placeholder="{{ '{{ 'Результат'|trans }}, обмеження, критерії приймання.'|trans }}"></textarea>
+                            <textarea class="cos-textarea" name="description" rows="6" required placeholder="{{ 'Результат, обмеження, критерії приймання.'|trans }}"></textarea>
                         </label>
                     </div>
                     <button class="cos-button cos-button--primary" type="submit">{{ 'Створити'|trans }}</button>
@@ -99,7 +99,7 @@
         <div class="engineering-toolbar" style="margin-bottom:8px">
             <div>
                 <h2 id="engineering-workspace-list" class="cos-section-title" style="margin:0">{{ 'Процеси'|trans }}</h2>
-                <p class="cos-card__copy" style="margin:2px 0 0">{{ 'Один список для черги, активних, проблемних і завершених workflow. {{ 'Стан'|trans }} береться з runtime, а не з декоративної картки.'|trans }}</p>
+                <p class="cos-card__copy" style="margin:2px 0 0">{{ 'Один список для черги, активних, проблемних і завершених workflow. Стан береться з runtime, а не з декоративної картки.'|trans }}</p>
             </div>
             <div class="engineering-pulse">
                 <span class="cos-badge">P0 → P1 → P2 → P3</span>
@@ -147,13 +147,13 @@
                     <tr>
                         <th>{{ 'Завдання'|trans }}</th>
                         <th>{{ 'Стан'|trans }}</th>
-                        <th>{{ '{{ 'Стан'|trans }} runtime'|trans }}</th>
+                        <th>{{ 'Стан runtime'|trans }}</th>
                         <th>{{ 'Етап'|trans }}</th>
                         <th>{{ 'Агент'|trans }}</th>
                         <th>{{ 'Задачі'|trans }}</th>
                         <th>{{ 'Запуски'|trans }}</th>
                         <th>{{ 'Використання'|trans }}</th>
-                        <th>{{ '{{ 'Активні'|trans }}сть'|trans }}</th>
+                        <th>{{ 'Активність'|trans }}</th>
                         <th>{{ 'Черга'|trans }}</th>
                         <th style="text-align:right">{{ 'Дії'|trans }}</th>
                     </tr>
@@ -174,7 +174,7 @@
                                     {% if feature.runtime_reason %}<span class="engineering-table__meta">{{ feature.runtime_reason }}</span>{% endif %}
                                     {% if feature.stalled_at %}<span class="engineering-table__meta">{{ 'since'|trans }} {{ feature.stalled_at }}</span>{% endif %}
                                 {% else %}
-                                    <span class="engineering-muted">{{ feature.health }}</span>
+                                    <span class="engineering-muted">{{ ('engineering.status.' ~ (feature.health|lower))|trans }}</span>
                                     {% if feature.runtime_reason %}<span class="engineering-table__meta">{{ feature.runtime_reason }}</span>{% endif %}
                                 {% endif %}
                             </td>
@@ -206,13 +206,13 @@
                                     <a class="cos-button cos-button--ghost" href="/admin/engineering/{{ feature.id }}">{{ 'Відкрити'|trans }}</a>
                                     {% if actions.queue|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/queue">
-                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--primary" type="submit">{{ 'У чергу'|trans }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.run|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
-                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--ghost" type="submit">{{ 'Запустити'|trans }}</button>
                                         </form>
                                     {% endif %}
@@ -221,26 +221,26 @@
                                     {% endif %}
                                     {% if actions.finalize|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/finalize">
-                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--primary" type="submit">{{ 'Перевірити merge'|trans }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.retry|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
-                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
-                                            <button class="cos-button cos-button--primary" type="submit">{{ '{{ 'Повтори'|trans }}ти'|trans }}</button>
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <button class="cos-button cos-button--primary" type="submit">{{ 'Повторити'|trans }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.resume|default(false) or actions.continue|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/run">
-                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                             <button class="cos-button cos-button--primary" type="submit">{{ actions.resume|default(false) ? 'Відновити' : 'Продовжити' }}</button>
                                         </form>
                                     {% endif %}
                                     {% if actions.cancel|default(false) %}
                                         <form method="post" action="/admin/engineering/{{ feature.id }}/cancel">
-                                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
-                                            <input type="hidden" name="reason" value="{{ 'Скасовано з Engineering {{ 'Workspace'|trans }}.'|trans }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                            <input type="hidden" name="reason" value="{{ 'Скасовано з Engineering Workspace.'|trans }}">
                                             <button class="cos-button cos-button--danger" type="submit">{{ 'Скасувати'|trans }}</button>
                                         </form>
                                     {% endif %}

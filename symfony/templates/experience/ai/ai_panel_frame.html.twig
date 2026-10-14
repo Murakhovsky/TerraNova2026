@@ -1,8 +1,8 @@
-<turbo-frame id="cos-ai-panel-frame">
-    <div class="cos-ai-panel__body" data-cos-ai-center>
-        <header class="cos-ai-panel__header">
+<turbo-frame id="cos-{{ 'ai'|trans }}-panel-frame">
+    <div class="cos-{{ 'ai'|trans }}-panel__body" data-cos-{{ 'ai'|trans }}-center>
+        <header class="cos-{{ 'ai'|trans }}-panel__header">
             <div>
-                <p class="cos-ai-panel__eyebrow">COS AI</p>
+                <p class="cos-{{ 'ai'|trans }}-panel__eyebrow">{{ 'COS'|trans }} AI</p>
                 <h2>{{ 'AI & Agent Center'|trans }}</h2>
             </div>
             <button
@@ -13,14 +13,14 @@
             >×</button>
         </header>
 
-        <section class="cos-ai-context-card" aria-labelledby="cos-ai-context-selector">
-            <div class="cos-ai-context-card__head">
+        <section class="cos-{{ 'ai'|trans }}-context-card" aria-labelledby="cos-{{ 'ai'|trans }}-context-selector">
+            <div class="cos-{{ 'ai'|trans }}-context-card__head">
                 <div>
                     <small>{{ 'Context selector'|trans }}</small>
-                    <strong id="cos-ai-context-selector">{{ 'Що аналізуємо'|trans }}</strong>
+                    <strong id="cos-{{ 'ai'|trans }}-context-selector">{{ 'Що аналізуємо'|trans }}</strong>
                 </div>
             </div>
-            <form method="get" action="/workspace/ai" data-turbo-frame="cos-ai-panel-frame" class="cos-pattern-stack">
+            <form method="get" action="/workspace/{{ 'ai'|trans }}" data-turbo-frame="cos-{{ 'ai'|trans }}-panel-frame" class="cos-pattern-stack">
                 <label class="cos-field">
                     <span>{{ 'Workspace'|trans }}</span>
                     <input class="cos-input" name="workspace" value="{{ workspaceId }}" placeholder="sales.deal, sales.lead…">
@@ -31,12 +31,12 @@
                 </label>
                 <button class="cos-button cos-button--primary" type="submit">{{ 'Завантажити контекст'|trans }}</button>
             </form>
-            <p class="cos-card__copy">{{ 'Цей surface показує контекст, доступні керовані actions та результати агентів. Він не маскується під універсальний чат, якщо такого workflow {{ 'ще немає'|trans }}.'|trans }}</p>
+            <p class="cos-card__copy">{{ 'Цей surface показує контекст, доступні керовані actions та результати агентів. Він не маскується під універсальний чат, якщо такого workflow ще немає.'|trans }}</p>
         </section>
 
         {% if uiContext %}
-            <section class="cos-ai-context-card">
-                <div class="cos-ai-context-card__head">
+            <section class="cos-{{ 'ai'|trans }}-context-card">
+                <div class="cos-{{ 'ai'|trans }}-context-card__head">
                     <div>
                         <small>{{ 'Active UIContext'|trans }}</small>
                         <strong>{{ uiContext.workspace }}</strong>
@@ -44,7 +44,7 @@
                     {% if uiContext.entity %}<code>{{ uiContext.entity.key() }}</code>{% endif %}
                 </div>
 
-                <dl class="cos-ai-context-card__facts">
+                <dl class="cos-{{ 'ai'|trans }}-context-card__facts">
                     <div>
                         <dt>{{ 'Available actions'|trans }}</dt>
                         <dd>{{ uiContext.availableActions|length }}</dd>
@@ -60,7 +60,7 @@
                 </dl>
 
                 {% if uiContext.availableActions is not empty %}
-                    <ul class="cos-ai-context-card__actions">
+                    <ul class="cos-{{ 'ai'|trans }}-context-card__actions">
                         {% for action in uiContext.availableActions %}
                             <li>
                                 <code>{{ action.id }}</code>
@@ -69,19 +69,19 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="cos-ai-panel__hint">{{ 'Для цього context немає доступних керованих actions.'|trans }}</p>
+                    <p class="cos-{{ 'ai'|trans }}-panel__hint">{{ 'Для цього context немає доступних керованих actions.'|trans }}</p>
                 {% endif %}
             </section>
         {% elseif contextError %}
             <div class="cos-agent-warning" role="status">{{ contextError }}</div>
         {% else %}
-            <p class="cos-ai-panel__hint">
-                {{ '{{ 'Workspace'|trans }} context не вибрано. Нижче показано останні {{ 'Agent runs'|trans }} організації.'|trans }}
+            <p class="cos-{{ 'ai'|trans }}-panel__hint">
+                {{ 'Workspace context не вибрано. Нижче показано останні Agent runs організації.'|trans }}
             </p>
         {% endif %}
 
-        <section class="cos-ai-panel__runs">
-            <div class="cos-ai-panel__section-head">
+        <section class="cos-{{ 'ai'|trans }}-panel__runs">
+            <div class="cos-{{ 'ai'|trans }}-panel__section-head">
                 <h3>{{ 'Agent runs'|trans }}</h3>
                 {% if entity %}<small>{{ 'Filtered by'|trans }} {{ entity.key() }}</small>{% endif %}
             </div>
@@ -89,14 +89,14 @@
             {% for run in runs %}
                 <twig:CosAgentRun :run="run" />
             {% else %}
-                <div class="cos-ai-panel__empty">
-                    {{ 'Для цього контексту {{ 'ще немає'|trans }} {{ 'Agent runs'|trans }}.'|trans }}
+                <div class="cos-{{ 'ai'|trans }}-panel__empty">
+                    {{ 'Для цього контексту ще немає Agent runs.'|trans }}
                 </div>
             {% endfor %}
         </section>
 
-        <section class="cos-ai-context-card" aria-label="{{ 'AI workspaces'|trans }}">
-            <div class="cos-ai-context-card__head">
+        <section class="cos-{{ 'ai'|trans }}-context-card" aria-label="{{ 'AI workspaces'|trans }}">
+            <div class="cos-{{ 'ai'|trans }}-context-card__head">
                 <div>
                     <small>{{ 'Operate'|trans }}</small>
                     <strong>{{ 'Керування AI'|trans }}</strong>

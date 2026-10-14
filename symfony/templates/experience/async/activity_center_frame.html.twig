@@ -9,7 +9,7 @@
     >
         <header class="cos-activity-center__header">
             <div>
-                <p class="cos-activity-center__eyebrow">{{ 'Async {{ 'Operation'|trans }}s'|trans }}</p>
+                <p class="cos-activity-center__eyebrow">{{ 'Async Operations'|trans }}</p>
                 <h2>{{ tab == 'notifications' ? ('Notifications'|trans) : ('Activity Center'|trans) }}</h2>
             </div>
             <button
@@ -20,7 +20,7 @@
             >×</button>
         </header>
 
-        <nav class="cos-activity-center__tabs" aria-label="{{ '{{ 'Activity Center'|trans }} views'|trans }}">
+        <nav class="cos-activity-center__tabs" aria-label="{{ 'Activity Center views'|trans }}">
             <a
                 href="{{ path('cos_web_activity_center', {tab: 'activity'}) }}"
                 class="{% if tab == 'activity' %}is-active{% endif %}"
@@ -35,7 +35,7 @@
 
         {% if retried %}
             <div class="cos-alert cos-alert--success" role="status">
-                {{ '{{ 'Operation'|trans }} returned to the canonical queue.'|trans }}
+                {{ 'Operation returned to the canonical queue.'|trans }}
             </div>
         {% endif %}
 
@@ -62,7 +62,7 @@
 
                 <dl class="cos-activity-center__facts">
                     <div><dt>{{ 'Operation'|trans }}</dt><dd><code>{{ selected.id }}</code></dd></div>
-                    <div><dt>{{ '{{ 'Attempt'|trans }}s'|trans }}</dt><dd>{{ selected.attempts }} / {{ selected.maxAttempts }}</dd></div>
+                    <div><dt>{{ 'Attempts'|trans }}</dt><dd>{{ selected.attempts }} / {{ selected.maxAttempts }}</dd></div>
                     <div><dt>{{ 'Correlation'|trans }}</dt><dd><code>{{ selected.correlationId }}</code></dd></div>
                     {% if selected.workerId %}<div><dt>{{ 'Worker'|trans }}</dt><dd>{{ selected.workerId }}</dd></div>{% endif %}
                     {% if selected.entityType and selected.entityId %}
@@ -81,7 +81,7 @@
                         action="{{ path('cos_web_async_operation_retry', {id: selected.id}) }}"
                         data-turbo-frame="cos-activity-center-frame"
                     >
-                        <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                         <button class="cos-button cos-button--primary" type="submit">{{ 'Retry operation'|trans }}</button>
                     </form>
                 {% endif %}
