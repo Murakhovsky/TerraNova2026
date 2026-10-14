@@ -77,7 +77,7 @@ Stocks Trading/tokenized-assets API Binance відрізняється від п
 
 Поточні обмеження: автоматичне розкладення Discovery, перевірка issuer evidence, канонічна registry reconciliation, Subscription Planner і real-time streams є наступними критеріями приймання, а не наявною функціональністю.
 
-## CLI Discovery
+## Запуск перевірки через командний рядок
 
 Для керованого повторного сканування доступна команда:
 
