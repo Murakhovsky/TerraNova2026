@@ -35,6 +35,10 @@ final class BinanceL2RecoveryCoordinator
     /** @param array{U:string,u:string,pu?:string,book:MarketOrderBook} $event */
     public function buffer(int $epoch, array $event, int $bytes): void
     {
+        if ($this->session->trustedBook($epoch) !== null) {
+            $this->applyLive($epoch, $event);
+            return;
+        }
         $this->session->buffer($epoch, $event, $bytes);
     }
 
@@ -43,10 +47,13 @@ final class BinanceL2RecoveryCoordinator
         if ($snapshot->eventType() !== MarketEventType::OrderBookSnapshot) {
             throw new DomainException('Binance recovery requires REST snapshot.');
         }
-        $events = $this->session->drain($epoch);
         $book = $snapshot;
         try {
-            foreach ($events as $entry) {
+            // Drain again after each batch: events arriving during snapshot replay
+            // must be applied before exposing the book as trusted.
+            do {
+                $events = $this->session->drain($epoch);
+                foreach ($events as $entry) {
                 $event = $entry['payload'];
                 if (!$this->bridged) {
                     if (!$this->sequence->acceptFirst($snapshotId, $event['U'], $event['u'])) continue;
@@ -55,7 +62,8 @@ final class BinanceL2RecoveryCoordinator
                     continue;
                 }
                 $book = $this->rebuilder->apply($book, $event['book']);
-            }
+                }
+            } while ($events !== []);
             if (!$this->bridged) {
                 // No verified bridge yet: never publish a snapshot as live trusted L2.
                 return;
