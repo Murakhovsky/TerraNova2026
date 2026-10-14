@@ -94,13 +94,15 @@ $http->data['capital_markets.discovery.bybit']=json_encode(['retCode'=>0,'result
 unset($http->data['capital_markets.discovery.kraken']);
 $degraded=$scanner->scan('tenant-alpha',[$aapl]);
 $assert($degraded['source_health']['KRAKEN']['state']==='UNAVAILABLE'
-    && $degraded['rows'][0]['venues'][2]['status']==='UNAVAILABLE',
-    'Provider outage must not be rendered as not listed.');
+    && $degraded['rows'][0]['venues'][2]['status']==='UNAVAILABLE'
+    && $degraded['source_health']['BYBIT']['state']==='UNAVAILABLE'
+    && $degraded['rows'][0]['venues'][1]['status']==='UNAVAILABLE',
+    'Empty catalog or provider outage must fail closed, never become a false delisting.');
 $projection=new \Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection();
 $projected=$projection->candidates($result);
 $assert(count($projected)===3 && $projected[1]['verification_state']==='UNVERIFIED'
     && $projected[1]['economic_equivalence']==='NOT_ESTABLISHED',
     'Discovery projection must never approve token economics.');
 $projectedDown=$projection->candidates($degraded);
-$assert(count($projectedDown)===2,'Provider outages must not remove last-known pool candidate.');
+$assert(count($projectedDown)===1,'Provider outage and empty catalog must preserve last-known observations.');
 echo "Cross-venue 80-row historical universe, Binance market payload and discovery policy passed.\n";

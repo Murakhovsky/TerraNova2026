@@ -70,6 +70,9 @@ final readonly class CrossVenueCatalogDiscovery
                         ++$pages;
                     }
                 }
+                if ($catalog===[]) {
+                    throw new InvalidArgumentException('Provider returned an empty or unusable spot catalog.');
+                }
                 $catalogs[$name] = $catalog;
                 $health[$name] = [
                     'state'=>'AVAILABLE','count'=>count($catalogs[$name]),
