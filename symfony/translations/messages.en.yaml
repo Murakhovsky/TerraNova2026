@@ -806,3 +806,8 @@
 "Огляд effective capabilities для базових ролей.": "Overview of effective capabilities for base roles."
 "Новий акаунт створюється тільки через admin mutation із CSRF-перевіркою.": "A new account can only be created through an admin mutation with CSRF validation."
 "Context": "Context"
+"Деталі процесу": "Process details"
+"Запуски агентів": "Agent runs"
+"Скасовано з Engineering UI.": "Cancelled from Engineering UI."
+"виконувався": "executed"
+"не виконувався": "not executed"

@@ -17,7 +17,7 @@
     'STARTED': 'РОЗПОЧАТО'|trans,
     'APPROVED': 'СХВАЛЕНО'|trans,
     'PASS': 'ПРОЙДЕНО'|trans,
-    'PASSED': 'ПРОЙДЕНО'|trans|trans,
+    'PASSED': 'ПРОЙДЕНО'|trans,
     'SUCCESS': 'УСПІШНО'|trans,
     'TIMED_OUT': 'ТАЙМАУТ'|trans,
     'NOT_REACHED': 'ЩЕ НЕ РОЗПОЧАТО'|trans,
@@ -172,7 +172,7 @@
                         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                         <label class="cos-field">
                             <span>{{ 'Причина'|trans }}</span>
-                            <input class="cos-input" name="reason" value="Скасовано з {{ 'Engineering'|trans }} UI." required>
+                            <input class="cos-input" name="reason" value="{{ 'Скасовано з Engineering UI.'|trans }}" required>
                         </label>
                         <button class="cos-button cos-button--danger" type="submit">{{ 'Підтвердити скасування'|trans }}</button>
                     </form>
@@ -285,7 +285,7 @@
                 {% endif %}
             </span>
         </div>
-        <div class="engineering-summary__item"><span class="engineering-summary__label">{{ 'Запуски'|trans }} агентів</span><span class="engineering-summary__value" data-engineering-live-target="agentRuns">{{ summary.agent_runs }}</span></div>
+        <div class="engineering-summary__item"><span class="engineering-summary__label">{{ 'Запуски агентів'|trans }}</span><span class="engineering-summary__value" data-engineering-live-target="agentRuns">{{ summary.agent_runs }}</span></div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">{{ 'Задачі'|trans }}</span><span class="engineering-summary__value" data-engineering-live-target="tasks">{{ summary.tasks_completed }}/{{ summary.tasks_total }}</span></div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">{{ 'Тривалість процесу'|trans }}</span>
@@ -300,7 +300,7 @@
         </div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">{{ 'Токени'|trans }}</span>
-            <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : 'ще немає' }}</span>
+            <span class="engineering-summary__value">{{ summary.tokens is not null ? summary.tokens|number_format(0, '.', ' ') : ('облік недоступний'|trans) }}</span>
         </div>
         <div class="engineering-summary__item">
             <span class="engineering-summary__label">
@@ -308,7 +308,7 @@
                 {% if summary.usage.cost_sources|default([]) is not empty %} · {{ summary.usage.cost_sources|join(', ') }}{% endif %}
             </span>
             <span class="engineering-summary__value">
-                {% if summary.cost is not null %}{{ summary.usage.cost_currency|default('USD') }} {{ summary.cost|number_format(4, '.', '') }}{% else %}{{ 'ще немає'|trans }}{% endif %}
+                {% if summary.cost is not null %}{{ summary.usage.cost_currency|default('USD') }} {{ summary.cost|number_format(4, '.', '') }}{% else %}{{ 'облік недоступний'|trans }}{% endif %}
             </span>
         </div>
     </section>
@@ -414,7 +414,7 @@
                     <p class="engineering-muted">{{ 'Відсутність зауважень ще не означає успішну перевірку, доки рев’юер або QA не запускалися.'|trans }}</p>
                 {% elseif summary.open_findings is empty %}
                     <strong>{{ 'Відкритих зауважень немає.'|trans }}</strong>
-                    <p class="engineering-muted">{{ 'Рев’юер:'|trans }} {{ summary.review_reached ? 'виконувався' : 'не виконувався' }} · {{ 'QA:'|trans }} {{ summary.qa_reached ? 'виконувався' : 'не виконувався' }}</p>
+                    <p class="engineering-muted">{{ 'Рев’юер:'|trans }} {{ summary.review_reached ? ('виконувався'|trans) : ('не виконувався'|trans) }} · {{ 'QA:'|trans }} {{ summary.qa_reached ? ('виконувався'|trans) : ('не виконувався'|trans) }}</p>
                 {% else %}
                     {% for finding in summary.open_findings %}
                         <div style="margin-bottom:8px">
@@ -435,7 +435,7 @@
         {'key': 'technical', 'label': 'Артефакти та аудит'}
     ] %}
 
-    <twig:CosTabs id="engineering-details-tabs" label="{{ 'Деталі'|trans }} процесу" :items="engineeringTabs" active="agents">
+    <twig:CosTabs id="engineering-details-tabs" label="{{ 'Деталі процесу'|trans }}" :items="engineeringTabs" active="agents">
         <section
             id="engineering-details-tabs-panel-agents"
             role="tabpanel"

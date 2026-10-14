@@ -58,4 +58,11 @@ foreach ([
         throw new RuntimeException('Required localization catalog entry is missing: '.$key);
     }
 }
+$feature = $read('symfony/templates/experience/engineering/feature.html.twig');
+if (str_contains($feature, '|trans|trans') || str_contains($feature, "{{ '{{") || str_contains($feature, "{{ 'tok'|trans }}ens")) {
+    throw new RuntimeException('Engineering locale template contains corrupt translation markup.');
+}
+foreach (['Деталі процесу','Запуски агентів','облік недоступний'] as $key) {
+    if (!str_contains($feature, $key)) throw new RuntimeException('Missing localized operational label: '.$key);
+}
 echo "COS locale switcher and core localization contract passed.\n";
