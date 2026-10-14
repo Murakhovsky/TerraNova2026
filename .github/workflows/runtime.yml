@@ -105,6 +105,17 @@ jobs:
             -e DB_USERNAME="$MYSQL_USER" \
             -e DB_PASSWORD="$MYSQL_PASSWORD" \
             php php /tmp/workflow_durable_store_mysql.php
+      - name: Canonical Action receipt read-only MySQL acceptance
+        run: |
+          docker compose cp tests/integration/workflow_action_receipt_mysql.php php:/tmp/workflow_action_receipt_mysql.php
+          docker compose exec -T \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            -e DB_HOST=mysql \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE="$MYSQL_DATABASE" \
+            -e DB_USERNAME="$MYSQL_USER" \
+            -e DB_PASSWORD="$MYSQL_PASSWORD" \
+            php php /tmp/workflow_action_receipt_mysql.php
       - name: Capital Markets paper NAV persistence integration
         run: |
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
