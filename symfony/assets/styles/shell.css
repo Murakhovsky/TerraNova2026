@@ -609,11 +609,11 @@ turbo-frame[aria-busy="true"] .cos-command__list {
 
 .cos-shell__locale-select {
   max-width: 8.5rem;
-  min-height: var(--cos-control-height);
-  padding: 0 1.7rem 0 0.65rem;
-  color: var(--cos-color-text);
-  background: var(--cos-color-surface);
-  border: 1px solid var(--cos-color-border);
+  min-height: 2.5rem;
+  padding: 0 var(--cos-space-3);
+  color: var(--cos-color-shell-text);
+  background: var(--cos-color-shell);
+  border: 1px solid var(--cos-color-shell-border);
   border-radius: var(--cos-radius-sm);
   font: inherit;
   font-size: var(--cos-font-xs);
