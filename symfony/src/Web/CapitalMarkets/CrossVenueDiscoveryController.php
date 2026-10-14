@@ -186,7 +186,14 @@ final readonly class CrossVenueDiscoveryController
             return new Response('Instrument review permission required.',403);
         }
         try {
-            $result=$this->listingReviews->decide(
+            $decision=trim((string)$request->request->get('decision',''));
+            $result=$decision==='REVOKE_LISTING' ?
+                $this->listingReviews->revoke(
+                    $org,$actor,
+                    trim((string)$request->request->get('seed_token','')),
+                    trim((string)$request->request->get('venue','')),
+                    trim((string)$request->request->get('revoke_reason',''))
+                ) : $this->listingReviews->decide(
                 $org,$actor,
                 trim((string)$request->request->get('seed_token','')),
                 trim((string)$request->request->get('venue','')),

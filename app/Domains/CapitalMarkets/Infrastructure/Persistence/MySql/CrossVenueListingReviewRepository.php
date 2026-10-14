@@ -36,6 +36,52 @@ final readonly class CrossVenueListingReviewRepository
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** Immediate fail-closed revocation even if Discovery is stale or unavailable. */
+    public function revoke(string $org,int $actor,string $token,string $venue,string $reason):array
+    {
+        $reason=trim($reason);
+        if ($org==='' || strlen($org)>190 || $actor<1
+            || preg_match('/^[A-Z0-9]{2,40}$/D',$token)!==1
+            || !array_key_exists($venue,self::HOSTS)
+            || mb_strlen($reason)<10 || mb_strlen($reason)>500) {
+            throw new InvalidArgumentException('Revocation requires tenant, reviewer and an explanatory reason.');
+        }
+        if ($this->connection->inTransaction()) throw new RuntimeException('Revocation requires standalone transaction.');
+        $this->connection->beginTransaction();
+        try {
+            $find=$this->connection->prepare(
+                'SELECT venue_symbol,quote_currency,source_as_of
+                 FROM tn_capital_market_cross_venue_pool_candidates
+                 WHERE organization_id=:org AND pool_key=:pool AND seed_token=:token AND venue=:venue FOR UPDATE'
+            );
+            $find->execute(['org'=>$org,'pool'=>self::POOL,'token'=>$token,'venue'=>$venue]);
+            $row=$find->fetch(PDO::FETCH_ASSOC);
+            if (!is_array($row)) throw new RuntimeException('Listing candidate not found.');
+            $this->connection->prepare(
+                'UPDATE tn_capital_market_cross_venue_pool_candidates
+                 SET verification_state=\'UNVERIFIED\'
+                 WHERE organization_id=:org AND pool_key=:pool AND seed_token=:token AND venue=:venue'
+            )->execute(['org'=>$org,'pool'=>self::POOL,'token'=>$token,'venue'=>$venue]);
+            $history=$this->connection->prepare(
+                'INSERT INTO tn_capital_market_pool_listing_reviews
+                 (organization_id,pool_key,seed_token,venue,venue_symbol,quote_currency,source_as_of,
+                  reviewer_actor_id,decision,evidence_url,evidence_sha256,reviewed_at)
+                 VALUES (:org,:pool,:token,:venue,:symbol,:quote,:as_of,:actor,
+                     \'REVOKE_LISTING\',\'operator://manual-revocation\',:hash,UTC_TIMESTAMP(6))'
+            );
+            $history->execute(['org'=>$org,'pool'=>self::POOL,'token'=>$token,'venue'=>$venue,
+                'symbol'=>$row['venue_symbol']??'','quote'=>$row['quote_currency']??'',
+                'as_of'=>$row['source_as_of'],'actor'=>$actor,
+                'hash'=>hash('sha256',$reason)]);
+            $this->connection->commit();
+            return ['status'=>'UNVERIFIED','seed_token'=>$token,'venue'=>$venue,
+                'economic_equivalence'=>'NOT_ESTABLISHED'];
+        } catch (Throwable $e) {
+            if ($this->connection->inTransaction()) $this->connection->rollBack();
+            throw $e;
+        }
+    }
+
     /**
      * The source_as_of value is a compare-and-swap token from the operator's
      * screen: older reviews never approve newer discovery observations.
@@ -48,7 +94,7 @@ final readonly class CrossVenueListingReviewRepository
         if ($org==='' || strlen($org)>190 || $actor<1
             || preg_match('/^[A-Z0-9]{2,40}$/D',$token)!==1
             || !array_key_exists($venue,self::HOSTS)
-            || !in_array($decision,['APPROVE_LISTING','REVOKE_LISTING'],true)
+            || $decision!=='APPROVE_LISTING'
             || preg_match('/^[a-f0-9]{64}$/D',$evidenceSha256)!==1
             || strlen($expectedSourceAsOf)>40) {
             throw new InvalidArgumentException('Invalid listing review request.');

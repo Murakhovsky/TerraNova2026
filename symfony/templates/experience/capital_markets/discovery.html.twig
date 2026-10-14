@@ -91,7 +91,10 @@
                     <input class="form-control" type="text" name="evidence_sha256" required maxlength="64" minlength="64" pattern="[a-f0-9]{64}" />
                   </label>
                   <button class="btn btn-secondary" type="submit" name="decision" value="APPROVE_LISTING">Підтвердити лише лістинг</button>
-                  <button class="btn btn-secondary" type="submit" name="decision" value="REVOKE_LISTING">Відкликати перевірку</button>
+                  <label>Причина термінового відкликання (від 10 символів)
+                    <input class="form-control" type="text" name="revoke_reason" maxlength="500" placeholder="Помилка лістингу, зміна забезпечення..." />
+                  </label>
+                  <button class="btn btn-secondary" type="submit" name="decision" value="REVOKE_LISTING" formnovalidate>Негайно відкликати допуск</button>
                 </form>
               {% else %}
                 <small>Потрібні дозволи InstrumentManage та MarketDataManage.</small>
