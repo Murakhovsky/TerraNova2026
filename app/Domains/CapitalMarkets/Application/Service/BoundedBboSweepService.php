@@ -8,6 +8,7 @@ use Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInte
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlBoundedBboSweepGate;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueBboAdmissionFence;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -24,6 +25,7 @@ final readonly class BoundedBboSweepService
         private MysqlBoundedBboSweepGate $gate,
         private BoundedBboSweepPolicy $policy,
         private CrossVenueMarketSourceAdmission $admission,
+        private CrossVenueBboAdmissionFence $fence,
     ) {}
 
     /** @return array<string,mixed> */
@@ -33,6 +35,7 @@ final readonly class BoundedBboSweepService
             || $maxTargets<1 || $maxTargets>10 || $cooldownSeconds<300 || $cooldownSeconds>86400) {
             throw new InvalidArgumentException('Invalid bounded BBO sweep scope.');
         }
+        $this->fence->disableUnapproved($org);
         $supported=[
             'binance.spot.rest'=>true,'bybit.spot.v5'=>true,'kraken.spot.rest'=>true,
         ];

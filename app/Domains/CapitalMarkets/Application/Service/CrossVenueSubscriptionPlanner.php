@@ -18,6 +18,7 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSubscriptionStatus;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueBboAdmissionFence;
 use InvalidArgumentException;
 
 /**
@@ -37,6 +38,7 @@ final readonly class CrossVenueSubscriptionPlanner
         private MarketDataAdapterRegistry $adapters,
         private MarketDataAdministrationService $administration,
         private CrossVenueMarketSourceAdmission $sourceAdmission,
+        private CrossVenueBboAdmissionFence $fence,
     ) {}
 
     /** @return array{source:string,venue:string,total:int,create:int,existing:int,blocked:int,rows:list<array<string,string>>} */
@@ -127,6 +129,7 @@ final readonly class CrossVenueSubscriptionPlanner
     public function apply(string $org,int $actor,string $sourceId,int $limit=250): array
     {
         if ($actor < 1) throw new InvalidArgumentException('Authorized operator required.');
+        $this->fence->disableUnapproved($org);
         $plan=$this->plan($org,$sourceId,$limit);
         $created=0;
         foreach ($plan['rows'] as $row) {

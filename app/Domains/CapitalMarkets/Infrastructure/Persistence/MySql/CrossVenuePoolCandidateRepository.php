@@ -11,7 +11,8 @@ use RuntimeException;
 
 final readonly class CrossVenuePoolCandidateRepository
 {
-    public function __construct(private PDO $connection, private CrossVenuePoolProjection $projection) {}
+    public function __construct(private PDO $connection, private CrossVenuePoolProjection $projection,
+        private CrossVenueBboAdmissionFence $fence) {}
 
     /** Idempotent candidate synchronization; never writes canonical identity or approved relationships. */
     public function reconcile(string $organizationId, array $snapshot): int
@@ -54,6 +55,7 @@ final readonly class CrossVenuePoolCandidateRepository
                     'state'=>$row['listing_state'],'source_as_of'=>$row['source_as_of'],
                 ]);
             }
+            $this->fence->disableUnapproved($organizationId);
             $this->connection->commit();
         } catch (\Throwable $e) {
             $this->connection->rollBack();

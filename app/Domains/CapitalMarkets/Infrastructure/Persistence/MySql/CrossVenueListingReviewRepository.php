@@ -16,7 +16,7 @@ final readonly class CrossVenueListingReviewRepository
     private const POOL='BINANCE_BSTOCKS_SEED';
     private const HOSTS=['BINANCE'=>'www.binance.com','BYBIT'=>'www.bybit.com','KRAKEN'=>'www.kraken.com'];
 
-    public function __construct(private PDO $connection) {}
+    public function __construct(private PDO $connection,private CrossVenueBboAdmissionFence $fence) {}
 
     /** @return list<array<string,mixed>> */
     public function pending(string $organizationId,int $limit=40):array
@@ -62,6 +62,7 @@ final readonly class CrossVenueListingReviewRepository
                  SET verification_state=\'UNVERIFIED\'
                  WHERE organization_id=:org AND pool_key=:pool AND seed_token=:token AND venue=:venue'
             )->execute(['org'=>$org,'pool'=>self::POOL,'token'=>$token,'venue'=>$venue]);
+            $disabled=$this->fence->disableForCandidate($org,$token,$venue);
             $history=$this->connection->prepare(
                 'INSERT INTO tn_capital_market_pool_listing_reviews
                  (organization_id,pool_key,seed_token,venue,venue_symbol,quote_currency,source_as_of,
@@ -75,7 +76,7 @@ final readonly class CrossVenueListingReviewRepository
                 'hash'=>hash('sha256',$reason)]);
             $this->connection->commit();
             return ['status'=>'UNVERIFIED','seed_token'=>$token,'venue'=>$venue,
-                'economic_equivalence'=>'NOT_ESTABLISHED'];
+                'disabled_subscriptions'=>$disabled,'economic_equivalence'=>'NOT_ESTABLISHED'];
         } catch (Throwable $e) {
             if ($this->connection->inTransaction()) $this->connection->rollBack();
             throw $e;
