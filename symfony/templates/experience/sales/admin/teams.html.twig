@@ -34,7 +34,7 @@
                     <h2 class="cos-card__title">Create team</h2>
                     <form class="cos-pattern-stack" data-create-team data-action="submit->sales-admin-teams#create">
                         <label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" required maxlength="160"></label>
-                        <label class="cos-field"><span>Code</span><input class="cos-input" name="code" required maxlength="80" pattern="[A-Za-z0-9_]+"></label>
+                        <label class="cos-field"><span>{{ 'Code'|trans }}</span><input class="cos-input" name="code" required maxlength="80" pattern="[A-Za-z0-9_]+"></label>
                         <label class="cos-field"><span>Assignment mode</span><select class="cos-select" name="assignment_mode">{% for mode in catalog.assignment_modes ?? ['MANUAL'] %}<option value="{{ mode }}">{{ mode }}</option>{% endfor %}</select></label>
                         <button class="cos-button cos-button--primary" type="submit">Create team</button>
                     </form>
@@ -42,7 +42,7 @@
                 <article class="cos-card">
                     <p class="cos-card__eyebrow">Authority boundary</p>
                     <h2 class="cos-card__title">Explicit permissions</h2>
-                    <p class="cos-card__copy"><code>sales.deal.assign</code>, <code>sales.approval.decide</code> та <code>sales.approval.any_team</code> лишаються explicit capability contracts.</p>
+                    <p class="cos-card__copy"><code>sales.deal.assign</code>code, <code>sales.approval.decide</code>code та <code>sales.approval.any_team</code>code лишаються explicit capability contracts.</p>
                 </article>
             </div>
 

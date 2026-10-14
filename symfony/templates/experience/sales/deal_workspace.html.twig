@@ -102,7 +102,7 @@
                                     {% endfor %}
                                 </select>
                             </label>
-                            <button class="cos-button cos-button--primary" type="submit">Assign</button>
+                            <button class="cos-button cos-button--primary" type="submit">{{ 'Assign'|trans }}</button>
                             <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
                         </form>
                     </article>
@@ -127,7 +127,7 @@
                                 <span>Next contact</span>
                                 <input class="cos-input" type="datetime-local" name="next_contact_at" value="{{ deal.nextContactInput }}">
                             </label>
-                            <button class="cos-button cos-button--primary" type="submit">Save</button>
+                            <button class="cos-button cos-button--primary" type="submit">{{ 'Save'|trans }}</button>
                             <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
                         </form>
                     </article>
@@ -141,7 +141,7 @@
                             data-action="submit->sales-deal#operation"
                         >
                             <label class="cos-field">
-                                <span>Title</span>
+                                <span>{{ 'Title'|trans }}</span>
                                 <input class="cos-input" name="title" value="Follow-up">
                             </label>
                             <label class="cos-field">
@@ -150,7 +150,7 @@
                             </label>
                             <label class="cos-field">
                                 <span>Note</span>
-                                <textarea class="cos-textarea" name="body" rows="2"></textarea>
+                                <textarea class="cos-textarea" name="body" rows="2"></textarea>textarea
                             </label>
                             <button class="cos-button cos-button--primary" type="submit">Schedule</button>
                             <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
@@ -166,7 +166,7 @@
                             data-action="submit->sales-deal#operation"
                         >
                             <label class="cos-field">
-                                <span>Title</span>
+                                <span>{{ 'Title'|trans }}</span>
                                 <input class="cos-input" name="title" value="Sales meeting">
                             </label>
                             <label class="cos-field">
@@ -191,19 +191,19 @@
                             data-action="submit->sales-deal#operation"
                         >
                             <label class="cos-field">
-                                <span>Type</span>
+                                <span>{{ 'Type'|trans }}</span>
                                 <select class="cos-select" name="activity_type">
                                     <option value="note">Note</option>
                                     <option value="call">Completed call</option>
                                 </select>
                             </label>
                             <label class="cos-field">
-                                <span>Title</span>
+                                <span>{{ 'Title'|trans }}</span>
                                 <input class="cos-input" name="title" value="Нотатка">
                             </label>
                             <label class="cos-field">
                                 <span>Body</span>
-                                <textarea class="cos-textarea" name="body" rows="2"></textarea>
+                                <textarea class="cos-textarea" name="body" rows="2"></textarea>textarea
                             </label>
                             <button class="cos-button cos-button--primary" type="submit">Add</button>
                             <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
@@ -240,7 +240,7 @@
                         </label>
                         <label class="cos-field">
                             <span>Message</span>
-                            <textarea class="cos-textarea" name="body" rows="3" required></textarea>
+                            <textarea class="cos-textarea" name="body" rows="3" required></textarea>textarea
                         </label>
                         <button class="cos-button cos-button--primary" type="submit">Send Message</button>
                         <span class="cos-card__copy" data-sales-operation-status aria-live="polite"></span>
