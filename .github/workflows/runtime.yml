@@ -109,6 +109,13 @@ jobs:
             -e COS_CM_WRITER_GATE_TEST=1 \
             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
             php php /tmp/cm-rest-ws-race.php
+      - name: Capital Markets per-instrument streaming trust MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_instrument_stream_trust_mysql.php php:/tmp/cm-instrument-trust.php
+          docker compose exec -T \
+            -e COS_CM_INSTRUMENT_TRUST_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-instrument-trust.php
       - name: Capital Markets paper NAV persistence integration
         run: |
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "

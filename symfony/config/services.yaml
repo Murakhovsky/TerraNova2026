@@ -1987,6 +1987,9 @@ services:
   Domains\CapitalMarkets\Application\Contract\StreamingTrustInvalidatorInterface:
     alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingTrustInvalidator
 
+  Domains\CapitalMarkets\Application\Contract\StreamingInstrumentTrustInvalidatorInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingTrustInvalidator
+
   Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner: ~
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway:
