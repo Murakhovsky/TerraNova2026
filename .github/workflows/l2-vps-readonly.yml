@@ -15,7 +15,7 @@ jobs:
     name: VPS L2 SSH preflight (read only)
     runs-on: ubuntu-24.04
     timeout-minutes: 7
-    environment: AWS TN2026
+    # Probe repository-level credentials without environment access; no production writes.
     steps:
       - name: Validate SSH credentials (without disclosing them)
         env:
@@ -29,7 +29,7 @@ jobs:
           set -euo pipefail
           for required in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
             if [ -z "${!required:-}" ]; then
-              echo "::error::Missing $required in environment AWS TN2026"
+              echo "::error::Missing repository-level $required; AWS TN2026 environment is restricted for PRs"
               exit 1
             fi
           done
