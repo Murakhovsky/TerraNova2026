@@ -228,6 +228,15 @@ try {
       });
       assertVisual(screenshot, `${profile.name}/${target.name}`);
 
+      // Only advertise artifacts after both the Axe report and screenshot were written.
+      evidenceFiles.push({
+        page: target.name,
+        route: target.path,
+        viewport: profile.name,
+        screenshot: `${profile.name}-${target.name}.png`,
+        accessibility: `${profile.name}-${target.name}.axe.json`,
+      });
+
       await page.close();
     }
 
@@ -257,14 +266,6 @@ try {
     base_url: new URL(baseUrl).origin,
     environment: process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
   };
-
-  evidenceFiles = targets.flatMap((target) => profiles.map((profile) => ({
-    page: target.name,
-    route: target.path,
-    viewport: profile.name,
-    screenshot: `${profile.name}-${target.name}.png`,
-    accessibility: `${profile.name}-${target.name}.axe.json`,
-  })));
 
   await writeFile(
     resolve(outputDir, 'summary.json'),

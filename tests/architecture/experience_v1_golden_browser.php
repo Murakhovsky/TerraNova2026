@@ -38,4 +38,8 @@ foreach ([
     }
 }
 
+if (str_contains($source, 'targets.flatMap')) {
+    throw new RuntimeException('Golden Eight evidence manifest must list only artifacts that were written.');
+}
+
 echo "Golden Eight browser QA contract OK\n";
