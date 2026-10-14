@@ -2666,6 +2666,11 @@ capital_markets_discovery_listing_review:
   controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::reviewListing
   methods: [POST]
 
+capital_markets_discovery_subscription_plan:
+  path: /capital-markets/discovery/subscription-plan
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::planPoolBbo
+  methods: [POST]
+
 # Capital Markets CM-FOUNDATION UI
 capital_markets_overview:
   path: /capital-markets

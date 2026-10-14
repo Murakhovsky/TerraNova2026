@@ -12,6 +12,8 @@ use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
 use Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse;
 use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
 use Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService;
+use Domains\CapitalMarkets\Application\Service\BStocksReferenceBboPlanner;
+use Domains\CapitalMarkets\Application\Service\CrossVenueSubscriptionPlanner;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlBoundedBboSweepGate;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -49,6 +51,8 @@ final readonly class CrossVenueDiscoveryController
         private CrossVenueActiveUniverse $activeUniverse,
         private BStocksSeedFileReader $seedReader,
         private BStocksCanonicalDraftService $canonicalDrafts,
+        private BStocksReferenceBboPlanner $referenceBbo,
+        private CrossVenueSubscriptionPlanner $tokenBbo,
         private BStocksSeedImportRepository $seedImports,
         private MysqlBoundedBboSweepGate $bboPollGate,
         private CrossVenueCatalogDiscovery $scanner,
@@ -99,6 +103,7 @@ final readonly class CrossVenueDiscoveryController
                     && $this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage),
                 'canonicalCoverage'=>$canonicalCoverage,'bboPollHealth'=>$bboPollHealth,
                 'canScan'=>$canScan,'canSeedDrafts'=>$canSeedDrafts,
+                'canPlanBbo'=>$canScan,
                 'csrfToken'=>$this->csrf->token($request),
                 'scanned'=>$request->query->getBoolean('scanned'),
                 'cooldown'=>$request->query->getBoolean('cooldown'),
@@ -133,6 +138,41 @@ final readonly class CrossVenueDiscoveryController
             return new RedirectResponse('/capital-markets/discovery?error=1',303);
         }
         return new RedirectResponse('/capital-markets/discovery?scanned=1',303);
+    }
+
+    public function planPoolBbo(Request $request):Response
+    {
+        $tenant=$this->authorized(CapitalMarketsCapability::MarketDataManage);
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.',403);
+        $org=$tenant->organizationId()->value();
+        $actor=(int)$tenant->userId()->value();
+        $kind=trim((string)$request->request->get('kind',''));
+        $action=trim((string)$request->request->get('action',''));
+        $source=trim((string)$request->request->get('source_id',''));
+        if (!in_array($kind,['TOKEN_BBO','REFERENCE_BBO'],true)
+            || !in_array($action,['preview','apply'],true)
+            || $source==='' || strlen($source)>190) {
+            return new Response('Invalid subscription planning request.',400);
+        }
+        if ($kind==='REFERENCE_BBO'
+            && !$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage)) {
+            return new Response('Instrument Manage permission required for reference subscriptions.',403);
+        }
+        try {
+            $planner=$kind==='TOKEN_BBO'?$this->tokenBbo:$this->referenceBbo;
+            $result=$action==='preview' ? ['plan'=>$planner->plan($org,$source,250),'created'=>0]
+                :$planner->apply($org,$actor,$source,250);
+            $plan=$result['plan'];
+            $summary=['kind'=>$kind,'mode'=>$action,'source'=>$source,'created'=>$result['created'],
+                'total'=>$plan['total'],'eligible_new'=>$plan['create'],
+                'already_active'=>$plan['existing'],'blocked'=>$plan['blocked']];
+            $request->getSession()->getFlashBag()->add('pool_bbo',json_encode($summary,JSON_THROW_ON_ERROR));
+            return new RedirectResponse('/capital-markets/discovery?bboPlan=1',303);
+        } catch (Throwable $e) {
+            error_log('capital_markets.bbo_plan.failed '.get_class($e).' '.$e->getMessage());
+            return new RedirectResponse('/capital-markets/discovery?bboPlanError=1',303);
+        }
     }
 
     public function reviewListing(Request $request): Response
