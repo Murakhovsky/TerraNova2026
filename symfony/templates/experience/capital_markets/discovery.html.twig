@@ -53,6 +53,26 @@
     <small>Стан верифікації: UNVERIFIED. Автоматичні підписки і trusted Market State ще не активовані цим модулем.</small>
   </section>
 
+  <section class="cos-panel">
+    <h2>Імпорт історичного каталогу</h2>
+    <p>Завантажте XLSM/XLSX/CSV із Binance. Файл валідується без виконання макросів. Заявлені атрибути не означають поточний лістинг чи економічну еквівалентність.</p>
+    {% if canScan %}
+      <form method="post" action="/capital-markets/discovery/import" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label for="cm-seed-file">Каталог (до 5 МіБ)</label>
+        <input id="cm-seed-file" type="file" name="seed_file" accept=".xlsm,.xlsx,.csv" required>
+        <button class="btn btn-secondary" name="seed_mode" value="preview" type="submit">Перевірити без запису</button>
+        <button class="btn btn-primary" name="seed_mode" value="apply" type="submit">Імпортувати</button>
+      </form>
+    {% else %}
+      <p>Потрібен дозвіл на керування ринковими даними.</p>
+    {% endif %}
+    {% for result in app.flashes('seed_import') %}
+      <p class="cos-alert cos-alert--success">Підсумок імпорту: {{ result }}</p>
+    {% endfor %}
+    {% if app.request.query.get('seedError') %}<p class="cos-alert cos-alert--danger">Імпорт відхилено: помилка формату, доступу, бази даних або конфлікт ідентичності. Причину записано в журнал.</p>{% endif %}
+  </section>
+
   {% if scanned %}<div class="cos-alert cos-alert--success">Результат перевірки збережено.</div>{% endif %}
   {% if cooldown %}<div class="cos-alert cos-alert--warning">Зачекайте 90 секунд між перевірками.</div>{% endif %}
   {% if scanError %}<div class="cos-alert cos-alert--danger">Не вдалося провести сканування. Подивіться серверні журнали.</div>{% endif %}

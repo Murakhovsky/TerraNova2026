@@ -2651,6 +2651,11 @@ capital_markets_discovery_scan:
   controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::scan
   methods: [POST]
 
+capital_markets_discovery_import:
+  path: /capital-markets/discovery/import
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::importSeed
+  methods: [POST]
+
 # Capital Markets CM-FOUNDATION UI
 capital_markets_overview:
   path: /capital-markets

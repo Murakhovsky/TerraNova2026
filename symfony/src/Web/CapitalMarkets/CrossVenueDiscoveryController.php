@@ -9,6 +9,9 @@ use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
 use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
+use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository;
@@ -39,6 +42,8 @@ final readonly class CrossVenueDiscoveryController
         private SessionCsrfValidator $csrf,
         private WorkspaceShellFactory $shells,
         private CrossVenueUniverse $universe,
+        private BStocksSeedFileReader $seedReader,
+        private BStocksSeedImportRepository $seedImports,
         private CrossVenueCatalogDiscovery $scanner,
         private CrossVenueDiscoverySnapshotRepository $snapshots,
         private CrossVenuePoolCandidateRepository $poolCandidates,
@@ -109,6 +114,54 @@ final readonly class CrossVenueDiscoveryController
             return new RedirectResponse('/capital-markets/discovery?error=1',303);
         }
         return new RedirectResponse('/capital-markets/discovery?scanned=1',303);
+    }
+
+    public function importSeed(Request $request): Response
+    {
+        $tenant=$this->authorized(CapitalMarketsCapability::MarketDataManage);
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.',403);
+        $uploaded=$request->files->get('seed_file');
+        $mode=(string)$request->request->get('seed_mode','');
+        if (!$uploaded instanceof UploadedFile || !$uploaded->isValid()
+            || $uploaded->getSize() === null || $uploaded->getSize() > 5242880
+            || !in_array($mode,['preview','apply'],true)) {
+            return new Response('Invalid seed import request.',400);
+        }
+        $extension=strtolower($uploaded->getClientOriginalExtension());
+        if (!in_array($extension,['xlsm','xlsx','csv'],true)) {
+            return new Response('Unsupported seed file extension.',400);
+        }
+        $mime=(new \finfo(FILEINFO_MIME_TYPE))->file($uploaded->getPathname());
+        if (!in_array($mime,[
+            'application/vnd.ms-excel.sheet.macroEnabled.12',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/zip','application/octet-stream','text/plain',
+            'text/csv','application/csv','application/vnd.ms-excel',
+        ],true)) {
+            return new Response('Unsupported seed content type.',400);
+        }
+        $org=$tenant->organizationId()->value();
+        $actor=(int)$tenant->userId()->value();
+        $name='cos_cm_seed_'.bin2hex(random_bytes(12)).'.'.$extension;
+        $path=sys_get_temp_dir().DIRECTORY_SEPARATOR.$name;
+        try {
+            $uploaded->move(sys_get_temp_dir(),$name);
+            $seed=$this->seedReader->read($path);
+            $stats=$mode==='preview'
+                ?$this->seedImports->preview($org,$seed)
+                :$this->seedImports->apply($org,$actor,$seed);
+            $request->getSession()->getFlashBag()->add('seed_import',json_encode([
+                'mode'=>$mode,'file_sha256'=>$seed['sha256'],
+                'source_as_of'=>$seed['source_as_of'],'stats'=>$stats,
+            ],JSON_THROW_ON_ERROR));
+            return new RedirectResponse('/capital-markets/discovery?seedImported=1',303);
+        } catch (Throwable $e) {
+            error_log('capital_markets.seed_import.failed '.get_class($e).' '.$e->getMessage());
+            return new RedirectResponse('/capital-markets/discovery?seedError=1',303);
+        } finally {
+            if (is_file($path)) @unlink($path);
+        }
     }
 
     public function observeQuotes(Request $request):Response
