@@ -280,6 +280,7 @@ services:
         - '@App\Persistence\Workflow\SalesWonDealNonActionEvidence'
         - '@App\Persistence\Workflow\GrowthInboundResponseNonActionEvidence'
         - '@App\Persistence\Workflow\EngineeringArtifactNonActionEvidence'
+        - '@App\Persistence\Workflow\PropertyIdentityResolutionNonActionEvidence'
   Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface:
     alias: App\Persistence\Workflow\WorkflowNonActionReceiptRegistry
   Platform\Workflow\Contract\WorkflowReceiptVerifierInterface:

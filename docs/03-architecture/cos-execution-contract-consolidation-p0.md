@@ -209,6 +209,8 @@ interface WorkflowRecoveryInterface
 
 **Domain Evidence Adapters Sales / Growth / Engineering:** `SalesWonDealNonActionEvidence` читає `sales.deal.won` у tenant-scoped `cos_events` (aggregate/час і normalized payload hash). `GrowthInboundResponseNonActionEvidence` читає tenant-owned `tn_growth_engagement_responses` із provenance до вже завершеного canonical Workflow Action. `EngineeringArtifactNonActionEvidence` перевіряє чинний `cos_engineering_artifacts`, tenant через `cos_engineering_features`, завершений AgentRun і той самий hash, що Engineering ArtifactStore. Built-in `platform.engineering` не є опціональним tenant Domain; scope перевіряється обов'язково через Feature ownership. Така атестація **не** доводить Engineering QA/Review/Release approval. Невідомі kind/tenant/підмінені records залишаються fail-closed. Production worker alias лишається fail-closed.
 
+**Property verified identity:** `PropertyIdentityResolutionNonActionEvidence` валідує конкретне рішення `tn_property_identity_resolutions` разом із незалежним `tn_property_identity_review_audit`, актуальним `tn_property_assets`, reviewer, tenant scope, часовим інтервалом canonical Run/Step і fingerprint. Сам факт наявності об'єкта/попередній fuzzy match не є достовірним доказом. Спроба перевірити pending або підмінений review завершується забороною.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0
