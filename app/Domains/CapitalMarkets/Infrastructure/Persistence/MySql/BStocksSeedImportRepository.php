@@ -117,7 +117,11 @@ final readonly class BStocksSeedImportRepository
                 ++$totals['conflicts']; continue;
             }
             $old=json_decode((string)$existing['row_evidence_json'],true,64,JSON_THROW_ON_ERROR);
-            if ($old === $row) { ++$totals['unchanged']; }
+            if (!is_array($old)) throw new RuntimeException('Corrupt historical seed evidence.');
+            $canonical=$row;
+            ksort($old,SORT_STRING);
+            ksort($canonical,SORT_STRING);
+            if ($old === $canonical) { ++$totals['unchanged']; }
             else { ++$totals['changed']; }
         }
         return $totals;
