@@ -10,6 +10,8 @@ use Platform\Workflow\Model\WorkflowStepSelectionState;
 use Platform\Workflow\Model\WorkflowStepSnapshot;
 use Platform\Workflow\Service\WorkflowDependencyGraph;
 use Platform\Workflow\Service\WorkflowStepScheduler;
+use Platform\Workflow\Service\DurableWorkflowTransitionPolicy;
+use Platform\Orchestration\Goal\ExecutionRunPolicy;
 
 $definition = [
     ['id' => 'review', 'capability_id' => 'test.read', 'capability_version' => '1',
@@ -85,6 +87,7 @@ $update($modified, 'review', 'pending');
 $deny($definition, $modified);
 $modified = $rows;
 $update($modified, 'join', 'ambiguous');
+$update($modified, 'alpha', 'pending');
 $deny($definition, $modified);
 $modified = $rows;
 $modified[0]['capability_version'] = 'forged';
@@ -102,4 +105,28 @@ $deny($definition, $rows, false);
 $legacyGraph = (new FederationStepDependencyGraph())->resolve($definition);
 $sharedGraph = (new WorkflowDependencyGraph())->resolve($definition);
 $assert($legacyGraph === $sharedGraph, 'Compatibility dependency graph diverged.');
+$matrix = [
+    ['pending','running',false,true], ['running','ambiguous',false,true],
+    ['ambiguous','completed',false,false], ['ambiguous','waiting',false,true],
+    ['completed','running',false,false], ['pending','claimed',true,true],
+    ['pending','completed',true,false], ['claimed','completed',true,true],
+    ['ambiguous','claimed',true,false],
+];
+foreach ($matrix as [$from,$to,$step,$expected]) {
+    $sharedResult = DurableWorkflowTransitionPolicy::canTransition($from,$to,$step);
+    if ($sharedResult !== $expected || ExecutionRunPolicy::canTransition($from,$to,$step) !== $expected) {
+        throw new RuntimeException('Durable status transition policy lost Federation compatibility.');
+    }
+}
+if (DurableWorkflowTransitionPolicy::canAutoRetry('external','waiting')
+    || !DurableWorkflowTransitionPolicy::canAutoRetry('none','waiting')) {
+    throw new RuntimeException('External side-effect automatic retry must remain blocked.');
+}
+$bad = $rows;
+$bad[0] = 'forged-persisted-step';
+try {
+    $legacy->select($definition, $bad, true);
+    throw new RuntimeException('Malformed persisted step was accepted.');
+} catch (DomainException) {
+}
 echo "Shared Workflow DAG contract parity passed: canonical DTOs, Federation compatibility, ambiguity and negative fixtures.\n";

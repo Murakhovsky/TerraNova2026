@@ -183,7 +183,7 @@ interface WorkflowRecoveryInterface
 
 ## 6.1. Реалізований інкремент P0: спільний DAG selector
 
-У поточній гілці реалізовано `Platform\\Workflow\\Service\\WorkflowStepScheduler`, `WorkflowDependencyGraph`, `WorkflowStepSchedulerInterface`, DTO `WorkflowDefinitionSnapshot`, `WorkflowStepSnapshot`, `WorkflowStepDecision` і `WorkflowStepSelectionState`. `FederationStepCursor` і `FederationStepDependencyGraph` стали compatibility adapters та використовують **той самий** pure algorithm. Action, Approval, Claim, Receipt, CAS і Worker gates не переписані; це не новий execution engine.
+У поточній гілці реалізовано `Platform\\Workflow\\Service\\WorkflowStepScheduler`, `WorkflowDependencyGraph`, `WorkflowStepSchedulerInterface`, DTO `WorkflowDefinitionSnapshot`, `WorkflowStepSnapshot`, `WorkflowStepDecision` і `WorkflowStepSelectionState`. `FederationStepCursor` і `FederationStepDependencyGraph` стали compatibility adapters та використовують **той самий** pure algorithm. Action, Approval, Claim, Receipt, CAS і Worker gates не переписані; це не новий execution engine. Додатково `ExecutionRunPolicy` делегує спільній технічній `DurableWorkflowTransitionPolicy`, збережено існуючі дозволені та заборонені переходи для Federation.
 
 Новий unit contract `tests/unit/workflow_shared_dag_contract.php` перевіряє прямий canonical selector та той самий Federation cursor, invalid DAG, injected steps, mixed read-only, ambiguity, exclusion of parallel claims і відсутність side effects. Старий `tests/unit/federation_step_cursor.php` залишається обов'язковим regression gate.
 

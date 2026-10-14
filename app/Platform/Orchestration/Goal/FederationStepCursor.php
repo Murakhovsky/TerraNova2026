@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Platform\Orchestration\Goal;
 
+use DomainException;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
 use Platform\Workflow\Model\WorkflowStepSnapshot;
 use Platform\Workflow\Service\WorkflowStepScheduler;
@@ -23,7 +24,9 @@ final readonly class FederationStepCursor
     {
         $definition = new WorkflowDefinitionSnapshot('federation.approved-plan', 'legacy', $planSteps);
         $snapshots = array_map(
-            static fn (array $row): WorkflowStepSnapshot => WorkflowStepSnapshot::fromPersistedRow($row),
+            static fn (mixed $row): WorkflowStepSnapshot => is_array($row)
+                ? WorkflowStepSnapshot::fromPersistedRow($row)
+                : throw new DomainException('Malformed persisted Workflow step row.'),
             $persistedSteps,
         );
         return (new WorkflowStepScheduler())->select(

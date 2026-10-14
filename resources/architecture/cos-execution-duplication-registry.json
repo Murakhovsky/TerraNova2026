@@ -50,7 +50,8 @@
       "guardrail": "split store; preserve goals/plans/evaluations, tenant CAS and one run per plan",
       "baseline_test": "tests/architecture/federation_execution_authorization.php",
       "migration_status": "NOT_STARTED",
-      "runtime_consumers_verified": false
+      "runtime_consumers_verified": false,
+      "implementation_note": "Federation ExecutionRunPolicy delegates pure transition validation to Platform Workflow DurableWorkflowTransitionPolicy. Persisted Federation Run/Step writer has NOT migrated."
     },
     {
       "id": "EX-003",
@@ -397,5 +398,5 @@
       "runtime_consumers_verified": false
     }
   ],
-  "contract_iteration": "2026-10-15: shared stateless DAG selector, typed immutable selection DTO, Federation adapter; no persisted durable workflow or Engineering migration"
+  "contract_iteration": "2026-10-15: shared pure WorkflowStepScheduler/WorkflowDependencyGraph and durable transition policy, compatible Federation adapters; no persisted execution cutover."
 }
