@@ -23,6 +23,7 @@ $files=[
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/BStocksSeedImportRepository.php',
     'symfony/src/Command/CapitalMarketsSeedImportCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenueSubscriptionPlanner.php',
+    'app/Domains/CapitalMarkets/Application/Service/CrossVenueMarketSourceAdmission.php',
     'symfony/src/Command/CapitalMarketsSubscriptionPlanCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftProjection.php',
     'app/Domains/CapitalMarkets/Application/Service/BStocksCanonicalDraftService.php',
@@ -47,6 +48,7 @@ foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
     'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository','CrossVenueListingReviewRepository',
     'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',
+    'CrossVenueMarketSourceAdmission',
     'BStocksCanonicalDraftProjection','BStocksCanonicalDraftService','BoundedBboSweepService',
     'MysqlBoundedBboSweepGate',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
@@ -126,4 +128,9 @@ $poolRepo=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastru
 $assert(str_contains($poolRepo,"'verified'=>'REVIEWED_LISTING'")
     && str_contains($poolRepo,"'fresh_after'"),
     'Unreviewed or expired listings cannot enter BBO subscription planning.');
+$sourceAdmission=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/CrossVenueMarketSourceAdmission.php');
+$assert(str_contains($sourceAdmission,'MarketDataProviderAvailabilityInterface')
+    && str_contains($sourceAdmission,'LICENSE_PROFILE_UNDECLARED')
+    && str_contains($sourceAdmission,'REST_MODE_NOT_EXPLICIT'),
+    'Automatic subscription and BBO sampler must reject disallowed or WS-owned sources.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
