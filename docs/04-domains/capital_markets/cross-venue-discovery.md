@@ -101,3 +101,14 @@ php symfony/bin/console cos:capital-markets:instruments:import ORG_ID ACTOR_ID -
 ```
 
 У CI додано реальний MySQL-тест історичного CSV на 80 записів, повторення, відокремлення організацій, блокування конфліктів і відкат транзакції. Проходження цього тесту перевіряється окремо за відповідним SHA.
+
+## Планування підписок на котирування
+
+Для вже перевірених канонічних інструментів з ACTIVE venue mapping, наявним джерелом і підтримуваним BBO можна попередньо переглянути та застосувати план через наявний сервіс Market Data Administration. План не створює інструментів за схожістю тикера, не оживляє призупинені підписки і не вважає REST polling підтвердженим WebSocket streaming.
+
+```bash
+php symfony/bin/console cos:capital-markets:subscriptions:plan ORG_ID ACTOR_ID --source=SOURCE_ID
+php symfony/bin/console cos:capital-markets:subscriptions:plan ORG_ID ACTOR_ID --source=SOURCE_ID --apply
+```
+
+За замовчуванням команда працює як dry-run. Ліміт планування 250 пар. Непідтверджені ідентифікатори та недоступні джерела не активуються. Підтвердження реального streaming BBO й керованого воркера залишається окремим acceptance gate.

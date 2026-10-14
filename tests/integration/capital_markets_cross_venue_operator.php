@@ -22,6 +22,8 @@ $files=[
     'app/Domains/CapitalMarkets/Application/Service/BStocksSeedFileReader.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/BStocksSeedImportRepository.php',
     'symfony/src/Command/CapitalMarketsSeedImportCommand.php',
+    'app/Domains/CapitalMarkets/Application/Service/CrossVenueSubscriptionPlanner.php',
+    'symfony/src/Command/CapitalMarketsSubscriptionPlanCommand.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenuePoolProjection.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php',
     'symfony/src/Command/CapitalMarketsInstrumentDiscoveryCommand.php',
@@ -34,7 +36,7 @@ foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueCatalogDiscovery','CrossVenueDiscoverySnapshotRepository',
     'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
     'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository',
-    'BStocksSeedFileReader','BStocksSeedImportRepository',"$".'connection: '."'@cos.database.pdo'"] as $needle){
+    'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
 }
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
@@ -75,4 +77,10 @@ $assert(str_contains($controller,'function importSeed(Request $request)')
     && str_contains($controller,"$".'this->seedImports->apply($org,$actor,$seed)')
     && str_contains($controller,"$".'this->seedImports->preview($org,$seed)'),
     'Operator import must support both preview and committed evidence.');
+$planner=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/CrossVenueSubscriptionPlanner.php');
+$assert(str_contains($planner,'InstrumentStatus::Active')
+    && str_contains($planner,'VenueInstrumentStatus::Active')
+    && str_contains($planner,'BLOCKED_AMBIGUOUS_MAPPING')
+    && str_contains($planner,'createSubscription'),
+    'BBO planner must use existing audited source and canonical identity gates.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
