@@ -48,6 +48,17 @@ try {
         WHERE organization_id=:org AND source_id=:source');
     $state->execute(['org'=>$org,'source'=>'test-source']);
     $assert($state->fetchColumn()==='FAILED','Source gate status differs from provider failure.');
+    $recent=$gate->recent($org,10,1800);
+    $assert(count($recent)===1 && $recent[0]['freshness']==='RECENT',
+        'Operator read model should expose recent completed observation.');
+    $pdo->prepare("UPDATE tn_capital_market_bbo_poll_gates
+       SET last_completed_at=UTC_TIMESTAMP(6)-INTERVAL 1900 SECOND
+       WHERE organization_id=:org AND source_id='test-source'")
+       ->execute(['org'=>$org]);
+    $aged=$gate->recent($org,10,1800);
+    $assert($aged[0]['freshness']==='STALE','Old BBO poll must be marked STALE.');
+    $assert($gate->recent($org.'-unknown')===[],'Foreign tenant can read BBO poll evidence.');
+
     echo "Bounded BBO MySQL: lease, cooldown, failure fencing, tenant isolation passed.\n";
 } finally {
     $pdo->prepare('DELETE FROM tn_capital_market_bbo_poll_gates WHERE organization_id IN (:org,:other)')

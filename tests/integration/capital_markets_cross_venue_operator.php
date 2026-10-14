@@ -104,4 +104,12 @@ $assert(str_contains($bboSweep,'MarketSourcePollingService')
 $assert(str_contains($scheduler,'SampleBStockBboQuotes')
     && str_contains($scheduler,'capitalMarketsBboPollEnabled'),
     'Bounded BBO must be opt-in through the existing scheduler.');
+$assert(str_contains($controller,'function seedCanonicalDrafts(Request $request)')
+    && str_contains($controller,'CapitalMarketsCapability::InstrumentManage')
+    && str_contains($controller,'canonicalCoverage')
+    && str_contains($controller,'bboPollGate->recent'),
+    'Canonical draft and BBO health operators must use existing tenant/RBAC protections.');
+$assert(str_contains($tpl,'Пул кандидатів') && str_contains($tpl,'Стан канонічного пулу')
+    && str_contains($tpl,'Стан контрольованого REST BBO'),
+    'Discovery UI must surface all three instrument, canonical and quote readiness levels.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
