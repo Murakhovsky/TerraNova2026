@@ -4,13 +4,15 @@ declare(strict_types=1);
 /**
  * Real MySQL multi-branch Workflow DAG worker acceptance.
  * Canonical external Action evidence is actual persisted SQL; the non-Action
- * domain evidence adapter is a controlled synthetic test double. No handler
+ * domain evidence adapter uses real persisted Documents records. No handler
  * is invoked and no production Action is dispatched.
  */
 require (string)(getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__,2).'/symfony/vendor/autoload.php');
 
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission;
+use App\Persistence\Workflow\DocumentSignatureNonActionEvidence;
+use App\Persistence\Workflow\WorkflowNonActionReceiptRegistry;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
 use App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence;
 use App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence;
@@ -35,7 +37,6 @@ use Kernel\Tenant\Model\Permission;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Kernel\Workflow\Model\WorkflowStatus;
-use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
 use Platform\Workflow\Model\WorkflowRunCommand;
@@ -59,6 +60,10 @@ $planId='plan-'.$token;
 $planDigest=hash('sha256','original-approved-plan-'.$token);
 $approvalReference='plan-approval-'.$token;
 $correlation='corr-'.$token;
+$signatureId='signed-'.$token;
+$documentId='document-'.$token;
+$signerId='signer-'.$token;
+$signatureReference='receipt-'.$token;
 $definition=new WorkflowDefinitionSnapshot('test.predecessors','1.0.0',[
     ['id'=>'p1','capability_id'=>'test.publish','capability_version'=>'1.0.0',
      'owner_domain'=>'sales','execution_binding'=>'action:test.publish',
@@ -68,9 +73,15 @@ $definition=new WorkflowDefinitionSnapshot('test.predecessors','1.0.0',[
      'owner_domain'=>'sales','execution_binding'=>'action:test.publish',
      'side_effect_level'=>'external','depends_on'=>[],
      'input'=>['target_type'=>'case','target_id'=>'p2','parameters'=>['seq'=>2]]],
-    ['id'=>'p3','capability_id'=>'test.read','capability_version'=>'1.0.0',
-     'owner_domain'=>'sales','execution_binding'=>'read:test',
-     'side_effect_level'=>'none','depends_on'=>['p1']],
+    ['id'=>'p3','capability_id'=>'documents.signature.observation','capability_version'=>'1.0.0',
+     'owner_domain'=>'platform.documents',
+     'execution_binding'=>'read:documents.signature.signed.v1',
+     'side_effect_level'=>'none','depends_on'=>['p1'],
+     'evidence'=>[
+         'kind'=>'documents.signature.signed.v1','run_id'=>$identity->runId,
+         'input_digest'=>hash('sha256','input-'.$token),
+         'signature_id'=>$signatureId,'document_id'=>$documentId,'signer_id'=>$signerId,
+     ]],
     ['id'=>'send','capability_id'=>'test.publish','capability_version'=>'1.0.0',
      'owner_domain'=>'sales','execution_binding'=>'action:test.publish',
      'side_effect_level'=>'external','depends_on'=>['p2','p3'],
@@ -123,24 +134,9 @@ $trustedPlan=new class($identity,$planId,$planDigest,$approvalReference) impleme
         }
     }
 };
-$nonAction=new class($identity,$draft->inputDigest,$token) implements WorkflowNonActionReceiptEvidenceInterface {
-    public bool $trusted=true;
-    public function __construct(
-        private WorkflowRunIdentity $id,private string $digest,private string $nonce,
-    ){}
-    public function assertVerified(
-        WorkflowRunIdentity $identity,string $stepId,string $reference,
-        string $inputDigest,array $pinnedStep,
-    ):void {
-        if(!$this->trusted || $identity!=$this->id || $stepId!=='p3'
-            || $reference!=='evidence:domain-'.$this->nonce
-            || $inputDigest!==$this->digest
-            || ($pinnedStep['execution_binding']??null)!=='read:test'
-            || ($pinnedStep['side_effect_level']??null)!=='none') {
-            throw new DomainException('Independent non-Action fixture evidence was not verified.');
-        }
-    }
-};
+$nonAction=new WorkflowNonActionReceiptRegistry($modules,[
+    new DocumentSignatureNonActionEvidence($db),
+]);
 $receipts=new DoctrineWorkflowActionReceiptVerifier($db,$trustedPlan);
 $predecessors=new WorkflowPredecessorReceiptVerifier($receipts,$nonAction);
 $worker=new DoctrineWorkflowActionWorkerAdmission(
@@ -163,7 +159,8 @@ $reject=static function(callable $call,string $label):void{
 $actions=[];
 $stepKeys=[];
 $key=['org'=>$org,'run'=>$identity->runId];
-$receipt='evidence:domain-'.$token;
+$receipt='documents:signature:signed:v1:'.$signatureId.':'
+    .hash('sha256',$signatureReference);
 try {
     $store->create($draft,$actor);
     $store->compareAndTransition(new WorkflowRunTransition(
@@ -219,6 +216,21 @@ try {
             [...$key,'step'=>$id,'ref'=>'action:'.$actionId],
         );
     }
+    // Proof exists in the Documents domain after Run creation, not in Step flags.
+    $db->executeStatement(
+        'INSERT INTO cos_documents
+         (organization_id,document_id,title,status,created_by,updated_by,created_at)
+         VALUES (:org,:doc,"Workflow predecessor","active",1,1,NOW(6))',
+        ['org'=>$org,'doc'=>$documentId],
+    );
+    $db->executeStatement(
+        'INSERT INTO cos_document_signatures
+         (organization_id,signature_id,document_id,signer_id,status,requested_by,
+          signed_by,signed_by_actor_id,signature_reference,signed_at)
+         VALUES (:org,:sig,:doc,:signer,"signed",1,:signer,2,:reference,NOW(6))',
+        ['org'=>$org,'sig'=>$signatureId,'doc'=>$documentId,'signer'=>$signerId,
+         'reference'=>$signatureReference],
+    );
     $db->executeStatement(
         'UPDATE cos_workflow_steps SET state="completed",attempts=1,revision=3,
             result_reference=:ref,updated_at=NOW(6)
@@ -273,9 +285,17 @@ try {
     $worker->assertAuthorized($current);
     $reject(static fn()=> $noProofWorker->assertAuthorized($current),'no real non-Action proof adapter');
     $reject(static fn()=> $noPlanWorker->assertAuthorized($current),'untrusted business Plan');
-    $nonAction->trusted=false;
-    $reject(static fn()=> $worker->assertAuthorized($current),'revoked independent non-Action proof');
-    $nonAction->trusted=true;
+    $db->executeStatement(
+        'UPDATE cos_document_signatures SET status="revoked"
+         WHERE organization_id=:org AND signature_id=:sig',
+        ['org'=>$org,'sig'=>$signatureId],
+    );
+    $reject(static fn()=> $worker->assertAuthorized($current),'revoked independent Documents proof');
+    $db->executeStatement(
+        'UPDATE cos_document_signatures SET status="signed"
+         WHERE organization_id=:org AND signature_id=:sig',
+        ['org'=>$org,'sig'=>$signatureId],
+    );
 
     $db->executeStatement(
         'UPDATE cos_workflow_steps SET result_reference=:bad
@@ -401,7 +421,7 @@ try {
         'SELECT status FROM cos_actions WHERE organization_id=:org AND id=:id',
         ['org'=>$org,'id'=>$currentId],
     )!=='RUNNING')throw new RuntimeException('Read-only worker proof changed current canonical Action.');
-    echo "Workflow DAG worker MySQL receipts passed: two external branches, independent non-Action proof, all completed predecessor attestations, tamper/replay/Policy/Approval/DAG rejection.\n";
+    echo "Workflow DAG worker MySQL receipts passed: two external branches, independently persisted Documents proof, all completed predecessor attestations, tamper/replay/Policy/Approval/DAG rejection.\n";
 } finally {
     $db->executeStatement('DELETE FROM cos_approvals WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_policy_evaluations WHERE organization_id=:org',['org'=>$org]);
@@ -409,4 +429,6 @@ try {
     $db->executeStatement('DELETE FROM cos_actions WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_workflow_steps WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_workflow_runs WHERE organization_id=:org',['org'=>$org]);
+    $db->executeStatement('DELETE FROM cos_document_signatures WHERE organization_id=:org',['org'=>$org]);
+    $db->executeStatement('DELETE FROM cos_documents WHERE organization_id=:org',['org'=>$org]);
 }
