@@ -10,6 +10,26 @@ updated: 2026-10-14
 
 **Статус:** інструкція / release gate, а не сертифікат. Проходження unit-тестів або MySQL smoke з відкачаними fixtures **не** дорівнює 50 реальним Sales Leads і 50 Documents.
 
+## Бізнес-мета
+
+Підтвердити наскрізний бізнес-результат: рівно 50 унікальних підтверджених кандидатів Growth, кожен із погодженим чотириетапним виконанням, власним Sales Lead та прив'язаним Documents, і незалежну перевірку Goal. Unit-тести не замінюють результат на тестовому tenant.
+
+## Учасники
+
+- **Менеджер tenant:** створює Goal, погоджує параметри вибірки, запускає перевірки та ініціює оцінку результату.
+- **Незалежний погоджувач:** окремо погоджує кожний план та всі зовнішні Action.
+- **Growth:** підтверджує походження й кваліфікацію кандидатів та виконує Sales handoff.
+- **Sales:** єдиний власник запису Lead і доказу його створення.
+- **Documents:** створює та прив'язує підготовлену пропозицію без надсилання чи підписання.
+
+## Карта коду
+
+- `app/Platform/Orchestration/Goal/FederationGolden50GoalProfile.php`: допустимі Action для Goal із ціллю 50.
+- `symfony/src/Persistence/Federation/FederationCandidateFanoutService.php`: перевірка реальних даних Growth і пропозиція дочірніх планів.
+- `symfony/src/Persistence/Federation/FederationGoalOutcomeAggregationService.php`: повторна незалежна звірка джерела, Action receipts, Sales і Documents.
+- `app/Platform/Orchestration/Goal/FederationDiscoverySourceMatcher.php`: достовірність native Growth membership.
+- `symfony/src/Web/Federation/FederationGoalAggregateController.php`: read-only агрегат і CSRF-guarded запис Goal evaluation.
+
 ## Вимірювана мета
 
 - Один tenant-owned Goal, критерій `federation.verified_proposals`, оператор `at_least`, очікуване значення **50**.
