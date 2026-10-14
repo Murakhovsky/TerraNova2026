@@ -70,4 +70,20 @@ $missingRejected = false;
 try { $missingWorker->run(static function():void {},1); }
 catch (DomainException $e) { $missingRejected = true; }
 if (!$missingRejected) throw new RuntimeException('Missing subscription ack accepted.');
+
+$stoppedTransport = new FixtureL2Transport();
+$stoppedSession = new L2RecoverySession();
+$stoppedWorker = new L2StreamWorker(
+    new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
+    new L2SubscriptionEncoder(), $stoppedTransport,
+    new BybitL2StreamProcessor(
+        new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT',50),'BYBIT_LINEAR'),
+        new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
+        new BybitL2RecoveryCoordinator($stoppedSession),$stoppedSession
+    )
+);
+if ($stoppedWorker->run(static function(): void { throw new RuntimeException('Stopped worker published.'); }, 3, static fn(): bool => true) !== 0
+    || count($stoppedTransport->sent) !== 0) {
+    throw new RuntimeException('Stopped L2 worker initiated work.');
+}
 echo "L2 stream worker smoke passed\n";

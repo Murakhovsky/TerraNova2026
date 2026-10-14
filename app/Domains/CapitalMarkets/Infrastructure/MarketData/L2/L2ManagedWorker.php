@@ -31,12 +31,12 @@ final readonly class L2ManagedWorker
             throw new DomainException('Invalid managed worker message budget.');
         }
         return $this->runner->run(
-            static function (int $epoch, callable $verified) use ($workerFactory, $messageBudget): int {
+            static function (int $epoch, callable $verified) use ($workerFactory, $messageBudget, $shouldStop): int {
                 $worker = $workerFactory($epoch);
                 if (!$worker instanceof L2StreamWorker) {
                     throw new DomainException('Managed L2 worker factory returned invalid worker.');
                 }
-                return $worker->run($verified, $messageBudget);
+                return $worker->run($verified, $messageBudget, $shouldStop);
             },
             $publish,
             $sleep,

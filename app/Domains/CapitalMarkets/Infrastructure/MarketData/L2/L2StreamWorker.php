@@ -26,8 +26,10 @@ final readonly class L2StreamWorker
      * @param callable(MarketOrderBook):void $publish
      * @return int number of trusted publications
      */
-    public function run(callable $publish, int $maxMessages = 1000): int
+    public function run(callable $publish, int $maxMessages = 1000, ?callable $shouldStop = null): int
     {
+        $shouldStop ??= static fn(): bool => false;
+        if ($shouldStop()) return 0;
         if ($maxMessages < 1 || $maxMessages > 1000000) throw new DomainException('Invalid worker message budget.');
         if (str_starts_with($this->config->venue, 'BINANCE_') && $this->snapshotClient === null) {
             throw new DomainException('Binance worker requires REST snapshot client.');
@@ -44,6 +46,7 @@ final readonly class L2StreamWorker
             $subscriptionReady = $subscribe === null;
             $acknowledgements = $this->acknowledgements ?? new L2SubscriptionAcknowledgement();
             for ($i = 0; $i < $maxMessages; ++$i) {
+                if ($shouldStop()) return $published;
                 $frame = $this->transport->readText();
                 if (!$subscriptionReady) {
                     if ($acknowledgements->accepted($this->config->venue, $frame)) {
@@ -83,6 +86,7 @@ final readonly class L2StreamWorker
                 if ($this->watchdog !== null && $published > 0 && $this->watchdog->isStale($nowMs)) {
                     throw new DomainException('L2 verified publication stalled; reconnect required.');
                 }
+                if ($shouldStop()) return $published;
                 $publish($book);
                 $this->watchdog?->published($nowMs);
                 $lastVersion = $version;
