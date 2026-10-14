@@ -1,6 +1,6 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}{{ 'engineering.eyebrow'|trans }} · {{ engineering.feature.title }} | COS{% endblock %}
+{% block title %}{{ 'Engineering'|trans }} · {{ engineering.feature.title }} | {{ 'COS'|trans }}{% endblock %}
 
 {% block workspace_content %}
 {% set statusLabels = {
@@ -120,7 +120,7 @@
 
     <div class="engineering-head">
         <div>
-            <p class="cos-card__eyebrow">{{ 'engineering.eyebrow'|trans }}</p>
+            <p class="cos-card__eyebrow">{{ 'COS'|trans }} · {{ 'Engineering'|trans }}</p>
             <h1 class="engineering-head__title">{{ engineering.feature.title }}</h1>
             <div class="engineering-head__meta">
                 <span class="cos-badge">{{ engineering.feature.priority }}</span>
@@ -140,39 +140,39 @@
             {% set actions = summary.actions|default({}) %}
             {% if actions.run|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <button class="cos-button cos-button--primary" type="submit">{{ 'Запустити'|trans }}</button>
                 </form>
             {% elseif actions.resume|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <button class="cos-button cos-button--primary" type="submit">{{ 'Відновити'|trans }}</button>
                 </form>
             {% elseif actions.continue|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <button class="cos-button cos-button--primary" type="submit">{{ 'Продовжити'|trans }}</button>
                 </form>
             {% elseif actions.retry|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
-                    <button class="cos-button cos-button--primary" type="submit">{{ '{{ '{{ 'Повтори'|trans }}ти'|trans }} процес'|trans }}</button>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">{{ 'Повторити процес'|trans }}</button>
                 </form>
             {% endif %}
             {% if actions.finalize|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/finalize">
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
-                    <button class="cos-button cos-button--primary" type="submit">{{ '{{ 'Перевірити merge'|trans }} та завершити'|trans }}</button>
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">{{ 'Перевірити merge та завершити'|trans }}</button>
                 </form>
             {% endif %}
             {% if actions.cancel|default(false) %}
                 <details class="engineering-details">
                     <summary class="cos-button cos-button--danger">{{ 'Скасувати'|trans }}</summary>
                     <form class="cos-form cos-card" style="position:absolute;right:24px;z-index:5;min-width:360px;padding:12px" method="post" action="/admin/engineering/{{ engineering.feature.id }}/cancel">
-                        <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                         <label class="cos-field">
                             <span>{{ 'Причина'|trans }}</span>
-                            <input class="cos-input" name="reason" value="Скасовано з Engineering UI." required>
+                            <input class="cos-input" name="reason" value="Скасовано з {{ 'Engineering'|trans }} UI." required>
                         </label>
                         <button class="cos-button cos-button--danger" type="submit">{{ 'Підтвердити скасування'|trans }}</button>
                     </form>
@@ -193,7 +193,7 @@
         <div class="engineering-panel__body">
             {% if engineering.workflow is null %}
                 <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/update" data-engineering-update>
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <div class="cos-form__grid">
                         <label class="cos-field"><span>{{ 'Назва'|trans }}</span><input class="cos-input" name="title" maxlength="255" value="{{ engineering.feature.title }}" required></label>
                         <label class="cos-field"><span>{{ 'Пріоритет'|trans }}</span>
@@ -214,7 +214,7 @@
     {% if engineering.open_human_decisions is not empty %}
         <section class="engineering-panel" aria-labelledby="engineering-human-decisions">
             <div class="engineering-panel__head">
-                <h2 id="engineering-human-decisions">{{ '⚠ {{ 'Потрібне рішення'|trans }} людини'|trans }}</h2>
+                <h2 id="engineering-human-decisions">{{ '⚠ Потрібне рішення людини'|trans }}</h2>
                 <span class="cos-badge">{{ engineering.open_human_decisions|length }}</span>
             </div>
             <div class="engineering-panel__body">
@@ -239,7 +239,7 @@
                             </div>
                         {% endif %}
                         <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/human-decision">
-                            <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                             <input type="hidden" name="request_id" value="{{ decision.id }}">
                             <div class="engineering-inline">
                                 {% for option in decision.options|default([]) %}
@@ -263,7 +263,7 @@
         <div class="engineering-summary__item"><span class="engineering-summary__label">{{ 'Стан'|trans }}</span><span class="engineering-summary__value" data-engineering-live-target="workflowStatus">{{ statusLabels[summary.display_status]|default(summary.display_status) }}</span></div>
         <div class="engineering-summary__item"><span class="engineering-summary__label">{{ 'Етап'|trans }}</span><span class="engineering-summary__value" data-engineering-live-target="state">{{ statusLabels[summary.state]|default(summary.state) }}</span></div>
         <div class="engineering-summary__item">
-            <span class="engineering-summary__label">{{ '{{ 'Стан'|trans }} runtime'|trans }}</span>
+            <span class="engineering-summary__label">{{ 'Стан runtime'|trans }}</span>
             <span class="engineering-summary__value" data-engineering-live-target="health">{{ statusLabels[summary.health]|default(summary.health) }}</span>
             <span
                 class="engineering-table__meta"
@@ -313,7 +313,7 @@
         </div>
     </section>
 
-    <section class="engineering-stages" aria-label="{{ 'Етап'|trans }}и процесу">
+    <section class="engineering-stages" aria-label="Етапи процесу">
         {% for stage in summary.stages %}
             <div class="engineering-stage">
                 <strong>{{ stage.label }}</strong>
@@ -335,19 +335,19 @@
             title="{{ 'LLM ще не запускався'|trans }}"
             copy="{{ summary.health == 'STALLED'
                 ? 'Перший AgentRun не був створений, тому виклику LLM і витрат токенів не було.'|trans
-                : 'Зараз система готує контекст для першого агента. Токени й вартість з’являться після першого виклику LLM.' }}"
+                : 'Зараз система готує контекст для першого агента. Токени й вартість з’являться після першого виклику LLM.'|trans }}"
             tone="{{ summary.health == 'STALLED' ? 'warning' : 'info' }}"
         />
     {% elseif summary.tokens is null %}
         <twig:CosAlert
             title="{{ 'Не вдалося прив’язати використання LLM'|trans }}"
-            copy="{{ 'Агент'|trans }} уже запускався, але облік токенів не зв’язаний із цим процесом. Це проблема correlation/ledger, а не нульове використання."
+            copy="{{ 'Агент уже запускався, але облік токенів не зв’язаний із цим процесом. Це проблема correlation/ledger, а не нульове використання.'|trans }}"
             tone="warning"
         />
     {% elseif summary.cost is null %}
         <twig:CosAlert
-            title="{{ '{{ 'Токени'|trans }} обліковані, вартість ще не визначена'|trans }}"
-            copy="Провайдер не повернув вартість, а для цієї моделі немає налаштованої ставки. Кількість токенів показана фактично."
+            title="{{ 'Токени обліковані, вартість ще не визначена'|trans }}"
+            copy="{{ 'Провайдер не повернув вартість, а для цієї моделі немає налаштованої ставки. Кількість токенів показана фактично.'|trans }}"
             tone="warning"
         />
     {% endif %}
@@ -363,7 +363,7 @@
             </div>
             <div class="engineering-terminal" data-engineering-live-target="terminal">
                 {% if engineering.timeline is empty %}
-                    <div class="engineering-terminal__muted">{{ 'Подій виконання {{ 'ще немає'|trans }}.'|trans }}</div>
+                    <div class="engineering-terminal__muted">{{ 'Подій виконання ще немає.'|trans }}</div>
                 {% else %}
                     {% for event in engineering.timeline %}
                         <div class="engineering-terminal__row">
@@ -371,7 +371,7 @@
                                 class="engineering-terminal__muted"
                                 data-engineering-live-timestamp="{{ event.time|default('') }}"
                             >{{ event.time|default('') }}</span>
-                            <strong>{{ eventTypeLabels[event.type|default('EVENT')]|default(event.type|default('ПОДІЯ')) }}</strong>
+                            <strong>{{ eventTypeLabels[event.type|default('EVENT')]|default(event.type|default('ПОДІЯ'|trans)) }}</strong>
                             <span>
                                 {{ event.title|default('') }}
                                 {% if event.status|default('') %} · {{ statusLabels[event.status]|default(event.status) }}{% endif %}
@@ -413,7 +413,7 @@
                     <strong>{{ 'Рев’ю та QA ще не запускалися.'|trans }}</strong>
                     <p class="engineering-muted">{{ 'Відсутність зауважень ще не означає успішну перевірку, доки рев’юер або QA не запускалися.'|trans }}</p>
                 {% elseif summary.open_findings is empty %}
-                    <strong>{{ '{{ 'Відкрити'|trans }}х зауважень немає.'|trans }}</strong>
+                    <strong>{{ 'Відкритих зауважень немає.'|trans }}</strong>
                     <p class="engineering-muted">{{ 'Рев’юер:'|trans }} {{ summary.review_reached ? 'виконувався' : 'не виконувався' }} · {{ 'QA:'|trans }} {{ summary.qa_reached ? 'виконувався' : 'не виконувався' }}</p>
                 {% else %}
                     {% for finding in summary.open_findings %}
@@ -509,7 +509,7 @@
                                     {% if run.error_message %}<p class="engineering-danger">{{ run.error_message }}</p>{% endif %}
                                     {% if run.input_snapshot|default([]) is not empty %}
                                         <details class="engineering-details" style="margin:8px 0">
-                                            <summary>{{ '{{ 'Вхід'|trans }}ний контекст агента'|trans }}</summary>
+                                            <summary>{{ 'Вхідний контекст агента'|trans }}</summary>
                                             <div class="engineering-agent-output">{{ run.input_snapshot|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                         </details>
                                     {% endif %}
@@ -532,8 +532,8 @@
                                             {% endfor %}
                                         </div>
                                     {% endif %}
-                                    {% if run.output.decision|default('') %}<div><strong>{{ '{{ 'Рішення'|trans }}:'|trans }}</strong> {{ run.output.decision }}</div>{% endif %}
-                                    {% if run.output.reason|default('') %}<div><strong>{{ '{{ 'Причина'|trans }}:'|trans }}</strong> {{ run.output.reason }}</div>{% endif %}
+                                    {% if run.output.decision|default('') %}<div><strong>{{ 'Рішення:'|trans }}</strong> {{ run.output.decision }}</div>{% endif %}
+                                    {% if run.output.reason|default('') %}<div><strong>{{ 'Причина:'|trans }}</strong> {{ run.output.reason }}</div>{% endif %}
                                     {% if run.output.proposed_actions|default([]) is not empty %}
                                         <div><strong>{{ 'Запропоновані дії:'|trans }}</strong> {{ run.output.proposed_actions|length }}</div>
                                     {% endif %}
@@ -656,12 +656,12 @@
         {% if engineering.llm_invocations is empty %}
             <div class="engineering-panel__body">
                 <strong>{{ 'Журнал використання LLM для цього процесу не знайдено.'|trans }}</strong>
-                <p class="engineering-muted">{{ 'Це не дорівнює 0 {{ 'tok'|trans }}ens / $0. Якщо OpenAI usage існує, але correlation не з\'єднаний з AgentRun, accounting потребує виправлення.'|trans }}</p>
+                <p class="engineering-muted">{{ 'engineering.usage.empty_explanation'|trans }}</p>
             </div>
         {% else %}
             <div class="engineering-table-wrap">
                 <table class="engineering-table">
-                    <thead><tr><th>{{ 'Час'|trans }}</th><th>{{ 'Provider / модель'|trans }}</th><th>{{ 'Сценарій'|trans }}</th><th>{{ '{{ 'Вхід'|trans }}ні'|trans }}</th><th>{{ 'Cached'|trans }}</th><th>{{ '{{ 'Вихід'|trans }}ні'|trans }}</th><th>{{ 'Reasoning'|trans }}</th><th>{{ 'Усього'|trans }}</th><th>{{ 'Вартість'|trans }}</th><th>{{ 'Джерело ціни'|trans }}</th><th>{{ 'Затримка'|trans }}</th><th>{{ 'Provider request'|trans }}</th><th>{{ 'Correlation'|trans }}</th></tr></thead>
+                    <thead><tr><th>{{ 'Час'|trans }}</th><th>{{ 'Provider / модель'|trans }}</th><th>{{ 'Сценарій'|trans }}</th><th>{{ 'Вхідні'|trans }}</th><th>{{ 'Cached'|trans }}</th><th>{{ 'Вихідні'|trans }}</th><th>{{ 'Reasoning'|trans }}</th><th>{{ 'Усього'|trans }}</th><th>{{ 'Вартість'|trans }}</th><th>{{ 'Джерело ціни'|trans }}</th><th>{{ 'Затримка'|trans }}</th><th>{{ 'Provider request'|trans }}</th><th>{{ 'Correlation'|trans }}</th></tr></thead>
                     <tbody>
                     {% for inv in engineering.llm_invocations %}
                         <tr>
@@ -700,7 +700,7 @@
             <div class="engineering-panel__head"><h2>{{ 'Артефакти / репозиторій'|trans }}</h2><span class="engineering-muted">{{ engineering.artifacts|length }} {{ 'artifacts'|trans }}</span></div>
             <div class="engineering-panel__body">
                 <div><strong>{{ 'Repository revision:'|trans }}</strong> {{ engineering.feature.repository_revision|default('not captured') }}</div>
-                {% if summary.pull_request.number %}<div><strong>{{ '{{ 'Pull request'|trans }}:'|trans }}</strong> #{{ summary.pull_request.number }}</div>{% endif %}
+                {% if summary.pull_request.number %}<div><strong>{{ 'Pull request:'|trans }}</strong> #{{ summary.pull_request.number }}</div>{% endif %}
                 {% for type, artifact in engineering.artifacts %}
                     <details class="engineering-details" style="margin-top:8px">
                         <summary>{{ type }} · v{{ artifact.version|default('?') }}</summary>
@@ -720,9 +720,9 @@
                 <div><strong>{{ 'Trace:'|trans }}</strong> <code>{{ engineering.workflow.trace_id|default('n/a') }}</code></div>
                 <div><strong>{{ 'Остання активність:'|trans }}</strong> {{ engineering.workflow.last_activity_at|default('не запускалось'|trans) }}</div>
                 <div><strong>{{ 'Сигнал:'|trans }}</strong> {{ engineering.workflow.heartbeat_at|default('немає') }}</div>
-                <div><strong>{{ '{{ '{{ 'Стан'|trans }} runtime'|trans }}:'|trans }}</strong> {{ engineering.workflow.health_status|default('UNKNOWN') }}</div>
+                <div><strong>{{ 'Стан runtime:'|trans }}</strong> {{ engineering.workflow.health_status|default('UNKNOWN') }}</div>
                 {% if engineering.workflow.stalled_at|default('') %}<div><strong>{{ 'Зупинено о:'|trans }}</strong> {{ engineering.workflow.stalled_at }}</div>{% endif %}
-                {% if engineering.workflow.runtime_reason|default('') %}<div><strong>{{ '{{ 'Причина'|trans }}:'|trans }}</strong> {{ engineering.workflow.runtime_reason }}</div>{% endif %}
+                {% if engineering.workflow.runtime_reason|default('') %}<div><strong>{{ 'Причина:'|trans }}</strong> {{ engineering.workflow.runtime_reason }}</div>{% endif %}
                 <div><strong>{{ 'Початок:'|trans }}</strong> {{ engineering.workflow.started_at|default('не запускалось') }}</div>
                 <div><strong>{{ 'Завершення:'|trans }}</strong> {{ engineering.workflow.finished_at|default('не завершено') }}</div>
             </div>
@@ -737,7 +737,7 @@
             <div class="engineering-panel__body">
                 <p class="engineering-muted">{{ 'Повне видалення доступне тільки для чернетки або скасованого/невдалого процесу без pull request.'|trans }}</p>
                 <form class="cos-form" method="post" action="/admin/engineering/{{ engineering.feature.id }}/delete" data-engineering-delete>
-                    <input type="hidden" name="csrf_{{ 'tok'|trans }}en" value="{{ csrfToken }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                     <label><input type="checkbox" name="confirm_delete" value="1" required> {{ 'Підтверджую видалення локальної Engineering історії'|trans }}</label>
                     <button class="cos-button cos-button--danger" type="submit">{{ 'Видалити'|trans }}</button>
                 </form>
