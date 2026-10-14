@@ -29,9 +29,9 @@
 
     <twig:CosFilterBar action="/property/submissions" label="Submission filters">
         <label class="cos-field">
-            <span>Статус</span>
+            <span>{{ 'Статус'|trans }}</span>
             <select class="cos-select" name="status">
-                <option value="">Усі</option>
+                <option value="">{{ 'Усі'|trans }}</option>
                 {% for option in queue.statusOptions %}
                     <option value="{{ option.code }}" {% if queue.status == option.code %}selected{% endif %}>{{ option.label }} · {{ option.count }}</option>
                 {% endfor %}
