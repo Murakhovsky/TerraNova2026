@@ -23,15 +23,24 @@ final readonly class CrossVenuePoolCandidateRepository
              VALUES (:org,\'BINANCE_BSTOCKS_SEED\',:token,:underlying,:venue,:symbol,:quote,
                      :state,\'UNVERIFIED\',\'NOT_ESTABLISHED\',:source_as_of,UTC_TIMESTAMP(6))
              ON DUPLICATE KEY UPDATE
-              verification_state=IF(underlying_symbol <=> VALUES(underlying_symbol)
-                    AND venue_symbol <=> VALUES(venue_symbol)
-                    AND listing_state <=> VALUES(listing_state),verification_state,\'UNVERIFIED\'),
-              economic_equivalence=IF(underlying_symbol <=> VALUES(underlying_symbol)
-                    AND venue_symbol <=> VALUES(venue_symbol)
-                    AND listing_state <=> VALUES(listing_state),economic_equivalence,\'NOT_ESTABLISHED\'),
-              underlying_symbol=VALUES(underlying_symbol),venue_symbol=VALUES(venue_symbol),
-              quote_currency=VALUES(quote_currency),listing_state=VALUES(listing_state),
-              source_as_of=VALUES(source_as_of),observed_at=VALUES(observed_at)'
+              verification_state=IF(VALUES(source_as_of)>=source_as_of,
+                  IF(underlying_symbol <=> VALUES(underlying_symbol)
+                     AND venue_symbol <=> VALUES(venue_symbol)
+                     AND quote_currency <=> VALUES(quote_currency)
+                     AND listing_state <=> VALUES(listing_state),
+                     verification_state,\'UNVERIFIED\'),verification_state),
+              economic_equivalence=IF(VALUES(source_as_of)>=source_as_of,
+                  IF(underlying_symbol <=> VALUES(underlying_symbol)
+                     AND venue_symbol <=> VALUES(venue_symbol)
+                     AND quote_currency <=> VALUES(quote_currency)
+                     AND listing_state <=> VALUES(listing_state),
+                     economic_equivalence,\'NOT_ESTABLISHED\'),economic_equivalence),
+              underlying_symbol=IF(VALUES(source_as_of)>=source_as_of,VALUES(underlying_symbol),underlying_symbol),
+              venue_symbol=IF(VALUES(source_as_of)>=source_as_of,VALUES(venue_symbol),venue_symbol),
+              quote_currency=IF(VALUES(source_as_of)>=source_as_of,VALUES(quote_currency),quote_currency),
+              listing_state=IF(VALUES(source_as_of)>=source_as_of,VALUES(listing_state),listing_state),
+              observed_at=IF(VALUES(source_as_of)>=source_as_of,VALUES(observed_at),observed_at),
+              source_as_of=IF(VALUES(source_as_of)>=source_as_of,VALUES(source_as_of),source_as_of)'
         );
         $this->connection->beginTransaction();
         try {

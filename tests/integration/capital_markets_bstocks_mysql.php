@@ -90,11 +90,36 @@ try {
     $assert($current['verification_state']==='UNVERIFIED'
         && $current['economic_equivalence']==='NOT_ESTABLISHED'
         && $current['listing_state']==='NOT_LISTED','Listing drift did not revoke stale verification.');
+    // Quote-currency drift is economic identity drift, not an innocent listing refresh.
+    $quoteDrift=$snapshot;
+    $quoteDrift['as_of_utc']='2026-10-14T20:02:00Z';
+    $quoteDrift['rows'][0]['venues'][0]['quote']='USD';
+    $pdo->prepare("UPDATE tn_capital_market_cross_venue_pool_candidates
+        SET verification_state='VERIFIED',economic_equivalence='VERIFIED'
+        WHERE organization_id=:org AND venue='BINANCE'")->execute(['org'=>$org]);
+    $candidates->reconcile($org,$quoteDrift);
+    $verifyCurrency=$pdo->prepare("SELECT verification_state,economic_equivalence,quote_currency,source_as_of
+        FROM tn_capital_market_cross_venue_pool_candidates
+        WHERE organization_id=:org AND venue='BINANCE'");
+    $verifyCurrency->execute(['org'=>$org]);
+    $changedCurrency=$verifyCurrency->fetch(PDO::FETCH_ASSOC);
+    $assert($changedCurrency['quote_currency']==='USD'
+        && $changedCurrency['verification_state']==='UNVERIFIED'
+        && $changedCurrency['economic_equivalence']==='NOT_ESTABLISHED',
+        'Changed quote currency retained unsafe verification.');
+    // Slower network response from an earlier scan cannot roll back a newer observation.
+    $older=$snapshot;
+    $older['as_of_utc']='2026-10-14T20:01:00Z';
+    $candidates->reconcile($org,$older);
+    $verifyCurrency->execute(['org'=>$org]);
+    $assert($verifyCurrency->fetch(PDO::FETCH_ASSOC)===$changedCurrency,
+        'Out-of-order discovery result overwrote newer candidate evidence.');
     $againDown=$changed;
     $againDown['rows'][0]['venues'][0]=['venue'=>'BINANCE','status'=>'UNAVAILABLE'];
     $candidates->reconcile($org,$againDown);
-    $check->execute(['org'=>$org]);
-    $assert($check->fetch(PDO::FETCH_ASSOC)===$current,'Provider outage replaced last known observation.');
+    $verifyCurrency->execute(['org'=>$org]);
+    $assert($verifyCurrency->fetch(PDO::FETCH_ASSOC)===$changedCurrency,
+        'Provider outage replaced last-known verified time and currency.');
     echo "MySQL seed import: 80 inserted, 80 unchanged, tenant isolation, rollback and conflicts passed.\n";
 } finally {
     foreach (['tn_capital_market_seed_import_batches','tn_capital_market_seed_import_evidence','tn_capital_market_cross_venue_pool_candidates'] as $table) {
