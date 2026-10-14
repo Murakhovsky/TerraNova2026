@@ -35,6 +35,7 @@ $stateMigration=file_get_contents(dirname(__DIR__,2).'/app/migrations/20261006_0
 foreach (array_filter(array_map('trim',explode(';',$stateMigration))) as $sql) {
     if (str_starts_with($sql,'CREATE TABLE')) $pdo->exec($sql);
 }
+$organization='l2-mysql-'.bin2hex(random_bytes(8));
 $clock->time=new DateTimeImmutable('now');
 $sourceId=MarketSourceId::fromString('source:l2-mysql');
 $source=new MarketSourceDescriptor(
@@ -61,7 +62,31 @@ $service=new MarketDataIngestionService(
     new MysqlMarketQualityMetricRepository($pdo),
     new MysqlMarketStateRepository($pdo,new MarketDataHydrator()),new MarketDataQualityEngine(),
     new MarketStateEngine(new OrderBookRebuilder()),new ReferenceMarketStateEngine(),
-    $locks,$events,$transactions,$clock
+    $locks,$events,new class($pdo) implements \\Kernel\\Transaction\\Contract\\TransactionManagerInterface {
+        private array $afterCommit=[];
+        public function __construct(private PDO $connection) {}
+        public function transactional(callable $operation):mixed {
+            if ($this->connection->inTransaction()) return $operation();
+            $this->connection->beginTransaction();
+            try {
+                $result=$operation();
+                $this->connection->commit();
+                $callbacks=$this->afterCommit;
+                $this->afterCommit=[];
+                foreach ($callbacks as $callback) $callback();
+                return $result;
+            } catch (Throwable $error) {
+                if ($this->connection->inTransaction()) $this->connection->rollBack();
+                $this->afterCommit=[];
+                throw $error;
+            }
+        }
+        public function isActive():bool { return $this->connection->inTransaction(); }
+        public function afterCommit(callable $callback):void {
+            if ($this->connection->inTransaction()) { $this->afterCommit[]=$callback; return; }
+            $callback();
+        }
+    },$clock
 );
 $publisher=new L2IngestionPublisher($service,$organization,$sourceId,$venueId,'AAPLXUSDT');
 $book=(new L2DomainBookFactory(new AssetCode('AAPLX'),new AssetCode('USDT')))
@@ -104,10 +129,12 @@ if ($rawRepository->append($organization,$rawHistory[0])
     || $canonicalRepository->append($organization,$history[0])) {
     throw new RuntimeException('MySQL duplicate events were not rejected.');
 }
-$counts=$pdo->query("SELECT
-    (SELECT COUNT(*) FROM tn_capital_market_raw_events) AS raw_count,
-    (SELECT COUNT(*) FROM tn_capital_market_canonical_events) AS canonical_count,
-    (SELECT COUNT(*) FROM tn_capital_market_quality_metrics) AS quality_count")->fetch();
+$countQuery=$pdo->prepare("SELECT
+    (SELECT COUNT(*) FROM tn_capital_market_raw_events WHERE organization_id=:raw_org) AS raw_count,
+    (SELECT COUNT(*) FROM tn_capital_market_canonical_events WHERE organization_id=:canonical_org) AS canonical_count,
+    (SELECT COUNT(*) FROM tn_capital_market_quality_metrics WHERE organization_id=:quality_org) AS quality_count");
+$countQuery->execute(['raw_org'=>$organization,'canonical_org'=>$organization,'quality_org'=>$organization]);
+$counts=$countQuery->fetch();
 if ((int)$counts['raw_count']!==1 || (int)$counts['canonical_count']!==1
     || (int)$counts['quality_count']!==1) {
     throw new RuntimeException('Unexpected MySQL ingestion row counts.');
