@@ -3,7 +3,7 @@ declare(strict_types=1);
 $base = dirname(__DIR__,2).'/app/';
 require_once $base.'Kernel/Shared/Domain/ValueObject.php';
 foreach (['Decimal','AssetCode','Price','Quantity'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Value/'.$name.'.php';
-foreach (['MarketEventType','OrderBookLevel','MarketOrderBook'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/MarketData/'.$name.'.php';
+foreach (['MarketEventType','MarketObservation','OrderBookLevel','MarketOrderBook'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/MarketData/'.$name.'.php';
 foreach (['OrderBookRebuilder','L2RecoverySession','BybitL2RecoveryCoordinator'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Service/'.$name.'.php';
 foreach (['L2SubscriptionConfig','L2SubscriptionEncoder','L2WebSocketTransport','L2FrameSizeGuard','L2ControlFrameFilter','L2WebSocketFrameRouter','L2FrameDispatch','L2DomainBookFactory','BybitL2StreamProcessor','BinanceL2SnapshotDecoder','BinanceL2SnapshotClient','BinanceL2StreamProcessor','KrakenL2StreamProcessor','L2StreamWorker'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
