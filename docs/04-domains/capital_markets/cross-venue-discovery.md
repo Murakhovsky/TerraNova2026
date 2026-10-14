@@ -86,3 +86,7 @@ php symfony/bin/console cos:capital-markets:discovery:run ORGANIZATION_ID ACTOR_
 ```
 
 Використовувати тільки з дозволеним service actor та в межах tenant. Результат `RECORDED` означає збереження доказів, але не означає, що всі джерела доступні: `source_health` має бути перевірений окремо. Паралельні виклики обмежуються існуючим reservation gate (90 секунд). Перевірку operator permissions для фонового service actor та розклад у Kernel Scheduler необхідно реалізувати до production-автоматизації; CLI самостійно не надає торгового допуску.
+
+## Автоматичне оновлення пулу
+
+Планувальник `CosScheduleProvider` підтримує повідомлення `RefreshCrossVenueCandidatePool` із явним tenant і service actor. За замовчуванням вимкнено. Після створення та перевірки service actor, налаштування транспорту `async` і застосування міграції встановити `COS_CM_POOL_DISCOVERY_SCHEDULER_ENABLED=1`, `COS_CM_POOL_DISCOVERY_ACTOR_ID=<ідентифікатор>` та `COS_CM_POOL_DISCOVERY_INTERVAL_MINUTES=1440`. Organization ID береться з уже наявного `COS_ORGANIZATION_ID`. Підтримується інтервал 15–1440 хвилин. Повідомлення виконує сканування повного seed-набору, зберігає snapshot і синхронізує candidate pool із cooldown guard; навіть успішний запуск не встановлює VERIFIED і не передає торговий сигнал.

@@ -14,6 +14,7 @@ use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
 use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
 use App\Application\CapitalMarkets\Command\CapturePaperNavSnapshot;
+use App\Application\CapitalMarkets\Command\RefreshCrossVenueCandidatePool;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -54,6 +55,10 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly bool $capitalMarketsPaperNavEnabled = false,
         private readonly string $capitalMarketsPaperNavOrganizationId = '',
         private readonly int $capitalMarketsPaperNavIntervalMinutes = 10,
+        private readonly bool $capitalMarketsDiscoveryEnabled = false,
+        private readonly string $capitalMarketsDiscoveryOrganizationId = '',
+        private readonly int $capitalMarketsDiscoveryActorId = 0,
+        private readonly int $capitalMarketsDiscoveryIntervalMinutes = 1440,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
@@ -96,6 +101,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if ($this->capitalMarketsPaperNavEnabled && trim($this->capitalMarketsPaperNavOrganizationId)==='') {
             throw new InvalidArgumentException('Paper NAV scheduler requires an existing tenant ID.');
+        }
+        if ($this->capitalMarketsDiscoveryIntervalMinutes < 15 || $this->capitalMarketsDiscoveryIntervalMinutes > 1440) {
+            throw new InvalidArgumentException('Capital Markets Discovery interval must be 15..1440 minutes.');
+        }
+        if ($this->capitalMarketsDiscoveryEnabled
+            && (trim($this->capitalMarketsDiscoveryOrganizationId) === '' || $this->capitalMarketsDiscoveryActorId < 1)) {
+            throw new InvalidArgumentException('Capital Markets Discovery requires explicit tenant and actor.');
         }
         if($this->engineeringRuntimeWatchdogIntervalMinutes<1||$this->engineeringRuntimeWatchdogIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering runtime watchdog interval must be between 1 and 60 minutes.');
@@ -183,6 +195,16 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthAutonomousOutreachIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthAutonomousOutreachCommand('scheduler'), 'async'),
+            );
+        }
+
+        if ($this->capitalMarketsDiscoveryEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsDiscoveryIntervalMinutes.' minutes',
+                new RedispatchMessage(
+                    new RefreshCrossVenueCandidatePool($this->capitalMarketsDiscoveryOrganizationId,$this->capitalMarketsDiscoveryActorId),
+                    'async',
+                ),
             );
         }
 
