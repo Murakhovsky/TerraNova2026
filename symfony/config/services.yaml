@@ -1992,6 +1992,9 @@ services:
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueListingReviewRepository:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueBboAdmissionFence:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\CrossVenueSubscriptionPlanner: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueMarketSourceAdmission: ~
   Domains\CapitalMarkets\Application\Service\BStocksReferenceBboPlanner: ~
