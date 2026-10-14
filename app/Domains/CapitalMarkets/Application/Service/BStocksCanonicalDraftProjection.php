@@ -69,4 +69,48 @@ final class BStocksCanonicalDraftProjection
             ]],
         ];
     }
+
+    /**
+     * Distinct unverified reference equity/ETF; not the issued token and not an
+     * inferred conversion/redemption right. Never creates an economic edge.
+     * @param array<string,mixed> $evidence
+     * @return array<string,mixed>
+     */
+    public function createUnderlyingInput(string $organizationId,array $evidence):array
+    {
+        $token=$this->createInput($organizationId,$evidence);
+        $ticker=$token['metadata']['underlying_reference_symbol'];
+        $assetType=$token['metadata']['historical_asset_type'];
+        $scope='BINANCE_BSTOCKS_UNDERLYING_SEED';
+        return [
+            'id'=>'cm_underlying_'.substr(hash('sha256',$organizationId.'|'.$scope.'|'.$ticker),0,28),
+            'symbol'=>$ticker,
+            'canonical_symbol'=>$ticker,
+            'name'=>'Unverified reference '.$ticker,
+            'family'=>$assetType==='Stock'?'equity':'fund',
+            'status'=>'DRAFT',
+            'currency'=>null,
+            'quote_asset'=>null,
+            'issuer_reference'=>null,
+            'jurisdiction'=>null,
+            'primary_venue_reference'=>null,
+            'metadata'=>[
+                'origin'=>$scope,
+                'reference_only'=>true,
+                'source_token_symbol'=>$token['symbol'],
+                'underlying_reference_symbol'=>$ticker,
+                'historical_asset_type'=>$assetType,
+                'historical_leverage_factor'=>$token['metadata']['historical_leverage_factor'],
+                'source_sha256'=>$token['metadata']['source_sha256'],
+                'source_as_of'=>$token['metadata']['source_as_of'],
+                'identity_verified'=>false,
+                'economic_link_status'=>'UNVERIFIED',
+                'eligible_for_execution'=>false,
+            ],
+            'identifiers'=>[[
+                'type'=>'PROVIDER_ID','source'=>$scope,'value'=>$ticker,
+            ]],
+        ];
+    }
+
 }

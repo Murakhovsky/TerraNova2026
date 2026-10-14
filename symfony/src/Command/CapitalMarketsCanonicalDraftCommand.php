@@ -28,6 +28,7 @@ final class CapitalMarketsCanonicalDraftCommand extends Command
         $this->addArgument('organization',InputArgument::REQUIRED,'Tenant organization ID')
             ->addArgument('actor',InputArgument::REQUIRED,'Authorized instrument manager ID')
             ->addOption('apply',null,InputOption::VALUE_NONE,'Create DRAFT canonical instruments after dry-run.')
+            ->addOption('underlyings',null,InputOption::VALUE_NONE,'Use separate equity/ETF reference drafts instead of token drafts.')
             ->addOption('limit',null,InputOption::VALUE_REQUIRED,'Max imported rows (1..500)','100');
     }
 
@@ -47,9 +48,11 @@ final class CapitalMarketsCanonicalDraftCommand extends Command
             return Command::FAILURE;
         }
         try {
+            $reference=(bool)$input->getOption('underlyings');
             $result=$input->getOption('apply')
-                ?$this->drafts->apply($org,$actor,$limit)
-                :['status'=>'DRY_RUN','plan'=>$this->drafts->plan($org)];
+                ?($reference?$this->drafts->applyUnderlyings($org,$actor,$limit)
+                    :$this->drafts->apply($org,$actor,$limit))
+                :['status'=>'DRY_RUN','plan'=>$reference?$this->drafts->planUnderlying($org):$this->drafts->plan($org)];
             $output->writeln(json_encode($result,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
             return ($result['plan']['blocked']??0)>0 ? Command::FAILURE : Command::SUCCESS;
         } catch (Throwable $e) {
