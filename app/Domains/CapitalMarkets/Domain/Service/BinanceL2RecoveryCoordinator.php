@@ -44,6 +44,9 @@ final class BinanceL2RecoveryCoordinator
 
     public function reconcile(int $epoch, MarketOrderBook $snapshot, string $snapshotId): void
     {
+        if ($this->session->diagnostics()['epoch'] !== $epoch) {
+            throw new DomainException('Stale Binance snapshot epoch.');
+        }
         if ($snapshot->eventType() !== MarketEventType::OrderBookSnapshot) {
             $this->session->invalidateIfCurrent($epoch, 'INVALID_BINANCE_SNAPSHOT');
             throw new DomainException('Binance recovery requires REST snapshot.');
@@ -55,14 +58,14 @@ final class BinanceL2RecoveryCoordinator
             do {
                 $events = $this->session->drain($epoch);
                 foreach ($events as $entry) {
-                $event = $entry['payload'];
-                if (!$this->bridged) {
-                    if (!$this->sequence->acceptFirst($snapshotId, $event['U'], $event['u'])) continue;
-                    $this->bridged = true;
-                } elseif (!$this->sequence->acceptNext($event['U'], $event['u'], $event['pu'] ?? null)) {
-                    continue;
-                }
-                $book = $this->rebuilder->apply($book, $event['book']);
+                    $event = $entry['payload'];
+                    if (!$this->bridged) {
+                        if (!$this->sequence->acceptFirst($snapshotId, $event['U'], $event['u'])) continue;
+                        $this->bridged = true;
+                    } elseif (!$this->sequence->acceptNext($event['U'], $event['u'], $event['pu'] ?? null)) {
+                        continue;
+                    }
+                    $book = $this->rebuilder->apply($book, $event['book']);
                 }
             } while ($events !== []);
             if (!$this->bridged) {

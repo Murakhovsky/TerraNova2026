@@ -32,6 +32,9 @@ final class BybitL2RecoveryCoordinator
 
     public function snapshot(int $epoch, MarketOrderBook $snapshot, string $updateId, string $crossSequence): void
     {
+        if ($this->session->diagnostics()['epoch'] !== $epoch) {
+            throw new DomainException('Stale Bybit snapshot epoch.');
+        }
         $this->validate($updateId, $crossSequence);
         if ($snapshot->eventType() !== MarketEventType::OrderBookSnapshot) {
             $this->session->invalidateIfCurrent($epoch, 'BYBIT_INVALID_SNAPSHOT');
@@ -40,6 +43,9 @@ final class BybitL2RecoveryCoordinator
         if ($this->session->diagnostics()['buffered'] !== 0) {
             $this->session->invalidateIfCurrent($epoch, 'BYBIT_UNRECONCILED_BUFFER');
             throw new DomainException('Bybit snapshot requires replay of buffered deltas.');
+        }
+        if ($this->session->status() === 'TRUSTED') {
+            $epoch = $this->session->begin();
         }
         $this->session->drain($epoch);
         $this->updateId = $updateId;
