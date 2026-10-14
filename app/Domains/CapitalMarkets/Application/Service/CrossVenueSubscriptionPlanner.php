@@ -140,9 +140,15 @@ final readonly class CrossVenueSubscriptionPlanner
             // Recheck current reviewer decision just before activating; never
             // use a stale whole-plan snapshot to resurrect a disabled BBO.
             $allowed=$this->pool->listedForVenue($org,$plan['venue'],500);
-            if (!array_any($allowed,static fn(array $candidate):bool=>
-                $candidate['seed_token']===$row['seed_token']
-                && $candidate['venue_symbol']===$row['venue_symbol'])) {
+            $stillApproved=false;
+            foreach ($allowed as $candidate) {
+                if ($candidate['seed_token']===$row['seed_token']
+                    && $candidate['venue_symbol']===$row['venue_symbol']) {
+                    $stillApproved=true;
+                    break;
+                }
+            }
+            if (!$stillApproved) {
                 throw new InvalidArgumentException('Listing changed during BBO subscription apply.');
             }
             $this->administration->createSubscription(

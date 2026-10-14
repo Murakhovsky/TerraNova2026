@@ -180,7 +180,9 @@ final readonly class MarketDataAdministrationService
             foreach ($this->subscriptions->forSource($organizationId,$sourceKey) as $current) {
                 if (!$current->id->equals($subscriptionId)) continue;
                 if ($current->status===MarketSubscriptionStatus::Active) {
-                    throw new DomainException('Market-data subscription already active.');
+                    // A duplicate create is idempotent; do not reset its
+                    // freshness or fabricate a second audit change.
+                    return $this->subscriptionArray($current);
                 }
                 $previous=$this->subscriptionArray($current);
                 break;
