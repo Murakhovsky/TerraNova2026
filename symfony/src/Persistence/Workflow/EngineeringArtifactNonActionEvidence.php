@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Persistence\Workflow;
 
 use Doctrine\DBAL\Connection;
+use App\Engineering\Domain\Artifact\ArtifactType;
 use DomainException;
 use Platform\Workflow\Contract\WorkflowNonActionEvidenceAdapterInterface;
 use Platform\Workflow\Model\WorkflowRunIdentity;
@@ -34,6 +35,7 @@ final readonly class EngineeringArtifactNonActionEvidence implements WorkflowNon
             }
         }
         if (!is_string($type) || !preg_match('/^[A-Z0-9_]{1,48}$/D', $type)
+            || ArtifactType::tryFrom($type) === null
             || !is_int($version) || $version < 1) {
             throw new DomainException('Engineering artifact type/version is not pinned.');
         }

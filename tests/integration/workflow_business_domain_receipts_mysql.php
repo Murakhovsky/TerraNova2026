@@ -79,7 +79,7 @@ $eSales=['kind'=>'sales.deal.won.v1','run_id'=>$runId,'input_digest'=>$digest,
 $eGrowth=['kind'=>'growth.inbound_response.recorded.v1','run_id'=>$runId,'input_digest'=>$digest,
     'response_id'=>$replyId,'source_event_id'=>$sourceId,'action_id'=>$actionId];
 $eEngineering=['kind'=>'engineering.artifact.active.v1','run_id'=>$runId,'input_digest'=>$digest,
-    'feature_id'=>$feature,'artifact_id'=>$artifact,'artifact_type'=>'ARCHITECTURE',
+    'feature_id'=>$feature,'artifact_id'=>$artifact,'artifact_type'=>'ARCHITECTURE_DECISION',
     'version'=>1,'agent_run_id'=>$agent];
 $steps=[
     ['id'=>'send','capability_id'=>'test.send','capability_version'=>'1.0.0',
@@ -203,7 +203,7 @@ try {
     $db->executeStatement(
         'INSERT INTO cos_engineering_artifacts
          (id,feature_id,agent_run_id,type,version,status,content,content_hash,created_at)
-         VALUES (:id,:feature,:agent,"ARCHITECTURE",1,"ACTIVE",:content,:digest,NOW(6))',
+         VALUES (:id,:feature,:agent,"ARCHITECTURE_DECISION",1,"ACTIVE",:content,:digest,NOW(6))',
         ['id'=>$artifact,'feature'=>$feature,'agent'=>$agent,
          'content'=>json_encode($artifactContent,JSON_THROW_ON_ERROR),
          'digest'=>$artifactHash],
