@@ -46,7 +46,7 @@ jobs:
           tar -cf - app symfony/src symfony/config deploy/l2/Dockerfile.vps tests/live/l2_vps_mysql_acceptance.php \
             | "${SSH[@]}" "tar -xf - -C '$STAGE'"
           SHORT="${GITHUB_SHA:0:12}"
-          "${SSH[@]}" "bash -s -- '$STAGE' '$DEV_PATH' '$SHORT'" <<'REMOTE'
+          "${SSH[@]}" "bash -s -- '$STAGE' '$DEV_PATH' '$SHORT'" <<'REMOTE' | tee "$RUNNER_TEMP/l2-vps-e2e.log"
           set -Eeuo pipefail
           STAGE="$1"
           ROOT="$2"
@@ -74,11 +74,11 @@ jobs:
           FIXTURE="$STAGE/tests/live/l2_vps_mysql_acceptance.php"
           # Only anonymous temporary one-off containers; never docker-compose up.
           run_php() {
-            $D compose "${COMPOSE[@]}" run --rm --no-deps -T \
+            timeout --signal=TERM --kill-after=10s 120s $D compose "${COMPOSE[@]}" run --rm --no-deps -T \
               -v "$FIXTURE:/tmp/l2_acceptance.php:ro" \
               -e FOS_L2_ACCEPTANCE_ORG="$ORG" \
               -e FOS_L2_ALERT_ENABLED=0 \
-              php php -d memory_limit=224M "$@"
+              php php -d memory_limit=224M "$@" </dev/null
           }
           echo '=== VALIDATE ACTUAL SYMFONY CLI COMMAND ==='
           run_php bin/console list --raw > "$STAGE/cli-commands.txt"
@@ -124,3 +124,5 @@ jobs:
           echo "l2_manifest_available: $PERSIST/compose.override.yml"
           echo '=== VPS L2 CLI & MYSQL E2E PASS ==='
           REMOTE
+          grep -Fxq '=== VPS L2 CLI & MYSQL E2E PASS ===' "$RUNNER_TEMP/l2-vps-e2e.log"
+          echo 'Accepted: true MySQL E2E marker observed.'
