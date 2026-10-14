@@ -101,7 +101,7 @@ class L2WebSocketTransport
             elseif ($opcode !== 0 || !$started) throw new DomainException('Unexpected websocket opcode.');
             $message .= $payload;
             if ($fin) {
-                if (!mb_check_encoding($message, 'UTF-8')) throw new DomainException('Invalid websocket UTF-8.');
+                if (preg_match('//u', $message) !== 1) throw new DomainException('Invalid websocket UTF-8.');
                 return $message;
             }
         }
