@@ -33,8 +33,8 @@ final readonly class L2StreamWorker
         $this->processor->begin();
         $published = 0;
         $lastVersion = -1;
-        $this->transport->connect($this->config->websocketUrl());
         try {
+            $this->transport->connect($this->config->websocketUrl());
             $subscribe = $this->encoder->encode($this->config);
             if ($subscribe !== null) $this->transport->sendText($subscribe);
             $snapshotPending = str_starts_with($this->config->venue, 'BINANCE_');
