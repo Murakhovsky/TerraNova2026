@@ -75,7 +75,13 @@ jobs:
           fi
           echo "accepted_test_organization: $ORG"
           if $D ps -a --format '{{.Names}}' | grep -Fxq cos-l2-soak-1; then
-            echo "::error::Existing L2 soak container must be inspected before another starts"; exit 1
+            OLD_STATUS="$($D inspect -f '{{.State.Status}}' cos-l2-soak-1)"
+            OLD_SERVICE="$($D inspect -f '{{ index .Config.Labels "com.docker.compose.service" }}' cos-l2-soak-1)"
+            if [ "$OLD_STATUS" != "exited" ] || [ "$OLD_SERVICE" != "l2-soak" ]; then
+              echo "::error::An active or foreign soak container exists; refusing replacement"; exit 1
+            fi
+            echo 'Replacing only the previously failed isolated soak container.'
+            $D rm cos-l2-soak-1 >/dev/null
           fi
           cat > "$PERSIST/soak.sh" <<'SCRIPT'
           #!/bin/sh
@@ -108,7 +114,7 @@ jobs:
           done
           echo "L2_SOAK_24H_COMPLETE sessions=$SESSIONS errors=$ERRORS"
           SCRIPT
-          chmod 700 "$PERSIST/soak.sh"
+          chmod 644 "$PERSIST/soak.sh"
           cat > "$PERSIST/soak.override.yml" <<YAML
           services:
             php:
@@ -124,6 +130,7 @@ jobs:
               mem_limit: 192m
               cpus: "0.35"
               pids_limit: 64
+              networks: [frontend, backend]
               stop_grace_period: 45s
               command: ["sh","/opt/fos-l2/soak.sh"]
               environment:
