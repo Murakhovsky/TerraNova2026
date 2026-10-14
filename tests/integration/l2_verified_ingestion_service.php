@@ -13,7 +13,7 @@ use Domains\CapitalMarkets\Domain\Service\{MarketDataQualityEngine,MarketStateEn
 use Domains\CapitalMarkets\Domain\Value\{AssetCode};
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2VerifiedMarketDataDecoder,L2DomainBookFactory,L2IngestionPublisher,L2VerifiedIngestionCallback};
 
-$clock->time = new DateTimeImmutable('now');
+$clock->time = new DateTimeImmutable('+10 seconds');
 $sourceId = MarketSourceId::fromString('source:l2-verified-integration');
 $source = new MarketSourceDescriptor(
     $sourceId,$venueId,L2VerifiedMarketDataDecoder::ADAPTER_TYPE,true,10,

@@ -36,7 +36,7 @@ foreach (array_filter(array_map('trim',explode(';',$stateMigration))) as $sql) {
     if (str_starts_with($sql,'CREATE TABLE')) $pdo->exec($sql);
 }
 $organization='l2-mysql-'.bin2hex(random_bytes(8));
-$clock->time=new DateTimeImmutable('now');
+$clock->time=new DateTimeImmutable('+10 seconds');
 $sourceId=MarketSourceId::fromString('source:l2-mysql');
 $source=new MarketSourceDescriptor(
     $sourceId,$venueId,L2VerifiedMarketDataDecoder::ADAPTER_TYPE,true,10,
