@@ -65,7 +65,12 @@ $agent=bin2hex(random_bytes(16));
 $artifact=bin2hex(random_bytes(16));
 $artifactContent=['content'=>['ok'=>true,'items'=>['one','two']],'summary'=>'verified'];
 $normalized=$artifactContent;
-ksort($normalized);
+$normalize=static function(array &$value) use (&$normalize):void {
+    foreach($value as &$item)if(is_array($item))$normalize($item);
+    unset($item);
+    if(!array_is_list($value))ksort($value);
+};
+$normalize($normalized);
 $artifactHash=hash('sha256',json_encode($normalized,
     JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
 $engineeringRef='engineering:artifact:active:v1:'.$artifact.':'.$artifactHash;
