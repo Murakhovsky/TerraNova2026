@@ -9,6 +9,11 @@ final class BinanceL2SnapshotDecoder
     /** @return array{sequence:string,bids:list<array{price:string,qty:string}>,asks:list<array{price:string,qty:string}>} */
     public function decode(string $json): array
     {
+        $shape = json_decode($json, false, 128, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
+        if (!is_object($shape) || !isset($shape->bids, $shape->asks)
+            || !is_array($shape->bids) || !is_array($shape->asks)) {
+            throw new DomainException('Snapshot sides must be JSON arrays.');
+        }
         $row = json_decode($json, true, 128, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
         if (!is_array($row) || array_is_list($row)) throw new DomainException('Invalid Binance depth snapshot.');
         $id = $row['lastUpdateId'] ?? null;

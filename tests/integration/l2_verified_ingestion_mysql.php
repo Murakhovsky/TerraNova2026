@@ -62,7 +62,7 @@ $service=new MarketDataIngestionService(
     new MysqlMarketQualityMetricRepository($pdo),
     new MysqlMarketStateRepository($pdo,new MarketDataHydrator()),new MarketDataQualityEngine(),
     new MarketStateEngine(new OrderBookRebuilder()),new ReferenceMarketStateEngine(),
-    $locks,$events,new class($pdo) implements \\Kernel\\Transaction\\Contract\\TransactionManagerInterface {
+    $locks,$events,new class($pdo) implements \Kernel\Transaction\Contract\TransactionManagerInterface {
         private array $afterCommit=[];
         public function __construct(private PDO $connection) {}
         public function transactional(callable $operation):mixed {
