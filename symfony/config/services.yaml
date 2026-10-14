@@ -1994,6 +1994,7 @@ services:
       $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\CrossVenueSubscriptionPlanner: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueMarketSourceAdmission: ~
+  Domains\CapitalMarkets\Application\Service\BStocksReferenceBboPlanner: ~
   Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftProjection: ~
   Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService: ~
   Domains\CapitalMarkets\Application\Service\BoundedBboSweepService: ~
