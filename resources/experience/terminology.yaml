@@ -1,0 +1,28 @@
+version: 1
+status: draft
+terms:
+  next_action:
+    label: "Next action"
+    meaning: "The next concrete step needed to progress the current item."
+    avoid: ["Do it", "Action", "Process"]
+  owner:
+    label: "Owner"
+    meaning: "The person accountable for the next step."
+    avoid: ["Responsible" , "Executor"] 
+  status:
+    label: "Status"
+    meaning: "The current outcome or lifecycle state of an item."
+    avoid: ["Stage"]
+    note: "Use Stage only for position within a workflow."
+  evidence:
+    label: "Evidence"
+    meaning: "Source material that supports a fact, score, or recommendation."
+    avoid: ["AI says", "Proof" ]
+  needs_attention:
+    label: "Needs attention"
+    meaning: "An item requires review or action; this label must be paired with a reason."
+    avoid: ["Warning" ]
+  not_configured:
+    label: "Not configured"
+    meaning: "A capability needs setup before it can be used."
+    avoid: ["Broken", "Unavailable"]

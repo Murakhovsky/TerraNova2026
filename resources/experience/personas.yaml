@@ -1,0 +1,33 @@
+version: 1
+status: draft
+personas:
+  authenticated_operator:
+    label: "Operator"
+    job: "Complete assigned work and resolve the next actionable item."
+    needs: [clear_next_action, visible_status, low_navigation_cost, recoverable_errors]
+    avoid: [ambiguous_controls, hidden_state, unnecessary_configuration]
+  sales_manager:
+    label: "Sales manager"
+    job: "Prioritize leads, progress deals, and keep follow-ups from being missed."
+    needs: [prioritized_queue, ownership, next_action, pipeline_visibility, activity_history]
+    avoid: [duplicate_entry, unclear_stage, silent_failures]
+  growth_manager:
+    label: "Growth manager"
+    job: "Find qualified opportunities, understand why now, and initiate measurable outreach."
+    needs: [evidence_quality, opportunity_priority, why_now, outreach_state, outcome_feedback]
+    avoid: [unsupported_ai_claims, opaque_scores, untraceable_recommendations]
+  property_operator:
+    label: "Property operator"
+    job: "Maintain accurate inventory and move a property from source data to publication."
+    needs: [clear_inventory_state, data_quality, publication_status, media_preview, validation_feedback]
+    avoid: [duplicate_records, hidden_validation, accidental_publication]
+  executive:
+    label: "Executive"
+    job: "Understand business health, material risks, and decisions requiring attention."
+    needs: [decision_summary, trend_context, exceptions, accountable_owner, drill_down]
+    avoid: [vanity_metrics, unexplained_variance, alert_noise]
+  external_visitor:
+    label: "Visitor"
+    job: "Understand what COS offers and determine a sensible next step."
+    needs: [plain_language_value, credible_proof, transparent_next_step, accessible_forms]
+    avoid: [internal_jargon, forced_registration, exaggerated_claims]

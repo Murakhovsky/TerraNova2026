@@ -1,0 +1,17 @@
+version: 1
+status: active
+gaps:
+  - id: DSG-001
+    title: "Golden Growth dashboard has incomplete quality evidence"
+    severity: high
+    status: open
+    affected_pages: [growth.overview]
+    missing: [functional_qa, visual_qa, responsive_qa, accessibility_qa]
+    acceptance: "Automated evidence is attached to the contract and a human can review the rendered page; no human decision is synthesized."
+  - id: DSG-002
+    title: "Golden page acceptance needs a repeatable review checklist"
+    severity: high
+    status: open
+    affected_pages: [core.executive.dashboard, sales.dashboard, sales.today, sales.leads.collection, sales.deal.workspace, sales.pipeline, growth.overview, property.map]
+    missing: [task_success, visual_hierarchy, responsive_behavior, keyboard_access, error_empty_loading_states]
+    acceptance: "A reviewer can record ACCEPT or REQUEST_CHANGES with dated evidence for each criterion."

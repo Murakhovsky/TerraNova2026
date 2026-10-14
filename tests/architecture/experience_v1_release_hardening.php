@@ -17,6 +17,8 @@ foreach ([
     'registry_coverage',
     'golden_decision_ledger',
     'golden_human_approval',
+    'release_candidate_scope',
+    'excluded_retired',
     'p0_v1_ready',
     'p1_production_acceptable',
     'p0_p1_accessibility_qa',
@@ -28,6 +30,9 @@ foreach ([
     'stale_route_cleanup',
     'ExperienceAssetDebtScanner',
     'ExperienceRouteDebtScanner',
+    'PageExperienceStatus::Deprecated',
+    'PageExperienceStatus::Superseded',
+    'PageExperienceStatus::Exempt',
 ] as $marker) {
     if (!str_contains($service, $marker)) {
         throw new RuntimeException('EX-007 release gate missing: '.$marker);

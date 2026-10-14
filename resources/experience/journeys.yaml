@@ -1,0 +1,31 @@
+version: 1
+status: draft
+journeys:
+  sales_lead_to_next_action:
+    persona: sales_manager
+    trigger: "A new lead arrives or an existing lead requires attention."
+    goal: "Determine the next useful action and preserve ownership."
+    steps: [review_context, assess_fit, assign_owner, choose_next_action, record_outcome]
+    success: "Lead has an owner, a meaningful state, and a dated next action or a documented disqualification."
+    failure_recovery: [validation_error, duplicate_lead, missing_contact_data, permission_denied]
+  growth_signal_to_opportunity:
+    persona: growth_manager
+    trigger: "A new market signal is detected."
+    goal: "Decide whether the signal justifies outreach."
+    steps: [inspect_source_evidence, assess_relevance, understand_why_now, create_or_reject_opportunity, select_outreach]
+    success: "Decision is traceable to evidence and has an explicit next step."
+    failure_recovery: [stale_evidence, low_confidence, duplicate_account, provider_failure]
+  property_to_publication:
+    persona: property_operator
+    trigger: "A property is imported, created, or materially changed."
+    goal: "Publish correct and complete property information."
+    steps: [review_identity, validate_required_fields, attach_media, resolve_quality_issues, preview_publication, publish]
+    success: "Published read model matches the canonical property state and publication status is visible."
+    failure_recovery: [missing_required_data, invalid_media, permission_denied, publication_failure]
+  executive_exception_review:
+    persona: executive
+    trigger: "A material KPI changes or a critical exception is raised."
+    goal: "Understand impact and decide who acts next."
+    steps: [review_summary, inspect_variance, inspect_evidence, assign_accountability, record_decision]
+    success: "Decision, owner, and follow-up are explicit."
+    failure_recovery: [stale_metrics, missing_provenance, unavailable_drill_down]

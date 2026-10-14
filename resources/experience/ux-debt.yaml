@@ -1,0 +1,27 @@
+version: 1
+status: active
+items:
+  - id: UXD-001
+    title: "Replace generated generic product goals in inventory contracts"
+    severity: critical
+    status: open
+    affected: [resources/experience/pages/inventory.yaml]
+    user_cost: "Users and delivery agents cannot infer the actual job-to-be-done from route boilerplate."
+    evidence: "Inventory contracts contain the generic phrase 'Complete the primary task' rather than route-specific outcomes."
+    closure: "Every active P0/P1 contract has a specific persona, goal, primary action, key states, and success condition."
+  - id: UXD-002
+    title: "Reduce priority inflation"
+    severity: high
+    status: open
+    affected: [resources/experience/pages]
+    user_cost: "Criticality becomes meaningless when nearly every route is P0/P1; delivery cannot focus on user-critical paths."
+    evidence: "Inventory audit shows almost all contracts are assigned P0 or P1."
+    closure: "Priority policy is documented and active routes are reclassified using impact, frequency, and failure cost; no priority is changed automatically without reviewable evidence."
+  - id: UXD-003
+    title: "Synchronize automated QA evidence into page contracts"
+    severity: high
+    status: open
+    affected: [resources/experience/pages, tests]
+    user_cost: "Dashboards under-report verified checks or confuse automated verification with human acceptance."
+    evidence: "Golden browser checks and Page Contract QA fields can diverge."
+    closure: "Automated QA results carry run/source/timestamp provenance; human acceptance remains a separate decision."

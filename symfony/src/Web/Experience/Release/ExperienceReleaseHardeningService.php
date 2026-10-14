@@ -32,9 +32,21 @@ final readonly class ExperienceReleaseHardeningService
         $routes = $this->routes->productionHtmlRoutes();
         $exemptions = $this->exemptions->all();
 
+        // Retired contracts remain in inventory for traceability, but are not release candidates.
+        // Human Golden acceptance remains a separate, explicit release gate.
+        $retiredStatuses = [
+            PageExperienceStatus::Deprecated,
+            PageExperienceStatus::Superseded,
+            PageExperienceStatus::Exempt,
+        ];
+        $releaseCandidates = array_values(array_filter(
+            $contracts,
+            static fn ($page): bool => !in_array($page->status, $retiredStatuses, true),
+        ));
+
         $p0 = [];
         $p1 = [];
-        foreach ($contracts as $page) {
+        foreach ($releaseCandidates as $page) {
             if ($page->priority === 'P0') $p0[] = $page;
             if ($page->priority === 'P1') $p1[] = $page;
         }
@@ -62,6 +74,7 @@ final readonly class ExperienceReleaseHardeningService
         $assets = $this->assetDebt->scan();
         $routeDebt = $this->routeDebt->scan();
 
+        $activeQaRequired = count($p0) + count($p1);
         $gates = [
             'registry_coverage' => ['actual' => $coverage, 'required' => 100, 'pass' => $coverage === 100],
             'design_system' => ['pass' => $design->isGreen(), 'deprecated_components' => $design->deprecated],
@@ -75,12 +88,17 @@ final readonly class ExperienceReleaseHardeningService
             'golden_decision_ledger' => ['actual' => count($this->goldenDecisions->all()), 'required' => 8, 'pass' => count($this->goldenDecisions->all()) === 8],
             'golden_human_approval' => ['actual' => $this->goldenDecisions->acceptedCount(), 'required' => $golden->required, 'pass' => $golden->isComplete()],
             'external_reference_structure' => ['actual' => $external->passed(), 'required' => 4, 'pass' => $external->isGreen()],
+            'release_candidate_scope' => [
+                'active' => count($releaseCandidates),
+                'excluded_retired' => count($contracts) - count($releaseCandidates),
+                'pass' => true,
+            ],
             'p0_v1_ready' => ['actual' => $p0Ready, 'required' => count($p0), 'pass' => $p0Ready === count($p0)],
             'p1_production_acceptable' => ['actual' => $p1Acceptable, 'required' => count($p1), 'pass' => $p1Acceptable === count($p1)],
-            'p0_p1_functional_qa' => ['actual' => $qa([...$p0, ...$p1], 'functional'), 'required' => count($p0) + count($p1)],
-            'p0_p1_visual_qa' => ['actual' => $qa([...$p0, ...$p1], 'visual'), 'required' => count($p0) + count($p1)],
-            'p0_p1_responsive_qa' => ['actual' => $qa([...$p0, ...$p1], 'responsive'), 'required' => count($p0) + count($p1)],
-            'p0_p1_accessibility_qa' => ['actual' => $qa([...$p0, ...$p1], 'accessibility'), 'required' => count($p0) + count($p1)],
+            'p0_p1_functional_qa' => ['actual' => $qa([...$p0, ...$p1], 'functional'), 'required' => $activeQaRequired],
+            'p0_p1_visual_qa' => ['actual' => $qa([...$p0, ...$p1], 'visual'), 'required' => $activeQaRequired],
+            'p0_p1_responsive_qa' => ['actual' => $qa([...$p0, ...$p1], 'responsive'), 'required' => $activeQaRequired],
+            'p0_p1_accessibility_qa' => ['actual' => $qa([...$p0, ...$p1], 'accessibility'), 'required' => $activeQaRequired],
             'dead_css_cleanup' => ['pass' => $assets->cssGreen(), 'actual' => count($assets->deadCss), 'required' => 0],
             'dead_js_cleanup' => ['pass' => $assets->jsGreen(), 'actual' => count($assets->deadJs), 'required' => 0],
             'legacy_asset_cleanup' => ['pass' => $assets->legacyArtifacts === [], 'actual' => count($assets->legacyArtifacts), 'required' => 0],
