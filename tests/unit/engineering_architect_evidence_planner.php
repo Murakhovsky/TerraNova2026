@@ -32,4 +32,20 @@ $invalid = $planner->plan(['src/key.pem'], ['src/A.php'], 0, 0);
 if ($invalid['status'] !== 'REJECTED' || $invalid['reason'] !== 'NO_USABLE_PATHS') {
     throw new RuntimeException('Unsafe-only request must stop without further LLM attempts.');
 }
+$withMissing = $planner->plan(
+    ['src/B.php', 'src/C.php'], ['src/A.php'], 0, 0,
+    static fn (array $paths): array => ['src/B.php'],
+);
+if ($withMissing['status'] !== 'COLLECT' || $withMissing['paths'] !== ['src/B.php']
+    || ($withMissing['rejected'][0]['reason'] ?? null) !== 'NOT_FOUND_AT_PINNED_REVISION') {
+    throw new RuntimeException('Missing repository file must not cancel valid sibling evidence.');
+}
+$allMissing = $planner->plan(
+    ['src/C.php'], ['src/A.php'], 0, 0,
+    static fn (array $paths): array => [],
+);
+if ($allMissing['status'] !== 'REJECTED' || $allMissing['reason'] !== 'NO_USABLE_PATHS') {
+    throw new RuntimeException('All missing files must produce typed technical blocker.');
+}
+
 echo "Engineering evidence planner V2 passed.\n";
