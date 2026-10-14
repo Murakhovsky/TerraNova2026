@@ -55,3 +55,27 @@ php tests/CapitalMarkets/L2WebSocketTransportSmoke.php
   sequence gaps, API throttling, malformed frames and reconnect exhaustion.
 
 Do not label the package production-ready before these gates pass.
+
+## Verification checkpoint (2026-10-14)
+
+The current feature branch includes fail-closed subscription acknowledgement,
+a worker budget check for incomplete Binance recovery, a verified ingestion
+callback, and a publication freshness watchdog. The new Kraken processor
+fixture tests a valid snapshot, a valid delta and CRC mismatch invalidation.
+
+**Important:** These are source changes and test definitions. No passing
+GitHub Actions job or complete local application suite has been observed
+during this checkpoint. The GitHub connector's commit workflow lookup
+returned no PR-triggered runs and the combined commit status returned no
+statuses. Neither result proves that the workflow passed or failed.
+
+Remaining acceptance gates:
+1. Execute the complete L2 smoke suite and fix all failures.
+2. Exercise a full worker -> verified ingestion -> canonical state flow
+   using the application normalizer and persistence services.
+3. Verify real Binance spot/futures, Bybit spot/linear and Kraken v2 feeds,
+   including reconnect and venue-side subscription rejection.
+4. Integrate lifecycle supervision, operational metrics and alerts into
+   a managed worker process with graceful shutdown.
+5. Validate stale-data revocation and replay idempotency across process
+   restarts. Do not merge or deploy as production-ready before these gates.
