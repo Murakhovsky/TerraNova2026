@@ -176,6 +176,11 @@ jobs:
         run: |
           docker compose exec -T php php bin/console lint:container
           docker compose --profile l2 config --quiet
+          # Exercise the exact Compose-managed worker image/CLI without starting a live feed.
+          docker compose --profile l2 run --rm --no-deps l2-stream \
+            php bin/console cos:capital-markets:l2:stream --help > /tmp/l2-stream-help.txt
+          grep -q -- '--venue' /tmp/l2-stream-help.txt
+          grep -q -- '--source' /tmp/l2-stream-help.txt
           docker compose exec -T php php bin/console list --raw | grep -q '^cos:capital-markets:l2:stream '
           # The command must be invokable in the real Symfony container, not just PHP linted.
           if docker compose exec -T -e FOS_L2_ENABLED=0 php php bin/console cos:capital-markets:l2:stream \

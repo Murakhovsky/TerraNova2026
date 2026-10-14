@@ -338,3 +338,29 @@ No credentials or trading methods are used. It does **not** switch on
 429 (throttling), TLS problems or invalid exchange data.
 The fallback also depends on the hosting jurisdiction and may be unavailable
 to CI runners. An actual live PASS is required before accepting Futures.
+
+### Verified full live matrix, commit 87baf14 (2026-10-14)
+
+GitHub Actions `L2 Live Venue Reconnect`, run `38629499249`, has
+**5/5 passing independent real WSS jobs**:
+
+- BINANCE_SPOT (official market-data-only host)
+- BINANCE_FUTURES (public Futures WSS snapshot fallback for blocked REST)
+- BYBIT_SPOT
+- BYBIT_LINEAR
+- KRAKEN_SPOT
+
+Every test observed two verified full books from distinct recovery epochs,
+one intentionally closed connection, supervisor BACKOFF and recovery to
+TRUSTED. Results and protocol metrics are recorded per venue in workflow
+job logs/artifacts. These are **public API test subscriptions only**:
+no real order execution and no production database writes.
+The deterministic L2 Recovery Smoke suite and MySQL ingestion pipeline have
+separate acceptance jobs. The Runtime workflow additionally checks a
+dry-run rejection of an unknown registered source and boots the actual
+Compose-profile L2 worker image with `--help` as a non-network preflight.
+
+Successful GitHub Actions live checks prove the five exchange endpoints were
+reachable *from that GitHub runner at the run time*. They do not prove that
+the operator's production deployment has the correct organization/source
+records or that its server can maintain the same streams indefinitely.
