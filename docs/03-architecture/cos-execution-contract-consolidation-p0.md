@@ -197,6 +197,8 @@ interface WorkflowRecoveryInterface
 
 **Read-only canonical Action receipt proof:** `DoctrineWorkflowActionReceiptVerifier` перевіряє існуючий Action із `wf:<stored-step-idempotency>`, pinned Step input/action binding, source/tenant/correlation, один COMPLETED attempt, latest `APPROVAL_REQUIRED` Policy і незалежне не прострочене `APPROVED` рішення. Перевірка Plan винесена у `WorkflowPlanApprovalEvidenceInterface`; **production default — `FailClosedWorkflowPlanApprovalEvidence`**, і основний `WorkflowReceiptVerifierInterface` залишається пов'язаний з `FailClosedWorkflowReceiptVerifier`. Без active module/handler, approved Plan adapter і окремого Action admission **не вмикати** цей proof як production-finalizer. Наявність receipt у БД не дає права виконувати Action.
 
+**Federation approval adapter:** `FederationWorkflowPlanApprovalEvidence` повторно використовує існуючий `FederationPlanApprovalEvidenceReader` та перевіряє tenant, owner, актуальну Goal specification, raw Plan JSON hash, approval Action і однаковість approved Plan steps з canonical technical definition. Це read-only bridge до спільного `WorkflowPlanApprovalEvidenceInterface`, а не новий Approval engine. Symfony default для універсального Plan port **залишається fail-closed**, тому Engineering/невідомі бізнес-плани не отримують неявного дозволу.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0
