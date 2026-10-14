@@ -124,3 +124,13 @@ the caller must check `enabled` before starting the worker. Required keys:
 These are **library primitives**, not a deployed process supervisor or a
 fully wired Symfony console command. The remaining gates are process wiring,
 persisted health/alerts, live venue capture and replay/restart verification.
+
+### Health semantics
+
+`L2HealthEvaluator` maps supervisor and publication metrics to
+`STOPPED`, `RECOVERING`, `DEGRADED`, `STALE` or `HEALTHY`.
+Only a trusted stream with a sufficiently recent publication is healthy.
+`DEGRADED` and `STALE` raise an alert flag. The evaluator does not
+send notifications itself; alert delivery and persistence remain an
+integration gate. No simulated market data should be published as live
+trusted data during recovery.
