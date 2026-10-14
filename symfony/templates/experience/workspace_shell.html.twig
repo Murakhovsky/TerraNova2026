@@ -58,7 +58,7 @@
                         href="{{ item.path }}"
                     >
                         <span class="cos-shell__nav-glyph" aria-hidden="true">{{ item.glyph }}</span>
-                        <span>{{ item.label }}</span>
+                        <span>{{ item.label|trans }}</span>
                     </a>
                 {% endfor %}
             </nav>
@@ -80,13 +80,13 @@
 
                 <div class="cos-shell__title-block">
                     {% if shell.breadcrumbs is not empty %}
-                        <nav class="cos-shell__breadcrumbs" aria-label="Breadcrumb">
+                        <nav class="cos-shell__breadcrumbs" aria-label="{{ 'shell.breadcrumb'|trans }}">
                             {% for breadcrumb in shell.breadcrumbs %}
                                 {% if not loop.first %}<span aria-hidden="true">/</span>{% endif %}
                                 {% if breadcrumb.path %}
                                     <a href="{{ breadcrumb.path }}">{{ breadcrumb.label|trans }}</a>
                                 {% else %}
-                                    <span>{{ breadcrumb.label }}</span>
+                                    <span>{{ breadcrumb.label|trans }}</span>
                                 {% endif %}
                             {% endfor %}
                         </nav>
@@ -189,7 +189,7 @@
                 class="{% if item.active %}is-active{% endif %}"
                 href="{{ item.path }}"
                 {% if item.active %}aria-current="page"{% endif %}
-            >{{ item.label }}</a>
+            >{{ item.label|trans }}</a>
         {% endfor %}
         <button
             type="button"
