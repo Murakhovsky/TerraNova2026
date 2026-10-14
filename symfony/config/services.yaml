@@ -1993,6 +1993,7 @@ services:
   Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftProjection: ~
   Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftService: ~
   Domains\CapitalMarkets\Application\Service\BoundedBboSweepService: ~
+  Domains\CapitalMarkets\Application\Service\BoundedBboSweepPolicy: ~
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlBoundedBboSweepGate:
     arguments:
       $connection: '@cos.database.pdo'

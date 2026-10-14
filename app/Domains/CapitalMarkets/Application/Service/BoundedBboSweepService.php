@@ -22,6 +22,7 @@ final readonly class BoundedBboSweepService
         private MarketSubscriptionRepositoryInterface $subscriptions,
         private MarketSourcePollingService $polling,
         private MysqlBoundedBboSweepGate $gate,
+        private BoundedBboSweepPolicy $policy,
     ) {}
 
     /** @return array<string,mixed> */
@@ -41,28 +42,17 @@ final readonly class BoundedBboSweepService
         }
         $rows=[];
         foreach ($active as $source) {
-            $subscriptions=$this->subscriptions->forSource($org,$source->id,true);
-            if ($subscriptions===[]) {
-                $rows[]=['source'=>$source->id->value(),'state'=>'NO_ACTIVE_BBO'];
+            $admission=$this->policy->evaluate(
+                $this->subscriptions->forSource($org,$source->id,true),
+                $source->rateLimitPolicy,$maxTargets,$cooldownSeconds
+            );
+            if ($admission['status']!=='READY') {
+                $rows[]=['source'=>$source->id->value(),'state'=>$admission['status'],
+                    'active_targets'=>$admission['targets'],
+                    'request_budget'=>$admission['request_budget']];
                 continue;
             }
-            $targets=[];
-            foreach ($subscriptions as $item) {
-                if ($item->dataType!==MarketEventType::Bbo) {
-                    $rows[]=['source'=>$source->id->value(),'state'=>'BLOCKED_MIXED_SUBSCRIPTIONS'];
-                    continue 2;
-                }
-                $targets[$item->instrumentId->value()]=true;
-            }
-            $targetCount=count($targets);
-            $budget=$source->rateLimitPolicy;
-            $windows=max(1,(int)ceil($budget->windowSeconds/$cooldownSeconds));
-            // Triple-charge each target: conservative budget for retries/extra requests.
-            if ($targetCount>$maxTargets || $targetCount*3*$windows>$budget->requestBudget) {
-                $rows[]=['source'=>$source->id->value(),'state'=>'BLOCKED_BUDGET',
-                    'active_targets'=>$targetCount,'request_budget'=>$budget->requestBudget];
-                continue;
-            }
+            $targetCount=$admission['targets'];
             $outcome=$this->gate->run(
                 $org,$source->id->value(),$cooldownSeconds,
                 fn():string=>$this->polling->poll($org,$source->id,$targetCount)->status,
