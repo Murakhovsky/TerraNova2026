@@ -1,0 +1,287 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "COS-FED-EXEC-CONTRACT-CONSOLIDATION-P0",
+  "baseline_reference": "372947c9c02577880332d6f1bad9993c465991fd",
+  "legend": {
+    "baseline_anchor": "Existing test file is a point of departure, NOT proof that target parity passes",
+    "target_status": "All parity with new durable canonical Workflow is NOT_IMPLEMENTED before runtime development"
+  },
+  "tests": [
+    {
+      "id": "CP-01",
+      "area": "definition",
+      "scenario": "Kernel graph rejects unknown/duplicate/unreachable steps",
+      "baseline_anchor": "tests/unit/kernel_workflow_engine.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "unit",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-02",
+      "area": "dag",
+      "scenario": "Federation DAG deterministic tie-break uses approved plan order",
+      "baseline_anchor": "tests/unit/federation_step_cursor.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "unit",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-03",
+      "area": "dag",
+      "scenario": "Concurrent claimed external steps blocked before independent side effects",
+      "baseline_anchor": "tests/unit/federation_step_cursor.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "unit",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-04",
+      "area": "dag",
+      "scenario": "Dependency cycle, unknown edge, injected step, forged capability fail closed",
+      "baseline_anchor": "tests/unit/federation_step_cursor.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "unit",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-05",
+      "area": "persistence",
+      "scenario": "Run create only under tenant + approved immutable Plan; max one run per Plan",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-06",
+      "area": "persistence",
+      "scenario": "CAS stale revisions and two concurrent claims result in one winner",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql_concurrency",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-07",
+      "area": "recovery",
+      "scenario": "Crash before Action submission and after claim yields ambiguous/manual proof not retry",
+      "baseline_anchor": "tests/unit/federation_goal_recovery.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql_failure_injection",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-08",
+      "area": "recovery",
+      "scenario": "Crash after remote effect before DB receipt does not duplicate side effect",
+      "baseline_anchor": "tests/unit/federation_goal_recovery.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "external_fake_mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true,
+      "notes": "Remote idempotency proof or manual reconciliation required; at-least-once delivery is not exactly-once effect"
+    },
+    {
+      "id": "CP-09",
+      "area": "security",
+      "scenario": "Expired, self-approved, forged or revoked plan approval never dispatches Action",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-10",
+      "area": "security",
+      "scenario": "Worker revalidates current Policy/Approval not submitted user grants",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-11",
+      "area": "security",
+      "scenario": "Tenant substitution across Run/Step/Action/approval is rejected",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-12",
+      "area": "receipts",
+      "scenario": "Completed flag without independent canonical receipt cannot finalize",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-13",
+      "area": "receipts",
+      "scenario": "Action attempt count/parameters/plan hash mismatch fails closed",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-14",
+      "area": "goal",
+      "scenario": "Technical Workflow completed does not imply Goal outcome achieved",
+      "baseline_anchor": "tests/unit/federation_goal_outcome.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-15",
+      "area": "engineering",
+      "scenario": "Human decision persists resume state and only resumes valid stage",
+      "baseline_anchor": "tests/unit/engineering_workflow_state_machine.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "unit_mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-16",
+      "area": "engineering",
+      "scenario": "Engineering workflow row version/transition sequence/history preserved",
+      "baseline_anchor": "tests/architecture/engineering_workflow_version_contract.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-17",
+      "area": "engineering",
+      "scenario": "Engineering technical retries distinct from review/QA fix loop budgets",
+      "baseline_anchor": "tests/unit/engineering_retry_policy.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "unit",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-18",
+      "area": "engineering",
+      "scenario": "Stale Engineering AgentRun recovery cannot duplicate GitHub mutation",
+      "baseline_anchor": "tests/architecture/engineering_continue_contract.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "integration_fake_github",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-19",
+      "area": "engineering",
+      "scenario": "Reviewer/QA independence and human merge/approval guard survives cutover",
+      "baseline_anchor": "tests/architecture/engineering_human_merge_gate.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "integration",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-20",
+      "area": "cutover",
+      "scenario": "Read-only shadow comparison agrees old vs new state with same evidence",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-21",
+      "area": "cutover",
+      "scenario": "Old link/Run references recover from legacy mapping, idempotency keys preserved",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-22",
+      "area": "cutover",
+      "scenario": "Rollback after pre-cutover read-only, no dual writers or data loss",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-23",
+      "area": "integration",
+      "scenario": "Canonical Multi-domain Goal three handlers and native verified Outcome",
+      "baseline_anchor": "tests/unit/federation_reference_scenario_executable.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql_e2e",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-24",
+      "area": "integration",
+      "scenario": "Module disabled between approval/queue and worker execution fails closed",
+      "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "mysql",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    },
+    {
+      "id": "CP-25",
+      "area": "observability",
+      "scenario": "Correlation and causation trace unchanged across Action/Agent/Queue/Engineering",
+      "baseline_anchor": "tests/architecture/engineering_trace_id_contract.php",
+      "target_status": "NOT_IMPLEMENTED",
+      "target_runner_kind": "integration",
+      "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
+      "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
+      "blocking": true
+    }
+  ]
+}

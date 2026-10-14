@@ -263,6 +263,12 @@ Operator workspace: Goal → approved Plan → canonical Workflow Run → steps/
 
 Перехідний adapter має підтримати чинні /workspace/goals та /api/v1/federation/... до впорядкованого versioned API cutover. GET не створює side effects; mutation endpoints — authenticated/CSRF+Policy. Виведення старих маршрутів тільки після usage telemetry та оголошеної сумісності.
 
+## 11.1. Обов'язкова передумова: P0 Contract & Consolidation Pack
+
+Перед роботою над новим durable Workflow обов'язково пройти [P0 Contract & Consolidation Pack](./cos-execution-contract-consolidation-p0.md): конкретні interface/DTO/status/error контракти, [машинозчитуваний реєстр дублювань](../../resources/architecture/cos-execution-duplication-registry.json) для **трьох** механізмів Kernel/Federation/Engineering, [карту міграції станів](./cos-execution-state-migration-map.md) і [каталог parity-сценаріїв](../../resources/architecture/cos-execution-parity-cases.json).
+
+Поточний каталог тестів є **планом parity та baseline anchors**, а не підтвердженням роботи ще не існуючого спільного runtime. Розробку нового executor відкривати після контрактного приймання P0, production cutover — лише після реальних parity/MySQL/worker/E2E доказів.
+
 ## 12. План впровадження й артефакти
 
 ### Етап 0. Замороження дублювання (P0)
