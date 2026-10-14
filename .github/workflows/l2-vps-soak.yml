@@ -117,10 +117,9 @@ jobs:
           chmod 644 "$PERSIST/soak.sh"
           cat > "$PERSIST/soak.override.yml" <<YAML
           services:
-            php:
-              image: $IMAGE
             l2-soak:
               extends:
+                file: $ROOT/docker-compose.yml
                 service: php
               image: $IMAGE
               profiles: ["l2"]
@@ -144,6 +143,14 @@ jobs:
           YAML
           COMPOSE=(-f "$ROOT/docker-compose.yml" -f "$PERSIST/soak.override.yml" --env-file "$ROOT/.env")
           $D compose "${COMPOSE[@]}" config --quiet
+          $D compose "${COMPOSE[@]}" config --format json | python3 -c '
+          import json,sys
+          obj=json.load(sys.stdin)["services"]["l2-soak"]
+          keys=obj.get("environment",{})
+          for name in ["DATABASE_URL","APP_SECRET","REDIS_URL","FOS_L2_ENABLED"]:
+              if not keys.get(name): raise SystemExit("Missing resolved L2 soak environment: "+name)
+          print("L2 soak inherited authenticated Symfony environment: PASS")
+          '
           # Only the new isolated L2 service. Never recreate php/mysql/nginx.
           $D compose "${COMPOSE[@]}" --profile l2 up -d --no-deps --no-build l2-soak </dev/null
           sleep 45
