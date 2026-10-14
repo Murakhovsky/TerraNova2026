@@ -46,6 +46,10 @@ try{
     // Worker acquired the source before the stale REST HTTP response arrived.
     $token=$lease->acquire($org,$source,$shard,'ws-worker',30);
     $assert($token!==null&&$token>0,'Streaming worker could not obtain initial source lease.');
+    // A second shard for the same source must not run beside the current WS.
+    $batchCandidate=$lease->acquire($org,$source,'batch-ws-bbo','batch-worker',30);
+    $assert($batchCandidate===null,
+        'Second shard acquired same source while first WebSocket is live.');
     try{
         $gate->executeRest($org,$source,static function()use(&$wasRun):void{$wasRun=true;});
         throw new RuntimeException('REST was admitted despite active WS lease.');
@@ -58,6 +62,10 @@ try{
     $assert($differentTenantRan==='DIFFERENT_TENANT','Writer guard crossed tenant boundary.');
 
     $lease->release($org,$source,$shard,'ws-worker',$token);
+    $batchToken=$lease->acquire($org,$source,'batch-ws-bbo','batch-worker',30);
+    $assert($batchToken!==null&&$batchToken>0,
+        'Source could not transfer to the batch shard after the first worker exited.');
+    $lease->release($org,$source,'batch-ws-bbo','batch-worker',$batchToken);
     $assert($gate->executeRest($org,$source,static fn():string=>'REST_OK')==='REST_OK',
         'REST should resume after source streaming lease is released.');
 
