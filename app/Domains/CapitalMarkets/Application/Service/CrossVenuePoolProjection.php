@@ -24,7 +24,7 @@ final class CrossVenuePoolProjection
         try {
             $asOf=(new DateTimeImmutable($rawAsOf))
                 ->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\\TH:i:s.u\\Z');
-        } catch (\\Exception) {
+        } catch (\Exception) {
             throw new InvalidArgumentException('Invalid discovery UTC timestamp.');
         }
         $out = [];
