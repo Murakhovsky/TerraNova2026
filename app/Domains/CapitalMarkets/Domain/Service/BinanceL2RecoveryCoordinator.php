@@ -44,7 +44,7 @@ final class BinanceL2RecoveryCoordinator
 
     public function reconcile(int $epoch, MarketOrderBook $snapshot, string $snapshotId): void
     {
-        if ($this->session->diagnostics()['epoch'] !== $epoch) {
+        if ($this->session->diagnostics()['epoch'] !== $epoch || $this->session->status() === 'TRUSTED') {
             throw new DomainException('Stale Binance snapshot epoch.');
         }
         if ($snapshot->eventType() !== MarketEventType::OrderBookSnapshot) {

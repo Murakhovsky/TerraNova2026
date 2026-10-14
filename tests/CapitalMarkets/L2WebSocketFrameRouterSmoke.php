@@ -18,4 +18,13 @@ try {
     $binance->decode('{"e":"depthUpdate","s":"ETHUSDT","U":1,"u":2,"b":[],"a":[]}');
     throw new RuntimeException('Wrong symbol accepted');
 } catch (DomainException) {}
+foreach (['orderbook.50.ETHUSDT', 'orderbook.50.BTCUSDT.extra'] as $topic) {
+    $rejected = false;
+    try {
+        $bybit->decode(json_encode(['topic' => $topic, 'type' => 'delta', 'data' => ['s' => 'BTCUSDT', 'u' => 2, 'seq' => 4, 'b' => [], 'a' => []]], JSON_THROW_ON_ERROR));
+    } catch (DomainException $e) {
+        $rejected = true;
+    }
+    checkFrame($rejected, 'Invalid Bybit topic was accepted: '.$topic);
+}
 echo "L2 frame router smoke passed\n";
