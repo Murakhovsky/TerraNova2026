@@ -51,7 +51,7 @@ final class BybitL2RecoveryCoordinator
     {
         try {
             $this->validate($updateId, $crossSequence);
-        } catch (\\Throwable $error) {
+        } catch (\Throwable $error) {
             $this->session->invalidate('BYBIT_INVALID_SEQUENCE');
             throw $error;
         }
