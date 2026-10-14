@@ -1,6 +1,6 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}Sales Dashboard | COS{% endblock %}
+{% block title %}{{ 'Sales Dashboard'|trans }} | COS{% endblock %}
 
 {% block workspace_content %}
 <section
@@ -12,7 +12,7 @@
 >
     <twig:CosPageHeader
         eyebrow="Sales"
-        title="Sales Dashboard"
+        title="{{ 'Sales Dashboard'|trans }}"
         subtitle="Операційний стан продажів, ризики та наступні дії в одному Domain Dashboard."
     >
         <twig:CosButton label="Today" href="/sales/today" variant="ghost" />
@@ -21,10 +21,10 @@
     </twig:CosPageHeader>
 
     {% if dashboard.error %}
-        <twig:CosAlert title="Sales Dashboard недоступний" copy="{{ dashboard.error }}" tone="danger" />
+        <twig:CosAlert title="{{ 'Sales Dashboard недоступний'|trans }}" copy="{{ dashboard.error }}" tone="danger" />
     {% else %}
         <section class="cos-page__section" aria-labelledby="sales-kpis">
-            <h2 id="sales-kpis" class="cos-section-title">Sales pulse</h2>
+            <h2 id="sales-kpis" class="cos-section-title">{{ 'Sales pulse'|trans }}</h2>
             <div class="cos-kpi-strip">
                 <article class="cos-card">
                     <twig:CosTrendMetric label="Активні угоди" value="{{ dashboard.activeDeals }}" period="current" />
@@ -41,12 +41,12 @@
             </div>
         </section>
 
-        <section class="cos-page__section cos-section-grid" aria-label="Sales attention">
+        <section class="cos-page__section cos-section-grid" aria-label="{{ 'Sales attention'|trans }}">
             <article class="cos-card">
                 <div class="cos-card__header">
                     <div>
-                        <p class="cos-card__eyebrow">Risk</p>
-                        <h2 class="cos-card__title">At-risk deals</h2>
+                        <p class="cos-card__eyebrow">{{ 'Risk'|trans }}</p>
+                        <h2 class="cos-card__title">{{ 'At-risk deals'|trans }}</h2>
                     </div>
                     <twig:CosButton label="Усі угоди" href="/sales/deals?risk=high" variant="ghost" size="sm" />
                 </div>
@@ -98,8 +98,8 @@
             <article class="cos-card">
                 <div class="cos-card__header">
                     <div>
-                        <p class="cos-card__eyebrow">Fresh demand</p>
-                        <h2 class="cos-card__title">New Leads</h2>
+                        <p class="cos-card__eyebrow">{{ 'Fresh demand'|trans }}</p>
+                        <h2 class="cos-card__title">{{ 'New Leads'|trans }}</h2>
                     </div>
                     <twig:CosButton label="Lead List" href="/sales/leads" variant="primary" size="sm" />
                 </div>

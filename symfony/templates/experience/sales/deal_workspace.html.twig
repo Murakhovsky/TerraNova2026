@@ -55,7 +55,7 @@
                     <h2 class="cos-card__title">{{ deal.customer ?: deal.title }}</h2>
                     <dl class="cos-entity-summary">
                         <div><dt>Phone</dt><dd>{{ deal.phone }}</dd></div>
-                        <div><dt>Email</dt><dd>{{ deal.email }}</dd></div>
+                        <div><dt>{{ 'Email'|trans }}</dt><dd>{{ deal.email }}</dd></div>
                         <div><dt>Telegram</dt><dd>{{ deal.telegram }}</dd></div>
                     </dl>
                 </article>
@@ -268,7 +268,7 @@
                     <div class="cos-pattern-stack">
                         {% for approval in deal.approvals %}
                             <article class="cos-card" data-sales-approval data-approval-id="{{ approval.id }}">
-                                <p class="cos-card__eyebrow">Approval</p>
+                                <p class="cos-card__eyebrow">{{ 'Approval'|trans }}</p>
                                 <h3 class="cos-card__title">{{ approval.type }}</h3>
                                 <p class="cos-card__copy">{{ approval.reason }}</p>
                                 <twig:CosActionBar label="Approval decision">
@@ -277,13 +277,13 @@
                                         class="cos-button cos-button--primary cos-button--sm"
                                         data-decision="approve"
                                         data-action="click->sales-deal#approval"
-                                    >Approve</button>
+                                    >{{ 'Approve'|trans }}</button>
                                     <button
                                         type="button"
                                         class="cos-button cos-button--ghost cos-button--sm"
                                         data-decision="reject"
                                         data-action="click->sales-deal#approval"
-                                    >Reject</button>
+                                    >{{ 'Reject'|trans }}</button>
                                 </twig:CosActionBar>
                             </article>
                         {% endfor %}

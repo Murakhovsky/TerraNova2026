@@ -59,8 +59,8 @@
                 <h2>Контактні дані</h2>
                 <dl class="cos-entity-summary">
                     <div><dt>Phone</dt><dd>{{ lead.phone ?? '—' }}</dd></div>
-                    <div><dt>Email</dt><dd>{{ lead.email ?? '—' }}</dd></div>
-                    <div><dt>Source</dt><dd>{{ lead.source ?? 'Direct' }}</dd></div>
+                    <div><dt>{{ 'Email'|trans }}</dt><dd>{{ lead.email ?? '—' }}</dd></div>
+                    <div><dt>{{ 'Source'|trans }}</dt><dd>{{ lead.source ?? 'Direct' }}</dd></div>
                 </dl>
             </section>
 
