@@ -17,12 +17,19 @@ $files=[
     'resources/capital-markets/universes/binance-bstocks-2026-09-27.csv',
     'symfony/templates/experience/capital_markets/discovery.html.twig',
     'app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql',
+    'app/migrations/20261014_000140_capital_markets_candidate_pool.sql',
+    'app/Domains/CapitalMarkets/Application/Service/CrossVenuePoolProjection.php',
+    'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php',
+    'symfony/src/Command/CapitalMarketsInstrumentDiscoveryCommand.php',
+    'symfony/src/Application/CapitalMarkets/Command/RefreshCrossVenueCandidatePool.php',
+    'symfony/src/Application/CapitalMarkets/Handler/RefreshCrossVenueCandidatePoolHandler.php',
 ];
 foreach($files as $file)$assert(is_file($root.'/'.$file),'Missing cross-venue artifact: '.$file);
 $services=(string)file_get_contents($root.'/symfony/config/services.yaml');
 foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueCatalogDiscovery','CrossVenueDiscoverySnapshotRepository',
-    'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',"$".'connection: '."'@cos.database.pdo'"] as $needle){
+    'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
+    'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository',"$".'connection: '."'@cos.database.pdo'"] as $needle){
     $assert(str_contains($services,$needle),'Missing cross-venue wiring: '.$needle);
 }
 $routes=(string)file_get_contents($root.'/symfony/config/routes.yaml');
@@ -50,4 +57,12 @@ $assert(str_contains($docker,'COPY resources/capital-markets/ /var/www/html/reso
     'Production Docker runtime must include historical discovery universe.');
 $assert(str_contains($controller, '$this->quotes->reserve($org,$actor)'),
     'Quote refresh must have its own atomic tenant cooldown.');
+$assert(str_contains($controller, '$this->poolCandidates->reconcile($org,$snapshot)'),
+    'Discovery must persist candidate pool observations without approving canonical relationships.');
+$scheduler=(string)file_get_contents($root.'/symfony/src/Scheduler/CosScheduleProvider.php');
+$assert(str_contains($scheduler,'RefreshCrossVenueCandidatePool') && str_contains($scheduler,'capitalMarketsDiscoveryEnabled'),
+    'Scheduled discovery must be gated, tenant-scoped and use the existing scheduler.');
+$handler=(string)file_get_contents($root.'/symfony/src/Application/CapitalMarkets/Handler/RefreshCrossVenueCandidatePoolHandler.php');
+$assert(str_contains($handler,'reserveScan') && str_contains($handler,'reconcile'),
+    'Scheduled discovery must use atomic cooldown and candidate reconciliation.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
