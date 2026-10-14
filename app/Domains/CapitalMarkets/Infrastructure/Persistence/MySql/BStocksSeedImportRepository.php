@@ -30,6 +30,12 @@ final readonly class BStocksSeedImportRepository
         if ($this->connection->inTransaction()) {
             throw new RuntimeException('Seed import expects a standalone transactional unit.');
         }
+        // Serialize competing imports within the tenant even before any seed row exists.
+        $lockName='cm-seed-'.substr(hash('sha256',$org),0,48);
+        $lock=$this->connection->prepare('SELECT GET_LOCK(:lock_name,5)');
+        $lock->execute(['lock_name'=>$lockName]);
+        if ((int)$lock->fetchColumn() !== 1) throw new RuntimeException('Seed import lock unavailable.');
+        try {
         $this->connection->beginTransaction();
         try {
             $stats=$this->classify($org,$seed,true);
@@ -74,6 +80,10 @@ final readonly class BStocksSeedImportRepository
         } catch (Throwable $e) {
             if ($this->connection->inTransaction()) $this->connection->rollBack();
             throw $e;
+        }
+        } finally {
+            $release=$this->connection->prepare('SELECT RELEASE_LOCK(:lock_name)');
+            $release->execute(['lock_name'=>$lockName]);
         }
     }
 

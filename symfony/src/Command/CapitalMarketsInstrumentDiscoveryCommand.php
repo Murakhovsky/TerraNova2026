@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace App\Command;
 
 use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
+use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
@@ -28,6 +30,7 @@ final class CapitalMarketsInstrumentDiscoveryCommand extends Command
         private readonly CrossVenueCatalogDiscovery $discovery,
         private readonly CrossVenueDiscoverySnapshotRepository $snapshots,
         private readonly CrossVenuePoolCandidateRepository $pool,
+        private readonly CapitalMarketsAccessControlInterface $access,
         #[Autowire('%kernel.project_dir%/../resources/capital-markets/universes/binance-bstocks-2026-09-27.csv')]
         private readonly string $file,
     ) { parent::__construct(); }
@@ -48,6 +51,11 @@ final class CapitalMarketsInstrumentDiscoveryCommand extends Command
             || !in_array($limit, ['10','80'], true)) {
             $output->writeln('INVALID_SCOPE');
             return Command::INVALID;
+        }
+        if (!$this->access->hasCapability($org,$actor,CapitalMarketsCapability::MarketDataManage->value)
+            && !$this->access->hasCapability($org,$actor,CapitalMarketsCapability::Manage->value)) {
+            $output->writeln('FORBIDDEN');
+            return Command::FAILURE;
         }
         try {
             if (!$this->snapshots->reserveScan($org, $actor)) {
