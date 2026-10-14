@@ -104,3 +104,23 @@ PR #367 runs `L2 Recovery Smoke` with a MySQL 8.4 service. Commit
 `38553506247`. This verifies ingestion persistence but does not prove
 live-venue operational readiness. Runtime and other repository checks must
 be checked independently before merging.
+
+## Managed runtime primitives (2026-10-14)
+
+`L2ManagedStreamRunner` coordinates bounded retries and recovery epochs;
+`L2ManagedWorker` requires a new `L2StreamWorker` instance per attempt.
+`L2ShutdownSignal` provides a stop token for SIGTERM/SIGINT in a CLI process,
+and `L2OperationalMetrics` records reconnects, publications, failures and
+staleness. The runner exposes diagnostics including an optional metrics snapshot.
+
+`L2WorkerRuntimeConfig::fromEnvironment()` validates a stream's explicit
+venue, symbol, depth, message budget, retry limit, stale threshold and enable
+flag. The enable flag is fail-closed: only `0` or `1` are accepted, and
+the caller must check `enabled` before starting the worker. Required keys:
+`FOS_L2_VENUE`, `FOS_L2_SYMBOL`, `FOS_L2_ENABLED`. Optional keys:
+`FOS_L2_DEPTH` (50), `FOS_L2_MESSAGE_BUDGET` (1000),
+`FOS_L2_MAX_ATTEMPTS` (20), `FOS_L2_STALE_SECONDS` (30).
+
+These are **library primitives**, not a deployed process supervisor or a
+fully wired Symfony console command. The remaining gates are process wiring,
+persisted health/alerts, live venue capture and replay/restart verification.
