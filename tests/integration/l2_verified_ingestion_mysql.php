@@ -13,7 +13,7 @@ use Domains\CapitalMarkets\Domain\MarketData\{MarketSourceDescriptor,MarketSourc
 use Domains\CapitalMarkets\Domain\Service\{MarketDataQualityEngine,MarketStateEngine,OrderBookRebuilder,ReferenceMarketStateEngine};
 use Domains\CapitalMarkets\Domain\Value\AssetCode;
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2VerifiedMarketDataDecoder,L2DomainBookFactory,L2IngestionPublisher,L2VerifiedIngestionCallback};
-use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\{MysqlRawMarketEventRepository,MysqlCanonicalMarketEventRepository,MarketDataHydrator};
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\{MysqlRawMarketEventRepository,MysqlCanonicalMarketEventRepository,MysqlMarketQualityMetricRepository,MysqlMarketStateRepository,MarketDataHydrator};
 
 $dsn=getenv('L2_TEST_MYSQL_DSN');
 if (!$dsn || !str_starts_with($dsn,'mysql:')) throw new RuntimeException('Dedicated L2_TEST_MYSQL_DSN required.');
@@ -31,6 +31,10 @@ $pdo->exec('CREATE TABLE IF NOT EXISTS tn_capital_market_instruments (
     PRIMARY KEY (organization_id,instrument_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 $migration=file_get_contents(dirname(__DIR__,2).'/app/migrations/20261006_000126_capital_markets_market_events.sql');
 foreach (array_filter(array_map('trim',explode(';',$migration))) as $sql) $pdo->exec($sql);
+$stateMigration=file_get_contents(dirname(__DIR__,2).'/app/migrations/20261006_000127_capital_markets_market_state.sql');
+foreach (array_filter(array_map('trim',explode(';',$stateMigration))) as $sql) {
+    if (str_starts_with($sql,'CREATE TABLE')) $pdo->exec($sql);
+}
 $clock->time=new DateTimeImmutable('now');
 $sourceId=MarketSourceId::fromString('source:l2-mysql');
 $source=new MarketSourceDescriptor(
@@ -54,7 +58,8 @@ $service=new MarketDataIngestionService(
     $sources,new MarketDataDecoderRegistry([new L2VerifiedMarketDataDecoder()]),
     $normalizer,new MysqlRawMarketEventRepository($pdo),
     new MysqlCanonicalMarketEventRepository($pdo,new MarketDataHydrator()),
-    $qualityMetrics,$states,new MarketDataQualityEngine(),
+    new MysqlMarketQualityMetricRepository($pdo),
+    new MysqlMarketStateRepository($pdo,new MarketDataHydrator()),new MarketDataQualityEngine(),
     new MarketStateEngine(new OrderBookRebuilder()),new ReferenceMarketStateEngine(),
     $locks,$events,$transactions,$clock
 );
@@ -72,5 +77,39 @@ if (!$raw || !$canonical || $raw['sequence_value']!=='99001'
     || json_decode($canonical['payload_json'],true)['bids'][0]['quantity']['value']!=='10') {
     throw new RuntimeException('MySQL L2 raw/canonical persistence mismatch.');
 }
-if ($states->get($organization,$venueId,$tokenId)===null) throw new RuntimeException('Canonical market state missing.');
-echo "Verified L2 -> decoder -> normalizer -> MySQL raw/canonical -> market state passed\n";
+$persistedState=(new MysqlMarketStateRepository($pdo,new MarketDataHydrator()))->get($organization,$venueId,$tokenId);
+if ($persistedState === null || $persistedState->lastSequence !== '99001'
+    || $persistedState->orderBook === null) {
+    throw new RuntimeException('Persisted canonical market state missing or invalid.');
+}
+$metrics=$pdo->query("SELECT canonical_event_id,trust_status FROM tn_capital_market_quality_metrics ORDER BY id DESC LIMIT 1")->fetch();
+if (!$metrics || $metrics['canonical_event_id'] === '') {
+    throw new RuntimeException('MySQL quality metrics not persisted.');
+}
+$rawRepository=new MysqlRawMarketEventRepository($pdo);
+$canonicalRepository=new MysqlCanonicalMarketEventRepository($pdo,new MarketDataHydrator());
+$history=$canonicalRepository->history(
+    $organization,$tokenId,$clock->now()->modify('-1 minute'),$clock->now()->modify('+1 minute')
+);
+if (count($history)!==1 || $history[0]->sequence!=='99001') {
+    throw new RuntimeException('Canonical history round-trip failed.');
+}
+$rawHistory=$rawRepository->range(
+    $organization,$sourceId,$clock->now()->modify('-1 minute'),$clock->now()->modify('+1 minute')
+);
+if (count($rawHistory)!==1 || $rawHistory[0]->sequence!=='99001') {
+    throw new RuntimeException('Raw event round-trip failed.');
+}
+if ($rawRepository->append($organization,$rawHistory[0])
+    || $canonicalRepository->append($organization,$history[0])) {
+    throw new RuntimeException('MySQL duplicate events were not rejected.');
+}
+$counts=$pdo->query("SELECT
+    (SELECT COUNT(*) FROM tn_capital_market_raw_events) AS raw_count,
+    (SELECT COUNT(*) FROM tn_capital_market_canonical_events) AS canonical_count,
+    (SELECT COUNT(*) FROM tn_capital_market_quality_metrics) AS quality_count")->fetch();
+if ((int)$counts['raw_count']!==1 || (int)$counts['canonical_count']!==1
+    || (int)$counts['quality_count']!==1) {
+    throw new RuntimeException('Unexpected MySQL ingestion row counts.');
+}
+echo "Verified L2 -> decoder -> normalizer -> MySQL raw/canonical/quality/state passed\n";
