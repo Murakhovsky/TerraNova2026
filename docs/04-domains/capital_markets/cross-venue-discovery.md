@@ -112,3 +112,14 @@ php symfony/bin/console cos:capital-markets:subscriptions:plan ORG_ID ACTOR_ID -
 ```
 
 За замовчуванням команда працює як dry-run. Ліміт планування 250 пар. Непідтверджені ідентифікатори та недоступні джерела не активуються. Підтвердження реального streaming BBO й керованого воркера залишається окремим acceptance gate.
+
+## Заповнення канонічного реєстру без автоматичної активації
+
+Після імпорту XLSM або CSV доступне створення канонічних `DRAFT` через `/capital-markets/discovery` або через команди нижче. Потрібна роль із правом `InstrumentManage`; конфлікти ідентичності блокують пакет до запису. Кожен запис створюється через `CapitalMarketsFoundationBoundary` з аудитом і подією, але без Venue Instrument, економічного зв'язку, підписки на дані та торгового допуску.
+
+```bash
+php symfony/bin/console cos:capital-markets:instruments:seed-drafts ORG_ID ACTOR_ID --limit=100
+php symfony/bin/console cos:capital-markets:instruments:seed-drafts ORG_ID ACTOR_ID --limit=100 --apply
+```
+
+Runtime CI містить MySQL acceptance: створення 80 DRAFT, повторний запуск без нових записів, окремість underlying, аудит/події, відсутність зв'язків/підписок і блокування конфлікту канонічного символу без часткової вставки. Наявність тесту не дорівнює проходженню: перевіряти підсумок на останньому SHA.
