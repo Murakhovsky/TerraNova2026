@@ -465,6 +465,9 @@ final readonly class EngineeringArchitectStageExecutor
                     $seenPaths,
                     count($extraPaths),
                     $round,
+                    $this->repository->available()
+                        ? fn (array $requested): array => $this->repository->existingPathsAtRevision($requested, $repositoryRevision)
+                        : null,
                 );
                 $this->journal->event(
                     $featureId, $workflowId, 'MANAGER', 'architect.evidence_request_evaluated',
@@ -522,10 +525,6 @@ final readonly class EngineeringArchitectStageExecutor
                 $currentRevision = $this->repository->currentBaseRevision($targetBranch !== '' ? $targetBranch : null);
                 if ($currentRevision !== $repositoryRevision) {
                     throw new RuntimeException('Repository revision changed during evidence collection; Architect must revalidate.');
-                }
-                $existing = $this->repository->existingPathsAtRevision($paths, $repositoryRevision);
-                if (array_diff($paths, $existing) !== []) {
-                    throw new RuntimeException('Architect requested file does not exist at the pinned revision.');
                 }
                 $this->journal->event(
                     $featureId, $workflowId, 'MANAGER', 'manager.repository_evidence_auto_authorized',
