@@ -26,7 +26,7 @@ $assert($reject(fn()=>$protocol->subscriptionFrame()),
     'Batch subscribe before auth succeeded.');
 $now=new DateTimeImmutable('2026-10-13T12:00:01+00:00');
 $ms=(string)($now->getTimestamp()*1000);
-$quote=static function(string $symbol,string $sequence,string $bid,string $timestamp,string $ask='205.15') :string{
+$quote=static function(string $symbol,string $sequence,string $bid,string $timestamp,string $ask='206.15') :string{
     return '{"ev":"Q","sym":"'.$symbol.'","bp":'.$bid.',"bs":100,'.
         '"ap":'.$ask.',"as":200,"t":'.$timestamp.',"q":'.$sequence.'}';
 };
