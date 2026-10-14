@@ -16,6 +16,7 @@ final readonly class L2ManagedStreamRunner
     public function __construct(
         private L2StreamSupervisor $supervisor,
         private L2ReconnectPolicy $policy,
+        private ?L2OperationalMetrics $metrics = null,
     ) {}
 
     /**
@@ -38,6 +39,7 @@ final readonly class L2ManagedStreamRunner
             for ($attempt = 1; $attempt <= $this->policy->maxAttempts(); ++$attempt) {
                 if ($shouldStop()) return $total;
                 $epoch = $this->supervisor->start();
+                $this->metrics?->connection($attempt);
                 $this->supervisor->connected($epoch);
                 try {
                     $session($epoch, function (mixed $book) use ($epoch, $publish, &$total, $shouldStop): void {
@@ -49,6 +51,7 @@ final readonly class L2ManagedStreamRunner
                             throw new DomainException('Untrusted L2 publication epoch.');
                         }
                         $publish($book);
+                        $this->metrics?->publication();
                         ++$total;
                     });
                     // A finite session is a clean boundary; do not reconnect forever.
@@ -57,6 +60,7 @@ final readonly class L2ManagedStreamRunner
                     return $total;
                 } catch (Throwable $error) {
                     $delay = $this->supervisor->failure($epoch, $error->getMessage());
+                    $this->metrics?->failure($error->getMessage());
                     if ($attempt === $this->policy->maxAttempts()) {
                         throw new DomainException('Managed L2 reconnect budget exhausted.', 0, $error);
                     }
@@ -72,7 +76,7 @@ final readonly class L2ManagedStreamRunner
 
     public function diagnostics(): array
     {
-        return $this->supervisor->diagnostics();
+        return $this->supervisor->diagnostics() + ['metrics'=>$this->metrics?->snapshot()];
     }
 }
 
