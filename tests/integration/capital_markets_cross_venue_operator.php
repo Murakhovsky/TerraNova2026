@@ -34,6 +34,7 @@ $files=[
     'symfony/src/Application/CapitalMarkets/Command/SampleBStockBboQuotes.php',
     'symfony/src/Application/CapitalMarkets/Handler/SampleBStockBboQuotesHandler.php',
     'app/Domains/CapitalMarkets/Application/Service/CrossVenuePoolProjection.php',
+    'app/Domains/CapitalMarkets/Application/Service/CrossVenueActiveUniverse.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenuePoolCandidateRepository.php',
     'app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueListingReviewRepository.php',
     'app/migrations/20261015_000143_capital_markets_listing_review.sql',
@@ -48,6 +49,7 @@ foreach(['BinanceSpotMarketDataAdapter','BinanceMarketDataDecoder',
     'CrossVenueDiscoveryController','CrossVenueQuoteSampler','CrossVenueQuoteSnapshotRepository',
     'CrossVenuePoolProjection','CrossVenuePoolCandidateRepository','CrossVenueListingReviewRepository',
     'BStocksSeedFileReader','BStocksSeedImportRepository','CrossVenueSubscriptionPlanner',
+    'CrossVenueActiveUniverse',
     'CrossVenueMarketSourceAdmission',
     'BStocksCanonicalDraftProjection','BStocksCanonicalDraftService','BoundedBboSweepService',
     'MysqlBoundedBboSweepGate',"$".'connection: '."'@cos.database.pdo'"] as $needle){
@@ -133,4 +135,12 @@ $assert(str_contains($sourceAdmission,'MarketDataProviderAvailabilityInterface')
     && str_contains($sourceAdmission,'LICENSE_PROFILE_UNDECLARED')
     && str_contains($sourceAdmission,'REST_MODE_NOT_EXPLICIT'),
     'Automatic subscription and BBO sampler must reject disallowed or WS-owned sources.');
+$activeUniverse=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Application/Service/CrossVenueActiveUniverse.php');
+$scheduled=(string)file_get_contents($root.'/symfony/src/Application/CapitalMarkets/Handler/RefreshCrossVenueCandidatePoolHandler.php');
+$manual=(string)file_get_contents($root.'/symfony/src/Command/CapitalMarketsInstrumentDiscoveryCommand.php');
+$assert(str_contains($activeUniverse,'IMPORTED_MYSQL')
+    && str_contains($scheduled,'CrossVenueActiveUniverse')
+    && str_contains($manual,'CrossVenueActiveUniverse')
+    && str_contains($controller,'$this->activeUniverse->load($org,$this->universeFile)'),
+    'All manual/scheduled discovery entrypoints must use the imported tenant universe.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";

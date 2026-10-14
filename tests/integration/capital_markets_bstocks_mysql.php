@@ -7,6 +7,8 @@ require (getenv('COS_TEST_AUTOLOAD') ?: $root.'/vendor/autoload.php');
 use Domains\CapitalMarkets\Application\Service\BStocksSeedFileReader;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\BStocksSeedImportRepository;
 use Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection;
+use Domains\CapitalMarkets\Application\Service\CrossVenueActiveUniverse;
+use Domains\CapitalMarkets\Application\Service\CrossVenueUniverse;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
 
 $assert=static function(bool $condition,string $message): void {
@@ -120,6 +122,30 @@ try {
     $verifyCurrency->execute(['org'=>$org]);
     $assert($verifyCurrency->fetch(PDO::FETCH_ASSOC)===$changedCurrency,
         'Provider outage replaced last-known verified time and currency.');
+    $active=new CrossVenueActiveUniverse($repository,new CrossVenueUniverse());
+    $bootstrap=$active->load($otherOrg,$seedPath);
+    $assert($bootstrap['origin']==='BOOTSTRAP_CSV' && count($bootstrap['rows'])===80,
+        'Empty tenant must use bundled historical bootstrap, not another tenant import.');
+    $imported=$active->load($org,$seedPath);
+    $assert($imported['origin']==='IMPORTED_MYSQL' && count($imported['rows'])===80,
+        'Manual and scheduled discovery must switch to imported tenant evidence.');
+    $extended=$seed;
+    $extended['rows'][]=[
+        'underlying_symbol'=>'TEST','token_symbol'=>'TESTB','venue_symbol'=>'TESTBUSDT',
+        'declared_status'=>null,'exchange_url'=>null,'issuer_or_instrument_name'=>'Test Reference',
+        'declared_instrument_type'=>'Stock','declared_leverage'=>1,
+        'risk_class'=>'STANDARD_CANDIDATE',
+    ];
+    $extended['sha256']=hash('sha256','ci-extended-universe-'.$org);
+    $extendedResult=$repository->apply($org,1,$extended);
+    $assert($extendedResult['new']===1,'Extended seed import must add exactly one instrument.');
+    $universe=$active->load($org,$seedPath);
+    $assert($universe['origin']==='IMPORTED_MYSQL' && count($universe['rows'])===81
+        && count(array_filter($universe['rows'],static fn(array $row):bool=>
+            $row['token']==='TESTB' && $row['market']==='TESTBUSDT'))===1,
+        'Imported symbol was missing from future scheduled universe.');
+    $assert(count($active->load($otherOrg,$seedPath)['rows'])===80,
+        'Newly imported token leaked into another tenant.');
     echo "MySQL seed import: 80 inserted, 80 unchanged, tenant isolation, rollback and conflicts passed.\n";
 } finally {
     foreach (['tn_capital_market_seed_import_batches','tn_capital_market_seed_import_evidence','tn_capital_market_cross_venue_pool_candidates'] as $table) {
