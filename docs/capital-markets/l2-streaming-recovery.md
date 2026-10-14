@@ -323,3 +323,18 @@ visible in static fixture tests:
 
 Re-run the strict `L2 Live Venue Reconnect` workflow after these updates.
 An offline smoke pass is not evidence of public exchange availability.
+
+### Binance Futures: public WS depth snapshot fallback
+
+A strict live matrix on the GitHub-hosted runner showed valid Futures diff-depth
+WebSocket traffic but REST depth returning a non-200 response before trust could
+be established. The HTTPS snapshot client now reports the actual HTTP code.
+Only for Futures REST status **403/451**, it may request a depth snapshot from
+the independently documented *public* Binance Futures WebSocket API
+`wss://ws-fapi.binance.com/ws-fapi/v1`, using method `depth`,
+the configured symbol and a bound request ID. It validates response status,
+request ID, sequence, prices and quantities through the same snapshot decoder.
+No credentials or trading methods are used. It does **not** switch on
+429 (throttling), TLS problems or invalid exchange data.
+The fallback also depends on the hosting jurisdiction and may be unavailable
+to CI runners. An actual live PASS is required before accepting Futures.

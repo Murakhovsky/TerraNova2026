@@ -21,6 +21,23 @@ final class BinanceL2SnapshotDecoder
         return ['sequence' => (string) $id, 'bids' => $this->levels($row['bids'] ?? null), 'asks' => $this->levels($row['asks'] ?? null)];
     }
 
+    /**
+     * Validate the official Futures WS API request correlation and status,
+     * then apply the same exact-decimal order-book validation as HTTPS REST.
+     * @return array{sequence:string,bids:array,asks:array}
+     */
+    public function decodeFuturesWebSocketDepth(string $json, string $requestId): array
+    {
+        $response = json_decode($json, true, 128, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
+        if (!is_array($response) || array_is_list($response)
+            || !hash_equals($requestId, (string)($response['id'] ?? ''))
+            || ($response['status'] ?? null) !== 200
+            || !is_array($response['result'] ?? null) || array_is_list($response['result'])) {
+            throw new DomainException('Binance Futures WS snapshot response invalid or rejected.');
+        }
+        return $this->decode(json_encode($response['result'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+    }
+
     private function levels(mixed $rows): array
     {
         if (!is_array($rows) || !array_is_list($rows)) throw new DomainException('Invalid snapshot levels.');
