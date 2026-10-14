@@ -222,8 +222,39 @@ final class EngineeringAgentOutputValidator
 
     private function architect(array $output): void
     {
-        $this->required($output, ['status','architecture_decision','implementation_plan','developer_handoff','documentation_changes','conditions','risks','unresolved_questions','required_human_decisions']);
+        $this->required($output, ['status']);
         $status = (string) $output['status'];
+        // Intermediate read-only evidence requests are not architecture decisions.
+        if ($status === 'NEEDS_REPOSITORY_EVIDENCE') {
+            $this->required($output, ['requested_repository_files']);
+            $files = $output['requested_repository_files'];
+            if (!is_array($files) || count($files) < 1 || count($files) > 6) {
+                throw new EngineeringAgentOutputValidationException('Repository evidence request must name 1 to 6 exact files.');
+            }
+            foreach ($files as $path) {
+                if (!is_string($path) || trim($path) === '' || strlen($path) > 240) {
+                    throw new EngineeringAgentOutputValidationException('Repository evidence request contains an invalid path.');
+                }
+            }
+            if (($output['required_human_decisions'] ?? []) !== []) {
+                throw new EngineeringAgentOutputValidationException('Read-only evidence collection must not trigger a human gate.');
+            }
+            foreach (['architecture_decision','implementation_plan','developer_handoff'] as $section) {
+                if (isset($output[$section]) && !is_array($output[$section])) {
+                    throw new EngineeringAgentOutputValidationException('Evidence requests cannot include provisional '.$section.'.');
+                }
+            }
+            return;
+        }
+        if (in_array($status, ['EVIDENCE_BUDGET_EXHAUSTED','EVIDENCE_REQUEST_REJECTED'], true)) {
+            $details = $output['evidence_exhaustion'] ?? null;
+            if (!is_array($details) || trim((string) ($details['reason'] ?? '')) === ''
+                || ($output['required_human_decisions'] ?? []) !== []) {
+                throw new EngineeringAgentOutputValidationException('Technical evidence blocker must carry a reason and no human gate.');
+            }
+            return;
+        }
+        $this->required($output, ['architecture_decision','implementation_plan','developer_handoff','documentation_changes','conditions','risks','unresolved_questions','required_human_decisions']);
         if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION','NEEDS_REPOSITORY_EVIDENCE'], true)) {
             throw new EngineeringAgentOutputValidationException('Architect gate status is invalid.');
         }
@@ -319,14 +350,7 @@ final class EngineeringAgentOutputValidator
         if (!is_array($requestedFiles)) {
             throw new EngineeringAgentOutputValidationException('Architect requested_repository_files must be an array.');
         }
-        if ($status === 'NEEDS_REPOSITORY_EVIDENCE') {
-            if (count($requestedFiles) < 1 || count($requestedFiles) > 6) {
-                throw new EngineeringAgentOutputValidationException('Repository evidence request must name 1 to 6 exact files.');
-            }
-            if (($output['required_human_decisions'] ?? []) !== []) {
-                throw new EngineeringAgentOutputValidationException('Read-only evidence collection must not trigger a human gate.');
-            }
-        } elseif ($requestedFiles !== []) {
+        if ($requestedFiles !== []) {
             throw new EngineeringAgentOutputValidationException('Repository file requests require NEEDS_REPOSITORY_EVIDENCE status.');
         }
 

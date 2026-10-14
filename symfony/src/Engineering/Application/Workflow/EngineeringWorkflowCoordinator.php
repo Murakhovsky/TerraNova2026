@@ -267,6 +267,9 @@ final readonly class EngineeringWorkflowCoordinator
         $status = (string) ($output['status'] ?? '');
         if ($status === 'NEEDS_HUMAN_DECISION') return $this->human($workflow, 'Architect requires a human architecture/product decision.');
         if ($status === 'REJECTED') return $this->block($workflow, 'Architecture gate rejected the feature for development.');
+        if (in_array($status, ['EVIDENCE_BUDGET_EXHAUSTED','EVIDENCE_REQUEST_REJECTED'], true)) {
+            return $this->block($workflow, 'Architect repository evidence stopped by deterministic Manager policy. No human decision required.');
+        }
         if (!in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS'], true)) throw new LogicException('Unexpected Architect status: '.$status);
 
         $transitions = [

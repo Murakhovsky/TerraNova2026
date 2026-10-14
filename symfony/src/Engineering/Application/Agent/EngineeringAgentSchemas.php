@@ -232,12 +232,12 @@ final class EngineeringAgentSchemas
 
         return [
             'type' => 'object',
-            'required' => ['status','architecture_decision','implementation_plan','developer_handoff','documentation_changes','conditions','risks','unresolved_questions','required_human_decisions'],
+            'required' => ['status','requested_repository_files'],
             'properties' => [
                 'status' => self::baseStatus($gate),
                 'architecture_decision' => [
                     'type' => 'object',
-                    'required' => ['affected_domains','primary_owner_domain','bounded_context','current_architecture','proposed_solution','components','interfaces','data_flow','dependencies','database_changes','api_changes','events','identity','permissions','tenant_isolation','security','migration_strategy','backward_compatibility','observability','testing_strategy','risks','alternatives_considered','decision'],
+                    'required' => [],
                     'properties' => [
                         'affected_domains' => ['type' => 'array', 'items' => ['type' => 'string']],
                         'primary_owner_domain' => ['type' => 'string'],
@@ -267,7 +267,7 @@ final class EngineeringAgentSchemas
                 ],
                 'implementation_plan' => [
                     'type' => 'object',
-                    'required' => ['steps','files_to_create','files_to_modify','services','controllers','commands','entities','repositories','frontend_components','migrations','tests_required','documentation_updates','completion_conditions'],
+                    'required' => [],
                     'properties' => [
                         'steps' => ['type' => 'array'],
                         'files_to_create' => ['type' => 'array'],
@@ -287,7 +287,7 @@ final class EngineeringAgentSchemas
                 ],
                 'developer_handoff' => [
                     'type' => 'object',
-                    'required' => ['mandatory_constraints','forbidden_changes','interfaces_to_respect','tests_required','completion_conditions'],
+                    'required' => [],
                     'properties' => [
                         'mandatory_constraints' => ['type' => 'array'],
                         'forbidden_changes' => ['type' => 'array'],

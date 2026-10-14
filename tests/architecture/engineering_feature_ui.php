@@ -136,4 +136,13 @@ if ($jsonExample === false || !str_contains($jsonExample, 'Привіт, Укр�
     throw new RuntimeException('Human-readable JSON Unicode contract failed.');
 }
 
+if (!str_contains($template, 'data-engineering-evidence-status')
+    || !str_contains($template, 'architect.evidence_collection_stopped')) {
+    throw new RuntimeException('Engineering terminal does not surface evidence recovery status.');
+}
+if (!str_contains($template, 'engineering-terminal__group')
+    || !str_contains($template, 'event.group_label')
+    || !str_contains($template, 'event.evidence_round')) {
+    throw new RuntimeException('Engineering terminal lacks attributed groups and evidence rounds.');
+}
 echo "Engineering feature UI contract passed.\n";

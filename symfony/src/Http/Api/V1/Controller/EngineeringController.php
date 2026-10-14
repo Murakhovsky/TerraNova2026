@@ -121,6 +121,10 @@ final readonly class EngineeringController
                     'title' => (string) ($event['title'] ?? ''),
                     'detail' => (string) ($event['detail'] ?? ''),
                     'reference_id' => (string) ($event['reference_id'] ?? ''),
+                    'group_key' => (string) ($event['group_key'] ?? 'system'),
+                    'group_label' => (string) ($event['group_label'] ?? 'Системні події'),
+                    'attribution' => (string) ($event['attribution'] ?? 'UNATTRIBUTED'),
+                    'evidence_round' => $event['evidence_round'] ?? null,
                 ],
                 array_slice(
                     array_values(array_filter($status['timeline'] ?? [], 'is_array')),

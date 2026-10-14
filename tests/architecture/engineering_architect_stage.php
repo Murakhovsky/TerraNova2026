@@ -53,7 +53,7 @@ foreach ([
     'manager.repository_evidence_auto_authorized',
     'architect.repository_evidence_collected',
     'existingPathsAtRevision',
-    'MAX_ROUNDS',
+    'EngineeringArchitectEvidencePlanner',
     'Repository revision changed during evidence collection',
 ] as $evidenceNeedle) {
     if (!str_contains($stage, $evidenceNeedle)) throw new RuntimeException('Architect read-only evidence automation missing '.$evidenceNeedle);
@@ -76,4 +76,12 @@ foreach ([
     }
 }
 
+foreach ([
+    'EngineeringArchitectEvidencePlanner',
+    'architect.evidence_request_evaluated',
+    'architect.evidence_collection_stopped',
+    'repository_evidence_budget',
+] as $marker) {
+    if (!str_contains($stage, $marker)) throw new RuntimeException('Evidence recovery V2 not wired: '.$marker);
+}
 echo "Engineering Architect stage passed.\n";
