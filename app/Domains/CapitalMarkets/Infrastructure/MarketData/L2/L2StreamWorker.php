@@ -82,6 +82,8 @@ final readonly class L2StreamWorker
                 $lastVersion = $version;
                 ++$published;
             }
+            if (!$subscriptionReady) throw new DomainException('L2 subscription acknowledgement missing.');
+            if ($snapshot !== null || $snapshotPending) throw new DomainException('Binance snapshot recovery incomplete.');
             return $published;
         } finally {
             try {
