@@ -356,6 +356,7 @@ final readonly class EngineeringArchitectStageExecutor
                     $reclassified['status'] = 'NEEDS_REPOSITORY_EVIDENCE';
                     $reclassified['required_human_decisions'] = [];
                     $reclassified['requested_repository_files'] = $evidencePolicy->legacyRefreshPaths($seenPaths);
+                    unset($reclassified['architecture_decision'], $reclassified['implementation_plan'], $reclassified['developer_handoff']);
                     $run = new EngineeringAgentRunResult(
                         runId: $run->runId,
                         role: $run->role,
@@ -913,6 +914,11 @@ final readonly class EngineeringArchitectStageExecutor
             'context_revision' => $contextRevision,
             'repository_revision' => $repositoryRevision,
         ];
+
+        if ($status === 'NEEDS_REPOSITORY_EVIDENCE') {
+            unset($output['architecture_decision'], $output['implementation_plan'], $output['developer_handoff']);
+            return $output;
+        }
 
         foreach (['architecture_decision','implementation_plan','developer_handoff'] as $section) {
             if (!is_array($output[$section] ?? null)) $output[$section] = [];
