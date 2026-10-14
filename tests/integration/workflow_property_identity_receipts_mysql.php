@@ -69,6 +69,9 @@ try {
         $id,$def->id,$def->version,$digest,$actor->userId()->value(),
         'corr-'.$tag,definition:$def,
     ),$actor);
+    // Property review audit and resolution source timestamps have second precision.
+    // Wait until the next second so evidence demonstrably postdates the Run.
+    usleep(1100000);
     $db->executeStatement(
         'INSERT INTO tn_property_assets (organization_id,asset_id,kind,type_code,lifecycle)
          VALUES (:org,:asset,"house","house","active")',

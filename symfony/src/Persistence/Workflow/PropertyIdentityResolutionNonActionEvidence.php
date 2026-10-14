@@ -63,9 +63,9 @@ final readonly class PropertyIdentityResolutionNonActionEvidence implements Work
             || $row['reviewer_reference']!==$reviewer
             || $row['audit_reviewer']!==$reviewer
             || $row['resolved_at']===null
-            || $row['resolved_at'] < $row['run_started']
+            || $row['resolved_at'] <= substr((string) $row['run_started'], 0, 19)
             || $row['resolved_at'] > $row['step_completed']
-            || $row['reviewed_at'] < $row['run_started']
+            || $row['reviewed_at'] <= substr((string) $row['run_started'], 0, 19)
             || $row['reviewed_at'] > $row['step_completed']) {
             throw new DomainException('Property identity was not independently resolved and reviewed in this Run.');
         }
