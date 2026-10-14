@@ -32,6 +32,9 @@ final class BybitL2RecoveryCoordinator
 
     public function snapshot(int $epoch, MarketOrderBook $snapshot, string $updateId, string $crossSequence): void
     {
+        if ($this->session->diagnostics()['epoch'] !== $epoch || $this->session->status() === 'TRUSTED') {
+            throw new DomainException('Bybit snapshot requires an active, current recovery epoch.');
+        }
         $this->validate($updateId, $crossSequence);
         if ($snapshot->eventType() !== MarketEventType::OrderBookSnapshot) {
             $this->session->invalidateIfCurrent($epoch, 'BYBIT_INVALID_SNAPSHOT');

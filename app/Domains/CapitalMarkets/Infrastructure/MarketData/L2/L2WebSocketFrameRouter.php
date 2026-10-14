@@ -89,7 +89,7 @@ final class L2WebSocketFrameRouter
         if (!is_array($rows) || !array_is_list($rows)) throw new DomainException('L2 levels must be a list.');
         $out = [];
         foreach ($rows as $row) {
-            if (!is_array($row) || count($row) !== 2) throw new DomainException('Invalid L2 price/quantity pair.');
+            if (!is_array($row) || !array_is_list($row) || count($row) !== 2) throw new DomainException('Invalid L2 price/quantity pair.');
             $out[] = ['price' => $this->decimal($row[0] ?? null), 'qty' => $this->decimal($row[1] ?? null)];
         }
         return $out;
