@@ -18,6 +18,7 @@ use Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenuePoolCandidateRepository;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueListingReviewRepository;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Kernel\Module\ActiveModuleResolver;
@@ -51,6 +52,7 @@ final readonly class CrossVenueDiscoveryController
         private CrossVenueCatalogDiscovery $scanner,
         private CrossVenueDiscoverySnapshotRepository $snapshots,
         private CrossVenuePoolCandidateRepository $poolCandidates,
+        private CrossVenueListingReviewRepository $listingReviews,
         private CrossVenueQuoteSampler $sampler,
         private CrossVenueQuoteSnapshotRepository $quotes,
         #[Autowire('%kernel.project_dir%/../resources/capital-markets/universes/binance-bstocks-2026-09-27.csv')]
@@ -66,6 +68,7 @@ final readonly class CrossVenueDiscoveryController
             $watchlist=$this->universe->load($this->universeFile);
             $snapshot=$this->snapshots->latest($org);
             $poolCandidateCounts=$this->poolCandidates->counts($org);
+            $listingReviewRows=$this->listingReviews->pending($org);
             $canonicalCoverage=$this->seedImports->canonicalCoverage($org);
             $bboPollHealth=$this->bboPollGate->recent($org);
             $quoteSnapshot=$this->quotes->latest($org);
@@ -87,6 +90,9 @@ final readonly class CrossVenueDiscoveryController
                 'shell'=>$shell,'pageTitle'=>'Cross-Venue Discovery',
                 'watchlist'=>$watchlist,'snapshot'=>$snapshot,'quoteSnapshot'=>$quoteSnapshot,
                 'poolCandidateCounts'=>$poolCandidateCounts,
+                'listingReviewRows'=>$listingReviewRows,
+                'canReviewListings'=>$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage)
+                    && $this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage),
                 'canonicalCoverage'=>$canonicalCoverage,'bboPollHealth'=>$bboPollHealth,
                 'canScan'=>$canScan,'canSeedDrafts'=>$canSeedDrafts,
                 'csrfToken'=>$this->csrf->token($request),
@@ -123,6 +129,35 @@ final readonly class CrossVenueDiscoveryController
             return new RedirectResponse('/capital-markets/discovery?error=1',303);
         }
         return new RedirectResponse('/capital-markets/discovery?scanned=1',303);
+    }
+
+    public function reviewListing(Request $request): Response
+    {
+        $tenant=$this->authorized(CapitalMarketsCapability::MarketDataManage);
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.',403);
+        $org=$tenant->organizationId()->value();
+        $actor=(int)$tenant->userId()->value();
+        if (!$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage)) {
+            return new Response('Instrument review permission required.',403);
+        }
+        try {
+            $result=$this->listingReviews->decide(
+                $org,$actor,
+                trim((string)$request->request->get('seed_token','')),
+                trim((string)$request->request->get('venue','')),
+                trim((string)$request->request->get('source_as_of','')),
+                trim((string)$request->request->get('decision','')),
+                trim((string)$request->request->get('evidence_url','')),
+                trim((string)$request->request->get('evidence_sha256','')),
+            );
+            $request->getSession()->getFlashBag()->add('listing_review',
+                $result['seed_token'].' / '.$result['venue'].' → '.$result['status']);
+            return new RedirectResponse('/capital-markets/discovery?listingReviewed=1',303);
+        } catch (Throwable $e) {
+            error_log('capital_markets.listing_review.failed '.get_class($e).' '.$e->getMessage());
+            return new RedirectResponse('/capital-markets/discovery?listingReviewError=1',303);
+        }
     }
 
     public function seedCanonicalDrafts(Request $request): Response

@@ -50,7 +50,59 @@
         {% endfor %}
       </div>
     {% endif %}
-    <small>Стан верифікації: UNVERIFIED. Автоматичні підписки і trusted Market State ще не активовані цим модулем.</small>
+    <small>Лише REVIEWED_LISTING із актуальним Discovery допускається до планування BBO, за умови окремо активованого канонічного інструмента та venue mapping. Рішення не підтверджує economic equivalence.</small>
+  </section>
+
+  <section class="cos-panel">
+    <h2>Перевірка біржових лістингів оператором</h2>
+    <p>Рішення підтверджує лише наявність конкретного символу на конкретній біржі. Це не затвердження прав власності, backing, redemption, економічної тотожності чи торгової стратегії. Для кожного рішення потрібні офіційне посилання біржі та SHA-256 підтвердного документа.</p>
+    {% for message in app.flashes('listing_review') %}
+      <p class="cos-alert cos-alert--success">{{ message }}</p>
+    {% endfor %}
+    {% if app.request.query.get('listingReviewError') %}
+      <p class="cos-alert cos-alert--danger">Рішення відхилено. Оновіть сторінку, перевірте свіжість Discovery, посилання та SHA-256.</p>
+    {% endif %}
+    {% if listingReviewRows is empty %}
+      <p>Жодного актуального точного лістингу не знайдено. Запустіть Discovery.</p>
+    {% else %}
+      <p>Показано до 40 кандидатів. Для кожного лістингу потрібне окреме рішення з доказами.</p>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Токен</th><th>Біржа</th><th>Пара</th><th>Дані UTC</th><th>Перевірка</th><th>Рішення</th></tr></thead>
+          <tbody>
+          {% for item in listingReviewRows %}
+            <tr>
+              <td><strong>{{ item.seed_token }}</strong> · {{ item.underlying_symbol }}</td>
+              <td>{{ item.venue }}</td>
+              <td>{{ item.venue_symbol }} / {{ item.quote_currency }}</td>
+              <td>{{ item.source_as_of }}</td>
+              <td>{{ item.verification_state }}</td>
+              <td>
+              {% if canReviewListings %}
+                <form method="post" action="/capital-markets/discovery/listing-review" class="d-flex flex-column gap-1">
+                  <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                  <input type="hidden" name="seed_token" value="{{ item.seed_token }}">
+                  <input type="hidden" name="venue" value="{{ item.venue }}">
+                  <input type="hidden" name="source_as_of" value="{{ item.source_as_of }}">
+                  <label>Офіційне HTTPS-посилання
+                    <input class="form-control" type="url" name="evidence_url" required maxlength="512" placeholder="https://..." />
+                  </label>
+                  <label>SHA-256 доказу
+                    <input class="form-control" type="text" name="evidence_sha256" required maxlength="64" minlength="64" pattern="[a-f0-9]{64}" />
+                  </label>
+                  <button class="btn btn-secondary" type="submit" name="decision" value="APPROVE_LISTING">Підтвердити лише лістинг</button>
+                  <button class="btn btn-secondary" type="submit" name="decision" value="REVOKE_LISTING">Відкликати перевірку</button>
+                </form>
+              {% else %}
+                <small>Потрібні дозволи InstrumentManage та MarketDataManage.</small>
+              {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
   </section>
 
   <section class="cos-panel">

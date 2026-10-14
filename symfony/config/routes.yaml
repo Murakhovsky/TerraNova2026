@@ -2661,6 +2661,11 @@ capital_markets_discovery_drafts:
   controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::seedCanonicalDrafts
   methods: [POST]
 
+capital_markets_discovery_listing_review:
+  path: /capital-markets/discovery/listing-review
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::reviewListing
+  methods: [POST]
+
 # Capital Markets CM-FOUNDATION UI
 capital_markets_overview:
   path: /capital-markets
