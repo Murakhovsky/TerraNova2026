@@ -26,10 +26,11 @@ $reject = static function (callable $action, string $label): void {
 
 $identity = new WorkflowRunIdentity('org-test', 'run-1');
 $hash = hash('sha256', 'immutable-invocation');
+$planHash = hash('sha256', 'pinned-plan');
 $draft = new WorkflowRunDraft($identity, 'sales.intake', '1.0.0', $hash,
-    'manager-1', 'corr-1', 'plan-1', 'approval-1');
+    'manager-1', 'corr-1', 'plan-1', 'approval-1', $planHash);
 $run = new WorkflowRunSnapshot($identity, $draft->definitionId, $draft->definitionVersion,
-    WorkflowStatus::AMBIGUOUS, 5, $draft->correlationId, $draft->sourcePlanId);
+    WorkflowStatus::AMBIGUOUS, 5, $draft->correlationId, $draft->sourcePlanId, null, $planHash);
 $assert($run->status === WorkflowStatus::AMBIGUOUS && $run->revision === 5,
     'Persisted Run must preserve uncertainty and revision.');
 $assert(StepStatus::CLAIMED->value === 'claimed' && StepStatus::AMBIGUOUS->value === 'ambiguous',
@@ -37,6 +38,8 @@ $assert(StepStatus::CLAIMED->value === 'claimed' && StepStatus::AMBIGUOUS->value
 $reject(static fn() => new WorkflowRunIdentity('', 'run-1'), 'unscoped Run');
 $reject(static fn() => new WorkflowRunDraft($identity, 'wf', '1', 'unhashed', 'actor', 'corr'),
     'unversioned input hash');
+$reject(static fn() => new WorkflowRunDraft($identity, 'wf', '1', $hash, 'actor', 'corr', 'plan'),
+    'approved Plan without pinned digest');
 $reject(static fn() => new WorkflowRunSnapshot($identity, 'wf', '1', WorkflowStatus::RUNNING, 0, 'corr'),
     'revision zero');
 $reject(static fn() => new WorkflowReceiptAttestation($identity, 'step', true, 'action', null, 'corr'),
