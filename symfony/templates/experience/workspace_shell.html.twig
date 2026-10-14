@@ -12,18 +12,18 @@
     <aside
         class="cos-shell__sidebar"
         id="cos-workspace-navigation"
-        aria-label="Company Workspace navigation"
+        aria-label="{{ 'shell.company_workspace_navigation'|trans }}"
         data-workspace-shell-target="sidebar"
     >
         <div class="cos-shell__brand">
             <span class="cos-shell__brand-mark" aria-hidden="true">COS</span>
             <span class="cos-shell__brand-copy">
-                <strong>Company OS</strong>
+                <strong>{{ 'shell.brand_name'|trans }}</strong>
                 <small>{{ shell.tenantLabel }}</small>
             </span>
         </div>
 
-        <nav class="cos-shell__nav" aria-label="Primary navigation">
+        <nav class="cos-shell__nav" aria-label="{{ 'shell.primary_navigation'|trans }}">
             {% for item in shell.primaryNavigation %}
                 <div class="cos-shell__nav-group">
                     <a
@@ -32,7 +32,7 @@
                         {% if item.active %}aria-current="page"{% endif %}
                     >
                         <span class="cos-shell__nav-glyph" aria-hidden="true">{{ item.glyph }}</span>
-                        <span>{{ item.label }}</span>
+                        <span>{{ item.label|trans }}</span>
                     </a>
 
                     {% if item.children is not empty %}
@@ -42,7 +42,7 @@
                                     class="{% if child.active %}is-active{% endif %}"
                                     href="{{ child.path }}"
                                     {% if child.active %}aria-current="page"{% endif %}
-                                >{{ child.label }}</a>
+                                >{{ child.label|trans }}</a>
                             {% endfor %}
                         </div>
                     {% endif %}
@@ -51,7 +51,7 @@
         </nav>
 
         {% if shell.utilityNavigation is not empty %}
-            <nav class="cos-shell__nav cos-shell__nav--utility" aria-label="Utility navigation">
+            <nav class="cos-shell__nav cos-shell__nav--utility" aria-label="{{ 'shell.utility_navigation'|trans }}">
                 {% for item in shell.utilityNavigation %}
                     <a
                         class="cos-shell__nav-item{% if item.active %} is-active{% endif %}"
@@ -73,7 +73,7 @@
                     type="button"
                     aria-controls="cos-workspace-navigation"
                     aria-expanded="false"
-                    aria-label="Open navigation"
+                    aria-label="{{ 'shell.open_navigation'|trans }}"
                     data-workspace-shell-target="menuButton"
                     data-action="click->workspace-shell#toggleSidebar"
                 >☰</button>
@@ -84,14 +84,14 @@
                             {% for breadcrumb in shell.breadcrumbs %}
                                 {% if not loop.first %}<span aria-hidden="true">/</span>{% endif %}
                                 {% if breadcrumb.path %}
-                                    <a href="{{ breadcrumb.path }}">{{ breadcrumb.label }}</a>
+                                    <a href="{{ breadcrumb.path }}">{{ breadcrumb.label|trans }}</a>
                                 {% else %}
                                     <span>{{ breadcrumb.label }}</span>
                                 {% endif %}
                             {% endfor %}
                         </nav>
                     {% endif %}
-                    <div class="cos-shell__title">{{ shell.title }}</div>
+                    <div class="cos-shell__title">{{ shell.title|trans }}</div>
                 </div>
             </div>
 
@@ -102,15 +102,24 @@
                     aria-haspopup="dialog"
                     data-action="click->workspace-shell#openPalette"
                 >
-                    <span>Search workspace</span>
+                    <span>{{ 'shell.search_workspace'|trans }}</span>
                     <kbd>⌘K</kbd>
                 </button>
+
+                <form class="cos-shell__locale-form" method="post" action="{{ path('cos_web_locale_switch') }}" data-action="change->workspace-shell#submitLocale">
+                    <input type="hidden" name="_token" value="{{ csrf_token('cos_locale_switch') }}">
+                    <label class="cos-visually-hidden" for="cos-shell-locale">{{ 'shell.language'|trans }}</label>
+                    <select id="cos-shell-locale" class="cos-shell__locale-select" name="locale" aria-label="{{ 'shell.language'|trans }}">
+                        <option value="uk"{% if app.request.locale == 'uk' %} selected{% endif %}>Українська</option>
+                        <option value="en"{% if app.request.locale == 'en' %} selected{% endif %}>English</option>
+                    </select>
+                </form>
 
                 {% if shell.aiAvailable %}
                     <button
                         class="cos-shell__icon-button"
                         type="button"
-                        aria-label="Open AI assistant"
+                        aria-label="{{ 'shell.open_ai_assistant'|trans }}"
                         aria-controls="cos-ai-panel"
                         aria-expanded="false"
                         data-workspace-shell-target="aiButton"
@@ -122,17 +131,17 @@
                     class="cos-shell__connection"
                     data-state="{{ shell.connectionState.value }}"
                     data-cos-realtime-state
-                    title="Realtime connection state"
-                ><span data-cos-realtime-state-label>{{ shell.connectionState.value|capitalize }}</span></span>
+                    title="{{ 'shell.realtime_connection_state'|trans }}"
+                ><span data-cos-realtime-state-label>{{ ('shell.connection.' ~ shell.connectionState.value)|trans }}</span></span>
 
                 <button
                     class="cos-shell__icon-button"
                     type="button"
-                    aria-label="Notifications"
+                    aria-label="{{ 'shell.notifications'|trans }}"
                     aria-controls="cos-activity-center-panel"
                     aria-expanded="false"
                     data-workspace-shell-target="notificationButton"
-                    data-action="click->workspace-shell#openNotifications"
+                    data-action="click->workspace-shell#open{{ 'shell.notifications'|trans }}"
                 >
                     NT
                     <span
@@ -145,7 +154,7 @@
                 <button
                     class="cos-shell__icon-button"
                     type="button"
-                    aria-label="Activity Center"
+                    aria-label="{{ 'shell.activity_center'|trans }}"
                     aria-controls="cos-activity-center-panel"
                     aria-expanded="false"
                     data-workspace-shell-target="activityButton"
@@ -186,7 +195,7 @@
             type="button"
             aria-controls="cos-workspace-navigation"
             data-action="click->workspace-shell#openSidebar"
-        >More</button>
+        >{{ 'shell.more'|trans }}</button>
     </nav>
 
     <div id="cos-async-operation-signal" hidden aria-hidden="true"></div>
@@ -196,7 +205,7 @@
             class="cos-ai-panel__backdrop"
             type="button"
             tabindex="-1"
-            aria-label="Close AI assistant"
+            aria-label="{{ 'shell.close_ai_assistant'|trans }}"
             data-action="click->workspace-shell#closeAI"
         ></button>
         <aside class="cos-ai-panel__panel" role="dialog" aria-modal="true" aria-label="COS AI">
@@ -205,7 +214,7 @@
                 data-workspace-shell-target="aiFrame"
                 data-action="turbo:frame-load->workspace-shell#aiLoaded"
             >
-                <div class="cos-ai-panel__loading" aria-live="polite">Loading COS AI…</div>
+                <div class="cos-ai-panel__loading" aria-live="polite">{{ 'shell.loading_ai'|trans }}</div>
             </turbo-frame>
         </aside>
     </div>
@@ -220,18 +229,18 @@
             class="cos-activity-center__backdrop"
             type="button"
             tabindex="-1"
-            aria-label="Close Activity Center"
+            aria-label="{{ 'shell.close_activity_center'|trans }}"
             data-action="click->workspace-shell#closeActivityCenter"
         ></button>
 
-        <aside class="cos-activity-center__panel" role="dialog" aria-modal="true" aria-label="Activity Center">
+        <aside class="cos-activity-center__panel" role="dialog" aria-modal="true" aria-label="{{ 'shell.activity_center'|trans }}">
             <turbo-frame
                 id="cos-activity-center-frame"
                 src="{{ path('cos_web_activity_center', {tab: 'activity'}) }}"
                 data-workspace-shell-target="activityFrame"
                 data-action="turbo:frame-load->workspace-shell#activityCenterLoaded"
             >
-                <div class="cos-activity-center__loading" aria-live="polite">Loading activity…</div>
+                <div class="cos-activity-center__loading" aria-live="polite">{{ 'shell.loading_activity'|trans }}</div>
             </turbo-frame>
         </aside>
     </div>
@@ -241,16 +250,16 @@
             class="cos-command__backdrop"
             type="button"
             tabindex="-1"
-            aria-label="Close command palette"
+            aria-label="{{ 'shell.close_command_palette'|trans }}"
             data-action="click->workspace-shell#closePalette"
         ></button>
 
-        <section class="cos-command__panel" role="dialog" aria-modal="true" aria-label="Global command palette">
+        <section class="cos-command__panel" role="dialog" aria-modal="true" aria-label="{{ 'shell.global_command_palette'|trans }}">
             <div class="cos-command__search">
                 <input
                     class="cos-command__input"
                     type="search"
-                    placeholder="Search workspace…"
+                    placeholder="{{ 'shell.search_workspace_placeholder'|trans }}"
                     autocomplete="off"
                     spellcheck="false"
                     aria-controls="cos-global-search-results"
@@ -266,7 +275,7 @@
                 data-action="turbo:frame-load->workspace-shell#searchLoaded"
             >
                 <div class="cos-command__list" role="listbox" aria-label="Global commands">
-                    <p class="cos-command__group">Commands</p>
+                    <p class="cos-command__group">{{ 'shell.commands'|trans }}</p>
                     {% for command in shell.commands %}
                         <a
                             class="cos-command__item"
@@ -277,13 +286,13 @@
                             data-workspace-shell-target="resultItem"
                         >
                             <span>
-                                <strong>{{ command.label }}</strong>
-                                {% if command.hint %}<small>{{ command.hint }}</small>{% endif %}
+                                <strong>{{ command.label|trans }}</strong>
+                                {% if command.hint %}<small>{{ command.hint|trans }}</small>{% endif %}
                             </span>
-                            <small>{{ command.kind }}</small>
+                            <small>{{ command.kind|trans }}</small>
                         </a>
                     {% else %}
-                        <p class="cos-command__empty">No commands available.</p>
+                        <p class="cos-command__empty">{{ 'shell.no_commands'|trans }}</p>
                     {% endfor %}
                 </div>
             </turbo-frame>

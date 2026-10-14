@@ -40,6 +40,12 @@ export default class extends Controller {
         }
     }
 
+    submitLocale(event) {
+        if (event.target?.name === 'locale') {
+            event.currentTarget.requestSubmit();
+        }
+    }
+
     toggleSidebar() {
         const open = !this.sidebarTarget.classList.contains('is-mobile-open');
         this.setSidebarOpen(open);

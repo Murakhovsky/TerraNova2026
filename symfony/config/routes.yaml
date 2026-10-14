@@ -64,6 +64,11 @@ cos_engineering_feature_human_decision:
   methods: [POST]
   requirements: { id: '[0-9a-fA-F-]{36}' }
 
+cos_web_locale_switch:
+  path: /workspace/locale
+  controller: App\Web\Experience\Locale\LocaleController::change
+  methods: [POST]
+
 cos_web_global_search:
   path: /workspace/search
   controller: App\Web\Experience\Search\GlobalSearchController
