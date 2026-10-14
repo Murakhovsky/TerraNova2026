@@ -199,6 +199,8 @@ interface WorkflowRecoveryInterface
 
 **Federation approval adapter:** `FederationWorkflowPlanApprovalEvidence` повторно використовує існуючий `FederationPlanApprovalEvidenceReader` та перевіряє tenant, owner, актуальну Goal specification, raw Plan JSON hash, approval Action і однаковість approved Plan steps з canonical technical definition. Це read-only bridge до спільного `WorkflowPlanApprovalEvidenceInterface`, а не новий Approval engine. Symfony default для універсального Plan port **залишається fail-closed**, тому Engineering/невідомі бізнес-плани не отримують неявного дозволу.
 
+**Кандидат канонічного Action claim admission:** `DoctrineWorkflowActionClaimAdmission` робить read-only перевірку pinned Run/Step/Plan, `CanonicalCapabilityCatalog`, `ActiveModuleResolver`, єдиного QUEUED Action з `wf:` idempotency key, нульових попередніх attempts, latest Policy і незалежного людського Approval. **Цей кандидат не є штатним DI alias і не відправляє Action**. До production cutover потрібен окремий останній worker-side gate, який повторює Policy/Approval/Plan без TOCTOU.
+
 **Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
 
 ## 7. Порядок виконання та критерій закриття P0
