@@ -45,6 +45,7 @@ final class BinanceL2RecoveryCoordinator
     public function reconcile(int $epoch, MarketOrderBook $snapshot, string $snapshotId): void
     {
         if ($snapshot->eventType() !== MarketEventType::OrderBookSnapshot) {
+            $this->session->invalidate('INVALID_BINANCE_SNAPSHOT');
             throw new DomainException('Binance recovery requires REST snapshot.');
         }
         $book = $snapshot;
@@ -65,7 +66,9 @@ final class BinanceL2RecoveryCoordinator
                 }
             } while ($events !== []);
             if (!$this->bridged) {
-                // No verified bridge yet: never publish a snapshot as live trusted L2.
+                // A REST snapshot without a covering delta is not a proven live book.
+                // Keep the session untrusted and request a new recovery cycle.
+                $this->session->invalidate('BINANCE_SNAPSHOT_BRIDGE_MISSING');
                 return;
             }
             $this->session->publishVerified($epoch, $book, $this->sequence->last());
