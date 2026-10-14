@@ -15,7 +15,10 @@ jobs:
     name: VPS L2 SSH preflight (read only)
     runs-on: ubuntu-24.04
     timeout-minutes: 7
-    # Probe repository-level credentials without environment access; no production writes.
+    # Environment secrets are not repository secrets. Require the protected
+    # AWS TN2026 environment to explicitly permit this feature branch.
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feature/fos-l2-orderbook-recovery')
+    environment: AWS TN2026
     steps:
       - name: Validate SSH credentials (without disclosing them)
         env:
@@ -29,7 +32,7 @@ jobs:
           set -euo pipefail
           for required in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
             if [ -z "${!required:-}" ]; then
-              echo "::error::Missing repository-level $required; AWS TN2026 environment is restricted for PRs"
+              echo "::error::Missing $required in AWS TN2026 environment"
               exit 1
             fi
           done
