@@ -78,6 +78,7 @@ jobs:
               -v "$FIXTURE:/tmp/l2_acceptance.php:ro" \
               -e FOS_L2_ACCEPTANCE_ORG="$ORG" \
               -e FOS_L2_ALERT_ENABLED=0 \
+              -e FOS_L2_ENABLED=1 \
               php php -d memory_limit=224M "$@" </dev/null
           }
           echo '=== VALIDATE ACTUAL SYMFONY CLI COMMAND ==='
