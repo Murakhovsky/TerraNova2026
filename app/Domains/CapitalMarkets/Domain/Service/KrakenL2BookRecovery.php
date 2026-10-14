@@ -126,7 +126,7 @@ final class KrakenL2BookRecovery
         try {
             $bids = $this->sorted($this->bids, true);
             $asks = $this->sorted($this->asks, false);
-            if ($bids !== [] && $asks !== [] && $bids[0]['price'] === $asks[0]['price']) {
+            if ($bids !== [] && $asks !== [] && $this->normalize($bids[0]['price']) === $this->normalize($asks[0]['price'])) {
                 throw new DomainException('Crossed Kraken book.');
             }
             $this->checksum->assertMatches($asks, $bids, $crc);
