@@ -25,7 +25,7 @@ class L2CaptureIngestion implements MarketDataIngestionInterface {
     }
 }
 $adapter = new L2CaptureIngestion();
-$publisher = new L2IngestionPublisher($adapter,'test-org',MarketSourceId::fromString('test-source'),null,'BTCUSDT','binance.spot.depth.snapshot');
+$publisher = new L2IngestionPublisher($adapter,'test-org',MarketSourceId::fromString('test-source'),null,'BTCUSDT','l2.verified.snapshot');
 $factory = new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT'));
 $book = $factory->fromFrame(['type'=>'snapshot','bids'=>[['price'=>'100','qty'=>'2']],'asks'=>[['price'=>'101','qty'=>'1']]],'42');
 $result = $publisher->publish($book);
@@ -42,7 +42,7 @@ $rejectedAdapter = new class implements MarketDataIngestionInterface {
 $rejected = false;
 try {
     (new L2VerifiedIngestionCallback(
-        new L2IngestionPublisher($rejectedAdapter,'test-org',MarketSourceId::fromString('test-source'),null,'BTCUSDT','binance.spot.depth.snapshot')
+        new L2IngestionPublisher($rejectedAdapter,'test-org',MarketSourceId::fromString('test-source'),null,'BTCUSDT','l2.verified.snapshot')
     ))($book);
 } catch (DomainException $e) { $rejected = true; }
 if (!$rejected) throw new RuntimeException('Rejected ingestion counted as published.');

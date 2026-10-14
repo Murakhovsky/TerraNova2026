@@ -26,12 +26,12 @@ final readonly class L2IngestionPublisher
         private string $symbol,
         private string $eventType = 'l2.verified.snapshot',
     ) {
-        if ($eventType !== 'l2.verified.snapshot') throw new \\DomainException('Unsupported verified L2 event type.');
+        if ($eventType !== 'l2.verified.snapshot') throw new \DomainException('Unsupported verified L2 event type.');
     }
 
     public function publish(MarketOrderBook $book): MarketDataIngestionResult
     {
-        if ($book->type !== \\Domains\\CapitalMarkets\\Domain\\MarketData\\MarketEventType::OrderBookSnapshot) throw new \\DomainException('Verified ingestion requires a full book snapshot.');
+        if ($book->type !== \Domains\CapitalMarkets\Domain\MarketData\MarketEventType::OrderBookSnapshot) throw new \DomainException('Verified ingestion requires a full book snapshot.');
         if ($book->sequence === null || $book->sequence === '') {
             throw new \DomainException('Verified L2 publication requires a sequence.');
         }
