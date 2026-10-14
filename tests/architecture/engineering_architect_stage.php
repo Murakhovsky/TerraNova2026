@@ -53,7 +53,7 @@ foreach ([
     'manager.repository_evidence_auto_authorized',
     'architect.repository_evidence_collected',
     'existingPathsAtRevision',
-    'MAX_ROUNDS',
+    'EngineeringArchitectEvidencePlanner',
     'Repository revision changed during evidence collection',
 ] as $evidenceNeedle) {
     if (!str_contains($stage, $evidenceNeedle)) throw new RuntimeException('Architect read-only evidence automation missing '.$evidenceNeedle);
