@@ -155,4 +155,9 @@ $assert(str_contains($referencePlanner,'massive.stocks.v2')
     && str_contains($referencePlanner,'Reference')
     && str_contains($controller,'function planPoolBbo(Request $request)'),
     'Reference BBO must reuse audited subscriptions and require explicit source/tenant.');
+$revocationFence=(string)file_get_contents($root.'/app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/CrossVenueBboAdmissionFence.php');
+$assert(str_contains($revocationFence,'disableForCandidate')
+    && str_contains($revocationFence,'disableUnapproved')
+    && str_contains($revocationFence,"s.status=\\'DISABLED\\'"),
+    'Listing revocation must fence existing BBO subscription rows.');
 echo "Cross-venue discovery integration/operator contracts passed.\n";
