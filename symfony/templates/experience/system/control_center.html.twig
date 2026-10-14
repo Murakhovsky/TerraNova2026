@@ -1,6 +1,6 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}COS Control Center | COS{% endblock %}
+{% block title %}COS {{ 'Control Center'|trans }} | COS{% endblock %}
 
 {% block workspace_content %}
 <section
@@ -12,7 +12,7 @@
 >
     <twig:CosPageHeader
         eyebrow="Company Operating System"
-        title="Control Center"
+        title="{{ 'Control Center'|trans }}"
         subtitle="Спостережуваний ланцюг рішень: від бізнес-події до результату й аудиту."
     >
         <twig:CosButton label="Architecture" href="/cos/architecture" variant="ghost" />
@@ -32,7 +32,7 @@
     {% endif %}
 
     {% if control.error %}
-        <twig:CosAlert title="COS Control Center недоступний" copy="{{ control.error }}" tone="danger" />
+        <twig:CosAlert title="COS {{ 'Control Center'|trans }} недоступний" copy="{{ control.error }}" tone="danger" />
     {% endif %}
 
     <section class="cos-kpi-strip" aria-label="COS runtime summary">
@@ -58,7 +58,7 @@
             </header>
 
             {% if section.items is empty %}
-                <twig:CosEmptyState title="Даних ще немає" copy="Runtime records з’являться тут після першої відповідної події." />
+                <twig:CosEmptyState title="Даних {{ 'ще немає'|trans }}" copy="Runtime records з’являться тут після першої відповідної події." />
             {% else %}
                 <div class="cos-entity-list" role="list">
                     {% for item in section.items %}
