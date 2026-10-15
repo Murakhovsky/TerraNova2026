@@ -72,6 +72,21 @@ final readonly class GoalPlanValidator
                     continue;
                 }
             }
+            $pinnedEvidence = null;
+            if ($capability->sideEffectLevel === 'none'
+                && str_starts_with($capability->executionBinding,'read:')) {
+                $pinnedEvidence = $step['evidence'] ?? null;
+                if (!is_array($pinnedEvidence) || array_is_list($pinnedEvidence)
+                    || ($pinnedEvidence['kind'] ?? null)
+                        !== substr($capability->executionBinding,5)
+                    || !is_string($pinnedEvidence['reference'] ?? null)
+                    || $pinnedEvidence['reference'] === ''
+                    || strlen(json_encode($pinnedEvidence, JSON_THROW_ON_ERROR)) > 4096
+                    || $input !== null) {
+                    $errors[] = 'invalid_domain_read_evidence:' . $capabilityId;
+                    continue;
+                }
+            }
             $normalized[] = [
                 'id' => $id,
                 'depends_on' => $dependencies[$id],
@@ -86,7 +101,7 @@ final readonly class GoalPlanValidator
                 // SHA-256 approved plan snapshot; execution must never use
                 // caller-supplied parameters after approval.
                 'input' => $input,
-            ];
+            ] + ($pinnedEvidence === null ? [] : ['evidence' => $pinnedEvidence]);
         }
         if ($normalized === []) {
             $errors[] = 'empty_executable_plan';

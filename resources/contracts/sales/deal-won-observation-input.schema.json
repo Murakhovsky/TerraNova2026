@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sales Won Deal Read-Only Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {}
+}

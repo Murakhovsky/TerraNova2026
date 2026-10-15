@@ -251,6 +251,26 @@ final readonly class FederationGoalStore
             }
         }
 
+        // The Run identity must be fixed BEFORE Plan Approval for independent
+        // Domain-only evidence. No random Run ID after signing the Plan.
+        $runId = null;
+        $normalizedSteps = $validated['steps'];
+        foreach($normalizedSteps as &$step) {
+            if (($step['side_effect_level'] ?? null) !== 'none') continue;
+            $runId ??= 'run-' . substr(hash('sha256',
+                $actor->organizationId()->value()."\0".$planId),0,24);
+            $digest=hash('sha256',$actor->organizationId()->value()."\0".$runId."\0".$planId);
+            $original=$step['evidence']??null;
+            if (!is_array($original)
+                || (isset($original['run_id']) && $original['run_id']!==$runId)
+                || (isset($original['input_digest']) && $original['input_digest']!==$digest)) {
+                throw new DomainException('Non-Action evidence Run/input binding does not match pinned Plan identity.');
+            }
+            $step['evidence']['run_id']=$runId;
+            $step['evidence']['input_digest']=$digest;
+        }
+        unset($step);
+        $validated['steps']=$normalizedSteps;
         $this->db->insert('cos_federation_plans', [
             'organization_id' => $actor->organizationId()->value(),
             'plan_id' => $planId,
@@ -259,6 +279,7 @@ final readonly class FederationGoalStore
             'plan_version' => $planVersion,
             'state' => 'proposed',
             'plan_json' => self::json(['steps' => $validated['steps'], 'created_by' => $actor->userId()->value()]
+                + ($runId === null ? [] : ['run_id' => $runId])
                 + ($lineage === [] ? [] : ['lineage' => $lineage])),
             'created_at' => self::now(),
         ]);

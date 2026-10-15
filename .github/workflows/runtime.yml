@@ -92,8 +92,8 @@ jobs:
           docker compose run --rm --no-deps php sh -c 'test -r /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv && test "$(wc -l < /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv)" -eq 81'
       - name: Start runtime
         run: docker compose up -d --remove-orphans
-      - name: Federation tenant-persistence smoke
-        run: docker compose exec -T php php bin/console cos:federation:persistence:smoke
+      - name: Federation retired executor source gate
+        run: php tests/architecture/federation_canonical_goal_cutover.php
       - name: Canonical Workflow durable store MySQL acceptance
         run: |
           docker compose cp tests/integration/workflow_durable_store_mysql.php php:/tmp/workflow_durable_store_mysql.php

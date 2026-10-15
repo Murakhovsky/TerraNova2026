@@ -193,6 +193,36 @@ final readonly class FederationHistoricalRunCutover
             $reasons[]='historical_terminal_or_mutated_run_requires_manual_archive';
         }
         if ($source['plan']['state']!=='approved') $reasons[]='plan_not_approved';
+        $currentSpec=$this->db->fetchOne(
+            'SELECT current_spec_version FROM cos_federation_goals
+             WHERE organization_id=:org AND goal_id=:goal',
+            ['org'=>$org,'goal'=>$r['goal_id']],
+        );
+        if ((int)$currentSpec!==(int)$source['plan']['spec_version']) {
+            $reasons[]='approved_specification_no_longer_current';
+        }
+        // Read-only preflight must attest the original independent Plan human
+        // approval. An "approved" string is insufficient for promotion.
+        $approvals=$this->db->fetchAllAssociative(
+            'SELECT id FROM cos_actions WHERE organization_id=:org
+             AND type=:type AND target_type=:target
+             AND target_id=:plan AND status=:status',
+            ['org'=>$org,'type'=>'cos.federation.plan.approval',
+                'target'=>'cos_federation_plan','plan'=>$r['plan_id'],
+                'status'=>'COMPLETED'],
+        );
+        if (count($approvals)!==1) {
+            $reasons[]='plan_approval_not_unique';
+        } else {
+            try {
+                $this->approvals->requireForOrganization($org,(string)$approvals[0]['id'],
+                    (string)$r['goal_id'],(string)$r['plan_id'],
+                    (int)$source['plan']['spec_version'],(string)$source['plan']['plan_json'],
+                    (string)$source['owner_id']);
+            } catch (\Throwable) {
+                $reasons[]='plan_approval_not_attested';
+            }
+        }
         if (count($steps)!==count($graph) || $steps===[]) $reasons[]='step_topology_mismatch';
         $byId=[];
         foreach($graph as $step) {

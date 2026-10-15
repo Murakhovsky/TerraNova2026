@@ -64,7 +64,10 @@ final readonly class FederationCapabilityBindingResolver
             || !$actor->isManager()
             || !is_string($contract->permission)
             || !$actor->allows($contract->permission)
-            || $contract->kind !== 'command'
+            || ($contract->kind !== 'command'
+                && !($contract->sideEffectLevel==='none'
+                    && $contract->kind==='query'
+                    && str_starts_with($contract->executionBinding,'read:')))
             || !(str_starts_with($contract->executionBinding, 'action:')
                 || ($contract->sideEffectLevel==='none' && str_starts_with($contract->executionBinding,'read:')))
             || !$this->modules->isEnabled($actor->organizationId()->value(), $contract->ownerDomain)) {

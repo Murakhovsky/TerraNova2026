@@ -46,10 +46,11 @@ final readonly class ModuleActionExecutionGate implements ActionExecutionGateInt
         }
         if ($action->idempotencyKey !== null
             && str_starts_with($action->idempotencyKey, 'fed:')) {
-            if ($this->federation === null) {
-                throw ExecutionFailureException::policyDenied('Federation Action admission is not installed.');
-            }
-            $this->federation->assertAuthorized($action);
+            // The old Federation technical executor is RETIRED. Existing
+            // queued Actions must never execute later via the global worker,
+            // regardless of an obsolete legacy Admission adapter.
+            throw ExecutionFailureException::policyDenied(
+                'Legacy Federation Action worker retired; reconcile without replay.');
         }
     }
 }
