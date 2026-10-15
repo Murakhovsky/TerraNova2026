@@ -312,6 +312,10 @@ try {
  $deny(static fn()=> $fence->beginAgent(
     new Job($expiredJob,$org,'AGENT_RUN',$payload,1,3,7200,$expiredCorr,null,$worker),
     $agent), 'Agent automatic claim after lease expiry');
+ $db->executeStatement(
+    'UPDATE cos_jobs SET status="DEAD",locked_at=NULL,locked_by=NULL
+     WHERE organization_id=:org AND id=:job',
+    ['org'=>$org,'job'=>$expiredJob]);
  $expiredIdentity=new \Platform\Workflow\Model\WorkflowRunIdentity(
     $org,$expiredClaim->runId);
  $expect($store->get($expiredIdentity)?->status->value==='running'
@@ -371,6 +375,29 @@ try {
     ['forged'=>$forged,'org'=>$org,'request'=>$requestId]);
  $deny(static fn()=> $recover->reconcile($cmd($two,2),$requestId),
     'approved but forged native Agent receipt');
+ $withProposals=[
+    'decision'=>'crash-reconciled',
+    'proposed_actions'=>[['type'=>'test.mutation','target_type'=>'lead',
+        'target_id'=>'lead-'.$token,'parameters'=>['test'=>true]]],
+ ];
+ $proposalReceipt='kernel:agent:'.$expiredNative.':'.
+    WorkflowDefinitionFingerprint::digest([$withProposals]);
+ $db->executeStatement(
+    'UPDATE cos_agent_runs SET output=:output
+     WHERE organization_id=:org AND id=:native',
+    ['output'=>json_encode($withProposals,JSON_THROW_ON_ERROR),
+     'org'=>$org,'native'=>$expiredNative]);
+ $db->executeStatement(
+    'UPDATE cos_workflow_recovery_decisions SET receipt_reference=:receipt
+     WHERE organization_id=:org AND request_id=:request AND status="APPROVED"',
+    ['receipt'=>$proposalReceipt,'org'=>$org,'request'=>$requestId]);
+ $deny(static fn()=> $recover->reconcile($cmd($two,2),$requestId),
+    'valid native Agent reasoning receipt without durable Action proposal handoff');
+ $db->executeStatement(
+    'UPDATE cos_agent_runs SET output=:output
+     WHERE organization_id=:org AND id=:native',
+    ['output'=>json_encode(['decision'=>'crash-reconciled'],JSON_THROW_ON_ERROR),
+     'org'=>$org,'native'=>$expiredNative]);
  $db->executeStatement(
     'UPDATE cos_workflow_recovery_decisions SET receipt_reference=:valid
      WHERE organization_id=:org AND request_id=:request AND status="APPROVED"',

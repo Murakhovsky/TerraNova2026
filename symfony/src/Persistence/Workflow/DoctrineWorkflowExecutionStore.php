@@ -622,6 +622,32 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
                     'kernel:tool:'.(string)$step['claimed_by'].':'))) {
                 throw new DomainException('Kernel recovery pinned technical binding is untrusted.');
             }
+            if ($kind === 'agent') {
+                // The persisted reasoning response alone cannot prove that
+                // downstream Action proposals were handed to the Action queue.
+                // Until a separately attested handoff receipt exists, refuse
+                // to claim successful recovery of a potentially partial handoff.
+                if (!preg_match('/^kernel:agent:([a-f0-9]{32}):[a-f0-9]{64}$/D',
+                    (string)$decision['receipt_reference'],$nativeMatch)) {
+                    throw new DomainException('Recovery Agent native receipt format invalid.');
+                }
+                $native=$this->db->fetchOne(
+                    'SELECT output FROM cos_agent_runs
+                     WHERE organization_id=:org AND id=:native
+                       AND correlation_id=:correlation',
+                    ['org'=>$identity->organizationId,'native'=>$nativeMatch[1],
+                     'correlation'=>$run['correlation_id']],
+                );
+                $output=is_string($native)
+                    ?json_decode($native,true,512,JSON_THROW_ON_ERROR):null;
+                if (!is_array($output)
+                    || !is_array($output['proposed_actions']??[])
+                    || ($output['proposed_actions']??[])!==[]) {
+                    throw new DomainException(
+                        'Agent proposal handoff is not independently proven; preserve quarantine.'
+                    );
+                }
+            }
             $this->kernelEvidence->assertCompletion(
                 $identity,$kind,$pinned['source_id'],$step['capability_id'],
                 (string)$run['input_digest'],(string)$decision['receipt_reference'],

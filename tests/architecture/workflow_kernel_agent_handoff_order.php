@@ -17,7 +17,8 @@ if($claim===false||$publish===false||$queue===false||$complete===false||$quarant
     || !($claim<$publish && $publish<$queue && $queue<$complete && $complete<$quarantine)
     || !str_contains($source,"'agent-job', $job->id")
     || !str_contains($source,"'action-execution:' . $action->id")
-    || !str_contains($source,'catch (Throwable $error)')) {
+    || !str_contains($source,'catch (Throwable $error)')
+    || !str_contains($source,'ExecutionFailureException::permanent(')) {
     throw new RuntimeException('Agent canonical completion must follow proposal submission and queued Action handoff.');
 }
 echo "Canonical Agent handoff ordering architecture PASS: local output before handoff, receipt after, failures quarantined.\n";

@@ -16,6 +16,7 @@ use Kernel\Queue\Job;
 use RuntimeException;
 use Throwable;
 use Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface;
+use Kernel\Execution\ExecutionFailureException;
 
 final readonly class AgentRunJobHandler implements JobHandlerInterface
 {
@@ -51,7 +52,16 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
         }
 
         $agent = $this->domains->agent($agentName);
-        $claim = $this->canonical?->beginAgent($job, $agentName);
+        try {
+            $claim = $this->canonical?->beginAgent($job, $agentName);
+        } catch (Throwable $error) {
+            // An existing, expired or uncertain canonical claim must not cause
+            // another queue delivery to invoke the LLM.
+            throw ExecutionFailureException::permanent(
+                'Canonical Agent admission denied; inspect persisted execution before any replay.',
+                $error,
+            );
+        }
         try {
             $execution = $this->runtime->run($agent, new AgentInvocation(
                 $job->organizationId,
@@ -108,6 +118,14 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
                     // An expired/completed claim still blocks replay. The exact
                     // persisted outcome requires independent operator recovery.
                 }
+            }
+            if ($claim !== null) {
+                // QueueWorker marks this delivery DEAD, not FAILED/retryable.
+                // A native receipt is evidence for an operator, not replay permission.
+                throw ExecutionFailureException::permanent(
+                    'Canonical Agent effect is uncertain; independent recovery required.',
+                    $error,
+                );
             }
             throw $error;
         }

@@ -176,7 +176,7 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
              WHERE organization_id=:org AND id=:job',
             ['org'=>$identity->organizationId,'job'=>$sourceId]);
         $payload=$job?json_decode((string)$job['payload'],true,512,JSON_THROW_ON_ERROR):null;
-        if(!$job || $job['type']!=='AGENT_RUN' || !in_array($job['status'],['RUNNING','COMPLETED'],true)
+        if(!$job || $job['type']!=='AGENT_RUN' || !in_array($job['status'],['RUNNING','COMPLETED','FAILED','DEAD'],true)
             || (int)$job['attempts']!==1 || $job['correlation_id']!==$correlation
             || !is_array($payload) || ($payload['agent_name']??null)!==$agent
             || WorkflowDefinitionFingerprint::digest([$payload])!==$digest) {
