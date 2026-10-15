@@ -86,7 +86,9 @@ final readonly class MysqlStreamingOperationsSnapshot
              WHERE sub.organization_id=:org".($sourceId===null?'':' AND sub.source_id=:source').
              " AND sub.status='ACTIVE' AND sub.data_type='BBO'
                AND src.enabled=1
-               AND src.adapter_type IN ('binance.spot.rest','massive.stocks.v2')
+               AND src.adapter_type IN ('binance.spot.rest','binance.usdm.perpetual.bbo.v1',
+                    'bybit.spot.v5','bybit.linear-perpetual.v5',
+                    'kraken.spot.rest','massive.stocks.v2')
              GROUP BY sub.source_id LIMIT 501");
         $wanted->execute($args);
         $desiredBbo=[];

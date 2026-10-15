@@ -51,13 +51,13 @@ final readonly class MysqlStreamingIncidentManager
                     "UPDATE tn_capital_market_stream_incidents
                      SET severity=:severity,occurrences=occurrences+1,
                          last_seen_at=UTC_TIMESTAMP(6),
-                         status=CASE WHEN status='RESOLVED' THEN 'OPEN' ELSE status END,
                          first_seen_at=CASE WHEN status='RESOLVED' THEN UTC_TIMESTAMP(6)
                              ELSE first_seen_at END,
                          acknowledged_at=CASE WHEN status='RESOLVED' THEN NULL ELSE acknowledged_at END,
                          acknowledged_by=CASE WHEN status='RESOLVED' THEN NULL ELSE acknowledged_by END,
                          last_notification_at=CASE WHEN status='RESOLVED' THEN NULL ELSE last_notification_at END,
-                         resolved_at=CASE WHEN status='RESOLVED' THEN NULL ELSE resolved_at END
+                         resolved_at=CASE WHEN status='RESOLVED' THEN NULL ELSE resolved_at END,
+                         status=CASE WHEN status='RESOLVED' THEN 'OPEN' ELSE status END
                      WHERE organization_id=:org AND source_id=:source
                        AND subject_id=:subject AND code=:code");
                 $before=$this->pdo->prepare(

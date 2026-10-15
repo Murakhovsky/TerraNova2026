@@ -158,11 +158,12 @@ final readonly class MysqlStreamingFailoverAudit
                  WHERE p.organization_id=:org AND p.source_id=:source
                    AND p.status='LIVE_QUOTE' AND p.fencing_token=:token
                    AND p.quote_count>0 AND p.last_quality_score>=80
-                   AND p.ack_at>:observed AND p.last_live_quote_at>:observed
+                   AND p.ack_at>:observed AND p.last_live_quote_at>:observed_quote
                    AND t.status='TRUSTED' AND t.recovery_required=0
                    AND t.last_quality_score>=80 AND t.fencing_token=:current");
             $v->execute(['org'=>$org,'source'=>$source,'token'=>$current,
-                'current'=>$current,'observed'=>$row['observed_at']]);
+                'current'=>$current,'observed'=>$row['observed_at'],
+                'observed_quote'=>$row['observed_at']]);
             $confirmed=(int)$v->fetchColumn();
             if($confirmed<1)throw new DomainException('Fresh provider ACK/live quote/trust after failover not proven.');
             $this->record($org,$source,'RECOVERED',(int)$row['previous_token'],$current,true);
