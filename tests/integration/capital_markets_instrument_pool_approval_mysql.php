@@ -117,6 +117,37 @@ try{
         'New venue mapping was not safety-quarantined.');
     $reject(fn()=>$service->decide($org,$approver,$change,true,
         'Replay approval should fail','CI-REPLAY'),'Approval replay was accepted.');
+
+    // Explicit economic identity binding to a separately pre-existing instrument.
+    $linkSymbol='LNK'.strtoupper(bin2hex(random_bytes(3))).'USDT';
+    $linkedId='pool:linked:'.strtolower($linkSymbol);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_instruments
+         (organization_id,instrument_id,symbol,canonical_symbol,name,family,status,
+          metadata_json,created_at,updated_at)
+         VALUES (:org,:id,:symbol,:symbol,'Existing canonical symbol',
+          'spot_market','ACTIVE','{}',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"
+    )->execute(['org'=>$org,'id'=>$linkedId,'symbol'=>$linkSymbol]);
+    $linkSnapshot=$record([[
+        'venue_symbol'=>$linkSymbol,'instrument_id'=>null,'mapping_status'=>null,
+        'observation'=>'UNMAPPED_REVIEW','base'=>'LNK','quote'=>'USDT',
+    ]],1);
+    $reject(fn()=>$service->propose($org,$proposer,[
+        'snapshot_id'=>$linkSnapshot,'action'=>'LINK','venue_symbol'=>$linkSymbol,
+        'instrument_id'=>'missing:instrument',
+        'reason'=>'Unverified symbol cannot link to unknown asset',
+    ],'CI-INVALID-LINK'),'Unknown canonical identity was accepted as a LINK.');
+    $linkChange=$service->propose($org,$proposer,[
+        'snapshot_id'=>$linkSnapshot,'action'=>'LINK','venue_symbol'=>$linkSymbol,
+        'instrument_id'=>$linkedId,'reason'=>'Operator verified existing instrument identity',
+    ],'CI-LINK');
+    $assert($select('tn_capital_market_venue_instruments','status',$org,$linkedId)===null,
+        'Unapproved LINK changed canonical registry.');
+    $service->decide($org,$approver,$linkChange,true,
+        'Approved separately verified canonical association','CI-LINK-APPROVE');
+    $assert($select('tn_capital_market_venue_instruments','status',$org,$linkedId)==='SUSPENDED',
+        'Approved LINK must create a suspended venue mapping.');
+
     $reject(fn()=>$service->decide($other,$foreignActor,$change,true,
         'Foreign decision should fail','CI-TENANT'),'Foreign org approved change.');
     $candidateSet=$service->stageStatusCandidates($org,$proposer,$s1);
@@ -133,6 +164,11 @@ try{
     $autoId=(int)$rows[0]['id'];
     $service->decide($org,$approver,$autoId,false,
         'Operator explicitly rejects automated activation','CI-AUTO-REJECT');
+    // Re-proposing after rejection requires new catalog evidence.
+    $s2=$record([[
+        'venue_symbol'=>$symbol,'instrument_id'=>$id,'mapping_status'=>'SUSPENDED',
+        'observation'=>'MAPPED_STATUS_REVIEW','base'=>'CI','quote'=>'USDT',
+    ]],1);
     $activation=$service->propose($org,$proposer,[
         'snapshot_id'=>$s2,'action'=>'STATUS','venue_symbol'=>$symbol,'target_status'=>'ACTIVE',
         'reason'=>'Current live listing verified explicitly',
@@ -184,6 +220,7 @@ try{
     $autoPending=(int)$service->queue($org,$proposer)[0]['id'];
     $service->decide($org,$approver,$autoPending,false,
         'Operator reserves right to reject suspicious disappearance','CI-AUTO-SUSPEND-REJECT');
+    $s5=$record([$missing],1);
     $suspension=$service->propose($org,$proposer,[
         'snapshot_id'=>$s5,'action'=>'STATUS','venue_symbol'=>$symbol,'target_status'=>'SUSPENDED',
         'reason'=>'Three independent full healthy observations',
