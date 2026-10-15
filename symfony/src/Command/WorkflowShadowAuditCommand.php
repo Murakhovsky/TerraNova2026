@@ -24,7 +24,7 @@ final class WorkflowShadowAuditCommand extends Command
     {
         $this->addArgument('source',InputArgument::REQUIRED,'federation, engineering-agent, engineering-workflow or engineering-fleet');
         $this->addArgument('organization',InputArgument::REQUIRED,'Verified tenant organization ID');
-        $this->addArgument('run',InputArgument::REQUIRED,'Legacy run/AgentRun ID');
+        $this->addArgument('run',InputArgument::OPTIONAL,'Legacy run/AgentRun ID (omit for engineering-fleet)');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -37,6 +37,9 @@ final class WorkflowShadowAuditCommand extends Command
             $output->writeln(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
             // Fleet aggregation cannot approve a business Workflow cutover.
             return ($report['status']??'drift')==='partial' ? Command::SUCCESS : Command::FAILURE;
+        }
+        if ($run==='' && $source!=='engineering-fleet') {
+            throw new \InvalidArgumentException('Source-scoped audit requires an explicit legacy Run/AgentRun ID.');
         }
         if ($source==='engineering-workflow') {
             $report=$this->reader->engineeringWorkflow($org,$run);
