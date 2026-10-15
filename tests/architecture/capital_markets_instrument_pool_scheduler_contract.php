@@ -32,7 +32,7 @@ if(!str_contains($messenger,"'App\\Application\\CapitalMarkets\\Command\\RunInst
 }
 foreach([
     "getenv('COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED')!=='1'",
-    "isEnabled($org,'capital_markets')",'reserveScan(','->record(',
+    'isEnabled($org,\'capital_markets\')','reserveScan(','->record(',
     'InstrumentPoolScheduleTargets::parse','catch(Throwable $error)',
 ] as $needle){
     if(!str_contains($handler,$needle))throw new RuntimeException('Instrument Pool handler guard missing '.$needle);
