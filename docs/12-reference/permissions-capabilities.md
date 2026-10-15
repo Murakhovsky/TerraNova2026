@@ -200,8 +200,8 @@ generated: true
 | `sales` | `sales.approval.any_team` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.approval.decide` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.create_task` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
-| `sales` | `sales.deal.won.observation` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.deal.assign` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
+| `sales` | `sales.deal.won.observation` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.director.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.workspace.use` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `service` | `service.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
