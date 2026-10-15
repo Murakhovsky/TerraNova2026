@@ -49,10 +49,10 @@ generated: true
 - `capital_markets.allocation.view`;
 - `capital_markets.audit.view`;
 - `capital_markets.instrument.manage`;
+- `capital_markets.instrument.view`;
 - `capital_markets.instrument_pool.approve`;
 - `capital_markets.instrument_pool.propose`;
 - `capital_markets.instrument_pool.view`;
-- `capital_markets.instrument.view`;
 - `capital_markets.manage`;
 - `capital_markets.market_data.history.view`;
 - `capital_markets.market_data.manage`;

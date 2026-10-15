@@ -1,0 +1,22 @@
+pages:
+  - id: capital.markets.instrument.pool.approvals
+    route: { name: capital_markets_instrument_pool, path: "/capital-markets/instrument-pool", methods: [GET, HEAD] }
+    surface: workspace
+    domain: CapitalMarkets
+    capability: capital_markets.instrument_pool.view
+    owner: CapitalMarkets
+    priority: P0
+    status: IMPLEMENTED
+    personas: [authenticated_user]
+    product:
+      primary_goal: "Review provider discovery evidence and govern canonical instrument imports with independent approval."
+      page_purpose: "Human-controlled mapping and venue status lifecycle over the existing Capital Markets Foundation."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [EntityList, FormSection, ErrorState, EmptyState]
+    primary_action: capital_markets.instrument_pool.propose
+    states: [normal, error, permission_denied]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 70, ux: 50, visual: 30, responsive: 30, accessibility: 30, content: 70 }

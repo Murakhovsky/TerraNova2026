@@ -2020,6 +2020,7 @@ services:
   Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery: ~
   Domains\CapitalMarkets\Application\Service\InstrumentPoolCatalogAudit: ~
   Domains\CapitalMarkets\Application\Service\InstrumentPoolApprovalService:
+    public: true
     arguments:
       $pdo: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\InstrumentPoolLifecycleReviewer: ~
