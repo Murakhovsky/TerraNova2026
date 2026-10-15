@@ -57,6 +57,8 @@ jobs:
           php tests/unit/capital_markets_per_instrument_stream_trust.php
           php tests/unit/capital_markets_multi_symbol_300_planner.php
           php tests/architecture/capital_markets_multisymbol_per_instrument_contract.php
+          php tests/unit/capital_markets_stream_provider_ops_alerts.php
+          php tests/architecture/capital_markets_live_provider_ops_contract.php
           php tests/unit/capital_markets_pool_production_soak.php
           php tests/architecture/capital_markets_pool_production_contract.php
           php tests/unit/capital_markets_cross_venue_discovery.php
