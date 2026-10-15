@@ -12,6 +12,7 @@ use Kernel\Workflow\Model\WorkflowStatus;
 use LogicException;
 use Platform\Workflow\Contract\WorkflowExecutionStoreInterface;
 use Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface;
+use Platform\Workflow\Contract\WorkflowTechnicalExternalEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
 use Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
@@ -39,6 +40,7 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
         private Connection $db,
         private WorkflowReceiptVerifierInterface $receipts,
         private WorkflowStepClaimAdmissionInterface $admission,
+        private ?WorkflowTechnicalExternalEvidenceInterface $technicalEvidence = null,
     ) {}
 
     public function create(WorkflowRunDraft $draft, TenantContext $actor): WorkflowRunSnapshot
@@ -322,6 +324,12 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             $identity,$definition,$inputDigest,$actorId,$correlationId,
             $workerId,$leaseSeconds,$step,$stepKey,$token
         ):void {
+            if ($this->technicalEvidence===null) {
+                throw new DomainException('Unconfigured technical Agent evidence: fail closed.');
+            }
+            $this->technicalEvidence->assertBegin(
+                $identity,$definition,$inputDigest,$actorId,$correlationId,$workerId,
+            );
             $this->db->executeStatement(
                 'INSERT INTO cos_workflow_runs
                  (organization_id,run_id,definition_id,definition_version,
@@ -380,6 +388,12 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
                 || ($definition[0]['execution_binding']??null)!=='engineering:agent-run') {
                 throw new DomainException('Technical Agent immutable Workflow diverged before checkpoint.');
             }
+            if ($this->technicalEvidence===null) {
+                throw new DomainException('Unconfigured technical Agent evidence: fail closed.');
+            }
+            $this->technicalEvidence->assertCompletion(
+                $identity,$stepId,$claimToken,$receipt,$correlationId,
+            );
             $changed=$this->db->executeStatement(
                 'UPDATE cos_workflow_steps SET state="completed",revision=revision+1,
                  result_reference=:receipt,claim_expires_at=NULL,updated_at=UTC_TIMESTAMP(6)
@@ -415,6 +429,10 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
                 || $run['state']!=='running' || (int)$run['revision']!==2) {
                 throw new DomainException('Technical Agent is not in an unresolved running claim.');
             }
+            if ($this->technicalEvidence===null) {
+                throw new DomainException('Unconfigured technical Agent evidence: fail closed.');
+            }
+            $this->technicalEvidence->assertQuarantine($identity,$stepId,$claimToken);
             $changed=$this->db->executeStatement(
                 'UPDATE cos_workflow_steps SET state="ambiguous",revision=revision+1,
                  updated_at=UTC_TIMESTAMP(6)

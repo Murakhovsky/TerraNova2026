@@ -11,6 +11,7 @@ use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionGateway;
+use App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionEvidence;
 use App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionAdmission;
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
@@ -42,6 +43,7 @@ $task=new EngineeringAgentTask($taskId,$feature,AgentRole::QA_PLANNER,
 $runTrace=$trace.':agent:'.$taskId;
 $gate=new EngineeringCanonicalTechnicalExecutionGateway($db,new DoctrineWorkflowExecutionStore(
     $db,new FailClosedWorkflowReceiptVerifier(),new FailClosedWorkflowStepClaimAdmission(),
+    new EngineeringCanonicalTechnicalExecutionEvidence($db),
 ));
 $plan=new FederationWorkflowPlanApprovalEvidence($db,new FederationPlanApprovalEvidenceReader($db));
 $reader=new DoctrineWorkflowShadowParityReader($db,
