@@ -31,7 +31,10 @@ foreach(['reviewed_by<>submitted_by','instrument_pool.approve','instrument_pool.
 }
 if(!str_contains($proof,"'https'")||!str_contains($policy,"'BBO_250'")
     ||!str_contains($policy,"'L2_50'"))throw new RuntimeException('Strict production gates missing.');
-if(!str_contains($compose,'COS_CM_POOL_PRODUCTION_ARMED')
+if(!str_contains($compose,'profiles: [cm-pool-watchdog]')
+    ||!str_contains($compose,'sleep 300')
+    ||!str_contains($compose,'COS_CM_POOL_WATCHDOG_ACTOR_ID')
+    ||!str_contains($compose,'COS_CM_POOL_PRODUCTION_ARMED')
     ||!str_contains($schema,'tn_capital_market_pool_production_control')){
     throw new RuntimeException('Production flag/config/schema not installed.');
 }

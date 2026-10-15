@@ -223,6 +223,39 @@ services:
     healthcheck: { disable: true }
     networks: [backend]
 
+  # OFF by default. Separate 5-minute tenant-scoped rollback watchdog.
+  # Does not create feeds, grant credentials, or enable live trading.
+  cm-pool-watchdog:
+    profiles: [cm-pool-watchdog]
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    mem_limit: 192m
+    cpus: "0.25"
+    command:
+      - sh
+      - -ec
+      - |
+        test -n "$COS_CM_POOL_WATCHDOG_ORGANIZATION"
+        case "$COS_CM_POOL_WATCHDOG_ACTOR_ID" in
+          ''|0|*[!0-9]*) echo "Invalid watchdog actor"; exit 1 ;;
+        esac
+        while true; do
+          php bin/console cos:capital-markets:pool:production watchdog \
+            --organization="$COS_CM_POOL_WATCHDOG_ORGANIZATION" \
+            --actor="$COS_CM_POOL_WATCHDOG_ACTOR_ID"
+          sleep 300
+        done
+    environment:
+      <<: *app-environment
+      COS_CM_POOL_WATCHDOG_ORGANIZATION: ${COS_CM_POOL_WATCHDOG_ORGANIZATION:-}
+      COS_CM_POOL_WATCHDOG_ACTOR_ID: ${COS_CM_POOL_WATCHDOG_ACTOR_ID:-0}
+    depends_on:
+      mysql: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [backend]
+
   spatial-worker:
     image: cos-symfony-php:local
     restart: unless-stopped

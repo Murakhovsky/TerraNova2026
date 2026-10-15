@@ -61,7 +61,11 @@ Acceptance requires a different operator from rollout initiator and 24h actual e
 
 **Безперервний контроль та аварійний відкат**
 
-Configure the following as a monitored externally scheduled job every 5 minutes using a dedicated authorized service operator. If live health fails, watchdog automatically executes tenant-specific emergency rollback:
+An opt-in Docker Compose profile is provided. On the approved deployed host, configure COS_CM_POOL_WATCHDOG_ORGANIZATION and COS_CM_POOL_WATCHDOG_ACTOR_ID, then run:
+
+    docker compose --profile cm-pool-watchdog up -d --no-deps cm-pool-watchdog
+
+The profile is OFF by default, bounded to 192 MiB / 0.25 CPUs and never starts market feeds. Inspect its logs and supervise Docker restarts; any command failure terminates the loop for restart/alert. Alternatively, configure the following as a monitored externally scheduled job every 5 minutes using a dedicated authorized service operator. If live health fails, watchdog automatically executes tenant-specific emergency rollback:
 
     ... watchdog --organization=ORG --actor=SERVICE_OPERATOR
 

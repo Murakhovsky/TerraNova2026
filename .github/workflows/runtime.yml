@@ -84,6 +84,8 @@ jobs:
         run: docker compose config --quiet
       - name: Validate optional Capital Markets streaming lease monitor
         run: docker compose --profile cm-stream-sweeper config --quiet
+      - name: Validate guarded Capital Markets pool watchdog profile
+        run: docker compose --profile cm-pool-watchdog config --quiet
       - name: Build runtime
         run: docker compose build php nginx
       - name: Start dependencies
