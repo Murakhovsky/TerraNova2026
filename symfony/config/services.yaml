@@ -2078,6 +2078,11 @@ services:
   Domains\CapitalMarkets\Application\Service\BybitDerivativesStreamScope: ~
   Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner: ~
   Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore: ~
+  Domains\CapitalMarkets\Application\Service\StreamingFleetPlacementPolicy: ~
+  Domains\CapitalMarkets\Application\Service\CrossVenueBboConsensus: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlCrossVenueBboReconciliation:
+    arguments:
+      $pdo: '@cos.database.pdo'
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway:
     arguments:
