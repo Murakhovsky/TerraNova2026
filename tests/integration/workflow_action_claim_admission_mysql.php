@@ -164,6 +164,29 @@ try {
                  "USER",:owner,"USER",:approver,NOW(6),DATE_ADD(NOW(6),INTERVAL 1 DAY))',
         ['id'=>bin2hex(random_bytes(16)),...$keys,'approver'=>$approvedBy,'owner'=>$actorId],
     );
+    // Claim BEFORE independent human approval so that a queued worker can
+    // never execute without the exclusive persisted Workflow Step lease.
+    $db->executeStatement(
+        'UPDATE cos_actions SET status="PENDING_APPROVAL" WHERE organization_id=:org AND id=:action',
+        $keys,
+    );
+    $db->executeStatement(
+        'UPDATE cos_approvals SET status="PENDING",decided_by_type=NULL,decided_by_id=NULL,
+             decided_at=NULL WHERE organization_id=:org AND action_id=:action',
+        $keys,
+    );
+    $admission->assertAuthorized($claim,$step);
+    $reject(static fn()=> $untrusted->assertAuthorized($claim,$step),'untrusted Plan while approval pending');
+    $db->executeStatement(
+        'UPDATE cos_actions SET status="QUEUED" WHERE organization_id=:org AND id=:action',
+        $keys,
+    );
+    $db->executeStatement(
+        'UPDATE cos_approvals SET status="APPROVED",decided_by_type="USER",
+             decided_by_id=:approver,decided_at=NOW(6)
+         WHERE organization_id=:org AND action_id=:action',
+        ['approver'=>$approvedBy,...$keys],
+    );
     $admission->assertAuthorized($claim,$step);
     $reject(static fn()=> $untrusted->assertAuthorized($claim,$step),'untrusted Plan gate');
     $permissionState->setEnabled($org,'sales',false);

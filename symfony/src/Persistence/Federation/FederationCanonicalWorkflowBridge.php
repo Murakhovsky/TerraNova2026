@@ -88,7 +88,7 @@ final readonly class FederationCanonicalWorkflowBridge
         $run = $this->requireRun($id);
         return [
             'run_id'=>$runId, 'plan_id'=>$run->sourcePlanId,
-            'state'=>$run->state->value, 'revision'=>$run->revision,
+            'state'=>$run->status->value, 'revision'=>$run->revision,
             'execution_authority'=>'platform_workflow',
             'steps'=>array_map(static fn($step): array => [
                 'step_id'=>$step->stepId, 'capability_id'=>$step->capabilityId,
@@ -169,14 +169,35 @@ final readonly class FederationCanonicalWorkflowBridge
         $this->authorized($actor);
         self::identifier($runId);
         $org=$actor->organizationId()->value();
+        // Serialize Action submission and Workflow claims using the SAME
+        // authoritative canonical Run row. A second operator sees the new
+        // Step claim and cannot mint a second Action.
+        return $this->db->transactional(function () use ($actor,$org,$runId,$approvalId): array {
+            $locked=$this->db->fetchOne(
+                'SELECT run_id FROM cos_workflow_runs
+                 WHERE organization_id=:org AND run_id=:run
+                   AND definition_id=:definition FOR UPDATE',
+                ['org'=>$org,'run'=>$runId,'definition'=>'federation.approved-plan'],
+            );
+            if ($locked===false) {
+                throw new DomainException('Canonical Goal run is unavailable or not tenant-owned.');
+            }
+            return $this->advanceLocked($actor,$runId,$approvalId);
+        });
+    }
+
+    /** Lock of the canonical Run must be held for the entire progression. */
+    private function advanceLocked(TenantContext $actor, string $runId, string $approvalId): array
+    {
+        $org=$actor->organizationId()->value();
         $id=new WorkflowRunIdentity($org,$runId);
         $run=$this->requireRun($id);
         $result=static fn(string $state,?string $step=null,?string $action=null): array => [
             'run_id'=>$runId,'state'=>$state,'step_id'=>$step,'action_id'=>$action,
             'execution_authority'=>'platform_workflow',
         ];
-        if ($run->state === WorkflowStatus::COMPLETED) return $result('completed');
-        if ($run->state !== WorkflowStatus::CREATED && $run->state !== WorkflowStatus::RUNNING) {
+        if ($run->status === WorkflowStatus::COMPLETED) return $result('completed');
+        if ($run->status !== WorkflowStatus::CREATED && $run->status !== WorkflowStatus::RUNNING) {
             return $result('manual_reconciliation_required');
         }
         if (!is_string($run->sourcePlanId) || $run->sourcePlanId === '') {
@@ -198,7 +219,7 @@ final readonly class FederationCanonicalWorkflowBridge
             hash('sha256',(string)$row['plan_json']),$approvalId);
 
         $command=new WorkflowRunCommand($id,$actor,$run->revision,$run->correlationId);
-        if ($run->state === WorkflowStatus::CREATED) {
+        if ($run->status === WorkflowStatus::CREATED) {
             $this->workflow->compareAndTransition(new WorkflowRunTransition(
                 $command,WorkflowStatus::CREATED,WorkflowStatus::RUNNING,'approved Goal run started'));
             return $result('running');

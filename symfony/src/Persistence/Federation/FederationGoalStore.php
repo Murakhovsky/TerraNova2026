@@ -131,10 +131,19 @@ final readonly class FederationGoalStore
         $this->writer($viewer);
         $limit = max(1, min(20, $limit));
         return $this->db->fetchAllAssociative(
-            'SELECT run_id, goal_id, plan_id, state, revision, created_at
-             FROM cos_federation_runs WHERE organization_id = :org
-             ORDER BY created_at DESC, run_id DESC LIMIT ' . $limit,
-            ['org' => $viewer->organizationId()->value()],
+            'SELECT run_id,goal_id,plan_id,state,revision,created_at FROM (
+                SELECT r.run_id,r.goal_id,r.plan_id,r.state,r.revision,r.created_at
+                FROM cos_federation_runs r WHERE r.organization_id=:legacy_org
+                UNION ALL
+                SELECT w.run_id,p.goal_id,p.plan_id,w.state,w.revision,w.created_at
+                FROM cos_workflow_runs w
+                INNER JOIN cos_federation_plans p
+                  ON p.organization_id=w.organization_id AND p.plan_id=w.source_plan_id
+                WHERE w.organization_id=:canonical_org AND w.definition_id=:definition
+             ) AS executions ORDER BY created_at DESC,run_id DESC LIMIT ' . $limit,
+            ['legacy_org'=>$viewer->organizationId()->value(),
+             'canonical_org'=>$viewer->organizationId()->value(),
+             'definition'=>'federation.approved-plan'],
         );
     }
 
@@ -550,6 +559,20 @@ final readonly class FederationGoalStore
                  WHERE r.organization_id = :org AND r.run_id = :run FOR UPDATE',
                 ['org' => $org, 'run' => $runId],
             );
+            if (!$row) {
+                // Canonical technical Run is the sole authority for new Plans.
+                // No fallback to legacy flags when a canonical Run exists.
+                $row = $this->db->fetchAssociative(
+                    'SELECT p.goal_id, w.created_at, w.state AS run_state,
+                            p.spec_version, p.state AS plan_state
+                     FROM cos_workflow_runs w
+                     INNER JOIN cos_federation_plans p
+                       ON p.organization_id=w.organization_id AND p.plan_id=w.source_plan_id
+                     WHERE w.organization_id=:org AND w.run_id=:run
+                       AND w.definition_id=:definition FOR UPDATE',
+                    ['org'=>$org,'run'=>$runId,'definition'=>'federation.approved-plan'],
+                );
+            }
             if (!$row || $row['run_state'] !== 'completed' || $row['plan_state'] !== 'approved') {
                 throw new DomainException('Goal outcomes require a finalized, approved tenant Run.');
             }
@@ -603,6 +626,25 @@ final readonly class FederationGoalStore
              ORDER BY e.evaluated_at DESC, e.evaluation_id DESC LIMIT 1",
             ['org' => $viewer->organizationId()->value(), 'run' => $runId, 'evaluation_run' => $runId],
         );
+        if (!$row) {
+            $row = $this->db->fetchAssociative(
+                "SELECT e.evaluation_id,e.evaluated_at,e.evaluation_json
+                 FROM cos_federation_evaluations e
+                 INNER JOIN cos_workflow_runs w
+                   ON w.organization_id=e.organization_id
+                 INNER JOIN cos_federation_plans p
+                   ON p.organization_id=w.organization_id AND p.plan_id=w.source_plan_id
+                  AND p.goal_id=e.goal_id AND p.spec_version=e.spec_version
+                 WHERE w.organization_id=:org AND w.run_id=:run
+                   AND w.definition_id=:definition AND w.state='completed'
+                   AND p.state='approved'
+                   AND JSON_UNQUOTE(JSON_EXTRACT(e.evaluation_json, '$.run_id'))=:evaluation_run
+                   AND JSON_UNQUOTE(JSON_EXTRACT(e.evaluation_json, '$.evidence_policy'))='domain_read_model_v1'
+                 ORDER BY e.evaluated_at DESC,e.evaluation_id DESC LIMIT 1",
+                ['org'=>$viewer->organizationId()->value(),'run'=>$runId,
+                 'definition'=>'federation.approved-plan','evaluation_run'=>$runId],
+            );
+        }
         if (!$row) return null;
         $result = self::decode((string) $row['evaluation_json']);
         if (($result['run_id'] ?? null) !== $runId

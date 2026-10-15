@@ -102,9 +102,6 @@ final readonly class FederationRunController
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
         try {
-            if ($this->canonical->owns($actor, $runId)) {
-                return self::reply(['error'=>'canonical_goal_outcome_adapter_not_yet_verified'], 422);
-            }
             return self::reply($this->goals->recordEvaluation(
                 $actor, 'eval-' . bin2hex(random_bytes(12)), $runId,
             ), 201);
