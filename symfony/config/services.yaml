@@ -282,6 +282,12 @@ services:
   # independent Approval, immutable Plan and all predecessor receipts.
   Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission
+  Platform\Workflow\Contract\WorkflowExecutionCoordinatorInterface:
+    alias: App\Persistence\Workflow\DoctrineWorkflowExecutionCoordinator
+  App\Persistence\Workflow\DoctrineWorkflowExecutionCoordinator:
+    arguments:
+      $approval: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+      $receipts: '@App\Persistence\Workflow\WorkflowReceiptAttestationRouter'
   Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
   Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface:
