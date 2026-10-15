@@ -36,7 +36,8 @@ final class WorkflowShadowAuditCommand extends Command
             $report=$this->reader->engineeringFleet($org);
             $output->writeln(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
             // Fleet aggregation cannot approve a business Workflow cutover.
-            return ($report['status']??'drift')==='partial' ? Command::SUCCESS : Command::FAILURE;
+            // PARTIAL compares technical execution only; it is never release readiness.
+            return Command::FAILURE;
         }
         if ($run==='' && $source!=='engineering-fleet') {
             throw new \InvalidArgumentException('Source-scoped audit requires an explicit legacy Run/AgentRun ID.');
