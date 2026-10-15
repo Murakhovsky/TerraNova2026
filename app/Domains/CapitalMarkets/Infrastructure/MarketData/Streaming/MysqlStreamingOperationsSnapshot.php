@@ -152,7 +152,7 @@ final readonly class MysqlStreamingOperationsSnapshot
                 'canonical_events_5m'=>(int)$record['canonical_events'],
                 'trusted_live_events_5m'=>(int)$record['trusted_events'],
                 'worst_ingest_ms'=>(int)$record['worst_ingest_ms'],
-                'mean_ingest_ms'=>(float)$record['mean_ingest_ms'],
+                'mean_ingest_ms'=>(int)round((float)$record['mean_ingest_ms']),
                 'last_event_at'=>$record['last_event_at'],
             ];
         }
