@@ -10,6 +10,7 @@ spl_autoload_register(static function (string $class): void {
 });
 
 use App\Engineering\Application\Agent\EngineeringAgentRunner;
+use App\Engineering\Application\Agent\EngineeringTechnicalExecutionAdmissionInterface;
 use App\Engineering\Application\Agent\EngineeringAgentTechnicalFailureException;
 use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
@@ -115,4 +116,38 @@ $result = (new EngineeringAgentRunner($invalidThenCorrected))->run($task, 'platf
 if ($invalidThenCorrected->calls !== 2) throw new RuntimeException('Invalid structured output must receive one correction retry.');
 if ($result->technicalRetries !== 1) throw new RuntimeException('Validation correction retry count was not preserved.');
 
-echo "Engineering technical retry policy passed.\n";
+$admission = new class implements EngineeringTechnicalExecutionAdmissionInterface {
+    public bool $authorized = false;
+    public int $checks = 0;
+    public function assertReady(EngineeringAgentTask $task, string $organizationId, string $runTraceId): void
+    {
+        ++$this->checks;
+        if ($organizationId !== 'platform' || !str_contains($runTraceId, ':agent:'.$task->id)
+            || !$this->authorized) {
+            throw new DomainException('No canonical AgentRun claim before external provider.');
+        }
+    }
+};
+$beforeCalls = $runtimeFailure->calls;
+try {
+    (new EngineeringAgentRunner($runtimeFailure, technicalAdmission: $admission))
+        ->run($task, 'platform', 'pre-provider-trace');
+    throw new RuntimeException('LLM provider unexpectedly called without canonical technical admission.');
+} catch (DomainException) {
+    // DENIED before external provider execution.
+}
+if ($runtimeFailure->calls !== $beforeCalls || $admission->checks !== 1) {
+    throw new RuntimeException('Missing admission must prevent all LLM calls.');
+}
+$admission->authorized = true;
+try {
+    (new EngineeringAgentRunner($runtimeFailure, technicalAdmission: $admission))
+        ->run($task, 'platform', 'pre-provider-trace');
+    throw new RuntimeException('Synthetic provider failure was not propagated.');
+} catch (EngineeringAgentTechnicalFailureException) {
+    // This time the provider is reached exactly once.
+}
+if ($runtimeFailure->calls !== $beforeCalls + 1 || $admission->checks !== 2) {
+    throw new RuntimeException('Authorized canonical AgentRun must be checked before provider exactly once.');
+}
+echo "Engineering technical retry policy and canonical pre-provider admission passed.\n";

@@ -11,6 +11,7 @@ use App\Engineering\Domain\Agent\AgentRole;
 use App\Engineering\Domain\Agent\EngineeringAgentTask;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionGateway;
+use App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionAdmission;
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
@@ -81,6 +82,10 @@ try {
        ['id'=>$workflow,'feature'=>$feature,'trace'=>$trace,'lock'=>'engineering:feature:'.$feature.':workflow'],
     );
     $createAgent($agent,$task,$runTrace);
+    $admission=new EngineeringCanonicalTechnicalExecutionAdmission($db,$reader);
+    $admission->assertReady($task,$org,$runTrace);
+    $deny(static fn()=> $admission->assertReady($task,'foreign-tenant',$runTrace),
+        'legacy AgentRun tenant substitution before provider');
     $gate->begin($agent,$workflow,$task,$runTrace);
     if($reader->engineeringAgent($org,$agent)->status->value!=='no_target') {
         throw new RuntimeException('Legacy-only AgentRun must not shadow as canonical.');
@@ -92,8 +97,16 @@ try {
        ['org'=>$org,'feature'=>$feature],
     );
     $gate->begin($agent,$workflow,$task,$runTrace);
+    $admission->assertReady($task,$org,$runTrace);
+    $deny(static fn()=> $admission->assertReady($task,$org,'tampered-trace'),
+        'provider trace substitution on canonical AgentRun');
     if($reader->engineeringAgent($org,$agent)->status->value!=='match') {
         throw new RuntimeException('Active claimed Engineering AgentRun did not match canonical technical Run.');
+    }
+    $fleet=$reader->engineeringFleet($org);
+    if($fleet['status']!=='partial' || ($fleet['counts']['partial']??0)!==1
+       || count($fleet['features'])!==1 || $fleet['cutover_authorized']!==false) {
+        throw new RuntimeException('Real Engineering fleet audit did not preserve business gate ownership.');
     }
     $batch=$reader->engineeringWorkflow($org,$workflow);
     if($batch['status']!=='partial' || ($batch['technical_counts']['match']??0)!==1
@@ -116,6 +129,8 @@ try {
     if($reader->engineeringAgent($org,$agent)->status->value!=='drift') {
         throw new RuntimeException('Shadow ignored expired canonical technical lease.');
     }
+    $deny(static fn()=> $admission->assertReady($task,$org,$runTrace),
+        'provider must not execute on expired canonical lease');
     $db->executeStatement(
         'UPDATE cos_workflow_steps SET claim_expires_at=DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 7200 SECOND)
          WHERE organization_id=:org AND run_id=:run AND step_id="execute"',
@@ -127,6 +142,8 @@ try {
     $createAgent($other,$otherTask,'resume-'.$tag.':agent:'.$otherTask->id);
     $deny(static fn()=> $gate->begin($other,$workflow,$otherTask,'resume-'.$tag.':agent:'.$otherTask->id),
         'overlapping external AgentRun while first claim is held');
+    $deny(static fn()=> $admission->assertReady($otherTask,$org,'resume-'.$tag.':agent:'.$otherTask->id),
+        'provider cannot bypass unresolved first canonical claim');
 
     $db->executeStatement(
         'UPDATE cos_workflow_runs SET correlation_id="tampered"
@@ -170,6 +187,8 @@ try {
         ['agent'=>$agent,'output'=>json_encode($result,JSON_THROW_ON_ERROR)],
     );
     $gate->complete($agent);
+    $deny(static fn()=> $admission->assertReady($task,$org,$runTrace),
+        'finished AgentRun may not execute provider again');
     if($reader->engineeringAgent($org,$agent)->status->value!=='match') {
         throw new RuntimeException('Completed canonical AgentRun receipt did not match persisted source output.');
     }
@@ -209,7 +228,7 @@ try {
     if($reader->engineeringAgent('wrong-tenant',$agent)->status->value!=='no_target') {
         throw new RuntimeException('Engineering shadow leaked another tenant.');
     }
-    echo "Real Engineering canonical AgentRun MySQL passed: opt-in, live shadow, claim fencing, receipts, drift, manual reconciliation and tenant isolation.\n";
+    echo "Real Engineering canonical AgentRun MySQL passed: opt-in, fleet parity, pre-provider admission, claim fencing, receipts, drift, manual reconciliation and tenant isolation.\n";
 } finally {
     $db->executeStatement('DELETE FROM cos_engineering_technical_links WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_workflow_steps WHERE organization_id=:org',['org'=>$org]);

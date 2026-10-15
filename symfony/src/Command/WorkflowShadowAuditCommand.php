@@ -22,7 +22,7 @@ final class WorkflowShadowAuditCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('source',InputArgument::REQUIRED,'federation, engineering-agent or engineering-workflow');
+        $this->addArgument('source',InputArgument::REQUIRED,'federation, engineering-agent, engineering-workflow or engineering-fleet');
         $this->addArgument('organization',InputArgument::REQUIRED,'Verified tenant organization ID');
         $this->addArgument('run',InputArgument::REQUIRED,'Legacy run/AgentRun ID');
     }
@@ -32,6 +32,12 @@ final class WorkflowShadowAuditCommand extends Command
         $source=(string)$input->getArgument('source');
         $org=(string)$input->getArgument('organization');
         $run=(string)$input->getArgument('run');
+        if ($source==='engineering-fleet') {
+            $report=$this->reader->engineeringFleet($org);
+            $output->writeln(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
+            // Fleet aggregation cannot approve a business Workflow cutover.
+            return ($report['status']??'drift')==='partial' ? Command::SUCCESS : Command::FAILURE;
+        }
         if ($source==='engineering-workflow') {
             $report=$this->reader->engineeringWorkflow($org,$run);
             $output->writeln(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
@@ -41,7 +47,7 @@ final class WorkflowShadowAuditCommand extends Command
         $report=match($source) {
             'federation'=>$this->reader->federation($org,$run),
             'engineering-agent'=>$this->reader->engineeringAgent($org,$run),
-            default=>throw new \InvalidArgumentException('Only federation, engineering-agent and engineering-workflow are supported.'),
+            default=>throw new \InvalidArgumentException('Only federation, engineering-agent, engineering-workflow and engineering-fleet are supported.'),
         };
         $output->writeln(json_encode([
             'source'=>$report->source,'run_id'=>$report->sourceRunId,

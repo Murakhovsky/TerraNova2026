@@ -1424,6 +1424,13 @@ services:
   App\Engineering\Application\Agent\EngineeringAgentRunnerInterface:
     alias: App\Engineering\Application\Agent\EngineeringAgentRunner
 
+  App\Engineering\Application\Agent\EngineeringTechnicalExecutionAdmissionInterface:
+    alias: App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionAdmission
+
+  App\Engineering\Application\Agent\EngineeringAgentRunner:
+    arguments:
+      $technicalAdmission: '@App\Engineering\Application\Agent\EngineeringTechnicalExecutionAdmissionInterface'
+
   App\Engineering\Application\Agent\AgentCapabilityRegistry:
     arguments:
       $configDirectory: '%kernel.project_dir%/config/engineering/agents'

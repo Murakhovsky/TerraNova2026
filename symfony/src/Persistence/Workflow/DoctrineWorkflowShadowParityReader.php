@@ -106,6 +106,66 @@ final readonly class DoctrineWorkflowShadowParityReader
     }
 
     /**
+     * Operator-facing, production-schema fleet audit. No projections are
+     * synthesized, no rollout is switched and no cutover is authorized.
+     *
+     * @return array<string,mixed>
+     */
+    public function engineeringFleet(string $organizationId, int $limit = 50): array
+    {
+        if (trim($organizationId)==='') {
+            throw new DomainException('Engineering shadow fleet requires a tenant.');
+        }
+        $limit=max(1,min(100,$limit));
+        $features=$this->db->fetchAllAssociative(
+            'SELECT o.feature_id,o.mode,o.approved_by,o.approved_at,
+                    f.status AS feature_status
+             FROM cos_engineering_technical_rollouts o
+             JOIN cos_engineering_features f ON f.id=o.feature_id
+               AND f.organization_id=o.organization_id
+             WHERE o.organization_id=:org
+             ORDER BY o.feature_id LIMIT '.$limit,
+            ['org'=>$organizationId],
+        );
+        $counts=['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0];
+        $reports=[];
+        foreach($features as $feature) {
+            $ids=$this->db->fetchFirstColumn(
+                'SELECT w.id FROM cos_engineering_workflows w
+                 WHERE w.feature_id=:feature ORDER BY w.started_at DESC,w.id DESC LIMIT 1',
+                ['feature'=>$feature['feature_id']],
+            );
+            $workflow=$ids!==[]
+                ? $this->engineeringWorkflow($organizationId,(string)$ids[0])
+                : ['status'=>'no_target','reason'=>'engineering_business_workflow_not_found',
+                    'technical_counts'=>['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0],
+                    'read_only'=>true,'cutover_authorized'=>false];
+            $status=(string)$workflow['status'];
+            if (!array_key_exists($status,$counts)) $status='drift';
+            ++$counts[$status];
+            $reports[]=[
+                'feature_id'=>$feature['feature_id'],
+                'rollout_mode'=>$feature['mode'],
+                'operator_approved'=>$feature['approved_by']!==null && $feature['approved_at']!==null,
+                'feature_status'=>$feature['feature_status'],
+                'workflow_id'=>$ids[0]??null,
+                'technical_counts'=>$workflow['technical_counts'],
+                'status'=>$status,
+                'business_gate_authority'=>'legacy_engineering',
+                'cutover_authorized'=>false,
+            ];
+        }
+        $status=$counts['drift']>0?'drift':
+            ($counts['no_target']>0 || $reports===[]?'no_target':'partial');
+        return [
+            'source'=>'engineering_fleet','organization_id'=>$organizationId,
+            'status'=>$status,'counts'=>$counts,'features'=>$reports,
+            'read_only'=>true,'cutover_authorized'=>false,
+            'business_gate_authority'=>'legacy_engineering',
+        ];
+    }
+
+    /**
      * Fleet-facing read-only technical parity for the entire Engineering
      * workflow. Never equate AgentRun parity with business-stage/QA approval.
      *
