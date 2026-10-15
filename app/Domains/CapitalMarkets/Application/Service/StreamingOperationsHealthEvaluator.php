@@ -105,6 +105,32 @@ final readonly class StreamingOperationsHealthEvaluator
                 $tally['WARNING']++;
             }
         }
+        foreach(($snapshot['source_health']??[]) as $source=>$metrics){
+            if(!is_string($source)||!is_array($metrics)){
+                throw new DomainException('Invalid streaming source health metric.');
+            }
+            if(in_array($metrics['rate_limit_state']??null,['THROTTLED','EXHAUSTED'],true)){
+                $alerts[]=[
+                    'severity'=>'CRITICAL','code'=>'STREAM_PROVIDER_RATE_LIMIT',
+                    'source_id'=>$source,'count'=>1,
+                    'operator_action'=>'REDUCE_SUBSCRIPTIONS_OR_VALIDATE_VENDOR_QUOTA',
+                ];$tally['CRITICAL']++;
+            }
+            if(($metrics['clock_reliable']??true)!==true){
+                $alerts[]=[
+                    'severity'=>'CRITICAL','code'=>'STREAM_SOURCE_CLOCK_UNRELIABLE',
+                    'source_id'=>$source,'count'=>1,
+                    'operator_action'=>'RECOVER_CLOCK_SYNC_BEFORE_TRUST',
+                ];$tally['CRITICAL']++;
+            }
+            if(is_int($metrics['queue_lag']??null)&&$metrics['queue_lag']>100){
+                $alerts[]=[
+                    'severity'=>'WARNING','code'=>'STREAM_QUEUE_LAG',
+                    'source_id'=>$source,'count'=>$metrics['queue_lag'],
+                    'operator_action'=>'INSPECT_INGESTION_BACKPRESSURE',
+                ];$tally['WARNING']++;
+            }
+        }
         $hasEvidence=($snapshot['leases']??[])!==[]
             ||($snapshot['quality_by_source']??[])!==[];
         return [

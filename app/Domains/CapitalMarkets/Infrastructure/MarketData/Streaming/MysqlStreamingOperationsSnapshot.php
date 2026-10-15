@@ -127,6 +127,58 @@ final readonly class MysqlStreamingOperationsSnapshot
         }
         unset($numbers);
         ksort($provider,SORT_STRING);
+        // Lightweight tenant-scoped 5-minute operational window: these are
+        // observed DB events, not vendor market-data throughput promises.
+        $window=$this->pdo->prepare(
+            "SELECT e.source_id,COUNT(*) AS canonical_events,
+                 SUM(CASE WHEN q.trust_status='TRUSTED'
+                           AND q.quality_score>=80 AND e.data_mode='LIVE'
+                         THEN 1 ELSE 0 END) AS trusted_events,
+                 COALESCE(MAX(q.ingestion_latency_ms),0) AS worst_ingest_ms,
+                 COALESCE(AVG(q.ingestion_latency_ms),0) AS mean_ingest_ms,
+                 MAX(e.received_timestamp) AS last_event_at
+             FROM tn_capital_market_canonical_events e
+             LEFT JOIN tn_capital_market_quality_metrics q
+               ON q.organization_id=e.organization_id
+              AND q.canonical_event_id=e.canonical_event_id
+             WHERE e.organization_id=:org".($sourceId===null?'':' AND e.source_id=:source')."
+               AND e.source_timestamp>DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 6 MINUTE)
+               AND e.received_timestamp>DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 5 MINUTE)
+             GROUP BY e.source_id LIMIT 501");
+        $window->execute($args);
+        $throughput=[];
+        foreach($window->fetchAll(PDO::FETCH_ASSOC) as $record){
+            $throughput[$record['source_id']]=[
+                'canonical_events_5m'=>(int)$record['canonical_events'],
+                'trusted_live_events_5m'=>(int)$record['trusted_events'],
+                'worst_ingest_ms'=>(int)$record['worst_ingest_ms'],
+                'mean_ingest_ms'=>(float)$record['mean_ingest_ms'],
+                'last_event_at'=>$record['last_event_at'],
+            ];
+        }
+        ksort($throughput,SORT_STRING);
+        $healthQuery=$this->pdo->prepare(
+            "SELECT source_id,connection_state,queue_lag,rate_limit_state,
+                    clock_reliable,failure_count,reconnect_count,error_count,
+                    last_heartbeat_at,last_event_at
+             FROM tn_capital_market_source_health WHERE ".$where."
+             ORDER BY source_id LIMIT 501");
+        $healthQuery->execute($args);
+        $sourceHealth=[];
+        foreach($healthQuery->fetchAll(PDO::FETCH_ASSOC) as $h){
+            $sourceHealth[$h['source_id']]=[
+                'connection_state'=>$h['connection_state'],
+                'queue_lag'=>(int)$h['queue_lag'],
+                'rate_limit_state'=>$h['rate_limit_state'],
+                'clock_reliable'=>(int)$h['clock_reliable']===1,
+                'failure_count'=>(int)$h['failure_count'],
+                'reconnect_count'=>(int)$h['reconnect_count'],
+                'error_count'=>(int)$h['error_count'],
+                'last_heartbeat_at'=>$h['last_heartbeat_at'],
+                'last_event_at'=>$h['last_event_at'],
+            ];
+        }
+        ksort($sourceHealth,SORT_STRING);
         return [
             'organization_id'=>$organizationId,
             'source_filter'=>$sourceId,
@@ -134,6 +186,8 @@ final readonly class MysqlStreamingOperationsSnapshot
             'leases'=>$leases,
             'quality_by_source'=>$quality,
             'provider_by_source'=>$provider,
+            'canonical_5m_by_source'=>$throughput,
+            'source_health'=>$sourceHealth,
             'operating_mode'=>'READ_ONLY',
         ];
     }
