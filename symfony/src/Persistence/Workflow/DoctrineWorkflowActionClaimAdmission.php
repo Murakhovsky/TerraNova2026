@@ -20,7 +20,8 @@ use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
  *
  * This is NOT an Action dispatcher, and is intentionally NOT the default DI
  * WorkflowStepClaimAdmissionInterface. The Action must exist in the canonical
- * Action service, be queued, independently approved, and have zero attempts.
+ * Action service, be awaiting human Approval or queued with independent
+ * Approval, and have zero attempts. The worker still requires actual Approval.
  * The real Action worker still needs its own last-moment Policy/Approval gate.
  */
 final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowStepClaimAdmissionInterface
@@ -124,7 +125,7 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
         }
         $action = $actions[0];
         if (!preg_match('/^[a-f0-9]{32}$/', (string) $action['id'])
-            || $action['status'] !== 'QUEUED'
+            || !in_array($action['status'], ['PENDING_APPROVAL','QUEUED'], true)
             || $action['source_type'] !== 'USER'
             || $action['source_id'] !== $context['actor_id']
             || $action['execution_mode'] !== 'APPROVAL_REQUIRED'
@@ -160,14 +161,26 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
              FROM cos_approvals WHERE organization_id=:org AND action_id=:action',
             ['org' => $identity->organizationId, 'action' => $action['id']],
         );
-        if (count($decisions) !== 1 || $decisions[0]['status'] !== 'APPROVED'
+        if (count($decisions) !== 1) {
+            throw new DomainException('Canonical Action requires exactly one human Approval record.');
+        }
+        if ($action['status'] === 'PENDING_APPROVAL') {
+            // A claim can reserve the Step before a human accepts the Action.
+            // The worker rejects until independently approved, and can never
+            // execute before this exclusive Step claim exists.
+            if ($decisions[0]['status'] !== 'PENDING'
+                || $decisions[0]['decided_at'] !== null
+                || $decisions[0]['decided_by_id'] !== null) {
+                throw new DomainException('Pre-Approval claim has an invalid pending decision.');
+            }
+        } elseif ($decisions[0]['status'] !== 'APPROVED'
             || $decisions[0]['decided_by_type'] !== 'USER'
             || !is_string($decisions[0]['decided_by_id']) || $decisions[0]['decided_by_id'] === ''
             || $decisions[0]['decided_by_id'] === $action['source_id']
             || $decisions[0]['decided_at'] === null
             || ($decisions[0]['expires_at'] !== null
                 && strtotime((string) $decisions[0]['expires_at'] . ' UTC') <= time())) {
-            throw new DomainException('Canonical Action has no independent active human Approval.');
+            throw new DomainException('Queued Action has no independent active human Approval.');
         }
     }
 

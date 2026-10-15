@@ -261,14 +261,27 @@ services:
   Kernel\Application\Bus\EventBusInterface:
     alias: App\Infrastructure\Messenger\SymfonyEventBus
 
-  # Durable Workflow foundation, fail closed; NOT connected to Federation/Engineering writers.
+  # Last-moment canonical wf: worker admission checks live Step lease, Policy,
+  # independent Approval, immutable Plan and all predecessor receipts.
   Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface:
-    alias: App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission
+    alias: App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission
   Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
   # Plan verifier stays fail-closed. Real Action receipt verifier is not promoted.
   Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface:
     alias: App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence
+  # Explicit business evidence for Federation-only canonical executions.
+  # Global Workflow Plan port remains fail closed for unrelated callers.
+  App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission:
+    arguments:
+      $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+  App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission:
+    arguments:
+      $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+  App\Persistence\Workflow\DoctrineWorkflowExecutionStore:
+    arguments:
+      $receipts: '@App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier'
+      $admission: '@App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission'
   # Recovery uses trusted Federation Plan evidence only for read-only Action proof.
   # Global WorkflowReceiptVerifierInterface remains fail-closed for normal execution.
   App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier:

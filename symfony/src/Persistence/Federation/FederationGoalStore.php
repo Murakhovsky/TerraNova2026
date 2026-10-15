@@ -278,6 +278,16 @@ final readonly class FederationGoalStore
                 $actor, $approvalActionId, $specification->goalId, $planId,
                 $specification->version, (string) $plan['plan_json'], $specification->ownerId,
             );
+            // Plan row is locked by BOTH writers. A canonical technical Run
+            // must prohibit a second legacy Run and another Action key space.
+            $canonicalRun = $this->db->fetchOne(
+                'SELECT run_id FROM cos_workflow_runs
+                 WHERE organization_id = :org AND source_plan_id = :plan',
+                ['org' => $org, 'plan' => $planId],
+            );
+            if ($canonicalRun !== false) {
+                throw new DomainException('Canonical Workflow already owns this Plan; legacy execution is forbidden.');
+            }
             $existing = $this->db->fetchOne(
                 'SELECT run_id FROM cos_federation_runs
                  WHERE organization_id = :org AND plan_id = :plan LIMIT 1 FOR UPDATE',

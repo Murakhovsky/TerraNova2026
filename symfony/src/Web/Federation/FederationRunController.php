@@ -26,6 +26,7 @@ final readonly class FederationRunController
         private SessionCsrfValidator $csrf,
         private FederationGoalStore $goals,
         private FederationSequentialOrchestrator $orchestrator,
+        private \App\Persistence\Federation\FederationCanonicalWorkflowBridge $canonical,
         private \App\Persistence\Federation\FederationRunRecoveryService $recovery,
     ) {}
 
@@ -34,6 +35,9 @@ final readonly class FederationRunController
         $actor = $this->manager();
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         try {
+            if ($this->canonical->owns($actor, $runId)) {
+                return self::reply($this->canonical->status($actor, $runId));
+            }
             $run = $this->goals->run($actor, $runId);
             if ($run === null) return self::reply(['error' => 'not_found'], 404);
             return self::reply([
@@ -58,12 +62,12 @@ final readonly class FederationRunController
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
         try {
-            return self::reply($this->orchestrator->start(
-                $actor,
-                'run-' . bin2hex(random_bytes(12)),
-                (string) $request->request->get('plan_id', ''),
-                (string) $request->request->get('approval_action_id', ''),
-            ), 201);
+            $runId = 'run-' . bin2hex(random_bytes(12));
+            $planId = (string) $request->request->get('plan_id', '');
+            $approvalId = (string) $request->request->get('approval_action_id', '');
+            return self::reply($this->canonical->newRunsEnabled($actor)
+                ? $this->canonical->start($actor, $runId, $planId, $approvalId)
+                : $this->orchestrator->start($actor, $runId, $planId, $approvalId), 201);
         } catch (DomainException|\InvalidArgumentException) {
             return self::reply(['error' => 'plan_not_executable'], 422);
         } catch (Throwable) {
@@ -77,9 +81,10 @@ final readonly class FederationRunController
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
         try {
-            return self::reply($this->orchestrator->advance(
-                $actor, $runId, (string) $request->request->get('approval_action_id', ''),
-            ));
+            $approvalId = (string) $request->request->get('approval_action_id', '');
+            return self::reply($this->canonical->owns($actor, $runId)
+                ? $this->canonical->advance($actor, $runId, $approvalId)
+                : $this->orchestrator->advance($actor, $runId, $approvalId));
         } catch (DomainException|\InvalidArgumentException|\LogicException) {
             return self::reply(['error' => 'run_not_executable_or_stale'], 422);
         } catch (Throwable) {
@@ -97,6 +102,9 @@ final readonly class FederationRunController
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
         try {
+            if ($this->canonical->owns($actor, $runId)) {
+                return self::reply(['error'=>'canonical_goal_outcome_adapter_not_yet_verified'], 422);
+            }
             return self::reply($this->goals->recordEvaluation(
                 $actor, 'eval-' . bin2hex(random_bytes(12)), $runId,
             ), 201);
@@ -113,6 +121,9 @@ final readonly class FederationRunController
         $actor = $this->manager();
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         try {
+            if ($this->canonical->owns($actor, $runId)) {
+                return self::reply(['error'=>'canonical_run_requires_workflow_recovery'], 422);
+            }
             return self::reply($this->recovery->inspect($actor, $runId));
         } catch (DomainException|LogicException) {
             return self::reply(['error' => 'recovery_unavailable'], 422);
@@ -128,6 +139,9 @@ final readonly class FederationRunController
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
         try {
+            if ($this->canonical->owns($actor, $runId)) {
+                return self::reply(['error'=>'canonical_run_requires_workflow_recovery'], 422);
+            }
             return self::reply($this->recovery->reconcileVerified($actor, $runId));
         } catch (DomainException|LogicException) {
             return self::reply(['error' => 'reconciliation_unavailable'], 422);
