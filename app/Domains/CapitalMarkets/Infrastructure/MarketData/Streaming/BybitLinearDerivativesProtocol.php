@@ -113,7 +113,10 @@ final class BybitLinearDerivativesProtocol
             $events[]=new RawMarketEvent(
                 'cm-ws-derivatives-'.bin2hex(random_bytes(12)),
                 $this->source,$this->venue,$this->symbol,self::FIELDS[$field],
-                $time,$received,$ms,$payload,
+                // Ticker updates have a provider timestamp, not a gapless
+                // cross-capability sequence. Global MarketState shares its
+                // lastSequence across mark/index/funding/OI; do not invent one.
+                $time,$received,null,$payload,
                 ['provider'=>'BYBIT','transport'=>'WEBSOCKET',
                     'topic'=>'tickers.'.$this->symbol,'market_status'=>'OPEN',
                     'contract_family'=>'LINEAR_PERPETUAL','ack'=>'VERIFIED'],
