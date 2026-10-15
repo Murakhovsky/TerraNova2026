@@ -78,6 +78,17 @@ try{
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
 
+    $trustAdd=$pdo->prepare(
+        "INSERT INTO tn_capital_market_instrument_stream_trust
+         (organization_id,source_id,instrument_id,channel,shard_key,
+          fencing_token,status,last_sequence,last_event_at,last_quality_score,recovery_required)
+         VALUES (:org,:source,:instrument,'BBO',:shard,3,'TRUSTED','101',
+                 UTC_TIMESTAMP(6),90,0)");
+    foreach($instruments as $instrument){
+        $trustAdd->execute(['org'=>$org,'source'=>$source,
+            'instrument'=>$instrument,'shard'=>$shard]);
+    }
+
     $invalidator=new StreamingTrustInvalidator($pdo);
     $changed=$invalidator->invalidateInstrument(
         $org,$source,$shard,$worker,$token,$instruments[0],'MASSIVE_SYMBOL_STALE',
@@ -133,11 +144,45 @@ try{
         &&$healthRow['last_error']===null,
         'Per-instrument invalidation must not degrade shared transport health.');
 
-    echo "Capital Markets per-instrument trust isolation MySQL integration passed.\n";
+    $selectTrust=$pdo->prepare(
+        'SELECT status,recovery_required,last_quality_score FROM
+         tn_capital_market_instrument_stream_trust
+         WHERE organization_id=:org AND source_id=:source AND instrument_id=:instrument');
+    $selectTrust->execute(['org'=>$org,'source'=>$source,'instrument'=>$instruments[0]]);
+    $badTrust=$selectTrust->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($badTrust)&&$badTrust['status']==='UNTRUSTED'
+        &&(int)$badTrust['recovery_required']===1,
+        'Per-symbol revocation did not fence persistent recovery.');
+    $selectTrust->execute(['org'=>$org,'source'=>$source,'instrument'=>$instruments[1]]);
+    $goodTrust=$selectTrust->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($goodTrust)&&$goodTrust['status']==='TRUSTED',
+        'Sibling persisted stream trust was poisoned by another ticker.');
+
+    $pdo->prepare('UPDATE tn_capital_market_instrument_stream_trust
+        SET last_event_at=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 10 MINUTE)
+        WHERE organization_id=:org AND instrument_id=:instrument')
+        ->execute(['org'=>$org,'instrument'=>$instruments[1]]);
+    $sweeper=new \Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlPerInstrumentStreamTrust(
+        $pdo,new \Domains\CapitalMarkets\Application\Service\PerInstrumentStreamTrustMachine()
+    );
+    $sweep=$sweeper->sweepStale($org,$source,120,50);
+    $assert($sweep['expired']===1,'Stale sibling was not independently expired.');
+    $selectTrust->execute(['org'=>$org,'source'=>$source,'instrument'=>$instruments[1]]);
+    $stale=$selectTrust->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($stale)&&$stale['status']==='STALE'
+        &&(int)$stale['recovery_required']===1,'Stale instrument recovered without new evidence.');
+    $assert($sweeper->sweepStale($org,$source,120,50)['expired']===0,
+        'Repeated stale sweep was not idempotent.');
+    $healthRead->execute(['org'=>$org,'source'=>$source]);
+    $healthAfter=$healthRead->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($healthAfter)&&$healthAfter['connection_state']==='ACTIVE',
+        'Per-symbol freshness degraded the shared source transport.');
+
+    echo "Capital Markets per-instrument trust isolation, recovery fencing and stale sweep MySQL passed.\n";
 }finally{
     if($pdo->inTransaction())$pdo->rollBack();
     $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach(['tn_capital_market_states','tn_capital_market_reference_states','tn_capital_market_source_health',
+    foreach(['tn_capital_market_instrument_stream_trust','tn_capital_market_states','tn_capital_market_reference_states','tn_capital_market_source_health',
         'tn_capital_market_stream_worker_leases'] as $table){
         $delete=$pdo->prepare('DELETE FROM '.$table.' WHERE organization_id=:org');
         $delete->execute(['org'=>$org]);
