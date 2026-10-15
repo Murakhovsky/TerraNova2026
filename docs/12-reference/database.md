@@ -94,11 +94,11 @@ generated: true
 | `capital_markets` | `app/migrations/20261015_000142_capital_markets_instrument_pool_approval.sql` | `tn_capital_market_instrument_pool_snapshots` |
 | `capital_markets` | `app/migrations/20261015_000142_capital_markets_instrument_pool_approval.sql` | `tn_capital_market_venues` |
 | `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_canonical_events` |
+| `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_data_sources` |
+| `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_instruments` |
 | `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_pool_external_evidence` |
 | `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_pool_production_control` |
 | `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_pool_stream_assignments` |
-| `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_data_sources` |
-| `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_instruments` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |

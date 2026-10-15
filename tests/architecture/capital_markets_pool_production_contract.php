@@ -26,10 +26,17 @@ foreach(['source_id IN (__SOURCE_PLACEHOLDERS__)','tn_capital_market_canonical_e
     'ALL_SUPERVISED_SOURCES_OBSERVED','mode','ISSUER_IDENTITY'] as $part){
     if(!str_contains($reader,$part))throw new RuntimeException('Production MySQL evidence missing '.$part);
 }
-foreach(['reviewed_by<>submitted_by','instrument_pool.approve','instrument_pool.propose',
-    'HTTPS','PENDING'] as $part){
-    if(!str_contains($proof,str_replace('HTTPS','HTTPS',$part))
-      &&$part!=='HTTPS')throw new RuntimeException('Two-person attestation missing '.$part);
+foreach(['instrument_pool.approve','instrument_pool.propose',
+    "'reviewed_by'", "'submitted_by'", "status='APPROVED'",
+    'function revoke(', 'ORDER BY kind,subject_id,id DESC','PENDING'] as $part){
+    if(!str_contains($proof,$part)){
+        throw new RuntimeException('Independent attestation and revocation contract missing '.$part);
+    }
+}
+if(!str_contains($schema,'reviewed_by <> submitted_by')
+    ||!str_contains($schema,'tn_capital_market_pool_stream_assignments')
+    ||!str_contains($command,"'assign-shard'")){
+    throw new RuntimeException('Independent proof and explicit worker sharding schema missing.');
 }
 if(!str_contains($proof,"'https'")||!str_contains($policy,"'BBO_250'")
     ||!str_contains($policy,"'L2_50'"))throw new RuntimeException('Strict production gates missing.');
