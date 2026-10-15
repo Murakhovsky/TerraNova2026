@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Application\CapitalMarkets\Handler;
 use App\Application\CapitalMarkets\Command\RunInstrumentPoolSnapshotScans;
 use Domains\CapitalMarkets\Application\Service\InstrumentPoolCatalogAudit;
+use Domains\CapitalMarkets\Application\Service\InstrumentPoolApprovalService;
 use Domains\CapitalMarkets\Application\Service\InstrumentPoolScheduleTargets;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentPoolSnapshotRepository;
 use Kernel\Module\ActiveModuleResolver;
@@ -16,6 +17,7 @@ final readonly class RunInstrumentPoolSnapshotScansHandler
 {
     public function __construct(
         private InstrumentPoolCatalogAudit $audit,
+        private InstrumentPoolApprovalService $approvals,
         private MysqlInstrumentPoolSnapshotRepository $snapshots,
         private ActiveModuleResolver $modules,
         private LoggerInterface $logger,
@@ -42,7 +44,10 @@ final readonly class RunInstrumentPoolSnapshotScansHandler
                     $result['skipped']++;continue;
                 }
                 $data=$this->audit->inspect($org,$provider,$venue,500);
-                $this->snapshots->record($org,$this->actorId,$data);
+                $snapshotId=$this->snapshots->record($org,$this->actorId,$data);
+                if(getenv('COS_CM_INSTRUMENT_POOL_AUTO_PROPOSE_ENABLED')==='1' && $data['health']==='AVAILABLE'){
+                    $this->approvals->stageStatusCandidates($org,$this->actorId,$snapshotId,50);
+                }
                 $result['saved']++;
                 if($data['health']!=='AVAILABLE')$result['unavailable']++;
             }catch(Throwable $error){

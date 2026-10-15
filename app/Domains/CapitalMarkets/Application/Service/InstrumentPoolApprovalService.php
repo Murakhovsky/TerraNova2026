@@ -110,6 +110,59 @@ final readonly class InstrumentPoolApprovalService
         });
     }
 
+    /**
+     * Optional automatic preparation of STATUS requests only. Every action
+     * remains PENDING until a different authorized human approves it.
+     * Never guesses identity, imports a new symbol or executes a transition.
+     * @return array{created:int,skipped:int}
+     */
+    public function stageStatusCandidates(string $org,int $actor,int $snapshotId,int $limit=50):array
+    {
+        $this->allow($org,$actor,'capital_markets.instrument_pool.propose');
+        if($limit<1||$limit>100)throw new DomainException('Invalid automatic proposal budget.');
+        $snapshot=$this->snapshot($org,$snapshotId);
+        $history=$this->snapshots->history($org,$snapshot['provider'],$snapshot['venue_id'],3);
+        $review=$this->reviewer->review($history,3);
+        $approvedMissing=[];
+        foreach($review['rows'] as $candidate){
+            if(($candidate['observation']??null)==='MAPPED_NOT_OBSERVED_REVIEW'
+                &&($candidate['decision']??null)==='OPERATOR_REVIEW_REQUIRED'){
+                $approvedMissing[(string)$candidate['venue_symbol']]=true;
+            }
+        }
+        $counts=['created'=>0,'skipped'=>0];
+        foreach($snapshot['rows']??[] as $row){
+            if(!is_array($row)||!is_string($row['venue_symbol']??null))continue;
+            $target=null;
+            if(($row['observation']??null)==='MAPPED_STATUS_REVIEW'
+                &&($row['mapping_status']??null)==='SUSPENDED')$target='ACTIVE';
+            if(($row['observation']??null)==='MAPPED_NOT_OBSERVED_REVIEW'
+                &&($row['mapping_status']??null)==='ACTIVE'
+                &&isset($approvedMissing[$row['venue_symbol']]))$target='SUSPENDED';
+            if($target===null)continue;
+            if($counts['created']>=$limit)break;
+            $pending=$this->pdo->prepare(
+                "SELECT id FROM tn_capital_market_instrument_pool_changes
+                 WHERE organization_id=:org AND venue_id=:venue AND venue_symbol=:symbol
+                   AND status='PENDING' LIMIT 1"
+            );
+            $pending->execute(['org'=>$org,'venue'=>$snapshot['venue_id'],'symbol'=>$row['venue_symbol']]);
+            if($pending->fetchColumn()!==false){$counts['skipped']++;continue;}
+            try{
+                $this->propose($org,$actor,[
+                    'snapshot_id'=>$snapshotId,'action'=>'STATUS',
+                    'venue_symbol'=>$row['venue_symbol'],'target_status'=>$target,
+                    'reason'=>'Automated discovery: independent human approval required.',
+                ],'CM-POOL-AUTO-'.bin2hex(random_bytes(8)));
+                $counts['created']++;
+            }catch(\DomainException|\PDOException){
+                // Pending proposal, lost lease, or changing evidence. Fail closed.
+                $counts['skipped']++;
+            }
+        }
+        return $counts;
+    }
+
     /** @return array<string,mixed> */
     public function decide(string $org,int $actor,int $id,bool $approve,string $reason,string $correlationId):array
     {

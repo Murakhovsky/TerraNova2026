@@ -19,4 +19,4 @@ pages:
     states: [normal, error, permission_denied]
     responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
     qa: { functional: true, visual: false, responsive: false, accessibility: false, human_acceptance: false }
-    quality: { functionality: 70, ux: 50, visual: 30, responsive: 30, accessibility: 30, content: 70 }
+    quality: { functionality: 3, ux: 2, visual: 1, responsive: 1, accessibility: 1, content: 3 }

@@ -14,11 +14,13 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_instrument_pool_changes (
  reviewed_by BIGINT UNSIGNED NULL,
  review_reason VARCHAR(500) NULL,
  status VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+ pending_slot TINYINT GENERATED ALWAYS AS (CASE WHEN status='PENDING' THEN 1 ELSE NULL END) STORED,
  result_json JSON NULL,
  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
  decided_at DATETIME(6) NULL,
  PRIMARY KEY(id),
  UNIQUE KEY uq_cm_pool_proposal (organization_id,snapshot_id,venue_symbol),
+ UNIQUE KEY uq_cm_pool_pending (organization_id,venue_id,venue_symbol,pending_slot),
  KEY ix_cm_pool_review (organization_id,status,created_at),
  KEY ix_cm_pool_venue (organization_id,venue_id,venue_symbol),
  CONSTRAINT fk_cm_pool_change_snapshot FOREIGN KEY (snapshot_id)

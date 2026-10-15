@@ -119,10 +119,20 @@ try{
         'Replay approval should fail','CI-REPLAY'),'Approval replay was accepted.');
     $reject(fn()=>$service->decide($other,$foreignActor,$change,true,
         'Foreign decision should fail','CI-TENANT'),'Foreign org approved change.');
+    $candidateSet=$service->stageStatusCandidates($org,$proposer,$s1);
+    $assert($candidateSet['created']===0,'Automated pool staging must not infer new instrument identities.');
     $s2=$record([[
         'venue_symbol'=>$symbol,'instrument_id'=>$id,'mapping_status'=>'SUSPENDED',
         'observation'=>'MAPPED_STATUS_REVIEW','base'=>'CI','quote'=>'USDT',
     ]],1);
+    $auto=$service->stageStatusCandidates($org,$proposer,$s2,5);
+    $assert($auto['created']===1,'Observed suspended mapping did not generate approval request.');
+    $autoRepeat=$service->stageStatusCandidates($org,$proposer,$s2,5);
+    $assert($autoRepeat['created']===0,'Duplicate auto proposals were created.');
+    $rows=$service->queue($org,$proposer);
+    $autoId=(int)$rows[0]['id'];
+    $service->decide($org,$approver,$autoId,false,
+        'Operator explicitly rejects automated activation','CI-AUTO-REJECT');
     $activation=$service->propose($org,$proposer,[
         'snapshot_id'=>$s2,'action'=>'STATUS','venue_symbol'=>$symbol,'target_status'=>'ACTIVE',
         'reason'=>'Current live listing verified explicitly',
@@ -168,6 +178,12 @@ try{
         'reason'=>'Single missing observation is insufficient',
     ],'CI-MISSING-ONE'),'Single absence improperly authorized suspension.');
     $record([$missing],1);$s5=$record([$missing],1);
+    $autoSuspend=$service->stageStatusCandidates($org,$proposer,$s5,5);
+    $assert($autoSuspend['created']===1,
+        'Three healthy absent catalog snapshots did not stage a controlled suspension.');
+    $autoPending=(int)$service->queue($org,$proposer)[0]['id'];
+    $service->decide($org,$approver,$autoPending,false,
+        'Operator reserves right to reject suspicious disappearance','CI-AUTO-SUSPEND-REJECT');
     $suspension=$service->propose($org,$proposer,[
         'snapshot_id'=>$s5,'action'=>'STATUS','venue_symbol'=>$symbol,'target_status'=>'SUSPENDED',
         'reason'=>'Three independent full healthy observations',
