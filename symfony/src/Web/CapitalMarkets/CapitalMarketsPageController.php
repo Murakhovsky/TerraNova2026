@@ -24,6 +24,8 @@ use Domains\CapitalMarkets\Application\Query\ListInstruments;
 use Domains\CapitalMarkets\Application\Query\ListRelationships;
 use Domains\CapitalMarkets\Application\Query\ListVenues;
 use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
+use Domains\CapitalMarkets\Application\Service\StreamingOperationsHealthEvaluator;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingOperationsSnapshot;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityResearchService;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityReadService;
@@ -55,6 +57,8 @@ final readonly class CapitalMarketsPageController
         private CapitalMarketsFeatureGate $features,
         private CapitalMarketsFoundationBoundary $capitalMarkets,
         private MarketDataAdministrationService $marketData,
+        private MysqlStreamingOperationsSnapshot $streamingOps,
+        private StreamingOperationsHealthEvaluator $streamingHealth,
         private TokenizedEquityVerticalSliceService $tokenizedEquity,
         private TokenizedEquityPaperExecutionService $paperExecution,
         private TokenizedEquityResearchService $tokenizedEquityResearch,
@@ -227,12 +231,31 @@ final readonly class CapitalMarketsPageController
                 return ['workspace'=>array_replace(
                     $this->marketData->dashboard($org),
                     [
+                        'streaming_ops'=>$this->readStreamingOperations($org),
                         'instruments'=>$this->capitalMarkets->listInstruments(new ListInstruments($org,['status'=>'ACTIVE'],500)),
                         'venues'=>$this->capitalMarkets->listVenues(new ListVenues($org,250)),
                     ]
                 )];
             }
         );
+    }
+
+    /** Read-only, tenant-scoped operational projection for an authorized Market Data reader. */
+    private function readStreamingOperations(string $org):array
+    {
+        try{
+            $snapshot=$this->streamingOps->inspect($org);
+            $snapshot['health_evaluation']=$this->streamingHealth->evaluate($snapshot);
+            return $snapshot;
+        }catch(Throwable $error){
+            error_log('capital_markets.streaming_operations.read_failed '.get_class($error));
+            return [
+                'status'=>'UNAVAILABLE',
+                'leases'=>[],
+                'lease_counts'=>['ACTIVE'=>0,'EXPIRED'=>0,'RELEASED'=>0],
+                'health_evaluation'=>['health'=>'UNAVAILABLE','alerts'=>[]],
+            ];
+        }
     }
 
     public function createMarketDataSource(Request $request):Response

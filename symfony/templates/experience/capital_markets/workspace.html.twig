@@ -1104,6 +1104,40 @@
       <twig:CosMetric label="Execution" value="Disabled" hint="read-only market intelligence" />
     </section>
 
+    <section class="cos-panel" aria-label="Streaming operations">
+      <h2>Streaming operations (read only)</h2>
+      <p>Active, expired and released worker leases. Market quality is shown independently; missing evidence is never treated as healthy.</p>
+      {% set stream = w.streaming_ops|default({}) %}
+      {% set streamHealth = stream.health_evaluation|default({}) %}
+      <div class="d-flex gap-3 flex-wrap mb-3">
+        <span><strong>Health:</strong> {{ streamHealth.health|default('NO_EVIDENCE') }}</span>
+        <span><strong>Active:</strong> {{ stream.lease_counts.ACTIVE|default(0) }}</span>
+        <span><strong>Expired:</strong> {{ stream.lease_counts.EXPIRED|default(0) }}</span>
+        <span><strong>Released:</strong> {{ stream.lease_counts.RELEASED|default(0) }}</span>
+      </div>
+      {% if stream.leases|default([]) is empty %}
+        <p>No worker lease evidence available.</p>
+      {% else %}
+        <div class="table-responsive"><table class="table table-sm">
+          <thead><tr><th>Source</th><th>Shard</th><th>Lease</th><th>Remaining seconds</th></tr></thead>
+          <tbody>
+            {% for lease in stream.leases %}
+              <tr><td>{{ lease.source_id }}</td><td>{{ lease.shard_key }}</td>
+                <td>{{ lease.lease_state }}</td><td>{{ lease.remaining_seconds }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+      {% endif %}
+      {% if streamHealth.alerts|default([]) is not empty %}
+        <h3>Attention required</h3>
+        <ul>
+          {% for alert in streamHealth.alerts %}
+            <li><strong>{{ alert.severity }}</strong>: {{ alert.code }} · {{ alert.source_id }} ({{ alert.count }})</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
     {% if canManageMarketDataSources %}
       <section class="cos-panel">
         <h2>Create market-data source</h2>
