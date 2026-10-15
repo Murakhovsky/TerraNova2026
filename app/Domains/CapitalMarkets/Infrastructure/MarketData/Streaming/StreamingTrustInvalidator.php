@@ -152,6 +152,17 @@ final readonly class StreamingTrustInvalidator implements
                 'org'=>$organizationId,'source'=>$sourceId,'reason'=>$reason,
             ],$scopeParams));
 
+            // Derivative capabilities are independently quarantined on
+            // disconnection, lease expiry and source-level trust revocation.
+            $derivatives=$this->pdo->prepare(
+                "UPDATE tn_capital_market_derivative_stream_trust
+                 SET status='UNTRUSTED',quality_score=0,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND source_id=:source".$receiptScope
+            );
+            $derivatives->execute(array_merge([
+                'org'=>$organizationId,'source'=>$sourceId,
+            ],$scopeParams));
+
             // A single ticker problem is not a transport outage.
             if($instrumentId===null){
                 $health=$this->pdo->prepare(
