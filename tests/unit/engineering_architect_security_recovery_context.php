@@ -7,7 +7,7 @@ use App\Engineering\Application\Service\EngineeringArchitectSecurityRecoveryCont
 
 $builder = new EngineeringArchitectSecurityRecoveryContext();
 $review = [
-    'id' => 'review-1', 'content_hash' => 'hash-1',
+    'id' => 'review-1', 'status' => 'SUPERSEDED', 'content_hash' => 'hash-1',
     'content' => [
         'status' => 'REQUEST_CHANGES',
         'evidence' => ['phase' => 'PRE_DEVELOPMENT'],
@@ -30,6 +30,8 @@ $context = $builder->fromArtifact($review, 'revision-a');
 if ($context === null || ($context['source_artifact_id'] ?? '') !== 'review-1'
     || $context['revision_binding'] !== 'MATCH'
     || $context['architecture_binding'] !== 'UNVERIFIED_LEGACY'
+    || $context['review_is_historical'] !== true
+    || $context['source_artifact_status'] !== 'SUPERSEDED'
     || $context['finding_ids'] !== ['SEC-001', 'SEC-002']
     || count($context['required_actions']) !== 2
     || $context['findings'][0]['resolution_state'] !== 'UNVERIFIED'

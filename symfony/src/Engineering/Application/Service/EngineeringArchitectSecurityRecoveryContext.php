@@ -60,6 +60,8 @@ final readonly class EngineeringArchitectSecurityRecoveryContext
             'kind' => 'TARGETED_SECURITY_REVIEW_RECOVERY',
             'source_artifact_id' => (string) ($report['id'] ?? ''),
             'source_artifact_hash' => (string) ($report['content_hash'] ?? ''),
+            'source_artifact_status' => (string) ($report['status'] ?? 'UNKNOWN'),
+            'review_is_historical' => strtoupper((string) ($report['status'] ?? '')) !== 'ACTIVE',
             'source_status' => $status,
             'source_phase' => (string) ($content['phase'] ?? $content['evidence']['phase'] ?? ''),
             'reviewed_revision' => $reviewedRevision,

@@ -11,7 +11,9 @@ kind: guide
 Feature ID: `b1673b25-1859-4e68-8470-8d1fc0a5b349`  
 Workflow ID: `c2e88072-6791-4385-986d-e6c099093774`  
 Pinned review revision: `ec797294b3535eeb3cc89b0fbd79d33cb575708a`  
-Architecture Decision v3: **REJECTED**, not development authorization.  
+Architecture Decision v3: **REJECTED**, not development authorization.
+Security review is **SUPERSEDED for approval purposes** after the architecture changed;
+historical read-only retrieval is required to keep its findings available for recovery.  
 Security review: **REQUEST_CHANGES**, based on an earlier architecture proposal; explicit reviewed architecture artifact ID/hash absent in the legacy report.
 
 ## Як використовувати

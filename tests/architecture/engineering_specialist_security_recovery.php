@@ -5,6 +5,14 @@ $root = dirname(__DIR__, 2);
 $specialist = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringSpecialistStageExecutor.php');
 $architect = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArchitectStageExecutor.php');
 $recovery = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Service/EngineeringArchitectSecurityRecoveryContext.php');
+$interface = (string) file_get_contents($root.'/symfony/src/Engineering/Application/Persistence/EngineeringArtifactStoreInterface.php');
+$store = (string) file_get_contents($root.'/symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringArtifactStore.php');
+if (!str_contains($interface, 'latestIncludingSuperseded(')
+    || !str_contains($store, 'function latestIncludingSuperseded(')
+    || !str_contains($architect, 'latestIncludingSuperseded(')
+    || !str_contains($store, "['featureId' => \$featureId, 'type' => \$type->value]")) {
+    throw new RuntimeException('Superseded independent Security reviews are not accessible for read-only targeted recovery.');
+}
 
 foreach ([
     "'reviewed_architecture_artifact_id'",

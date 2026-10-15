@@ -20,6 +20,13 @@ interface EngineeringArtifactStoreInterface
     /** @return array{id:string,type:string,version:int,status:string,content:array,content_hash:string}|null */
     public function latest(string $featureId, ArtifactType $type): ?array;
 
+    /**
+     * Historical read-only source for recovery context ONLY.
+     * Superseded reports are not active approvals and cannot authorize delivery.
+     * @return array{id:string,type:string,version:int,status:string,content:array,content_hash:string}|null
+     */
+    public function latestIncludingSuperseded(string $featureId, ArtifactType $type): ?array;
+
     /** @param list<ArtifactType> $types */
     public function invalidate(string $featureId, array $types): int;
 }

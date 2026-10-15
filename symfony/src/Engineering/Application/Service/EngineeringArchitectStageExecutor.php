@@ -80,7 +80,12 @@ final readonly class EngineeringArchitectStageExecutor
         $previousArchitecture = $this->artifacts->latest($featureId, ArtifactType::ARCHITECTURE_DECISION);
         $previousImplementation = $this->artifacts->latest($featureId, ArtifactType::IMPLEMENTATION_PLAN);
         $previousHandoff = $this->artifacts->latest($featureId, ArtifactType::DEVELOPER_HANDOFF);
-        $securityReview = $this->artifacts->latest($featureId, ArtifactType::SECURITY_REVIEW_REPORT);
+        // Security feedback is historical evidence after architecture revision:
+        // the invalidation contract supersedes its ACTIVE status on purpose.
+        // This read MUST NOT be used as approval for implementation.
+        $securityReview = $this->artifacts->latestIncludingSuperseded(
+            $featureId, ArtifactType::SECURITY_REVIEW_REPORT,
+        );
 
         $contextRevision = trim((string) ($contextMap['content']['repository_revision'] ?? ''));
         $repositoryRevision = $contextRevision !== '' ? $contextRevision : 'unknown';
