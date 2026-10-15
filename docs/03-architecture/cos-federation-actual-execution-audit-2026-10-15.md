@@ -120,7 +120,7 @@ Tool: існуючі permission/schema gates виконуються ДО canonic
 
 **Важлива межа:** цей reconciliation підтверджує технічний native execution, **не** завершення downstream Action proposals, бізнес-Goal або безпечність загального production cutover. Останні мають окремі release gates.
 
-## Canonical Agent job completion and proposal handoff
+## Завершення AgentRun після передачі пропозицій дій
 
 For enrolled Agent jobs, successful native LLM reasoning and native AgentRun persistence are **not yet a complete queue job** when the result includes Action proposals. `AgentRunJobHandler` publishes every proposal using the job-stable Action idempotency key and enqueues any approved Action *before* marking its canonical technical Run `completed`. Failure during handoff quarantines the claim and stops automatic Agent execution replay; the reason and any already-created Actions require independent operator investigation. This ordering is enforced by `tests/architecture/workflow_kernel_agent_handoff_order.php`.
 
