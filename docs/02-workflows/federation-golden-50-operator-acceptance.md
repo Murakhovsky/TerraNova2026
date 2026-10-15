@@ -70,7 +70,7 @@ Growth Market Discovery повертає Account, але Candidate з'являє
 
 Операторські маршрути усувають необхідність вручну створювати початковий Discovery Plan. Вони НЕ створюють 50 реальних кандидатів, не замінюють Growth signal/research/scoring, champion-контакти, незалежні погодження та native Action worker. Без фактичного тестового tenant з 50 справжніми Growth Candidate та 50 незалежно підтвердженими native Lead/Document receipts Package A не вважається прийнятим незалежно від зеленого CI.
 
-## Canonical evidence coverage (2026-10-15)
+## Перевірка доказів канонічного виконання (2026-10-15)
 
 Golden 50 fan-out preview і Goal outcome aggregation тепер читають **новий** `cos_workflow_runs/steps` через read-only authority adapter, а не вимагають legacy `cos_federation_runs/steps`. Усі completed canonical Actions повторно перевіряються за pinned Plan, independent human Approval, Policy, єдиною успішною attempt, native action identity і tenant. Історичні rows зберігають read-only adapter; колізія двох execution authorities завершується помилкою, не обирає «кращу».
 

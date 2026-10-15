@@ -11,6 +11,9 @@ declare(strict_types=1);
 require (string)(getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__, 2).'/symfony/vendor/autoload.php');
 
 use App\Persistence\Federation\FederationCanonicalWorkflowBridge;
+use App\Persistence\Federation\FederatedActionAdmission;
+use App\Persistence\Federation\FederationExternalActionReceiptReconciler;
+use App\Persistence\Federation\FederationVerifiedRunReadModel;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
@@ -401,6 +404,70 @@ try {
     $assert($crm->calls===1,'completed Run re-executed Sales task');
     $assert($rows('cos_federation_runs')===0 && $rows('cos_federation_steps')===0,
         'legacy Run/Step received duplicate writes');
+
+    // The Golden 50 read path must recognize canonical Runs and perform its
+    // own independent Action/Policy/Approval/attempt attestation. All SQL
+    // mutations below are isolated test-tenant tamper fixtures, never workers.
+    $nativeReader=new FederationVerifiedRunReadModel(
+        $db,
+        new FederationExternalActionReceiptReconciler(
+            $db,$goals,new FederatedActionAdmission($db,$capabilities,$planReader),
+        ),
+        $receipts,
+    );
+    $proof=$nativeReader->forPlan($actor,$planId);
+    $assert(($proof['authority']??null)==='canonical'
+        && ($proof['run_id']??null)===$runId
+        && ($proof['run_state']??null)==='completed',
+        'Golden 50 reader failed to resolve the canonical Plan authority');
+    $stepProof=$nativeReader->step($actor,$runId,'task');
+    $assert(is_array($stepProof) && ($stepProof['authority']??null)==='canonical'
+        && $nativeReader->actionKey($stepProof)===$key,
+        'Golden 50 reader failed to pin the canonical Action idempotency key');
+    $assert(count($nativeReader->stepsForRun($actor,$runId,'canonical'))===1,
+        'Golden 50 reader lost the canonical Step set');
+    $assert($nativeReader->requireCompletedAction($actor,$runId,'task')===$actionId,
+        'Golden 50 reader did not independently attest completed canonical Action');
+    $db->executeStatement(
+        'UPDATE cos_action_attempts SET status="FAILED"
+         WHERE organization_id=:org AND action_id=:id',
+        ['org'=>$org,'id'=>$actionId],
+    );
+    $reject(static fn()=> $nativeReader->requireCompletedAction($actor,$runId,'task'),
+        'Golden 50 read admitted a tampered successful Action attempt');
+    $db->executeStatement(
+        'UPDATE cos_action_attempts SET status="COMPLETED"
+         WHERE organization_id=:org AND action_id=:id',
+        ['org'=>$org,'id'=>$actionId],
+    );
+    $assert($nativeReader->requireCompletedAction($actor,$runId,'task')===$actionId,
+        'Golden 50 canonical Action proof could not recover after restored evidence');
+    $foreignReaderActor=new TenantContext(
+        UserId::fromString('foreign-'.$token),
+        OrganizationId::fromString('foreign-'.$token),
+        OrganizationRole::fromString('manager'),
+        [Permission::fromString(TenantPermissions::MANAGE)],
+    );
+    $assert($nativeReader->forPlan($foreignReaderActor,$planId)===null
+        && $nativeReader->step($foreignReaderActor,$runId,'task')===null,
+        'Golden 50 native read leaked an execution across tenants');
+    $reject(static fn()=> $nativeReader->requireCompletedAction($foreignReaderActor,$runId,'task'),
+        'Golden 50 foreign tenant Action proof was admitted');
+
+    $db->executeStatement(
+        'INSERT INTO cos_federation_runs
+         (organization_id,run_id,goal_id,plan_id,state,revision,created_at,updated_at)
+         VALUES (:org,:run,:goal,:plan,"pending",1,NOW(6),NOW(6))',
+        ['org'=>$org,'run'=>'collision-'.$token,'goal'=>$goalId,'plan'=>$planId],
+    );
+    $reject(static fn()=> $nativeReader->forPlan($actor,$planId),
+        'Golden 50 silently selected one of two conflicting Plan authorities');
+    $db->executeStatement(
+        'DELETE FROM cos_federation_runs WHERE organization_id=:org AND run_id=:run',
+        ['org'=>$org,'run'=>'collision-'.$token],
+    );
+    $assert($nativeReader->forPlan($actor,$planId)['authority']==='canonical',
+        'Canonical authority did not recover after removing test-only collision');
 
     $outcome=$goals->recordEvaluation($actor,'eval-'.$token,$runId);
     $assert(($outcome['result']??null)==='satisfied','native Sales Goal outcome not satisfied');
