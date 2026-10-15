@@ -55,8 +55,11 @@ $runId='run-'.$token;
 $approvalId=bin2hex(random_bytes(16));
 $independent='fed-approver-'.$token;
 $operatorId='';
-$authorityKey=bin2hex(random_bytes(32));
-$oldAuthority=getenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY');
+$privateKey=openssl_pkey_new(['private_key_type'=>OPENSSL_KEYTYPE_RSA,'private_key_bits'=>2048]);
+if($privateKey===false)throw new RuntimeException('CI fixture RSA signing key generation failed.');
+$publicKey=openssl_pkey_get_details($privateKey)['key']??null;
+if(!is_string($publicKey))throw new RuntimeException('CI fixture public key missing.');
+$oldAuthority=getenv('COS_FEDERATION_MIGRATION_AUTHORITY_PUBLIC_KEY_BASE64');
 $oldMigration=getenv('COS_FEDERATION_HISTORICAL_MIGRATION');
 $keys=['org'=>$org,'plan'=>$planId];
 $sourceSteps=[
@@ -185,19 +188,22 @@ try {
         throw new RuntimeException('Unsafe historical cutover accepted: '.$reason);
     };
     $expiry=time()+600;
-    $signedPayload=implode("\n",['federation-cutover-v1',$org,$runId,
+    $signedPayload=implode("\n",['federation-cutover-v2',$org,$runId,
         $operatorId,(string)$before['source_sha256'],(string)$expiry]);
-    $permit='v1:'.$expiry.':'.hash_hmac('sha256',$signedPayload,$authorityKey);
+    if(!openssl_sign($signedPayload,$signature,$privateKey,OPENSSL_ALGO_SHA256)) {
+        throw new RuntimeException('CI fixture signing failed.');
+    }
+    $permit='v2:'.$expiry.':'.bin2hex($signature);
     $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,$permit),
         'apply without explicit operator rollout gate');
     putenv('COS_FEDERATION_HISTORICAL_MIGRATION=explicit_operator_approved');
-    putenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY='.$authorityKey);
-    $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,'v1:'.$expiry.':'.str_repeat('0',64)),
+    putenv('COS_FEDERATION_MIGRATION_AUTHORITY_PUBLIC_KEY_BASE64='.base64_encode($publicKey));
+    $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,'v2:'.$expiry.':'.str_repeat('0',512)),
         'unauthenticated migration permit');
     $reject(static fn()=> $cutover->promotePristine($org,$runId,'999999999',$permit),
         'arbitrary operator without tenant membership');
     $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,
-        'v1:'.(time()-1).':'.str_repeat('0',64)), 'expired signed permit');
+        'v2:'.(time()-1).':'.str_repeat('0',512)), 'expired signed permit');
     $db->executeStatement(
         'UPDATE cos_organization_memberships SET status="SUSPENDED"
          WHERE organization_id=:org AND user_id=:id',
@@ -368,8 +374,8 @@ try {
 } finally {
     if ($oldMigration===false)putenv('COS_FEDERATION_HISTORICAL_MIGRATION');
     else putenv('COS_FEDERATION_HISTORICAL_MIGRATION='.$oldMigration);
-    if ($oldAuthority===false)putenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY');
-    else putenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY='.$oldAuthority);
+    if ($oldAuthority===false)putenv('COS_FEDERATION_MIGRATION_AUTHORITY_PUBLIC_KEY_BASE64');
+    else putenv('COS_FEDERATION_MIGRATION_AUTHORITY_PUBLIC_KEY_BASE64='.$oldAuthority);
     foreach(['cos_federation_migration_audit','cos_federation_execution_migrations',
         'cos_workflow_steps','cos_workflow_runs',
         'cos_federation_steps','cos_federation_runs','cos_approvals','cos_policy_evaluations',

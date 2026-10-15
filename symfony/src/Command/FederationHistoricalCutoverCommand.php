@@ -43,7 +43,7 @@ final class FederationHistoricalCutoverCommand extends Command
                 throw new \DomainException('Migration permit file must be a readable regular 0600 file.');
             }
             $permit=trim((string)file_get_contents($permitFile));
-            if (strlen($permit)>128) {
+            if (strlen($permit)>1100) {
                 throw new \DomainException('Migration permit has invalid length.');
             }
             $result=$this->cutover->promotePristine($org,$run,$operator,$permit);

@@ -8,11 +8,11 @@ use DomainException;
 
 /**
  * Two independent gates: active tenant admin membership AND a short-lived,
- * tenant/run/source-bound HMAC permit issued by a separately controlled authority.
+ * tenant/run/source-bound RSA signature issued by a separate trusted authority.
  * Never accepts a caller-supplied --operator string as authentication.
  *
- * The permit is "v1:<expiry_unix>:<lowercase_hex_sha256_hmac>". Do not expose
- * the signing key to the untrusted CLI invoker. Permit use is fenced by the
+ * The permit is "v2:<expiry_unix>:<hex_RSA_SHA256_signature>". The
+ * executing server only knows the public key, NEVER the signing private key. Permit use is fenced by the
  * migration ledger's unique organization/run and organization/plan constraints.
  */
 final readonly class FederationMigrationOperatorAuthorization
@@ -46,19 +46,30 @@ final readonly class FederationMigrationOperatorAuthorization
             || !in_array(strtolower((string)$row['member_role']),['admin','owner'],true)) {
             throw new DomainException('Historical migration operator lacks active tenant admin authorization.');
         }
-        $secret=getenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY');
-        if (!is_string($secret) || strlen($secret)<32
-            || !preg_match('/^v1:([0-9]{10,11}):([a-f0-9]{64})$/',$permit,$parts)) {
-            throw new DomainException('Migration requires a separately authorized, time-bound signed permit.');
+        $publicKeyBase64=getenv('COS_FEDERATION_MIGRATION_AUTHORITY_PUBLIC_KEY_BASE64');
+        if (!is_string($publicKeyBase64)
+            || !preg_match('/^v2:([0-9]{10,11}):([a-f0-9]{512,1024})$/',$permit,$parts)) {
+            throw new DomainException('Migration requires a separately signed RSA permit.');
         }
         $expiry=(int)$parts[1];
         $now=time();
         if ($expiry<=$now || $expiry>$now+900) {
             throw new DomainException('Historical migration permit is expired or exceeds the allowed 15-minute window.');
         }
-        $payload=implode("\n",['federation-cutover-v1',$organizationId,$runId,$operatorId,$sourceSha256,(string)$expiry]);
-        if (!hash_equals(hash_hmac('sha256',$payload,$secret),$parts[2])) {
-            throw new DomainException('Historical migration permit does not match signed tenant, operator, Run and source.');
+        $pem=base64_decode($publicKeyBase64,true);
+        $key=is_string($pem)?openssl_pkey_get_public($pem):false;
+        if ($key===false) {
+            throw new DomainException('Migration authority public key is unavailable.');
+        }
+        $details=openssl_pkey_get_details($key);
+        if (!is_array($details)||($details['type']??null)!==OPENSSL_KEYTYPE_RSA
+            || ($details['bits']??0)<2048) {
+            throw new DomainException('Migration authority must use an RSA key of at least 2048 bits.');
+        }
+        $payload=implode("\n",['federation-cutover-v2',$organizationId,$runId,$operatorId,$sourceSha256,(string)$expiry]);
+        $signature=hex2bin($parts[2]);
+        if ($signature===false || openssl_verify($payload,$signature,$key,OPENSSL_ALGO_SHA256)!==1) {
+            throw new DomainException('Historical migration permit is not signed for this tenant, Run, operator and source.');
         }
         return hash('sha256',$permit);
     }

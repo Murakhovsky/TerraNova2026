@@ -105,14 +105,13 @@ php symfony/bin/console cos:federation:history:cutover \
   --permit-file='/run/secrets/federation-cutover-permit'
 ```
 
-The separate authorizing service must issue a permit with the grammar
-`v1:<unix-expiry>:<64-character-lowercase-hex-HMAC-SHA256>`.
-The MAC key is provisioned only to the **trusted migration authority**, as
-`COS_FEDERATION_MIGRATION_AUTHORITY_KEY` (at least 32 bytes). The signed
-payload is the newline-separated UTF-8 text:
+The separate authorizing service issues an asymmetric signed permit with the
+grammar `v2:<unix-expiry>:<lowercase_hex_RSA_SHA256_signature>`. A trusted
+authority signs the newline-separated UTF-8 payload using its **private
+RSA-2048-or-stronger key**:
 
 ```text
-federation-cutover-v1
+federation-cutover-v2
 <organization-id>
 <run-id>
 <operator-tn-users-id>
@@ -120,17 +119,24 @@ federation-cutover-v1
 <expiry-unix-seconds>
 ```
 
+The COS CLI only receives the **public** PEM key, base64-encoded in
+`COS_FEDERATION_MIGRATION_AUTHORITY_PUBLIC_KEY_BASE64`. It verifies the
+signature via `openssl_verify` using RSA/SHA-256. The private signing key
+never reaches the migration CLI, operator shell, COS host or Actions runner.
+The signer must independently authorize the human request, and its
+private-key storage/access control is outside the COS application boundary.
+
 The server verifies that the operator is a live `tn_users` identity with an
-ACTIVE `admin` or `owner` membership for the exact tenant. It compares the
-HMAC in constant time and rejects expired permits and expiry windows longer
+ACTIVE `admin` or `owner` membership for the exact tenant. It verifies the
+public-key signature and rejects expired permits and expiry windows longer
 than 15 minutes. A permit for another Run, tenant, actor or modified source
-cannot authorize a transfer. Store the signing key outside source control,
-runner logs, ordinary CLI accounts and the generated reports; a CLI user who
-can read the key is inherently in the trusted authority boundary.
+cannot authorize a transfer. Keep the **private key** in a separately controlled approval/signing service.
+The public key is not a signing secret. A CLI operator cannot mint permits
+merely by reading application configuration.
 
 The migration ledger and unique constraints prevent re-application. The
-migration audit contains only the **SHA-256 digest of the permit**, never its
-raw signed value or key. This is an operator-only pathway, not a public
+migration audit contains only the **SHA-256 digest of the signed permit**, never its
+raw signed value or private key. This is an operator-only pathway, not a public
 controller or automatic background task.
 
 Legacy migrations recorded before this safety pack have no canonical
