@@ -135,7 +135,7 @@ final readonly class MysqlStreamingOperationsSnapshot
                            AND q.quality_score>=80 AND e.data_mode='LIVE'
                          THEN 1 ELSE 0 END) AS trusted_events,
                  COALESCE(MAX(q.ingestion_latency_ms),0) AS worst_ingest_ms,
-                 COALESCE(AVG(q.ingestion_latency_ms),0) AS mean_ingest_ms,
+                 COALESCE(ROUND(AVG(q.ingestion_latency_ms)),0) AS mean_ingest_ms,
                  MAX(e.received_timestamp) AS last_event_at
              FROM tn_capital_market_canonical_events e
              LEFT JOIN tn_capital_market_quality_metrics q
@@ -152,7 +152,7 @@ final readonly class MysqlStreamingOperationsSnapshot
                 'canonical_events_5m'=>(int)$record['canonical_events'],
                 'trusted_live_events_5m'=>(int)$record['trusted_events'],
                 'worst_ingest_ms'=>(int)$record['worst_ingest_ms'],
-                'mean_ingest_ms'=>(int)round((float)$record['mean_ingest_ms']),
+                'mean_ingest_ms'=>(int)$record['mean_ingest_ms'],
                 'last_event_at'=>$record['last_event_at'],
             ];
         }
