@@ -38,6 +38,13 @@ $check($p->decode(str_replace('"u":110','"u":112',$eth),$now->modify('+122 secon
 $check($p->staleSymbols($now->modify('+123 seconds'))===[],'Recovered ticker marked stale.');
 $check($reject(fn()=>$p->decode('{"id":3,"result":null}',$now)),'Stale recovery ACK accepted.');
 $check($reject(fn()=>$p->decode(str_replace('"s":"BTCUSDT"','"s":"SOLUSDT"',$btc),$now)),'Undeclared symbol accepted.');
+$conflictingEth=str_replace('"a":"2450.3"','"a":"2451.3"',str_replace('"u":110','"u":112',$eth));
+$conflict=$p->decode($conflictingEth,$now->modify('+123 seconds'));
+$check($conflict['kind']==='reset'&&$conflict['reason']==='BINANCE_CONFLICTING_UPDATE',
+    'Conflicting payload with the same sequence was treated as harmless heartbeat.');
+$check($p->decode(str_replace('"u":100','"u":2',$btc),$now->modify('+123 seconds'))['kind']==='quote',
+    'Quarantined ETH blocked healthy BTC symbol.');
+
 $p->subscribeFrames(array_keys($keys),4);
 $check($reject(fn()=>$p->decode($eth,$now)),'Old epoch trust leaked.');
 $check($reject(fn()=>new BinanceSpotMultiBboProtocol(

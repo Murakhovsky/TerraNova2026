@@ -23,6 +23,8 @@ final class BinanceSpotMultiBboProtocol
     private array $symbolsToKeys=[];
     /** @var array<string,string> */
     private array $sequences=[];
+    /** @var array<string,string> Exact BBO payload fingerprint for a provider update ID. */
+    private array $fingerprints=[];
     /** @var array<string,DateTimeImmutable> */
     private array $lastReceived=[];
     /** @var array<string,true> */
@@ -71,6 +73,7 @@ final class BinanceSpotMultiBboProtocol
         }
         $this->ready=false;
         $this->sequences=[];
+        $this->fingerprints=[];
         $this->lastReceived=[];
         $this->quarantined=[];
         $this->hardRecovery=[];
@@ -146,7 +149,7 @@ final class BinanceSpotMultiBboProtocol
                 $this->subscribed[$symbol]=true;
                 // Provider re-ACK ends hard quarantine; first fresh complete
                 // BBO still controls re-admission to trusted Market State.
-                unset($this->hardRecovery[$symbol],$this->sequences[$symbol]);
+                unset($this->hardRecovery[$symbol],$this->sequences[$symbol],$this->fingerprints[$symbol]);
                 $this->lastReceived[$symbol]=$receivedAt;
                 return ['kind'=>'resubscribed','symbol'=>$symbol];
             }
@@ -189,9 +192,14 @@ final class BinanceSpotMultiBboProtocol
             $this->quarantineSymbol($symbol,true);
             return ['kind'=>'invalid_quote','symbol'=>$symbol,'reason'=>'BINANCE_INVALID_BBO'];
         }
+        $fingerprint=hash('sha256',$normalized);
         if(isset($this->sequences[$symbol])){
             $order=$this->compareInteger($sequence,$this->sequences[$symbol]);
             if($order===0){
+                if(($this->fingerprints[$symbol]??null)!==$fingerprint){
+                    $this->quarantineSymbol($symbol,true);
+                    return ['kind'=>'reset','symbol'=>$symbol,'reason'=>'BINANCE_CONFLICTING_UPDATE'];
+                }
                 return ['kind'=>'heartbeat','symbol'=>$symbol];
             }
             if($order<0){
@@ -200,6 +208,7 @@ final class BinanceSpotMultiBboProtocol
             }
         }
         $this->sequences[$symbol]=$sequence;
+        $this->fingerprints[$symbol]=$fingerprint;
         $this->lastReceived[$symbol]=$receivedAt;
         unset($this->quarantined[$symbol]);
         return [
