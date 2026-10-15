@@ -19,6 +19,8 @@ final class EngineeringWorkflowDefinition
         'CHANGES_REQUESTED' => [EngineeringWorkflowState::DEVELOPMENT_RUNNING, EngineeringWorkflowState::ESCALATED, EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
         'QA_PENDING' => [EngineeringWorkflowState::REVIEW_PENDING, EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL, EngineeringWorkflowState::QA_FAILED, EngineeringWorkflowState::ESCALATED, EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
         'QA_FAILED' => [EngineeringWorkflowState::DEVELOPMENT_RUNNING, EngineeringWorkflowState::ESCALATED, EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
+        // Only guarded operator recovery may exit BLOCKED; workflow is otherwise parked.
+        'BLOCKED' => [EngineeringWorkflowState::ARCHITECTURE_PENDING, EngineeringWorkflowState::DEVELOPMENT_RUNNING, EngineeringWorkflowState::CANCELLED],
         'ESCALATED' => [EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
         'READY_FOR_HUMAN_APPROVAL' => [EngineeringWorkflowState::DONE, EngineeringWorkflowState::DEVELOPMENT_RUNNING, EngineeringWorkflowState::CANCELLED],
     ];

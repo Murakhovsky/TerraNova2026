@@ -182,6 +182,66 @@
         </div>
     </div>
 
+    {% if securityRecovery is defined and securityRecovery.latest_recovery|default(null) or (securityRecovery is defined and securityRecovery.finding_ids|default([]) is not empty) %}
+        <section class="engineering-panel" data-engineering-controlled-security-recovery>
+            <div class="engineering-panel__head">
+                <strong>Адресне відновлення Security findings</strong>
+                <span class="engineering-muted">1 Architect + 1 незалежний Security Review, без автоматичного Developer</span>
+            </div>
+            <div class="engineering-panel__body">
+                <p>Невирішені findings:
+                    {% for finding in securityRecovery.finding_ids|default([]) %}
+                        <span class="cos-badge">{{ finding }}</span>
+                    {% else %}
+                        <span>Не встановлено</span>
+                    {% endfor %}
+                </p>
+                <p class="engineering-muted">Звіт: {{ securityRecovery.source_artifact_id|default('—') }}
+                    · Revision: {{ securityRecovery.revision_binding|default('UNVERIFIED') }}
+                    · Архітектура: {{ securityRecovery.architecture_binding|default('UNVERIFIED') }}</p>
+                {% set recoveryPermit = securityRecovery.latest_recovery|default(null) %}
+                {% if recoveryPermit %}
+                    <p>Останнє відновлення: <strong>{{ recoveryPermit.state|default('UNKNOWN') }}</strong>
+                    {% if recoveryPermit.outcome|default('') %}· результат: <strong>{{ recoveryPermit.outcome }}</strong>{% endif %}</p>
+                {% endif %}
+                {% if securityRecovery.eligible|default(false) %}
+                    <details class="engineering-details">
+                        <summary class="cos-button cos-button--primary">Підготувати одноразове відновлення Architect</summary>
+                        <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <input type="hidden" name="review_hash" value="{{ securityRecovery.source_artifact_hash }}">
+                            <p>Авторизується рівно одна логічна спроба Architect і один незалежний Security Review. Загальний бюджет агентів не збільшується.</p>
+                            <label class="cos-field">
+                                <span>Для підтвердження введіть RECOVER_SECURITY_FINDINGS</span>
+                                <input class="cos-input" name="confirmation" required autocomplete="off">
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Підтвердити й передати immediate worker</button>
+                        </form>
+                    </details>
+                {% elseif recoveryPermit and recoveryPermit.state|default('') == 'FINISHED'
+                    and recoveryPermit.outcome|default('') == 'SECURITY_APPROVED'
+                    and securityRecovery.workflow_state|default('') == 'BLOCKED' %}
+                    <details class="engineering-details">
+                        <summary class="cos-button cos-button--primary">Security підтвердив. Дозволити Developer</summary>
+                        <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery-release">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <p>Після окремого підтвердження буде застосовано звичайний контроль бюджету запусків та інші Engineering Gates.</p>
+                            <label class="cos-field">
+                                <span>Введіть RELEASE_AFTER_SECURITY_REVIEW</span>
+                                <input class="cos-input" name="confirmation" required autocomplete="off">
+                            </label>
+                            <button class="cos-button cos-button--primary" type="submit">Погодити перехід до Developer</button>
+                        </form>
+                    </details>
+                {% else %}
+                    {% for problem in securityRecovery.problems|default([]) %}
+                        <p class="engineering-muted">• {{ problem }}</p>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
     {% if statusMessage %}
         <twig:CosAlert title="{{ statusMessage starts with 'ERROR:' ? 'Помилка Engineering' : 'Engineering оновлено' }}" copy="{{ statusMessage }}" tone="{{ statusMessage starts with 'ERROR:' ? 'danger' : 'positive' }}" />
     {% endif %}

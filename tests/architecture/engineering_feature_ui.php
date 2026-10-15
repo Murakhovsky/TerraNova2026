@@ -145,4 +145,21 @@ if (!str_contains($template, 'engineering-terminal__group')
     || !str_contains($template, 'event.evidence_round')) {
     throw new RuntimeException('Engineering terminal lacks attributed groups and evidence rounds.');
 }
+foreach ([
+    '/admin/engineering/{id}/security-recovery',
+    '/admin/engineering/{id}/security-recovery-release',
+    'EngineeringFeatureController::securityRecovery',
+    'EngineeringFeatureController::securityRecoveryRelease',
+] as $needle) {
+    if (!str_contains($routes, $needle)) throw new RuntimeException('Controlled Security recovery route missing '.$needle);
+}
+foreach (['data-engineering-controlled-security-recovery', 'RECOVER_SECURITY_FINDINGS',
+    'RELEASE_AFTER_SECURITY_REVIEW', 'review_hash'] as $needle) {
+    if (!str_contains($template, $needle)) throw new RuntimeException('Controlled Security recovery UI missing '.$needle);
+}
+foreach (['securityRecovery->authorize', 'securityRecovery->releaseToDeveloper',
+    "trigger: 'security-recovery'", 'SessionCsrfValidator'] as $needle) {
+    if (!str_contains($controller, $needle)) throw new RuntimeException('Controlled recovery web authorization missing '.$needle);
+}
+
 echo "Engineering feature UI contract passed.\n";

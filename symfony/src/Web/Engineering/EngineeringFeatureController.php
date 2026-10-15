@@ -11,6 +11,7 @@ use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringWorkflowStoreInterface;
 use App\Engineering\Application\Observability\EngineeringObservabilityReadModelInterface;
 use App\Engineering\Application\Service\EngineeringCancelService;
+use App\Engineering\Application\Service\EngineeringControlledSecurityRecoveryService;
 use App\Engineering\Application\Service\EngineeringFeatureManagementService;
 use App\Engineering\Application\Service\EngineeringFinalizeService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
@@ -46,6 +47,7 @@ final readonly class EngineeringFeatureController
         private EngineeringObservabilityReadModelInterface $observability,
         private EngineeringOrchestrator $orchestrator,
         private EngineeringCancelService $cancel,
+        private EngineeringControlledSecurityRecoveryService $securityRecovery,
         private EngineeringFeatureManagementService $featureManagement,
         private EngineeringFinalizeService $finalize,
         private EngineeringHumanDecisionService $decisions,
@@ -334,6 +336,7 @@ final readonly class EngineeringFeatureController
         ]);
 
         $summary = $this->summary($data);
+        $securityRecovery = $this->securityRecovery->preview($featureId, $tenant->organizationId()->value());
 
         return new Response(
             $this->twig->render('experience/engineering/feature.html.twig', [
@@ -345,6 +348,7 @@ final readonly class EngineeringFeatureController
                 ),
                 'engineering' => $data,
                 'summary' => $summary,
+                'securityRecovery' => $securityRecovery,
                 'csrfToken' => $this->csrf->token($request),
                 'statusMessage' => trim((string) $request->query->get('status_message', '')),
             ]),
@@ -427,6 +431,66 @@ final readonly class EngineeringFeatureController
             return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow передано immediate worker.');
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
+        }
+    }
+
+    /** Explicit Manager confirmation, never a generic 'run again' request. */
+    public function securityRecovery(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->ownedStatus($tenant, $featureId);
+            $permit = $this->securityRecovery->authorize(
+                $featureId,
+                $tenant->organizationId()->value(),
+                'user:'.$tenant->userId()->value(),
+                trim((string) $request->request->get('review_hash', '')),
+                trim((string) $request->request->get('confirmation', '')),
+            );
+            // Queue the existing immediate command transport, but with a dedicated
+            // handler branch that never enters the 16-step general progression.
+            $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+                trigger: 'security-recovery',
+            ));
+            return $this->redirectStatus('/admin/engineering/'.$featureId,
+                'Адресне відновлення Security передано worker. Permit '.substr((string) $permit['id'], 0, 8).'.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
+        }
+    }
+
+    /** Separate human release, only after a new independent APPROVED report. */
+    public function securityRecoveryRelease(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->ownedStatus($tenant, $featureId);
+            $result = $this->securityRecovery->releaseToDeveloper(
+                $featureId,
+                $tenant->organizationId()->value(),
+                'user:'.$tenant->userId()->value(),
+                trim((string) $request->request->get('confirmation', '')),
+            );
+            $this->workflows->markImmediate((string) $result['workflow_id']);
+            $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+                trigger: 'security-recovery-release',
+            ));
+            return $this->redirectStatus('/admin/engineering/'.$featureId,
+                'Погоджений Security Review передано до звичайного Developer workflow із чинними обмеженнями бюджету.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
         }
     }
 

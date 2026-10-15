@@ -67,6 +67,7 @@ final readonly class EngineeringArchitectStageExecutor
         string $organizationId,
         string $correlationId,
         int $logicalAttempt = 1,
+        bool $targetedSecurityRecovery = false,
     ): WorkflowDirective {
         $featureSpec = $this->artifacts->latest($featureId, ArtifactType::FEATURE_SPEC);
         $contextMap = $this->artifacts->latest($featureId, ArtifactType::CONTEXT_MAP);
@@ -269,6 +270,12 @@ final readonly class EngineeringArchitectStageExecutor
                 'human_decisions' => $humanDecisionHistory,
                 'tasks' => $this->tasks->forFeature($featureId),
                 'security_review_recovery' => $securityRecovery,
+                'controlled_security_recovery' => $targetedSecurityRecovery ? [
+                    'architect_attempts' => 1,
+                    'max_additional_evidence_rounds' => 1,
+                    'mandatory_independent_security_recheck' => true,
+                    'auto_developer' => false,
+                ] : null,
                 'previous_architecture_decision' => $previousArchitecture['content'] ?? null,
                 'previous_implementation_plan' => $previousImplementation['content'] ?? null,
                 'previous_developer_handoff' => $previousHandoff['content'] ?? null,
@@ -308,6 +315,7 @@ final readonly class EngineeringArchitectStageExecutor
             ],
             idempotencyKey: $featureId.':architect:'.$logicalAttempt.':'.$repositoryRevision.':'.$featureSpec['content_hash'].':'.$previousArchitectureHash.':security-review:'.($securityRecovery['source_artifact_hash'] ?? 'none'),
             inputSnapshot: [
+                'controlled_security_recovery' => $targetedSecurityRecovery,
                 'feature_id' => $featureId,
                 'feature_spec_artifact_id' => $featureSpec['id'],
                 'feature_spec_hash' => $featureSpec['content_hash'],
@@ -503,6 +511,11 @@ final readonly class EngineeringArchitectStageExecutor
                         ? fn (array $requested): array => $this->repository->existingPathsAtRevision($requested, $repositoryRevision)
                         : null,
                 );
+                if ($targetedSecurityRecovery && $round >= 1) {
+                    $plan['status'] = 'EXHAUSTED';
+                    $plan['reason'] = 'TARGETED_RECOVERY_ROUND_LIMIT';
+                    $plan['paths'] = [];
+                }
                 $this->journal->event(
                     $featureId, $workflowId, 'MANAGER', 'architect.evidence_request_evaluated',
                     'COMPLETED', 'Manager evaluated read-only evidence request against safety and budget.',

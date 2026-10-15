@@ -134,6 +134,60 @@ final readonly class EngineeringWorkflowCoordinator
         );
     }
 
+    public function beginTargetedSecurityRecovery(WorkflowExecution $workflow, string $actor, string $permitId): WorkflowDirective
+    {
+        if ($workflow->currentState() !== EngineeringWorkflowState::BLOCKED
+            || !str_starts_with($actor, 'user:') || trim($permitId) === '') {
+            throw new LogicException('One-shot recovery requires a blocked workflow and explicit operator permit.');
+        }
+        $transition = $this->engine->transition($workflow, EngineeringWorkflowState::ARCHITECTURE_PENDING,
+            new WorkflowTransitionContext(
+                trigger: 'HUMAN_TARGETED_SECURITY_RECOVERY',
+                reason: 'One Architecture attempt and one independent Security recheck only.',
+                initiatedByType: 'HUMAN', initiatedById: $actor,
+                metadata: ['security_recovery_permit_id' => $permitId, 'architect_attempts' => 1, 'auto_developer' => false],
+            ),
+        );
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::PRINCIPAL_ARCHITECT,
+            'Targeted Security recovery without autonomous Developer or repeated Architect runs.', [$transition]);
+    }
+
+    public function parkTargetedSecurityRecovery(WorkflowExecution $workflow, string $outcome): WorkflowDirective
+    {
+        if (!in_array($workflow->currentState(), [
+            EngineeringWorkflowState::ARCHITECTURE_PENDING, EngineeringWorkflowState::DEVELOPMENT_RUNNING,
+        ], true)) {
+            throw new LogicException('Security recovery parking must come from an in-flight architecture phase.');
+        }
+        $transition = $this->engine->transition($workflow, EngineeringWorkflowState::BLOCKED,
+            new WorkflowTransitionContext(
+                trigger: 'SECURITY_RECOVERY_PARKED',
+                reason: 'Targeted Security recovery stopped: '.$outcome,
+                initiatedByType: 'SYSTEM', initiatedById: 'engineering-security-recovery',
+                metadata: ['outcome' => $outcome, 'auto_developer' => false],
+            ),
+        );
+        return new WorkflowDirective(WorkflowDirectiveType::STOP, null, 'Security recovery parked: '.$outcome, [$transition]);
+    }
+
+    public function releaseAfterTargetedSecurityReview(WorkflowExecution $workflow, string $actor, string $permitId): WorkflowDirective
+    {
+        if ($workflow->currentState() !== EngineeringWorkflowState::BLOCKED
+            || !str_starts_with($actor, 'user:') || trim($permitId) === '') {
+            throw new LogicException('Developer release requires explicit operator and approved independent security report.');
+        }
+        $transition = $this->engine->transition($workflow, EngineeringWorkflowState::DEVELOPMENT_RUNNING,
+            new WorkflowTransitionContext(
+                trigger: 'HUMAN_RELEASE_AFTER_SECURITY_RECHECK',
+                reason: 'Operator released independently reviewed architecture; normal agent-run budget applies.',
+                initiatedByType: 'HUMAN', initiatedById: $actor,
+                metadata: ['security_recovery_permit_id' => $permitId],
+            ),
+        );
+        return new WorkflowDirective(WorkflowDirectiveType::RUN_AGENT, AgentRole::DEVELOPER,
+            'Resume normal Developer stage subject to ordinary autonomy and review gates.', [$transition]);
+    }
+
     public function specialistRework(WorkflowExecution $workflow, string $reason): WorkflowDirective
     {
         if ($workflow->currentState() === EngineeringWorkflowState::DEVELOPMENT_RUNNING) {

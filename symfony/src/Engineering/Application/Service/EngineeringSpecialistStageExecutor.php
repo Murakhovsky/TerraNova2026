@@ -86,6 +86,22 @@ final readonly class EngineeringSpecialistStageExecutor
         };
     }
 
+    /** One independent, read-only architecture Security recheck with no automatic rework loop. */
+    public function reviewArchitectureOnly(
+        string $featureId,
+        string $workflowId,
+        string $organizationId,
+        string $correlationId,
+    ): void {
+        $featureSpec = $this->requiredArtifact($featureId, ArtifactType::FEATURE_SPEC);
+        $architecture = $this->requiredArtifact($featureId, ArtifactType::ARCHITECTURE_DECISION);
+        if (!in_array(($architecture['content']['gate_status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS'], true)) {
+            throw new RuntimeException('Independent Security review requires an approved Architecture Decision.');
+        }
+        $this->executeOne($featureId, $workflowId, $organizationId, $correlationId,
+            'TARGETED_RECOVERY', AgentRole::SECURITY_SPECIALIST, $featureSpec, $architecture, null, true);
+    }
+
     public function executeRequired(
         string $featureId,
         string $workflowId,
@@ -132,6 +148,7 @@ final readonly class EngineeringSpecialistStageExecutor
         array $featureSpec,
         array $architecture,
         ?array $development,
+        bool $reviewOnly = false,
     ): ?WorkflowDirective {
         $this->assignments->assertAssignable($featureId, $role, 'FEATURE', 'HIGH');
 
@@ -269,7 +286,7 @@ final readonly class EngineeringSpecialistStageExecutor
 
         return $this->lock->synchronized(
             $featureId,
-            function () use ($featureId, $workflowId, $engineeringRunId, $run, $role, $phase, $architecture): ?WorkflowDirective {
+            function () use ($featureId, $workflowId, $engineeringRunId, $run, $role, $phase, $architecture, $reviewOnly): ?WorkflowDirective {
                 $this->agentRuns->complete($engineeringRunId, $run);
                 $this->artifacts->createVersion(
                     $featureId,
@@ -288,6 +305,7 @@ final readonly class EngineeringSpecialistStageExecutor
                 );
 
                 $status = strtoupper((string) ($run->structuredOutput['status'] ?? ''));
+                if ($reviewOnly) return null; // Persist findings, but never schedule another Architect automatically.
                 if (in_array($status, ['APPROVED','APPROVED_WITH_CONDITIONS','COMPLETED'], true)) return null;
 
                 $workflow = $this->workflows->get($workflowId);

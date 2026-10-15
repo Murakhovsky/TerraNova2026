@@ -52,6 +52,26 @@ if ($budgetDirective->type !== WorkflowDirectiveType::BLOCK
     throw new RuntimeException('Evidence budget exhaustion must block without scheduling Developer or Human Gate.');
 }
 
+$controlledRecovery = new WorkflowExecution(
+    EngineeringId::generate(), EngineeringId::generate(), EngineeringWorkflowState::BLOCKED, 'one-shot-security-recovery',
+);
+$permit = EngineeringId::generate();
+$recovered = $coordinator->beginTargetedSecurityRecovery($controlledRecovery, 'user:operator-1', $permit);
+if ($recovered->agent !== AgentRole::PRINCIPAL_ARCHITECT
+    || $controlledRecovery->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
+    throw new RuntimeException('Explicit Security recovery cannot resume blocked architecture.');
+}
+$parking = $coordinator->parkTargetedSecurityRecovery($controlledRecovery, 'SECURITY_FINDINGS_OPEN');
+if ($parking->type !== WorkflowDirectiveType::STOP
+    || $controlledRecovery->currentState() !== EngineeringWorkflowState::BLOCKED) {
+    throw new RuntimeException('Unresolved Security findings must park the workflow without Developer.');
+}
+$release = $coordinator->releaseAfterTargetedSecurityReview($controlledRecovery, 'user:operator-1', $permit);
+if ($release->agent !== AgentRole::DEVELOPER
+    || $controlledRecovery->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) {
+    throw new RuntimeException('Explicit post-review Developer release transition failed.');
+}
+
 $d = $coordinator->acceptAgentResult($workflow, AgentRole::PRINCIPAL_ARCHITECT, ['status' => 'APPROVED']);
 if ($d->agent !== AgentRole::DEVELOPER || $workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) throw new RuntimeException('Developer routing failed.');
 

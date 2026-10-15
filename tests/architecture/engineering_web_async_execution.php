@@ -59,4 +59,11 @@ foreach ([
     }
 }
 
+foreach (["trigger: 'security-recovery'", "trigger: 'security-recovery-release'",
+    'RunEngineeringFeatureCommand'] as $needle) {
+    if (!str_contains($controller, $needle)) {
+        throw new RuntimeException('Security recovery must dispatch to immediate worker, not execute LLM in HTTP.');
+    }
+}
+
 echo "Engineering Web async execution contract passed.\n";

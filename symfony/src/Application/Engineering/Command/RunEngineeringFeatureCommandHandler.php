@@ -4,12 +4,16 @@ declare(strict_types=1);
 namespace App\Application\Engineering\Command;
 
 use App\Engineering\Application\Service\EngineeringContinueService;
+use App\Engineering\Application\Service\EngineeringControlledSecurityRecoveryService;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use Kernel\Application\Command\CommandHandlerInterface;
 
 final readonly class RunEngineeringFeatureCommandHandler implements CommandHandlerInterface
 {
-    public function __construct(private EngineeringContinueService $engineering) {}
+    public function __construct(
+        private EngineeringContinueService $engineering,
+        private EngineeringControlledSecurityRecoveryService $securityRecovery,
+    ) {}
 
     /** @return array<string,mixed> */
     public function __invoke(RunEngineeringFeatureCommand $command): array
@@ -18,6 +22,13 @@ final readonly class RunEngineeringFeatureCommandHandler implements CommandHandl
         $organizationId = trim($command->organizationId);
         if ($organizationId === '') {
             throw new \InvalidArgumentException('Engineering immediate execution requires organization id.');
+        }
+
+        if ($command->trigger === 'security-recovery') {
+            return $this->securityRecovery->executeOnce(
+                $featureId, $organizationId,
+                'engineering:security-recovery:'.$featureId.':'.EngineeringId::generate(),
+            );
         }
 
         $result = $this->engineering->continueFeature(
