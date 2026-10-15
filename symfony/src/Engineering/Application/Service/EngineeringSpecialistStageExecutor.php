@@ -157,6 +157,33 @@ final readonly class EngineeringSpecialistStageExecutor
             ?? $architecture['content']['repository_revision']
             ?? 'unknown'
         ));
+        $reviewFiles = [];
+        if ($reviewOnly) {
+            if (!$this->repository->available() || preg_match('/^[a-f0-9]{40}$/iD', $revision) !== 1) {
+                throw new RuntimeException('Security recheck requires a pinned repository revision.');
+            }
+            $paths = [
+                'symfony/config/routes.yaml',
+                'symfony/config/packages/security.yaml',
+                'symfony/src/Security/CosIdentityLoader.php',
+                'symfony/src/Web/PublicSite/HomeController.php',
+                'symfony/templates/experience/public/home.html.twig',
+                'symfony/public/sw.js',
+            ];
+            $existing = $this->repository->existingPathsAtRevision($paths, $revision);
+            if (count($existing) !== count($paths)) {
+                throw new RuntimeException('Required source evidence is missing from the pinned revision.');
+            }
+            $reviewFiles = $this->repository->filesAtRevision($paths, $revision);
+            foreach ($reviewFiles as &$file) {
+                $body = (string) ($file['content'] ?? '');
+                $file['content'] = mb_strcut($body, 0, 16384, 'UTF-8');
+                $file['complete'] = ($file['complete'] ?? false) === true
+                    && strlen($file['content']) === strlen($body);
+            }
+            unset($file);
+        }
+
         $inputHash = hash('sha256', implode(':', [
             $featureSpec['content_hash'] ?? 'none',
             $architecture['content_hash'] ?? 'none',
@@ -186,6 +213,10 @@ final readonly class EngineeringSpecialistStageExecutor
                 'architecture_decision' => $architecture['content'],
                 'development_result' => $development['content'] ?? null,
                 'reviewed_revision' => $revision !== '' ? $revision : null,
+                'repository_evidence' => $reviewFiles,
+                'repository_evidence_notice' => $reviewOnly
+                    ? 'Source code review only. Do not claim HTTP, CDN or browser tests were executed.'
+                    : null,
             ],
             contextRefs: array_values(array_filter([
                 'artifact:'.$featureSpec['id'],
