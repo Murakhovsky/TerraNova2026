@@ -20,6 +20,19 @@ $compose=$read('docker-compose.yml');
 foreach(['provider_stream_receipts','stream_incidents','stream_failover_observations'] as $table){
     if(!str_contains($schema,$table))throw new RuntimeException('Missing durable provider ops table '.$table);
 }
+$singleNames=['CapitalMarketsBinanceSpotStreamingCommand.php',
+ 'CapitalMarketsBinanceUsdmStreamingCommand.php',
+ 'CapitalMarketsBybitSpotStreamingCommand.php',
+ 'CapitalMarketsBybitLinearStreamingCommand.php',
+ 'CapitalMarketsKrakenSpotStreamingCommand.php',
+ 'CapitalMarketsMassiveStocksStreamingCommand.php'];
+foreach($singleNames as $file){
+    $worker=$read('symfony/src/Command/'.$file);
+    if(!str_contains($worker,'$this->verification->acknowledged(')
+        ||!str_contains($worker,'$this->verification->acceptedQuote(')){
+        throw new RuntimeException('Single-symbol provider missing durable live ACK proof: '.$file);
+    }
+}
 foreach([$binance,$massive] as $worker){
     if(!str_contains($worker,'$this->verification->acknowledged(')
         ||!str_contains($worker,'$this->verification->acceptedQuote(')){

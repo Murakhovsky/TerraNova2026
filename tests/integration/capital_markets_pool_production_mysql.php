@@ -386,6 +386,10 @@ try{
     $rejected=false;
     try{$failover->verify($org,$source);}catch(DomainException){$rejected=true;}
     $assert($rejected,'Fresh lease/ACK alone passed without new LIVE canonical quote.');
+    $pdo->prepare("UPDATE tn_capital_market_source_health
+         SET connection_state='ACTIVE',clock_reliable=1,queue_lag=0,
+             last_event_at=UTC_TIMESTAMP(6),updated_at=UTC_TIMESTAMP(6)
+         WHERE organization_id=? AND source_id=?")->execute([$org,$source]);
     $post='ci-post-failover-'.bin2hex(random_bytes(10));
     $persist($post);
     $provider->acceptedQuote($org,$source,'ci-shard','ci-new-worker',11,4,$makeQuote($post));

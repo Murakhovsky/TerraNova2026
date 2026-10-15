@@ -149,6 +149,21 @@ final readonly class MysqlStreamingFailoverAudit
                 throw new DomainException('New worker lease token not proven.');
             }
             $current=(int)$tokens[0];
+            $sourceHealth=$this->pdo->prepare(
+                "SELECT connection_state,clock_reliable,queue_lag,rate_limit_state,
+                        last_event_at FROM tn_capital_market_source_health
+                 WHERE organization_id=:org AND source_id=:source");
+            $sourceHealth->execute(['org'=>$org,'source'=>$source]);
+            $health=$sourceHealth->fetch(PDO::FETCH_ASSOC);
+            $lastEvent=is_array($health)&&is_string($health['last_event_at'])
+                ?strtotime($health['last_event_at'].' UTC'):false;
+            if(!is_array($health)||$health['connection_state']!=='ACTIVE'
+                ||(int)$health['clock_reliable']!==1
+                ||(int)$health['queue_lag']>100
+                ||in_array($health['rate_limit_state'],['THROTTLED','EXHAUSTED'],true)
+                ||$lastEvent===false||$lastEvent<time()-120||$lastEvent>time()+5){
+                throw new DomainException('Recovered worker source health not proven.');
+            }
             $v=$this->pdo->prepare(
                 "SELECT COUNT(*) FROM tn_capital_market_provider_stream_receipts p
                  JOIN tn_capital_market_instrument_stream_trust t

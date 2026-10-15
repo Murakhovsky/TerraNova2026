@@ -33,4 +33,17 @@ try{$eval->evaluate(['leases'=>[],'quality_by_source'=>[],
         'confirmed_live'=>1,'revoked'=>0]]]);
     throw new RuntimeException('Negative provider metrics accepted.');
 }catch(DomainException $expected){}
+$rate=$base;
+$rate['source_health']['binance']=[
+ 'rate_limit_state'=>'THROTTLED','clock_reliable'=>true,'queue_lag'=>201];
+$alarm=$eval->evaluate($rate);
+$codes=array_column($alarm['alerts'],'code');
+$assert(in_array('STREAM_PROVIDER_RATE_LIMIT',$codes,true)
+    &&in_array('STREAM_QUEUE_LAG',$codes,true),
+    'Rate-limit and backpressure alerts missing.');
+$skew=$base;$skew['source_health']['binance']=[
+ 'rate_limit_state'=>'OK','clock_reliable'=>false,'queue_lag'=>0];
+$assert(in_array('STREAM_SOURCE_CLOCK_UNRELIABLE',
+    array_column($eval->evaluate($skew)['alerts'],'code'),true),
+    'Unreliable source clock incorrectly counted as healthy.');
 echo "Source-scoped provider ACK, partial symbol outage, revoked subscription and worker alerts passed.\n";
