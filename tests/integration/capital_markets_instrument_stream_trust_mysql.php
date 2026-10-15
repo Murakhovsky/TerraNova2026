@@ -178,6 +178,53 @@ try{
     $assert(is_array($healthAfter)&&$healthAfter['connection_state']==='ACTIVE',
         'Per-symbol freshness degraded the shared source transport.');
 
+    // Actual application result shape: the source-fenced gateway runs this
+    // policy in the same transaction as canonical event + quality persistence.
+    $time=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $observation=new class implements \Domains\CapitalMarkets\Domain\MarketData\MarketObservation{
+        public function eventType():\Domains\CapitalMarkets\Domain\MarketData\MarketEventType {
+            return \Domains\CapitalMarkets\Domain\MarketData\MarketEventType::Bbo;
+        }
+        public function toArray():array{return ['bid'=>'10.0','ask'=>'10.1'];}
+    };
+    $quality=new \Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment(
+        \Domains\CapitalMarkets\Domain\MarketData\MarketTrustStatus::Trusted,99,[],1,1,1
+    );
+    $makeResult=static function(string $sequence) use ($source,$instruments,$time,$observation,$quality){
+        $event=new \Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent(
+            'ci-canonical-'.bin2hex(random_bytes(8)),
+            \Domains\CapitalMarkets\Domain\MarketData\MarketSourceId::fromString($source),
+            null,\Domains\CapitalMarkets\Domain\Instrument\InstrumentId::fromString($instruments[0]),
+            new \Domains\CapitalMarkets\Domain\MarketData\MarketTimestamps($time,$time,$time),
+            $sequence,$observation,[],1,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketDataMode::Live,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketStatus::Open
+        );
+        return new \Domains\CapitalMarkets\Application\DTO\MarketDataIngestionResult(
+            'ACCEPTED',true,true,true,$event,$quality,null
+        );
+    };
+    $pdo->beginTransaction();
+    try{
+        $trusted=$sweeper->observe($org,$source,$shard,$token,$makeResult('200'));
+        $assert($trusted==='TRUSTED','Fresh complete symbol BBO failed independent recovery.');
+        $blocked=$sweeper->observe($org,$source,$shard,$token,$makeResult('199'));
+        $assert($blocked==='UNTRUSTED','Regressing symbol sequence escaped persisted trust.');
+        $read=$pdo->prepare(
+            'SELECT status,recovery_required,last_sequence FROM tn_capital_market_instrument_stream_trust
+             WHERE organization_id=? AND source_id=? AND instrument_id=? AND channel=?');
+        $read->execute([$org,$source,$instruments[0],'BBO']);
+        $symbol=$read->fetch(PDO::FETCH_ASSOC);
+        $assert(is_array($symbol)&&$symbol['status']==='UNTRUSTED'
+            &&(int)$symbol['recovery_required']===1&&$symbol['last_sequence']==='200',
+            'Sequence regression rewound trusted per-symbol baseline.');
+        $read->execute([$org,$source,$instruments[1],'BBO']);
+        $sibling=$read->fetch(PDO::FETCH_ASSOC);
+        $assert(is_array($sibling)&&$sibling['status']==='STALE',
+            'Sequence regression changed another symbol trust row.');
+        $pdo->commit();
+    }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();throw $error;}
+
     echo "Capital Markets per-instrument trust isolation, recovery fencing and stale sweep MySQL passed.\n";
 }finally{
     if($pdo->inTransaction())$pdo->rollBack();
