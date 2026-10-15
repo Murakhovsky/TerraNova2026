@@ -6,6 +6,7 @@ namespace App\Command;
 use DomainException;
 use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
 use Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore;
+use Domains\CapitalMarkets\Application\Service\StreamingFleetPlacementPolicy;
 use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -26,6 +27,7 @@ final class CapitalMarketsMultiSymbolFleetCommand extends Command
 {
     public function __construct(
         private readonly MultiSymbolStreamingCore $planner,
+        private readonly StreamingFleetPlacementPolicy $placement,
         private readonly CapitalMarketsAccessControlInterface $access,
     ){parent::__construct();}
 
@@ -36,6 +38,12 @@ final class CapitalMarketsMultiSymbolFleetCommand extends Command
             ->addOption('sources',null,InputOption::VALUE_REQUIRED,'1..16 unique existing source IDs')
             ->addOption('seconds',null,InputOption::VALUE_REQUIRED,'Run duration, 0 until SIGTERM','60')
             ->addOption('max-workers',null,InputOption::VALUE_REQUIRED,'Maximum independent source workers (1..16)','16')
+            ->addOption('nodes',null,InputOption::VALUE_REQUIRED,'Explicit ordered node IDs, e.g. a,b,c')
+            ->addOption('node',null,InputOption::VALUE_REQUIRED,'Local approved node ID')
+            ->addOption('max-subscriptions',null,InputOption::VALUE_REQUIRED,
+                'Max BBO per node (1..6400)','1200')
+            ->addOption('budget-milliusd-hour',null,InputOption::VALUE_REQUIRED,
+                'Estimated maximum node cost milli-USD/hour','200000')
             ->addOption('execute',null,InputOption::VALUE_NONE,'Actually run child workers (default dry-run)');
     }
 
@@ -57,6 +65,30 @@ final class CapitalMarketsMultiSymbolFleetCommand extends Command
                 throw new DomainException('Market Data manager capability required.');
             }
             $plan=$this->planner->plan($org,explode(',',$raw));
+            $nodesRaw=$in->getOption('nodes');
+            $local=$in->getOption('node');
+            $capacity=filter_var($in->getOption('max-subscriptions'),FILTER_VALIDATE_INT);
+            $budget=filter_var($in->getOption('budget-milliusd-hour'),FILTER_VALIDATE_INT);
+            if($capacity===false||$budget===false){
+                throw new DomainException('Invalid source subscription or cost envelope.');
+            }
+            $selected=$plan['sources'];$topology=null;
+            if($nodesRaw!==null||$local!==null){
+                if(!is_string($nodesRaw)||$nodesRaw===''||!is_string($local)||$local===''){
+                    throw new DomainException('Both --nodes and --node required for multi-node fleet.');
+                }
+                $nodes=explode(',',$nodesRaw);
+                if(!in_array($local,$nodes,true)){
+                    throw new DomainException('Local node absent from approved roster.');
+                }
+                $topology=$this->placement->place($selected,$nodes,$max,$capacity,$budget);
+                $owned=array_fill_keys($topology['nodes'][$local]['sources'],true);
+                $selected=array_values(array_filter($selected,
+                    static fn(array $x):bool=>isset($owned[$x['source_id']])));
+                $plan['distributed_placement']=$topology;
+                $plan['local_node']=$local;
+                $plan['local_source_count']=count($selected);
+            }
             if(!$in->getOption('execute')){
                 $out->writeln(json_encode($plan,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
                 return Command::SUCCESS;
@@ -65,7 +97,15 @@ final class CapitalMarketsMultiSymbolFleetCommand extends Command
                 ||!function_exists('pcntl_async_signals')||!function_exists('proc_open')){
                 throw new DomainException('Live fleet requires opt-in flag, pcntl and process supervisor support.');
             }
-            $sources=$plan['sources'];
+            if($topology!==null
+                &&getenv('COS_CM_STREAMING_FLEET_TOPOLOGY_DIGEST')!==$topology['topology_digest']){
+                throw new DomainException('Fleet topology roster/cost hash not pinned in environment.');
+            }
+            $sources=$selected;
+            if($sources===[]){
+                $out->writeln('{"status":"NO_LOCAL_SOURCES","network_sessions_opened":0}');
+                return Command::SUCCESS;
+            }
             if(count($sources)>$max){
                 throw new DomainException('Fleet would omit selected sources: increase bounded --max-workers.');
             }
