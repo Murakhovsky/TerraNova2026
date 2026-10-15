@@ -118,7 +118,7 @@ final class CapitalMarketsBinanceUsdmStreamingCommand extends Command
                 'wss://fstream.binance.com/public/stream',
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $epoch)use(
-                    $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,&$leaseToken,&$accepted,,
+                    $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,&$leaseToken,&$accepted,
                     $verifiedInstrumentId):void{
                     $decoded=$protocol->decode($payload,new DateTimeImmutable('now',new DateTimeZone('UTC')));
                     if($decoded['kind']==='ack'){

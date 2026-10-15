@@ -121,7 +121,7 @@ final class CapitalMarketsKrakenSpotStreamingCommand extends Command
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $epoch) use (
                     $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,
-                    $target,&$leaseToken,&$accepted,&$expectMarketMessages,,
+                    $target,&$leaseToken,&$accepted,&$expectMarketMessages,
                     $verifiedInstrumentId):void{
                     $received=new DateTimeImmutable('now',new DateTimeZone('UTC'));
                     $status=$this->marketStatus->resolve($target->venueInstrument,$received);

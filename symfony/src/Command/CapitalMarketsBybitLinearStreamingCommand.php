@@ -113,7 +113,7 @@ final class CapitalMarketsBybitLinearStreamingCommand extends Command
                 'wss://stream.bybit.com/v5/public/linear',
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $generation)use(
-                    $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,&$token,&$accepted,,
+                    $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,&$token,&$accepted,
                     $verifiedInstrumentId):void{
                     $result=$protocol->decode($payload,new DateTimeImmutable('now',new DateTimeZone('UTC')));
                     if($result['kind']==='ack'){

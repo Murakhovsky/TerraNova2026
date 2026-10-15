@@ -138,7 +138,7 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $epoch) use(
                     $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,
-                    &$transport,&$token,&$accepted,,
+                    &$transport,&$token,&$accepted,
                     $verifiedInstrumentId):void{
                     $received=new DateTimeImmutable('now',new DateTimeZone('UTC'));
                     foreach($protocol->decodeBatch($payload,$received) as $event){
