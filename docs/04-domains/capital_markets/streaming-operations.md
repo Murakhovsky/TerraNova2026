@@ -9,8 +9,8 @@ updated: 2026-10-15
 # Діагностика потокових даних
 
 Оператор має команду лише для читання. Вона показує ACTIVE, EXPIRED і
-RELEASED для кожного worker shard, а також кількість TRUSTED, DEGRADED та
-UNTRUSTED Market State в розрізі джерела та типу ринкових даних.
+RELEASED для кожного worker shard, а також кількість TRUSTED, DEGRADED, STALE,
+UNTRUSTED та UNAVAILABLE Market State в розрізі джерела та типу ринкових даних.
 
 ```bash
 php symfony/bin/console cos:capital-markets:market-data:stream:status ORG

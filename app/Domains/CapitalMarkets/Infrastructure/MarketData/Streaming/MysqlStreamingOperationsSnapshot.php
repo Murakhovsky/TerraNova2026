@@ -66,12 +66,12 @@ final readonly class MysqlStreamingOperationsSnapshot
             foreach($grouped as $row){
                 $key=(string)$row['source_id'];
                 $trust=(string)$row['trust_status'];
-                if(!in_array($trust,['TRUSTED','DEGRADED','UNTRUSTED'],true)){
+                if(!in_array($trust,['TRUSTED','DEGRADED','STALE','UNTRUSTED','UNAVAILABLE'],true)){
                     throw new RuntimeException('Unexpected Market State trust status.');
                 }
                 if(!isset($quality[$key]))$quality[$key]=[
-                    'trading'=>['TRUSTED'=>0,'DEGRADED'=>0,'UNTRUSTED'=>0],
-                    'reference'=>['TRUSTED'=>0,'DEGRADED'=>0,'UNTRUSTED'=>0],
+                    'trading'=>['TRUSTED'=>0,'DEGRADED'=>0,'STALE'=>0,'UNTRUSTED'=>0,'UNAVAILABLE'=>0],
+                    'reference'=>['TRUSTED'=>0,'DEGRADED'=>0,'STALE'=>0,'UNTRUSTED'=>0,'UNAVAILABLE'=>0],
                 ];
                 $quality[$key][$kind][$trust]=(int)$row['count_rows'];
             }
