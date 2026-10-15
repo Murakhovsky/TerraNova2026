@@ -43,6 +43,7 @@ return [
             'app/migrations/20261015_000144_capital_markets_pool_production.sql',
             'app/migrations/20261015_000145_capital_markets_instrument_stream_trust.sql',
             'app/migrations/20261015_000146_capital_markets_provider_ops.sql',
+            'app/migrations/20261015_000147_capital_markets_derivatives_stream.sql',
         ],
         'capabilities'=>[
             'capital_markets.view',

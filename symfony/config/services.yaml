@@ -2049,6 +2049,14 @@ services:
     arguments:
       $pdo: '@cos.database.pdo'
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlDerivativeLifecycleRegistry:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlDerivativeStreamTrust:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification:
     arguments:
       $pdo: '@cos.database.pdo'
