@@ -36,8 +36,9 @@ Production actions are disabled by default. Configure COS_CM_POOL_PRODUCTION_ARM
 
     ... attest --organization=ORG --actor=SUBMITTER --kind=SOURCE_ENTITLEMENT --subject=SOURCE_ID --document-url=https://provider.example/contract.pdf --sha256=HASH64 --expires="2026-11-10 10:00:00"
     ... review --organization=ORG --actor=REVIEWER --evidence-id=ID --decision=approve
+    ... revoke --organization=ORG --actor=REVIEWER --evidence-id=ID --reason="Entitlement cancelled by provider" --confirm=REVOKE_POOL_EVIDENCE
 
-For tokenized securities, create and independently review ISSUER_IDENTITY using the canonical instrument ID as subject. The URL must be a permanent HTTPS document URL with no credential in the query, username or password. Proof expires in at most 30 days.
+For tokenized securities, create and independently review ISSUER_IDENTITY using the canonical instrument ID as subject. The URL must be a permanent HTTPS document URL with no credential in the query, username or password. Proof expires in at most 30 days. A new PENDING/REJECTED/expired document for the same scope blocks an older approval. Revocation immediately removes production rights; the watchdog rolls the rollout back after its next check.
 
 **Пілотний запуск**
 
@@ -48,7 +49,7 @@ One source must have been disabled and correctly attested. Independently start i
 **Контрольоване добове випробування**
 
     ... soak --organization=ORG --actor=OPERATOR --sources=SOURCE_A,SOURCE_B,SOURCE_C --confirm=SOAK_INSTRUMENT_POOL
-    ... status --organization=ORG
+    ... status --organization=ORG --actor=OPERATOR
 
 Up to 64 distinct sources can be named per rollout; verify real connection limits and host capacity before activating a large set. All newly included sources must originally be disabled and independently attested; the original canary source stays included. Start separately supervised workers and preserve them for a full 24h following this stage. The system reads tenant-scoped real MySQL canonical + quality evidence, all 24 hourly buckets and at least 276 of the 288 five-minute buckets over the last 24h, LIVE mode, recent events within 300 seconds, active fenced source leases, independently reviewed entitlement/issuer, trusted quality score >=80 for every sample, valid ACTIVE subscriptions per instrument, fresh ACTIVE source health/clock, bounded ingestion latency, no unresolved persisted data gaps, and all source coverage. It needs at least 250 unique trusted BBO and 50 unique trusted L2 streams. No threshold reduction is supported by the production CLI.
 

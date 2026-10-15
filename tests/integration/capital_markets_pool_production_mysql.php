@@ -52,6 +52,24 @@ try{
     $assert(isset($proof->approved($org)['SOURCE_ENTITLEMENT|'.$source]),
         'Independent source review was lost.');
     $assert($proof->approved($foreign)===[],'Entitlement leaked to another tenant.');
+    $replacement=$proof->propose($org,701,'SOURCE_ENTITLEMENT',$source,
+        $url,str_repeat('c',64),gmdate('Y-m-d H:i:s',time()+86400));
+    $assert(!isset($proof->approved($org)['SOURCE_ENTITLEMENT|'.$source]),
+        'Older approved entitlement bypassed newer PENDING document.');
+    $proof->review($org,702,$replacement,false);
+    $assert(!isset($proof->approved($org)['SOURCE_ENTITLEMENT|'.$source]),
+        'Older approved entitlement bypassed rejected replacement.');
+    $replacement=$proof->propose($org,701,'SOURCE_ENTITLEMENT',$source,
+        $url,str_repeat('d',64),gmdate('Y-m-d H:i:s',time()+86400));
+    $proof->review($org,702,$replacement,true);
+    $assert(isset($proof->approved($org)['SOURCE_ENTITLEMENT|'.$source]),
+        'Independent replacement approval did not become effective.');
+    $proof->revoke($org,702,$replacement,'Provider approval cancelled by operator.');
+    $assert(!isset($proof->approved($org)['SOURCE_ENTITLEMENT|'.$source]),
+        'Revoked source entitlement still admitted in production.');
+    $replacement=$proof->propose($org,701,'SOURCE_ENTITLEMENT',$source,
+        $url,str_repeat('e',64),gmdate('Y-m-d H:i:s',time()+86400));
+    $proof->review($org,702,$replacement,true);
     $rejected=false;
     try{$proof->review($org,702,$e,true);}catch(DomainException){$rejected=true;}
     $assert($rejected,'Attestation replay was permitted.');

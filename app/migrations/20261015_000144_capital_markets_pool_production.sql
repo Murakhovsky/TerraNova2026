@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_pool_external_evidence (
     reviewed_by BIGINT UNSIGNED NULL,
     status VARCHAR(16) NOT NULL DEFAULT 'PENDING',
     reviewed_at DATETIME(6) NULL,
+    review_reason VARCHAR(512) NULL,
     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     PRIMARY KEY(id),
     KEY ix_cm_pool_evidence_scope(organization_id,kind,subject_id,status,valid_until),

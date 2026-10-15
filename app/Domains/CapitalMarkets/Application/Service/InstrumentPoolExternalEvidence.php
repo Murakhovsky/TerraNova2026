@@ -89,18 +89,64 @@ final readonly class InstrumentPoolExternalEvidence
         }
     }
 
+    /**
+     * Withdrawal is an explicit independently authorised operator decision.
+     * Re-reviewing a previously approved document must not revive older proofs.
+     */
+    public function revoke(string $org,int $actor,int $id,string $reason):void
+    {
+        $this->assertAuthorized($org,$actor,'capital_markets.instrument_pool.approve');
+        if($id<1||mb_strlen(trim($reason))<10||mb_strlen($reason)>500
+            ||$this->connection->inTransaction()){
+            throw new DomainException('Revocation needs an independent actor and documented reason.');
+        }
+        $this->connection->beginTransaction();
+        try{
+            $q=$this->connection->prepare(
+                'SELECT submitted_by,status FROM tn_capital_market_pool_external_evidence
+                 WHERE organization_id=:org AND id=:id FOR UPDATE');
+            $q->execute(['org'=>$org,'id'=>$id]);
+            $row=$q->fetch(PDO::FETCH_ASSOC);
+            if(!is_array($row)||$row['status']!=='APPROVED'
+                ||(int)$row['submitted_by']===$actor){
+                throw new DomainException('Current independently approved attestation required.');
+            }
+            $change=$this->connection->prepare(
+                "UPDATE tn_capital_market_pool_external_evidence
+                 SET status='REJECTED',reviewed_by=:actor,reviewed_at=UTC_TIMESTAMP(6),
+                     review_reason=:reason
+                 WHERE organization_id=:org AND id=:id AND status='APPROVED'");
+            $change->execute(['actor'=>$actor,'reason'=>trim($reason),
+                'org'=>$org,'id'=>$id]);
+            if($change->rowCount()!==1)throw new DomainException('Concurrent attestation revocation.');
+            $this->connection->commit();
+        }catch(Throwable $error){
+            if($this->connection->inTransaction())$this->connection->rollBack();
+            throw $error;
+        }
+    }
+
     /** @return array<string,bool> */
     public function approved(string $org):array
     {
         if($org===''||strlen($org)>190)throw new DomainException('Invalid tenant.');
         $q=$this->connection->prepare(
-            "SELECT kind,subject_id FROM tn_capital_market_pool_external_evidence
-             WHERE organization_id=:org AND status='APPROVED'
-               AND valid_until>UTC_TIMESTAMP(6)
-               AND reviewed_by IS NOT NULL AND reviewed_by<>submitted_by");
+            "SELECT kind,subject_id,status,valid_until,submitted_by,reviewed_by
+             FROM tn_capital_market_pool_external_evidence
+             WHERE organization_id=:org
+             ORDER BY kind,subject_id,id DESC");
         $q->execute(['org'=>$org]);
-        $out=[];
-        foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row)$out[$row['kind'].'|'.$row['subject_id']]=true;
+        $out=[];$processed=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+            $key=$row['kind'].'|'.$row['subject_id'];
+            if(isset($processed[$key]))continue;
+            $processed[$key]=true;
+            if($row['status']!=='APPROVED'
+                ||$row['reviewed_by']===null
+                ||(int)$row['reviewed_by']===(int)$row['submitted_by']
+                ||strtotime($row['valid_until'].' UTC')<=time())continue;
+            $out[$key]=true;
+        }
         return $out;
     }
 

@@ -38,7 +38,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
     protected function configure():void
     {
         $this->addArgument('action',\Symfony\Component\Console\Input\InputArgument::REQUIRED,
-                'status|attest|review|canary|soak|accept|promote|rollback|watchdog')
+                'status|attest|review|revoke|canary|soak|accept|promote|rollback|watchdog')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Tenant (required)',null)
             ->addOption('actor',null,InputOption::VALUE_REQUIRED,'Authorized operator id','0')
             ->addOption('sources',null,InputOption::VALUE_REQUIRED,'Comma-separated approved source IDs')
@@ -49,6 +49,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
             ->addOption('expires',null,InputOption::VALUE_REQUIRED,'YYYY-MM-DD HH:MM:SS UTC')
             ->addOption('evidence-id',null,InputOption::VALUE_REQUIRED,'Attestation row id')
             ->addOption('decision',null,InputOption::VALUE_REQUIRED,'approve|reject')
+            ->addOption('reason',null,InputOption::VALUE_REQUIRED,'Reason for independent revocation')
             ->addOption('confirm',null,InputOption::VALUE_REQUIRED,'Explicit action confirmation');
     }
 
@@ -59,6 +60,8 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         try{
             if($org===''||strlen($org)>190)throw new DomainException('Explicit --organization is required.');
             if($action==='status'){
+                $actor=(int)$input->getOption('actor');
+                $this->evidence->assertAuthorized($org,$actor,'capital_markets.market_data.view');
                 $row=$this->control($org);
                 $result=['control'=>$row,'acceptance'=>null];
                 if(is_array($row)&&in_array($row['phase'],['SOAK','ACCEPTED','LIVE'],true)){
@@ -82,6 +85,13 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                 if(!in_array($decision,['approve','reject'],true))throw new DomainException('Explicit review decision required.');
                 $this->evidence->review($org,$actor,(int)$input->getOption('evidence-id'),$decision==='approve');
                 return $this->out($output,['status'=>strtoupper($decision)],Command::SUCCESS);
+            }
+            if($action==='revoke'){
+                $this->confirm($input,'REVOKE_POOL_EVIDENCE');
+                $this->evidence->revoke($org,$actor,
+                    (int)$input->getOption('evidence-id'),
+                    (string)$input->getOption('reason'));
+                return $this->out($output,['status'=>'REVOKED'],Command::SUCCESS);
             }
             if(!in_array($action,['canary','soak','accept','promote','rollback','watchdog'],true)){
                 throw new DomainException('Unknown production action.');
