@@ -62,7 +62,7 @@ Security review: **REQUEST_CHANGES**, based on an earlier architecture proposal;
 
 ## Findings та завдання
 
-### SEC-001 · MAJOR · Cache isolation
+### SEC-001 · MAJOR · Ізоляція кешування
 
 **Стан: OPEN / EVIDENCE_PARTIAL.** Код worker network-first, але CDN/HTTP,
 HEAD, exception responses і старі root caches не доведені тестами.
@@ -76,7 +76,7 @@ ACT-001: до зміни HTML підготувати документовани�
 **Критерій closure:** виконувані тести + фактичні HTTP headers на reviewed revision,
 жодного повторного використання session-dependent HTML іншою сесією.
 
-### SEC-002 · MEDIUM · Identity interface
+### SEC-002 · MEDIUM · Інтеграція автентифікації
 
 **Стан: OPEN / EVIDENCE_PARTIAL.** Канонічний loader знайдено, але публічний
 root не є authenticated firewall boundary. Не використовувати `app.user` як
@@ -92,7 +92,7 @@ valid, revoked, malformed, cross-organization, provider failure; жодних
 **Критерій closure:** integration/browser тести для edge cases та tenant-isolation
 із правильними статусами й без зміни firewall.
 
-### SEC-003 · MEDIUM · Rendering/observability
+### SEC-003 · MEDIUM · Безпечний рендеринг та журналювання
 
 **Стан: OPEN / IMPLEMENTATION_TESTS_PENDING.** Головна сторінка ще не реалізована
 за цим feature. Без перевірки виконаної mutation неможливо закрити finding.
@@ -118,7 +118,7 @@ malicious content/URL, 404/503, sanitized logs без session IDs, tenant identi
 6. Якщо немає достатнього evidence або незалежної перевірки, дозволу на
    Developer/merge/deploy немає. Не підміняти це Human Gate чи новим LLM-циклом.
 
-## Recovery pipeline
+## Послідовність адресного відновлення
 
 `SECURITY_REVIEW_REPORT → Targeted finding context → Revision-bound evidence
 → Revised ARCHITECTURE_DECISION → Independent Security Specialist
