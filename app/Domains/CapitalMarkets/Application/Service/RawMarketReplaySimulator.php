@@ -9,6 +9,7 @@ use Domains\CapitalMarkets\Application\Contract\{
 };
 use Domains\CapitalMarkets\Domain\MarketData\{MarketDataMode,MarketSourceId,RawMarketEvent};
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlReplayCanonicalComparator;
 use Throwable;
 
 /**
@@ -24,6 +25,7 @@ final readonly class RawMarketReplaySimulator
         private MarketDataDecoderRegistry $decoders,
         private MarketDataNormalizerInterface $normalizer,
         private MysqlRawMarketProvenance $proof,
+        private MysqlReplayCanonicalComparator $canonical,
     ){}
 
     public function run(string $org,string $source,DateTimeImmutable $from,
@@ -59,12 +61,17 @@ final readonly class RawMarketReplaySimulator
                 if($canon->mode!==MarketDataMode::Replay){
                     throw new DomainException('Canonical normalizer escaped REPLAY lane.');
                 }
+                $comparison=$this->canonical->compare($org,$canon);
+                if($comparison['status']!=='CANONICAL_MATCH')$invalid++;
                 $out[]=[
                     'raw_event_id'=>$raw->eventId,
+                    'canonical_integrity'=>$comparison['status'],
+                    'replayed_fingerprint'=>$canon->fingerprint(),
                     'canonical_instrument_id'=>$canon->instrumentId->value(),
                     'event_type'=>$canon->eventType()->value,
                     'source_timestamp'=>$canon->timestamps->sourceTimestamp->format(DATE_ATOM),
-                    'status'=>'REPLAY_DECODED',
+                    'status'=>$comparison['status']==='CANONICAL_MATCH'
+                        ?'REPLAY_VERIFIED':'REPLAY_DRIFT',
                 ];
             }catch(Throwable){
                 $invalid++;

@@ -28,11 +28,13 @@ final readonly class MysqlRawMarketProvenance
     }
     public static function envelope(string $org,string $source,string $event,string $symbol,
         string $type,string $received,?string $sequence,string $mode,
-        string $payloadHash,string $metadataHash):string
+        string $payloadHash,string $metadataHash,?string $venueId=null,
+        ?string $providerTimestamp=null):string
     {
         return hash('sha256',json_encode(
             ['v'=>1,'org'=>$org,'source'=>$source,'id'=>$event,'symbol'=>$symbol,
              'type'=>$type,'received'=>$received,'sequence'=>$sequence,'mode'=>$mode,
+             'venue'=>$venueId,'provider_timestamp'=>$providerTimestamp,
              'payload'=>$payloadHash,'metadata'=>$metadataHash],
             JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES,
         ));
@@ -46,7 +48,8 @@ final readonly class MysqlRawMarketProvenance
         $digest=self::envelope($org,$raw->sourceId->value(),$raw->eventId,
             $raw->externalInstrument,$raw->eventType,
             $raw->receivedAt->format('Y-m-d H:i:s.u'),$raw->sequence,$raw->mode->value,
-            $payload,$metadata);
+            $payload,$metadata,$raw->venueId?->value(),
+            $raw->providerTimestamp?->format('Y-m-d H:i:s.u'));
         $q=$this->pdo->prepare(
             'INSERT INTO tn_capital_market_raw_provenance
              (organization_id,raw_event_id,source_id,payload_sha256,metadata_sha256,envelope_sha256)
@@ -73,7 +76,8 @@ final readonly class MysqlRawMarketProvenance
         $digest=self::envelope($org,$raw->sourceId->value(),$raw->eventId,
             $raw->externalInstrument,$raw->eventType,
             $raw->receivedAt->format('Y-m-d H:i:s.u'),$raw->sequence,
-            $raw->mode->value,$ph,$mh);
+            $raw->mode->value,$ph,$mh,$raw->venueId?->value(),
+            $raw->providerTimestamp?->format('Y-m-d H:i:s.u'));
         return hash_equals((string)$row['payload_sha256'],$ph)
             &&hash_equals((string)$row['metadata_sha256'],$mh)
             &&hash_equals((string)$row['envelope_sha256'],$digest);
@@ -88,7 +92,7 @@ final readonly class MysqlRawMarketProvenance
         }
         $q=$this->pdo->prepare(
             'SELECT r.id,r.raw_event_id,r.source_id,r.external_instrument,r.event_type,
-                    r.received_at,r.sequence_value,r.data_mode,
+                    r.received_at,r.provider_timestamp,r.venue_id,r.sequence_value,r.data_mode,
                     r.raw_payload_json,r.transport_metadata_json,
                     p.payload_sha256,p.metadata_sha256,p.envelope_sha256
              FROM tn_capital_market_raw_events r
@@ -111,7 +115,8 @@ final readonly class MysqlRawMarketProvenance
             $digest=self::envelope($org,$source,(string)$r['raw_event_id'],
                 (string)$r['external_instrument'],(string)$r['event_type'],
                 (string)$r['received_at'],$r['sequence_value'],
-                (string)$r['data_mode'],$ph,$mh);
+                (string)$r['data_mode'],$ph,$mh,$r['venue_id'],
+                $r['provider_timestamp']);
             $state=$r['envelope_sha256']===null?'NO_PROVENANCE':(
                 hash_equals((string)$r['payload_sha256'],$ph)
                 &&hash_equals((string)$r['metadata_sha256'],$mh)

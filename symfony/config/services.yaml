@@ -1887,6 +1887,10 @@ services:
   Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSubscriptionRepository
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlReplayCanonicalComparator:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance:
     arguments:
       $pdo: '@cos.database.pdo'
