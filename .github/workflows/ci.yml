@@ -55,3 +55,10 @@ jobs:
           find app symfony/src tests/architecture tests/unit -type f -name '*.php' ! -path 'tests/history/*' -print0 | xargs -0 -n1 php -l
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: Capital Markets Runtime Agent Team contracts and deterministic gates
+        run: |
+          php tests/unit/capital_markets_runtime_agent_team.php
+          php tests/architecture/capital_markets_runtime_agent_team_contract.php
+          php tests/architecture/capital_markets_agent_cycle_journal_contract.php
+          php tests/architecture/capital_markets_agent_cycle_status_contract.php
+
