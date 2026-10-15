@@ -78,4 +78,11 @@ if (!str_contains($messenger, 'RunEngineeringSecurityRecoveryCommand')
     || !str_contains($handler, 'executeOnce(')) {
     throw new RuntimeException('Dedicated asynchronous one-shot worker was not wired.');
 }
+$specialist = $read('symfony/src/Engineering/Application/Service/EngineeringSpecialistStageExecutor.php');
+foreach (['TARGETED_RECOVERY', 'existingPathsAtRevision(', 'filesAtRevision(', 'repository_evidence'] as $needle) {
+    if (!str_contains($specialist, $needle)) throw new RuntimeException('Independent Security lacks primary evidence: '.$needle);
+}
+if (!str_contains($service, 'DUPLICATE_IGNORED') || !str_contains($service, "'executed_llm' => false")) {
+    throw new RuntimeException('Duplicate recovery delivery must not create a second LLM call.');
+}
 echo "Engineering targeted Security recovery integration contract passed.\n";
