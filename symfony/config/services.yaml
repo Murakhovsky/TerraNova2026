@@ -2079,6 +2079,7 @@ services:
   Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner: ~
   Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore: ~
   Domains\CapitalMarkets\Application\Service\StreamingFleetPlacementPolicy: ~
+  Domains\CapitalMarkets\Application\Service\RawMarketReplaySimulator: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueBboConsensus: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlCrossVenueBboReconciliation:
     arguments:

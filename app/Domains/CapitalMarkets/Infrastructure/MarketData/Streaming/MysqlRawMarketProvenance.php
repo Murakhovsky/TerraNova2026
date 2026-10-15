@@ -55,6 +55,30 @@ final readonly class MysqlRawMarketProvenance
             'payload'=>$payload,'metadata'=>$metadata,'digest'=>$digest]);
     }
 
+    /** Verify the exact raw DTO against its persisted, immutable attestation. */
+    public function verifyEvent(string $org,RawMarketEvent $raw):bool
+    {
+        if($org===''||strlen($org)>190||$this->pdo->inTransaction()){
+            throw new DomainException('Provenance verification requires isolated read.');
+        }
+        $q=$this->pdo->prepare(
+            'SELECT payload_sha256,metadata_sha256,envelope_sha256
+             FROM tn_capital_market_raw_provenance
+             WHERE organization_id=:org AND raw_event_id=:event AND source_id=:source');
+        $q->execute(['org'=>$org,'event'=>$raw->eventId,'source'=>$raw->sourceId->value()]);
+        $row=$q->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($row))return false;
+        $ph=self::jsonHash($raw->rawPayload);
+        $mh=self::jsonHash($raw->transportMetadata);
+        $digest=self::envelope($org,$raw->sourceId->value(),$raw->eventId,
+            $raw->externalInstrument,$raw->eventType,
+            $raw->receivedAt->format('Y-m-d H:i:s.u'),$raw->sequence,
+            $raw->mode->value,$ph,$mh);
+        return hash_equals((string)$row['payload_sha256'],$ph)
+            &&hash_equals((string)$row['metadata_sha256'],$mh)
+            &&hash_equals((string)$row['envelope_sha256'],$digest);
+    }
+
     /** Bounded read-only, resumable audit. No raw values or credentials in output. */
     public function verify(string $org,string $source,int $afterId=0,int $limit=200):array
     {
