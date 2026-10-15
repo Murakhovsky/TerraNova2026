@@ -30,7 +30,7 @@ $proto=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Streaming/Byb
 $worker=$read('symfony/src/Command/CapitalMarketsBybitDerivativesStreamingCommand.php');
 $life=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Streaming/MysqlDerivativeLifecycleRegistry.php');
 $trust=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Streaming/MysqlDerivativeStreamTrust.php');
-foreach(['tickers.','snapshot','delta','nextFundingTime','subscription ACK',
+foreach(['tickers.','snapshot','delta','nextFundingTime','subscribe ACK',
     'ProviderTimestamp','MarketSourceId','RawMarketEvent'] as $part){
     if(!str_contains($proto,$part))throw new RuntimeException('Derivative feed lacks '.$part);
 }
