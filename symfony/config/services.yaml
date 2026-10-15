@@ -1703,6 +1703,7 @@ services:
       $redactor: '@Kernel\Agent\Service\SensitiveContextRedactor'
       $configurations: '@Kernel\Agent\Contract\AgentConfigurationProviderInterface'
       $audit: '@Kernel\Agent\Contract\AgentAuditInterface'
+      $canonical: '@Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface'
 
   App\Infrastructure\Automation\SalesActionProposalTool:
     arguments:
@@ -1796,10 +1797,6 @@ services:
 
   Kernel\Tool\Contract\ToolAuditInterface:
     alias: Infrastructure\Audit\PlatformToolAudit
-
-  Kernel\Agent\Service\AgentRuntime:
-    arguments:
-      $canonical: '@Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface'
 
   Kernel\Tool\Service\ToolRuntime:
     arguments:

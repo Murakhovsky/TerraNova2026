@@ -490,6 +490,10 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
                     WorkflowDefinitionFingerprint::digest($graph))) {
                 throw new DomainException('Kernel technical receipt lost immutable claim or lease.');
             }
+            if($kind==='tool' && !str_starts_with($receipt,
+                    'kernel:tool:'.(string)$step['claimed_by'].':')) {
+                throw new DomainException('Tool native audit ID differs from the claimed worker.');
+            }
             $this->kernelEvidence->assertCompletion(
                 $identity,$kind,$pinned['source_id'],$step['capability_id'],
                 (string)$run['input_digest'],$receipt,$correlation,
