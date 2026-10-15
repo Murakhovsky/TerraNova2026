@@ -53,10 +53,10 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
         }
         $blocked=$this->db->fetchOne(
             'SELECT agent_run_id FROM cos_engineering_technical_links
-             WHERE organization_id=:org AND engineering_workflow_id=:workflow
+             WHERE organization_id=:org AND feature_id=:feature
                AND technical_state IN ("claimed","ambiguous")
              LIMIT 1 FOR UPDATE',
-            ['org'=>$org,'workflow'=>$workflowId],
+            ['org'=>$org,'feature'=>$task->featureId],
         );
         if ($blocked!==false) {
             throw new DomainException('Prior Engineering canonical claim is unresolved: reconcile before another external AgentRun.');

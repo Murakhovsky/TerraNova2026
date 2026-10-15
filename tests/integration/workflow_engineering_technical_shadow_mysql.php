@@ -53,14 +53,15 @@ $deny=static function(callable $action,string $why):void {
     try{$action();}catch(DomainException){return;}
     throw new RuntimeException('Unsafe Engineering canonical execution accepted: '.$why);
 };
-$createAgent=static function(string $id, EngineeringAgentTask $task,string $agentTrace) use ($db,$org,$workflow,$feature):void {
+$createAgent=static function(string $id, EngineeringAgentTask $task,string $agentTrace,?string $targetWorkflow=null) use ($db,$org,$workflow,$feature):void {
+    $targetWorkflow ??= $workflow;
     $db->executeStatement(
         'INSERT INTO cos_engineering_agent_runs
          (id,feature_id,workflow_execution_id,agent_id,agent_role,idempotency_key,
           model_provider,model,input_snapshot,status,technical_retry,logical_attempt,trace_id,started_at)
          VALUES (:id,:feature,:workflow,"fixture",:role,:key,
                  "test","test",:input,"RUNNING",0,1,:trace,UTC_TIMESTAMP(6))',
-        ['id'=>$id,'feature'=>$feature,'workflow'=>$workflow,
+        ['id'=>$id,'feature'=>$feature,'workflow'=>$targetWorkflow,
          'role'=>$task->role->value,'key'=>$task->idempotencyKey,'trace'=>$agentTrace,
          'input'=>json_encode(array_merge($task->inputSnapshot,[
               '_execution_task_id'=>$task->id,
@@ -262,6 +263,29 @@ try {
     $createAgent($third,$thirdTask,'second-resume-'.$tag.':agent:'.$thirdTask->id);
     $deny(static fn()=> $gate->begin($third,$workflow,$thirdTask,'second-resume-'.$tag.':agent:'.$thirdTask->id),
         'ambiguous previous external effect cannot replay');
+    // Same Feature, DIFFERENT Engineering business workflow. An ambiguous
+    // provider side effect cannot be replayed under a new Workflow ID.
+    $alternateWorkflow=EngineeringId::generate();
+    $db->executeStatement(
+        'INSERT INTO cos_engineering_workflows
+         (id,feature_id,workflow_type,current_state,status,started_at,
+          last_activity_at,version,trace_id,lock_key)
+         VALUES (:id,:feature,"ENGINEERING","DEVELOPMENT_RUNNING","RUNNING",
+                 UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),1,:trace,:lock)',
+        ['id'=>$alternateWorkflow,'feature'=>$feature,
+         'trace'=>'alternate-'.$tag,
+         'lock'=>'engineering:feature:'.$feature.':alternate'],
+    );
+    $alternateId=EngineeringId::generate();
+    $alternateTask=new EngineeringAgentTask(
+        EngineeringId::generate(),$feature,AgentRole::DEVELOPER,
+        'No cross-workflow replay',[],[],[],'schema',[],
+        'eng-alternate-'.$tag,['logical_attempt'=>1],
+    );
+    $alternateTrace='alternate-'.$tag.':agent:'.$alternateTask->id;
+    $createAgent($alternateId,$alternateTask,$alternateTrace,$alternateWorkflow);
+    $deny(static fn()=> $gate->begin($alternateId,$alternateWorkflow,$alternateTask,$alternateTrace),
+        'unresolved prior canonical effect must block a different Workflow of the same Feature');
     if($reader->engineeringAgent('wrong-tenant',$agent)->status->value!=='no_target') {
         throw new RuntimeException('Engineering shadow leaked another tenant.');
     }
