@@ -59,6 +59,12 @@ try{
         'Provider outage was misrepresented as normal listing.');
     $assert($repo->latest($org,'KRAKEN',$venue)===null,
         'Provider isolation failed.');
+    $history=$repo->history($org,'BINANCE',$venue,2);
+    $assert(count($history)===2 && $history[0]['health']==='UNAVAILABLE'
+        && $history[1]['health']==='AVAILABLE',
+        'Historical Instrument Pool records not ordered latest-first.');
+    $assert($repo->history($foreign,'BINANCE',$venue,2)===[],
+        'Cross-tenant historical evidence leaked.');
     echo "Instrument Pool snapshot cooldown, evidence and MySQL tenant isolation passed.\n";
 }finally{
     foreach([

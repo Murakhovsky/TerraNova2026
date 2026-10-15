@@ -94,6 +94,30 @@ final readonly class MysqlInstrumentPoolSnapshotRepository
         return $result;
     }
 
+    /** @return list<array<string,mixed>> */
+    public function history(string $organizationId,string $provider,string $venueId,int $limit=5):array
+    {
+        $this->scope($organizationId,$provider,$venueId);
+        if($limit<1||$limit>10)throw new DomainException('Instrument Pool history limit must be 1..10.');
+        $stmt=$this->pdo->prepare(
+            'SELECT id,observed_at,results_json FROM tn_capital_market_instrument_pool_snapshots
+             WHERE organization_id=:org AND provider=:provider AND venue_id=:venue
+             ORDER BY observed_at DESC,id DESC LIMIT '.$limit
+        );
+        $stmt->execute(['org'=>$organizationId,'provider'=>$provider,'venue'=>$venueId]);
+        $out=[];
+        foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $row){
+            $value=json_decode((string)$row['results_json'],true,64,JSON_THROW_ON_ERROR);
+            if(!is_array($value)||array_is_list($value)){
+                throw new RuntimeException('Corrupted historical Instrument Pool evidence.');
+            }
+            $value['snapshot_id']=(int)$row['id'];
+            $value['stored_at_utc']=(string)$row['observed_at'];
+            $out[]=$value;
+        }
+        return $out;
+    }
+
     private function scope(string $org,string $provider,string $venue):void
     {
         foreach([$org,$venue] as $identity){
