@@ -234,7 +234,7 @@ interface WorkflowRecoveryInterface
 - Коміти групувати за цілісним пакетом, не створювати коміт на кожний файл. Merge лише після green CI + реального runtime evidence.
 
 
-## Safe mutating reconciliation for uncertain execution
+## Безпечне відновлення виконань із невизначеним результатом
 
 Shared `WorkflowRecoveryInterface` now routes to `DoctrineWorkflowRecoveryManager`. It exposes a three-stage **explicit** recovery workflow rather than an automatic replay:
 
@@ -246,3 +246,5 @@ Allowed resolutions: `quarantine` (unknown, no replay), `verified_complete` (onl
 
 `expiredClaims(command, limit)` offers a tenant-scoped bounded recovery worklist. Tables `cos_workflow_recovery_decisions` and append-only `cos_workflow_recovery_events` preserve approvals, state, actor IDs and transitions. No scheduler or automatic external dispatch is added. Global Worker Admission and general WorkflowReceiptVerifierInterface stay fail closed; the isolated recovery verifier uses *Federation's already validated Plan approval* for canonical Action receipt verification.
 
+
+Для оператора доступний tenant-scoped CSRF-захищений API: `GET /api/v1/workflows/recovery/worklist`, `GET /api/v1/workflows/{runId}/recovery`, `GET /api/v1/workflows/{runId}/recovery/requests`, `POST /api/v1/workflows/{runId}/recovery/request`, `POST /api/v1/workflows/{runId}/recovery/approve` і `POST /api/v1/workflows/{runId}/recovery/apply`. POST-запити вимагають CSRF та менеджерський tenant-контекст із сесії. Після карантину невизначений Step залишається у списку оператора; status Action зчитується, але ніколи не змінюється механізмом recovery. `cancel_uncertain` блокується, доки інші кроки того самого Run активні або теж невизначені.

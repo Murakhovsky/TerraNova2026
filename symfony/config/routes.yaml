@@ -1,6 +1,42 @@
 
 # COS Federation Goal/Outcome draft workspace.
 # Read-only, Domain-attested Goal-wide progress (no auto approval or execution).
+# Canonical Workflow uncertainty recovery. CSRF + tenant manager; two people to mutate.
+cos_workflow_recovery_worklist:
+  path: /api/v1/workflows/recovery/worklist
+  controller: App\Http\Api\V1\Controller\WorkflowRecoveryController::worklist
+  methods: [GET]
+
+cos_workflow_recovery_inspect:
+  path: /api/v1/workflows/{runId}/recovery
+  controller: App\Http\Api\V1\Controller\WorkflowRecoveryController::inspect
+  methods: [GET]
+  requirements: { runId: '[a-zA-Z0-9_.:-]{1,190}' }
+
+cos_workflow_recovery_requests:
+  path: /api/v1/workflows/{runId}/recovery/requests
+  controller: App\Http\Api\V1\Controller\WorkflowRecoveryController::requests
+  methods: [GET]
+  requirements: { runId: '[a-zA-Z0-9_.:-]{1,190}' }
+
+cos_workflow_recovery_request:
+  path: /api/v1/workflows/{runId}/recovery/request
+  controller: App\Http\Api\V1\Controller\WorkflowRecoveryController::request
+  methods: [POST]
+  requirements: { runId: '[a-zA-Z0-9_.:-]{1,190}' }
+
+cos_workflow_recovery_approve:
+  path: /api/v1/workflows/{runId}/recovery/approve
+  controller: App\Http\Api\V1\Controller\WorkflowRecoveryController::approve
+  methods: [POST]
+  requirements: { runId: '[a-zA-Z0-9_.:-]{1,190}' }
+
+cos_workflow_recovery_apply:
+  path: /api/v1/workflows/{runId}/recovery/apply
+  controller: App\Http\Api\V1\Controller\WorkflowRecoveryController::apply
+  methods: [POST]
+  requirements: { runId: '[a-zA-Z0-9_.:-]{1,190}' }
+
 cos_federation_goal_aggregate:
   path: /api/v1/federation/goals/{goalId}/aggregate
   controller: App\Web\Federation\FederationGoalAggregateController::show

@@ -85,7 +85,7 @@ $managerService=new DoctrineWorkflowRecoveryManager(
     $actionProof,$nonAction,
 );
 $deny=static function(callable $fn,string $why):void {
-    try{$fn();}catch(DomainException|LogicException){return;}
+    try{$fn();}catch(DomainException|LogicException|InvalidArgumentException){return;}
     throw new RuntimeException('Unsafe recovery was accepted: '.$why);
 };
 $fixtureClaim=new class implements WorkflowStepClaimAdmissionInterface {
@@ -188,6 +188,21 @@ $proofAction=function(WorkflowRunIdentity $id) use ($db,$first,$second,$external
 try {
     // Crash after effect: status/attempt are COMPLETED, Step claim never checkpointed.
     [$id,$claim]=$create('completed');
+    // Microsecond active leases cannot be considered expired by PHP second rounding.
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps
+         SET claim_expires_at=DATE_ADD(NOW(6),INTERVAL 500000 MICROSECOND)
+         WHERE organization_id=:org AND run_id=:run AND step_id="send"',
+        ['org'=>$org,'run'=>$id->runId],
+    );
+    $early=$petition($id,$first,3,'send',2,WorkflowRecoveryResolution::QUARANTINE);
+    $deny(static fn()=>$managerService->request($early),'still-active subsecond lease');
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps
+         SET claim_expires_at=DATE_SUB(NOW(6),INTERVAL 2 MINUTE)
+         WHERE organization_id=:org AND run_id=:run AND step_id="send"',
+        ['org'=>$org,'run'=>$id->runId],
+    );
     $expired=$managerService->expiredClaims($command($id,$first,3));
     if(!array_filter($expired,static fn($row):bool=>$row['run_id']===$id->runId)) {
         throw new RuntimeException('Expired Action claim was not surfaced to operators.');
@@ -205,6 +220,11 @@ try {
             'SELECT state FROM cos_workflow_runs WHERE organization_id=:org AND run_id=:run',
             ['org'=>$org,'run'=>$id->runId])!=='ambiguous') {
         throw new RuntimeException('Expired external crash was not quarantined without replay.');
+    }
+    $queue=$managerService->expiredClaims($command($id,$first,4));
+    if(!array_filter($queue,static fn($row):bool=>
+        $row['run_id']===$id->runId && $row['step_state']==='ambiguous')) {
+        throw new RuntimeException('Quarantined external work disappeared from the recovery worklist.');
     }
     if($managerService->reconcile($command($id,$first,3,$rid))->reason!=='recovery_request_already_applied') {
         throw new RuntimeException('Recovery idempotent reapply did not no-op.');

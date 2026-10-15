@@ -49,14 +49,37 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
         return $this->db->fetchAllAssociative(
             'SELECT s.run_id,s.step_id,s.state AS step_state,s.side_effect_level,
                     s.revision AS step_revision,s.claim_expires_at,
-                    r.state AS run_state,r.revision AS run_revision
+                    r.state AS run_state,r.revision AS run_revision,
+                    a.status AS canonical_action_status,
+                    (SELECT d.request_id FROM cos_workflow_recovery_decisions d
+                     WHERE d.organization_id=s.organization_id AND d.run_id=s.run_id
+                       AND d.step_id=s.step_id AND d.status IN ("REQUESTED","APPROVED")
+                     ORDER BY d.requested_at DESC LIMIT 1) AS pending_request_id
              FROM cos_workflow_steps s
              JOIN cos_workflow_runs r ON r.organization_id=s.organization_id AND r.run_id=s.run_id
-             WHERE s.organization_id=:org AND s.state="claimed"
-               AND s.claim_expires_at < NOW(6)
+             LEFT JOIN cos_actions a ON a.organization_id=s.organization_id
+               AND a.idempotency_key=CONCAT("wf:",s.idempotency_key)
+             WHERE s.organization_id=:org
+               AND (s.state="ambiguous" OR (s.state="claimed" AND s.claim_expires_at < NOW(6)))
                AND r.state IN ("running","waiting","ambiguous")
              ORDER BY s.claim_expires_at,s.run_id,s.step_id LIMIT ' . $limit,
             ['org'=>$command->identity->organizationId],
+        );
+    }
+
+    /** Read-only, tenant-authorized queue of pending and completed reconciliation requests. */
+    public function requestsForRun(WorkflowRunCommand $command, int $limit = 50): array
+    {
+        self::authorize($command);
+        $limit=max(1,min(100,$limit));
+        return $this->db->fetchAllAssociative(
+            'SELECT request_id,step_id,run_revision,step_revision,resolution,
+                    receipt_reference,reason,requested_by,approved_by,status,
+                    requested_at,approved_at,applied_at
+             FROM cos_workflow_recovery_decisions
+             WHERE organization_id=:org AND run_id=:run
+             ORDER BY requested_at DESC LIMIT '.$limit,
+            ['org'=>$command->identity->organizationId,'run'=>$command->identity->runId],
         );
     }
 
@@ -172,6 +195,19 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                 throw new LogicException('Stale Run revision on recovery decision.');
             }
             self::eligible($run,$step,$resolution,$request['receipt_reference']);
+            if($resolution===WorkflowRecoveryResolution::CANCEL_UNCERTAIN) {
+                $otherActive=(int)$this->db->fetchOne(
+                    'SELECT COUNT(*) FROM cos_workflow_steps
+                     WHERE organization_id=:org AND run_id=:run AND step_id<>:step
+                       AND (state="ambiguous" OR
+                            (state="claimed" AND claim_expires_at > NOW(6)))',
+                    ['org'=>$identity->organizationId,'run'=>$identity->runId,
+                     'step'=>$step['step_id']],
+                );
+                if($otherActive>0) {
+                    throw new DomainException('Cannot cancel Run while other uncertain or live steps remain.');
+                }
+            }
             $graph=$this->checkedDefinition($run,$identity);
             $this->verifyStepBinding($graph,$identity,$step);
             // Quarantine and cancellation may run with corrupt evidence; never
@@ -262,7 +298,9 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
             'SELECT * FROM cos_workflow_runs WHERE organization_id=:org AND run_id=:run FOR UPDATE',$keys);
         if(!$run)throw new DomainException('Unknown tenant-owned Workflow Run.');
         $step=$this->db->fetchAssociative(
-            'SELECT * FROM cos_workflow_steps
+            'SELECT *, CASE WHEN claim_expires_at IS NOT NULL AND claim_expires_at <= NOW(6)
+                       THEN 1 ELSE 0 END AS lease_expired
+             FROM cos_workflow_steps
              WHERE organization_id=:org AND run_id=:run AND step_id=:step FOR UPDATE',
             [...$keys,'step'=>$stepId]);
         if(!$step)throw new DomainException('Recovery Step missing in tenant.');
@@ -282,7 +320,9 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
             [...$keys,'request'=>$requestId]);
         if(!$request)throw new DomainException('Recovery request not found in tenant Run.');
         $step=$this->db->fetchAssociative(
-            'SELECT * FROM cos_workflow_steps
+            'SELECT *, CASE WHEN claim_expires_at IS NOT NULL AND claim_expires_at <= NOW(6)
+                       THEN 1 ELSE 0 END AS lease_expired
+             FROM cos_workflow_steps
              WHERE organization_id=:org AND run_id=:run AND step_id=:step FOR UPDATE',
             [...$keys,'step'=>$request['step_id']]);
         if(!$step)throw new DomainException('Recovery Step disappeared.');
@@ -296,8 +336,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
             throw new DomainException('Only in-flight, expired, waiting or quarantined Workflow can be recovered.');
         }
         if($step['state']==='claimed'
-            && ($step['claim_expires_at']===null
-                || strtotime((string)$step['claim_expires_at'].' UTC') > time())) {
+            && (int)($step['lease_expired']??0)!==1) {
             throw new DomainException('Cannot reconcile an actively leased Workflow worker.');
         }
         if($mode===WorkflowRecoveryResolution::RESET_READ_ONLY
