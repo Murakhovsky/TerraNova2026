@@ -37,6 +37,7 @@ use Platform\Workflow\Model\WorkflowRunCommand;
 use Platform\Workflow\Model\WorkflowRunTransition;
 use Platform\Workflow\Model\WorkflowStepClaim;
 use Platform\Workflow\Model\WorkflowStepCheckpoint;
+use Platform\Workflow\Model\WorkflowEvidenceSignal;
 
 $db=DriverManager::getConnection([
  'driver'=>'pdo_mysql','host'=>(string)(getenv('DB_HOST')?:'mysql'),
@@ -144,8 +145,18 @@ try {
     $assert($store->steps($id)[0]->state==='claimed',
         'Missing receipt modified the canonical Step state');
 
-    // Source fact arrives AFTER claim. The receipt verifier checks the exact
-    // source identity and time interval at the eventual checkpoint.
+    $waiting=$store->checkpoint(new WorkflowStepCheckpoint(
+        $cmd(3),'doc',$claimed->claimToken,StepStatus::WAITING));
+    $assert($waiting->state==='waiting'
+        && $store->steps($id)[0]->claimToken===null
+        && $store->get($id)?->revision===4,
+        'WAITING must release an unverified read-only claim without an Action');
+    $reject(static fn()=> $store->completeWaitingEvidence(new WorkflowEvidenceSignal(
+        $cmd(4),'doc',3,$reference)),
+        'no native Documents fact exists before signal');
+
+    // Source fact arrives AFTER waiting. The verifier requires the exact
+    // pinned reference, tenant and signed timestamp at completion.
     usleep(120000);
     $db->executeStatement(
        'INSERT INTO cos_documents
@@ -159,15 +170,18 @@ try {
         VALUES (:org,:sig,:doc,:signer,"signed",1,:signer,2,:reference,NOW(6))',
        ['org'=>$org,'sig'=>$sig,'doc'=>$document,'signer'=>$signer,'reference'=>$signatureRef]);
     usleep(120000);
-    $reject(static fn()=> $store->checkpoint(new WorkflowStepCheckpoint(
-        $cmd(3),'doc',$claimed->claimToken,StepStatus::COMPLETED,'documents:invalid')),
-        'forged Documents receipt');
-    $finished=$store->checkpoint(new WorkflowStepCheckpoint(
-        $cmd(3),'doc',$claimed->claimToken,StepStatus::COMPLETED,$reference));
+    $reject(static fn()=> $store->completeWaitingEvidence(new WorkflowEvidenceSignal(
+        $cmd(4),'doc',3,'documents:invalid')),
+        'forged Documents signal');
+    $finished=$store->completeWaitingEvidence(new WorkflowEvidenceSignal(
+        $cmd(4),'doc',3,$reference));
     $assert($finished->state==='completed' && $finished->resultReference===$reference,
        'Verified Documents receipt did not checkpoint canonical Step');
+    $reject(static fn()=> $store->completeWaitingEvidence(new WorkflowEvidenceSignal(
+        $cmd(5),'doc',4,$reference)),
+        'completed Domain signal must reject replay');
     $store->compareAndTransition(new WorkflowRunTransition(
-       $cmd(4),WorkflowStatus::RUNNING,WorkflowStatus::COMPLETED,'independent fact attested'));
+       $cmd(5),WorkflowStatus::RUNNING,WorkflowStatus::COMPLETED,'independent fact attested'));
     $assert($store->get($id)?->status===WorkflowStatus::COMPLETED,'non-Action Run did not complete');
     $assert((int)$db->fetchOne(
        'SELECT COUNT(*) FROM cos_actions WHERE organization_id=:org AND idempotency_key LIKE :key',
