@@ -2066,6 +2066,7 @@ services:
       $pdo: '@cos.database.pdo'
 
   Domains\CapitalMarkets\Application\Service\PerInstrumentStreamTrustMachine: ~
+  Domains\CapitalMarkets\Application\Service\BybitDerivativesStreamScope: ~
   Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner: ~
   Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore: ~
 
