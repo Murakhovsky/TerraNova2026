@@ -133,6 +133,67 @@ try {
     new ToolDefinition('sales.customer.write','external write',[],[],ToolEffect::EXTERNAL),
     bin2hex(random_bytes(16))),'mutation Tool without human approved Action');
 
+ // Native WRITE Tool: explicit independent human approval and pinned Action attempt.
+ $actionId=bin2hex(random_bytes(16));$writeAudit=bin2hex(random_bytes(16));
+ $writeName='sales.customer.write';$writeKey='write-'.$token;
+ $writeInput=['record_id'=>'lead-'.$token,'stage'=>'qualified'];
+ $writeDigest=\Platform\Workflow\Service\WorkflowDefinitionFingerprint::digest([$writeInput]);
+ $writeDefinition=new ToolDefinition($writeName,'approved mutation',[],[],ToolEffect::WRITE);
+ $writeInvocation=new ToolInvocation(
+    OrganizationId::fromString($org),$writeName,$writeInput,$trace,
+    UserId::fromString($user),$writeKey,$actionId);
+ $db->executeStatement(
+    'INSERT INTO cos_actions
+    (id,organization_id,type,target_type,target_id,parameters,source_type,
+     source_id,status,execution_mode,risk_level,idempotency_key,correlation_id)
+    VALUES (:id,:org,"kernel.tool.invoke","tool",:tool,:params,"USER",:owner,
+            "RUNNING","APPROVAL_REQUIRED","HIGH",:key,:trace)',
+    ['id'=>$actionId,'org'=>$org,'tool'=>$writeName,'owner'=>$user,
+     'key'=>'test-kernel-tool-'.$token,'trace'=>$trace,
+     'params'=>json_encode(['tool_name'=>$writeName,
+       'tool_input_digest'=>$writeDigest,'tool_key'=>$writeKey],JSON_THROW_ON_ERROR)]);
+ $db->executeStatement(
+    'INSERT INTO cos_policy_evaluations
+     (id,organization_id,action_id,decision,correlation_id,evaluated_at)
+     VALUES (:id,:org,:action,"APPROVAL_REQUIRED",:trace,NOW(6))',
+     ['id'=>bin2hex(random_bytes(16)),'org'=>$org,'action'=>$actionId,'trace'=>$trace]);
+ $deny(static fn()=> $fence->beginTool($writeInvocation,$writeDefinition,$writeAudit),
+    'WRITE Tool before independent human approval');
+ $db->executeStatement(
+    'INSERT INTO cos_approvals
+    (id,organization_id,action_id,status,approver_type,approver_id,
+     requested_by_type,requested_by_id,decided_by_type,decided_by_id,decided_at,
+     expires_at)
+    VALUES (:id,:org,:action,"APPROVED","USER",:reviewer,
+            "USER",:owner,"USER",:reviewer,NOW(6),DATE_ADD(NOW(6),INTERVAL 1 DAY))',
+    ['id'=>bin2hex(random_bytes(16)),'org'=>$org,'action'=>$actionId,
+     'reviewer'=>'reviewer-'.$token,'owner'=>$user]);
+ $db->executeStatement(
+    'INSERT INTO cos_action_attempts
+     (organization_id,action_id,attempt,worker_id,status,started_at)
+     VALUES (:org,:action,1,"acceptance-worker","RUNNING",NOW(6))',
+     ['org'=>$org,'action'=>$actionId]);
+ $writeClaim=$fence->beginTool($writeInvocation,$writeDefinition,$writeAudit);
+ $expect($writeClaim!==null,'Independently approved WRITE Tool was not admitted.');
+ $db->executeStatement(
+   'INSERT INTO cos_audit_log
+    (id,organization_id,category,actor_type,actor_id,source_type,
+     subject_type,subject_id,action,input_references,changes,result,metadata,
+     correlation_id,created_at)
+    VALUES (:id,:org,"platform_activity","USER",:actor,"TOOL",
+            "tool",:tool,"tool.execute",:input,:changes,:result,:metadata,:trace,NOW(6))',
+   ['id'=>$writeAudit,'org'=>$org,'actor'=>$user,'tool'=>$writeName,
+    'input'=>json_encode($writeInput,JSON_THROW_ON_ERROR),
+    'changes'=>json_encode(['status'=>'success'],JSON_THROW_ON_ERROR),
+    'result'=>json_encode(['updated'=>true],JSON_THROW_ON_ERROR),
+    'metadata'=>json_encode(['tool_effect'=>'WRITE'],JSON_THROW_ON_ERROR),
+    'trace'=>$trace]);
+ $fence->completeTool($writeClaim,$writeAudit);
+ $expect($store->get(new \Platform\Workflow\Model\WorkflowRunIdentity(
+    $org,$writeClaim->runId))?->status->value==='completed',
+    'Native WRITE Tool independent proof was not accepted.');
+ $deny(static fn()=> $fence->completeTool($writeClaim,$writeAudit),'replay of WRITE Tool');
+
  // An in-flight Agent with no receipt is quarantined, never replayed.
  $job2=bin2hex(random_bytes(16));$trace2='crash-'.$token;
  $db->executeStatement(
@@ -155,6 +216,7 @@ try {
  echo "Kernel canonical Agent/Tool MySQL PASSED: real queue, native AgentRun, Tool audit, fencing, duplicate replay, tenant, quarantine.\n";
 } finally {
  foreach(['cos_workflow_steps','cos_workflow_runs','cos_audit_log','cos_agent_runs',
+          'cos_action_attempts','cos_approvals','cos_policy_evaluations','cos_actions',
           'cos_jobs','cos_kernel_execution_rollouts'] as $table) {
   $db->executeStatement("DELETE FROM $table WHERE organization_id=:org",['org'=>$org]);
  }

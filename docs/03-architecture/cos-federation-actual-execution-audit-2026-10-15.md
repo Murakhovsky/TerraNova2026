@@ -91,3 +91,17 @@ CI регресія: `tests/integration/federation_historical_cutover_mysql.php`
 `DoctrineWorkflowExecutionCoordinator` управляє лише технічними переходами `start/advance/resume/cancel`. Він не створює паралельного worker і не підміняє власників Action, Agent та Tool. Доступ невідомим bindings закритий.
 
 **Поточний статус:** статичний аудит і підтримувані вузькі шляхи реалізовані; повний Package A acceptance, production fleet та універсальні Agent/Tool залишаються незавершеними. Статуси `VERIFIED`/merge без окремих доказів заборонені.
+
+## P0. Загальний Kernel Agent / Tool → canonical Platform Store
+
+Контрольований Kernel Agent/Tool cutover використовує той самий `DoctrineWorkflowExecutionStore`, що й Federation/Engineering. **Тільки цей Store змінює технічні `cos_workflow_runs/steps`**. Новий `DoctrineKernelExecutionFence` забезпечує admission та lifecycle, `DoctrineKernelExecutionEvidence` незалежно читає native `cos_jobs`, `cos_agent_runs`, `cos_audit_log` і погоджений `cos_actions` без запису Run/Step.
+
+**Активація:** таблиця `cos_kernel_execution_rollouts` окремо для `agent` і `tool` на кожен tenant. Відсутність явного `canonical`, `approved_by` та `approved_at` не активує cutover. Проводити активацію можна лише через затверджену операторську процедуру після tenant shadow/fleet parity. Наявні legacy-виклики залишаються незмінними при `off`; `canonical` блокує відсутність необхідних identity і approval.
+
+Agent: лише перший живий `AGENT_RUN` Job lease. Native LLM-виклик перевіряє claim, queue ownership та correlation. Native `cos_agent_runs` зберігає джерельний Job ID; завершення Workflow підтверджує незалежний результат. Жодна повторна генерація LLM після завершеного, простроченого чи неоднозначного claim не дозволяється.
+
+Tool: існуючі permission/schema gates виконуються ДО canonical claim. Потрібен стійкий ключ виклику й користувач. READ-Tool має одну спробу в canonical mode і підтверджується власним успішним `cos_audit_log`. WRITE/EXTERNAL-Tool допускається лише в контексті окремо дозволеного людським Approval канонічного `kernel.tool.invoke` Action зі звіркою pinned input, Policy та першої Action attempt. Для такого Action ще має існувати встановлений реальний handler; сам manifest не дозволяє запуску.
+
+**Recovery:** `php symfony/bin/console cos:workflow:kernel-recovery TENANT --limit=100`. Читає technical state, independent native receipts, expired claims і підозрілий drift. Не робить replay, не видає production дозволів, не виправляє невідомий ефект автоматично. Неповна вибірка або невизначені native outcomes забороняють позитивне приймання.
+
+**Межі приймання:** `tests/integration/workflow_kernel_canonical_mysql.php` перевіряє реальний MySQL queue / AgentRun / Tool-audit / CAS / replay / tenant / quarantine; це не означає, що всі Tool Action handlers наявні, а всі consumer invocations в production активовані. Повний fleet acceptance та незалежний операторський cutover залишаються окремими gates.
