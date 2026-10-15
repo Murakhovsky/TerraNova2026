@@ -2000,6 +2000,10 @@ services:
     arguments:
       $pdo: '@cos.database.pdo'
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingOperationsSnapshot:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlBinanceStreamingExpiredLeaseSweeper:
     arguments:
       $pdo: '@cos.database.pdo'
