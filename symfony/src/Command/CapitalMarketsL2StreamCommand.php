@@ -6,6 +6,8 @@ namespace App\Command;
 use DomainException;
 use Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface;
 use Domains\CapitalMarkets\Application\Contract\StreamingWorkerLeaseInterface;
+use Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface;
+use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Application\Contract\StreamingTrustInvalidatorInterface;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
 use Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2SourceFencedSession;
@@ -31,6 +33,7 @@ final class CapitalMarketsL2StreamCommand extends Command
     public function __construct(
         private readonly MarketDataIngestionInterface $ingestion,
         private readonly StreamingWorkerLeaseInterface $workerLeases,
+        private readonly MarketSubscriptionRepositoryInterface $subscriptionIntents,
         private readonly StreamingTrustInvalidatorInterface $trustInvalidator,
         private readonly StreamingFencedIngestionGateway $fencedGateway,
         private readonly MarketSourceRepositoryInterface $sources,
@@ -139,6 +142,21 @@ final class CapitalMarketsL2StreamCommand extends Command
                 new L2StreamSupervisor($policy), $policy, $metrics,
             ));
             $fenced=getenv('COS_CM_L2_FENCED_ENABLED')==='1';
+            if($fenced){
+                $matching=0;
+                foreach($this->subscriptionIntents->forSource(
+                    $required['organization'],$sourceId,true
+                ) as $intent){
+                    if($intent->instrumentId->equals($mapped->instrument->id)
+                        &&$intent->dataType===MarketEventType::OrderBookSnapshot
+                        &&$intent->venueId?->equals($descriptor->venueId)===true){
+                        $matching++;
+                    }
+                }
+                if($matching!==1){
+                    throw new DomainException('Exactly one approved canonical L2 subscription required for fenced source.');
+                }
+            }
             $leaseSession=$fenced?new L2SourceFencedSession(
                 $this->workerLeases,$this->trustInvalidator,$this->fencedGateway,
                 $required['organization'],$required['source'],

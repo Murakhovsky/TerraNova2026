@@ -65,6 +65,19 @@ final readonly class MysqlDerivativeLifecycleRegistry
                      SET status='UNTRUSTED',quality_score=0,updated_at=UTC_TIMESTAMP(6)
                      WHERE organization_id=:org AND source_id=:source AND instrument_id=:instrument");
                 $stop->execute(['org'=>$org,'source'=>$source,'instrument'=>$instrument]);
+                // Durable canonical states must not remain TRUSTED after the
+                // venue says this contract is no longer Trading.
+                foreach(['tn_capital_market_states','tn_capital_market_reference_states'] as $table){
+                    $invalidate=$this->pdo->prepare(
+                        "UPDATE $table SET trust_status='UNTRUSTED',quality_score=0,
+                         state_json=JSON_SET(state_json,
+                           '$.trust_status','UNTRUSTED','$.quality_status','UNTRUSTED',
+                           '$.quality.status','UNTRUSTED','$.quality.score',0),
+                         state_version=state_version+1,updated_at=UTC_TIMESTAMP(6)
+                         WHERE organization_id=:org AND source_id=:source
+                           AND instrument_id=:instrument");
+                    $invalidate->execute(['org'=>$org,'source'=>$source,'instrument'=>$instrument]);
+                }
             }
             $this->pdo->commit();
             return ['provider_status'=>$status,'tradable'=>$status==='Trading',

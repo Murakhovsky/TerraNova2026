@@ -12,6 +12,10 @@ $pub=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/L2/L2IngestionP
 foreach(['->acquire(','->renew(','->invalidate(','->release(','->ingest('] as $part){
     if(!str_contains($bridge,$part))throw new RuntimeException('L2 recovery not source-fenced: '.$part);
 }
+if(!str_contains($cmd,'MarketSubscriptionRepositoryInterface')
+    ||!str_contains($cmd,'MarketEventType::OrderBookSnapshot')){
+    throw new RuntimeException('Source-fenced L2 worker missing canonical approved subscription.');
+}
 if(!str_contains($cmd,'COS_CM_L2_FENCED_ENABLED')
     ||!str_contains($cmd,'L2SourceFencedSession')
     ||!str_contains($pub,'$fencedWriter')){
