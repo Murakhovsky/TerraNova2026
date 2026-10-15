@@ -210,6 +210,9 @@ SQL;
                 ?strtotime($receipt['last_live_quote_at'].' UTC'):false;
             $ackTime=is_array($receipt)&&is_string($receipt['ack_at'])
                 ?strtotime($receipt['ack_at'].' UTC'):false;
+            // L2 transport has its own authenticated snapshot/recovery
+            // protocol; BBO receipt rows must originate from the two approved
+            // multi-symbol WS protocols. Do not forge L2 provider ACKs.
             $providerVerified=is_array($receipt)
                 &&(int)$receipt['current_lease']===1
                 &&$receipt['status']==='LIVE_QUOTE'

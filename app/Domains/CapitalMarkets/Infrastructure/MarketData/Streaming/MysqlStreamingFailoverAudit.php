@@ -73,17 +73,15 @@ final readonly class MysqlStreamingFailoverAudit
             if($stmt->rowCount()!==1)throw new DomainException('Failover fencing race.');
             foreach(['tn_capital_market_provider_stream_receipts',
                 'tn_capital_market_instrument_stream_trust'] as $table){
-                $stmt=$this->pdo->prepare(
-                    "UPDATE $table SET status='REVOKED'".
-                    ($table==='tn_capital_market_instrument_stream_trust'
-                        ?",recovery_required=1,reason='FAILOVER_INJECTED',last_quality_score=0"
-                        :",last_error_code='FAILOVER_INJECTED',last_quality_score=0").
-                    " WHERE organization_id=:org AND source_id=:source");
-                // ledger status does not support REVOKED: override to UNTRUSTED.
                 if($table==='tn_capital_market_instrument_stream_trust'){
                     $stmt=$this->pdo->prepare(
                         "UPDATE $table SET status='UNTRUSTED',recovery_required=1,
                          reason='FAILOVER_INJECTED',last_quality_score=0
+                         WHERE organization_id=:org AND source_id=:source");
+                }else{
+                    $stmt=$this->pdo->prepare(
+                        "UPDATE $table SET status='REVOKED',
+                         last_error_code='FAILOVER_INJECTED',last_quality_score=0
                          WHERE organization_id=:org AND source_id=:source");
                 }
                 $stmt->execute(['org'=>$org,'source'=>$source]);

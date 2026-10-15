@@ -66,6 +66,25 @@ final readonly class MysqlStreamingProviderVerification
         $this->fenced($org,$source,$shard,$worker,$token,function()use(
             $org,$source,$shard,$instrument,$token,$epoch,$result,$live
         ):void{
+            // An in-memory DTO is NOT independent proof of accepted provider
+            // data. Require the exact canonical event plus persisted quality.
+            $proof=$this->pdo->prepare(
+                "SELECT e.canonical_event_id FROM tn_capital_market_canonical_events e
+                 JOIN tn_capital_market_quality_metrics q
+                   ON q.organization_id=e.organization_id
+                  AND q.canonical_event_id=e.canonical_event_id
+                 WHERE e.organization_id=:org AND e.source_id=:source
+                   AND e.instrument_id=:instrument AND e.canonical_event_id=:event
+                   AND e.event_type='BBO' AND e.data_mode='LIVE'
+                   AND e.received_timestamp>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 120 SECOND)
+                   AND e.received_timestamp<=UTC_TIMESTAMP(6)
+                   AND q.trust_status='TRUSTED' AND q.quality_score>=80
+                 LIMIT 1");
+            $proof->execute(['org'=>$org,'source'=>$source,'instrument'=>$instrument,
+                'event'=>$result->event->eventId]);
+            if($proof->fetchColumn()===false){
+                throw new DomainException('No persisted canonical LIVE BBO and quality proof.');
+            }
             $query=$this->pdo->prepare(
                 "UPDATE tn_capital_market_provider_stream_receipts
                  SET status=CASE WHEN :live=1 THEN 'LIVE_QUOTE' ELSE 'REVOKED' END,
