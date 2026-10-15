@@ -79,9 +79,15 @@ final readonly class MysqlStreamingOperationsSnapshot
         ksort($quality,SORT_STRING);
 
         $wanted=$this->pdo->prepare(
-            "SELECT source_id,COUNT(*) AS requested FROM tn_capital_market_subscriptions
-             WHERE ".$where." AND status='ACTIVE' AND data_type='BBO'
-             GROUP BY source_id LIMIT 501");
+            "SELECT sub.source_id,COUNT(*) AS requested
+             FROM tn_capital_market_subscriptions sub
+             JOIN tn_capital_market_data_sources src
+               ON src.organization_id=sub.organization_id AND src.source_id=sub.source_id
+             WHERE sub.organization_id=:org".($sourceId===null?'':' AND sub.source_id=:source').
+             " AND sub.status='ACTIVE' AND sub.data_type='BBO'
+               AND src.enabled=1
+               AND src.adapter_type IN ('binance.spot.rest','massive.stocks.v2')
+             GROUP BY sub.source_id LIMIT 501");
         $wanted->execute($args);
         $desiredBbo=[];
         foreach($wanted->fetchAll(PDO::FETCH_ASSOC) as $sub){
