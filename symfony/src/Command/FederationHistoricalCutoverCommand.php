@@ -23,7 +23,8 @@ final class FederationHistoricalCutoverCommand extends Command
         $this->addArgument('organization',InputArgument::REQUIRED,'Tenant organization');
         $this->addArgument('run',InputArgument::REQUIRED,'Legacy Run ID');
         $this->addOption('apply',null,InputOption::VALUE_NONE,'Commit only after strict parity and no Action evidence');
-        $this->addOption('operator',null,InputOption::VALUE_REQUIRED,'Audited operator ID');
+        $this->addOption('operator',null,InputOption::VALUE_REQUIRED,'Active tenant admin tn_users ID');
+        $this->addOption('permit',null,InputOption::VALUE_REQUIRED,'Time-bound, tenant/Run/source-bound signed authorization');
     }
 
     protected function execute(InputInterface $input,OutputInterface $output):int
@@ -32,7 +33,8 @@ final class FederationHistoricalCutoverCommand extends Command
         $run=(string)$input->getArgument('run');
         if ($input->getOption('apply')) {
             $operator=(string)$input->getOption('operator');
-            $result=$this->cutover->promotePristine($org,$run,$operator);
+            $permit=(string)$input->getOption('permit');
+            $result=$this->cutover->promotePristine($org,$run,$operator,$permit);
         } else {
             $result=$this->cutover->inspect($org,$run);
         }

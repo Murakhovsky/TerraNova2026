@@ -56,3 +56,96 @@ kind: architecture
 Non-Action кроки використовують `read:<kind>` і pinned `evidence` із `run_id`, `input_digest`, `reference` та доменно-специфічними полями. `Plan.run_id` потрібно визначити до незалежного людського погодження, а `input_digest` обчислюється як SHA256(organization + NUL + run + NUL + plan). Claim резервується один раз, а завершення можливе виключно за дійсним доменним receipt. Жодне read-evidence не замінює Approval чи фактичний Outcome.
 
 Для старих Runs команда `cos:federation:history:cutover` повертає також `step_reconciliation`: стан кожного кроку, число історичних Action attempts, посилання на Action і причину, чому неможливе автоматичне перенесення. Позначка `independent_action_receipt_attestation_required` **не є перевіреним receipt** і не означає дозвіл повторити Action.
+
+
+## P0: Federation Migration Safety
+
+Historical migration is **no replay**. Only pristine, not-yet-dispatched
+legacy Runs are promotable. All claimed, ambiguous, completed or missing
+receipts remain archived for operator reconciliation, never converted into a
+new `wf:` Action or silently marked successful.
+
+### Two separate invariants
+
+- **Cutover parity** is checked once inside the promotion transaction, at the
+  instant before the new authority is committed. The result `match`, the
+  SHA-256 of the original legacy Run/Steps and the SHA-256 of the canonical
+  immutable identity are recorded in
+  `cos_federation_execution_migrations`. A matching append-only
+  `cos_federation_migration_audit` row identifies the approving operator and
+  the permit digest. If any part fails, the whole transaction rolls back.
+- **Post-cutover integrity** is a separate read-only audit. It rechecks the
+  frozen legacy source checksum, verifies the canonical definition / static
+  binding checksum, independently checks pinned Plan Approval, and re-attests
+  every completed canonical Action or Domain receipt. Runtime transitions
+  (`created → running → completed`) are **excluded from the immutable
+  fingerprint**: normal progress must not be counted as shadow parity drift.
+  Results are `healthy`, `reconciliation_required`, or `drift`.
+  Legacy changes or canonical static identity changes mean `drift`.
+  Missing/uncertain receipts require reconciliation, not optimistic completion.
+
+The read-only `cos:federation:history:cutover <org> <run>` output includes
+`cutover_parity`, `post_cutover_integrity` and a per-Step
+`step_reconciliation` report. Successful historical `fed:` receipts are
+re-attested with the existing independent Action/Policy/Approval/first-attempt
+checker when available, as `verified_historical_receipt_archive_only`.
+**That result is archival evidence, not permission to execute, checkpoint
+or requeue any old Action.** The global legacy Action worker remains retired.
+
+### Trusted operator authorization
+
+The old `--operator=arbitrary-string` switch is no longer sufficient.
+The privileged CLI accepts:
+
+```bash
+COS_FEDERATION_HISTORICAL_MIGRATION=explicit_operator_approved \
+php symfony/bin/console cos:federation:history:cutover \
+  '<tenant-id>' '<legacy-run-id>' --apply \
+  --operator='<active-tenant-admin-tn_users-id>' \
+  --permit='<independently-issued-short-lived-permit>'
+```
+
+The separate authorizing service must issue a permit with the grammar
+`v1:<unix-expiry>:<64-character-lowercase-hex-HMAC-SHA256>`.
+The MAC key is provisioned only to the **trusted migration authority**, as
+`COS_FEDERATION_MIGRATION_AUTHORITY_KEY` (at least 32 bytes). The signed
+payload is the newline-separated UTF-8 text:
+
+```text
+federation-cutover-v1
+<organization-id>
+<run-id>
+<operator-tn-users-id>
+<source-sha256-from-read-only-inspect>
+<expiry-unix-seconds>
+```
+
+The server verifies that the operator is a live `tn_users` identity with an
+ACTIVE `admin` or `owner` membership for the exact tenant. It compares the
+HMAC in constant time and rejects expired permits and expiry windows longer
+than 15 minutes. A permit for another Run, tenant, actor or modified source
+cannot authorize a transfer. Store the signing key outside source control,
+runner logs, ordinary CLI accounts and the generated reports; a CLI user who
+can read the key is inherently in the trusted authority boundary.
+
+The migration ledger and unique constraints prevent re-application. The
+migration audit contains only the **SHA-256 digest of the permit**, never its
+raw signed value or key. This is an operator-only pathway, not a public
+controller or automatic background task.
+
+Legacy migrations recorded before this safety pack have no canonical
+identity baseline and are therefore reported as **requiring manual
+reconciliation**, not retroactively declared `healthy` without proof.
+
+### Acceptance gates
+
+`tests/integration/federation_historical_cutover_mysql.php` checks real
+MySQL tenant authorization, forged/missing permits, exactly one accepted
+audit event, normal canonical advancement after migration, legacy checksum
+drift, canonical immutable identity drift and no Action replay.
+`tests/architecture/federation_migration_safety.php` prevents accidental
+removal of the independent gates. Both are required by the fast Federation
+MySQL job and/or full Runtime.
+
+Do not turn off the environment rollout gate or batch-promote uncertain
+historical Actions to make migration coverage appear green.

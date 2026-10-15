@@ -9,6 +9,11 @@ require (string)(getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__,2).'/symfony/ven
 
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Federation\FederationHistoricalRunCutover;
+use App\Persistence\Federation\FederationMigrationOperatorAuthorization;
+use App\Persistence\Federation\FederationPostCutoverIntegrity;
+use Platform\Workflow\Model\WorkflowRunCommand;
+use Platform\Workflow\Model\WorkflowRunTransition;
+use Kernel\Workflow\Model\WorkflowStatus;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
 use App\Persistence\Workflow\DoctrineWorkflowShadowParityReader;
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
@@ -49,6 +54,10 @@ $planId='plan-'.$token;
 $runId='run-'.$token;
 $approvalId=bin2hex(random_bytes(16));
 $independent='fed-approver-'.$token;
+$operatorId='';
+$authorityKey=bin2hex(random_bytes(32));
+$oldAuthority=getenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY');
+$oldMigration=getenv('COS_FEDERATION_HISTORICAL_MIGRATION');
 $keys=['org'=>$org,'plan'=>$planId];
 $sourceSteps=[
     ['id'=>'publish','capability_id'=>'sales.create_task','capability_version'=>'1.0.0',
@@ -72,6 +81,22 @@ $deny=static function(callable $action,string $why):void {
     throw new RuntimeException('Unsafe Federation Plan proof accepted: '.$why);
 };
 try {
+    // Real active tenant administrator is the signer-bound operator; no
+    // arbitrary CLI string or plan-owner impersonation can authorize apply.
+    $db->executeStatement(
+        'INSERT INTO cos_organizations (id,name,status) VALUES (:org,:name,"ACTIVE")',
+        ['org'=>$org,'name'=>'Federation migration safety fixture']);
+    $db->executeStatement(
+        'INSERT INTO tn_users
+         (organization_id,email,password_hash,full_name,role,status)
+         VALUES (:org,:email,:hash,"Migration Safety Operator","admin","active")',
+        ['org'=>$org,'email'=>'migration-'.$token.'@example.test',
+          'hash'=>password_hash(bin2hex(random_bytes(16)),PASSWORD_DEFAULT)]);
+    $operatorId=(string)$db->fetchOne('SELECT LAST_INSERT_ID()');
+    $db->executeStatement(
+        'INSERT INTO cos_organization_memberships
+         (organization_id,user_id,role,status) VALUES (:org,:id,"admin","ACTIVE")',
+        ['org'=>$org,'id'=>$operatorId]);
     $db->executeStatement(
         'INSERT INTO cos_federation_goals
            (organization_id,goal_id,owner_id,current_spec_version,state,revision,created_at,updated_at)
@@ -144,7 +169,13 @@ try {
         new DoctrineWorkflowActionReceiptVerifier($db,$adapter),
         new FailClosedWorkflowNonActionReceiptEvidence(),
     );
-    $cutover=new FederationHistoricalRunCutover($db,$store,$shadow,$legacy);
+    $cutover=new FederationHistoricalRunCutover(
+        $db,$store,$shadow,$legacy,
+        new FederationMigrationOperatorAuthorization($db),
+        new FederationPostCutoverIntegrity($db,$adapter,
+            new DoctrineWorkflowActionReceiptVerifier($db,$adapter),
+            new FailClosedWorkflowNonActionReceiptEvidence()),
+    );
     $before=$cutover->inspect($org,$runId);
     if (!$before['promotable'] || $before['parity']!=='no_target') {
         throw new RuntimeException('Pristine historical Federation Run was not eligible.');
@@ -153,20 +184,59 @@ try {
         try{$action();}catch(Throwable){return;}
         throw new RuntimeException('Unsafe historical cutover accepted: '.$reason);
     };
-    $reject(static fn()=> $cutover->promotePristine($org,$runId,'operator-ci'),
-        'apply without explicit operator environment consent');
+    $expiry=time()+600;
+    $signedPayload=implode("\n",['federation-cutover-v1',$org,$runId,
+        $operatorId,(string)$before['source_sha256'],(string)$expiry]);
+    $permit='v1:'.$expiry.':'.hash_hmac('sha256',$signedPayload,$authorityKey);
+    $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,$permit),
+        'apply without explicit operator rollout gate');
     putenv('COS_FEDERATION_HISTORICAL_MIGRATION=explicit_operator_approved');
-    $result=$cutover->promotePristine($org,$runId,'operator-ci');
+    putenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY='.$authorityKey);
+    $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,'v1:'.$expiry.':'.str_repeat('0',64)),
+        'unauthenticated migration permit');
+    $reject(static fn()=> $cutover->promotePristine($org,$runId,'999999999',$permit),
+        'arbitrary operator without tenant membership');
+    $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,
+        'v1:'.(time()-1).':'.str_repeat('0',64)), 'expired signed permit');
+    $db->executeStatement(
+        'UPDATE cos_organization_memberships SET status="SUSPENDED"
+         WHERE organization_id=:org AND user_id=:id',
+        ['org'=>$org,'id'=>$operatorId]);
+    $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,$permit),
+        'suspended tenant operator');
+    $db->executeStatement(
+        'UPDATE cos_organization_memberships SET status="ACTIVE"
+         WHERE organization_id=:org AND user_id=:id',
+        ['org'=>$org,'id'=>$operatorId]);
+    $result=$cutover->promotePristine($org,$runId,$operatorId,$permit);
     if ($result['state']!=='promoted' || $result['parity']!=='match'
         || $shadow->federation($org,$runId)->status->value!=='match') {
         throw new RuntimeException('No-replay historical promotion did not prove exact parity.');
     }
     $read=$cutover->inspect($org,$runId);
-    if ($read['migration_state']!=='promoted' || $read['parity']!=='match') {
+    if ($read['migration_state']!=='promoted' || $read['parity']!=='match'
+        || $read['cutover_parity']!=='match'
+        || ($read['post_cutover_integrity']['status']??null)!=='healthy') {
         throw new RuntimeException('Historical immutable migration ledger missing.');
     }
-    $reject(static fn()=> $cutover->promotePristine($org,$runId,'operator-ci'),
+    $reject(static fn()=> $cutover->promotePristine($org,$runId,$operatorId,$permit),
         'duplicate historical promotion');
+    $audit=(int)$db->fetchOne(
+        'SELECT COUNT(*) FROM cos_federation_migration_audit
+         WHERE organization_id=:org AND legacy_run_id=:run AND event_code=:event',
+        ['org'=>$org,'run'=>$runId,'event'=>'cutover_accepted']);
+    if($audit!==1)throw new RuntimeException('One-time authorization audit not persisted.');
+    // After cutover the canonical authority progresses while frozen legacy
+    // state remains pending: NOT a parity drift.
+    $store->compareAndTransition(new WorkflowRunTransition(
+        new WorkflowRunCommand($runIdentity,$actor,1,'federation:'.$runId),
+        WorkflowStatus::CREATED,WorkflowStatus::RUNNING,'post-cutover normal progress'));
+    $progress=$cutover->inspect($org,$runId);
+    if (($progress['cutover_parity']??null)!=='match'
+        || ($progress['post_cutover_integrity']['status']??null)!=='healthy'
+        || ($progress['post_cutover_integrity']['canonical_state']??null)!=='running') {
+        throw new RuntimeException('Normal canonical progress incorrectly marked as post-cutover drift.');
+    }
     // Once promoted, historical Run/Step rows are pinned to their exact
     // pre-cutover checksum and can never become silent new authority.
     $db->executeStatement(
@@ -175,7 +245,9 @@ try {
         ['org'=>$org,'run'=>$runId,'step'=>'publish'],
     );
     $mutated=$cutover->inspect($org,$runId);
-    if (!in_array('legacy_source_mutated_after_cutover',$mutated['reasons'],true)) {
+    if (!in_array('legacy_source_mutated_after_cutover',$mutated['reasons'],true)
+        || ($mutated['cutover_parity']??null)!=='match'
+        || ($mutated['post_cutover_integrity']['status']??null)!=='drift') {
         throw new RuntimeException('Changed historical Step bypassed immutable source checksum.');
     }
     $db->executeStatement(
@@ -183,6 +255,20 @@ try {
          WHERE organization_id=:org AND run_id=:run AND step_id=:step',
         ['org'=>$org,'run'=>$runId,'step'=>'publish'],
     );
+    $db->executeStatement(
+        'UPDATE cos_workflow_runs SET correlation_id=:tampered
+         WHERE organization_id=:org AND run_id=:run',
+        ['tampered'=>'forged-'.$token,'org'=>$org,'run'=>$runId]);
+    $changed=$cutover->inspect($org,$runId);
+    if (($changed['post_cutover_integrity']['status']??null)!=='drift'
+        || !in_array('canonical_immutable_identity_changed',
+            $changed['post_cutover_integrity']['findings']??[],true)) {
+        throw new RuntimeException('Canonical immutable baseline drift not detected.');
+    }
+    $db->executeStatement(
+        'UPDATE cos_workflow_runs SET correlation_id=:original
+         WHERE organization_id=:org AND run_id=:run',
+        ['original'=>'federation:'.$runId,'org'=>$org,'run'=>$runId]);
     $actions=(int)$db->fetchOne(
         'SELECT COUNT(*) FROM cos_actions WHERE organization_id=:org AND idempotency_key LIKE :key',
         ['org'=>$org,'key'=>'fed:%'],
@@ -239,7 +325,7 @@ try {
         $examination['reasons'],true)) {
         throw new RuntimeException('Previously attempted Action was offered unsafe promotion.');
     }
-    $reject(static fn()=> $cutover->promotePristine($org,$blocked,'operator-ci'),
+    $reject(static fn()=> $cutover->promotePristine($org,$blocked,$operatorId,$permit),
         'previously claimed Action could replay');
     $mixed='mixed-'.$token;
     $db->executeStatement(
@@ -256,11 +342,17 @@ try {
     }
     echo "Federation historical canonical cutover MySQL passed: atomic Store migration, shadow MATCH, immutable ledger, no Action replay, claimed legacy fenced, tenant isolation.\n";
 } finally {
-    putenv('COS_FEDERATION_HISTORICAL_MIGRATION');
-    foreach(['cos_federation_execution_migrations','cos_workflow_steps','cos_workflow_runs',
+    if ($oldMigration===false)putenv('COS_FEDERATION_HISTORICAL_MIGRATION');
+    else putenv('COS_FEDERATION_HISTORICAL_MIGRATION='.$oldMigration);
+    if ($oldAuthority===false)putenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY');
+    else putenv('COS_FEDERATION_MIGRATION_AUTHORITY_KEY='.$oldAuthority);
+    foreach(['cos_federation_migration_audit','cos_federation_execution_migrations',
+        'cos_workflow_steps','cos_workflow_runs',
         'cos_federation_steps','cos_federation_runs','cos_approvals','cos_policy_evaluations',
         'cos_action_attempts','cos_actions','cos_federation_plans',
-        'cos_federation_goal_specs','cos_federation_goals'] as $table) {
+        'cos_federation_goal_specs','cos_federation_goals',
+        'cos_organization_memberships','tn_users'] as $table) {
         $db->executeStatement("DELETE FROM $table WHERE organization_id=:org",['org'=>$org]);
     }
+    $db->executeStatement('DELETE FROM cos_organizations WHERE id=:org',['org'=>$org]);
 }

@@ -118,6 +118,7 @@ final class TableOwnership
             // compatibility tables are Platform-owned, not CapitalMarkets.
             'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
             'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
+            'cos_federation_execution_migrations', 'cos_federation_migration_audit',
             'cos_experience_profiles', 'cos_workspace_experience_states',
             // Canonical technical Run/Step state belongs to Platform Workflow.
             'cos_workflow_runs', 'cos_workflow_steps',

@@ -96,6 +96,8 @@ jobs:
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Federation single-writer architecture gate
         run: php tests/architecture/federation_canonical_goal_cutover.php
+      - name: Federation migration authorization integrity gate
+        run: php tests/architecture/federation_migration_safety.php
       - name: Federation core MySQL admission/receipt/Goal E2E
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
@@ -276,6 +278,8 @@ jobs:
         run: docker compose up -d --remove-orphans
       - name: Federation retired executor source gate
         run: php tests/architecture/federation_canonical_goal_cutover.php
+      - name: Federation historical migration security source gate
+        run: php tests/architecture/federation_migration_safety.php
       - name: Canonical Workflow durable store MySQL acceptance
         run: |
           docker compose cp tests/integration/workflow_durable_store_mysql.php php:/tmp/workflow_durable_store_mysql.php

@@ -5,6 +5,8 @@ namespace App\Persistence\Federation;
 
 use App\Persistence\Workflow\DoctrineWorkflowShadowParityReader;
 use Doctrine\DBAL\Connection;
+use Kernel\Action\Action;
+use Kernel\Action\ActionStatus;
 use DomainException;
 use Kernel\Identity\Model\OrganizationRole;
 use Kernel\Shared\Domain\OrganizationId;
@@ -34,6 +36,9 @@ final readonly class FederationHistoricalRunCutover
         private WorkflowExecutionStoreInterface $store,
         private DoctrineWorkflowShadowParityReader $parity,
         private FederationPlanApprovalEvidenceReader $approvals,
+        private FederationMigrationOperatorAuthorization $operatorAuthorization,
+        private FederationPostCutoverIntegrity $integrity,
+        private ?FederatedActionAdmission $legacyReceipts = null,
     ) {}
 
     /** @return array<string,mixed> */
@@ -42,24 +47,31 @@ final readonly class FederationHistoricalRunCutover
         $source=$this->source($org,$runId);
         $reasons=$this->blockers($org,$source);
         $ledger=$this->db->fetchAssociative(
-            'SELECT migration_state,source_sha256,parity_status,canonical_run_id
+            'SELECT organization_id,legacy_run_id,migration_state,source_sha256,
+                    parity_status,canonical_run_id,canonical_identity_sha256
              FROM cos_federation_execution_migrations
              WHERE organization_id=:org AND legacy_run_id=:run',
             ['org'=>$org,'run'=>$runId],
         );
-        if ($ledger) {
-            $now=$this->sourceDigest($source);
-            if (!hash_equals((string)$ledger['source_sha256'],$now)) $reasons[]='legacy_source_mutated_after_cutover';
+        $fingerprint=$this->sourceDigest($source);
+        if ($ledger && !hash_equals((string)$ledger['source_sha256'],$fingerprint)) {
+            $reasons[]='legacy_source_mutated_after_cutover';
         }
+        // Cutover parity is a *frozen* decision. Replaying the comparator after
+        // the canonical Run moves forward would wrongly declare normal
+        // progress (old pending vs new completed) to be DRIFT.
+        $post=$ledger ? $this->integrity->inspect($org,$runId,$ledger,$fingerprint) : null;
         return [
             'organization_id'=>$org,'run_id'=>$runId,
             'legacy_state'=>$source['run']['state'],
             'legacy_step_count'=>count($source['steps']),
             'migration_state'=>$ledger['migration_state']??'not_migrated',
-            'source_sha256'=>$this->sourceDigest($source),
+            'source_sha256'=>$fingerprint,
             'promotable'=>$reasons===[] && $ledger===false,
             'reasons'=>array_values(array_unique($reasons)),
-            'parity'=>$ledger ? $this->parity->federation($org,$runId)->status->value : 'no_target',
+            'parity'=>$ledger ? (string)$ledger['parity_status'] : 'no_target',
+            'cutover_parity'=>$ledger ? (string)$ledger['parity_status'] : 'not_recorded',
+            'post_cutover_integrity'=>$post,
             'read_only'=>true,
             // Operator diagnosis is read-only; no Action claim, queue or retry.
             'step_reconciliation'=>$this->stepReconciliation($org,$source['steps']),
@@ -69,7 +81,7 @@ final readonly class FederationHistoricalRunCutover
     /** @param list<array<string,mixed>> $steps
      *  @return list<array{step_id:string,side_effect_level:string,legacy_state:string,
      *      legacy_attempts:int,action_id:?string,action_status:?string,
-     *      persisted_action_attempts:int,diagnosis:string}>
+     *      persisted_action_attempts:int,diagnosis:string,receipt_attestation:string}>
      */
     private function stepReconciliation(string $org,array $steps):array
     {
@@ -80,8 +92,10 @@ final readonly class FederationHistoricalRunCutover
             $attempts=(int)$step['attempts'];
             $receipt=$step['result_reference'];
             $actions=$this->db->fetchAllAssociative(
-                'SELECT id,status FROM cos_actions
-                 WHERE organization_id=:org AND idempotency_key=:key',
+                'SELECT id,status,type,target_type,target_id,parameters,
+                        source_type,source_id,execution_mode,risk_level,
+                        idempotency_key,correlation_id
+                 FROM cos_actions WHERE organization_id=:org AND idempotency_key=:key',
                 ['org'=>$org,'key'=>'fed:'.$key],
             );
             $action=count($actions)===1?$actions[0]:null;
@@ -109,6 +123,10 @@ final readonly class FederationHistoricalRunCutover
                 // Correlation is diagnostic ONLY. FederatedActionAdmission must
                 // re-attest Plan, Approval, Policy and Action before any archive.
                 $diagnosis='independent_action_receipt_attestation_required';
+                if ($this->legacyReceipts !== null
+                    && $this->historicalReceiptVerified($org,$action)) {
+                    $diagnosis='verified_historical_receipt_archive_only';
+                }
             }
             $items[]=[
                 'step_id'=>(string)$step['step_id'],
@@ -119,22 +137,48 @@ final readonly class FederationHistoricalRunCutover
                 'action_status'=>$action['status']??null,
                 'persisted_action_attempts'=>count($attemptRows),
                 'diagnosis'=>$diagnosis,
+                'receipt_attestation'=>$diagnosis==='verified_historical_receipt_archive_only'
+                    ? 'verified_read_only' : 'not_attested',
             ];
         }
         return $items;
     }
 
-    /** @return array<string,mixed> */
-    public function promotePristine(string $org,string $runId,string $operator): array
+    /** No ActionService dependency: nothing can be queued, dispatched or retried. */
+    private function historicalReceiptVerified(string $org,array $action): bool
     {
-        if (getenv('COS_FEDERATION_HISTORICAL_MIGRATION')!=='explicit_operator_approved'
-            || trim($operator)==='') {
-            throw new DomainException('Historical migration requires explicit operator authorization.');
+        if ($this->legacyReceipts === null) return false;
+        try {
+            $parameters=json_decode((string)$action['parameters'],true,512,JSON_THROW_ON_ERROR);
+            if (!is_array($parameters)) return false;
+            $completed=new Action(
+                (string)$action['id'],$org,(string)$action['type'],
+                $action['target_type']===null?null:(string)$action['target_type'],
+                $action['target_id']===null?null:(string)$action['target_id'],
+                $parameters,(string)$action['source_type'],(string)$action['source_id'],
+                (string)$action['execution_mode'],(string)$action['risk_level'],
+                (string)$action['idempotency_key'],new \DateTimeImmutable(),
+                ActionStatus::Completed,(string)$action['correlation_id'],
+            );
+            $this->legacyReceipts->assertCompletedReceipt($completed);
+            return true;
+        } catch (\Throwable) {
+            return false;
         }
-        return $this->db->transactional(function()use($org,$runId,$operator):array{
-            // All legacy writers lock this exact Run row. Do not copy while a
-            // legacy Action or another operator may be claiming a Step.
+    }
+
+    /** @return array<string,mixed> */
+    public function promotePristine(string $org,string $runId,string $operator,string $permit): array
+    {
+        if ($permit==='' || $operator==='') {
+            throw new DomainException('Historical migration requires an authenticated operator and signed permit.');
+        }
+        return $this->db->transactional(function()use($org,$runId,$operator,$permit):array{
+            // Lock the old authority before reading the immutable source.
             $source=$this->source($org,$runId,true);
+            $sourceSha=$this->sourceDigest($source);
+            $permitSha=$this->operatorAuthorization->assertAuthorized(
+                $org,$runId,$operator,$sourceSha,$permit);
             $reasons=$this->blockers($org,$source);
             if ($reasons!==[]) throw new DomainException('Historical Run requires reconciliation: '.implode(',',$reasons));
             $run=$source['run'];
@@ -173,10 +217,13 @@ final readonly class FederationHistoricalRunCutover
                     new WorkflowRunCommand($identity,$actor,1,'federation:'.$runId),
                     WorkflowStatus::CREATED,WorkflowStatus::RUNNING,'verified legacy pristine Run cutover'));
             }
+            $canonicalSha=$this->integrity->canonicalIdentitySha256($org,$runId);
             $this->db->insert('cos_federation_execution_migrations',[
                 'organization_id'=>$org,'legacy_run_id'=>$runId,
                 'plan_id'=>(string)$run['plan_id'],'canonical_run_id'=>$runId,
-                'source_sha256'=>$this->sourceDigest($source),
+                'source_sha256'=>$sourceSha,
+                'canonical_identity_sha256'=>$canonicalSha,
+                'permit_sha256'=>$permitSha,
                 'approval_reference'=>$approvalId,
                 'parity_status'=>'pending','migration_state'=>'promoted',
                 'operator_id'=>$operator,'migrated_at'=>gmdate('Y-m-d H:i:s.u'),
@@ -190,8 +237,17 @@ final readonly class FederationHistoricalRunCutover
                  WHERE organization_id=:org AND legacy_run_id=:run',
                 ['status'=>'match','org'=>$org,'run'=>$runId],
             );
+            // Append-only accepted event: audit and immutable source/target
+            // baselines commit atomically with the canonical projection.
+            $this->db->insert('cos_federation_migration_audit',[
+                'organization_id'=>$org,'legacy_run_id'=>$runId,
+                'event_code'=>'cutover_accepted','operator_id'=>$operator,
+                'source_sha256'=>$sourceSha,'canonical_identity_sha256'=>$canonicalSha,
+                'permit_sha256'=>$permitSha,'event_at'=>gmdate('Y-m-d H:i:s.u'),
+            ]);
             return ['organization_id'=>$org,'run_id'=>$runId,
-                'state'=>'promoted','parity'=>'match','source_sha256'=>$this->sourceDigest($source),
+                'state'=>'promoted','parity'=>'match','source_sha256'=>$sourceSha,
+                'canonical_identity_sha256'=>$canonicalSha,
                 'action_replays'=>0,'technical_writer'=>'platform_workflow'];
         });
     }
