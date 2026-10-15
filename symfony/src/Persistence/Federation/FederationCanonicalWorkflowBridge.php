@@ -50,7 +50,6 @@ final readonly class FederationCanonicalWorkflowBridge
     public function __construct(
         private Connection $db,
         private WorkflowExecutionStoreInterface $workflow,
-        private WorkflowEvidenceSignalStoreInterface $signals,
         private WorkflowStepScheduler $scheduler,
         private FederationGoalStore $goals,
         private FederationWorkflowPlanApprovalEvidence $planEvidence,
@@ -403,7 +402,10 @@ final readonly class FederationCanonicalWorkflowBridge
                 );
                 if (!$waiting) return $result('manual_reconciliation_required',$step->stepId);
                 try {
-                    $this->signals->completeWaitingEvidence(new WorkflowEvidenceSignal(
+                    if (!$this->workflow instanceof WorkflowEvidenceSignalStoreInterface) {
+                        throw new DomainException('Shared Store has no approved evidence-signal port.');
+                    }
+                    $this->workflow->completeWaitingEvidence(new WorkflowEvidenceSignal(
                         $command,$step->stepId,(int)$waiting['revision'],$reference,
                     ));
                     return $result('step_completed',$step->stepId);
