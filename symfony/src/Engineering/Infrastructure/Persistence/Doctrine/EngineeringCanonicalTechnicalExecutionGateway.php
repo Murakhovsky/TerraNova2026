@@ -26,7 +26,7 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
     public function begin(string $agentRunId, string $workflowId, EngineeringAgentTask $task, string $traceId): void
     {
         $ctx=$this->db->fetchAssociative(
-            'SELECT f.organization_id,w.trace_id,w.current_state
+            'SELECT f.organization_id,w.trace_id AS workflow_trace,a.trace_id AS agent_trace,w.current_state
              FROM cos_engineering_features f
              JOIN cos_engineering_workflows w ON w.feature_id=f.id
              JOIN cos_engineering_agent_runs a
@@ -48,7 +48,7 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
             || $rollout['approved_at']===null) {
             throw new DomainException('Engineering technical cutover is not explicitly authorized.');
         }
-        if (!str_starts_with($traceId, substr((string)$ctx['trace_id'].':agent:',0,128))) {
+        if ($ctx['agent_trace']!==$traceId) {
             throw new DomainException('Engineering canonical claim correlation differs from persistent workflow.');
         }
         $blocked=$this->db->fetchOne(

@@ -124,8 +124,8 @@ try {
     $other=EngineeringId::generate();
     $otherTask=new EngineeringAgentTask(EngineeringId::generate(),$feature,AgentRole::REVIEWER,
        'Reviewer fixture',[],[],[],'schema',[],'eng-other-'.$tag,['logical_attempt'=>1]);
-    $createAgent($other,$otherTask,$trace.':agent:'.$otherTask->id);
-    $deny(static fn()=> $gate->begin($other,$workflow,$otherTask,$trace.':agent:'.$otherTask->id),
+    $createAgent($other,$otherTask,'resume-'.$tag.':agent:'.$otherTask->id);
+    $deny(static fn()=> $gate->begin($other,$workflow,$otherTask,'resume-'.$tag.':agent:'.$otherTask->id),
         'overlapping external AgentRun while first claim is held');
 
     $db->executeStatement(
@@ -187,7 +187,7 @@ try {
     );
 
     // A failed or uncertain side effect remains ambiguous, never requeued.
-    $gate->begin($other,$workflow,$otherTask,$trace.':agent:'.$otherTask->id);
+    $gate->begin($other,$workflow,$otherTask,'resume-'.$tag.':agent:'.$otherTask->id);
     $gate->quarantine($other);
     if($reader->engineeringAgent($org,$other)->status->value!=='drift') {
         // The legacy RUNNING and canonical AMBIGUOUS deliberately differ.
@@ -203,8 +203,8 @@ try {
     $third=EngineeringId::generate();
     $thirdTask=new EngineeringAgentTask(EngineeringId::generate(),$feature,AgentRole::DEVELOPER,
        'No replay',[],[],[],'schema',[],'eng-third-'.$tag,['logical_attempt'=>1]);
-    $createAgent($third,$thirdTask,$trace.':agent:'.$thirdTask->id);
-    $deny(static fn()=> $gate->begin($third,$workflow,$thirdTask,$trace.':agent:'.$thirdTask->id),
+    $createAgent($third,$thirdTask,'second-resume-'.$tag.':agent:'.$thirdTask->id);
+    $deny(static fn()=> $gate->begin($third,$workflow,$thirdTask,'second-resume-'.$tag.':agent:'.$thirdTask->id),
         'ambiguous previous external effect cannot replay');
     if($reader->engineeringAgent('wrong-tenant',$agent)->status->value!=='no_target') {
         throw new RuntimeException('Engineering shadow leaked another tenant.');
