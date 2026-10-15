@@ -1,7 +1,11 @@
 <?php
 declare(strict_types=1);
 
-require dirname(__DIR__,2).'/symfony/vendor/autoload.php';
+$root=dirname(__DIR__,2);
+require $root.'/vendor/autoload.php';
+// Fast CI installs the root composer project, not symfony/vendor. The
+// Symfony App namespace is intentionally not part of the root PSR-4 map.
+require_once $root.'/symfony/src/Persistence/Federation/FederationCapabilityBindingResolver.php';
 
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use Kernel\Identity\Model\OrganizationRole;
