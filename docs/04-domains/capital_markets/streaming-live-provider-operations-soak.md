@@ -6,7 +6,7 @@ kind: operations
 updated: 2026-10-15
 ---
 
-# P0.5–P0.7: Live Provider, Operations, Soak, Failover
+# P0.5–P0.7: Біржові котирування, моніторинг та відновлення
 
 ## Базові гарантії
 
