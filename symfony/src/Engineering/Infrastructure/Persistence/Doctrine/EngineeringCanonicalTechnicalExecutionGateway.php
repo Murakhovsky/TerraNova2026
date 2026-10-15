@@ -85,19 +85,24 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
         ]]);
         // Platform Workflow Store is the sole technical Run/Step writer.
         // Rollout and persisted AgentRun provenance were checked above.
-        $token=$this->technical->beginGuardedExternal(
-            new WorkflowRunIdentity($org,$canonicalRun),$definition,$inputDigest,
-            'engineering:'.$task->role->value,$traceId,$agentRunId,7200,
-        );
-        $this->db->executeStatement(
-            'INSERT INTO cos_engineering_technical_links
-             (organization_id,agent_run_id,engineering_workflow_id,feature_id,
-              canonical_run_id,agent_idempotency_key,claim_token,technical_state,created_at,updated_at)
-             VALUES (:org,:agent,:workflow,:feature,:run,:key,:token,"claimed",UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
-            ['org'=>$org,'agent'=>$agentRunId,'workflow'=>$workflowId,
-                'feature'=>$task->featureId,'run'=>$canonicalRun,
-                'key'=>$task->idempotencyKey,'token'=>$token],
-        );
+        // Canonical claim and the Domain-owned link must commit atomically.
+        $this->db->transactional(function () use (
+            $org,$canonicalRun,$definition,$inputDigest,$task,$traceId,$agentRunId,$workflowId
+        ):void {
+            $token=$this->technical->beginGuardedExternal(
+                new WorkflowRunIdentity($org,$canonicalRun),$definition,$inputDigest,
+                'engineering:'.$task->role->value,$traceId,$agentRunId,7200,
+            );
+            $this->db->executeStatement(
+                'INSERT INTO cos_engineering_technical_links
+                 (organization_id,agent_run_id,engineering_workflow_id,feature_id,
+                  canonical_run_id,agent_idempotency_key,claim_token,technical_state,created_at,updated_at)
+                 VALUES (:org,:agent,:workflow,:feature,:run,:key,:token,"claimed",UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
+                ['org'=>$org,'agent'=>$agentRunId,'workflow'=>$workflowId,
+                    'feature'=>$task->featureId,'run'=>$canonicalRun,
+                    'key'=>$task->idempotencyKey,'token'=>$token],
+            );
+            });
     }
 
     /**
@@ -129,18 +134,22 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
         $digest=hash('sha256',json_encode($snapshot,
             JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
         $receipt='engineering:agent-run:completed:v1:'.$agentRunId.':'.$digest;
-        $this->technical->completeGuardedExternal(
-            new WorkflowRunIdentity((string)$link['organization_id'],(string)$link['canonical_run_id']),
-            'execute',(string)$link['claim_token'],$receipt,(string)$record['trace_id'],
-        );
-        $changed=$this->db->executeStatement(
-            'UPDATE cos_engineering_technical_links SET technical_state="completed",
-              updated_at=UTC_TIMESTAMP(6)
-             WHERE organization_id=:org AND agent_run_id=:agent
-               AND claim_token=:token AND technical_state="claimed"',
-            ['org'=>$link['organization_id'],'agent'=>$agentRunId,'token'=>$link['claim_token']],
-        );
-        if ($changed!==1) throw new DomainException('Canonical AgentRun link has stale claim fencing.');
+        // The external result is persisted already. Keep the canonical
+        // receipt and its Engineering link in one SQL transaction.
+        $this->db->transactional(function () use ($link,$agentRunId,$receipt,$record):void {
+            $this->technical->completeGuardedExternal(
+                new WorkflowRunIdentity((string)$link['organization_id'],(string)$link['canonical_run_id']),
+                'execute',(string)$link['claim_token'],$receipt,(string)$record['trace_id'],
+            );
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_engineering_technical_links SET technical_state="completed",
+                  updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND agent_run_id=:agent
+                   AND claim_token=:token AND technical_state="claimed"',
+                ['org'=>$link['organization_id'],'agent'=>$agentRunId,'token'=>$link['claim_token']],
+            );
+            if ($changed!==1) throw new DomainException('Canonical AgentRun link has stale claim fencing.');
+            });
     }
 
     public function quarantine(string $agentRunId): void
@@ -150,16 +159,19 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
         if ($link['technical_state']!=='claimed') return;
         $args=['org'=>$link['organization_id'],'run'=>$link['canonical_run_id'],
             'agent'=>$agentRunId,'token'=>$link['claim_token']];
-        $this->technical->quarantineGuardedExternal(
-            new WorkflowRunIdentity((string)$link['organization_id'],(string)$link['canonical_run_id']),
-            'execute',(string)$link['claim_token'],
-        );
-        $this->db->executeStatement(
-            'UPDATE cos_engineering_technical_links SET technical_state="ambiguous",
-             updated_at=UTC_TIMESTAMP(6)
-             WHERE organization_id=:org AND agent_run_id=:agent
-               AND claim_token=:token AND technical_state="claimed"',$args,
-        );
+        $this->db->transactional(function () use ($link,$args):void {
+            $this->technical->quarantineGuardedExternal(
+                new WorkflowRunIdentity((string)$link['organization_id'],(string)$link['canonical_run_id']),
+                'execute',(string)$link['claim_token'],
+            );
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_engineering_technical_links SET technical_state="ambiguous",
+                 updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND agent_run_id=:agent
+                   AND claim_token=:token AND technical_state="claimed"',$args,
+            );
+                if ($changed!==1) throw new DomainException('Canonical quarantine link lost claim fencing.');
+        });
     }
 
     /** @return array<string,mixed>|null */

@@ -248,6 +248,13 @@ try {
     );
 
     // A failed or uncertain side effect remains ambiguous, never requeued.
+    // Source AgentRun must be the workflow's active worker before Store admits it.
+    $deny(static fn()=> $gate->begin($other,$workflow,$otherTask,'resume-'.$tag.':agent:'.$otherTask->id),
+        'cannot mint technical lease for inactive Engineering AgentRun');
+    $db->executeStatement(
+        'UPDATE cos_engineering_workflows SET current_agent_run_id=:agent WHERE id=:workflow',
+        ['agent'=>$other,'workflow'=>$workflow],
+    );
     $gate->begin($other,$workflow,$otherTask,'resume-'.$tag.':agent:'.$otherTask->id);
     $gate->quarantine($other);
     if($reader->engineeringAgent($org,$other)->status->value!=='drift') {
