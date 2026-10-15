@@ -70,7 +70,7 @@ final readonly class FederationCanonicalWorkflowBridge
 
     public function owns(TenantContext $actor, string $runId): bool
     {
-        $this->authorized($actor);
+        $this->authorizedRead($actor);
         self::identifier($runId);
         return $this->db->fetchOne(
             'SELECT run_id FROM cos_workflow_runs
@@ -83,11 +83,21 @@ final readonly class FederationCanonicalWorkflowBridge
     /** @return array<string,mixed> */
     public function status(TenantContext $actor, string $runId): array
     {
-        $this->authorized($actor);
+        $this->authorizedRead($actor);
         $id = new WorkflowRunIdentity($actor->organizationId()->value(), $runId);
         $run = $this->requireRun($id);
+        $goalId=$this->db->fetchOne(
+            'SELECT p.goal_id FROM cos_workflow_runs w
+             INNER JOIN cos_federation_plans p
+               ON p.organization_id=w.organization_id AND p.plan_id=w.source_plan_id
+             WHERE w.organization_id=:org AND w.run_id=:run AND w.definition_id=:definition',
+            ['org'=>$id->organizationId,'run'=>$runId,'definition'=>'federation.approved-plan'],
+        );
+        if (!is_string($goalId) || $goalId==='') {
+            throw new DomainException('Canonical run has no owning Goal/Plan.');
+        }
         return [
-            'run_id'=>$runId, 'plan_id'=>$run->sourcePlanId,
+            'run_id'=>$runId,'goal_id'=>$goalId, 'plan_id'=>$run->sourcePlanId,
             'state'=>$run->status->value, 'revision'=>$run->revision,
             'execution_authority'=>'platform_workflow',
             'steps'=>array_map(static fn($step): array => [
@@ -377,11 +387,18 @@ final readonly class FederationCanonicalWorkflowBridge
         throw new DomainException('Canonical Federation Step missing.');
     }
 
+    private function authorizedRead(TenantContext $actor): void
+    {
+        if (!$actor->isManager() || !$actor->allows(TenantPermissions::MANAGE)) {
+            throw new DomainException('Canonical Goal read requires authenticated tenant manager.');
+        }
+    }
+
     private function authorized(TenantContext $actor): void
     {
-        if (!$actor->isManager() || !$actor->allows(TenantPermissions::MANAGE)
-            || !$this->modules->isEnabled($actor->organizationId()->value(),'federation')) {
-            throw new DomainException('Canonical Goal execution requires enabled tenant module and manager.');
+        $this->authorizedRead($actor);
+        if (!$this->modules->isEnabled($actor->organizationId()->value(),'federation')) {
+            throw new DomainException('Canonical Goal execution requires enabled tenant module.');
         }
     }
 
