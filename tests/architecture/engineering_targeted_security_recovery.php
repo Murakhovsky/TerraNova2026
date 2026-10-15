@@ -23,6 +23,8 @@ foreach ([
     "'state' => 'ARCHITECT_NOT_APPROVED'",
     "'SECURITY_REWORK_REQUIRED'",
     "'state' => 'RELEASED'",
+    "'recovery_cycles_max' => 2",
+    "'RECOVERY_CYCLE_LIMIT_REACHED'",
     'markRuntimeIssue',
     'SECURITY_REVIEW_REPORT',
     'reviewed_architecture_content_hash',

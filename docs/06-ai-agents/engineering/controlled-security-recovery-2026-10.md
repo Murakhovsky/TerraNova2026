@@ -39,9 +39,11 @@ Specialist і не запускає Developer на неперевіреній а
    файлів), далі, лише після схвалення архітектури, один незалежний
    Security Specialist. Немає автоматичного Developer і немає циклу
    `Security → Architect → Security → Architect`.
-5. При `ARCHITECT_NOT_APPROVED`, `SECURITY_REWORK_REQUIRED` або `FAILED`
-   зупинка зберігається. Потрібні нові конкретні докази та нове незалежне
-   рішення, а не повтор того самого recovery ID.
+5. При `ARCHITECT_NOT_APPROVED` або `FAILED` зупинка зберігається.
+   При `SECURITY_REWORK_REQUIRED` після нового незалежного
+   `REQUEST_CHANGES` менеджер може **один раз** підготувати другий
+   адресний цикл. Загалом не більше двох циклів для задачі, за двома різними
+   Security-звітами. Повтор того самого recovery ID заборонений.
 6. При `SECURITY_APPROVED_AWAITING_RELEASE` Manager вдруге підтверджує
    **«Дозволити Development після Security»**. Backend повторно
    перевіряє `APPROVED` від незалежного Security Specialist, збіг хешу

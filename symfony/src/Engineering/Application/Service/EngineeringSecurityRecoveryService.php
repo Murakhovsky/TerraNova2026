@@ -63,9 +63,18 @@ final readonly class EngineeringSecurityRecoveryService
         ));
         $same = $last !== null
             && ($last['source_review_artifact_id'] ?? null) === ($report['id'] ?? null);
-        $eligible = $workflow->currentState() === EngineeringWorkflowState::BLOCKED
+        $history = is_array($feature['previous_context'] ?? null) ? $feature['previous_context'] : [];
+        $cycles = count(array_filter($history, static fn (mixed $entry): bool =>
+            is_array($entry) && ($entry['security_recovery']['state'] ?? null) === 'PREPARED'
+        ));
+        $initial = $workflow->currentState() === EngineeringWorkflowState::BLOCKED
+            && $gate === 'REJECTED';
+        $rework = $workflow->currentState() === EngineeringWorkflowState::ARCHITECTURE_PENDING
+            && ($last['state'] ?? null) === 'SECURITY_REWORK_REQUIRED'
+            && in_array($gate, ['APPROVED','APPROVED_WITH_CONDITIONS'], true);
+        $eligible = ($initial || $rework)
+            && $cycles < 2
             && $findings !== null
-            && $gate === 'REJECTED'
             && $running === []
             && !$same
             && $revision !== '' && $revision !== 'unknown';
@@ -75,6 +84,8 @@ final readonly class EngineeringSecurityRecoveryService
             'workflow_id' => $workflowId,
             'state' => $workflow->currentState()->value,
             'architecture_gate' => $gate,
+            'recovery_cycles_used' => $cycles,
+            'recovery_cycles_max' => 2,
             'repository_revision' => $revision,
             'source_review_artifact_id' => $report['id'] ?? null,
             'starting_architecture_artifact_id' => $architecture['id'] ?? null,
@@ -83,11 +94,12 @@ final readonly class EngineeringSecurityRecoveryService
             'revision_binding' => $findings['revision_binding'] ?? null,
             'checkpoint' => $last,
             'reason' => $eligible ? 'READY_TO_PREPARE'
+                : ($cycles >= 2 ? 'RECOVERY_CYCLE_LIMIT_REACHED'
                 : ($same ? 'RECOVERY_ALREADY_ATTEMPTED_FOR_THIS_REVIEW_AND_ARCHITECTURE'
                 : ($running !== [] ? 'AGENT_RUN_STILL_RUNNING'
                 : ($gate !== 'REJECTED' ? 'ARCHITECTURE_IS_NOT_REJECTED'
                 : ($findings === null ? 'NO_UNRESOLVED_SECURITY_FINDINGS'
-                : ($revision === 'unknown' ? 'REPOSITORY_REVISION_UNAVAILABLE' : 'STATE_NOT_BLOCKED'))))),
+                : ($revision === 'unknown' ? 'REPOSITORY_REVISION_UNAVAILABLE' : 'STATE_NOT_RECOVERABLE')))))),
         ];
     }
 
@@ -102,23 +114,28 @@ final readonly class EngineeringSecurityRecoveryService
             }
             $workflow = $this->workflows->get($preview['workflow_id']);
             $recoveryId = EngineeringId::generate();
-            $transition = $this->engine->transition(
-                $workflow,
-                EngineeringWorkflowState::ARCHITECTURE_PENDING,
-                new WorkflowTransitionContext(
-                    trigger: 'HUMAN_PREPARED_TARGETED_SECURITY_RECOVERY',
-                    reason: 'Prepare precisely one Architect execution and one independent Security re-review.',
-                    initiatedByType: 'HUMAN',
-                    initiatedById: $operatorId,
-                    metadata: [
-                        'recovery_id' => $recoveryId,
-                        'review_artifact_id' => $preview['source_review_artifact_id'],
-                        'finding_ids' => $preview['finding_ids'],
-                        'revision' => $preview['repository_revision'],
-                    ],
-                ),
-            );
-            $this->workflows->saveTransition($workflow, $transition);
+            if ($workflow->currentState() === EngineeringWorkflowState::BLOCKED) {
+                $transition = $this->engine->transition(
+                    $workflow,
+                    EngineeringWorkflowState::ARCHITECTURE_PENDING,
+                    new WorkflowTransitionContext(
+                        trigger: 'HUMAN_PREPARED_TARGETED_SECURITY_RECOVERY',
+                        reason: 'Prepare precisely one Architect execution and one independent Security re-review.',
+                        initiatedByType: 'HUMAN',
+                        initiatedById: $operatorId,
+                        metadata: [
+                            'recovery_id' => $recoveryId,
+                            'review_artifact_id' => $preview['source_review_artifact_id'],
+                            'finding_ids' => $preview['finding_ids'],
+                            'revision' => $preview['repository_revision'],
+                        ],
+                    ),
+                );
+                $this->workflows->saveTransition($workflow, $transition);
+            }
+            // A second, explicitly authorized cycle may already be in
+            // ARCHITECTURE_PENDING after the previous Security REQUEST_CHANGES.
+            // An audited checkpoint replaces an invalid self-transition.
             $this->features->updateStatus($featureId, $workflow->currentState()->value);
             $checkpoint = [
                 'recovery_id' => $recoveryId,

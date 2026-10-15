@@ -339,7 +339,9 @@ final readonly class EngineeringFeatureController
         $summary = $this->summary($data);
         $checkpoint = EngineeringSecurityRecoveryService::latestCheckpoint($data['feature']);
         $recovery = ['checkpoint' => $checkpoint, 'eligible' => false];
-        if (($data['workflow']['state'] ?? null) === 'BLOCKED') {
+        if (($data['workflow']['state'] ?? null) === 'BLOCKED'
+            || (($data['workflow']['state'] ?? null) === 'ARCHITECTURE_PENDING'
+                && ($checkpoint['state'] ?? null) === 'SECURITY_REWORK_REQUIRED')) {
             try {
                 $recovery = $this->securityRecovery->preview($featureId, $tenant->organizationId()->value());
             } catch (Throwable) {
