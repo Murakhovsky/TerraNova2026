@@ -269,7 +269,7 @@ final readonly class EngineeringSpecialistStageExecutor
 
         return $this->lock->synchronized(
             $featureId,
-            function () use ($featureId, $workflowId, $engineeringRunId, $run, $role, $phase): ?WorkflowDirective {
+            function () use ($featureId, $workflowId, $engineeringRunId, $run, $role, $phase, $architecture): ?WorkflowDirective {
                 $this->agentRuns->complete($engineeringRunId, $run);
                 $this->artifacts->createVersion(
                     $featureId,
@@ -278,6 +278,10 @@ final readonly class EngineeringSpecialistStageExecutor
                         'role' => $role->value,
                         'phase' => $phase,
                         ...$run->structuredOutput,
+                        // Bind the independent review to the exact architecture
+                        // version. Legacy reports remain explicitly unverified.
+                        'reviewed_architecture_artifact_id' => $architecture['id'],
+                        'reviewed_architecture_content_hash' => $architecture['content_hash'],
                     ],
                     agentRunId: $engineeringRunId,
                     createdByAgent: $role->value,
