@@ -259,9 +259,147 @@ try{
         'Persistence quality corruption was not caught.');
     $assert($reader->report($foreign,$start,[$source])['verified']['L2']===0,
         'Other tenant stole real canonical acceptance evidence.');
+    // P0-5: only an actual protocol ACK from a fenced worker is accepted.
+    $provider=new \Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification($pdo);
+    $provider->acknowledged($org,$source,'ci-shard','ci-worker',7,2,
+        'BINANCE_SPOT',$token);
+    $check=$pdo->prepare(
+        "SELECT status,quote_count FROM tn_capital_market_provider_stream_receipts
+         WHERE organization_id=? AND source_id=? AND instrument_id=? AND channel='BBO'");
+    $check->execute([$org,$source,$token]);
+    $proofRow=$check->fetch(PDO::FETCH_ASSOC);
+    $assert($proofRow['status']==='ACKED'&&(int)$proofRow['quote_count']===0,
+        'Old LIVE evidence was not revoked by new session ACK.');
+    $staleOwnerRejected=false;
+    try{$provider->acknowledged($org,$source,'ci-shard','stolen-worker',7,3,
+        'BINANCE_SPOT',$token);}
+    catch(DomainException){$staleOwnerRejected=true;}
+    $assert($staleOwnerRejected,'Forged worker recorded a provider ACK.');
+    $observation=new class implements \Domains\CapitalMarkets\Domain\MarketData\MarketObservation{
+        public function eventType():\Domains\CapitalMarkets\Domain\MarketData\MarketEventType{
+            return \Domains\CapitalMarkets\Domain\MarketData\MarketEventType::Bbo;
+        }
+        public function toArray():array{return ['bid_price'=>'10.0','ask_price'=>'10.1'];}
+    };
+    $qualityAssessment=new \Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment(
+        \Domains\CapitalMarkets\Domain\MarketData\MarketTrustStatus::Trusted,99,[],1,1,1
+    );
+    $makeQuote=static function(string $eventId)use($source,$token,$observation,$qualityAssessment){
+        $stamp=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+        $event=new \Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent(
+            $eventId,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketSourceId::fromString($source),
+            null,\Domains\CapitalMarkets\Domain\Instrument\InstrumentId::fromString($token),
+            new \Domains\CapitalMarkets\Domain\MarketData\MarketTimestamps($stamp,$stamp,$stamp),
+            '300',$observation,[],1,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketDataMode::Live,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketStatus::Open
+        );
+        return new \Domains\CapitalMarkets\Application\DTO\MarketDataIngestionResult(
+            'ACCEPTED',true,true,true,$event,$qualityAssessment,null
+        );
+    };
+    $fake=$makeQuote('ci-no-real-canonical-event');
+    $rejected=false;
+    try{$provider->acceptedQuote($org,$source,'ci-shard','ci-worker',7,2,$fake);}
+    catch(DomainException){$rejected=true;}
+    $assert($rejected,'Unpersisted synthetic event promoted to genuine provider quote.');
+    $persist=static function(string $eventId)use(
+        $pdo,$org,$source,$token,$insertEvent,$insertQuality
+    ):void{
+        $stamp=(new DateTimeImmutable('now',new DateTimeZone('UTC')))
+            ->format('Y-m-d H:i:s.u');
+        $record=['org'=>$org,'event'=>$eventId,'src'=>$source,'instrument'=>$token,
+            'kind'=>'BBO','seq'=>'300','fp'=>hash('sha256',$eventId),
+            'source_time'=>$stamp,'received_time'=>$stamp,'processed_time'=>$stamp];
+        $insertEvent->execute($record);
+        $insertQuality->execute(['org'=>$org,'event'=>$eventId,'src'=>$source,
+            'instrument'=>$token,'timestamp'=>$stamp]);
+    };
+    $newEvent='ci-live-prov-'.bin2hex(random_bytes(10));
+    $persist($newEvent);
+    $provider->acceptedQuote($org,$source,'ci-shard','ci-worker',7,2,$makeQuote($newEvent));
+    $check->execute([$org,$source,$token]);$proofRow=$check->fetch(PDO::FETCH_ASSOC);
+    $assert($proofRow['status']==='LIVE_QUOTE'&&(int)$proofRow['quote_count']===1,
+        'Persisted post-ACK canonical LIVE quality did not create provider receipt.');
+
+    // P0-6: persistence, ACK vs resolution and reopen after recurrence.
+    $manager=new \Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingIncidentManager($pdo);
+    $signal=[['source_id'=>$source,'code'=>'STREAM_PROVIDER_LIVE_NOT_VERIFIED',
+        'severity'=>'CRITICAL','count'=>1]];
+    $detected=$manager->detect($org,$signal);
+    $assert($detected['opened']===1,'First source incident was not persisted.');
+    $listed=$manager->list($org,$source);
+    $incidentId=(int)$listed[0]['id'];
+    $assert($manager->list($foreign,$source)===[],
+        'Incident IDs leaked outside their tenant.');
+    $assert($manager->acknowledge($org,701,$incidentId),
+        'Operator acknowledgement did not persist.');
+    $manager->detect($org,$signal);
+    $listed=$manager->list($org,$source);
+    $assert($listed[0]['status']==='ACKNOWLEDGED'
+        &&(int)$listed[0]['occurrences']>=2,
+        'Repeated incident discarded ACK or occurrence count.');
+    $assert($manager->resolve($org,$incidentId,$source,'STREAM_PROVIDER_LIVE_NOT_VERIFIED'),
+        'Independent recovery resolution was not persisted.');
+    $again=$manager->detect($org,$signal);
+    $assert($again['reopened']===1,
+        'Unresolved provider fault did not re-open persisted incident.');
+
+    // P0-7: controlled fault injection fences old token and requires new
+    // lease + fresh provider ACK + canonical quote; synthetic CI exercise
+    // does not stand in for actual production chaos.
+    $savePhase=$pdo->prepare(
+        "INSERT INTO tn_capital_market_pool_production_control
+         (organization_id,phase,source_ids_json,initially_disabled_json,
+          operator_id,soak_started_at)
+         VALUES (:org,'SOAK',:sources,'[]',701,:since)");
+    $savePhase->execute(['org'=>$org,'sources'=>json_encode([$source],JSON_THROW_ON_ERROR),
+        'since'=>$start]);
+    $failover=new \Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingFailoverAudit($pdo);
+    $assert(!$failover->provenSince($org,$source,$start),
+        'Unchallenged source counted as failover-proven.');
+    $challenge=$failover->inject($org,$source);
+    $assert($challenge['status']==='INJECTED'
+        &&(int)$challenge['previous_fencing_token']===7,
+        'Controlled failover did not fence the old lease.');
+    $rejected=false;
+    try{$provider->acknowledged($org,$source,'ci-shard','ci-worker',7,3,
+        'BINANCE_SPOT',$token);}
+    catch(DomainException){$rejected=true;}
+    $assert($rejected,'Superseded worker accepted after failover fencing.');
+    $rejected=false;
+    try{$failover->verify($org,$source);}catch(DomainException){$rejected=true;}
+    $assert($rejected,'Failover accepted without new independently leased worker.');
+    $pdo->prepare(
+        "UPDATE tn_capital_market_stream_worker_leases
+         SET owner_id='ci-new-worker',fencing_token=11,
+           expires_at=DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 10 MINUTE)
+         WHERE organization_id=? AND source_id=?")->execute([$org,$source]);
+    $pdo->prepare(
+        "UPDATE tn_capital_market_instrument_stream_trust
+         SET status='TRUSTED',recovery_required=0,last_quality_score=99,fencing_token=11
+         WHERE organization_id=? AND source_id=? AND instrument_id=? AND channel='BBO'")
+        ->execute([$org,$source,$token]);
+    $provider->acknowledged($org,$source,'ci-shard','ci-new-worker',11,4,
+        'BINANCE_SPOT',$token);
+    $rejected=false;
+    try{$failover->verify($org,$source);}catch(DomainException){$rejected=true;}
+    $assert($rejected,'Fresh lease/ACK alone passed without new LIVE canonical quote.');
+    $post='ci-post-failover-'.bin2hex(random_bytes(10));
+    $persist($post);
+    $provider->acceptedQuote($org,$source,'ci-shard','ci-new-worker',11,4,$makeQuote($post));
+    $recovery=$failover->verify($org,$source);
+    $assert($recovery['status']==='RECOVERED'&&$recovery['after']===11,
+        'New fenced worker/provider quote was not accepted as recovery.');
+    $assert($failover->provenSince($org,$source,$start),
+        'Verified source failover not reflected in production acceptance.');
+    $rejected=false;
+    try{$failover->verify($org,$source);}catch(DomainException){$rejected=true;}
+    $assert($rejected,'Failover evidence replay accepted twice.');
     echo "Production attestation, canary, LIVE 24h MySQL quality, lease, issuer and tenant isolation passed. Fixtures are NOT real soak.\n";
 }finally{
-    foreach(['tn_capital_market_provider_stream_receipts','tn_capital_market_stream_incidents',
+    foreach(['tn_capital_market_pool_production_control','tn_capital_market_provider_stream_receipts','tn_capital_market_stream_incidents',
         'tn_capital_market_stream_failover_observations','tn_capital_market_instrument_stream_trust','tn_capital_market_pool_soak_checkpoints',
         'tn_capital_market_pool_stream_assignments','tn_capital_market_data_gaps','tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
         'tn_capital_market_stream_worker_leases',
