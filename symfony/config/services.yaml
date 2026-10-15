@@ -275,6 +275,7 @@ services:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
   # Operator-only SQL-backed shadow audit; never authorizes a cutover.
+  Platform\Workflow\Service\WorkflowShadowParityComparator: ~
   App\Persistence\Workflow\DoctrineWorkflowShadowParityReader:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'

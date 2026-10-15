@@ -138,6 +138,17 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
             || $record['idempotency_key']!==$link['agent_idempotency_key']) {
             throw new DomainException('Engineering canonical completion lacks persisted matching AgentRun output.');
         }
+        $run=$this->db->fetchAssociative(
+            'SELECT correlation_id,definition_id,state,input_digest FROM cos_workflow_runs
+             WHERE organization_id=:org AND run_id=:run',
+            ['org'=>$link['organization_id'],'run'=>$link['canonical_run_id']],
+        );
+        if (!$run || $run['correlation_id']!==$record['trace_id']
+            || $run['definition_id']!=='engineering.agent_execution'
+            || $run['state']!=='running'
+            || !preg_match('/^[a-f0-9]{64}$/D',(string)$run['input_digest'])) {
+            throw new DomainException('Canonical AgentRun identity and correlation changed before checkpoint.');
+        }
         $snapshot=json_decode((string)$record['output'],true,512,JSON_THROW_ON_ERROR);
         if (!is_array($snapshot) || $snapshot===[]) {
             throw new DomainException('Engineering canonical receipt cannot attest empty result.');

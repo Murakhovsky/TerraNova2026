@@ -104,7 +104,32 @@ try {
         ['org'=>$org,'run'=>$runId,'ref'=>$receipt],
     );
     $proof=static fn()=>$registry->assertVerified($id,'verify',$receipt,$digest,$step);
-    $proof();
+    try {
+        $proof();
+    } catch (DomainException $problem) {
+        $source=$db->fetchAssociative(
+            'SELECT x.decision,x.review_status,x.resolved_asset_id,x.reviewer_reference,
+                    x.resolved_at,a.action AS audit_action,a.resolved_asset_id AS audit_asset,
+                    a.reviewer_reference AS audit_reviewer,a.created_at AS audited_at,
+                    r.created_at AS run_started,w.updated_at AS step_completed
+             FROM tn_property_identity_resolutions x
+             JOIN tn_property_identity_review_audit a ON a.resolution_id=x.id
+             JOIN cos_workflow_runs r ON r.organization_id=x.organization_id
+             JOIN cos_workflow_steps w ON w.organization_id=r.organization_id
+                 AND w.run_id=r.run_id
+             WHERE x.organization_id=:org AND x.id=:resolution AND a.id=:audit
+                 AND r.run_id=:run AND w.step_id="verify"',
+            ['org'=>$org,'resolution'=>$resolutionId,'audit'=>$auditId,'run'=>$runId],
+        );
+        throw new RuntimeException(
+            'Property fixture positive source did not attest: '.json_encode(
+                ['source'=>$source,'database_time'=>$db->fetchOne('SELECT NOW(6)'),
+                 'database_utc'=>$db->fetchOne('SELECT UTC_TIMESTAMP(6)')],
+                JSON_THROW_ON_ERROR,
+            ),
+            0,$problem,
+        );
+    }
     $deny(static fn()=>$registry->assertVerified(new WorkflowRunIdentity('foreign-org',$runId),
         'verify',$receipt,$digest,$step),'foreign tenant');
     $deny(static fn()=>$registry->assertVerified($id,'verify',$receipt,hash('sha256','forged'),$step),
