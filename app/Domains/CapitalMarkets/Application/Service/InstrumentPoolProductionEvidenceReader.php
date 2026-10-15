@@ -248,6 +248,28 @@ SQL;
         $result['gates']['ALL_SUPERVISED_SOURCES_OBSERVED']=$missingSources===[];
         $result['accepted']=$result['accepted']&&$missingSources===[];
         $result['missing_sources']=$missingSources;
+        // Each included source must prove at least one supervised fencing
+        // challenge and a new, ACK-confirmed and quality-trusted owner in this
+        // SOAK epoch. A CI fixture or mere process restart is insufficient.
+        $failover=[];
+        foreach($allowedSources as $candidate){
+            $check=$this->connection->prepare(
+                "SELECT 1 FROM tn_capital_market_stream_failover_observations i
+                 JOIN tn_capital_market_stream_failover_observations r
+                   ON r.organization_id=i.organization_id AND r.source_id=i.source_id
+                  AND r.observation='RECOVERED' AND r.healthy=1 AND r.id>i.id
+                  AND r.previous_token=i.previous_token
+                  AND r.current_token>i.previous_token
+                 WHERE i.organization_id=:org AND i.source_id=:source
+                   AND i.observation='INJECTED'
+                   AND i.observed_at>=:started LIMIT 1");
+            $check->execute(['org'=>$org,'source'=>$candidate,
+                'started'=>$soakStartedAt??'1970-01-01 00:00:00']);
+            $failover[$candidate]=$check->fetchColumn()!==false;
+        }
+        $result['gates']['SOURCE_FAILOVER_PROVEN']=!in_array(false,$failover,true);
+        $result['accepted']=$result['accepted']&&$result['gates']['SOURCE_FAILOVER_PROVEN'];
+        $result['failover_by_source']=$failover;
         $result['window_started_at']=$soakStartedAt;
         $result['checked_at_utc']=gmdate(DATE_ATOM);
         // This digest is for an ephemeral check, not a permanently valid warrant.

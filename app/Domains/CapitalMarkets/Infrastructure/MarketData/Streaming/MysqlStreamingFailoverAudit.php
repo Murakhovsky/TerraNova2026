@@ -185,7 +185,8 @@ final readonly class MysqlStreamingFailoverAudit
              JOIN tn_capital_market_stream_failover_observations r
                ON r.organization_id=i.organization_id AND r.source_id=i.source_id
               AND r.observation='RECOVERED' AND r.healthy=1
-              AND r.id>i.id AND r.current_token>i.previous_token
+              AND r.id>i.id AND r.previous_token=i.previous_token
+              AND r.current_token>i.previous_token
              WHERE i.organization_id=:org AND i.source_id=:source
                AND i.observation='INJECTED' AND i.observed_at>=:started
              LIMIT 1");
