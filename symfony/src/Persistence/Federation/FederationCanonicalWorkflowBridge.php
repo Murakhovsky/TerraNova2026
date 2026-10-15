@@ -434,11 +434,25 @@ final readonly class FederationCanonicalWorkflowBridge
             }
             try {
                 $this->nonActions->assertVerified($id,$step->stepId,$reference,$inputDigest,$pinned);
+            } catch (DomainException) {
+                // A read-only Step can release its lease while awaiting a
+                // trusted, independently persisted Domain fact. No effect or
+                // Action is retried. A later operator advance re-attests it.
+                try {
+                    $this->workflow->checkpoint(new WorkflowStepCheckpoint(
+                        $command,$step->stepId,$claim['claim_token'],StepStatus::WAITING));
+                } catch (\Throwable) {
+                    return $result('manual_reconciliation_required',$step->stepId);
+                }
+                return $result('awaiting_domain_evidence',$step->stepId);
+            } catch (\Throwable) {
+                return $result('manual_reconciliation_required',$step->stepId);
+            }
+            try {
                 $this->workflow->checkpoint(new WorkflowStepCheckpoint(
                     $command,$step->stepId,$claim['claim_token'],StepStatus::COMPLETED,$reference));
             } catch (\Throwable) {
-                // Absence of an independent fact is not proof of a completed step.
-                return $result('awaiting_domain_evidence',$step->stepId);
+                return $result('manual_reconciliation_required',$step->stepId);
             }
             return $result('step_completed',$step->stepId);
         }
