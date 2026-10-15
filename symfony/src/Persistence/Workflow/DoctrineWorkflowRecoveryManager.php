@@ -199,8 +199,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                 $otherActive=(int)$this->db->fetchOne(
                     'SELECT COUNT(*) FROM cos_workflow_steps
                      WHERE organization_id=:org AND run_id=:run AND step_id<>:step
-                       AND (state="ambiguous" OR
-                            (state="claimed" AND claim_expires_at > NOW(6)))',
+                       AND state IN("ambiguous","claimed")',
                     ['org'=>$identity->organizationId,'run'=>$identity->runId,
                      'step'=>$step['step_id']],
                 );

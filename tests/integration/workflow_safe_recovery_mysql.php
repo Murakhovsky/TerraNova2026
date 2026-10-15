@@ -292,6 +292,28 @@ try {
     $cancel=$petition($uncertainId,$first,3,'send',2,WorkflowRecoveryResolution::CANCEL_UNCERTAIN);
     $cancelId=$managerService->request($cancel);
     $managerService->approve($command($uncertainId,$second,3),$cancelId);
+    // Even an expired second claimed Step is an unresolved remote outcome:
+    // a decision for one Step cannot silently terminate the other.
+    $orphanKey=hash('sha256',$org."\0".$uncertainId->runId."\0orphan");
+    $db->executeStatement(
+        'INSERT INTO cos_workflow_steps
+         (organization_id,run_id,step_id,ordinal_no,capability_id,capability_version,
+          side_effect_level,state,revision,attempts,idempotency_key,
+          claim_token,claimed_by,claim_expires_at,created_at,updated_at)
+         VALUES (:org,:run,"orphan",1,"test.unknown","1.0.0","external",
+                 "claimed",2,1,:key,:token,"orphan-worker",
+                 DATE_SUB(NOW(6),INTERVAL 5 MINUTE),NOW(6),NOW(6))',
+        ['org'=>$org,'run'=>$uncertainId->runId,'key'=>$orphanKey,
+         'token'=>bin2hex(random_bytes(16))],
+    );
+    $deny(static fn()=>$managerService->reconcile(
+        $command($uncertainId,$first,3,$cancelId),
+    ),'cancelling one uncertain Action while another expired claim is unresolved');
+    $db->executeStatement(
+        'DELETE FROM cos_workflow_steps
+         WHERE organization_id=:org AND run_id=:run AND step_id="orphan"',
+        ['org'=>$org,'run'=>$uncertainId->runId],
+    );
     $cancelled=$managerService->reconcile($command($uncertainId,$first,3,$cancelId));
     if($cancelled->disposition!==WorkflowRecoveryDisposition::NO_ACTION
         || !$cancelled->externalOutcomeUnknown
