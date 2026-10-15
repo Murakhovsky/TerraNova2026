@@ -122,4 +122,27 @@ if (!str_contains($commands, "'core.engineering'")) {
     throw new RuntimeException('Engineering command palette entry missing.');
 }
 
+// Engineering artifacts, agent I/O and action details must render human-readable
+// Ukrainian JSON instead of escaped \\uXXXX sequences. This is presentation-only.
+$jsonUnicodeFlags = "json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE'))";
+if (substr_count($template, $jsonUnicodeFlags) !== 6) {
+    throw new RuntimeException('Engineering JSON panels must render all six views with readable Unicode.');
+}
+if (str_contains($template, "json_encode(constant('JSON_PRETTY_PRINT'))")) {
+    throw new RuntimeException('Engineering still renders escaped Unicode JSON in a panel.');
+}
+$jsonExample = json_encode(['назва' => 'Привіт, Україно'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+if ($jsonExample === false || !str_contains($jsonExample, 'Привіт, Україно') || str_contains($jsonExample, '\\\\u')) {
+    throw new RuntimeException('Human-readable JSON Unicode contract failed.');
+}
+
+if (!str_contains($template, 'data-engineering-evidence-status')
+    || !str_contains($template, 'architect.evidence_collection_stopped')) {
+    throw new RuntimeException('Engineering terminal does not surface evidence recovery status.');
+}
+if (!str_contains($template, 'engineering-terminal__group')
+    || !str_contains($template, 'event.group_label')
+    || !str_contains($template, 'event.evidence_round')) {
+    throw new RuntimeException('Engineering terminal lacks attributed groups and evidence rounds.');
+}
 echo "Engineering feature UI contract passed.\n";

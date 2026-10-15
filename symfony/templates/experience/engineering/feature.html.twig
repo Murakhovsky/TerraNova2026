@@ -100,6 +100,8 @@
         .engineering-table th{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cos-text-secondary,#667085);background:var(--cos-surface-subtle,#f8f9fb)}
         .engineering-terminal{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.45;max-height:420px;overflow:auto;background:#111827;color:#e5e7eb;padding:10px 12px}
         .engineering-terminal__row{display:grid;grid-template-columns:115px 105px minmax(0,1fr);gap:8px;padding:2px 0}
+        .engineering-terminal__group{position:sticky;top:0;z-index:1;margin:9px 0 3px;padding:7px 4px;background:#243248;border-top:1px solid #475569;color:#e2e8f0;font-weight:700}
+        .engineering-terminal__round{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:4px;background:#334155;color:#e2e8f0;font-size:.7rem}
         .engineering-terminal__muted{color:#94a3b8}
         .engineering-muted{color:var(--cos-text-secondary,#667085)}
         .engineering-warning{font-weight:700}
@@ -137,6 +139,25 @@
             <a class="cos-button cos-button--ghost" href="/admin/engineering">До списку</a>
             {% if summary.pull_request.url %}<a class="cos-button cos-button--ghost" href="{{ summary.pull_request.url }}">Pull request</a>{% endif %}
             {% set actions = summary.actions|default({}) %}
+            {% set recoveryCheckpoint = securityRecovery.checkpoint|default(null) %}
+            {% if securityRecovery.eligible|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery/prepare">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Підготувати Security recovery</button>
+                </form>
+            {% elseif recoveryCheckpoint.state|default('') == 'PREPARED' %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery/execute">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Один Architect + Security Review</button>
+                </form>
+            {% elseif recoveryCheckpoint.state|default('') == 'SECURITY_APPROVED_AWAITING_RELEASE' %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery/release">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Дозволити Development після Security</button>
+                </form>
+            {% elseif recoveryCheckpoint.state|default('') in ['QUEUED','RUNNING','SECURITY_REVIEW','ARCHITECT_NOT_APPROVED','SECURITY_REWORK_REQUIRED','FAILED'] %}
+                <span class="cos-badge">Security recovery: {{ recoveryCheckpoint.state }}</span>
+            {% endif %}
             {% if actions.run|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
@@ -360,11 +381,33 @@
                     · <span data-engineering-live-target="pollStatus">автооновлення кожні 10 с</span>
                 </span>
             </div>
+            {% set lastEvidenceStop = null %}
+            {% for evidenceEvent in engineering.execution_events %}
+                {% if lastEvidenceStop is null and evidenceEvent.action|default('') == 'architect.evidence_collection_stopped' %}
+                    {% set lastEvidenceStop = evidenceEvent %}
+                {% endif %}
+            {% endfor %}
+            {% if lastEvidenceStop %}
+                <div class="engineering-panel__body" data-engineering-evidence-status>
+                    <strong>Остання технічна зупинка evidence collection</strong>
+                    <p>Причина: {{ lastEvidenceStop.details.reason|default('EVIDENCE_POLICY') }}
+                        · Додаткові файли: {{ lastEvidenceStop.details.budget.files_used|default('—') }}/{{ lastEvidenceStop.details.budget.files_max|default('—') }}
+                        · Раунди: {{ lastEvidenceStop.details.budget.rounds_used|default('—') }}/{{ lastEvidenceStop.details.budget.rounds_max|default('—') }}</p>
+                    <p class="engineering-muted">Це не рішення Architect і не Human Gate. Перед відновленням потрібно скоригувати evidence plan.</p>
+                </div>
+            {% endif %}
             <div class="engineering-terminal" data-engineering-live-target="terminal">
                 {% if engineering.timeline is empty %}
                     <div class="engineering-terminal__muted">Подій виконання ще немає.</div>
                 {% else %}
+                    {% set previousGroup = null %}
                     {% for event in engineering.timeline %}
+                        {% if event.group_key|default('system') != previousGroup %}
+                            <div class="engineering-terminal__group" data-engineering-group="{{ event.group_key|default('system') }}">
+                                {{ event.group_label|default('Системні та неатрибутовані події') }}
+                            </div>
+                            {% set previousGroup = event.group_key|default('system') %}
+                        {% endif %}
                         <div class="engineering-terminal__row">
                             <span
                                 class="engineering-terminal__muted"
@@ -375,6 +418,7 @@
                                 {{ event.title|default('') }}
                                 {% if event.status|default('') %} · {{ statusLabels[event.status]|default(event.status) }}{% endif %}
                                 {% if event.detail|default('') %} · {{ event.detail }}{% endif %}
+                                {% if event.evidence_round is not null %}<span class="engineering-terminal__round">Evidence #{{ event.evidence_round }}</span>{% endif %}
                             </span>
                         </div>
                     {% endfor %}
@@ -509,7 +553,7 @@
                                     {% if run.input_snapshot|default([]) is not empty %}
                                         <details class="engineering-details" style="margin:8px 0">
                                             <summary>Вхідний контекст агента</summary>
-                                            <div class="engineering-agent-output">{{ run.input_snapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                            <div class="engineering-agent-output">{{ run.input_snapshot|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                         </details>
                                     {% endif %}
                                     {% if run.runtime_steps|default([]) is not empty %}
@@ -521,11 +565,11 @@
                                                     {% if step.error|default('') %}<div class="engineering-danger">{{ step.error }}</div>{% endif %}
                                                     {% if step.input|default([]) is not empty %}
                                                         <div class="engineering-muted">Вхід</div>
-                                                        <div class="engineering-agent-output">{{ step.input|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                        <div class="engineering-agent-output">{{ step.input|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                                     {% endif %}
                                                     {% if step.output|default([]) is not empty %}
                                                         <div class="engineering-muted">Вихід</div>
-                                                        <div class="engineering-agent-output">{{ step.output|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                                        <div class="engineering-agent-output">{{ step.output|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                                     {% endif %}
                                                 </details>
                                             {% endfor %}
@@ -538,7 +582,7 @@
                                     {% endif %}
                                     <details class="engineering-details" style="margin-top:6px">
                                         <summary>Структурований результат</summary>
-                                        <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT')) : 'Structured output відсутній.' }}</div>
+                                        <div class="engineering-agent-output">{{ run.output ? run.output|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) : 'Structured output відсутній.' }}</div>
                                     </details>
                                     <div class="engineering-muted">trace: {{ run.trace_id|default('n/a') }}</div>
                                 </details>
@@ -614,7 +658,7 @@
                     <tbody>
                     {% for event in engineering.execution_events %}
                         <tr>
-                            <td>{{ event.occurred_at }}</td>
+                            <td><span data-engineering-live-timestamp="{{ event.occurred_at|default('') }}">{{ event.occurred_at|default('')|slice(0, 19)|replace({'T': ' '}) }}</span></td>
                             <td>{{ event.category }}</td>
                             <td><strong>{{ event.action }}</strong><div class="engineering-muted">{{ event.summary }}</div></td>
                             <td>{{ event.status }}</td>
@@ -624,7 +668,7 @@
                                 {% if event.details is not empty %}
                                     <details class="engineering-details">
                                         <summary>Деталі</summary>
-                                        <div class="engineering-agent-output">{{ event.details|json_encode(constant('JSON_PRETTY_PRINT')) }}</div>
+                                        <div class="engineering-agent-output">{{ event.details|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) }}</div>
                                     </details>
                                 {% elseif not event.error %}
                                     <span class="engineering-muted">—</span>
@@ -664,7 +708,7 @@
                     <tbody>
                     {% for inv in engineering.llm_invocations %}
                         <tr>
-                            <td>{{ inv.created_at }}</td>
+                            <td><span data-engineering-live-timestamp="{{ inv.created_at|default('') }}">{{ inv.created_at|default('')|slice(0, 19)|replace({'T': ' '}) }}</span></td>
                             <td>{{ inv.provider }} / {{ inv.model }}</td>
                             <td>{{ inv.use_case|default('—') }}</td>
                             <td>{{ inv.input_tokens is not null ? inv.input_tokens|number_format(0, '.', ' ') : 'n/a' }}</td>
@@ -703,7 +747,7 @@
                 {% for type, artifact in engineering.artifacts %}
                     <details class="engineering-details" style="margin-top:8px">
                         <summary>{{ type }} · v{{ artifact.version|default('?') }}</summary>
-                        <div class="engineering-agent-output">{{ artifact.content ? artifact.content|json_encode(constant('JSON_PRETTY_PRINT')) : 'No content' }}</div>
+                        <div class="engineering-agent-output">{{ artifact.content ? artifact.content|json_encode(constant('JSON_PRETTY_PRINT') + constant('JSON_UNESCAPED_UNICODE')) : 'No content' }}</div>
                     </details>
                 {% else %}
                     <p class="engineering-muted">Artifacts ще не створені.</p>

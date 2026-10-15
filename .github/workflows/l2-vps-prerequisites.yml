@@ -1,0 +1,87 @@
+name: FOS L2 VPS Deployment Prerequisites
+
+on:
+  push:
+    branches: [feature/fos-l2-orderbook-recovery]
+    paths: ['.github/workflows/l2-vps-prerequisites.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - name: Read-only discovery through SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          for v in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            if [ -z "${!v:-}" ]; then echo "::error::Missing $v"; exit 1; fi
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i ~/.ssh/key -p "$DEV_PORT" \
+            "$DEV_USER@$DEV_HOST" bash -s -- "$DEV_PATH" <<'REMOTE'
+          set -u
+          ROOT="$1"
+          echo '=== L2 DEPLOY CAPABILITIES (read only) ==='
+          echo 'host_php_extensions:'
+          php -r 'foreach(["pdo_mysql","mbstring","openssl","pcntl","curl"] as $x) echo "$x:", extension_loaded($x)?"yes":"no","\n";'
+          echo 'existing_host_vendor:'
+          for f in "$ROOT/symfony/vendor/autoload.php" "$ROOT/vendor/autoload.php"; do if [ -f "$f" ]; then echo "$f:yes"; else echo "$f:no"; fi; done
+          echo 'host_php_runtime_pdo:'
+          php -r 'echo PHP_VERSION,":",implode(",",PDO::getAvailableDrivers()),"\\n";'
+
+          for f in "$ROOT/symfony/vendor/autoload.php" "$ROOT/vendor/autoload.php" "$ROOT/symfony/.env" "$ROOT/.env" "$ROOT/.env.docker"; do [ -f "$f" ] && echo "$(basename "$(dirname "$f")")/$(basename "$f"):present" || true; done
+          D='docker'
+          if ! docker info >/dev/null 2>&1; then
+            if sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
+            else echo "::error::No Docker rights via user or passwordless sudo"; exit 1; fi
+          fi
+          echo 'docker_operator:authorized'
+          echo 'docker_disk:'
+          df -h /var/lib/docker 2>/dev/null | tail -n 1 || true
+          echo 'docker_stats:'
+          $D stats --no-stream --format '{{.Name}}|{{.MemUsage}}|{{.CPUPerc}}' | head -n 28 || true
+          echo 'available_php_images:'
+          $D images --format '{{.Repository}}:{{.Tag}}|{{.Size}}' | grep -E 'cos-symfony-php|php:8' | head -n 8 || true
+          echo 'cos_docker_networks:'
+          $D network ls --format '{{.Name}}' | grep '^cos_' || true
+          echo 'symfony_cli_command:'
+          $D exec cos-php-1 php bin/console list --raw 2>&1 | grep -E 'capital-markets:(market-data:poll|l2:stream)' || true
+          echo 'application_db_container_status:'
+          $D inspect -f '{{.State.Status}}' cos-mysql-1 || true
+          echo 'existing_market_data_tables:'
+          $D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<'SQL' || true
+          SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE()
+            AND table_name LIKE 'tn_capital_market_%'
+            AND (table_name LIKE '%source%' OR table_name LIKE '%venue%' OR table_name LIKE '%instrument%' OR table_name LIKE '%event%')
+            LIMIT 30;
+          SQL
+          echo 'existing_market_data_sources:'
+          $D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<'SQL' || true
+          SELECT organization_id,source_id,COALESCE(venue_id,'null'),adapter_type,enabled
+          FROM tn_capital_market_data_sources ORDER BY id DESC LIMIT 15;
+          SQL
+          echo 'existing_venues:'
+          $D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<'SQL' || true
+          SELECT organization_id,venue_id FROM tn_capital_market_venues LIMIT 20;
+          SQL
+          echo 'existing_instrument_map:'
+          $D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<'SQL' || true
+          SELECT organization_id,venue_id,instrument_id FROM tn_capital_market_venue_instruments LIMIT 20;
+          SQL
+          echo '=== L2 PREREQUISITES COMPLETE ==='
+          REMOTE

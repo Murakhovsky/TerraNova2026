@@ -87,6 +87,16 @@ if (!str_contains($continue, "\$next->type !== WorkflowDirectiveType::STOP")) {
     throw new RuntimeException('Engineering continue path still clears explicit runtime failures after STOP directives.');
 }
 
+foreach ([
+    'architect.preflight_evidence_ready',
+    'architect.agent_run_start',
+    'Architect AgentRun start failed after repository/database evidence',
+] as $checkpoint) {
+    if (!str_contains($architectStage, $checkpoint)) {
+        throw new RuntimeException('Architect pre-AgentRun diagnostics missing: '.$checkpoint);
+    }
+}
+
 if (!str_contains($architectStage, 'repository.revision_unavailable') || !str_contains($architectStage, "'human_decision_required' => false")) {
     throw new RuntimeException('Architect repository infrastructure failure is not classified as runtime-owned.');
 }
@@ -197,4 +207,7 @@ if (!str_contains($engineeringFeatureController, 'recoverStalledForOrganization(
     throw new RuntimeException('Engineering Resume can still be blocked by a zombie RUNNING AgentRun.');
 }
 
+if (!str_contains($status, 'EngineeringTimelineGrouper')) {
+    throw new RuntimeException('Engineering runtime timeline is missing run-attribution grouping.');
+}
 echo "Engineering runtime truth and observability contract passed.\n";

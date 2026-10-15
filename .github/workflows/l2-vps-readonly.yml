@@ -1,0 +1,111 @@
+name: FOS L2 VPS Read-only Preflight
+
+on:
+  push:
+    branches: [feature/fos-l2-orderbook-recovery]
+    paths:
+      - '.github/workflows/l2-vps-readonly.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: VPS L2 SSH preflight (read only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    # Environment secrets are not repository secrets. Require the protected
+    # AWS TN2026 environment to explicitly permit this feature branch.
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/feature/fos-l2-orderbook-recovery') || github.event_name == 'workflow_dispatch'
+    environment: AWS TN2026
+    steps:
+      - name: Validate SSH credentials (without disclosing them)
+        env:
+          DEV_HOST: ${{ secrets.DEV_HOST }}
+          DEV_USER: ${{ secrets.DEV_USER }}
+          DEV_PORT: ${{ secrets.DEV_PORT }}
+          DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+          DEV_PATH: ${{ vars.DEV_PATH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for required in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            if [ -z "${!required:-}" ]; then
+              echo "::error::Missing $required in AWS TN2026 environment"
+              exit 1
+            fi
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/fos_l2_audit_key
+          chmod 600 ~/.ssh/fos_l2_audit_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          chmod 600 ~/.ssh/known_hosts
+          echo "SSH configuration present."
+
+      - name: Check target VPS without changing production
+        env:
+          DEV_HOST: ${{ secrets.DEV_HOST }}
+          DEV_USER: ${{ secrets.DEV_USER }}
+          DEV_PORT: ${{ secrets.DEV_PORT }}
+          DEV_PATH: ${{ vars.DEV_PATH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i ~/.ssh/fos_l2_audit_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" <<'REMOTE'
+          set -u
+          TARGET_PATH="${1:-}"
+          echo '=== VPS L2 READ-ONLY PREFLIGHT ==='
+          echo 'host_os:'
+          uname -s -r
+          echo 'memory:'
+          free -m | head -n 2 || true
+          echo 'disk:'
+          df -h / | tail -n 1 || true
+          echo 'host_php:'
+          if command -v php >/dev/null 2>&1; then php -r 'echo PHP_VERSION,"\n";'; else echo unavailable; fi
+          echo 'host_composer:'
+          command -v composer || true
+          echo 'target_directory_present:'
+          if [ -d "$TARGET_PATH" ]; then echo yes; else echo no; fi
+          echo 'compose_file_present:'
+          if [ -f "$TARGET_PATH/docker-compose.yml" ]; then echo yes; else echo no; fi
+          echo 'L2_cli_file_in_deployed_code:'
+          if [ -f "$TARGET_PATH/symfony/src/Command/CapitalMarketsL2StreamCommand.php" ]; then echo yes; else echo no; fi
+          echo 'docker_access:'
+          D=''
+          if docker info >/dev/null 2>&1; then D='docker'
+          elif sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
+          fi
+          if [ -n "$D" ]; then
+            echo yes
+            echo 'docker_version:'
+            $D version --format '{{.Server.Version}}' || true
+            echo 'docker_compose_version:'
+            $D compose version || true
+            echo 'containers:'
+            $D ps --format '{{.Names}} | {{.Status}}' | head -n 24 || true
+            echo 'php_container_cli:'
+            if $D ps --format '{{.Names}}' | grep -Fxq 'cos-php-1'; then
+              $D exec cos-php-1 php -r 'echo PHP_VERSION,"\n";' || true
+            else echo 'cos-php-1 not running'; fi
+          else
+            echo no
+          fi
+          echo 'public_snapshot_HTTP_codes:'
+          if command -v curl >/dev/null 2>&1; then
+            for pair in \
+              'spot|https://data-api.binance.vision/api/v3/depth?symbol=BTCUSDT&limit=5' \
+              'futures|https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=5'; do
+              label="${pair%%|*}"
+              url="${pair#*|}"
+              code="$(curl -sSL --max-time 12 -o /dev/null -w '%{http_code}' "$url" || true)"
+              echo "$label: ${code:-unavailable}"
+            done
+          else
+            echo curl_unavailable
+          fi
+          echo '=== PREFLIGHT COMPLETE (no writes or deployment) ==='
+          REMOTE

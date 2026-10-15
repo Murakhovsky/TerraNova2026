@@ -248,7 +248,17 @@ export default class extends Controller {
             empty.textContent = 'Подій виконання ще немає.';
             this.terminalTarget.append(empty);
         } else {
+            let previousGroup = null;
             events.forEach((event) => {
+                const groupKey = String(event?.group_key || 'system');
+                if (groupKey !== previousGroup) {
+                    const heading = document.createElement('div');
+                    heading.className = 'engineering-terminal__group';
+                    heading.dataset.engineeringGroup = groupKey;
+                    heading.textContent = String(event?.group_label || 'Системні та неатрибутовані події');
+                    this.terminalTarget.append(heading);
+                    previousGroup = groupKey;
+                }
                 const row = document.createElement('div');
                 row.className = 'engineering-terminal__row';
 
@@ -266,6 +276,12 @@ export default class extends Controller {
                     event?.detail || '',
                 ].filter((value) => String(value).trim() !== '');
                 message.textContent = parts.join(' · ');
+                if (event?.evidence_round !== null && event?.evidence_round !== undefined) {
+                    const badge = document.createElement('span');
+                    badge.className = 'engineering-terminal__round';
+                    badge.textContent = 'Evidence #' + String(event.evidence_round);
+                    message.append(' ', badge);
+                }
 
                 row.append(time, type, message);
                 this.terminalTarget.append(row);
@@ -316,7 +332,9 @@ export default class extends Controller {
     }
 
     shouldStopLiveUpdates(health, state, status) {
-        return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);
+        // Runtime health may recover while the workflow remains nonterminal.
+        // Keep polling after STALE/STALLED; only terminal workflow states end polling.
+        return this.isTerminal(state, status);
     }
 
     stopReason(health, state, status) {

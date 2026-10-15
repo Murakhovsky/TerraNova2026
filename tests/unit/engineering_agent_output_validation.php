@@ -194,6 +194,28 @@ $architect = [
 ];
 $validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $architect);
 
+$minimalEvidence = [
+    'status' => 'NEEDS_REPOSITORY_EVIDENCE',
+    'requested_repository_files' => ['symfony/src/Web/PublicSite/HomeController.php'],
+    'required_human_decisions' => [],
+];
+$validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $minimalEvidence);
+$legacyIntermediate = $minimalEvidence;
+$legacyIntermediate['architecture_decision'] = ['data_flow' => []];
+$validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $legacyIntermediate);
+$invalidIntermediate = $minimalEvidence;
+$invalidIntermediate['architecture_decision'] = 'invalid type';
+try {
+    $validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $invalidIntermediate);
+    throw new RuntimeException('Intermediate Architect request accepted a non-object architecture section.');
+} catch (EngineeringAgentOutputValidationException) {}
+$technicalStop = [
+    'status' => 'EVIDENCE_BUDGET_EXHAUSTED',
+    'required_human_decisions' => [],
+    'evidence_exhaustion' => ['reason' => 'FILE_LIMIT'],
+];
+$validator->validate(AgentRole::PRINCIPAL_ARCHITECT, $technicalStop);
+
 $architectEnriched = $architect;
 $architectEnriched['repository_state'] = ['context_revision' => 'abc', 'repository_revision' => 'def'];
 $architectEnriched['architecture_decision']['feature_id'] = 'feature-1';

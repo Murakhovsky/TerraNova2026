@@ -47,7 +47,9 @@ final class CrossVenueDiscoveryFakeClient implements MarketJsonHttpClientInterfa
         ++$this->calls;
         if ($organizationId !== 'tenant-alpha' || !in_array((string)parse_url($url,PHP_URL_HOST),$allowedHosts,true)
             || $headers!==[])throw new RuntimeException('Unexpected discovery HTTP authority.');
-        return $this->data[$serviceKey]??throw new RuntimeException('Provider offline.');
+        parse_str((string)(parse_url($url,PHP_URL_QUERY) ?? ''),$query);
+        $key=$serviceKey.(isset($query['cursor'])?'|'.$query['cursor']:'');
+        return $this->data[$key]??throw new RuntimeException('Provider offline.');
     }
 }
 $http=new CrossVenueDiscoveryFakeClient();
@@ -79,9 +81,43 @@ $assert($result['rows'][0]['economic_link']==='UNVERIFIED'
     && $result['rows'][0]['executable']===false
     && $result['rows'][0]['net_edge']===null,
     'Listing discovery must not publish executable investment recommendations or fake P&L.');
+$http->data['capital_markets.discovery.bybit']=json_encode(['retCode'=>0,'result'=>['list'=>[],'nextPageCursor'=>'second']],JSON_THROW_ON_ERROR);
+$http->data['capital_markets.discovery.bybit|second']=json_encode(['retCode'=>0,'result'=>['list'=>[
+    ['symbol'=>'AAPLXUSDT','baseCoin'=>'AAPLX','quoteCoin'=>'USDT','status'=>'Trading']
+],'nextPageCursor'=>'']],JSON_THROW_ON_ERROR);
+$paged=$scanner->scan('tenant-alpha',[$aapl]);
+$assert($paged['source_health']['BYBIT']['pages']===2 && $paged['rows'][0]['venues'][1]['status']==='DISTINCT_TOKEN_REVIEW_REQUIRED','Paginated Bybit item was missed.');
+$audited=CrossVenueCatalogDiscovery::loadProviderCatalog(
+    $http,'tenant-alpha','BYBIT','capital_markets.discovery.bybit',
+);
+$assert($audited['pages']===2 && isset($audited['catalog']['AAPLX|USDT'])
+    && preg_match('/^[a-f0-9]{64}$/D',$audited['evidence_sha256'])===1,
+    'Audited catalog loader failed to aggregate full Bybit pagination.');
+$http->data['capital_markets.discovery.bybit|second']=json_encode(['retCode'=>0,'result'=>['list'=>[],'nextPageCursor'=>'second']],JSON_THROW_ON_ERROR);
+$paginationFailed=false;
+try {
+    CrossVenueCatalogDiscovery::loadProviderCatalog(
+        $http,'tenant-alpha','BYBIT','capital_markets.discovery.bybit',
+    );
+} catch (InvalidArgumentException) {
+    $paginationFailed=true;
+}
+$assert($paginationFailed,'Incomplete Bybit pagination cannot support lifecycle decisions.');
+$bad=$scanner->scan('tenant-alpha',[$aapl]);
+$assert($bad['source_health']['BYBIT']['state']==='UNAVAILABLE' && $bad['rows'][0]['venues'][1]['status']==='UNAVAILABLE','Cyclic pagination must fail closed.');
+$http->data['capital_markets.discovery.bybit']=json_encode(['retCode'=>0,'result'=>['list'=>[]]],JSON_THROW_ON_ERROR);
 unset($http->data['capital_markets.discovery.kraken']);
 $degraded=$scanner->scan('tenant-alpha',[$aapl]);
 $assert($degraded['source_health']['KRAKEN']['state']==='UNAVAILABLE'
-    && $degraded['rows'][0]['venues'][2]['status']==='UNAVAILABLE',
-    'Provider outage must not be rendered as not listed.');
+    && $degraded['rows'][0]['venues'][2]['status']==='UNAVAILABLE'
+    && $degraded['source_health']['BYBIT']['state']==='UNAVAILABLE'
+    && $degraded['rows'][0]['venues'][1]['status']==='UNAVAILABLE',
+    'Empty catalog or provider outage must fail closed, never become a false delisting.');
+$projection=new \Domains\CapitalMarkets\Application\Service\CrossVenuePoolProjection();
+$projected=$projection->candidates($result);
+$assert(count($projected)===3 && $projected[1]['verification_state']==='UNVERIFIED'
+    && $projected[1]['economic_equivalence']==='NOT_ESTABLISHED',
+    'Discovery projection must never approve token economics.');
+$projectedDown=$projection->candidates($degraded);
+$assert(count($projectedDown)===1,'Provider outage and empty catalog must preserve last-known observations.');
 echo "Cross-venue 80-row historical universe, Binance market payload and discovery policy passed.\n";

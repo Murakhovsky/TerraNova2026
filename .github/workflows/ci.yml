@@ -58,3 +58,43 @@ jobs:
         run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: Capital Markets streaming core, reconnect and Binance protocol acceptance
+        run: |
+          php tests/unit/capital_markets_streaming_recovery_gate.php
+          php tests/unit/capital_markets_streaming_supervision.php
+          php tests/unit/capital_markets_streaming_session_coordinator.php
+          php tests/unit/capital_markets_streaming_reconnect_runner.php
+          php tests/unit/capital_markets_binance_spot_bbo_protocol.php
+          php tests/unit/capital_markets_binance_spot_multi_bbo_protocol.php
+          php tests/unit/capital_markets_bstocks_opportunity_evidence_gate.php
+          php tests/architecture/capital_markets_bstocks_scheduler_opportunity_contract.php
+          php tests/unit/capital_markets_instrument_pool_catalog_audit.php
+          php tests/unit/capital_markets_instrument_pool_lifecycle_review.php
+          php tests/unit/capital_markets_instrument_pool_schedule_targets.php
+          php tests/architecture/capital_markets_instrument_pool_scheduler_contract.php
+          php tests/architecture/capital_markets_instrument_pool_approval_contract.php
+          php tests/unit/capital_markets_streaming_operations_alerts.php
+          php tests/architecture/capital_markets_instrument_pool_snapshot_contract.php
+          php tests/architecture/capital_markets_binance_spot_multi_streaming_contract.php
+          php tests/architecture/capital_markets_streaming_operations_contract.php
+          php tests/architecture/capital_markets_streaming_workspace_contract.php
+          php tests/unit/capital_markets_bybit_spot_bbo_protocol.php
+          php tests/unit/capital_markets_bybit_linear_bbo_protocol.php
+          php tests/unit/capital_markets_kraken_spot_ticker_protocol.php
+          php tests/unit/capital_markets_massive_stocks_ws_protocol.php
+          php tests/unit/capital_markets_massive_multi_nbbo_protocol.php
+          php tests/unit/capital_markets_binance_usdm_bbo_protocol.php
+          php tests/architecture/capital_markets_stream_runner_contract.php
+          php tests/architecture/capital_markets_binance_spot_streaming_contract.php
+          php tests/architecture/capital_markets_streaming_core_contract.php
+          php tests/architecture/capital_markets_stream_expired_sweeper_contract.php
+          php tests/architecture/capital_markets_stream_all_provider_sweeper_contract.php
+          php tests/architecture/capital_markets_stream_sweeper_profile_contract.php
+          php tests/architecture/capital_markets_rest_stream_writer_gate_contract.php
+          php tests/unit/capital_markets_market_intelligence_polling.php
+          php tests/architecture/capital_markets_bybit_spot_streaming_contract.php
+          php tests/architecture/capital_markets_bybit_linear_streaming_contract.php
+          php tests/architecture/capital_markets_kraken_streaming_contract.php
+          php tests/architecture/capital_markets_massive_stocks_ws_contract.php
+          php tests/architecture/capital_markets_massive_multi_nbbo_contract.php
+          php tests/architecture/capital_markets_binance_usdm_streaming_contract.php

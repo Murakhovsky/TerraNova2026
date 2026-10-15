@@ -43,6 +43,23 @@ final readonly class EngineeringAutonomousProgressionService
         string $correlationId,
     ): WorkflowDirective {
         for ($step = 0; $step < $this->maxStepsPerProgression; ++$step) {
+            $recovery = EngineeringSecurityRecoveryService::latestCheckpoint($this->features->view($featureId));
+            if ($recovery !== null && ($recovery['workflow_id'] ?? null) === $workflowId
+                && ($recovery['state'] ?? '') !== 'RELEASED') {
+                return new WorkflowDirective(WorkflowDirectiveType::STOP, null,
+                    'Targeted Security recovery requires the dedicated operator-controlled pipeline.');
+            }
+            if ($recovery !== null && ($recovery['workflow_id'] ?? null) === $workflowId
+                && ($recovery['state'] ?? '') === 'RELEASED') {
+                $cap = max(0, (int) ($recovery['release_run_baseline'] ?? 0))
+                    + min(8, max(0, (int) ($recovery['release_run_allowance'] ?? 0)));
+                if ($this->runCount($featureId) >= $cap) {
+                    $this->workflows->markRuntimeIssue($workflowId, 'STALLED',
+                        'Operator-approved recovery run limit reached; new scoped authorization required.');
+                    return new WorkflowDirective(WorkflowDirectiveType::STOP, null,
+                        'The controlled Security recovery run allowance is exhausted.');
+                }
+            }
             $role = $directive->agent;
             if ($role === null) return $directive;
 
@@ -228,7 +245,18 @@ final readonly class EngineeringAutonomousProgressionService
             if (strtoupper(trim((string) ($decision['answer']['selected_option'] ?? ''))) === 'CONTINUE') ++$extensions;
         }
 
-        return $this->maxLogicalAgentRunsPerFeature * (1 + $extensions);
+        $budget = $this->maxLogicalAgentRunsPerFeature * (1 + $extensions);
+        $recovery = EngineeringSecurityRecoveryService::latestCheckpoint($this->features->view($featureId));
+        if ($recovery !== null && ($recovery['state'] ?? '') === 'RELEASED') {
+            // Bounded operator-granted allowance, not a reset of all historical attempts.
+            // At most eight additional logical runs after independent Security approval.
+            $baseline = max(0, (int) ($recovery['release_run_baseline'] ?? 0));
+            $allowance = min(8, max(0, (int) ($recovery['release_run_allowance'] ?? 0)));
+            // Do not inherit a larger historical autonomy grant: this explicit
+            // operator release permits exactly the bounded additional window.
+            $budget = $baseline + $allowance;
+        }
+        return $budget;
     }
 
     private function escalateAutonomyBudget(string $featureId, string $workflowId, string $reason): WorkflowDirective

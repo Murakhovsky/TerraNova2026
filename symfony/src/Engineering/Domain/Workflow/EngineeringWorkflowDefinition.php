@@ -19,6 +19,9 @@ final class EngineeringWorkflowDefinition
         'CHANGES_REQUESTED' => [EngineeringWorkflowState::DEVELOPMENT_RUNNING, EngineeringWorkflowState::ESCALATED, EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
         'QA_PENDING' => [EngineeringWorkflowState::REVIEW_PENDING, EngineeringWorkflowState::READY_FOR_HUMAN_APPROVAL, EngineeringWorkflowState::QA_FAILED, EngineeringWorkflowState::ESCALATED, EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
         'QA_FAILED' => [EngineeringWorkflowState::DEVELOPMENT_RUNNING, EngineeringWorkflowState::ESCALATED, EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
+        // The only active use is the guarded, human-initiated Security recovery.
+        // Ordinary Continue/Resume never transitions out of BLOCKED.
+        'BLOCKED' => [EngineeringWorkflowState::ARCHITECTURE_PENDING, EngineeringWorkflowState::CANCELLED],
         'ESCALATED' => [EngineeringWorkflowState::HUMAN_DECISION_REQUIRED, EngineeringWorkflowState::BLOCKED, EngineeringWorkflowState::FAILED, EngineeringWorkflowState::CANCELLED],
         'READY_FOR_HUMAN_APPROVAL' => [EngineeringWorkflowState::DONE, EngineeringWorkflowState::DEVELOPMENT_RUNNING, EngineeringWorkflowState::CANCELLED],
     ];

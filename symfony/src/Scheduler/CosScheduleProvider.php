@@ -14,6 +14,11 @@ use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
 use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
 use App\Application\CapitalMarkets\Command\CapturePaperNavSnapshot;
+use App\Application\CapitalMarkets\Command\RunInstrumentPoolSnapshotScans;
+use App\Application\CapitalMarkets\Command\RefreshCrossVenueCandidatePool;
+use App\Application\CapitalMarkets\Command\SampleBStockBboQuotes;
+use App\Application\CapitalMarkets\Command\SweepBStockBboAdmissions;
+use App\Application\CapitalMarkets\Command\ReconcileBStocksPoolSubscriptions;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -51,9 +56,27 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly int $engineeringDomainAutonomyIntervalMinutes = 3,
         private readonly bool $engineeringRuntimeWatchdogEnabled = true,
         private readonly int $engineeringRuntimeWatchdogIntervalMinutes = 2,
+        private readonly bool $capitalMarketsInstrumentPoolScheduledEnabled = false,
+        private readonly int $capitalMarketsInstrumentPoolIntervalMinutes = 15,
         private readonly bool $capitalMarketsPaperNavEnabled = false,
         private readonly string $capitalMarketsPaperNavOrganizationId = '',
         private readonly int $capitalMarketsPaperNavIntervalMinutes = 10,
+        private readonly bool $capitalMarketsDiscoveryEnabled = false,
+        private readonly string $capitalMarketsDiscoveryOrganizationId = '',
+        private readonly int $capitalMarketsDiscoveryActorId = 0,
+        private readonly int $capitalMarketsDiscoveryIntervalMinutes = 1440,
+        private readonly bool $capitalMarketsBboPollEnabled = false,
+        private readonly string $capitalMarketsBboPollOrganizationId = '',
+        private readonly int $capitalMarketsBboPollActorId = 0,
+        private readonly int $capitalMarketsBboPollIntervalMinutes = 15,
+        private readonly bool $capitalMarketsBboFenceEnabled = false,
+        private readonly string $capitalMarketsBboFenceOrganizationId = '',
+        private readonly int $capitalMarketsBboFenceActorId = 0,
+        private readonly int $capitalMarketsBboFenceIntervalMinutes = 5,
+        private readonly bool $capitalMarketsPoolSubscriptionsEnabled = false,
+        private readonly string $capitalMarketsPoolSubscriptionsOrganizationId = '',
+        private readonly int $capitalMarketsPoolSubscriptionsActorId = 0,
+        private readonly int $capitalMarketsPoolSubscriptionsIntervalMinutes = 15,
     ) {
         if($this->growthCollectorPollingIntervalMinutes<1||$this->growthCollectorPollingIntervalMinutes>1440){
             throw new InvalidArgumentException('Growth collector polling interval must be between 1 and 1440 minutes.');
@@ -91,11 +114,44 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         if($this->engineeringDomainAutonomyIntervalMinutes<1||$this->engineeringDomainAutonomyIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering Domain autonomy interval must be between 1 and 60 minutes.');
         }
+        if($this->capitalMarketsInstrumentPoolIntervalMinutes<5||$this->capitalMarketsInstrumentPoolIntervalMinutes>1440){
+            throw new InvalidArgumentException('Instrument Pool snapshot scheduler interval must be 5..1440 minutes.');
+        }
         if ($this->capitalMarketsPaperNavIntervalMinutes<10||$this->capitalMarketsPaperNavIntervalMinutes>60) {
             throw new InvalidArgumentException('Paper NAV snapshot interval must be 10..60 minutes to preserve 31-day history integrity.');
         }
         if ($this->capitalMarketsPaperNavEnabled && trim($this->capitalMarketsPaperNavOrganizationId)==='') {
             throw new InvalidArgumentException('Paper NAV scheduler requires an existing tenant ID.');
+        }
+        if ($this->capitalMarketsPoolSubscriptionsIntervalMinutes<5
+            ||$this->capitalMarketsPoolSubscriptionsIntervalMinutes>1440) {
+            throw new InvalidArgumentException('Pool subscription reconciliation interval must be 5..1440.');
+        }
+        if ($this->capitalMarketsPoolSubscriptionsEnabled
+            && (trim($this->capitalMarketsPoolSubscriptionsOrganizationId)===''
+                ||$this->capitalMarketsPoolSubscriptionsActorId<1)) {
+            throw new InvalidArgumentException('Pool subscriptions require explicit tenant and actor.');
+        }
+        if ($this->capitalMarketsDiscoveryIntervalMinutes < 15 || $this->capitalMarketsDiscoveryIntervalMinutes > 1440) {
+            throw new InvalidArgumentException('Capital Markets Discovery interval must be 15..1440 minutes.');
+        }
+        if ($this->capitalMarketsBboFenceIntervalMinutes < 1 || $this->capitalMarketsBboFenceIntervalMinutes > 60) {
+            throw new InvalidArgumentException('BBO admission fence interval must be 1..60 minutes.');
+        }
+        if ($this->capitalMarketsBboFenceEnabled
+            && (trim($this->capitalMarketsBboFenceOrganizationId)==='' || $this->capitalMarketsBboFenceActorId<1)) {
+            throw new InvalidArgumentException('BBO fence requires explicit tenant and service actor.');
+        }
+        if ($this->capitalMarketsBboPollIntervalMinutes < 5 || $this->capitalMarketsBboPollIntervalMinutes > 1440) {
+            throw new InvalidArgumentException('Bounded BBO poll interval must be 5..1440 minutes.');
+        }
+        if ($this->capitalMarketsBboPollEnabled
+            && (trim($this->capitalMarketsBboPollOrganizationId)==='' || $this->capitalMarketsBboPollActorId<1)) {
+            throw new InvalidArgumentException('Bounded BBO poll requires explicit tenant and actor.');
+        }
+        if ($this->capitalMarketsDiscoveryEnabled
+            && (trim($this->capitalMarketsDiscoveryOrganizationId) === '' || $this->capitalMarketsDiscoveryActorId < 1)) {
+            throw new InvalidArgumentException('Capital Markets Discovery requires explicit tenant and actor.');
         }
         if($this->engineeringRuntimeWatchdogIntervalMinutes<1||$this->engineeringRuntimeWatchdogIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering runtime watchdog interval must be between 1 and 60 minutes.');
@@ -183,6 +239,57 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthAutonomousOutreachIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthAutonomousOutreachCommand('scheduler'), 'async'),
+            );
+        }
+
+        if ($this->capitalMarketsBboFenceEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsBboFenceIntervalMinutes.' minutes',
+                new RedispatchMessage(
+                    new SweepBStockBboAdmissions($this->capitalMarketsBboFenceOrganizationId,
+                        $this->capitalMarketsBboFenceActorId),
+                    'async',
+                ),
+            );
+        }
+
+        if ($this->capitalMarketsBboPollEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsBboPollIntervalMinutes.' minutes',
+                new RedispatchMessage(
+                    new SampleBStockBboQuotes($this->capitalMarketsBboPollOrganizationId,
+                        $this->capitalMarketsBboPollActorId,$this->capitalMarketsBboPollIntervalMinutes*60),
+                    'async',
+                ),
+            );
+        }
+
+        if ($this->capitalMarketsDiscoveryEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsDiscoveryIntervalMinutes.' minutes',
+                new RedispatchMessage(
+                    new RefreshCrossVenueCandidatePool($this->capitalMarketsDiscoveryOrganizationId,$this->capitalMarketsDiscoveryActorId),
+                    'async',
+                ),
+            );
+        }
+
+        if($this->capitalMarketsInstrumentPoolScheduledEnabled){
+            $messages[]=RecurringMessage::every(
+                $this->capitalMarketsInstrumentPoolIntervalMinutes.' minutes',
+                new RedispatchMessage(new RunInstrumentPoolSnapshotScans('scheduler'),'async'),
+            );
+        }
+
+        if ($this->capitalMarketsPoolSubscriptionsEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->capitalMarketsPoolSubscriptionsIntervalMinutes.' minutes',
+                new RedispatchMessage(
+                    new ReconcileBStocksPoolSubscriptions(
+                        $this->capitalMarketsPoolSubscriptionsOrganizationId,
+                        $this->capitalMarketsPoolSubscriptionsActorId,
+                    ),'async',
+                ),
             );
         }
 

@@ -39,6 +39,19 @@ if ($humanDirective->type !== WorkflowDirectiveType::REQUEST_HUMAN_DECISION || $
     throw new RuntimeException('Architect human decision gate failed.');
 }
 
+$budgetWorkflow = new WorkflowExecution(EngineeringId::generate(), EngineeringId::generate(), EngineeringWorkflowState::NEW, 'architect-budget-trace');
+$coordinator->startAnalysis($budgetWorkflow);
+$coordinator->acceptAgentResult($budgetWorkflow, AgentRole::PRODUCT_REQUIREMENTS, ['status' => 'SPECIFICATION_READY']);
+$coordinator->acceptAgentResult($budgetWorkflow, AgentRole::QA_PLANNER, ['status' => 'PLAN_READY']);
+$budgetDirective = $coordinator->acceptAgentResult($budgetWorkflow, AgentRole::PRINCIPAL_ARCHITECT, [
+    'status' => 'EVIDENCE_BUDGET_EXHAUSTED',
+]);
+if ($budgetDirective->type !== WorkflowDirectiveType::BLOCK
+    || $budgetWorkflow->currentState() !== EngineeringWorkflowState::BLOCKED
+    || $budgetDirective->agent !== null) {
+    throw new RuntimeException('Evidence budget exhaustion must block without scheduling Developer or Human Gate.');
+}
+
 $d = $coordinator->acceptAgentResult($workflow, AgentRole::PRINCIPAL_ARCHITECT, ['status' => 'APPROVED']);
 if ($d->agent !== AgentRole::DEVELOPER || $workflow->currentState() !== EngineeringWorkflowState::DEVELOPMENT_RUNNING) throw new RuntimeException('Developer routing failed.');
 

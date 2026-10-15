@@ -37,6 +37,7 @@ final readonly class BybitMarketDataDecoder implements MarketDataDecoderInterfac
 
         return match($event->eventType){
             'bybit.spot.ticker.bbo'=>$this->bbo($event,$body,$timestamp,$marketStatus),
+            'bybit.spot.ws.topbook.bbo'=>$this->wsTopBook($event,$body,$timestamp,$marketStatus),
             'bybit.spot.ticker.volume'=>$this->volume($event,$body,$timestamp,$marketStatus),
             'bybit.spot.orderbook.snapshot'=>$this->book($event,$body,$timestamp,$marketStatus),
             default=>throw new InvalidArgumentException('Unsupported Bybit raw event type: '.$event->eventType),
@@ -53,6 +54,25 @@ final readonly class BybitMarketDataDecoder implements MarketDataDecoderInterfac
                 'bid_quantity'=>$ticker['bid1Size'],
                 'ask_price'=>$ticker['ask1Price'],
                 'ask_quantity'=>$ticker['ask1Size'],
+            ],
+            $event->mode,$status,MarketSession::Unknown,ReferenceType::ProviderReference,
+        );
+    }
+
+    private function wsTopBook(
+        RawMarketEvent $event,string $body,DateTimeImmutable $timestamp,MarketStatus $status,
+    ):DecodedMarketEvent{
+        $book=$this->orderBooks->parse($body,$event->externalInstrument);
+        if(count($book['bids'])!==1||count($book['asks'])!==1){
+            throw new InvalidArgumentException('Bybit BBO snapshot must have exactly one bid and ask.');
+        }
+        return new DecodedMarketEvent(
+            MarketEventType::Bbo,$event->externalInstrument,$timestamp,null,
+            [
+                'bid_price'=>$book['bids'][0]['price'],
+                'bid_quantity'=>$book['bids'][0]['quantity'],
+                'ask_price'=>$book['asks'][0]['price'],
+                'ask_quantity'=>$book['asks'][0]['quantity'],
             ],
             $event->mode,$status,MarketSession::Unknown,ReferenceType::ProviderReference,
         );

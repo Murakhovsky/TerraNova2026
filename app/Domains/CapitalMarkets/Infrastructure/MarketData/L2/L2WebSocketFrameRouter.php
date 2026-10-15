@@ -1,0 +1,178 @@
+<?php
+declare(strict_types=1);
+
+namespace Domains\CapitalMarkets\Infrastructure\MarketData\L2;
+
+use DomainException;
+
+/**
+ * Strict wire-frame decoder. Network clients own TLS, reconnect and backoff.
+ * A separate router instance is required for each venue/symbol/subscription.
+ */
+final class L2WebSocketFrameRouter
+{
+    public function __construct(private readonly string $venue, private readonly string $symbol, private readonly ?int $depth = null) {}
+
+    /** @return array<string,mixed> */
+    public function decode(string $json): array
+    {
+        if ($this->venue === 'KRAKEN_SPOT') {
+            $json = $this->preserveKrakenDecimals($json);
+        }
+        $frame = json_decode($json, true, 128, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING);
+        if (!is_array($frame) || array_is_list($frame)) throw new DomainException('Invalid L2 frame.');
+        return match ($this->venue) {
+            'BINANCE_SPOT', 'BINANCE_FUTURES' => $this->binance($frame),
+            'BYBIT_SPOT', 'BYBIT_LINEAR' => $this->bybit($frame),
+            'KRAKEN_SPOT' => $this->kraken($frame),
+            default => throw new DomainException('Unsupported L2 venue.'),
+        };
+    }
+
+    /**
+     * Kraken WS v2 sends prices and quantities as JSON numbers. Preserve
+     * their literal bytes before json_decode can round through floats.
+     * Scan JSON strings rather than regexing values inside quoted text.
+     */
+    private function preserveKrakenDecimals(string $json): string
+    {
+        $length = strlen($json);
+        $out = '';
+        for ($i = 0; $i < $length;) {
+            if ($json[$i] !== '"') {
+                $out .= $json[$i++];
+                continue;
+            }
+            $start = $i++;
+            $escaped = false;
+            while ($i < $length) {
+                $char = $json[$i++];
+                if ($escaped) { $escaped = false; continue; }
+                if ($char === '\\') { $escaped = true; continue; }
+                if ($char === '"') break;
+            }
+            $key = substr($json, $start, $i - $start);
+            $out .= $key;
+            if ($key !== '"price"' && $key !== '"qty"') continue;
+            $look = $i;
+            while ($look < $length && ctype_space($json[$look])) ++$look;
+            if ($look >= $length || $json[$look] !== ':') continue;
+            ++$look;
+            while ($look < $length && ctype_space($json[$look])) ++$look;
+            if ($look >= $length || $json[$look] === '"') continue;
+            $rest = substr($json, $look);
+            if (preg_match('/\A-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/', $rest, $match) !== 1) {
+                continue; // Venue-specific level validation remains fail-closed.
+            }
+            $literal = $match[0];
+            $end = $look + strlen($literal);
+            $delimiter = $end;
+            while ($delimiter < $length && ctype_space($json[$delimiter])) ++$delimiter;
+            if ($delimiter < $length && !in_array($json[$delimiter], [',', '}', ']'], true)) continue;
+            if (strpbrk($literal, 'eE') !== false) {
+                throw new DomainException('Kraken exponent decimal requires exact conversion.');
+            }
+            $out .= substr($json, $i, $look - $i).'"'.$literal.'"';
+            $i = $end;
+        }
+        return $out;
+    }
+
+    /** @param array<string,mixed> $frame @return array<string,mixed> */
+    private function binance(array $frame): array
+    {
+        $row = $frame['data'] ?? $frame;
+        if (!is_array($row) || ($row['e'] ?? null) !== 'depthUpdate' || ($row['s'] ?? null) !== $this->symbol) {
+            throw new DomainException('Binance L2 symbol/event mismatch.');
+        }
+        $result = [
+            'type' => 'delta', 'U' => $this->uint($row['U'] ?? null),
+            'u' => $this->uint($row['u'] ?? null),
+            'bids' => $this->pairs($row['b'] ?? null),
+            'asks' => $this->pairs($row['a'] ?? null),
+        ];
+        if ($this->venue === 'BINANCE_FUTURES') $result['pu'] = $this->uint($row['pu'] ?? null);
+        return $result;
+    }
+
+    /** @param array<string,mixed> $frame @return array<string,mixed> */
+    private function bybit(array $frame): array
+    {
+        $topic = $frame['topic'] ?? null;
+        $parts = is_string($topic) ? explode('.', $topic) : [];
+        if (count($parts) !== 3 || $parts[0] !== 'orderbook' || !ctype_digit($parts[1]) || $parts[2] !== $this->symbol || ($this->depth !== null && (int) $parts[1] !== $this->depth)) {
+            throw new DomainException('Bybit L2 topic mismatch.');
+        }
+        $row = $frame['data'] ?? null;
+        if (!is_array($row) || ($row['s'] ?? null) !== $this->symbol) {
+            throw new DomainException('Bybit L2 symbol mismatch.');
+        }
+        $type = $frame['type'] ?? null;
+        if ($type !== 'snapshot' && $type !== 'delta') throw new DomainException('Bybit L2 event type mismatch.');
+        return [
+            'type' => $type, 'u' => $this->uint($row['u'] ?? null),
+            'seq' => $this->uint($row['seq'] ?? null),
+            'bids' => $this->pairs($row['b'] ?? null),
+            'asks' => $this->pairs($row['a'] ?? null),
+        ];
+    }
+
+    /** @param array<string,mixed> $frame @return array<string,mixed> */
+    private function kraken(array $frame): array
+    {
+        if (($frame['channel'] ?? null) !== 'book' || !in_array($frame['type'] ?? null, ['snapshot', 'update'], true)) {
+            throw new DomainException('Kraken L2 channel/event mismatch.');
+        }
+        $rows = $frame['data'] ?? null;
+        if (!is_array($rows) || count($rows) !== 1 || !is_array($rows[0]) || ($rows[0]['symbol'] ?? null) !== $this->symbol) {
+            throw new DomainException('Kraken L2 symbol mismatch.');
+        }
+        $row = $rows[0];
+        return [
+            'type' => $frame['type'] === 'snapshot' ? 'snapshot' : 'delta',
+            'checksum' => $this->uint($row['checksum'] ?? null),
+            'bids' => $this->levels($row['bids'] ?? null),
+            'asks' => $this->levels($row['asks'] ?? null),
+        ];
+    }
+
+    /** @return list<array{price:string,qty:string}> */
+    private function pairs(mixed $rows): array
+    {
+        if (!is_array($rows) || !array_is_list($rows)) throw new DomainException('L2 levels must be a list.');
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row) || !array_is_list($row) || count($row) !== 2) throw new DomainException('Invalid L2 price/quantity pair.');
+            $out[] = ['price' => $this->decimal($row[0] ?? null), 'qty' => $this->decimal($row[1] ?? null)];
+        }
+        return $out;
+    }
+
+    /** @return list<array{price:string,qty:string}> */
+    private function levels(mixed $rows): array
+    {
+        if (!is_array($rows) || !array_is_list($rows)) throw new DomainException('Kraken L2 levels must be a list.');
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) throw new DomainException('Invalid Kraken L2 level.');
+            $out[] = ['price' => $this->decimal($row['price'] ?? null), 'qty' => $this->decimal($row['qty'] ?? null)];
+        }
+        return $out;
+    }
+
+    private function decimal(mixed $value): string
+    {
+        if (!is_string($value) || !preg_match('/^[0-9]+(?:\.[0-9]+)?$/D', $value)) {
+            throw new DomainException('Invalid L2 decimal.');
+        }
+        return $value;
+    }
+
+    private function uint(mixed $value): string
+    {
+        if ((!is_string($value) && !is_int($value)) || !ctype_digit((string) $value)) {
+            throw new DomainException('Invalid L2 unsigned ID.');
+        }
+        return (string) $value;
+    }
+}

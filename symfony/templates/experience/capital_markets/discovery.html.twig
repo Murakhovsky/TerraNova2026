@@ -15,7 +15,7 @@
   <div class="cos-panel">
     <h2>Початковий каталог</h2>
     <p><strong>{{ watchlist|length }}</strong> кандидатів із файлу bStocks Binance.
-      Час даних: <strong>27.09.2026 17:53 UTC</strong>. Це не актуальні котирування та не підтвердження прав на токен.</p>
+      Джерело: <strong>{{ universeOrigin }}</strong>, дата файлу: <strong>{{ universeAsOf }}</strong>. Це не актуальні котирування та не підтвердження прав на токен.</p>
     <p><a href="/capital-markets/market-data">Налаштувати джерела котирувань</a> ·
       <a href="/capital-markets/instruments">Реєстр інструментів</a> ·
       <a href="/capital-markets/markets">Market Explorer</a></p>
@@ -25,19 +25,267 @@
         <label for="discovery-limit">Обсяг сканування:</label>
         <select class="form-select" id="discovery-limit" name="limit">
           <option value="10">Перші 10 кандидатів</option>
-          <option value="80">Усі 80 кандидатів</option>
+          <option value="all">Усі {{ watchlist|length }} кандидатів</option>
         </select>
         <button class="btn btn-primary" type="submit">Перевірити лістинги через API</button>
       </form>
-      <p><small>Три публічні каталоги. Запуск лише вручну, не частіше ніж раз на 90 секунд для організації.</small></p>
+      <p><small>Три публічні каталоги. Планове сканування також підтримується; ручний повтор не частіше ніж раз на 90 секунд для організації.</small></p>
     {% else %}
       <p>Для запуску перевірки потрібен дозвіл Market Data Manage.</p>
     {% endif %}
   </div>
 
+  <section class="cos-panel">
+    <h2>Пул кандидатів (без торгового допуску)</h2>
+    <p>Збережені спостереження з останніх успішних перевірок лістингів. Сканування не підтверджує юридичну ідентичність, забезпечення, redemption чи виконуваність угод. При недоступності біржі попереднє спостереження не стирається.</p>
+    {% if poolCandidateCounts is empty %}
+      <p>Пул поки порожній. Запустіть Discovery для першого наповнення.</p>
+    {% else %}
+      <div class="cos-kpi-strip">
+        {% for status in poolCandidateCounts %}
+          <article class="cos-card">
+            <strong>{{ status.listing_state }}</strong>
+            <p>{{ status.count }} спостережень</p>
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <small>Лише REVIEWED_LISTING із актуальним Discovery допускається до планування BBO, за умови окремо активованого канонічного інструмента та venue mapping. Рішення не підтверджує economic equivalence.</small>
+  </section>
+
+  <section class="cos-panel">
+    <h2>Перевірка біржових лістингів оператором</h2>
+    <p>Рішення підтверджує лише наявність конкретного символу на конкретній біржі. Це не затвердження прав власності, backing, redemption, економічної тотожності чи торгової стратегії. Для кожного рішення потрібні офіційне посилання біржі та SHA-256 підтвердного документа.</p>
+    {% for message in app.flashes('listing_review') %}
+      <p class="cos-alert cos-alert--success">{{ message }}</p>
+    {% endfor %}
+    {% if app.request.query.get('listingReviewError') %}
+      <p class="cos-alert cos-alert--danger">Рішення відхилено. Оновіть сторінку, перевірте свіжість Discovery, посилання та SHA-256.</p>
+    {% endif %}
+    {% if listingReviewRows is empty %}
+      <p>Жодного актуального точного лістингу не знайдено. Запустіть Discovery.</p>
+    {% else %}
+      <p>Сторінка {{ listingPage }}. Показано до 40 записів; неперевірені йдуть першими. Кожен лістинг потребує окремого доказу.</p>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Токен</th><th>Біржа</th><th>Пара</th><th>Дані UTC</th><th>Перевірка</th><th>Рішення</th></tr></thead>
+          <tbody>
+          {% for item in listingReviewRows %}
+            <tr>
+              <td><strong>{{ item.seed_token }}</strong> · {{ item.underlying_symbol }}</td>
+              <td>{{ item.venue }}</td>
+              <td>{{ item.venue_symbol }} / {{ item.quote_currency }}</td>
+              <td>{{ item.source_as_of }}</td>
+              <td>{{ item.verification_state }}</td>
+              <td>
+              {% if canReviewListings %}
+                <form method="post" action="/capital-markets/discovery/listing-review" class="d-flex flex-column gap-1">
+                  <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                  <input type="hidden" name="seed_token" value="{{ item.seed_token }}">
+                  <input type="hidden" name="venue" value="{{ item.venue }}">
+                  <input type="hidden" name="source_as_of" value="{{ item.source_as_of }}">
+                  <label>Офіційне HTTPS-посилання
+                    <input class="form-control" type="url" name="evidence_url" required maxlength="512" placeholder="https://..." />
+                  </label>
+                  <label>SHA-256 доказу
+                    <input class="form-control" type="text" name="evidence_sha256" required maxlength="64" minlength="64" pattern="[a-f0-9]{64}" />
+                  </label>
+                  <button class="btn btn-secondary" type="submit" name="decision" value="APPROVE_LISTING">Підтвердити лише лістинг</button>
+                  <label>Причина термінового відкликання (від 10 символів)
+                    <input class="form-control" type="text" name="revoke_reason" maxlength="500" placeholder="Помилка лістингу, зміна забезпечення..." />
+                  </label>
+                  <button class="btn btn-secondary" type="submit" name="decision" value="REVOKE_LISTING" formnovalidate>Негайно відкликати допуск</button>
+                </form>
+              {% else %}
+                <small>Потрібні дозволи InstrumentManage та MarketDataManage.</small>
+              {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <nav aria-label="Сторінки перевірки лістингів" class="d-flex gap-2">
+        {% if listingPage > 1 %}<a href="/capital-markets/discovery?listingPage={{ listingPage - 1 }}">Попередні 40</a>{% endif %}
+        {% if listingReviewRows|length == 40 and listingPage < 38 %}<a href="/capital-markets/discovery?listingPage={{ listingPage + 1 }}">Наступні 40</a>{% endif %}
+      </nav>
+    {% endif %}
+  </section>
+
+  <section class="cos-panel">
+    <h2>Імпорт історичного каталогу</h2>
+    <p>Завантажте XLSM/XLSX/CSV із Binance. Файл валідується без виконання макросів. Заявлені атрибути не означають поточний лістинг чи економічну еквівалентність.</p>
+    {% if canScan %}
+      <form method="post" action="/capital-markets/discovery/import" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label for="cm-seed-file">Каталог (до 5 МіБ)</label>
+        <input id="cm-seed-file" type="file" name="seed_file" accept=".xlsm,.xlsx,.csv" required>
+        <button class="btn btn-secondary" name="seed_mode" value="preview" type="submit">Перевірити без запису</button>
+        <button class="btn btn-primary" name="seed_mode" value="apply" type="submit">Імпортувати</button>
+      </form>
+    {% else %}
+      <p>Потрібен дозвіл на керування ринковими даними.</p>
+    {% endif %}
+    {% for result in app.flashes('seed_import') %}
+      <p class="cos-alert cos-alert--success">Підсумок імпорту: {{ result }}</p>
+    {% endfor %}
+    {% if app.request.query.get('seedError') %}<p class="cos-alert cos-alert--danger">Імпорт відхилено: помилка формату, доступу, бази даних або конфлікт ідентичності. Причину записано в журнал.</p>{% endif %}
+  </section>
+
+  <section class="cos-panel">
+    <h2>Канонічні записи для перевірки</h2>
+    <p>Перенесення з імпортованих історичних кандидатів створює лише чернетки (DRAFT).
+       Воно не підтверджує токенізований актив, не пов'язує його з базовою акцією, не підписується на котирування й не вмикає виконання угод.</p>
+    {% if canSeedDrafts %}
+      <form method="post" action="/capital-markets/discovery/canonical-drafts" class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <button class="btn btn-secondary" name="draft_mode" value="preview" type="submit">Перевірити план чернеток</button>
+        <button class="btn btn-primary" name="draft_mode" value="apply" type="submit">Створити DRAFT у реєстрі</button>
+        <button class="btn btn-secondary" name="draft_mode" value="underlying-preview" type="submit">Перевірити reference ETF/акції</button>
+        <button class="btn btn-primary" name="draft_mode" value="underlying-apply" type="submit">Створити DRAFT reference</button>
+      </form>
+      <small>Перед створенням імпортуйте файл. Якщо є конфлікт ідентичності, зміни блокуються.</small>
+    {% else %}
+      <p>Для створення чернеток потрібен дозвіл на керування інструментами.</p>
+    {% endif %}
+    {% for result in app.flashes('canonical_drafts') %}
+      <p class="cos-alert cos-alert--success">Результат: {{ result }}</p>
+    {% endfor %}
+    {% if app.request.query.get('draftError') %}
+      <p class="cos-alert cos-alert--danger">Реєстрацію чернеток відхилено; перевірте журнал і повторіть dry-run.</p>
+    {% endif %}
+  </section>
+
+  <section class="cos-panel">
+    <h2>Стан канонічного пулу</h2>
+    <p>Окремі чернетки токенів і базових reference-акцій/ETF. Стан DRAFT не дозволяє торгівлю чи автоматичні economic relationships.</p>
+    {% if canonicalCoverage is empty %}
+      <p>Імпортованих у канонічний реєстр інструментів поки немає.</p>
+    {% else %}
+      <div class="cos-kpi-strip">
+        {% for group in canonicalCoverage %}
+          <article class="cos-card">
+            <strong>{{ group.identifier_source == 'BINANCE_BSTOCKS_SEED' ? 'Токенізовані інструменти' : 'Базові акції/ETF' }}</strong>
+            <p>{{ group.total }} · {{ group.status }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="cos-panel">
+    <h2>Планування Bid/Ask підписок</h2>
+    <p>Цей крок лише створює підписки в наявному Market Data runtime. Для токенів потрібні REVIEWED_LISTING, ACTIVE canonical token і venue mapping. Для базових акцій/ETF потрібен ACTIVE reference canonical, налаштований Massive source і права на reference data. Підписка ще не означає, що WebSocket або REST працює.</p>
+    {% if canPlanBbo %}
+      <form method="post" action="/capital-markets/discovery/subscription-plan" class="d-flex align-items-center gap-2 flex-wrap">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label for="cm-bbo-kind">Група</label>
+        <select id="cm-bbo-kind" name="kind" class="form-select">
+          <option value="TOKEN_BBO">Токени: Binance/Bybit/Kraken</option>
+          {% if canSeedDrafts %}<option value="REFERENCE_BBO">Базові акції/ETF: Massive</option>{% endif %}
+        </select>
+        <label for="cm-bbo-source">ID налаштованого джерела</label>
+        <input id="cm-bbo-source" name="source_id" class="form-control" type="text" maxlength="190" required placeholder="source_id із Market Data">
+        <button class="btn btn-secondary" type="submit" name="action" value="preview">Перевірити план</button>
+        <button class="btn btn-primary" type="submit" name="action" value="apply">Створити BBO-підписки</button>
+      </form>
+    {% else %}
+      <p>Потрібен дозвіл Market Data Manage.</p>
+    {% endif %}
+    {% for result in app.flashes('pool_bbo') %}
+      <p class="cos-alert cos-alert--success">Підсумок плану: {{ result }}</p>
+    {% endfor %}
+    {% if app.request.query.get('bboPlanError') %}
+      <p class="cos-alert cos-alert--danger">План заблоковано. Перевірте права, реєстр, лістинг, source/license і серверний журнал.</p>
+    {% endif %}
+  </section>
+
+  <section class="cos-panel">
+    <h2>Стан контрольованого REST BBO</h2>
+    <p>Результати обмеженого fallback polling. Це не WebSocket і не підтвердження безперервного потоку.</p>
+    {% if bboPollHealth is empty %}
+      <p>Жодного автоматичного REST BBO polling ще не зафіксовано. За замовчуванням scheduler вимкнений.</p>
+    {% else %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Джерело</th><th>Остання спроба (UTC)</th><th>Завершення (UTC)</th><th>Статус</th><th>Свіжість</th></tr></thead>
+          <tbody>
+            {% for item in bboPollHealth %}
+              <tr>
+                <td>{{ item.source_id }}</td>
+                <td>{{ item.last_attempt_at }}</td>
+                <td>{{ item.last_completed_at|default('—') }}</td>
+                <td>{{ item.last_status }}</td>
+                <td>{{ item.freshness }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+    <p><a href="/capital-markets/market-data">Керування джерелами Market Data</a></p>
+  </section>
+
   {% if scanned %}<div class="cos-alert cos-alert--success">Результат перевірки збережено.</div>{% endif %}
   {% if cooldown %}<div class="cos-alert cos-alert--warning">Зачекайте 90 секунд між перевірками.</div>{% endif %}
   {% if scanError %}<div class="cos-alert cos-alert--danger">Не вдалося провести сканування. Подивіться серверні журнали.</div>{% endif %}
+
+  {% if quoted %}<div class="cos-alert cos-alert--success">Котирування отримано та збережено для аналізу.</div>{% endif %}
+  {% if quoteError %}<div class="cos-alert cos-alert--danger">Не вдалося зібрати котирування. Оновіть лістинги й перевірте доступність API.</div>{% endif %}
+  {% if quoteCooldown %}<div class="cos-alert cos-alert--warning">Наступна перевірка котирувань доступна через 60 секунд.</div>{% endif %}
+
+  {% if snapshot is not null and canScan %}
+    <section class="cos-panel">
+      <h2>Котирування з кількох майданчиків</h2>
+      <p>Публічні Bid/Ask із Binance Spot, Bybit Spot та Kraken. Лише котирування пар, які щойно підтверджені через Discovery. Ані вартість базової акції, ані справжній арбітраж цей крок не розраховує.</p>
+      <form method="post" action="/capital-markets/discovery/quotes">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <button type="submit" class="btn btn-primary">Отримати актуальні Bid/Ask</button>
+      </form>
+      <small>Потрібен Discovery не старше 15 хвилин. Між запусками не менше 60 секунд. Дані тільки для дослідження.</small>
+    </section>
+  {% endif %}
+
+  {% if quoteSnapshot is not null %}
+    <section class="cos-panel">
+      <h2>Останні спостереження цін</h2>
+      <p>Час отримання: {{ quoteSnapshot.observed_at_utc }}. Ціни не мають підтвердженого provider timestamp і не є сертифікованим MarketState. Оновіть знімок перед використанням.</p>
+      <p><strong>Лише діагностика.</strong> Спільний underlying не означає однаковий токен. USD та USDT не порівнюються без валютної конверсії. Комісії, проскальзування, ліквідність, права погашення та виконуваність не перевірено.</p>
+      <div class="cos-kpi-strip">
+        {% for venue, source in quoteSnapshot.source_health %}
+          <article class="cos-card">
+            <strong>{{ venue }}</strong>
+            <p>{{ source.status }}</p>
+            <small>{{ source.sample_count }} придатних котирувань</small>
+            {% if source.received_at_utc|default(null) %}<div><small>Відповідь: {{ source.received_at_utc }}</small></div>{% endif %}
+          </article>
+        {% endfor %}
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Underlying</th><th>Інструмент</th><th>Venue</th><th>Котирування</th><th>Bid</th><th>Ask</th><th>Bid Qty</th><th>Ask Qty</th><th>Статус</th></tr></thead>
+          <tbody>
+          {% for row in quoteSnapshot.rows %}
+            {% for venue in row.venues %}
+              <tr>
+                <td>{{ row.candidate.underlying }}</td>
+                <td>{{ venue.symbol|default('—') }}</td>
+                <td>{{ venue.venue }}</td>
+                <td>{{ venue.quote_observation.quote_currency|default(venue.quote|default('—')) }}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.bid }}{% else %}—{% endif %}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.ask }}{% else %}—{% endif %}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.bid_quantity }}{% else %}—{% endif %}</td>
+                <td>{% if venue.quote_observation is not null %}{{ venue.quote_observation.ask_quantity }}{% else %}—{% endif %}</td>
+                <td>{{ venue.quote_status }}</td>
+              </tr>
+            {% endfor %}
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p><small>Статус операційної придатності: NON_EXECUTABLE. Нетто-прибуток не розраховується до перевірки економічної тотожності, комісій, валюти й ризиків.</small></p>
+    </section>
+  {% endif %}
 
   {% if snapshot is null %}
     <section class="cos-panel">

@@ -13,6 +13,11 @@ foreach ([
     'ArtifactType::ARCHITECTURE_DECISION',
     'ArtifactType::IMPLEMENTATION_PLAN',
     'ArtifactType::DEVELOPER_HANDOFF',
+    'ArtifactType::SECURITY_REVIEW_REPORT',
+    'EngineeringArchitectSecurityRecoveryContext',
+    'architect.security_findings_recovery_loaded',
+    "'security_review_recovery'",
+    "'security_review_artifact_hash'",
     'ArtifactType::ARCHITECTURE_DOCUMENTATION',
     'filesAtRevision',
     'compareRevisions',
@@ -33,6 +38,16 @@ foreach ([
 ] as $needle) {
     if (!str_contains($stage, $needle)) throw new RuntimeException('Architect stage missing '.$needle);
 }
+foreach ([
+    'architect.preflight_evidence_ready',
+    'architect.agent_run_start',
+    'Architect AgentRun start failed after repository/database evidence',
+] as $checkpoint) {
+    if (!str_contains($stage, $checkpoint)) {
+        throw new RuntimeException('Architect pre-AgentRun diagnostics missing: '.$checkpoint);
+    }
+}
+
 if (!str_contains($progression, 'AgentRole::PRINCIPAL_ARCHITECT')) throw new RuntimeException('Autonomous progression does not run Architect.');
 if (!str_contains($schemaProvider, 'get_debug_type($column->getType())')) throw new RuntimeException('Architect DB schema provider must use DBAL 4-safe type introspection.');
 if (str_contains($schemaProvider, 'getDefault()')) throw new RuntimeException('Architect DB schema snapshot must not expose column default values.');
@@ -43,7 +58,7 @@ foreach ([
     'manager.repository_evidence_auto_authorized',
     'architect.repository_evidence_collected',
     'existingPathsAtRevision',
-    'MAX_ROUNDS',
+    'EngineeringArchitectEvidencePlanner',
     'Repository revision changed during evidence collection',
 ] as $evidenceNeedle) {
     if (!str_contains($stage, $evidenceNeedle)) throw new RuntimeException('Architect read-only evidence automation missing '.$evidenceNeedle);
@@ -54,4 +69,24 @@ if (!str_contains($stage, "'human_decision_required' => false")) throw new Runti
 if (!str_contains($stage, "markRuntimeIssue(") || !str_contains($stage, "'STALLED'")) throw new RuntimeException('Repository infrastructure failure must stall runtime explicitly.');
 if (str_contains($stage, "type: 'EXTERNAL_CREDENTIAL'")) throw new RuntimeException('Architect still creates EXTERNAL_CREDENTIAL human decisions for runtime configuration.');
 
+foreach ([
+    'EngineeringArchitectContextOptimizer',
+    'compactRevisionDiff($repositoryDiff, $repositoryFiles)',
+    "'repository_diff' => $compactRepositoryDiff",
+    'architect.context_size_profile',
+    'serializedBytesByComponent',
+] as $marker) {
+    if (!str_contains($stage, $marker)) {
+        throw new RuntimeException('Architect contextual evidence optimization missing '.$marker);
+    }
+}
+
+foreach ([
+    'EngineeringArchitectEvidencePlanner',
+    'architect.evidence_request_evaluated',
+    'architect.evidence_collection_stopped',
+    'repository_evidence_budget',
+] as $marker) {
+    if (!str_contains($stage, $marker)) throw new RuntimeException('Evidence recovery V2 not wired: '.$marker);
+}
 echo "Engineering Architect stage passed.\n";

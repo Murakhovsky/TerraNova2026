@@ -23,12 +23,15 @@ foreach (AgentRole::cases() as $role) {
 }
 
 $architect = EngineeringAgentSchemas::forRole(AgentRole::PRINCIPAL_ARCHITECT);
-foreach (['status','architecture_decision','implementation_plan','developer_handoff','documentation_changes','conditions','risks','unresolved_questions','required_human_decisions'] as $field) {
+foreach (['status','requested_repository_files'] as $field) {
     if (!in_array($field, $architect['required'], true)) throw new RuntimeException('Architect schema missing '.$field);
 }
 $architectStatuses = $architect['properties']['status']['enum'] ?? [];
 if ($architectStatuses !== ['APPROVED','APPROVED_WITH_CONDITIONS','REJECTED','NEEDS_HUMAN_DECISION','NEEDS_REPOSITORY_EVIDENCE']) {
     throw new RuntimeException('Architect gate statuses do not match canonical Architecture Gate.');
+}
+if (($architect['properties']['architecture_decision']['required'] ?? null) !== []) {
+    throw new RuntimeException('Intermediate evidence schema requires a provisional architecture.');
 }
 if (($architect['properties']['requested_repository_files']['maxItems'] ?? null) !== 6) {
     throw new RuntimeException('Read-only Architect evidence request is not bounded.');

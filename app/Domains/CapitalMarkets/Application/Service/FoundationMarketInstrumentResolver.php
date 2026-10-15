@@ -10,6 +10,8 @@ use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentIdentifier;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentIdentifierType;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentId;
+use Domains\CapitalMarkets\Domain\Instrument\InstrumentStatus;
+use Domains\CapitalMarkets\Domain\Venue\VenueInstrumentStatus;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataInstrumentTarget;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor;
 
@@ -28,8 +30,10 @@ final readonly class FoundationMarketInstrumentResolver implements MarketInstrum
         if($source->venueId!==null){
             foreach($this->venues->instruments($organizationId,$source->venueId) as $mapping){
                 if(strcasecmp($mapping->venueSymbol,$externalInstrument)!==0)continue;
+                if($mapping->status!==VenueInstrumentStatus::Active)return null;
                 $instrument=$this->instruments->get($organizationId,$mapping->instrumentId);
-                return $instrument===null?null:new ResolvedMarketInstrument($instrument,$mapping);
+                return $instrument===null||$instrument->status!==InstrumentStatus::Active
+                    ?null:new ResolvedMarketInstrument($instrument,$mapping);
             }
             return null;
         }
@@ -57,11 +61,12 @@ final readonly class FoundationMarketInstrumentResolver implements MarketInstrum
         InstrumentId $instrumentId,
     ):?MarketDataInstrumentTarget{
         $instrument=$this->instruments->get($organizationId,$instrumentId);
-        if($instrument===null)return null;
+        if($instrument===null||$instrument->status!==InstrumentStatus::Active)return null;
 
         if($source->venueId!==null){
             foreach($this->venues->instruments($organizationId,$source->venueId) as $mapping){
                 if(!$mapping->instrumentId->equals($instrumentId))continue;
+                if($mapping->status!==VenueInstrumentStatus::Active)return null;
                 return new MarketDataInstrumentTarget($instrument,$mapping,$mapping->venueSymbol);
             }
             return null;

@@ -6,6 +6,16 @@ export default class extends Controller {
         csrf: String,
     };
 
+    // The DOM can render before AssetMapper/Stimulus finishes attaching actions.
+    // Browser acceptance waits for this explicit interactive-readiness marker.
+    connect() {
+        this.element.dataset.salesLeadReady = '1';
+    }
+
+    disconnect() {
+        delete this.element.dataset.salesLeadReady;
+    }
+
     async status(event) {
         const status = event.currentTarget.dataset.status || '';
         if (!status) return;

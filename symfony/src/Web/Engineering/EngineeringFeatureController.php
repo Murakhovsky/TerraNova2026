@@ -5,6 +5,7 @@ namespace App\Web\Engineering;
 
 use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use App\Application\Engineering\Command\RunEngineeringFeatureCommand;
+use App\Application\Engineering\Command\RunEngineeringSecurityRecoveryCommand;
 use App\Engineering\Application\DTO\EngineeringRequest;
 use App\Engineering\Application\Persistence\EngineeringAgentRunStoreInterface;
 use App\Engineering\Application\Persistence\EngineeringFeatureStoreInterface;
@@ -16,6 +17,7 @@ use App\Engineering\Application\Service\EngineeringFinalizeService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Application\Service\EngineeringStatusService;
+use App\Engineering\Application\Service\EngineeringSecurityRecoveryService;
 use App\Engineering\Application\Service\EngineeringUiActionResolver;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Security\SessionCsrfValidator;
@@ -45,6 +47,7 @@ final readonly class EngineeringFeatureController
         private EngineeringAgentRunStoreInterface $agentRuns,
         private EngineeringObservabilityReadModelInterface $observability,
         private EngineeringOrchestrator $orchestrator,
+        private EngineeringSecurityRecoveryService $securityRecovery,
         private EngineeringCancelService $cancel,
         private EngineeringFeatureManagementService $featureManagement,
         private EngineeringFinalizeService $finalize,
@@ -334,6 +337,18 @@ final readonly class EngineeringFeatureController
         ]);
 
         $summary = $this->summary($data);
+        $checkpoint = EngineeringSecurityRecoveryService::latestCheckpoint($data['feature']);
+        $recovery = ['checkpoint' => $checkpoint, 'eligible' => false];
+        if (($data['workflow']['state'] ?? null) === 'BLOCKED'
+            || (($data['workflow']['state'] ?? null) === 'ARCHITECTURE_PENDING'
+                && ($checkpoint['state'] ?? null) === 'SECURITY_REWORK_REQUIRED')) {
+            try {
+                $recovery = $this->securityRecovery->preview($featureId, $tenant->organizationId()->value());
+            } catch (Throwable) {
+                // Rendering Engineering must remain possible during repository outages.
+                $recovery = ['checkpoint' => $checkpoint, 'eligible' => false, 'reason' => 'RECOVERY_PREFLIGHT_UNAVAILABLE'];
+            }
+        }
 
         return new Response(
             $this->twig->render('experience/engineering/feature.html.twig', [
@@ -345,6 +360,7 @@ final readonly class EngineeringFeatureController
                 ),
                 'engineering' => $data,
                 'summary' => $summary,
+                'securityRecovery' => $recovery,
                 'csrfToken' => $this->csrf->token($request),
                 'statusMessage' => trim((string) $request->query->get('status_message', '')),
             ]),
@@ -427,6 +443,72 @@ final readonly class EngineeringFeatureController
             return $this->redirectStatus('/admin/engineering/' . $featureId, 'Workflow передано immediate worker.');
         } catch (Throwable $error) {
             return $this->redirectStatus('/admin/engineering/' . rawurlencode($id), 'ERROR: ' . $error->getMessage());
+        }
+    }
+
+    public function securityRecoveryPrepare(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->ownedStatus($tenant, $featureId);
+            $checkpoint = $this->securityRecovery->prepare(
+                $featureId, $tenant->organizationId()->value(), 'user:'.$tenant->userId()->value(),
+            );
+            return $this->redirectStatus('/admin/engineering/'.$featureId,
+                'Адресний recovery підготовлено. Перевірте findings та підтвердьте одноразовий запуск.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
+        }
+    }
+
+    public function securityRecoveryExecute(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+        try {
+            $featureId = EngineeringId::assert($id);
+            $status = $this->ownedStatus($tenant, $featureId);
+            $checkpoint = EngineeringSecurityRecoveryService::latestCheckpoint($status['feature']);
+            if (($checkpoint['state'] ?? '') !== 'PREPARED') {
+                throw new \RuntimeException('One-shot recovery is not PREPARED or already dispatched.');
+            }
+            $this->securityRecovery->enqueue(
+                $featureId, $tenant->organizationId()->value(), (string) $checkpoint['recovery_id'],
+            );
+            $this->commandBus->dispatch(new RunEngineeringSecurityRecoveryCommand(
+                $featureId, $tenant->organizationId()->value(), (string) $checkpoint['recovery_id'],
+            ));
+            return $this->redirectStatus('/admin/engineering/'.$featureId,
+                'Одну спробу Architect + одну перевірку Security передано recovery worker.');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
+        }
+    }
+
+    public function securityRecoveryRelease(Request $request, string $id): Response
+    {
+        $tenant = $this->manager();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', Response::HTTP_BAD_REQUEST);
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->ownedStatus($tenant, $featureId);
+            $this->securityRecovery->release(
+                $featureId, $tenant->organizationId()->value(), 'user:'.$tenant->userId()->value(),
+            );
+            $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+                trigger: 'security-recovery-operator-release',
+            ));
+            return $this->redirectStatus('/admin/engineering/'.$featureId,
+                'Security схвалив нову архітектуру; контрольовано відновлено Development (до 8 запусків).');
+        } catch (Throwable $error) {
+            return $this->redirectStatus('/admin/engineering/'.rawurlencode($id), 'ERROR: '.$error->getMessage());
         }
     }
 

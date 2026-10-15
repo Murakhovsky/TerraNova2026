@@ -70,6 +70,20 @@ foreach ([
     }
 }
 
+// Actions and LLM tables must display seconds, never raw MySQL microseconds.
+// Keep original UTC timestamps in data attributes for timezone-aware JS rendering.
+foreach (['event.occurred_at', 'inv.created_at'] as $field) {
+    if (!str_contains($template, 'data-engineering-live-timestamp="{{ '.$field."|default('') }}\"")) {
+        throw new RuntimeException('Engineering timestamp lacks local-time rendering for '.$field);
+    }
+    if (!str_contains($template, $field."|default('')|slice(0, 19)")) {
+        throw new RuntimeException('Engineering timestamp fallback still includes fractional seconds for '.$field);
+    }
+    if (str_contains($template, '<td>{{ '.$field.' }}</td>')) {
+        throw new RuntimeException('Engineering table still shows raw microsecond timestamp for '.$field);
+    }
+}
+
 foreach ([
     'window.setInterval',
     'default: 10000',
@@ -103,6 +117,14 @@ foreach ([
     if (!str_contains($controller, $needle)) {
         throw new RuntimeException('Engineering live Stimulus controller missing '.$needle);
     }
+}
+
+// Recoverable runtime health is not a terminal workflow state.
+if (!str_contains($controller, 'return this.isTerminal(state, status);')) {
+    throw new RuntimeException('Engineering live polling must survive STALE and STALLED health.');
+}
+if (str_contains($controller, "return ['STALE', 'STALLED'].includes(String(health || '').toUpperCase()) || this.isTerminal(state, status);")) {
+    throw new RuntimeException('Engineering UI incorrectly treats recoverable health as terminal.');
 }
 
 if (!str_contains($uiActions, "\$activeExecution = \$hasWorkflow && \$workflowStatus === 'RUNNING'")) {
@@ -145,4 +167,8 @@ if (!str_contains($productStage, 'AgentRun start failed after repository discove
     throw new RuntimeException('Engineering Product stage does not surface pre-AgentRun start failures.');
 }
 
+if (!str_contains($controller, 'group_key') || !str_contains($controller, 'group_label')
+    || !str_contains($controller, 'evidence_round')) {
+    throw new RuntimeException('Engineering live timeline drops grouping metadata.');
+}
 echo "Engineering live runtime UI contract passed.\n";

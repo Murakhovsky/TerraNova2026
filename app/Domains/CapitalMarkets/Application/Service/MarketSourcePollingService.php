@@ -10,6 +10,8 @@ use Domains\CapitalMarkets\Application\Contract\MarketInstrumentResolverInterfac
 use Domains\CapitalMarkets\Application\Contract\MarketSourceRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface;
 use Domains\CapitalMarkets\Application\DTO\MarketSourcePollResult;
+use Domains\CapitalMarkets\Application\Contract\MarketSourceRestWriterGateInterface;
+use Domains\CapitalMarkets\Application\Exception\MarketSourceStreamingActiveException;
 use Domains\CapitalMarkets\Domain\Contract\MarketClockInterface;
 use Domains\CapitalMarkets\Domain\MarketData\MarketConnectionState;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataCapability;
@@ -29,6 +31,7 @@ final readonly class MarketSourcePollingService
         private MarketDataProviderAvailabilityInterface $availability,
         private MarketDataIngestionInterface $ingestion,
         private MarketClockInterface $clock,
+        private MarketSourceRestWriterGateInterface $writerGate,
     ){}
 
     public function poll(string $organizationId,MarketSourceId $sourceId,int $targetLimit=100):MarketSourcePollResult
@@ -72,36 +75,81 @@ final readonly class MarketSourcePollingService
                     array_values($group['capabilities']),
                 );
                 $polled++;
-                $now=$this->clock->now();
-                $previous=$this->sources->health($organizationId,$sourceId);
-                $lastEventAt=null;
-                foreach($batch->events as $raw){
-                    if($lastEventAt===null||$raw->receivedAt>$lastEventAt)$lastEventAt=$raw->receivedAt;
+                // Do NOT hold MySQL source lock during outbound provider I/O.
+                // Once the batch arrives, publication and health updates are
+                // admitted atomically against any competing WS lease acquire.
+                $outcome=$this->writerGate->executeRest(
+                    $organizationId,$sourceId->value(),
+                    function() use($organizationId,$sourceId,$batch):array{
+                        $now=$this->clock->now();
+                        $previous=$this->sources->health($organizationId,$sourceId);
+                        $lastEventAt=null;
+                        foreach($batch->events as $raw){
+                            if($lastEventAt===null||$raw->receivedAt>$lastEventAt){
+                                $lastEventAt=$raw->receivedAt;
+                            }
+                        }
+                        $this->sources->saveHealth($organizationId,new MarketSourceHealth(
+                            $sourceId,MarketConnectionState::Active,$lastEventAt,$now,
+                            0,0,$this->clock->reliable(),null,null,null,
+                            $previous?->errorCount??0,$previous?->reconnectCount??0,
+                            $previous?->rateLimitState??MarketRateLimitState::Unknown,
+                        ));
+                        $result=['raw'=>0,'accepted'=>0,'duplicates'=>0,'failed'=>0,'errors'=>[]];
+                        foreach($batch->events as $raw){
+                            $result['raw']++;
+                            $ingested=$this->ingestion->ingest($organizationId,$raw);
+                            if($ingested->status==='ACCEPTED'){$result['accepted']++;continue;}
+                            if($ingested->status==='DUPLICATE'){$result['duplicates']++;continue;}
+                            $result['failed']++;
+                            if($ingested->reason!==null&&count($result['errors'])<10){
+                                $result['errors'][]=$ingested->status.': '.$ingested->reason;
+                            }
+                        }
+                        return $result;
+                    },
+                );
+                $rawEvents+=$outcome['raw'];
+                $accepted+=$outcome['accepted'];
+                $duplicates+=$outcome['duplicates'];
+                $failed+=$outcome['failed'];
+                foreach($outcome['errors'] as $message){
+                    if(count($errors)<10)$errors[]=$message;
                 }
-                $this->sources->saveHealth($organizationId,new MarketSourceHealth(
-                    $sourceId,MarketConnectionState::Active,$lastEventAt,$now,0,0,$this->clock->reliable(),
-                    null,null,null,$previous?->errorCount??0,$previous?->reconnectCount??0,
-                    $previous?->rateLimitState??MarketRateLimitState::Unknown,
-                ));
-
-                foreach($batch->events as $raw){
-                    $rawEvents++;
-                    $result=$this->ingestion->ingest($organizationId,$raw);
-                    if($result->status==='ACCEPTED'){$accepted++;continue;}
-                    if($result->status==='DUPLICATE'){$duplicates++;continue;}
-                    $failed++;
-                    if($result->reason!==null&&count($errors)<10)$errors[]=$result->status.': '.$result->reason;
-                }
+            }catch(MarketSourceStreamingActiveException){
+                // This is healthy ownership arbitration, NOT a data-provider
+                // failure. Do not overwrite streaming health as DEGRADED.
+                return new MarketSourcePollResult(
+                    'STREAMING_ACTIVE',$polled,$rawEvents,$accepted,$duplicates,$failed,$errors
+                );
             }catch(Throwable $error){
                 $failed++;
-                $previous=$this->sources->health($organizationId,$sourceId);
-                $this->sources->saveHealth($organizationId,new MarketSourceHealth(
-                    $sourceId,MarketConnectionState::Degraded,$previous?->lastEventAt,$this->clock->now(),
-                    ($previous?->failureCount??0)+1,$previous?->queueLag??0,$this->clock->reliable(),
-                    mb_substr($error->getMessage(),0,1000),$previous?->messagesPerSecond,$previous?->lastLatencyMilliseconds,
-                    ($previous?->errorCount??0)+1,$previous?->reconnectCount??0,
-                    $previous?->rateLimitState??MarketRateLimitState::Unknown,
-                ));
+                try{
+                    $this->writerGate->executeRest(
+                        $organizationId,$sourceId->value(),
+                        function()use($organizationId,$sourceId,$error):void{
+                            $previous=$this->sources->health($organizationId,$sourceId);
+                            $this->sources->saveHealth($organizationId,new MarketSourceHealth(
+                                $sourceId,MarketConnectionState::Degraded,
+                                $previous?->lastEventAt,$this->clock->now(),
+                                ($previous?->failureCount??0)+1,$previous?->queueLag??0,
+                                $this->clock->reliable(),
+                                mb_substr($error->getMessage(),0,1000),
+                                $previous?->messagesPerSecond,
+                                $previous?->lastLatencyMilliseconds,
+                                ($previous?->errorCount??0)+1,
+                                $previous?->reconnectCount??0,
+                                $previous?->rateLimitState??MarketRateLimitState::Unknown,
+                            ));
+                        },
+                    );
+                }catch(MarketSourceStreamingActiveException){
+                    return new MarketSourcePollResult(
+                        'STREAMING_ACTIVE',$polled,$rawEvents,$accepted,$duplicates,$failed-1,$errors
+                    );
+                }catch(Throwable $healthError){
+                    if(count($errors)<10)$errors[]='Unable to persist polling source health.';
+                }
                 if(count($errors)<10)$errors[]=mb_substr($error->getMessage(),0,1000);
             }
         }

@@ -30,9 +30,17 @@ x-app-environment: &app-environment
   SPATIAL_JWT_TTL: ${SPATIAL_JWT_TTL:-28800}
   SPATIAL_BLENDER_BINARY: ${SPATIAL_BLENDER_BINARY:-}
   SPATIAL_GLTF_TRANSFORM_BINARY: ${SPATIAL_GLTF_TRANSFORM_BINARY:-}
+  COS_CM_POOL_SUBSCRIPTIONS_SCHEDULER_ENABLED: ${COS_CM_POOL_SUBSCRIPTIONS_SCHEDULER_ENABLED:-0}
+  COS_CM_POOL_SUBSCRIPTIONS_ACTOR_ID: ${COS_CM_POOL_SUBSCRIPTIONS_ACTOR_ID:-0}
+  COS_CM_POOL_SUBSCRIPTIONS_INTERVAL_MINUTES: ${COS_CM_POOL_SUBSCRIPTIONS_INTERVAL_MINUTES:-15}
+  COS_CM_BSTOCKS_OPPORTUNITY_ENABLED: ${COS_CM_BSTOCKS_OPPORTUNITY_ENABLED:-0}
   N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
   N8N_OUTBOUND_URL: ${N8N_OUTBOUND_URL:-}
   N8N_OUTBOUND_SECRET: ${N8N_OUTBOUND_SECRET:-}
+  FOS_L2_ENABLED: ${FOS_L2_ENABLED:-0}
+  FOS_L2_ALERT_ENABLED: ${FOS_L2_ALERT_ENABLED:-0}
+  FOS_L2_ALERT_EMAIL: ${FOS_L2_ALERT_EMAIL:-}
+  FOS_L2_ALERT_LOCALE: ${FOS_L2_ALERT_LOCALE:-uk}
   GROWTH_ENGAGEMENT_WEBHOOK_SECRET: ${GROWTH_ENGAGEMENT_WEBHOOK_SECRET:-}
   GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW: ${GROWTH_ENGAGEMENT_WEBHOOK_MAX_CLOCK_SKEW:-300}
   GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET: ${GROWTH_ENGAGEMENT_RESPONSE_WEBHOOK_SECRET:-}
@@ -61,6 +69,11 @@ x-app-environment: &app-environment
   COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID: ${COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID:-0}
   COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT: ${COS_GROWTH_MARKET_SCHEDULER_UNIVERSE_LIMIT:-200}
   COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT: ${COS_GROWTH_MARKET_SCHEDULER_ACCOUNT_LIMIT:-100}
+  COS_CM_INSTRUMENT_POOL_AUTO_PROPOSE_ENABLED: ${COS_CM_INSTRUMENT_POOL_AUTO_PROPOSE_ENABLED:-0}
+  COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED: ${COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED:-0}
+  COS_CM_INSTRUMENT_POOL_SCHEDULER_INTERVAL_MINUTES: ${COS_CM_INSTRUMENT_POOL_SCHEDULER_INTERVAL_MINUTES:-15}
+  COS_CM_INSTRUMENT_POOL_SCHEDULER_TARGETS_JSON: "${COS_CM_INSTRUMENT_POOL_SCHEDULER_TARGETS_JSON:-[]}"
+  COS_CM_INSTRUMENT_POOL_SCHEDULER_ACTOR_ID: ${COS_CM_INSTRUMENT_POOL_SCHEDULER_ACTOR_ID:-0}
   COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED: ${COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED:-0}
   COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES: ${COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES:-2}
   COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED: ${COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED:-0}
@@ -193,6 +206,22 @@ services:
     healthcheck: { disable: true }
     networks: [backend]
 
+  # OFF by default. Explicit profile only; never enables market streaming.
+  cm-stream-sweeper:
+    profiles: [cm-stream-sweeper]
+    image: cos-symfony-php:local
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["sh", "-ec", "while true; do php bin/console cos:capital-markets:market-data:stream:sweep-expired --limit=100; sleep 60; done"]
+    environment:
+      <<: *app-environment
+      COS_CM_STREAM_SWEEPER_ENABLED: "1"
+    depends_on:
+      mysql: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [backend]
+
   spatial-worker:
     image: cos-symfony-php:local
     restart: unless-stopped
@@ -209,6 +238,42 @@ services:
     volumes:
       - spatial_uploads:/var/www/html/public/uploads/spatial
     networks: [backend]
+
+  # Public market-data ingress; opt-in. The application image owns Symfony CLI;
+  # Compose provides process restart, stop signalling and internet egress.
+  # Run: docker compose --profile l2 up -d l2-stream
+  l2-stream:
+    image: cos-symfony-php:local
+    build:
+      context: .
+      dockerfile: docker/symfony/php/Dockerfile
+    profiles: ["l2"]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 45s
+    command:
+      - php
+      - bin/console
+      - cos:capital-markets:l2:stream
+      - "--organization=${FOS_L2_ORGANIZATION:-}"
+      - "--source=${FOS_L2_SOURCE_ID:-}"
+      - "--venue=${FOS_L2_VENUE:-}"
+      - "--symbol=${FOS_L2_SYMBOL:-}"
+      - "--base=${FOS_L2_BASE:-}"
+      - "--quote=${FOS_L2_QUOTE:-}"
+      - "--depth=${FOS_L2_DEPTH:-50}"
+      - "--message-budget=${FOS_L2_MESSAGE_BUDGET:-1000000}"
+      - "--max-attempts=${FOS_L2_MAX_ATTEMPTS:-20}"
+      - "--stale-seconds=${FOS_L2_STALE_SECONDS:-30}"
+    environment:
+      <<: *app-environment
+      MESSENGER_CONSUMER_NAME: l2-stream-1
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    # backend is internal-only; frontend is essential for outgoing public WSS/HTTPS.
+    networks: [frontend, backend]
 
   integration-worker:
     image: cos-symfony-php:local

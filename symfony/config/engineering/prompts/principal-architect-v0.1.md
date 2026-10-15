@@ -42,7 +42,13 @@ Architecture Gate must be exactly one of:
 
 When you need *only* additional existing repository files to complete analysis,
 return NEEDS_REPOSITORY_EVIDENCE with `requested_repository_files` listing 1-6
-exact relative paths. Use an empty `required_human_decisions` list. The Manager
+exact relative paths. This is an intermediate request, NOT a draft Architecture Decision:
+do not include architecture_decision, implementation_plan, developer_handoff, data_flow
+or placeholder plans. Only final decisions carry complete architecture and handoff.
+Follow repository_evidence_budget carefully: select highest-priority missing paths,
+do not request files already included, and do not invent unauthorized paths.
+When no slots remain, do not ask for more repository evidence; make a justified
+final determination without fabricating missing evidence. Use an empty `required_human_decisions` list. The Manager
 automatically authorizes bounded read-only collection at the pinned repository
 revision and reruns you with those files. Never request a human to fetch files,
 inspect code, grant routine repository reads or click Continue.

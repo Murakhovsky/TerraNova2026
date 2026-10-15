@@ -1,0 +1,129 @@
+name: FOS L2 VPS Isolated CLI and MySQL Acceptance
+
+on:
+  push:
+    branches: [feature/fos-l2-orderbook-recovery]
+    paths:
+      - '.github/workflows/l2-vps-cli-mysql.yml'
+      - 'deploy/l2/Dockerfile.vps'
+      - 'tests/live/l2_vps_mysql_acceptance.php'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vps-ingestion:
+    name: VPS isolated L2 Symfony CLI real venue MySQL acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy isolated L2 CLI image and test live canonical persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            if [ -z "${!key:-}" ]; then echo "::error::Missing $key"; exit 1; fi
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/fos_l2_deploy_key
+          chmod 600 ~/.ssh/fos_l2_deploy_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          SSH=(ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes
+            -i "$HOME/.ssh/fos_l2_deploy_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST")
+          STAGE="$("${SSH[@]}" 'mktemp -d /tmp/fos-l2-vps-stage-XXXXXXXX')"
+          [[ "$STAGE" =~ ^/tmp/fos-l2-vps-stage-[A-Za-z0-9]+$ ]] || { echo "::error::Unsafe temporary path"; exit 1; }
+          cleanup() { "${SSH[@]}" "rm -rf -- '$STAGE'" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          tar -cf - app symfony/src symfony/config deploy/l2/Dockerfile.vps tests/live/l2_vps_mysql_acceptance.php \
+            | "${SSH[@]}" "tar -xf - -C '$STAGE'"
+          SHORT="${GITHUB_SHA:0:12}"
+          "${SSH[@]}" "bash -s -- '$STAGE' '$DEV_PATH' '$SHORT'" <<'REMOTE' | tee "$RUNNER_TEMP/l2-vps-e2e.log"
+          set -Eeuo pipefail
+          STAGE="$1"
+          ROOT="$2"
+          SHORT="$3"
+          D='docker'
+          if ! docker info >/dev/null 2>&1; then
+            if sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
+            else echo "::error::Docker unavailable"; exit 1; fi
+          fi
+          if [ ! -f "$ROOT/.env" ] || [ ! -f "$ROOT/docker-compose.yml" ]; then
+            echo "::error::COS deployment config missing"; exit 1
+          fi
+          IMAGE="cos-fos-l2:$SHORT"
+          echo '=== BUILD ADDITIVE L2 IMAGE (existing COS untouched) ==='
+          $D build --quiet -f "$STAGE/deploy/l2/Dockerfile.vps" -t "$IMAGE" "$STAGE" >/dev/null
+          echo "l2_image_built: $IMAGE"
+          cat > "$STAGE/l2-override.yml" <<YAML
+          services:
+            php:
+              image: $IMAGE
+          YAML
+          COMPOSE=(-f "$ROOT/docker-compose.yml" -f "$STAGE/l2-override.yml" --env-file "$ROOT/.env")
+          $D compose "${COMPOSE[@]}" config --quiet
+          ORG="l2-vps-accept-$(date -u +%Y%m%d)-$(openssl rand -hex 4)"
+          FIXTURE="$STAGE/tests/live/l2_vps_mysql_acceptance.php"
+          # Only anonymous temporary one-off containers; never docker-compose up.
+          run_php() {
+            timeout --signal=TERM --kill-after=10s 120s $D compose "${COMPOSE[@]}" run --rm --no-deps -T \
+              -v "$FIXTURE:/tmp/l2_acceptance.php:ro" \
+              -e FOS_L2_ACCEPTANCE_ORG="$ORG" \
+              -e FOS_L2_ALERT_ENABLED=0 \
+              -e FOS_L2_ENABLED=1 \
+              php php -d memory_limit=224M "$@" </dev/null
+          }
+          echo '=== VALIDATE ACTUAL SYMFONY CLI COMMAND ==='
+          run_php bin/console list --raw > "$STAGE/cli-commands.txt"
+          grep -q '^cos:capital-markets:l2:stream ' "$STAGE/cli-commands.txt"
+          echo 'Symfony command registered.'
+          echo '=== BOOTSTRAP ACCEPTANCE-ONLY SOURCE/MAPPING ==='
+          run_php /tmp/l2_acceptance.php bootstrap
+          echo '=== CLI PREFLIGHT WITH ACTUAL SOURCE ==='
+          run_php bin/console cos:capital-markets:l2:stream \
+            --organization="$ORG" --source=source:l2-vps-bybit-spot \
+            --venue=BYBIT_SPOT --symbol=BTCUSDT --base=BTC --quote=USDT --dry-run
+          echo '=== REAL BYBIT SPOT -> L2 RECOVERY -> SYMFONY CLI -> MYSQL ==='
+          run_php bin/console cos:capital-markets:l2:stream \
+            --organization="$ORG" --source=source:l2-vps-bybit-spot \
+            --venue=BYBIT_SPOT --symbol=BTCUSDT --base=BTC --quote=USDT \
+            --message-budget=35 --max-attempts=4 --min-publication-interval-ms=1000
+          echo '=== ASSERT RAW, CANONICAL, QUALITY, MARKET STATE ==='
+          run_php /tmp/l2_acceptance.php verify
+          echo '=== ADDITIVE CLI IMAGE PERSISTED, ORIGINAL COS NOT RESTARTED ==='
+          PERSIST="$HOME/.local/share/fos-l2"
+          mkdir -p "$PERSIST"
+          printf '%s\n' "$IMAGE" > "$PERSIST/current-image"
+          cat > "$PERSIST/compose.override.yml" <<YAML
+          services:
+            php:
+              image: $IMAGE
+            l2-stream:
+              extends:
+                service: php
+              image: $IMAGE
+              profiles: ["l2"]
+              init: true
+              restart: unless-stopped
+              stop_grace_period: 45s
+              command: ["php","bin/console","cos:capital-markets:l2:stream"]
+              environment:
+                FOS_L2_ENABLED: "0"
+              healthcheck:
+                disable: true
+          YAML
+          $D compose -f "$ROOT/docker-compose.yml" -f "$PERSIST/compose.override.yml" --env-file "$ROOT/.env" config --quiet
+          echo "l2_image_available: $IMAGE"
+          echo "l2_manifest_available: $PERSIST/compose.override.yml"
+          echo '=== VPS L2 CLI & MYSQL E2E PASS ==='
+          REMOTE
+          grep -Fxq '=== VPS L2 CLI & MYSQL E2E PASS ===' "$RUNNER_TEMP/l2-vps-e2e.log"
+          echo 'Accepted: true MySQL E2E marker observed.'

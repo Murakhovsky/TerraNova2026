@@ -11,6 +11,8 @@ use Domains\CapitalMarkets\Application\DTO\MarketDataIngestionResult;
 use Domains\CapitalMarkets\Application\DTO\ResolvedMarketInstrument;
 use Domains\CapitalMarkets\Application\Service\MarketDataAdapterRegistry;
 use Domains\CapitalMarkets\Application\Service\MarketSourcePollingService;
+use Domains\CapitalMarkets\Application\Contract\MarketSourceRestWriterGateInterface;
+use Domains\CapitalMarkets\Application\Exception\MarketSourceStreamingActiveException;
 use Domains\CapitalMarkets\Domain\Contract\MarketClockInterface;
 use Domains\CapitalMarkets\Domain\Contract\MarketDataAdapterInterface;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentDescriptor;
@@ -150,6 +152,21 @@ final class CmPollIngestion implements MarketDataIngestionInterface
 }
 
 $organization='org-poll';
+final class CmPollWriterGate implements MarketSourceRestWriterGateInterface
+{
+    public bool $streamingActive=false;
+    public int $restWrites=0;
+
+    public function executeRest(string $organizationId,string $sourceId,callable $write):mixed
+    {
+        if($this->streamingActive){
+            throw new MarketSourceStreamingActiveException('Active stream writer owns source.');
+        }
+        $this->restWrites++;
+        return $write();
+    }
+}
+
 $now=new DateTimeImmutable('2026-10-06T09:00:00+00:00');
 $clock=new CmPollClock($now);
 $sourceId=MarketSourceId::fromString('source:fixture');
@@ -179,9 +196,10 @@ $subscriptions->save($organization,new MarketSubscription(
 $adapter=new CmPollAdapter($now);
 $availability=new CmPollAvailability(true);
 $ingestion=new CmPollIngestion($sources,$sourceId);
+$writerGate=new CmPollWriterGate();
 $service=new MarketSourcePollingService(
     $sources,$subscriptions,new CmPollResolver([$instrumentId->value()=>$target]),
-    new MarketDataAdapterRegistry([$adapter]),$availability,$ingestion,$clock
+    new MarketDataAdapterRegistry([$adapter]),$availability,$ingestion,$clock,$writerGate
 );
 
 $result=$service->poll($organization,$sourceId);
@@ -194,6 +212,9 @@ $assert($requested===['BBO','VOLUME'],'Coalesced provider snapshot lost requeste
 $assert($result->rawEvents===1&&$result->accepted===1&&$result->failed===0,'Provider poll counters drifted.');
 $assert($ingestion->calls===1,'Provider poll did not feed raw event into canonical ingestion.');
 $assert($sources->health($organization,$sourceId)?->connectionState===MarketConnectionState::Active,'Successful provider poll did not mark source ACTIVE.');
+
+
+
 
 $availability->value=false;
 $disabled=$service->poll($organization,$sourceId);
@@ -210,5 +231,20 @@ $degraded=$service->poll($organization,$sourceId);
 $assert($degraded->status==='DEGRADED','Unresolved subscription target must degrade the polling result.');
 $assert($degraded->failed===1,'Unresolved subscription target must count as a failure.');
 $assert($adapter->snapshotCalls===2,'Valid target should still be polled when another subscription is unresolved.');
+
+// REST must not publish OR change source health when an active streaming
+// worker has acquired ownership, even if a REST HTTP response has arrived.
+$beforeHealth=$sources->health($organization,$sourceId);
+$beforeEvents=$ingestion->calls;
+$beforeWrites=$writerGate->restWrites;
+$writerGate->streamingActive=true;
+$busy=$service->poll($organization,$sourceId);
+$assert($busy->status==='STREAMING_ACTIVE','REST did not yield source to live WS.');
+$assert($busy->accepted===0&&$busy->rawEvents===0,'Busy REST published streaming-owned data.');
+$assert($ingestion->calls===$beforeEvents,'Streaming-owned source still received REST events.');
+$assert($writerGate->restWrites===$beforeWrites,'Writer callback ran on streaming-owned source.');
+$assert($sources->health($organization,$sourceId)===$beforeHealth,
+    'REST must not overwrite source health while streaming owns it.');
+$writerGate->streamingActive=false;
 
 echo "Capital Markets provider polling passed.\n";

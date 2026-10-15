@@ -65,6 +65,15 @@ final readonly class DoctrineEngineeringArtifactStore implements EngineeringArti
         return $record instanceof AgentArtifactRecord ? $this->view($record) : null;
     }
 
+    public function latestIncludingSuperseded(string $featureId, ArtifactType $type): ?array
+    {
+        $record = $this->entityManager->getRepository(AgentArtifactRecord::class)->findOneBy(
+            ['featureId' => $featureId, 'type' => $type->value],
+            ['version' => 'DESC'],
+        );
+        return $record instanceof AgentArtifactRecord ? $this->view($record) : null;
+    }
+
     public function invalidate(string $featureId, array $types): int
     {
         $invalidated = 0;

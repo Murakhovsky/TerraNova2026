@@ -373,7 +373,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
 
     private function recordByIdempotencyKey(string $key): ?AgentRunRecord
     {
-        $record = $this->entityManager->getRepository(AgentRunRecord::class)->findOneBy(['idempotencyKey' => $key]);
+        $record = $this->entityManager->getRepository(AgentRunRecord::class)->findOneBy(['idempotencyKey' => EngineeringAgentTask::canonicalIdempotencyKey($key)]);
         return $record instanceof AgentRunRecord ? $record : null;
     }
 

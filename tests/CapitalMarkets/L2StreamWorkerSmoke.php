@@ -1,0 +1,122 @@
+<?php
+declare(strict_types=1);
+$base = dirname(__DIR__,2).'/app/';
+require_once $base.'Kernel/Shared/Domain/ValueObject.php';
+foreach (['Decimal','AssetCode','Price','Quantity'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Value/'.$name.'.php';
+foreach (['MarketEventType','MarketObservation','OrderBookLevel','MarketOrderBook'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/MarketData/'.$name.'.php';
+foreach (['OrderBookRebuilder','L2RecoverySession'] as $name) require_once $base.'Domains/CapitalMarkets/Domain/Service/'.$name.'.php';
+foreach (['BybitL2RecoveryCoordinator'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
+foreach (['L2SubscriptionConfig','L2SubscriptionEncoder','L2SubscriptionAcknowledgement','L2PublicationWatchdog','L2WebSocketTransport','L2FrameSizeGuard','L2ControlFrameFilter','L2WebSocketFrameRouter','L2FrameDispatch','L2DomainBookFactory','BybitL2StreamProcessor','BinanceL2SnapshotDecoder','BinanceL2SnapshotClient','BinanceL2StreamProcessor','KrakenL2StreamProcessor','L2StreamWorker'] as $name) require_once $base.'Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name.'.php';
+use Domains\CapitalMarkets\Domain\Value\AssetCode;
+use Domains\CapitalMarkets\Domain\Service\{L2RecoverySession};
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{BybitL2RecoveryCoordinator};
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\{L2SubscriptionConfig,L2SubscriptionEncoder,L2WebSocketTransport,L2FrameSizeGuard,L2ControlFrameFilter,L2WebSocketFrameRouter,L2FrameDispatch,L2DomainBookFactory,BybitL2StreamProcessor,L2StreamWorker,L2PublicationWatchdog};
+class FixtureL2Transport extends L2WebSocketTransport {
+    public array $messages = [
+        '{"op":"subscribe","success":true}',
+        '{"topic":"orderbook.50.BTCUSDT","type":"snapshot","data":{"s":"BTCUSDT","u":10,"seq":100,"b":[["100","1"]],"a":[["110","1"]]}}',
+        '{"topic":"orderbook.50.BTCUSDT","type":"delta","data":{"s":"BTCUSDT","u":11,"seq":101,"b":[["100","2"]],"a":[]}}'
+    ];
+    public array $sent = [];
+    public function connect(string $url): void { if (!str_starts_with($url,'wss://')) throw new RuntimeException('TLS missing.'); }
+    public function sendText(string $payload): void { $this->sent[] = $payload; }
+    public function readText(): string { return array_shift($this->messages) ?? throw new RuntimeException('Fixture exhausted.'); }
+    public function close(): void {}
+}
+$session = new L2RecoverySession();
+$transport = new FixtureL2Transport();
+$watchdog = new L2PublicationWatchdog();
+$worker = new L2StreamWorker(
+    new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
+    new L2SubscriptionEncoder(), $transport,
+    new BybitL2StreamProcessor(
+        new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT'),'BYBIT_LINEAR'),
+        new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
+        new BybitL2RecoveryCoordinator($session),$session
+    ), null, null, $watchdog
+);
+$published = [];
+$count = $worker->run(static function($book) use (&$published):void {$published[]=$book->bids[0]->quantity->value->value();},3);
+if ($count !== 2 || $published !== ['1','2'] || count($transport->sent) !== 1 || $watchdog->diagnostics()['publications'] !== 2 || !$watchdog->isStale(intdiv(hrtime(true),1000000))) throw new RuntimeException('L2 worker publication regression.');
+$badTransport = new FixtureL2Transport();
+$badTransport->messages = ['{"op":"subscribe","success":false}'];
+$badSession = new L2RecoverySession();
+$badWorker = new L2StreamWorker(
+    new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
+    new L2SubscriptionEncoder(), $badTransport,
+    new BybitL2StreamProcessor(
+        new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT',50),'BYBIT_LINEAR'),
+        new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
+        new BybitL2RecoveryCoordinator($badSession),$badSession
+    )
+);
+$rejected = false;
+try { $badWorker->run(static function():void { throw new RuntimeException('Rejected stream published.'); },1); }
+catch (DomainException $e) { $rejected = true; }
+if (!$rejected) throw new RuntimeException('Rejected subscription not blocked.');
+$missingTransport = new FixtureL2Transport();
+$missingTransport->messages = ['{"op":"pong"}'];
+$missingSession = new L2RecoverySession();
+$missingWorker = new L2StreamWorker(
+    new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
+    new L2SubscriptionEncoder(), $missingTransport,
+    new BybitL2StreamProcessor(
+        new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT',50),'BYBIT_LINEAR'),
+        new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
+        new BybitL2RecoveryCoordinator($missingSession),$missingSession
+    )
+);
+$missingRejected = false;
+try { $missingWorker->run(static function():void {},1); }
+catch (DomainException $e) { $missingRejected = true; }
+if (!$missingRejected) throw new RuntimeException('Missing subscription ack accepted.');
+
+$stoppedTransport = new FixtureL2Transport();
+$stoppedSession = new L2RecoverySession();
+$stoppedWorker = new L2StreamWorker(
+    new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
+    new L2SubscriptionEncoder(), $stoppedTransport,
+    new BybitL2StreamProcessor(
+        new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT',50),'BYBIT_LINEAR'),
+        new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
+        new BybitL2RecoveryCoordinator($stoppedSession),$stoppedSession
+    )
+);
+if ($stoppedWorker->run(static function(): void { throw new RuntimeException('Stopped worker published.'); }, 3, static fn(): bool => true) !== 0
+    || count($stoppedTransport->sent) !== 0) {
+    throw new RuntimeException('Stopped L2 worker initiated work.');
+}
+
+class SlowControlOnlyTransport extends FixtureL2Transport {
+    public function readText(): string {
+        if (count($this->messages) === 1) usleep(180000);
+        return parent::readText();
+    }
+}
+$slowTransport = new SlowControlOnlyTransport();
+$slowTransport->messages = [
+    '{"op":"subscribe","success":true}',
+    '{"topic":"orderbook.50.BTCUSDT","type":"snapshot","data":{"s":"BTCUSDT","u":10,"seq":100,"b":[["100","1"]],"a":[["110","1"]]}}',
+    '{"op":"pong"}'
+];
+$slowSession = new L2RecoverySession();
+$slowWorker = new L2StreamWorker(
+    new L2SubscriptionConfig('BYBIT_LINEAR','BTCUSDT',50),
+    new L2SubscriptionEncoder(),$slowTransport,
+    new BybitL2StreamProcessor(
+        new L2FrameDispatch(new L2FrameSizeGuard(),new L2ControlFrameFilter(),new L2WebSocketFrameRouter('BYBIT_LINEAR','BTCUSDT',50),'BYBIT_LINEAR'),
+        new L2DomainBookFactory(new AssetCode('BTC'),new AssetCode('USDT')),
+        new BybitL2RecoveryCoordinator($slowSession),$slowSession
+    ),null,null,new L2PublicationWatchdog(100)
+);
+$slowPublished = 0;
+$stalenessDetected = false;
+try {
+    $slowWorker->run(static function($book) use (&$slowPublished):void { ++$slowPublished; },3);
+} catch (DomainException $error) {
+    $stalenessDetected = str_contains($error->getMessage(),'stalled');
+}
+if (!$stalenessDetected || $slowPublished !== 1) {
+    throw new RuntimeException('Control-only L2 frames must not mask a stale verified book.');
+}
+echo "L2 stream worker smoke passed\n";
