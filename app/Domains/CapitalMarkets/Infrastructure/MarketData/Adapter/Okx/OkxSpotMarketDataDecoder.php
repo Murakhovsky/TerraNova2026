@@ -15,7 +15,7 @@ final readonly class OkxSpotMarketDataDecoder implements MarketDataDecoderInterf
     public function adapterType():string{return OkxSpotMarketDataAdapter::ADAPTER_TYPE;}
     public function decode(MarketSourceDescriptor $source,RawMarketEvent $raw):DecodedMarketEvent
     {
-        if($source->adapterType!==self::adapterType())throw new InvalidArgumentException('Wrong OKX spot decoder source.');
+        if($source->adapterType!==$this->adapterType())throw new InvalidArgumentException('Wrong OKX spot decoder source.');
         $status=match($raw->transportMetadata['market_status']??null){
             'OPEN'=>MarketStatus::Open,'CLOSED'=>MarketStatus::Closed,default=>MarketStatus::Unknown
         };
