@@ -73,6 +73,18 @@ final readonly class MysqlStreamingProviderVerification
                  JOIN tn_capital_market_quality_metrics q
                    ON q.organization_id=e.organization_id
                   AND q.canonical_event_id=e.canonical_event_id
+                 JOIN tn_capital_market_provider_stream_receipts p
+                   ON p.organization_id=e.organization_id
+                  AND p.source_id=e.source_id
+                  AND p.instrument_id=e.instrument_id AND p.channel='BBO'
+                  AND p.fencing_token=:proof_token AND p.session_epoch=:proof_epoch
+                  AND p.status IN ('ACKED','LIVE_QUOTE')
+                  AND e.received_timestamp>=p.ack_at
+                 JOIN tn_capital_market_instrument_stream_trust t
+                   ON t.organization_id=e.organization_id
+                  AND t.source_id=e.source_id AND t.instrument_id=e.instrument_id
+                  AND t.channel='BBO' AND t.fencing_token=p.fencing_token
+                  AND t.status='TRUSTED' AND t.recovery_required=0
                  WHERE e.organization_id=:org AND e.source_id=:source
                    AND e.instrument_id=:instrument AND e.canonical_event_id=:event
                    AND e.event_type='BBO' AND e.data_mode='LIVE'
@@ -81,7 +93,8 @@ final readonly class MysqlStreamingProviderVerification
                    AND q.trust_status='TRUSTED' AND q.quality_score>=80
                  LIMIT 1");
             $proof->execute(['org'=>$org,'source'=>$source,'instrument'=>$instrument,
-                'event'=>$result->event->eventId]);
+                'event'=>$result->event->eventId,
+                'proof_token'=>$token,'proof_epoch'=>$epoch]);
             if($proof->fetchColumn()===false){
                 throw new DomainException('No persisted canonical LIVE BBO and quality proof.');
             }
