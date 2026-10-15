@@ -141,6 +141,19 @@ SQL;
         $instruments->execute(['org'=>$org]);
         $indexed=[];
         foreach($instruments->fetchAll(PDO::FETCH_ASSOC) as $item)$indexed[$item['instrument_id']]=$item;
+        // Symbol-level ledger is the final, independent acceptance authority.
+        // Healthy transport/source is insufficient if one instrument is stale.
+        $streamRows=$this->connection->prepare(
+            'SELECT source_id,instrument_id,channel,status,recovery_required,
+                    last_event_at,last_quality_score
+             FROM tn_capital_market_instrument_stream_trust
+             WHERE organization_id=:org'
+        );
+        $streamRows->execute(['org'=>$org]);
+        $symbolTrust=[];
+        foreach($streamRows->fetchAll(PDO::FETCH_ASSOC) as $t){
+            $symbolTrust[$t['source_id'].'|'.$t['instrument_id'].'|'.$t['channel']]=$t;
+        }
         $rows=[];
         foreach($raw as $r){
             $source=$sources[$r['source_id']]??null;
@@ -162,7 +175,16 @@ SQL;
             }
             $assignmentKey=$r['source_id'].'|'.$r['instrument_id'].'|'.$r['kind'];
             $shard=$assignmentMap[$assignmentKey]??null;
+            $t=$symbolTrust[$assignmentKey]??null;
+            $symbolGood=is_array($t)
+                &&$t['status']==='TRUSTED'
+                &&(int)$t['recovery_required']===0
+                &&(int)$t['last_quality_score']>=80
+                &&is_string($t['last_event_at'])
+                &&($last=strtotime($t['last_event_at'].' UTC'))!==false
+                &&$last>=time()-300&&$last<=time()+5;
             $rows[]=[
+                'stream_trust_confirmed'=>$symbolGood,
                 'assignment_registered'=>$shard!==null,
                 'source_healthy'=>$healthy[$r['source_id']]??false,
                 'subscription_active'=>$activeSubscription,
@@ -309,7 +331,15 @@ SQL;
                AND last_event_at>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 120 SECOND)");
         $health->execute(['org'=>$org]);
         $healthy=array_fill_keys($health->fetchAll(PDO::FETCH_COLUMN),true);
+        $symbolQ=$this->connection->prepare(
+            "SELECT DISTINCT source_id FROM tn_capital_market_instrument_stream_trust
+             WHERE organization_id=:org AND status='TRUSTED' AND recovery_required=0
+               AND last_quality_score>=80
+               AND last_event_at>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 5 MINUTE)");
+        $symbolQ->execute(['org'=>$org]);
+        $symbolSources=array_fill_keys($symbolQ->fetchAll(PDO::FETCH_COLUMN),true);
         foreach($allowedSourceIds as $source){
+            if(!isset($symbolSources[$source]))return false;
             if(!is_string($source)||!isset($seen[$source])||!isset($active[$source])||!isset($healthy[$source])
                 ||!isset($approvals['SOURCE_ENTITLEMENT|'.$source]))return false;
         }

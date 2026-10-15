@@ -38,6 +38,7 @@ final readonly class InstrumentPoolProductionSoakPolicy
             }
             $reasons=[];
             if(($row['mode']??null)!=='LIVE')$reasons[]='NOT_LIVE';
+            if(($row['stream_trust_confirmed']??false)!==true)$reasons[]='SYMBOL_STREAM_UNTRUSTED';
             if(($row['approved_entitlement']??false)!==true)$reasons[]='ENTITLEMENT_UNVERIFIED';
             if(($row['issuer_verified']??false)!==true)$reasons[]='ISSUER_UNVERIFIED';
             if(($row['source_enabled']??false)!==true)$reasons[]='SOURCE_DISABLED';

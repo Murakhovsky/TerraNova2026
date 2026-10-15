@@ -11,7 +11,7 @@ foreach(['BBO'=>250,'L2'=>50] as $kind=>$total){
         $rows[]=['kind'=>$kind,'source_id'=>'live-source',
             'instrument_id'=>$kind.'-'.$i,'samples'=>288,
             'hour_buckets'=>24,'five_minute_buckets'=>288,'bad_samples'=>0,'age_seconds'=>10,
-            'mode'=>'LIVE','approved_entitlement'=>true,
+            'mode'=>'LIVE','stream_trust_confirmed'=>true,'approved_entitlement'=>true,
             'issuer_verified'=>true,'source_enabled'=>true,'worker_active'=>true,
             'source_healthy'=>true,'subscription_active'=>true,'unresolved_gap'=>false,
             'assignment_registered'=>true];
@@ -43,6 +43,8 @@ $bad=$rows;$bad[0]['subscription_active']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Inactive subscription passed.');
 $bad=$rows;$bad[0]['unresolved_gap']=true;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Unresolved data gap passed.');
+$bad=$rows;$bad[0]['stream_trust_confirmed']=false;
+$assert(!$policy->evaluate($bad,true)['accepted'],'Missing per-symbol stream trust passed.');
 $bad=$rows;$bad[0]['worker_active']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Unleased market writer passed.');
 $bad=$rows;$bad[0]['age_seconds']=301;
