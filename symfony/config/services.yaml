@@ -2043,6 +2043,8 @@ services:
     arguments:
       $pdo: '@cos.database.pdo'
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingIncidentDelivery: ~
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingIncidentManager:
     arguments:
       $pdo: '@cos.database.pdo'
