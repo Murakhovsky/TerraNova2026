@@ -49,6 +49,17 @@ final readonly class EngineeringAutonomousProgressionService
                 return new WorkflowDirective(WorkflowDirectiveType::STOP, null,
                     'Targeted Security recovery requires the dedicated operator-controlled pipeline.');
             }
+            if ($recovery !== null && ($recovery['workflow_id'] ?? null) === $workflowId
+                && ($recovery['state'] ?? '') === 'RELEASED') {
+                $cap = max(0, (int) ($recovery['release_run_baseline'] ?? 0))
+                    + min(8, max(0, (int) ($recovery['release_run_allowance'] ?? 0)));
+                if ($this->runCount($featureId) >= $cap) {
+                    $this->workflows->markRuntimeIssue($workflowId, 'STALLED',
+                        'Operator-approved recovery run limit reached; new scoped authorization required.');
+                    return new WorkflowDirective(WorkflowDirectiveType::STOP, null,
+                        'The controlled Security recovery run allowance is exhausted.');
+                }
+            }
             $role = $directive->agent;
             if ($role === null) return $directive;
 
@@ -241,7 +252,9 @@ final readonly class EngineeringAutonomousProgressionService
             // At most eight additional logical runs after independent Security approval.
             $baseline = max(0, (int) ($recovery['release_run_baseline'] ?? 0));
             $allowance = min(8, max(0, (int) ($recovery['release_run_allowance'] ?? 0)));
-            $budget = max($budget, $baseline + $allowance);
+            // Do not inherit a larger historical autonomy grant: this explicit
+            // operator release permits exactly the bounded additional window.
+            $budget = $baseline + $allowance;
         }
         return $budget;
     }
