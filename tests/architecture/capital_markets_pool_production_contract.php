@@ -16,7 +16,8 @@ $schema=$read('app/migrations/20261015_000144_capital_markets_pool_production.sq
 foreach(['COS_CM_POOL_PRODUCTION_ARMED','CANARY','SOAK','ACCEPTED','LIVE',
     'ROLLED_BACK','canaryHealthy','->report(','->setSourceEnabled(',
     'fencing_token=fencing_token+1','capital_markets.market_data.manage',
-    'DISABLED','UNTRUSTED','24h LIVE 250 BBO + 50 L2'] as $part){
+    'DISABLED','UNTRUSTED','INSERT IGNORE INTO tn_capital_market_pool_production_control',
+    'Canary source changed during lock acquisition','24h LIVE 250 BBO + 50 L2'] as $part){
     if(!str_contains($command,$part))throw new RuntimeException('Release command guard missing '.$part);
 }
 foreach(['source_id IN (__SOURCE_PLACEHOLDERS__)','tn_capital_market_canonical_events',

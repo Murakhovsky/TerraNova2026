@@ -149,6 +149,11 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
             if($old!==null&&!in_array($old['phase'],['OFF','ROLLED_BACK'],true)){
                 throw new DomainException('Another rollout already owns this tenant.');
             }
+            $current=$this->sources->get($org,MarketSourceId::fromString($ids[0]));
+            if($current===null||$current->enabled){
+                throw new DomainException('Canary source changed during lock acquisition.');
+            }
+            $this->assertSourceAttested($org,$ids);
             $this->saveControl($org,'CANARY',$ids,$ids,$actor,null);
             $this->administration->setSourceEnabled($org,$actor,$this->correlation(),$ids[0],true);
         });
@@ -179,6 +184,10 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
             $locked=$this->lockedControl($org);
             if(!is_array($locked)||$locked['phase']!=='CANARY')throw new DomainException('Concurrent rollout modification.');
             foreach($new as $id){
+                $current=$this->sources->get($org,MarketSourceId::fromString($id));
+                if($current===null||$current->enabled){
+                    throw new DomainException('Soak source changed during lock acquisition.');
+                }
                 $this->administration->setSourceEnabled($org,$actor,$this->correlation(),$id,true);
             }
             $this->saveControl($org,'SOAK',$ids,$disabled,(int)$locked['operator_id'],
@@ -312,6 +321,13 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
 
     private function lockedControl(string $org):?array
     {
+        // Serialize even FIRST activation: SELECT FOR UPDATE on a missing row
+        // does not reliably lock a tenant-specific non-existing rollout.
+        $initialize=$this->connection->prepare(
+            "INSERT IGNORE INTO tn_capital_market_pool_production_control
+             (organization_id,phase,source_ids_json,initially_disabled_json,operator_id)
+             VALUES (:org,'OFF','[]','[]',0)");
+        $initialize->execute(['org'=>$org]);
         $q=$this->connection->prepare(
             'SELECT * FROM tn_capital_market_pool_production_control
              WHERE organization_id=:org FOR UPDATE');
