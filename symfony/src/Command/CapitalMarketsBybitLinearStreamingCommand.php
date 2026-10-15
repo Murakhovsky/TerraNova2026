@@ -23,6 +23,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetua
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\BybitLinearTopBookProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -44,6 +45,7 @@ final class CapitalMarketsBybitLinearStreamingCommand extends Command
         private readonly BybitOrderBookPayloadParser $orderBooks,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){
         parent::__construct();
     }
@@ -106,15 +108,20 @@ final class CapitalMarketsBybitLinearStreamingCommand extends Command
             $token=0;
             $accepted=0;
             $lastPing=$clock();
+            $verifiedInstrumentId=$subs[0]->instrumentId->value();
             $transport=new NativeWebSocketTransport(
                 'wss://stream.bybit.com/v5/public/linear',
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $generation)use(
-                    $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,&$token,&$accepted,
-                ):void{
+                    $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,&$token,&$accepted,,
+                    $verifiedInstrumentId):void{
                     $result=$protocol->decode($payload,new DateTimeImmutable('now',new DateTimeZone('UTC')));
                     if($result['kind']==='ack'){
                         $session->subscribed($generation,$protocol->key());
+                        $this->verification->acknowledged(
+                            $org,$sourceName,$shard,$workerId,$token,$generation,
+                            'BYBIT_LINEAR',$verifiedInstrumentId
+                        );
                         return;
                     }
                     if($result['kind']==='pong'){
@@ -145,7 +152,12 @@ final class CapitalMarketsBybitLinearStreamingCommand extends Command
                     if(!in_array($written->status,['ACCEPTED','DUPLICATE'],true)){
                         throw new \DomainException('Bybit BBO ingestion rejected.');
                     }
-                    $accepted++;
+                    if($written->status==='ACCEPTED'){
+                        $this->verification->acceptedQuote(
+                            $org,$sourceName,$shard,$workerId,$token,$generation,$written
+                        );
+                        $accepted++;
+                    }
                 },
                 2097152,
                 function(string $kind,int $generation)use($session,$clock):void{

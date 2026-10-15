@@ -21,7 +21,8 @@ final readonly class MysqlStreamingProviderVerification
         int $epoch,string $provider,string $instrument,string $channel='BBO'
     ):void{
         $this->check($org,$source,$shard,$worker,$token,$epoch,$instrument,$channel);
-        if(!in_array($provider,['BINANCE_SPOT','MASSIVE_STOCKS'],true)){
+        if(!in_array($provider,['BINANCE_SPOT','BINANCE_USDM','BYBIT_SPOT','BYBIT_LINEAR',
+            'KRAKEN_SPOT','MASSIVE_STOCKS'],true)){
             throw new DomainException('Provider acknowledgement must originate in an approved protocol.');
         }
         $this->fenced($org,$source,$shard,$worker,$token,function()use(
