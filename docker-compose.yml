@@ -37,6 +37,9 @@ x-app-environment: &app-environment
   COS_CM_POOL_PRODUCTION_ARMED: ${COS_CM_POOL_PRODUCTION_ARMED:-0}
   COS_CM_INSTRUMENT_TRUST_SWEEPER_ENABLED: ${COS_CM_INSTRUMENT_TRUST_SWEEPER_ENABLED:-0}
   COS_CM_STREAM_OPS_MONITOR_ENABLED: ${COS_CM_STREAM_OPS_MONITOR_ENABLED:-0}
+  COS_CM_L2_FENCED_ENABLED: ${COS_CM_L2_FENCED_ENABLED:-0}
+  COS_CM_DERIVATIVES_LIFECYCLE_ENABLED: ${COS_CM_DERIVATIVES_LIFECYCLE_ENABLED:-0}
+  COS_CM_STREAMING_BYBIT_DERIVATIVES_ENABLED: ${COS_CM_STREAMING_BYBIT_DERIVATIVES_ENABLED:-0}
   COS_CM_STREAM_FAILOVER_DRILL_ARMED: ${COS_CM_STREAM_FAILOVER_DRILL_ARMED:-0}
   COS_CM_STREAMING_MULTI_FLEET_ENABLED: ${COS_CM_STREAMING_MULTI_FLEET_ENABLED:-0}
   COS_CM_STREAMING_BINANCE_SPOT_BATCH_PILOT: ${COS_CM_STREAMING_BINANCE_SPOT_BATCH_PILOT:-0}
@@ -369,6 +372,71 @@ services:
       mysql: { condition: service_healthy }
     healthcheck: { disable: true }
     networks: [backend]
+
+  # P1 Bybit contract status is checked by authoritative REST; no trades.
+  cm-derivatives-lifecycle:
+    profiles: [cm-derivatives-lifecycle]
+    image: cos-symfony-php:local
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 192m
+    cpus: "0.25"
+    command:
+      - sh
+      - -ec
+      - |
+        test -n "$COS_CM_DERIVATIVES_ORG"
+        test -n "$COS_CM_DERIVATIVES_SOURCE"
+        case "$COS_CM_DERIVATIVES_ACTOR" in
+          ''|0|*[!0-9]*) echo "Invalid derivatives operator"; exit 1 ;;
+        esac
+        while true; do
+          php bin/console cos:capital-markets:market-data:derivatives:lifecycle \
+            poll "$COS_CM_DERIVATIVES_ORG" "$COS_CM_DERIVATIVES_SOURCE" \
+            "$COS_CM_DERIVATIVES_ACTOR"
+          php bin/console cos:capital-markets:market-data:derivatives:lifecycle \
+            sweep "$COS_CM_DERIVATIVES_ORG" "$COS_CM_DERIVATIVES_SOURCE" \
+            "$COS_CM_DERIVATIVES_ACTOR" --stale-seconds=120
+          sleep 60
+        done
+    environment:
+      <<: *app-environment
+      COS_CM_DERIVATIVES_LIFECYCLE_ENABLED: "1"
+      COS_CM_DERIVATIVES_ORG: ${COS_CM_DERIVATIVES_ORG:-}
+      COS_CM_DERIVATIVES_SOURCE: ${COS_CM_DERIVATIVES_SOURCE:-}
+      COS_CM_DERIVATIVES_ACTOR: ${COS_CM_DERIVATIVES_ACTOR:-0}
+    depends_on:
+      mysql: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [frontend, backend]
+
+  # Opt-in one-source / one-contract WS worker; source lease rejects duplicates.
+  cm-derivatives-stream:
+    profiles: [cm-derivatives-stream]
+    image: cos-symfony-php:local
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 45s
+    mem_limit: 256m
+    cpus: "0.5"
+    command:
+      - sh
+      - -ec
+      - |
+        test -n "$COS_CM_DERIVATIVES_ORG"
+        test -n "$COS_CM_DERIVATIVES_SOURCE"
+        exec php bin/console cos:capital-markets:market-data:stream:bybit-derivatives \
+          "$COS_CM_DERIVATIVES_ORG" "$COS_CM_DERIVATIVES_SOURCE" --seconds=0
+    environment:
+      <<: *app-environment
+      COS_CM_STREAMING_BYBIT_DERIVATIVES_ENABLED: "1"
+      COS_CM_DERIVATIVES_ORG: ${COS_CM_DERIVATIVES_ORG:-}
+      COS_CM_DERIVATIVES_SOURCE: ${COS_CM_DERIVATIVES_SOURCE:-}
+    depends_on:
+      mysql: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [frontend, backend]
 
   spatial-worker:
     image: cos-symfony-php:local

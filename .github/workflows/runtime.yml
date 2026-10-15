@@ -93,6 +93,9 @@ jobs:
         run: docker compose --profile cm-stream-sweeper config --quiet
       - name: Validate source-fenced BBO fleet Compose profile
         run: docker compose --profile cm-stream-fleet config --quiet
+      - name: Validate opt-in derivatives REST and WebSocket profiles
+        run: |
+          docker compose --profile cm-derivatives-lifecycle --profile cm-derivatives-stream config --quiet
       - name: Validate source-scoped stream incident monitor profile
         run: docker compose --profile cm-stream-ops-monitor config --quiet
       - name: Validate per-instrument stale sweep Compose profile
