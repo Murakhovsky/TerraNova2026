@@ -33,6 +33,7 @@ final readonly class EngineeringCanonicalTechnicalExecutionAdmission implements 
         $row=$this->db->fetchAssociative(
             'SELECT a.id,a.status,a.trace_id,a.idempotency_key,a.agent_role,
                     a.workflow_execution_id,w.status AS workflow_status,
+                    w.current_agent_run_id AS active_agent_run_id,
                     f.organization_id,rollout.mode,rollout.approved_by,rollout.approved_at,
                     l.technical_state,l.canonical_run_id
              FROM cos_engineering_agent_runs a
@@ -50,7 +51,8 @@ final readonly class EngineeringCanonicalTechnicalExecutionAdmission implements 
         );
         if (!$row || $row['status']!=='RUNNING'
             || $row['trace_id']!==$runTraceId
-            || !in_array($row['workflow_status'],['RUNNING','WAITING'],true)) {
+            || $row['workflow_status']!=='RUNNING'
+            || $row['active_agent_run_id']!==$row['id']) {
             throw new DomainException('Engineering Agent provider has no active tenant-owned AgentRun and trace.');
         }
         $mode=$row['mode']??'off';

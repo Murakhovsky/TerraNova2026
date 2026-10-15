@@ -82,6 +82,12 @@ try {
        ['id'=>$workflow,'feature'=>$feature,'trace'=>$trace,'lock'=>'engineering:feature:'.$feature.':workflow'],
     );
     $createAgent($agent,$task,$runTrace);
+    // Real AgentRunStore::start synchronizes this pointer in the same transaction.
+    $db->executeStatement(
+        'UPDATE cos_engineering_workflows SET current_agent_run_id=:agent
+         WHERE id=:workflow',
+        ['agent'=>$agent,'workflow'=>$workflow],
+    );
     $admission=new EngineeringCanonicalTechnicalExecutionAdmission($db,$reader);
     $admission->assertReady($task,$org,$runTrace);
     $deny(static fn()=> $admission->assertReady($task,'foreign-tenant',$runTrace),
@@ -98,6 +104,16 @@ try {
     );
     $gate->begin($agent,$workflow,$task,$runTrace);
     $admission->assertReady($task,$org,$runTrace);
+    $db->executeStatement(
+        'UPDATE cos_engineering_workflows SET current_agent_run_id=NULL WHERE id=:workflow',
+        ['workflow'=>$workflow],
+    );
+    $deny(static fn()=> $admission->assertReady($task,$org,$runTrace),
+        'orphaned AgentRun is not authoritative workflow worker');
+    $db->executeStatement(
+        'UPDATE cos_engineering_workflows SET current_agent_run_id=:agent WHERE id=:workflow',
+        ['agent'=>$agent,'workflow'=>$workflow],
+    );
     $deny(static fn()=> $admission->assertReady($task,$org,'tampered-trace'),
         'provider trace substitution on canonical AgentRun');
     if($reader->engineeringAgent($org,$agent)->status->value!=='match') {
