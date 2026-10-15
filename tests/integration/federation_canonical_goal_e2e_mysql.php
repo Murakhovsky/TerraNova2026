@@ -172,7 +172,8 @@ try {
     $catalog=new ModuleCatalog([
         new ModuleDefinition(new ModuleManifest('sales','Sales','1.0.0'),
             new ModuleContributions(capabilities:['sales.create_task'],capabilityContracts:[$contract])),
-        new ModuleDefinition(new ModuleManifest('federation','Federation','1.0.0')),
+        new ModuleDefinition(new ModuleManifest('federation','Federation','1.0.0'),
+            new ModuleContributions()),
     ]);
     $states=new class implements ModuleStateRepositoryInterface {
         public function enabledOverride(string $organizationId,string $moduleId):?bool {return true;}
