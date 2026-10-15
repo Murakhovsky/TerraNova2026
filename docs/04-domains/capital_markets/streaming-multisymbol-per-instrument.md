@@ -27,6 +27,24 @@ Canonical Instrument Registry і MarketSubscription залишаються єд�
 
 Результат PLANNED_NOT_RUNNING вказує кількість, headroom, символи, ключі, reconnect limits. Це не підтвердження відкритих сокетів або біржових прав.
 
+## Керований запуск групи потоків
+
+Доступний спільний opt-in supervisor із перевіркою прав керування Market Data, детермінованим batching, обмеженням до 16 незалежних source-worker, запуском із затримкою не менше 500 мс між джерелами, source-scoped reconnect/backoff та граничним бюджетом повторних запусків. Він відкриває тільки вже реалізовані Binance/Massive worker-команди з наявними MySQL lease, а не власний ненадійний socket writer.
+
+Попередній перегляд (нічого не вмикає):
+
+    php symfony/bin/console cos:capital-markets:market-data:stream:multi-fleet ORG ACTOR --sources=SOURCE_A,SOURCE_B
+
+Керований локальний запуск після підтвердження ліцензій, source flags та параметрів:
+
+    COS_CM_STREAMING_MULTI_FLEET_ENABLED=1 php symfony/bin/console cos:capital-markets:market-data:stream:multi-fleet ORG ACTOR --sources=SOURCE_A,SOURCE_B --max-workers=16 --seconds=60 --execute
+
+Для постійної роботи передбачено окремий вимкнений за замовчуванням profile cm-stream-fleet. Необхідно явно задати COS_CM_FLEET_ORGANIZATION, COS_CM_FLEET_ACTOR, COS_CM_FLEET_SOURCES і перевірити CPU/RAM, права на provider streams та workers:
+
+    docker compose --profile cm-stream-fleet up -d --no-deps cm-stream-fleet
+
+У контейнері встановлено обмеження пам’яті/CPU і restart budget. Некоректний план відхиляється до відкриття WebSocket. Якщо один worker багаторазово завершується з помилкою, supervisor завершує групу з FAIL замість удаваного повного покриття. Процеси під час завершення отримують SIGTERM, потім примусовий kill лише після обмеженого grace period. Втрата worker lease не дозволяє старому процесу писати котирування. Працездатність групи ще не означає свіжості BBO чи приймання 24-годинного soak.
+
 ## Незалежний стан інструмента
 
 Додаткова таблиця tn_capital_market_instrument_stream_trust з ключем organization/source/instrument/channel зберігає стан TRUSTED, UNTRUSTED або STALE, останню sequence, freshness, quality score, recovery_required, shard_key та fencing_token. Додається один агрегат на інструмент, не паралельний реєстр інструментів.
