@@ -58,6 +58,8 @@ jobs:
         run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: Kernel Tool canonical retry contract
+        run: php tests/unit/workflow_kernel_tool_safe_retry.php
       - name: Capital Markets streaming core, reconnect and Binance protocol acceptance
         run: |
           php tests/unit/capital_markets_streaming_recovery_gate.php
