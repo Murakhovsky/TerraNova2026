@@ -177,14 +177,14 @@ try {
  $actual=$toolRuntime->execute($toolReal);
  $expect($actual->result()?->isSuccess()===true && $toolStub->invocations===1,
     'Full actual Tool runtime bypassed canonical fencing or native audit.');
- $nativeToolRun=(string)$db->fetchOne(
-    'SELECT run_id FROM cos_workflow_runs WHERE organization_id=:org
-     AND definition_id="kernel.tool_execution"
-     AND checkpoint_reference LIKE "kernel:tool:%"
-     ORDER BY updated_at DESC LIMIT 1',['org'=>$org]);
- $expect($nativeToolRun!=='' && $store->get(
-    new \Platform\Workflow\Model\WorkflowRunIdentity($org,$nativeToolRun))?->status->value==='completed',
-    'Real ToolRuntime did not checkpoint the native audit into canonical Store.');
+ $nativeToolRun='kt:'.substr(hash('sha256',
+    $org.chr(0).'tool'.chr(0).'read:ci.echo.read:actual-'.$token),0,32);
+ $realIdentity=new \Platform\Workflow\Model\WorkflowRunIdentity($org,$nativeToolRun);
+ $realSnapshot=$store->get($realIdentity);
+ $expect($realSnapshot?->status->value==='completed'
+    && str_starts_with((string)$store->steps($realIdentity)[0]->resultReference,
+        'kernel:tool:'.$actual->id.':'),
+    'Real ToolRuntime did not checkpoint its own native audit into canonical Store.');
 
  // Native WRITE Tool: explicit independent human approval and pinned Action attempt.
  $actionId=bin2hex(random_bytes(16));$writeAudit=bin2hex(random_bytes(16));
@@ -266,6 +266,53 @@ try {
  $expect($store->get(new \Platform\Workflow\Model\WorkflowRunIdentity(
     $org,$crash->runId))?->status->value==='ambiguous','Crash recovery did not quarantine.');
  $deny(static fn()=> $fence->beginAgent($jobCrash,$agent),'uncertain Agent effect automatically replayed');
+ // Simulated worker crash with expired lease and a persisted native result.
+ // Even a genuine output cannot bypass the expired technical lease CAS.
+ $expiredJob=bin2hex(random_bytes(16));$expiredCorr='expired-'.$token;
+ $db->executeStatement(
+    'INSERT INTO cos_jobs
+     (id,organization_id,type,payload,status,attempts,max_attempts,timeout_seconds,
+      available_at,locked_at,locked_by,correlation_id)
+     VALUES (:id,:org,"AGENT_RUN",:payload,"RUNNING",1,3,7200,
+             UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),:worker,:trace)',
+    ['id'=>$expiredJob,'org'=>$org,'payload'=>json_encode($payload,JSON_THROW_ON_ERROR),
+     'worker'=>$worker,'trace'=>$expiredCorr]);
+ $expiredClaim=$fence->beginAgent(
+    new Job($expiredJob,$org,'AGENT_RUN',$payload,1,3,7200,$expiredCorr,null,$worker),
+    $agent);
+ $db->executeStatement(
+    'UPDATE cos_workflow_steps
+     SET claim_expires_at=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 2 SECOND)
+     WHERE organization_id=:org AND run_id=:run',
+    ['org'=>$org,'run'=>$expiredClaim->runId]);
+ $expiredNative=bin2hex(random_bytes(16));
+ $db->executeStatement(
+    'INSERT INTO cos_agent_runs
+     (id,organization_id,agent_name,agent_version,provider,model,prompt_version,
+      schema_version,status,context_reference,input_snapshot,output,correlation_id,
+      started_at,finished_at)
+     VALUES (:id,:org,:agent,"1.0.0","fixture","fixture","1.0.0","1.0.0",
+             "COMPLETED",:context,"{}",:output,:trace,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
+    ['id'=>$expiredNative,'org'=>$org,'agent'=>$agent,'trace'=>$expiredCorr,
+     'context'=>json_encode(['__kernel_source_job_id'=>$expiredJob],JSON_THROW_ON_ERROR),
+     'output'=>json_encode(['decision'=>'crash-reconciled'],JSON_THROW_ON_ERROR)]);
+ $deny(static fn()=> $fence->completeAgent($expiredClaim,$expiredNative),
+    'Agent completion with expired canonical Step lease');
+ $deny(static fn()=> $fence->beginAgent(
+    new Job($expiredJob,$org,'AGENT_RUN',$payload,1,3,7200,$expiredCorr,null,$worker),
+    $agent), 'Agent automatic claim after lease expiry');
+ $expiredIdentity=new \Platform\Workflow\Model\WorkflowRunIdentity(
+    $org,$expiredClaim->runId);
+ $expect($store->get($expiredIdentity)?->status->value==='running'
+    && $store->steps($expiredIdentity)[0]->state==='claimed',
+    'Expired claim must remain explicitly unreconciled, not auto-completed');
+ $postCrash=(new DoctrineKernelExecutionRecoveryInspector($db,$evidence))
+    ->inspectTenant($org,100);
+ $expect(($postCrash['counts']['manual_required']??0)===2
+    && $postCrash['status']==='manual_reconciliation_required'
+    && $postCrash['automatic_replay_authorized']===false,
+    'Expired technical lease escaped manual reconciliation gate.');
+
  $expect((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs
     WHERE organization_id=:org',['org'=>$org])===0,
     'General Kernel technical executor wrote forbidden legacy Federation Run');
