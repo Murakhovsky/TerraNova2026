@@ -33,7 +33,7 @@ final readonly class StreamingFleetPlacementPolicy
             throw new DomainException('Invalid approved fleet node ID.');
         }
         sort($nodes,SORT_STRING);
-        $seen=[];$ledger=[];
+        $seen=[];$fingerprints=[];$ledger=[];
         foreach($nodes as $node)$ledger[$node]=['sources'=>[],'subscriptions'=>0,'estimated_milliusd_hour'=>0];
         usort($sources,static fn(array $a,array $b):int=>
             strcmp((string)($a['source_id']??''),(string)($b['source_id']??'')));
@@ -43,7 +43,13 @@ final readonly class StreamingFleetPlacementPolicy
                 ||isset($seen[$id])||!is_int($count)||$count<1||$count>100){
                 throw new DomainException('Unknown source or capacity exceeds supported worker limit.');
             }
-            $seen[$id]=true;$cost=$baseCostMilliUsdHour+$count*$quoteCostMilliUsdHour;
+            $seen[$id]=true;
+            // Hash the fully resolved source topology (including ordered
+            // canonical subscriptions), not only source IDs. Changed symbols
+            // require a new explicit pin on every node before execute.
+            $fingerprints[$id]=hash('sha256',json_encode($row,
+                JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
+            $cost=$baseCostMilliUsdHour+$count*$quoteCostMilliUsdHour;
             // Consistent order; adding a new node does not depend on iteration timing.
             $order=$nodes;
             usort($order,static fn(string $a,string $b):int=>
@@ -65,7 +71,7 @@ final readonly class StreamingFleetPlacementPolicy
         }
         foreach($ledger as &$item)sort($item['sources'],SORT_STRING);
         unset($item);
-        $digest=hash('sha256',json_encode([$nodes,array_keys($seen),
+        $digest=hash('sha256',json_encode([$nodes,$fingerprints,
             $maxSourcesPerNode,$maxSubscriptionsPerNode,
             $budgetMilliUsdHour,$baseCostMilliUsdHour,$quoteCostMilliUsdHour],
             JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));

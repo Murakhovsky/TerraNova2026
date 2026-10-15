@@ -28,7 +28,7 @@ Read-only cursor audit перевіряє ці підписи повторним
 
     php symfony/bin/console cos:capital-markets:market-data:evidence provenance ORG ACTOR --source=SOURCE --cursor=0 --limit=100
 
-Режим replay бере лише збережені записи з валідним provenance, змінює data mode на REPLAY, викликає існуючий adapter decoder і normalizer **без виклику ingestion, EventBus, capital reservation, opportunity чи execution**. Порушення контракту або пошкоджені записи відправляє до REPLAY_QUARANTINED. Діапазон обмежений сімома днями і двомастами подіями за запуск.
+Режим replay бере лише збережені записи з валідним provenance, змінює data mode на REPLAY, викликає існуючий adapter decoder і normalizer **без виклику ingestion, EventBus, capital reservation, opportunity чи execution**. Replay додатково порівнює повторно обчислений canonical fingerprint з історично збереженим, виявляючи drift після зміни декодера. Відсутність старого canonical baseline не прирівнюється до успішного parity. Порушення контракту або пошкоджені записи відправляє до REPLAY_QUARANTINED. Діапазон обмежений сімома днями і двомастами подіями за запуск.
 
     php symfony/bin/console cos:capital-markets:market-data:evidence replay ORG ACTOR --source=SOURCE --from=2026-10-15T00:00:00Z --to=2026-10-15T01:00:00Z --limit=100
 
@@ -42,7 +42,7 @@ Dry-run перед запуском:
 
     php symfony/bin/console cos:capital-markets:market-data:stream:multi-fleet ORG ACTOR --sources=SOURCE_A,SOURCE_B --nodes=worker-a,worker-b --node=worker-a --max-workers=16 --max-subscriptions=450 --budget-milliusd-hour=200000
 
-Результат містить topology_digest. На всіх вузлах має бути однаковий перелік nodes/sources та ідентичні caps. Для actual execute потрібно встановити COS_CM_STREAMING_MULTI_FLEET_ENABLED=1 та COS_CM_STREAMING_FLEET_TOPOLOGY_DIGEST із затвердженого dry-run, після чого явно додати --execute. Декілька supervisor з різними конфігураціями все одно блокуються існуючим MySQL source lease fencing; але різне планування не вважається коректним операційним станом.
+Результат містить topology_digest, залежний також від кількості та точного складу інструментів у кожному source. На всіх вузлах має бути однаковий перелік nodes/sources, mappings та ідентичні caps. Для actual execute потрібно встановити COS_CM_STREAMING_MULTI_FLEET_ENABLED=1 та COS_CM_STREAMING_FLEET_TOPOLOGY_DIGEST із затвердженого dry-run, після чого явно додати --execute. Декілька supervisor з різними конфігураціями все одно блокуються існуючим MySQL source lease fencing; але різне планування не вважається коректним операційним станом.
 
 Оцінка витрат не є фактичним provider invoice. Для повної оптимізації потрібні реальні тарифні дані ліцензій, CPU/RAM, network egress, витрати зберігання raw events, event latency percentiles та автоматизована ресурсна телеметрія. Жодних автоматичних фінансових транзакцій або масштабування понад визначені limits.
 

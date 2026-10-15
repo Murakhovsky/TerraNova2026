@@ -65,6 +65,11 @@ $placement=new StreamingFleetPlacementPolicy();
 $plan=$placement->place($pool,['node-c','node-a','node-b'],16,450,1000,10,1);
 $planReverse=$placement->place(array_reverse($pool),['node-b','node-c','node-a'],16,450,1000,10,1);
 $assert($plan===$planReverse,'Stable source-to-node placement depends on insertion order.');
+$changed=$pool;
+$changed[0]['subscriptions']=24;
+$changedPlan=$placement->place($changed,['node-a','node-b','node-c'],16,450,1000,10,1);
+$assert($changedPlan['topology_digest']!==$plan['topology_digest'],
+    'Changed subscription count reused pinned live topology digest.');
 $all=[];
 foreach($plan['nodes'] as $node=>$row){
     $assert(count($row['sources'])<=16&&$row['subscriptions']<=450
