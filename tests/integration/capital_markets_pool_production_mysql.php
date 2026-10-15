@@ -181,15 +181,16 @@ try{
     $assert($reader->canaryHealthy($org,[$source]),'Trusted live MySQL canary rejected.');
     $assert(!$reader->soakCheckpoints($org,$start)['accepted'],
         'Absent live watchdog checkpoints passed production acceptance.');
-    $c=$reader->recordSoakCheckpoint($org,$start,[$source]);
+    // Production PDO reads DATETIME(6), not a timestamp without fractional seconds.
+    $c=$reader->recordSoakCheckpoint($org,$start.'.000000',[$source]);
     $assert($c['healthy']===true
         &&$c['checkpoint']['observations']===1,
         'Live watchdog checkpoint was not persisted.');
     $pdo->prepare(
         "UPDATE tn_capital_market_pool_soak_checkpoints SET healthy=0
          WHERE organization_id=?")->execute([$org]);
-    $reader->recordSoakCheckpoint($org,$start,[$source]);
-    $assert($reader->soakCheckpoints($org,$start)['healthy']===0,
+    $reader->recordSoakCheckpoint($org,$start.'.000000',[$source]);
+    $assert($reader->soakCheckpoints($org,$start.'.000000')['healthy']===0,
         'Healthy retry resurrected previously failing watchdog bucket.');
     $pdo->prepare("UPDATE tn_capital_market_pool_stream_assignments
                    SET shard_key='absent-worker' WHERE organization_id=? AND instrument_id=?")

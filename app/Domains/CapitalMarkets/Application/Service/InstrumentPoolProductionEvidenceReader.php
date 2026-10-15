@@ -209,9 +209,11 @@ SQL;
             ||count(array_unique($sources))!==count($sources)){
             throw new DomainException('Explicit active soak epoch and source scope required.');
         }
-        $valid=\DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$soakStart,
+        // MySQL DATETIME(6) is returned with fractional seconds by PDO.
+        $epoch=str_contains($soakStart,'.')?$soakStart:$soakStart.'.000000';
+        $valid=\DateTimeImmutable::createFromFormat('!Y-m-d H:i:s.u',$epoch,
             new \DateTimeZone('UTC'));
-        if($valid===false||$valid->format('Y-m-d H:i:s')!==$soakStart){
+        if($valid===false||$valid->format('Y-m-d H:i:s.u')!==$epoch){
             throw new DomainException('Invalid soak epoch.');
         }
         $healthy=$this->canaryHealthy($org,$sources);
@@ -221,7 +223,8 @@ SQL;
             "INSERT INTO tn_capital_market_pool_soak_checkpoints
              (organization_id,soak_started_at,bucket_at,healthy,evidence_sha256)
              VALUES (:org,:epoch,
-                FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(UTC_TIMESTAMP(6))/300)*300),
+                DATE_SUB(DATE_FORMAT(UTC_TIMESTAMP(6),'%Y-%m-%d %H:%i:00'),
+                 INTERVAL (MINUTE(UTC_TIMESTAMP(6)) MOD 5) MINUTE),
                 :healthy,:digest)
              ON DUPLICATE KEY UPDATE
                 healthy=LEAST(healthy,VALUES(healthy)),
