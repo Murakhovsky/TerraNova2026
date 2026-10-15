@@ -11,12 +11,13 @@ final readonly class EngineeringArchitectEvidencePlanner
     ) {}
 
     /** @param list<string> $knownPaths @return array<string,mixed> */
-    public function budget(int $round, int $filesUsed, array $knownPaths): array
+    public function budget(int $round, int $filesUsed, array $knownPaths, ?int $maxRounds = null): array
     {
+        $roundLimit = min(EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS, max(1, $maxRounds ?? EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS));
         return [
             'rounds_used' => $round,
-            'rounds_max' => EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS,
-            'rounds_remaining' => max(0, EngineeringArchitectEvidenceAuthorization::MAX_ROUNDS - $round),
+            'rounds_max' => $roundLimit,
+            'rounds_remaining' => max(0, $roundLimit - $round),
             'files_used' => $filesUsed,
             'files_max' => EngineeringArchitectEvidenceAuthorization::MAX_ADDITIONAL_FILES,
             'files_remaining' => max(0, EngineeringArchitectEvidenceAuthorization::MAX_ADDITIONAL_FILES - $filesUsed),
@@ -30,9 +31,9 @@ final readonly class EngineeringArchitectEvidencePlanner
      * @param null|callable(list<string>):list<string> $resolveExisting
      * @return array{status:string,reason:string,paths:list<string>,rejected:list<array<string,string>>,partial:bool,budget:array<string,mixed>}
      */
-    public function plan(mixed $requested, array $alreadyRead, int $filesUsed, int $round, ?callable $resolveExisting = null): array
+    public function plan(mixed $requested, array $alreadyRead, int $filesUsed, int $round, ?callable $resolveExisting = null, ?int $maxRounds = null): array
     {
-        $budget = $this->budget($round, $filesUsed, $alreadyRead);
+        $budget = $this->budget($round, $filesUsed, $alreadyRead, $maxRounds);
         if (!is_array($requested) || $requested === []
             || count($requested) > EngineeringArchitectEvidenceAuthorization::MAX_FILES_PER_ROUND) {
             return [

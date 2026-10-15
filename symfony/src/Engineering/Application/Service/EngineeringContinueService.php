@@ -37,6 +37,15 @@ final readonly class EngineeringContinueService
         $workflowId = $this->workflows->activeIdForFeature($featureId);
         if ($workflowId === null) throw new RuntimeException('Engineering feature has no active workflow.');
         $workflow = $this->workflows->get($workflowId);
+        // Fail closed: generic immediate/scheduled continuation cannot run a
+        // targeted recovery and cannot auto-release the Developer.
+        $recovery = EngineeringSecurityRecoveryService::latestCheckpoint($feature);
+        if ($recovery !== null && ($recovery['workflow_id'] ?? null) === $workflowId
+            && !in_array((string) ($recovery['state'] ?? ''), ['RELEASED'], true)) {
+            $next = new WorkflowDirective(WorkflowDirectiveType::STOP, null,
+                'Targeted Security recovery is operator-controlled ('.($recovery['state'] ?? 'UNKNOWN').').');
+            return new EngineeringStartResult($featureId, $workflowId, $workflow->currentState()->value, $next);
+        }
         if ($workflow->currentState() === EngineeringWorkflowState::HUMAN_DECISION_REQUIRED) {
             $this->legacyEvidenceGates->reconcile($featureId, $workflowId, $correlationId);
             $workflow = $this->workflows->get($workflowId);
