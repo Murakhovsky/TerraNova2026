@@ -10,6 +10,7 @@ use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
 use Domains\CapitalMarkets\Application\Contract\MarketSourceRepositoryInterface;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
 use PDO;
+use Kernel\Transaction\Contract\TransactionManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -27,6 +28,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
 {
     public function __construct(
         private readonly PDO $connection,
+        private readonly TransactionManagerInterface $transactions,
         private readonly InstrumentPoolExternalEvidence $evidence,
         private readonly InstrumentPoolProductionEvidenceReader $reader,
         private readonly MarketSourceRepositoryInterface $sources,
@@ -142,18 +144,14 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         $this->assertSourceAttested($org,$ids);
         $source=$this->sources->get($org,MarketSourceId::fromString($ids[0]));
         if($source===null||$source->enabled)throw new DomainException('Canary must start from an OFF source.');
-        $this->connection->beginTransaction();
-        try{
+        $this->transactions->transactional(function() use ($org,$actor,$ids):void {
             $old=$this->lockedControl($org);
             if($old!==null&&!in_array($old['phase'],['OFF','ROLLED_BACK'],true)){
                 throw new DomainException('Another rollout already owns this tenant.');
             }
             $this->saveControl($org,'CANARY',$ids,$ids,$actor,null);
             $this->administration->setSourceEnabled($org,$actor,$this->correlation(),$ids[0],true);
-            $this->connection->commit();
-        }catch(Throwable $e){
-            $this->connection->rollBack();throw $e;
-        }
+        });
         return ['phase'=>'CANARY','sources'=>$ids,'live_confirmed'=>false,
             'next'=>'Start independently supervised live feed, then soak after fresh TRUSTED samples.'];
     }
@@ -177,8 +175,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         }
         $disabled=array_values(array_unique(array_merge(
             $this->decodeIds($old['initially_disabled_json']),$new)));
-        $this->connection->beginTransaction();
-        try{
+        $this->transactions->transactional(function() use ($org,$actor,$ids,$new,$disabled):void {
             $locked=$this->lockedControl($org);
             if(!is_array($locked)||$locked['phase']!=='CANARY')throw new DomainException('Concurrent rollout modification.');
             foreach($new as $id){
@@ -186,10 +183,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
             }
             $this->saveControl($org,'SOAK',$ids,$disabled,(int)$locked['operator_id'],
                 gmdate('Y-m-d H:i:s'));
-            $this->connection->commit();
-        }catch(Throwable $e){
-            $this->connection->rollBack();throw $e;
-        }
+        });
         return ['phase'=>'SOAK','sources'=>$ids,'window'=>'24 hours of real MySQL evidence',
             'external_workers_required'=>true,'accepted'=>false];
     }
@@ -204,8 +198,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         if(!$report['accepted'])throw new DomainException(
             '24h LIVE 250 BBO + 50 L2 quality/entitlement gates are not green.'
         );
-        $this->connection->beginTransaction();
-        try{
+        $this->transactions->transactional(function() use ($org,$actor,$old,$report):void {
             $locked=$this->lockedControl($org);
             if(!is_array($locked)||$locked['phase']!=='SOAK'||$locked['soak_started_at']!==$old['soak_started_at']){
                 throw new DomainException('Soak changed during acceptance.');
@@ -215,8 +208,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                  accepted_at=UTC_TIMESTAMP(6),acceptance_digest=:digest,
                  last_reviewed_by=:actor WHERE organization_id=:org");
             $q->execute(['digest'=>$report['digest'],'actor'=>$actor,'org'=>$org]);
-            $this->connection->commit();
-        }catch(Throwable $e){$this->connection->rollBack();throw $e;}
+        });
         return ['phase'=>'ACCEPTED','acceptance'=>$report,'production_running'=>false];
     }
 
@@ -229,10 +221,9 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
             throw new DomainException('Fresh independent acceptance required within 10 minutes.');
         }
         $this->assertSourceAttested($org,$this->decodeIds($old['source_ids_json']));
-        $report=$this->reader->report($org,$old['soak_started_at']);
+        $report=$this->reader->report($org,$old['soak_started_at'],$this->decodeIds($old['source_ids_json']));
         if(!$report['accepted'])throw new DomainException('Live production evidence degraded since acceptance.');
-        $this->connection->beginTransaction();
-        try{
+        $this->transactions->transactional(function() use ($org,$actor):void {
             $locked=$this->lockedControl($org);
             if(!is_array($locked)||$locked['phase']!=='ACCEPTED'){
                 throw new DomainException('Concurrent release state change.');
@@ -242,16 +233,14 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                  last_reviewed_by=:actor WHERE organization_id=:org AND phase='ACCEPTED'");
             $q->execute(['actor'=>$actor,'org'=>$org]);
             if($q->rowCount()!==1)throw new DomainException('Release already changed.');
-            $this->connection->commit();
-        }catch(Throwable $e){$this->connection->rollBack();throw $e;}
+        });
         return ['phase'=>'LIVE','gate'=>$report,'requires_continuous_watchdog'=>true,
             'trading_enabled'=>false];
     }
 
     private function rollback(string $org,int $actor):array
     {
-        $this->connection->beginTransaction();
-        try{
+        $disabled=$this->transactions->transactional(function() use ($org,$actor):array {
             $old=$this->lockedControl($org);
             if(!is_array($old)||in_array($old['phase'],['OFF','ROLLED_BACK'],true)){
                 throw new DomainException('No active pool rollout to roll back.');
@@ -286,8 +275,8 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                  SET phase='ROLLED_BACK',accepted_at=NULL,acceptance_digest=NULL,
                      last_reviewed_by=:actor WHERE organization_id=:org");
             $q->execute(['org'=>$org,'actor'=>$actor]);
-            $this->connection->commit();
-        }catch(Throwable $e){$this->connection->rollBack();throw $e;}
+            return $disabled;
+        });
         return ['phase'=>'ROLLED_BACK','disabled_sources'=>$disabled,'schema_rollback'=>false];
     }
 
