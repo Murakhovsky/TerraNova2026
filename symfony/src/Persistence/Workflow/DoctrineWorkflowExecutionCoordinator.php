@@ -41,9 +41,12 @@ final readonly class DoctrineWorkflowExecutionCoordinator implements WorkflowExe
             throw new DomainException('Approved canonical Goal required.');
         }
         $this->bindings($draft->definition);
-        $this->approval->assertTrusted($draft->identity,$draft->sourcePlanId,
-            $draft->sourcePlanDigest,$draft->approvalReference);
-        return $this->store->create($draft,$actor);
+        return $this->db->transactional(function () use ($draft,$actor):WorkflowRunSnapshot {
+            $created=$this->store->create($draft,$actor);
+            $this->approval->assertTrusted($draft->identity,$draft->sourcePlanId,
+                $draft->sourcePlanDigest,$draft->approvalReference);
+            return $created;
+        });
     }
 
     public function advance(WorkflowRunCommand $command):WorkflowRunSnapshot
