@@ -14,6 +14,7 @@ use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
 use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
 use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
 use App\Application\CapitalMarkets\Command\CapturePaperNavSnapshot;
+use App\Application\CapitalMarkets\Command\RunInstrumentPoolSnapshotScans;
 use InvalidArgumentException;
 use App\Application\System\Command\DrainSalesOutboxCommand;
 use App\Application\System\Command\SchedulerHeartbeatCommand;
@@ -51,6 +52,8 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly int $engineeringDomainAutonomyIntervalMinutes = 3,
         private readonly bool $engineeringRuntimeWatchdogEnabled = true,
         private readonly int $engineeringRuntimeWatchdogIntervalMinutes = 2,
+        private readonly bool $capitalMarketsInstrumentPoolScheduledEnabled = false,
+        private readonly int $capitalMarketsInstrumentPoolIntervalMinutes = 15,
         private readonly bool $capitalMarketsPaperNavEnabled = false,
         private readonly string $capitalMarketsPaperNavOrganizationId = '',
         private readonly int $capitalMarketsPaperNavIntervalMinutes = 10,
@@ -90,6 +93,9 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         }
         if($this->engineeringDomainAutonomyIntervalMinutes<1||$this->engineeringDomainAutonomyIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering Domain autonomy interval must be between 1 and 60 minutes.');
+        }
+        if($this->capitalMarketsInstrumentPoolIntervalMinutes<5||$this->capitalMarketsInstrumentPoolIntervalMinutes>1440){
+            throw new InvalidArgumentException('Instrument Pool snapshot scheduler interval must be 5..1440 minutes.');
         }
         if ($this->capitalMarketsPaperNavIntervalMinutes<10||$this->capitalMarketsPaperNavIntervalMinutes>60) {
             throw new InvalidArgumentException('Paper NAV snapshot interval must be 10..60 minutes to preserve 31-day history integrity.');
@@ -183,6 +189,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             $messages[] = RecurringMessage::every(
                 $this->growthAutonomousOutreachIntervalMinutes.' minutes',
                 new RedispatchMessage(new RunGrowthAutonomousOutreachCommand('scheduler'), 'async'),
+            );
+        }
+
+        if($this->capitalMarketsInstrumentPoolScheduledEnabled){
+            $messages[]=RecurringMessage::every(
+                $this->capitalMarketsInstrumentPoolIntervalMinutes.' minutes',
+                new RedispatchMessage(new RunInstrumentPoolSnapshotScans('scheduler'),'async'),
             );
         }
 

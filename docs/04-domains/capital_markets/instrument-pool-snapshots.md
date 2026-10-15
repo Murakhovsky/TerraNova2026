@@ -45,3 +45,21 @@ php symfony/bin/console cos:capital-markets:instrument-pool:review ORG BINANCE V
 `OPERATOR_REVIEW_REQUIRED`. Будь-який збій, зміна ідентичності або
 неповний (`truncated`) каталог перериває підтвердження. Це не доказ
 делістингу та не дозвіл на автоматичний імпорт чи торгівлю.
+
+## Автоматичне опитування через штатний COS Scheduler
+
+За замовчуванням вимкнене. Після явної активації Scheduler відправляє
+повідомлення до асинхронної черги, а обробник зберігає лише докази
+каталогу для організацій з увімкненим модулем Capital Markets.
+
+```dotenv
+COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED=1
+COS_CM_INSTRUMENT_POOL_SCHEDULER_INTERVAL_MINUTES=15
+COS_CM_INSTRUMENT_POOL_SCHEDULER_ACTOR_ID=1
+COS_CM_INSTRUMENT_POOL_SCHEDULER_TARGETS_JSON=[{"organization_id":"ORG","provider":"BINANCE","venue_id":"VENUE"}]
+```
+
+Максимум 25 явно налаштованих організацій та майданчиків, дублікати
+відхиляються. Кожен провайдер має незалежний atomic cooldown, збої
+одного джерела не припиняють інші. Scheduler не активує торгові
+підписки, не імпортує нові активи і не визначає автоматично `DELISTED`.
