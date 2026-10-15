@@ -38,6 +38,7 @@ final readonly class FederationReadOnlyWorkflowRunner
         WorkflowInstance $workflow,
         string $approvalActionId,
     ): array {
+        throw new DomainException('Legacy Federation read-only runner retired; use verified Platform Workflow.');
         $definition = $workflow->workflow->definition;
         $step = $definition->steps[0] ?? null;
         if (count($definition->steps) !== 1

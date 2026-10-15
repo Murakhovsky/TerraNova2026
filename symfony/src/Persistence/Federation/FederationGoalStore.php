@@ -297,6 +297,7 @@ final readonly class FederationGoalStore
         $this->identifier($planId);
         $org = $actor->organizationId()->value();
         $this->db->transactional(function () use ($actor, $org, $runId, $planId, $approvalActionId): void {
+        throw new DomainException('Legacy Federation technical execution retired; use Platform Workflow.');
             $plan = $this->db->fetchAssociative(
                 'SELECT goal_id, spec_version, state, plan_json FROM cos_federation_plans
                  WHERE organization_id = :org AND plan_id = :plan FOR UPDATE',
@@ -368,6 +369,7 @@ final readonly class FederationGoalStore
         string $stepId,
         array $projection,
     ): void {
+        throw new DomainException('Legacy Federation technical execution retired; use Platform Workflow.');
         $this->writer($actor);
         $this->identifier($runId);
         $this->identifier($stepId);
@@ -431,6 +433,7 @@ final readonly class FederationGoalStore
         string $nextState,
         int $expectedRevision,
     ): void {
+        throw new DomainException('Legacy Federation technical execution retired; use Platform Workflow.');
         $this->writer($actor);
         $this->identifier($runId);
         ExecutionRunPolicy::assertTransition($expectedState, $nextState);
@@ -453,6 +456,7 @@ final readonly class FederationGoalStore
         $this->identifier($stepId);
         $org = $actor->organizationId()->value();
         return $this->db->transactional(function () use ($org, $runId, $stepId): string {
+        throw new DomainException('Legacy Federation technical execution retired; use Platform Workflow.');
             // The owning Run row is the serialization lock for every claim,
             // even when concurrent callers selected different independent roots.
             // Resolve topology only AFTER acquiring the lock, inside this

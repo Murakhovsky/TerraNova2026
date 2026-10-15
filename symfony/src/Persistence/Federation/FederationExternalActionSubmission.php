@@ -41,6 +41,7 @@ final readonly class FederationExternalActionSubmission
         string $stepId,
         string $planApprovalActionId,
     ): array {
+        throw new DomainException('Legacy Federation Action submission retired; never replay fed: keys.');
         // All goal, plan, step, tenant and immutable schema checks happen here.
         $proposal = $this->intents->create($actor, $runId, $stepId, $planApprovalActionId);
         $org = $actor->organizationId()->value();
