@@ -226,7 +226,7 @@ final readonly class EngineeringControlledSecurityRecoveryService
                 ? $this->artifacts->latest($featureId, ArtifactType::SECURITY_REVIEW_REPORT)
                 : null;
             $securityApproved = $architectApproved && $review !== null
-                && in_array(($review['content']['status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS'], true)
+                && (($review['content']['status'] ?? '') === 'APPROVED')
                 && ($review['content']['reviewed_architecture_content_hash'] ?? null) === ($architecture['content_hash'] ?? '');
 
             $outcome = !$architectApproved ? 'ARCHITECTURE_NOT_APPROVED'
@@ -268,7 +268,7 @@ final readonly class EngineeringControlledSecurityRecoveryService
             $review = $this->artifacts->latest($featureId, ArtifactType::SECURITY_REVIEW_REPORT);
             if ($architecture === null || $review === null
                 || !in_array(($architecture['content']['gate_status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS'], true)
-                || !in_array(($review['content']['status'] ?? ''), ['APPROVED','APPROVED_WITH_CONDITIONS'], true)
+                || !(($review['content']['status'] ?? '') === 'APPROVED')
                 || ($review['content']['reviewed_architecture_content_hash'] ?? null) !== ($architecture['content_hash'] ?? null)
                 || ($review['id'] ?? null) !== ($permit['security_review_artifact_id'] ?? null)
                 || $this->humanDecisions->openForFeature($featureId) !== []) {
