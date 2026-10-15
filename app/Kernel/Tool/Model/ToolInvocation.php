@@ -20,6 +20,8 @@ final readonly class ToolInvocation extends ValueObject
         private array $input,
         string $correlationId,
         private ?UserId $requestedBy = null,
+        private ?string $idempotencyKey = null,
+        private ?string $authorizationActionId = null,
     ) {
         $toolName = strtolower(trim($toolName));
         if ($toolName === '' || strlen($toolName) > 190 || preg_match('/^[a-z0-9._:-]+$/', $toolName) !== 1) {
@@ -60,4 +62,7 @@ final readonly class ToolInvocation extends ValueObject
     {
         return $this->requestedBy;
     }
+
+    public function idempotencyKey(): ?string { return $this->idempotencyKey; }
+    public function authorizationActionId(): ?string { return $this->authorizationActionId; }
 }

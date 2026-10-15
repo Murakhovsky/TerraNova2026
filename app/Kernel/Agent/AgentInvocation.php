@@ -13,5 +13,7 @@ final readonly class AgentInvocation
         public string $correlationId,
         public array $contextReferences = [],
         public string $agentName = '',
+        public ?string $canonicalSourceJobId = null,
+        public ?string $canonicalClaimToken = null,
     ) {}
 }

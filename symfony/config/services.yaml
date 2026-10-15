@@ -314,6 +314,7 @@ services:
     arguments:
       $receipts: '@App\Persistence\Workflow\WorkflowReceiptAttestationRouter'
       $admission: '@App\Persistence\Workflow\WorkflowClaimAdmissionRouter'
+      $kernelEvidence: '@App\Persistence\Workflow\DoctrineKernelExecutionEvidence'
   # Recovery uses trusted Federation Plan evidence only for read-only Action proof.
   # Global WorkflowReceiptVerifierInterface remains fail-closed for normal execution.
   App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier:
@@ -330,6 +331,12 @@ services:
   # Engineering supplies trusted AgentRun provenance; Platform owns technical Run/Step SQL.
   Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
+  Platform\Workflow\Contract\WorkflowKernelExecutionStoreInterface:
+    alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
+  Platform\Workflow\Contract\WorkflowKernelExecutionEvidenceInterface:
+    alias: App\Persistence\Workflow\DoctrineKernelExecutionEvidence
+  Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface:
+    alias: App\Persistence\Workflow\DoctrineKernelExecutionFence
   Platform\Workflow\Contract\WorkflowTechnicalExternalEvidenceInterface:
     alias: App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionEvidence
   # Per-feature rollout is persisted explicitly in MySQL, not enabled by DI.
@@ -1790,12 +1797,17 @@ services:
   Kernel\Tool\Contract\ToolAuditInterface:
     alias: Infrastructure\Audit\PlatformToolAudit
 
+  Kernel\Agent\Service\AgentRuntime:
+    arguments:
+      $canonical: '@Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface'
+
   Kernel\Tool\Service\ToolRuntime:
     arguments:
       $registry: '@Kernel\Tool\Contract\ToolRegistryInterface'
       $permissions: '@Kernel\Tool\Contract\ToolPermissionCheckerInterface'
       $validator: '@Kernel\Tool\Contract\ToolInputValidatorInterface'
       $audit: '@Kernel\Tool\Contract\ToolAuditInterface'
+      $canonical: '@Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface'
 
   Kernel\Tool\Contract\ToolRuntimeInterface:
     alias: Kernel\Tool\Service\ToolRuntime
@@ -3289,6 +3301,7 @@ services:
       $policies: '@Kernel\Policy\Service\ActionPolicyService'
       $queue: '@Kernel\Queue\Contract\JobQueueInterface'
       $modules: '@Kernel\Module\ActiveModuleResolver'
+      $canonical: '@Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface'
 
   Kernel\Queue\Service\JobHandlerRegistry:
     arguments:

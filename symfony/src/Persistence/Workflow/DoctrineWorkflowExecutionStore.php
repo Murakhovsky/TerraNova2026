@@ -15,6 +15,8 @@ use Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface;
 use Platform\Workflow\Model\WorkflowEvidenceSignal;
 use Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface;
 use Platform\Workflow\Contract\WorkflowTechnicalExternalEvidenceInterface;
+use Platform\Workflow\Contract\WorkflowKernelExecutionEvidenceInterface;
+use Platform\Workflow\Contract\WorkflowKernelExecutionStoreInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
 use Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
@@ -36,13 +38,14 @@ use Platform\Workflow\Service\WorkflowStepScheduler;
  * No Action dispatch, Agent execution, automatic recovery or dual writes.
  * A run row serializes every transition/claim/checkpoint for its tenant.
  */
-final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface, WorkflowTechnicalExternalStoreInterface, WorkflowEvidenceSignalStoreInterface
+final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface, WorkflowTechnicalExternalStoreInterface, WorkflowEvidenceSignalStoreInterface, WorkflowKernelExecutionStoreInterface
 {
     public function __construct(
         private Connection $db,
         private WorkflowReceiptVerifierInterface $receipts,
         private WorkflowStepClaimAdmissionInterface $admission,
         private ?WorkflowTechnicalExternalEvidenceInterface $technicalEvidence = null,
+        private ?WorkflowKernelExecutionEvidenceInterface $kernelEvidence = null,
     ) {}
 
     public function create(WorkflowRunDraft $draft, TenantContext $actor): WorkflowRunSnapshot
@@ -370,6 +373,182 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             if (!$fresh) throw new LogicException('Completed Signal Step disappeared.');
             return self::stepSnapshot($fresh);
         });
+    }
+
+
+    /**
+     * Generic Kernel Agent/Tool claim. Only this Platform Store owns technical
+     * Run/Step mutations. A first-use queue claim or permission-checked Tool
+     * invocation and an independently approved tenant rollout are mandatory.
+     */
+    public function beginKernel(
+        WorkflowRunIdentity $identity,string $kind,string $sourceId,string $capability,
+        string $inputDigest,string $correlation,string $worker,int $leaseSeconds
+    ):string {
+        if(!in_array($kind,['agent','tool'],true)
+            || !preg_match('/^[a-f0-9]{64}$/D',$inputDigest)
+            || $sourceId==='' || strlen($sourceId)>190
+            || $capability==='' || strlen($capability)>160
+            || $correlation==='' || strlen($correlation)>40
+            || $worker==='' || strlen($worker)>100
+            || $leaseSeconds<1 || $leaseSeconds>7200
+            || $identity->runId!==self::kernelRunId($identity->organizationId,$kind,$sourceId)) {
+            throw new DomainException('Untrusted generic Kernel invocation or unstable source identity.');
+        }
+        $token=bin2hex(random_bytes(16));
+        $this->db->transactional(function()use(
+            $identity,$kind,$sourceId,$capability,$inputDigest,$correlation,$worker,$leaseSeconds,$token
+        ):void{
+            if($this->kernelEvidence===null) {
+                throw new DomainException('Generic Kernel evidence is not configured: fail closed.');
+            }
+            $rollout=$this->db->fetchAssociative(
+                'SELECT mode,approved_by,approved_at FROM cos_kernel_execution_rollouts
+                 WHERE organization_id=:org AND runtime_kind=:kind FOR UPDATE',
+                ['org'=>$identity->organizationId,'kind'=>$kind],
+            );
+            if(!$rollout || $rollout['mode']!=='canonical'
+                || trim((string)$rollout['approved_by'])==='' || $rollout['approved_at']===null) {
+                throw new DomainException('Canonical Kernel runtime has no explicit operator rollout.');
+            }
+            $this->kernelEvidence->assertBegin(
+                $identity,$kind,$sourceId,$capability,$inputDigest,$correlation,$worker,
+            );
+            $step=[
+                'id'=>'execute','capability_id'=>$capability,'capability_version'=>'1.0.0',
+                'side_effect_level'=>$kind==='tool' && str_starts_with($sourceId,'read:')
+                    ? 'none':'external',
+                'execution_binding'=>'kernel:'.$kind,'source_id'=>$sourceId,'depends_on'=>[],
+            ];
+            $definition=[$step];
+            $key=hash('sha256',$identity->organizationId."\0".$identity->runId."\0execute");
+            $this->db->executeStatement(
+                'INSERT INTO cos_workflow_runs
+                 (organization_id,run_id,definition_id,definition_version,
+                  definition_json,definition_digest,input_digest,actor_id,
+                  correlation_id,state,revision,created_at,updated_at)
+                 VALUES (:org,:run,:definition,:version,:graph,:fingerprint,:input,
+                         :actor,:correlation,"running",2,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,
+                    'definition'=>'kernel.'.$kind.'_execution','version'=>'1.0.0',
+                    'graph'=>json_encode($definition,JSON_THROW_ON_ERROR),
+                    'fingerprint'=>WorkflowDefinitionFingerprint::digest($definition),
+                    'input'=>$inputDigest,'actor'=>'kernel:'.$kind,
+                    'correlation'=>$correlation],
+            );
+            $this->db->executeStatement(
+                'INSERT INTO cos_workflow_steps
+                 (organization_id,run_id,step_id,ordinal_no,capability_id,
+                  capability_version,side_effect_level,state,revision,attempts,
+                  idempotency_key,claim_token,claimed_by,claim_expires_at,
+                  created_at,updated_at)
+                 VALUES (:org,:run,"execute",0,:capability,"1.0.0",:side,"claimed",2,1,
+                         :stepkey,:token,:worker,
+                         DATE_ADD(UTC_TIMESTAMP(6),INTERVAL :lease SECOND),
+                         UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,
+                    'capability'=>$capability,'side'=>$step['side_effect_level'],
+                    'stepkey'=>$key,'token'=>$token,'worker'=>$worker,'lease'=>$leaseSeconds],
+            );
+        });
+        return $token;
+    }
+
+    public function completeKernel(
+        WorkflowRunIdentity $identity,string $kind,string $token,string $receipt,string $correlation
+    ):void {
+        if(!in_array($kind,['agent','tool'],true)
+            || !preg_match('/^[a-f0-9]{32}$/D',$token)
+            || !str_starts_with($receipt,'kernel:'.$kind.':')) {
+            throw new DomainException('Invalid generic Kernel receipt/claim.');
+        }
+        $this->db->transactional(function()use($identity,$kind,$token,$receipt,$correlation):void{
+            $run=$this->lockedRun($identity);
+            $step=$this->db->fetchAssociative(
+                'SELECT * FROM cos_workflow_steps
+                 WHERE organization_id=:org AND run_id=:run AND step_id="execute" FOR UPDATE',
+                self::keys($identity),
+            );
+            $graph=json_decode((string)$run['definition_json'],true,512,JSON_THROW_ON_ERROR);
+            $pinned=is_array($graph)&&count($graph)===1?$graph[0]:null;
+            if($this->kernelEvidence===null || !$step || !is_array($pinned)
+                || $run['definition_id']!=='kernel.'.$kind.'_execution'
+                || $run['state']!=='running' || (int)$run['revision']!==2
+                || $run['correlation_id']!==$correlation
+                || $step['state']!=='claimed' || (int)$step['revision']!==2
+                || (int)$step['attempts']!==1
+                || !is_string($step['claim_token']) || !hash_equals($step['claim_token'],$token)
+                || $step['claim_expires_at']===null
+                || strtotime((string)$step['claim_expires_at'].' UTC')<=time()
+                || ($pinned['execution_binding']??null)!=='kernel:'.$kind
+                || ($pinned['capability_id']??null)!==$step['capability_id']
+                || ($pinned['side_effect_level']??null)!==$step['side_effect_level']
+                || !is_string($pinned['source_id']??null)
+                || $identity->runId!==self::kernelRunId(
+                    $identity->organizationId,$kind,$pinned['source_id'])
+                || !hash_equals((string)$run['definition_digest'],
+                    WorkflowDefinitionFingerprint::digest($graph))) {
+                throw new DomainException('Kernel technical receipt lost immutable claim or lease.');
+            }
+            $this->kernelEvidence->assertCompletion(
+                $identity,$kind,$pinned['source_id'],$step['capability_id'],
+                (string)$run['input_digest'],$receipt,$correlation,
+            );
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_steps SET state="completed",revision=revision+1,
+                   result_reference=:receipt,claim_token=NULL,claimed_by=NULL,
+                   claim_expires_at=NULL,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND step_id="execute"
+                   AND state="claimed" AND revision=2 AND attempts=1 AND claim_token=:token
+                   AND claim_expires_at>UTC_TIMESTAMP(6)',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,
+                    'receipt'=>$receipt,'token'=>$token],
+            );
+            if($changed!==1) throw new DomainException('Stale Kernel Step CAS: reconcile before retry.');
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_runs SET state="completed",revision=revision+1,
+                   checkpoint_reference=:receipt,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND state="running" AND revision=2',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,'receipt'=>$receipt],
+            );
+            if($changed!==1) throw new DomainException('Kernel Run CAS failed.');
+        });
+    }
+
+    public function quarantineKernel(WorkflowRunIdentity $identity,string $kind,string $token):void
+    {
+        if(!in_array($kind,['agent','tool'],true)
+            || !preg_match('/^[a-f0-9]{32}$/D',$token)) {
+            throw new DomainException('Invalid Kernel quarantine token.');
+        }
+        $this->db->transactional(function()use($identity,$kind,$token):void{
+            $run=$this->lockedRun($identity);
+            if($run['definition_id']!=='kernel.'.$kind.'_execution'
+                || $run['state']!=='running' || (int)$run['revision']!==2) {
+                throw new DomainException('Kernel quarantine is not a single unresolved Run.');
+            }
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_steps SET state="ambiguous",revision=revision+1,
+                   updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND step_id="execute"
+                   AND state="claimed" AND revision=2 AND claim_token=:token',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,'token'=>$token],
+            );
+            if($changed!==1) throw new DomainException('Kernel quarantine stale claim.');
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_runs SET state="ambiguous",revision=revision+1,
+                   updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND state="running" AND revision=2',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId],
+            );
+            if($changed!==1) throw new DomainException('Kernel quarantine Run CAS failed.');
+        });
+    }
+
+    private static function kernelRunId(string $org,string $kind,string $source):string
+    {
+        return 'k'.($kind==='agent'?'a':'t').':'.substr(
+            hash('sha256',$org."\0".$kind."\0".$source),0,32);
     }
 
     /**

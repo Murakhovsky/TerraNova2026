@@ -14,6 +14,8 @@ use Kernel\Queue\Contract\JobHandlerInterface;
 use Kernel\Queue\Contract\JobQueueInterface;
 use Kernel\Queue\Job;
 use RuntimeException;
+use Throwable;
+use Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface;
 
 final readonly class AgentRunJobHandler implements JobHandlerInterface
 {
@@ -25,6 +27,7 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
         private ActionPolicyService $policies,
         private JobQueueInterface $queue,
         private ?ActiveModuleResolver $modules = null,
+        private ?KernelCanonicalExecutionFenceInterface $canonical = null,
     ) {}
 
     public function supports(string $type): bool
@@ -48,6 +51,8 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
         }
 
         $agent = $this->domains->agent($agentName);
+        $claim = $this->canonical?->beginAgent($job, $agentName);
+        try {
         $execution = $this->runtime->run($agent, new AgentInvocation(
             $job->organizationId,
             $subjectType,
@@ -56,7 +61,17 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
             $job->correlationId,
             is_array($job->payload['context_references'] ?? null) ? $job->payload['context_references'] : [],
             $agentName,
+            $claim !== null ? $job->id : null,
+            $claim?->token,
         ));
+        if ($claim !== null) $this->canonical->completeAgent($claim, $execution->runId);
+        } catch (Throwable $error) {
+            if ($claim !== null) {
+                try { $this->canonical->quarantine($claim); }
+                catch (Throwable) { /* Operator reconcile; no replay. */ }
+            }
+            throw $error;
+        }
 
         foreach ($execution->proposals as $index => $proposal) {
             // The job identity, rather than the individual LLM run, makes retries idempotent.

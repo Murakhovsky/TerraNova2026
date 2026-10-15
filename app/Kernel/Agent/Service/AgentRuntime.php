@@ -5,6 +5,7 @@ namespace Kernel\Agent\Service;
 
 use Kernel\Action\ActionProposal;
 use Kernel\Agent\AgentDefinition;
+use Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface;
 use Kernel\Agent\AgentExecution;
 use Kernel\Agent\AgentInvocation;
 use Kernel\Agent\Contract\AgentAuditInterface;
@@ -30,6 +31,7 @@ final readonly class AgentRuntime
         private ?ContextRedactorInterface $redactor = null,
         private ?AgentConfigurationProviderInterface $configurations = null,
         private ?AgentAuditInterface $audit = null,
+        private ?KernelCanonicalExecutionFenceInterface $canonical = null,
     ) {}
 
     public function run(AgentDefinition $agent, AgentInvocation $invocation): AgentExecution
@@ -47,6 +49,8 @@ final readonly class AgentRuntime
             throw new RuntimeException(sprintf('Agent %s is disabled for this organization.', $agent->name));
         }
 
+        // Native LLM access cannot bypass an enrolled canonical technical claim.
+        $this->canonical?->assertAgentAdmitted($invocation);
         $runId = bin2hex(random_bytes(16));
         $started = hrtime(true);
         $failureRecorded = false;

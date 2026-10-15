@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kernel\Tool\Service;
 
 use InvalidArgumentException;
+use Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface;
 use Kernel\Tool\Contract\ToolAuditInterface;
 use Kernel\Tool\Contract\ToolInputValidatorInterface;
 use Kernel\Tool\Contract\ToolPermissionCheckerInterface;
@@ -24,6 +25,7 @@ final readonly class ToolRuntime implements ToolRuntimeInterface
         private ToolInputValidatorInterface $validator,
         private ToolAuditInterface $audit,
         private ToolRetryPolicy $retryPolicy = new ToolRetryPolicy(),
+        private ?KernelCanonicalExecutionFenceInterface $canonical = null,
     ) {}
 
     public function execute(ToolInvocation $invocation): ToolExecution
@@ -52,7 +54,10 @@ final readonly class ToolRuntime implements ToolRuntimeInterface
             return $execution;
         }
 
-        $maxAttempts = $this->retryPolicy->attemptsFor($definition);
+        // Validation and permission checking PRECEDE canonical admission.
+        // An enrolled side effect requires its own independent human Action.
+        $claim = $this->canonical?->beginTool($invocation,$definition,$execution->id);
+        $maxAttempts = $claim!==null ? 1 : $this->retryPolicy->attemptsFor($definition);
         $lastResult = null;
 
         for ($attempt = 1; $attempt <= $maxAttempts; ++$attempt) {
@@ -65,13 +70,29 @@ final readonly class ToolRuntime implements ToolRuntimeInterface
 
             if ($lastResult->isSuccess()) {
                 $execution->complete($lastResult);
-                $this->audit->record($execution);
+                try {
+                    $this->audit->record($execution);
+                    if ($claim!==null) $this->canonical->completeTool($claim,$execution->id);
+                } catch (Throwable $error) {
+                    if ($claim!==null) {
+                        try { $this->canonical->quarantine($claim); }
+                        catch (Throwable) { /* Already terminal or needs operator resolution. */ }
+                    }
+                    throw $error;
+                }
                 return $execution;
             }
         }
 
         $execution->fail($lastResult ?? ToolResult::failure('Tool execution failed without a result.'));
-        $this->audit->record($execution);
+        try {
+            $this->audit->record($execution);
+        } finally {
+            if ($claim!==null) {
+                try { $this->canonical->quarantine($claim); }
+                catch (Throwable) { /* Claim/receipt is uncertain; block replay. */ }
+            }
+        }
         return $execution;
     }
 }
