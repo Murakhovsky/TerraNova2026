@@ -130,6 +130,34 @@ try{
     $service->decide($org,$approver,$activation,true,'Enable verified mapping','CI-ACTIVATE');
     $assert($select('tn_capital_market_venue_instruments','status',$org,$id)==='ACTIVE',
         'Approved mapping activation failed.');
+
+    // Seed a previously trusted quote and active subscription: a later
+    // approved suspension must revoke both in the SAME transaction.
+    $source='ci-pool-approval-source';
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_data_sources
+         (organization_id,source_id,venue_id,adapter_type,enabled,priority,roles_json,
+          rate_limit_policy_json,reconnect_policy_json,health_policy_json,
+          license_profile,metadata_json)
+         VALUES (:org,:source,:venue,'test',0,100,'[]','{}','{}','{}','UNSPECIFIED','{}')"
+    )->execute(['org'=>$org,'source'=>$source,'venue'=>$venue]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_states
+         (organization_id,venue_id,instrument_id,source_id,state_json,trust_status,
+          quality_score,state_version,source_timestamp,updated_at,
+          last_sequence,last_event_fingerprint,data_mode)
+         VALUES (:org,:venue,:id,:source,'{}','TRUSTED',95,2,UTC_TIMESTAMP(6),
+          UTC_TIMESTAMP(6),NULL,:fingerprint,'LIVE')"
+    )->execute(['org'=>$org,'venue'=>$venue,'id'=>$id,'source'=>$source,
+        'fingerprint'=>str_repeat('b',64)]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_subscriptions
+         (organization_id,subscription_id,source_id,venue_id,instrument_id,
+          target_fingerprint,data_type,status,subscribed_at)
+         VALUES (:org,:sub,:source,:venue,:id,:fingerprint,'BBO','ACTIVE',UTC_TIMESTAMP(6))"
+    )->execute(['org'=>$org,'sub'=>'sub:'.bin2hex(random_bytes(8)),'source'=>$source,
+        'venue'=>$venue,'id'=>$id,'fingerprint'=>hash('sha256',$org.'|'.$source.'|'.$id)]);
+
     $missing=[
         'venue_symbol'=>$symbol,'instrument_id'=>$id,'mapping_status'=>'ACTIVE',
         'observation'=>'MAPPED_NOT_OBSERVED_REVIEW','base'=>null,'quote'=>null,
@@ -154,6 +182,39 @@ try{
         'Evidence became unavailable for safe approval','CI-REJECT');
     $assert($service->queue($org,$proposer)[0]['status']==='REJECTED',
         'Rejection was not persisted in governance queue.');
+
+    // The outage interrupted the chain. Only three NEW healthy observations
+    // allow a fresh suspension proposal. This exercises actual DB revocation.
+    $record([$missing],1);$record([$missing],1);$last=$record([$missing],1);
+    $fresh=$service->propose($org,$proposer,[
+        'snapshot_id'=>$last,'action'=>'STATUS','venue_symbol'=>$symbol,
+        'target_status'=>'SUSPENDED',
+        'reason'=>'Three fresh independent healthy absence observations',
+    ],'CI-RECHECK');
+    $service->decide($org,$approver,$fresh,true,
+        'Review completed and mapping must be suspended','CI-SUSPEND');
+    $assert($select('tn_capital_market_venue_instruments','status',$org,$id)==='SUSPENDED',
+        'Approved suspension failed to change canonical mapping.');
+    $assert($select('tn_capital_market_states','trust_status',$org,$id)==='UNTRUSTED',
+        'Approved suspension did not invalidate trusted market state.');
+    $assert($select('tn_capital_market_states','quality_score',$org,$id)==='0',
+        'Approved suspension retained decision-grade data quality.');
+    $read=$pdo->prepare("SELECT JSON_UNQUOTE(JSON_EXTRACT(state_json,'$.trust_status')) AS trust_json,
+       JSON_UNQUOTE(JSON_EXTRACT(state_json,'$.market_status')) AS market_json,
+       JSON_UNQUOTE(JSON_EXTRACT(state_json,'$.quality_status')) AS quality_json,
+       state_version AS version_sql,
+       JSON_EXTRACT(state_json,'$.state_version') AS version_json
+       FROM tn_capital_market_states WHERE organization_id=:org AND venue_id=:venue AND instrument_id=:id");
+    $read->execute(['org'=>$org,'venue'=>$venue,'id'=>$id]);
+    $state=$read->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($state)&&$state['trust_json']==='UNTRUSTED'
+        &&$state['quality_json']==='UNTRUSTED'&&$state['market_json']==='CLOSED',
+        'Market State JSON still advertises stale decision-grade trust.');
+    $assert((int)$state['version_sql']===(int)$state['version_json'],
+        'Market State JSON state_version drifted after revocation.');
+    $assert($select('tn_capital_market_subscriptions','status',$org,$id)==='DISABLED',
+        'Approved suspension kept a live subscription active.');
+
     echo "Instrument Pool MySQL approval, no-self-approval, import, mappings, lifecycle and outage passed.\n";
 }finally{
     if($pdo->inTransaction())$pdo->rollBack();

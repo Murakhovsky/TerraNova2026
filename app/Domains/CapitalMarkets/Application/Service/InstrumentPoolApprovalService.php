@@ -195,7 +195,15 @@ final readonly class InstrumentPoolApprovalService
                 // market evidence and active subscriptions before commit.
                 $invalidate=$this->pdo->prepare(
                     "UPDATE tn_capital_market_states
-                     SET trust_status='UNTRUSTED',quality_score=0,
+                     SET state_json=JSON_SET(state_json,
+                         '$.trust_status','UNTRUSTED',
+                         '$.quality_status','UNTRUSTED',
+                         '$.quality_score',0,
+                         '$.market_status','CLOSED',
+                         '$.quality_flags',JSON_ARRAY('SOURCE_DEGRADED'),
+                         '$.state_version',state_version+1,
+                         '$.updated_at',DATE_FORMAT(UTC_TIMESTAMP(6),'%Y-%m-%dT%H:%i:%s+00:00')),
+                         trust_status='UNTRUSTED',quality_score=0,
                          state_version=state_version+1,updated_at=UTC_TIMESTAMP(6)
                      WHERE organization_id=:org AND venue_id=:venue AND instrument_id=:id"
                 );
