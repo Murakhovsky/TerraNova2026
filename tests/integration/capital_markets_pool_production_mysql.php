@@ -97,7 +97,7 @@ try{
           sequence_value,payload_json,quality_flags_json,schema_version,fingerprint,
           data_mode,market_status)
          VALUES (:org,:event,:src,NULL,:instrument,:kind,
-          :timestamp,:timestamp,:timestamp,:seq,'{}','[]',1,:fp,'LIVE','OPEN')");
+          :source_time,:received_time,:processed_time,:seq,'{}','[]',1,:fp,'LIVE','OPEN')");
     $insertQuality=$pdo->prepare(
         "INSERT INTO tn_capital_market_quality_metrics
          (organization_id,canonical_event_id,source_id,venue_id,instrument_id,
@@ -111,8 +111,11 @@ try{
             $event='ci-'.bin2hex(random_bytes(12));
             $data=['org'=>$org,'event'=>$event,'src'=>$source,'instrument'=>$instrument,
                 'kind'=>$kind,'timestamp'=>$timestamp,'seq'=>(string)(1000-$hour),
-                'fp'=>hash('sha256',$event)];
-            $insertEvent->execute($data);
+                'fp'=>hash('sha256',$event),
+                'source_time'=>$timestamp,'received_time'=>$timestamp,'processed_time'=>$timestamp];
+            $insertEvent->execute(array_intersect_key($data,array_flip(
+                ['org','event','src','instrument','kind','seq','fp',
+                 'source_time','received_time','processed_time'])));
             $insertQuality->execute(array_intersect_key($data,array_flip(
                 ['org','event','src','instrument','timestamp'])));
             if($firstEvent===null)$firstEvent=$event;
