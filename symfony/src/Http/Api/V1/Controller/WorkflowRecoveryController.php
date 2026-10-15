@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Http\Api\V1\Controller;
 
 use App\Persistence\Workflow\DoctrineWorkflowRecoveryManager;
+use App\Persistence\Workflow\DoctrineKernelExecutionRecoveryManager;
 use App\Security\SessionCsrfValidator;
 use DomainException;
 use InvalidArgumentException;
@@ -26,6 +27,7 @@ final readonly class WorkflowRecoveryController
         private DoctrineWorkflowRecoveryManager $recovery,
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
+        private ?DoctrineKernelExecutionRecoveryManager $kernel = null,
     ) {}
 
     public function worklist(Request $request): JsonResponse
@@ -79,8 +81,10 @@ final readonly class WorkflowRecoveryController
                 (string)($data['reason']??''),
                 isset($data['receipt_reference'])?(string)$data['receipt_reference']:null,
             );
+            $requestId=$this->kernel !== null && $this->kernel->owns($command->identity)
+                ? $this->kernel->request($petition) : $this->recovery->request($petition);
             return new JsonResponse(['ok'=>true,'data'=>[
-                'request_id'=>$this->recovery->request($petition),
+                'request_id'=>$requestId,
                 'status'=>'REQUESTED','requires_different_manager'=>true,
             ]],201);
         } catch(Throwable $e){return $this->failure($e);}
@@ -93,9 +97,12 @@ final readonly class WorkflowRecoveryController
         try {
             $data=$this->input($request);
             $id=(string)($data['request_id']??'');
-            $this->recovery->approve(
-                $this->command($actor,$runId,(int)($data['run_revision']??0),null),$id,
-            );
+            $cmd=$this->command($actor,$runId,(int)($data['run_revision']??0),null);
+            if($this->kernel !== null && $this->kernel->owns($cmd->identity)) {
+                $this->kernel->approve($cmd,$id);
+            } else {
+                $this->recovery->approve($cmd,$id);
+            }
             return new JsonResponse(['ok'=>true,'data'=>[
                 'request_id'=>$id,'status'=>'APPROVED','external_effect_replayed'=>false,
             ]]);
@@ -110,6 +117,15 @@ final readonly class WorkflowRecoveryController
             $data=$this->input($request);
             $command=$this->command($actor,$runId,
                 (int)($data['run_revision']??0),(string)($data['request_id']??''));
+            if($this->kernel !== null && $this->kernel->owns($command->identity)) {
+                $this->kernel->reconcile($command,(string)($data['request_id']??''));
+                return new JsonResponse(['ok'=>true,'data'=>[
+                    'run_id'=>$runId,'disposition'=>'reconcile_only',
+                    'reason'=>'independent_kernel_native_receipt',
+                    'external_outcome_unknown'=>false,
+                    'external_effect_replayed'=>false,
+                ]]);
+            }
             $result=$this->recovery->reconcile($command);
             return new JsonResponse(['ok'=>true,'data'=>[
                 'run_id'=>$runId,'disposition'=>$result->disposition->value,

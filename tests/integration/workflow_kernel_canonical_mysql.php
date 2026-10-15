@@ -6,11 +6,21 @@ require (string)(getenv('COS_TEST_AUTOLOAD')?:dirname(__DIR__,2).'/symfony/vendo
 use App\Persistence\Workflow\DoctrineKernelExecutionEvidence;
 use App\Persistence\Workflow\DoctrineKernelExecutionFence;
 use App\Persistence\Workflow\DoctrineKernelExecutionRecoveryInspector;
+use App\Persistence\Workflow\DoctrineKernelExecutionRecoveryManager;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
 use App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier;
 use App\Persistence\Workflow\FailClosedWorkflowStepClaimAdmission;
 use Doctrine\DBAL\DriverManager;
 use Kernel\Queue\Job;
+use Kernel\Identity\Model\OrganizationRole;
+use Kernel\Tenant\Model\TenantContext;
+use Kernel\Tenant\Model\TenantPermissions;
+use Kernel\Tenant\Model\Permission;
+use Platform\Workflow\Model\WorkflowRecoveryPetition;
+use Platform\Workflow\Model\WorkflowRecoveryResolution;
+use Platform\Workflow\Model\WorkflowRunCommand;
+use Platform\Workflow\Model\WorkflowRunIdentity;
+use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 use Kernel\Shared\Domain\OrganizationId;
 use Kernel\Shared\Domain\UserId;
 use Kernel\Tool\Model\ToolDefinition;
@@ -313,6 +323,51 @@ try {
     && $postCrash['status']==='manual_reconciliation_required'
     && $postCrash['automatic_replay_authorized']===false,
     'Expired technical lease escaped manual reconciliation gate.');
+
+ // Operator recovery: verified native output may be adopted once,
+ // but ONLY following two distinct tenant managers and the original CAS.
+ $manager=static fn(string $uid,string $tenant):TenantContext=>new TenantContext(
+    UserId::fromString($uid),OrganizationId::fromString($tenant),
+    OrganizationRole::fromString('manager'),
+    [Permission::fromString(TenantPermissions::MANAGE)],
+ );
+ $one=$manager('recovery-one-'.$token,$org);
+ $two=$manager('recovery-two-'.$token,$org);
+ $outsider=$manager('recovery-out-'.$token,$other);
+ $recover=new DoctrineKernelExecutionRecoveryManager($db,$store);
+ $cmd=static fn(TenantContext $actor,int $rev):WorkflowRunCommand=>
+    new WorkflowRunCommand($expiredIdentity,$actor,$rev,$expiredCorr);
+ $expectedReceipt='kernel:agent:'.$expiredNative.':'.
+    WorkflowDefinitionFingerprint::digest([['decision'=>'crash-reconciled']]);
+ $requestId=bin2hex(random_bytes(16));
+ $petition=new WorkflowRecoveryPetition(
+    $cmd($one,2),$requestId,'execute',2,WorkflowRecoveryResolution::VERIFIED_COMPLETE,
+    'Independent native output exists after expired lease; never run LLM again.',
+    $expectedReceipt,
+ );
+ $deny(static fn()=> $recover->request(new WorkflowRecoveryPetition(
+    $cmd($outsider,2),bin2hex(random_bytes(16)),'execute',2,
+    WorkflowRecoveryResolution::VERIFIED_COMPLETE,
+    'A foreign tenant cannot authorize the original expired lease.',$expectedReceipt)),
+    'cross-tenant recovery petition');
+ $expect($recover->request($petition)===$requestId,
+    'Kernel recovery request not persisted.');
+ $deny(static fn()=> $recover->approve($cmd($one,2),$requestId),
+    'self approval of expired Agent');
+ $deny(static fn()=> $recover->reconcile($cmd($one,2),$requestId),
+    'reconciliation without second manager');
+ $recover->approve($cmd($two,2),$requestId);
+ $recover->reconcile($cmd($two,2),$requestId);
+ $expect($store->get($expiredIdentity)?->status->value==='completed'
+    && $store->steps($expiredIdentity)[0]->resultReference===$expectedReceipt,
+    'Two-person verified recovery did not atomically complete original Agent claim.');
+ $deny(static fn()=> $recover->reconcile($cmd($two,2),$requestId),
+    'replay of verified operator recovery');
+ $afterReconcile=(new DoctrineKernelExecutionRecoveryInspector($db,$evidence))
+    ->inspectTenant($org,100);
+ $expect(($afterReconcile['counts']['verified']??0)===5
+    && ($afterReconcile['counts']['manual_required']??0)===1,
+    'Independent receipts did not survive two-person recovery.');
 
  $expect((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs
     WHERE organization_id=:org',['org'=>$org])===0,

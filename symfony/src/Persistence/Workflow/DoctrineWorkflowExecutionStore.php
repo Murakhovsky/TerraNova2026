@@ -549,6 +549,114 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
         });
     }
 
+
+    /**
+     * Operator recovery never invokes a provider, Tool, Action or queue worker.
+     * An independently APPROVED decision must still match immutable Run/Step
+     * revisions, a terminated lease and an actual Domain-native result.
+     */
+    public function reconcileKernelApproved(
+        \Platform\Workflow\Model\WorkflowRunCommand $command,string $requestId
+    ):void {
+        self::authorized($command->actor,$command->identity);
+        if(!preg_match('/^[a-f0-9]{32}$/D',$requestId)) {
+            throw new DomainException('Recovery requires an existing decision ID.');
+        }
+        $this->db->transactional(function()use($command,$requestId):void{
+            $identity=$command->identity;
+            $run=$this->lockedRun($identity);
+            $decision=$this->db->fetchAssociative(
+                'SELECT * FROM cos_workflow_recovery_decisions
+                 WHERE organization_id=:org AND request_id=:request FOR UPDATE',
+                ['org'=>$identity->organizationId,'request'=>$requestId],
+            );
+            $step=$this->db->fetchAssociative(
+                'SELECT * FROM cos_workflow_steps
+                 WHERE organization_id=:org AND run_id=:run AND step_id="execute" FOR UPDATE',
+                self::keys($identity),
+            );
+            if(!$step || !$decision || $decision['status']!=='APPROVED'
+                || $decision['run_id']!==$identity->runId
+                || $decision['step_id']!=='execute'
+                || $decision['resolution']!=='verified_complete'
+                || !is_string($decision['receipt_reference'])
+                || $decision['receipt_reference']===''
+                || !is_string($decision['approved_by'])
+                || trim($decision['approved_by'])===''
+                || $decision['approved_by']===$decision['requested_by']
+                || $decision['approved_at']===null
+                || ($approvedAt=strtotime((string)$decision['approved_at'].' UTC'))===false
+                || $approvedAt>time() || $approvedAt<time()-900
+                || (int)$decision['run_revision']!==$command->expectedRevision
+                || (int)$run['revision']!==$command->expectedRevision
+                || (int)$decision['step_revision']!==(int)$step['revision']
+                || !in_array($run['state'],['running','ambiguous'],true)
+                || !in_array($step['state'],['claimed','ambiguous'],true)
+                || (int)$step['attempts']!==1
+                || ($step['state']==='claimed' && ($step['claim_expires_at']===null
+                    || strtotime((string)$step['claim_expires_at'].' UTC')>time()))) {
+                throw new DomainException('Kernel recovery requires two-person approval and an expired/ambiguous CAS.');
+            }
+            $kind=match($run['definition_id']){
+                'kernel.agent_execution'=>'agent',
+                'kernel.tool_execution'=>'tool',
+                default=>throw new DomainException('Recovery decision cannot target another Workflow owner.')
+            };
+            $graph=json_decode((string)$run['definition_json'],true,512,JSON_THROW_ON_ERROR);
+            $pinned=is_array($graph)&&count($graph)===1?$graph[0]:null;
+            if($this->kernelEvidence===null || !is_array($pinned)
+                || $run['definition_version']!=='1.0.0'
+                || !hash_equals((string)$run['definition_digest'],
+                    WorkflowDefinitionFingerprint::digest($graph))
+                || ($pinned['id']??null)!=='execute'
+                || ($pinned['execution_binding']??null)!=='kernel:'.$kind
+                || ($pinned['capability_id']??null)!==$step['capability_id']
+                || ($pinned['side_effect_level']??null)!==$step['side_effect_level']
+                || !is_string($pinned['source_id']??null)
+                || $identity->runId!==self::kernelRunId(
+                    $identity->organizationId,$kind,$pinned['source_id'])
+                || $run['actor_id']!=='kernel:'.$kind
+                || !str_starts_with((string)$decision['receipt_reference'],'kernel:'.$kind.':')
+                || ($kind==='tool' && !str_starts_with(
+                    (string)$decision['receipt_reference'],
+                    'kernel:tool:'.(string)$step['claimed_by'].':'))) {
+                throw new DomainException('Kernel recovery pinned technical binding is untrusted.');
+            }
+            $this->kernelEvidence->assertCompletion(
+                $identity,$kind,$pinned['source_id'],$step['capability_id'],
+                (string)$run['input_digest'],(string)$decision['receipt_reference'],
+                (string)$run['correlation_id'],
+            );
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_steps SET state="completed",
+                   revision=revision+1,result_reference=:receipt,claim_token=NULL,
+                   claimed_by=NULL,claim_expires_at=NULL,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND step_id="execute"
+                   AND revision=:revision AND state=:state',
+                ['receipt'=>$decision['receipt_reference'],
+                 ...self::keys($identity),'revision'=>(int)$step['revision'],
+                 'state'=>$step['state']],
+            );
+            if($changed!==1)throw new LogicException('Kernel recovery Step CAS failed.');
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_runs SET state="completed",revision=revision+1,
+                   checkpoint_reference=:receipt,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND revision=:revision AND state=:state',
+                ['receipt'=>$decision['receipt_reference'],
+                 ...self::keys($identity),'revision'=>$command->expectedRevision,
+                 'state'=>$run['state']],
+            );
+            if($changed!==1)throw new LogicException('Kernel recovery Run CAS failed.');
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_recovery_decisions
+                 SET status="APPLIED",applied_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND request_id=:request AND status="APPROVED"',
+                ['org'=>$identity->organizationId,'request'=>$requestId],
+            );
+            if($changed!==1)throw new LogicException('Kernel recovery decision CAS failed.');
+        });
+    }
+
     private static function kernelRunId(string $org,string $kind,string $source):string
     {
         return 'k'.($kind==='agent'?'a':'t').':'.substr(

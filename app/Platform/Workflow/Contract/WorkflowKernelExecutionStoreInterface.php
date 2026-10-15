@@ -15,4 +15,8 @@ interface WorkflowKernelExecutionStoreInterface
         WorkflowRunIdentity $identity,string $kind,string $token,string $receipt,string $correlation
     ):void;
     public function quarantineKernel(WorkflowRunIdentity $identity,string $kind,string $token):void;
+    /** Apply a two-person, tenant-authenticated request without executing any effect. */
+    public function reconcileKernelApproved(
+        \Platform\Workflow\Model\WorkflowRunCommand $command,string $requestId
+    ):void;
 }
