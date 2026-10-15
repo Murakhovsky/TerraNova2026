@@ -101,6 +101,20 @@ jobs:
         run: |
           php tests/architecture/federation_canonical_goal_cutover.php
           php tests/architecture/cos_execution_authority_paths.php
+      - name: Federation execution authority inventory
+        run: |
+          set -euo pipefail
+          php tests/architecture/cos_execution_authority_inventory.php
+          php bin/cos-execution-authority-report.php > "$RUNNER_TEMP/cos-execution-authority.json"
+          php -r '$a=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR); if (($a["status"]??null)!=="static_covered_not_fleet_accepted" || ($a["consumer_fleet_verified"]??null)!==false) exit(1);' "$RUNNER_TEMP/cos-execution-authority.json"
+      - name: Upload execution authority evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: federation-execution-authority-static
+          path: ${{ runner.temp }}/cos-execution-authority.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Federation migration authorization integrity gate
         run: php tests/architecture/federation_migration_safety.php
       - name: Federation core MySQL admission/receipt/Goal E2E
