@@ -17,6 +17,10 @@ $placement=$read('app/Domains/CapitalMarkets/Application/Service/StreamingFleetP
 $fleet=$read('symfony/src/Command/CapitalMarketsMultiSymbolFleetCommand.php');
 $rest=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Okx/OkxSpotMarketDataAdapter.php');
 $cli=$read('symfony/src/Command/CapitalMarketsStreamingEvidenceCommand.php');
+foreach(['ix_cm_cross_venue_latest','ix_cm_reconcile_active_instrument',
+    'ALGORITHM=INPLACE','LOCK=NONE'] as $index){
+    if(!str_contains($schema,$index))throw new RuntimeException('Missing online cross-venue query index '.$index);
+}
 foreach(['raw_provenance','venue_reconciliation'] as $table){
     if(!str_contains($schema,$table))throw new RuntimeException('Missing P1/P2 MySQL schema: '.$table);
 }

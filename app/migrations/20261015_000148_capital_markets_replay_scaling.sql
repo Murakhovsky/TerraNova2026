@@ -33,5 +33,18 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_venue_reconciliation (
         ('CONSENSUS','DIVERGED','NO_QUORUM','CURRENCY_MISMATCH'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Avoid full instrument history scans when reconciling latest BBO
+-- across independent sources, and keep subscriptions scoped by instrument.
+-- MySQL 8 InnoDB online indexes: fail migration rather than force table lock.
+ALTER TABLE tn_capital_market_canonical_events
+ ADD INDEX ix_cm_cross_venue_latest
+    (organization_id,instrument_id,source_id,event_type,received_timestamp,id),
+ ALGORITHM=INPLACE, LOCK=NONE;
+
+ALTER TABLE tn_capital_market_subscriptions
+ ADD INDEX ix_cm_reconcile_active_instrument
+    (organization_id,instrument_id,data_type,status,source_id),
+ ALGORITHM=INPLACE, LOCK=NONE;
+
 INSERT IGNORE INTO tn_migrations(migration)
  VALUES ('20261015_000148_capital_markets_replay_scaling');
