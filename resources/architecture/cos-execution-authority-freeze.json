@@ -15,13 +15,11 @@
     ],
     "cos_workflow_runs": [
       "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
-      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php",
-      "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionGateway.php"
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php"
     ],
     "cos_workflow_steps": [
       "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
-      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php",
-      "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionGateway.php"
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php"
     ]
   },
   "legacy_exception": {
@@ -33,9 +31,9 @@
     "sunset_gate": "verified migration and shadow parity of every tenant/run/step/Action receipt, in-flight drain and single-writer fence"
   },
   "engineering_exception": {
-    "status": "DIRECT_CANONICAL_SQL_DEBT",
+    "status": "GATEWAY_DELEGATES_TO_PLATFORM_STORE__REAL_MYSQL_REGRESSION_PENDING",
     "path": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionGateway.php",
-    "sunset_gate": "route canonical create/claim/checkpoint/recovery via WorkflowExecutionStoreInterface; preserve AgentRun business history and human gates"
+    "sunset_gate": "verify existing engineering shadow MySQL suite and fleet-wide rollout before claiming completed cutover"
   },
   "grandfathered_legacy_executors": [
     "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",

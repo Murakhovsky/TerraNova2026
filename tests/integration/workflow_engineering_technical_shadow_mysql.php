@@ -40,7 +40,9 @@ $task=new EngineeringAgentTask($taskId,$feature,AgentRole::QA_PLANNER,
     'Prepare deterministic fixture QA plan',[],[],[],'schema',[],
     'eng-technical-'.$tag,['logical_attempt'=>1,'revision'=>'fixed']);
 $runTrace=$trace.':agent:'.$taskId;
-$gate=new EngineeringCanonicalTechnicalExecutionGateway($db);
+$gate=new EngineeringCanonicalTechnicalExecutionGateway($db,new DoctrineWorkflowExecutionStore(
+    $db,new FailClosedWorkflowReceiptVerifier(),new FailClosedWorkflowStepClaimAdmission(),
+));
 $plan=new FederationWorkflowPlanApprovalEvidence($db,new FederationPlanApprovalEvidenceReader($db));
 $reader=new DoctrineWorkflowShadowParityReader($db,
     new DoctrineWorkflowExecutionStore($db,new FailClosedWorkflowReceiptVerifier(),

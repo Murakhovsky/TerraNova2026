@@ -11,6 +11,7 @@ use Kernel\Workflow\Model\StepStatus;
 use Kernel\Workflow\Model\WorkflowStatus;
 use LogicException;
 use Platform\Workflow\Contract\WorkflowExecutionStoreInterface;
+use Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
 use Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
@@ -32,7 +33,7 @@ use Platform\Workflow\Service\WorkflowStepScheduler;
  * No Action dispatch, Agent execution, automatic recovery or dual writes.
  * A run row serializes every transition/claim/checkpoint for its tenant.
  */
-final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface
+final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface, WorkflowTechnicalExternalStoreInterface
 {
     public function __construct(
         private Connection $db,
@@ -268,6 +269,168 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             );
             if (!$fresh) throw new LogicException('Checkpointed Workflow Step disappeared.');
             return self::stepSnapshot($fresh);
+        });
+    }
+
+
+    /**
+     * Trusted, narrow technical Agent admission. Domain owns AgentRun proof
+     * and human-approved rollout; this Store owns every Run/Step mutation.
+     * Kept distinct from human-approved Action claim admission on purpose.
+     */
+    public function beginGuardedExternal(
+        WorkflowRunIdentity $identity,
+        WorkflowDefinitionSnapshot $definition,
+        string $inputDigest,
+        string $actorId,
+        string $correlationId,
+        string $workerId,
+        int $leaseSeconds
+    ): string {
+        if (!str_starts_with($identity->runId, 'eng-agent:')
+            || $definition->id !== 'engineering.agent_execution'
+            || $definition->version !== '1.0.0'
+            || count($definition->steps) !== 1
+            || !preg_match('/^[a-f0-9]{64}$/D', $inputDigest)
+            || !str_starts_with($actorId, 'engineering:')
+            || $correlationId === '' || $workerId === ''
+            || $leaseSeconds < 1 || $leaseSeconds > 7200) {
+            throw new DomainException('Untrusted technical Agent invocation cannot create a canonical Workflow.');
+        }
+        $step=$definition->steps[0];
+        if (($step['id']??null)!=='execute'
+            || ($step['execution_binding']??null)!=='engineering:agent-run'
+            || ($step['side_effect_level']??null)!=='external'
+            || ($step['depends_on']??null)!==[]
+            || !is_string($step['capability_id']??null)
+            || !str_starts_with($step['capability_id'],'engineering.agent.')
+            || ($step['capability_version']??null)!=='1.0.0'
+            || ($step['input']['idempotency_key']??null)===''
+            || ($step['input']['execution_task_id']??null)===''
+            || ($step['input']['feature_id']??null)==='') {
+            throw new DomainException('Technical Agent graph is not a pinned Engineering execution.');
+        }
+        $selected=(new WorkflowStepScheduler())->select($definition,
+            [new WorkflowStepSnapshot('execute',$step['capability_id'],'1.0.0','external','pending')],
+            ['none','external']);
+        if ($selected->stepId!=='execute' || $selected->state->value!=='pending') {
+            throw new DomainException('Technical Agent graph cannot be claimed.');
+        }
+        $stepKey=hash('sha256',$identity->organizationId."\0".$identity->runId."\0execute");
+        $token=bin2hex(random_bytes(16));
+        $this->db->transactional(function () use (
+            $identity,$definition,$inputDigest,$actorId,$correlationId,
+            $workerId,$leaseSeconds,$step,$stepKey,$token
+        ):void {
+            $this->db->executeStatement(
+                'INSERT INTO cos_workflow_runs
+                 (organization_id,run_id,definition_id,definition_version,
+                  definition_json,definition_digest,input_digest,actor_id,
+                  correlation_id,state,revision,created_at,updated_at)
+                 VALUES (:org,:run,:definition_id,:version,
+                         :definition,:fingerprint,:input,:actor,:trace,"running",2,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,
+                 'definition_id'=>$definition->id,'version'=>$definition->version,
+                 'definition'=>json_encode($definition->steps,JSON_THROW_ON_ERROR),
+                 'fingerprint'=>WorkflowDefinitionFingerprint::digest($definition->steps),
+                 'input'=>$inputDigest,'actor'=>$actorId,'trace'=>$correlationId],
+            );
+            $this->db->executeStatement(
+                'INSERT INTO cos_workflow_steps
+                 (organization_id,run_id,step_id,ordinal_no,capability_id,capability_version,
+                  side_effect_level,state,revision,attempts,idempotency_key,claim_token,
+                  claimed_by,claim_expires_at,created_at,updated_at)
+                 VALUES (:org,:run,"execute",0,:capability,"1.0.0",
+                         "external","claimed",2,1,:stepkey,:token,:worker,
+                         DATE_ADD(UTC_TIMESTAMP(6),INTERVAL :lease SECOND),UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,
+                 'capability'=>$step['capability_id'],'stepkey'=>$stepKey,
+                 'token'=>$token,'worker'=>$workerId,'lease'=>$leaseSeconds],
+            );
+        });
+        return $token;
+    }
+
+    /**
+     * Receipt was independently derived from the persisted Domain AgentRun
+     * by the caller. Store checks the immutable technical graph and lease.
+     */
+    public function completeGuardedExternal(
+        WorkflowRunIdentity $identity,
+        string $stepId,
+        string $claimToken,
+        string $receipt,
+        string $correlationId
+    ): void {
+        if ($stepId!=='execute' || !preg_match('/^[a-f0-9]{32}$/D',$claimToken)
+            || !str_starts_with($identity->runId,'eng-agent:')
+            || !str_starts_with($receipt,'engineering:agent-run:completed:v1:')
+            || $correlationId==='') {
+            throw new DomainException('Invalid canonical technical Agent completion.');
+        }
+        $this->db->transactional(function () use ($identity,$stepId,$claimToken,$receipt,$correlationId):void {
+            $run=$this->lockedRun($identity);
+            $definition=json_decode((string)$run['definition_json'],true,512,JSON_THROW_ON_ERROR);
+            if ($run['definition_id']!=='engineering.agent_execution'
+                || $run['state']!=='running' || (int)$run['revision']!==2
+                || $run['correlation_id']!==$correlationId
+                || !preg_match('/^[a-f0-9]{64}$/D',(string)$run['input_digest'])
+                || !is_array($definition) || count($definition)!==1
+                || !hash_equals((string)$run['definition_digest'],WorkflowDefinitionFingerprint::digest($definition))
+                || ($definition[0]['execution_binding']??null)!=='engineering:agent-run') {
+                throw new DomainException('Technical Agent immutable Workflow diverged before checkpoint.');
+            }
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_steps SET state="completed",revision=revision+1,
+                 result_reference=:receipt,claim_expires_at=NULL,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND step_id=:step
+                   AND state="claimed" AND attempts=1 AND revision=2
+                   AND claim_token=:token AND claim_expires_at>UTC_TIMESTAMP(6)',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,'step'=>$stepId,
+                 'receipt'=>$receipt,'token'=>$claimToken],
+            );
+            if ($changed!==1) throw new DomainException('Stale technical Agent lease: reconcile external effect.');
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_runs SET state="completed",revision=revision+1,
+                 checkpoint_reference=:receipt,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND state="running" AND revision=2',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,'receipt'=>$receipt],
+            );
+            if ($changed!==1) throw new DomainException('Technical Agent completion failed canonical CAS.');
+        });
+    }
+
+    public function quarantineGuardedExternal(
+        WorkflowRunIdentity $identity,
+        string $stepId,
+        string $claimToken
+    ): void {
+        if ($stepId!=='execute' || !preg_match('/^[a-f0-9]{32}$/D',$claimToken)
+            || !str_starts_with($identity->runId,'eng-agent:')) {
+            throw new DomainException('Invalid canonical technical Agent quarantine.');
+        }
+        $this->db->transactional(function () use ($identity,$stepId,$claimToken):void {
+            $run=$this->lockedRun($identity);
+            if ($run['definition_id']!=='engineering.agent_execution'
+                || $run['state']!=='running' || (int)$run['revision']!==2) {
+                throw new DomainException('Technical Agent is not in an unresolved running claim.');
+            }
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_steps SET state="ambiguous",revision=revision+1,
+                 updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND step_id=:step
+                   AND state="claimed" AND claim_token=:token',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId,
+                 'step'=>$stepId,'token'=>$claimToken],
+            );
+            if ($changed!==1) throw new DomainException('Technical Agent quarantine has stale claim fencing.');
+            $changed=$this->db->executeStatement(
+                'UPDATE cos_workflow_runs SET state="ambiguous",revision=revision+1,
+                 updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND run_id=:run AND state="running" AND revision=2',
+                ['org'=>$identity->organizationId,'run'=>$identity->runId],
+            );
+            if ($changed!==1) throw new DomainException('Technical Agent quarantine failed canonical CAS.');
         });
     }
 

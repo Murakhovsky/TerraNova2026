@@ -10,6 +10,8 @@ use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
 use Platform\Workflow\Model\WorkflowStepSnapshot;
 use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 use Platform\Workflow\Service\WorkflowStepScheduler;
+use Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface;
+use Platform\Workflow\Model\WorkflowRunIdentity;
 
 /**
  * Canonical technical authority for explicitly allowlisted Engineering
@@ -21,7 +23,7 @@ use Platform\Workflow\Service\WorkflowStepScheduler;
  */
 final readonly class EngineeringCanonicalTechnicalExecutionGateway
 {
-    public function __construct(private Connection $db) {}
+    public function __construct(private Connection $db, private WorkflowTechnicalExternalStoreInterface $technical) {}
 
     public function begin(string $agentRunId, string $workflowId, EngineeringAgentTask $task, string $traceId): void
     {
@@ -81,30 +83,11 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
             'feature'=>$task->featureId,'role'=>$task->role->value,
             'key'=>$task->idempotencyKey,'snapshot'=>$task->inputSnapshot,
         ]]);
-        $stepKey=hash('sha256',$org."\0".$canonicalRun."\0execute");
-        $token=bin2hex(random_bytes(16));
-        $this->db->executeStatement(
-            'INSERT INTO cos_workflow_runs
-             (organization_id,run_id,definition_id,definition_version,
-              definition_json,definition_digest,input_digest,actor_id,
-              correlation_id,state,revision,created_at,updated_at)
-             VALUES (:org,:run,"engineering.agent_execution","1.0.0",
-                     :definition,:fingerprint,:input,:actor,:trace,"running",2,NOW(6),NOW(6))',
-            ['org'=>$org,'run'=>$canonicalRun,'definition'=>json_encode([$step],JSON_THROW_ON_ERROR),
-                'fingerprint'=>WorkflowDefinitionFingerprint::digest([$step]),
-                'input'=>$inputDigest,'actor'=>'engineering:'.$task->role->value,
-                'trace'=>$traceId],
-        );
-        $this->db->executeStatement(
-            'INSERT INTO cos_workflow_steps
-             (organization_id,run_id,step_id,ordinal_no,capability_id,capability_version,
-              side_effect_level,state,revision,attempts,idempotency_key,claim_token,
-              claimed_by,claim_expires_at,created_at,updated_at)
-             VALUES (:org,:run,"execute",0,:capability,"1.0.0",
-                     "external","claimed",2,1,:stepkey,:token,:worker,
-                     DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 7200 SECOND),UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
-            ['org'=>$org,'run'=>$canonicalRun,'capability'=>$step['capability_id'],
-                'stepkey'=>$stepKey,'token'=>$token,'worker'=>$agentRunId],
+        // Platform Workflow Store is the sole technical Run/Step writer.
+        // Rollout and persisted AgentRun provenance were checked above.
+        $token=$this->technical->beginGuardedExternal(
+            new WorkflowRunIdentity($org,$canonicalRun),$definition,$inputDigest,
+            'engineering:'.$task->role->value,$traceId,$agentRunId,7200,
         );
         $this->db->executeStatement(
             'INSERT INTO cos_engineering_technical_links
@@ -139,17 +122,6 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
             || $record['idempotency_key']!==$link['agent_idempotency_key']) {
             throw new DomainException('Engineering canonical completion lacks persisted matching AgentRun output.');
         }
-        $run=$this->db->fetchAssociative(
-            'SELECT correlation_id,definition_id,state,input_digest FROM cos_workflow_runs
-             WHERE organization_id=:org AND run_id=:run',
-            ['org'=>$link['organization_id'],'run'=>$link['canonical_run_id']],
-        );
-        if (!$run || $run['correlation_id']!==$record['trace_id']
-            || $run['definition_id']!=='engineering.agent_execution'
-            || $run['state']!=='running'
-            || !preg_match('/^[a-f0-9]{64}$/D',(string)$run['input_digest'])) {
-            throw new DomainException('Canonical AgentRun identity and correlation changed before checkpoint.');
-        }
         $snapshot=json_decode((string)$record['output'],true,512,JSON_THROW_ON_ERROR);
         if (!is_array($snapshot) || $snapshot===[]) {
             throw new DomainException('Engineering canonical receipt cannot attest empty result.');
@@ -157,26 +129,10 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
         $digest=hash('sha256',json_encode($snapshot,
             JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
         $receipt='engineering:agent-run:completed:v1:'.$agentRunId.':'.$digest;
-        $params=['org'=>$link['organization_id'],'run'=>$link['canonical_run_id'],
-            'token'=>$link['claim_token']];
-        $changed=$this->db->executeStatement(
-            'UPDATE cos_workflow_steps SET state="completed",revision=revision+1,
-              result_reference=:receipt,claim_expires_at=NULL,updated_at=UTC_TIMESTAMP(6)
-             WHERE organization_id=:org AND run_id=:run AND step_id="execute"
-               AND state="claimed" AND attempts=1 AND revision=2
-               AND claim_token=:token AND claim_expires_at>UTC_TIMESTAMP(6)',
-            [...$params,'receipt'=>$receipt],
+        $this->technical->completeGuardedExternal(
+            new WorkflowRunIdentity((string)$link['organization_id'],(string)$link['canonical_run_id']),
+            'execute',(string)$link['claim_token'],$receipt,(string)$record['trace_id'],
         );
-        if ($changed!==1) {
-            throw new DomainException('Stale/expired canonical AgentRun lease: external effect needs reconciliation.');
-        }
-        $changed=$this->db->executeStatement(
-            'UPDATE cos_workflow_runs SET state="completed",revision=revision+1,
-              checkpoint_reference=:receipt,updated_at=UTC_TIMESTAMP(6)
-             WHERE organization_id=:org AND run_id=:run AND state="running" AND revision=2',
-            [...$params,'receipt'=>$receipt],
-        );
-        if ($changed!==1) throw new DomainException('Canonical AgentRun CAS rejected duplicate completion.');
         $changed=$this->db->executeStatement(
             'UPDATE cos_engineering_technical_links SET technical_state="completed",
               updated_at=UTC_TIMESTAMP(6)
@@ -194,16 +150,9 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
         if ($link['technical_state']!=='claimed') return;
         $args=['org'=>$link['organization_id'],'run'=>$link['canonical_run_id'],
             'agent'=>$agentRunId,'token'=>$link['claim_token']];
-        $this->db->executeStatement(
-            'UPDATE cos_workflow_steps SET state="ambiguous",revision=revision+1,
-              updated_at=UTC_TIMESTAMP(6)
-             WHERE organization_id=:org AND run_id=:run AND step_id="execute"
-               AND state="claimed" AND claim_token=:token',$args,
-        );
-        $this->db->executeStatement(
-            'UPDATE cos_workflow_runs SET state="ambiguous",revision=revision+1,
-             updated_at=UTC_TIMESTAMP(6)
-             WHERE organization_id=:org AND run_id=:run AND state="running"',$args,
+        $this->technical->quarantineGuardedExternal(
+            new WorkflowRunIdentity((string)$link['organization_id'],(string)$link['canonical_run_id']),
+            'execute',(string)$link['claim_token'],
         );
         $this->db->executeStatement(
             'UPDATE cos_engineering_technical_links SET technical_state="ambiguous",

@@ -319,6 +319,9 @@ services:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
       $actions: '@App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier'
+  # Engineering supplies trusted AgentRun provenance; Platform owns technical Run/Step SQL.
+  Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface:
+    alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
   # Per-feature rollout is persisted explicitly in MySQL, not enabled by DI.
   App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionGateway: ~
 
