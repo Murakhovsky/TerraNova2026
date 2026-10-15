@@ -173,6 +173,17 @@ try{
         $ledger->execute(['org'=>$org,'src'=>$source,
             'instrument'=>$instrument,'channel'=>$channel]);
     }
+    $receiptInsert=$pdo->prepare(
+        "INSERT INTO tn_capital_market_provider_stream_receipts
+         (organization_id,source_id,instrument_id,channel,shard_key,
+          fencing_token,session_epoch,provider,status,ack_at,last_live_quote_at,
+          quote_count,last_quality_score)
+         VALUES (:org,:source,:instrument,:channel,'ci-shard',7,1,
+                 'BINANCE_SPOT','LIVE_QUOTE',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),288,99)");
+    foreach([[$token,'BBO'],[$l2,'L2']] as [$instrument,$channel]){
+        $receiptInsert->execute(['org'=>$org,'source'=>$source,
+            'instrument'=>$instrument,'channel'=>$channel]);
+    }
     $start=gmdate('Y-m-d H:i:s',time()-86402);
     $result=$reader->report($org,$start,[$source]);
     $assert($result['verified']['BBO']===0&&$result['verified']['L2']===1
@@ -250,7 +261,8 @@ try{
         'Other tenant stole real canonical acceptance evidence.');
     echo "Production attestation, canary, LIVE 24h MySQL quality, lease, issuer and tenant isolation passed. Fixtures are NOT real soak.\n";
 }finally{
-    foreach(['tn_capital_market_instrument_stream_trust','tn_capital_market_pool_soak_checkpoints',
+    foreach(['tn_capital_market_provider_stream_receipts','tn_capital_market_stream_incidents',
+        'tn_capital_market_stream_failover_observations','tn_capital_market_instrument_stream_trust','tn_capital_market_pool_soak_checkpoints',
         'tn_capital_market_pool_stream_assignments','tn_capital_market_data_gaps','tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
         'tn_capital_market_stream_worker_leases',
         'tn_capital_market_pool_external_evidence',
