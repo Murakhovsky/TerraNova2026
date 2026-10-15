@@ -64,6 +64,7 @@ jobs:
           php tests/unit/capital_markets_binance_spot_bbo_protocol.php
           php tests/unit/capital_markets_binance_spot_multi_bbo_protocol.php
           php tests/architecture/capital_markets_binance_spot_multi_streaming_contract.php
+          php tests/architecture/capital_markets_streaming_operations_contract.php
           php tests/unit/capital_markets_bybit_spot_bbo_protocol.php
           php tests/unit/capital_markets_bybit_linear_bbo_protocol.php
           php tests/unit/capital_markets_kraken_spot_ticker_protocol.php
