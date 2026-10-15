@@ -109,12 +109,12 @@ services:
       tags:
         - { name: 'cos.web.action.permission_checker' }
 
+  App\:
+    resource: '../src/'
+
   App\Command\CapitalMarketsInstrumentPoolProductionCommand:
     arguments:
       $connection: '@cos.database.pdo'
-
-  App\:
-    resource: '../src/'
 
   App\Controller\:
     resource: '../src/Controller/'

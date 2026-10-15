@@ -60,7 +60,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                 $row=$this->control($org);
                 $result=['control'=>$row,'acceptance'=>null];
                 if(is_array($row)&&in_array($row['phase'],['SOAK','ACCEPTED','LIVE'],true)){
-                    $result['acceptance']=$this->reader->report($org,$row['soak_started_at']);
+                    $result['acceptance']=$this->reader->report($org,$row['soak_started_at'],$this->decodeIds($row['source_ids_json']));
                 }
                 return $this->out($output,$result,Command::SUCCESS);
             }
@@ -199,7 +199,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         if(!is_array($old)||$old['phase']!=='SOAK'||(int)$old['operator_id']===$actor){
             throw new DomainException('Independent operator and SOAK phase required.');
         }
-        $report=$this->reader->report($org,$old['soak_started_at']);
+        $report=$this->reader->report($org,$old['soak_started_at'],$this->decodeIds($old['source_ids_json']));
         if(!$report['accepted'])throw new DomainException(
             '24h LIVE 250 BBO + 50 L2 quality/entitlement gates are not green.'
         );
@@ -296,7 +296,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         if(!is_array($control)||$control['phase']!=='LIVE'){
             return ['phase'=>$control['phase']??'OFF','monitoring'=>'NOT_LIVE'];
         }
-        $report=$this->reader->report($org,$control['soak_started_at']);
+        $report=$this->reader->report($org,$control['soak_started_at'],$this->decodeIds($control['source_ids_json']));
         if(!$report['accepted']){
             $reverted=$this->rollback($org,$actor);
             return ['monitoring'=>'FAILED_ROLLBACK_APPLIED','acceptance'=>$report,'rollback'=>$reverted];
