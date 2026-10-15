@@ -358,11 +358,19 @@ try {
     $reject(static fn()=> $cutover->promotePristine($org,$blocked,$operatorId,$permit),
         'previously claimed Action could replay');
     $mixed='mixed-'.$token;
+    $mixedPlan='mixed-plan-'.$token;
+    $db->executeStatement(
+        'INSERT INTO cos_federation_plans
+         (organization_id,plan_id,goal_id,spec_version,plan_version,state,plan_json,created_at)
+         VALUES (:org,:plan,:goal,1,1,"approved",:json,NOW(6))',
+        ['org'=>$org,'plan'=>$mixedPlan,'goal'=>$goalId,
+         'json'=>json_encode(['steps'=>$sourceSteps],JSON_THROW_ON_ERROR)],
+    );
     $db->executeStatement(
         'INSERT INTO cos_federation_runs
          (organization_id,run_id,goal_id,plan_id,state,revision,created_at,updated_at)
          VALUES (:org,:run,:goal,:plan,"pending",1,NOW(6),NOW(6))',
-        ['org'=>$org,'run'=>$mixed,'goal'=>$blockedGoal,'plan'=>$planId],
+        ['org'=>$org,'run'=>$mixed,'goal'=>$blockedGoal,'plan'=>$mixedPlan],
     );
     $reject(static fn()=> $cutover->inspect($org,$mixed),
         'legacy Run points to a Plan owned by a different Goal');
