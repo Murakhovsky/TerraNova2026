@@ -85,7 +85,8 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                 throw new DomainException('Unknown production action.');
             }
             $this->evidence->assertAuthorized($org,$actor,'capital_markets.market_data.manage');
-            if(getenv('COS_CM_POOL_PRODUCTION_ARMED')!=='1'){
+            if(!in_array($action,['rollback','watchdog'],true)
+                &&getenv('COS_CM_POOL_PRODUCTION_ARMED')!=='1'){
                 throw new DomainException('COS_CM_POOL_PRODUCTION_ARMED=1 required on target runtime.');
             }
             if($action!=='watchdog')$this->confirm($input,strtoupper($action).'_INSTRUMENT_POOL');
@@ -110,8 +111,8 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
     {
         $raw=(string)$input->getOption('sources');
         $ids=array_map('trim',explode(',',$raw));
-        if($raw===''||count($ids)>16||count(array_unique($ids))!==count($ids)){
-            throw new DomainException('1..16 unique source IDs required.');
+        if($raw===''||count($ids)>64||count(array_unique($ids))!==count($ids)){
+            throw new DomainException('1..64 unique source IDs required.');
         }
         foreach($ids as $id){
             if($id===''||strlen($id)>190||preg_match('/^[a-zA-Z0-9:_-]+$/D',$id)!==1){
@@ -296,7 +297,14 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         if(!is_array($control)||$control['phase']!=='LIVE'){
             return ['phase'=>$control['phase']??'OFF','monitoring'=>'NOT_LIVE'];
         }
-        $report=$this->reader->report($org,$control['soak_started_at'],$this->decodeIds($control['source_ids_json']));
+        try{
+            $report=$this->reader->report($org,$control['soak_started_at'],
+                $this->decodeIds($control['source_ids_json']));
+        }catch(Throwable $error){
+            $reverted=$this->rollback($org,$actor);
+            return ['monitoring'=>'EVIDENCE_ERROR_ROLLBACK_APPLIED',
+                'error_type'=>get_class($error),'rollback'=>$reverted];
+        }
         if(!$report['accepted']){
             $reverted=$this->rollback($org,$actor);
             return ['monitoring'=>'FAILED_ROLLBACK_APPLIED','acceptance'=>$report,'rollback'=>$reverted];
@@ -345,7 +353,7 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
     private function decodeIds(string $encoded):array
     {
         $array=json_decode($encoded,true,flags:JSON_THROW_ON_ERROR);
-        if(!is_array($array)||count($array)>16)throw new DomainException('Corrupted rollout source scope.');
+        if(!is_array($array)||count($array)>64)throw new DomainException('Corrupted rollout source scope.');
         foreach($array as $id)if(!is_string($id)||$id===''||strlen($id)>190){
             throw new DomainException('Invalid rollout source reference.');
         }

@@ -22,7 +22,7 @@ final readonly class InstrumentPoolProductionEvidenceReader
     public function report(string $org,?string $soakStartedAt,array $allowedSources):array
     {
         if($org===''||strlen($org)>190||trim($org)!==$org)throw new DomainException('Tenant required.');
-        if($allowedSources===[]||count($allowedSources)>16
+        if($allowedSources===[]||count($allowedSources)>64
             ||count(array_unique($allowedSources))!==count($allowedSources)){
             throw new DomainException('Explicit supervised source scope required.');
         }
@@ -132,7 +132,7 @@ SQL;
 
     public function canaryHealthy(string $org,array $allowedSourceIds):bool
     {
-        if($allowedSourceIds===[]||count($allowedSourceIds)>16)return false;
+        if($allowedSourceIds===[]||count($allowedSourceIds)>64)return false;
         $approvals=$this->attestations->approved($org);
         $q=$this->connection->prepare(
             "SELECT e.source_id, COUNT(*) AS observations,
