@@ -38,7 +38,7 @@ try{
     $raw=new RawMarketEvent('raw:fixture:'.bin2hex(random_bytes(7)),
         MarketSourceId::fromString($src),null,'BTC-USDT',
         'okx.spot.ticker.bbo',$received,$received,'76',
-        ['ticker_json'=>'{"code":"0","bidPx":"100.01","askPx":"100.02"}'],
+        ['ticker_json'=>'{"code":"0","data":[{"instType":"SPOT","instId":"BTC-USDT","bidPx":"100.01","bidSz":"1","askPx":"100.02","askSz":"1","vol24h":"25","ts":"1760000000123"}]}'],
         ['provider'=>'OKX','transport'=>'REST'],MarketDataMode::Live);
     $assert($raws->append($org,$raw),'Raw append failed.');
     $assert($raws->append($org,$raw)===false,'Duplicate raw event appended twice.');
@@ -105,6 +105,61 @@ try{
         'processed_at'=>$received->format('Y-m-d H:i:s.u'),
         'digest'=>$canonical->fingerprint()];
     $stored->execute($params);
+    // Full independent RAW -> decoder -> normalizer -> fingerprint,
+    // without calling production ingestion/event bus/execution.
+    $sourceDesc=new \Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor(
+        MarketSourceId::fromString($src),null,
+        \Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxSpotMarketDataAdapter::ADAPTER_TYPE,
+        true,100,[\Domains\CapitalMarkets\Domain\MarketData\MarketSourceRole::ValidationSource],
+        null,new \Domains\CapitalMarkets\Domain\MarketData\RateLimitPolicy(10,2),
+        new \Domains\CapitalMarkets\Domain\MarketData\ReconnectPolicy(),
+        new \Domains\CapitalMarkets\Domain\MarketData\MarketHealthPolicy(),[],'PUBLIC-LIVE');
+    $sources=new class($sourceDesc) implements \Domains\CapitalMarkets\Application\Contract\MarketSourceRepositoryInterface {
+        public function __construct(public $source){}
+        public function save(string $organizationId,\Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor $source):void{}
+        public function get(string $organizationId,MarketSourceId $id):?\Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor{
+            return $id->equals($this->source->id)?$this->source:null;
+        }
+        public function list(string $organizationId,bool $enabledOnly=false):array{return [$this->source];}
+        public function saveHealth(string $organizationId,\Domains\CapitalMarkets\Domain\MarketData\MarketSourceHealth $health):void{}
+        public function health(string $organizationId,MarketSourceId $id):?\Domains\CapitalMarkets\Domain\MarketData\MarketSourceHealth{return null;}
+    };
+    $normalizer=new class($obs,$instrument) implements \Domains\CapitalMarkets\Application\Contract\MarketDataNormalizerInterface {
+        public function __construct(private $observation,private string $instrumentId){}
+        public function normalize(string $organizationId,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor $source,
+            RawMarketEvent $raw,
+            \Domains\CapitalMarkets\Application\DTO\DecodedMarketEvent $decoded
+        ):\Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent{
+            return new \Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent(
+                $raw->eventId,$source->id,$source->venueId,
+                \Domains\CapitalMarkets\Domain\Instrument\InstrumentId::fromString($this->instrumentId),
+                new \Domains\CapitalMarkets\Domain\MarketData\MarketTimestamps(
+                    $decoded->sourceTimestamp,$raw->receivedAt,$raw->receivedAt),
+                $decoded->sequence,$this->observation,[],1,$decoded->mode,
+                \Domains\CapitalMarkets\Domain\MarketData\MarketStatus::Open
+            );
+        }
+    };
+    $decoder=new \Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxSpotMarketDataDecoder(
+        new \Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPublicPayloadParser());
+    $replayer=new \Domains\CapitalMarkets\Application\Service\RawMarketReplaySimulator(
+        $raws,$sources,
+        new \Domains\CapitalMarkets\Application\Service\MarketDataDecoderRegistry([$decoder]),
+        $normalizer,$provenance,$comparator
+    );
+    $before=$pdo->query("SELECT COUNT(*) FROM tn_capital_market_canonical_events
+       WHERE organization_id=".$pdo->quote($org))->fetchColumn();
+    $range=$replayer->run($org,$src,
+        $received->sub(new DateInterval('PT1S')),
+        $received->add(new DateInterval('PT1S')),20);
+    $assert($range['status']==='REPLAY_VERIFIED'
+        &&$range['decoded']===1
+        &&$range['events'][0]['canonical_integrity']==='CANONICAL_MATCH',
+        'Full read-only replay did not preserve original canonical fingerprint.');
+    $after=$pdo->query("SELECT COUNT(*) FROM tn_capital_market_canonical_events
+       WHERE organization_id=".$pdo->quote($org))->fetchColumn();
+    $assert($before===$after,'Read-only replay mutated canonical live stream.');
     $assert($comparator->compare($org,$canonical)['status']==='CANONICAL_MATCH',
         'Pure Replay must reproduce canonical fingerprint without ingestion.');
     $pdo->prepare("UPDATE tn_capital_market_canonical_events
@@ -118,6 +173,12 @@ try{
     $pdo->prepare("UPDATE tn_capital_market_raw_events
        SET raw_payload_json='{\"ticker_json\":\"tampered\"}'
        WHERE organization_id=? AND raw_event_id=?")->execute([$org,$raw->eventId]);
+    $tamperedReplay=$replayer->run($org,$src,
+        $received->sub(new DateInterval('PT1S')),
+        $received->add(new DateInterval('PT1S')),20);
+    $assert($tamperedReplay['status']==='REPLAY_INCOMPLETE'
+        &&$tamperedReplay['events'][0]['status']==='PROVENANCE_FAILED',
+        'Tampered RAW frame slipped through replay path.');
     $changed=$provenance->verify($org,$src,0,20);
     $assert($changed['status']==='TAMPERED'&&$changed['tampered']===1,
         'Raw history tampering was not detected.');
