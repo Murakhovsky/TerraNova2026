@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Persistence\Federation;
 
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
+use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
 use App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence;
 use Doctrine\DBAL\Connection;
 use DomainException;
@@ -51,6 +52,7 @@ final readonly class FederationCanonicalWorkflowBridge
         private FederationGoalStore $goals,
         private FederationWorkflowPlanApprovalEvidence $planEvidence,
         private DoctrineWorkflowActionReceiptVerifier $receipts,
+        private WorkflowNonActionReceiptEvidenceInterface $nonActions,
         private FederationPlanApprovalEvidenceReader $approval,
         private CanonicalCapabilityCatalog $capabilities,
         private DomainModuleRegistry $domains,
@@ -66,6 +68,32 @@ final readonly class FederationCanonicalWorkflowBridge
         $organization = getenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
         return is_string($organization) && $organization !== ''
             && hash_equals($organization, $actor->organizationId()->value());
+    }
+
+    /**
+     * Non-Action evidence must be linked to an immutable Run ID BEFORE the
+     * Plan receives human approval. Action-only Plans retain random IDs.
+     */
+    public function plannedRunId(TenantContext $actor, string $planId): ?string
+    {
+        $this->authorized($actor);
+        self::identifier($planId);
+        $json=$this->db->fetchOne(
+            'SELECT plan_json FROM cos_federation_plans WHERE organization_id=:org AND plan_id=:plan',
+            ['org'=>$actor->organizationId()->value(),'plan'=>$planId],
+        );
+        if (!is_string($json)) return null;
+        $plan=json_decode($json,true,512,JSON_THROW_ON_ERROR);
+        if (!is_array($plan) || !is_array($plan['steps']??null)) return null;
+        foreach($plan['steps'] as $step) {
+            if (is_array($step) && ($step['side_effect_level']??null)==='none') {
+                $run=$plan['run_id']??null;
+                if (!is_string($run)) throw new DomainException('Pinned non-Action Plan lacks Run identity.');
+                self::identifier($run);
+                return $run;
+            }
+        }
+        return null;
     }
 
     public function owns(TenantContext $actor, string $runId): bool
@@ -153,19 +181,41 @@ final readonly class FederationCanonicalWorkflowBridge
                 || !array_is_list($decoded['steps']) || $decoded['steps'] === []) {
                 throw new DomainException('Approved Plan lacks a canonical executable graph.');
             }
+            $hasNonAction=false;
             foreach ($decoded['steps'] as $step) {
-                // First cutover slice deliberately allows approved external
-                // Actions only. Non-action evidence needs its own claim path.
-                if (!is_array($step) || ($step['side_effect_level']??null) !== 'external'
-                    || !is_string($step['execution_binding']??null)
+                if (!is_array($step) || !is_string($step['execution_binding']??null)) {
+                    throw new DomainException('Unsupported canonical Goal step binding.');
+                }
+                if (($step['side_effect_level']??null)==='none') {
+                    if (!str_starts_with($step['execution_binding'],'read:')
+                        || !is_array($step['evidence']??null)) {
+                        throw new DomainException('Non-Action Step requires pinned Domain read evidence.');
+                    }
+                    $hasNonAction=true;
+                } elseif (($step['side_effect_level']??null)!=='external'
                     || !str_starts_with($step['execution_binding'],'action:')) {
-                    throw new DomainException('Canonical rollout currently requires external Action-only Plans.');
+                    throw new DomainException('Canonical Goal cannot dispatch unsupported side effects.');
                 }
             }
             $definition = new WorkflowDefinitionSnapshot('federation.approved-plan','1.0.0',$decoded['steps']);
             $digest=hash('sha256',(string)$plan['plan_json']);
+            $inputDigest=$hasNonAction
+                ? hash('sha256',$org."\0".$runId."\0".$planId)
+                : $digest;
+            if ($hasNonAction) {
+                if (($decoded['run_id']??null)!==$runId) {
+                    throw new DomainException('Non-Action Plan must pre-pin the exact future Run ID.');
+                }
+                foreach($decoded['steps'] as $step) {
+                    if (($step['side_effect_level']??null)!=='none') continue;
+                    if (($step['evidence']['run_id']??null)!==$runId
+                        || ($step['evidence']['input_digest']??null)!==$inputDigest) {
+                        throw new DomainException('Non-Action Plan evidence does not match immutable invocation.');
+                    }
+                }
+            }
             $id=new WorkflowRunIdentity($org,$runId);
-            $draft=new WorkflowRunDraft($id,$definition->id,$definition->version,$digest,
+            $draft=new WorkflowRunDraft($id,$definition->id,$definition->version,$inputDigest,
                 $actor->userId()->value(),'federation:'.$runId,$planId,$approvalId,$digest,$definition);
             $this->workflow->create($draft,$actor);
             // Zero writes to cos_federation_runs/steps, no Action submission.
@@ -271,7 +321,7 @@ final readonly class FederationCanonicalWorkflowBridge
         if (!is_array($steps) || !array_is_list($steps)) throw new DomainException('Pinned Plan topology missing.');
         $selection=$this->scheduler->select(
             new WorkflowDefinitionSnapshot('federation.approved-plan','1.0.0',$steps),
-            $this->workflow->steps($id),['external'],
+            $this->workflow->steps($id),['external','none'],
         );
         // A prior COMPLETED flag is never enough to authorize a subsequent Action.
         foreach ($selection->completed as $stepId) {
@@ -279,9 +329,16 @@ final readonly class FederationCanonicalWorkflowBridge
             $receipt=$completed->resultReference;
             if ($receipt===null) return $result('manual_reconciliation_required',$stepId);
             try {
-                $proof=$this->receipts->attestForAudit($id,$stepId,$receipt,
-                    hash('sha256',(string)$row['plan_json']));
-                if (!$proof->verified || $proof->evidenceReference !== $receipt) {
+                $pinned=null;
+                foreach($steps as $candidate) if(($candidate['id']??null)===$stepId) $pinned=$candidate;
+                if ($completed->sideEffectLevel==='none' && is_array($pinned)) {
+                    $this->nonActions->assertVerified($id,$stepId,$receipt,$run->inputDigest,$pinned);
+                } elseif ($completed->sideEffectLevel==='external') {
+                    $proof=$this->receipts->attestForAudit($id,$stepId,$receipt,$run->inputDigest);
+                    if (!$proof->verified || $proof->evidenceReference !== $receipt) {
+                        return $result('manual_reconciliation_required',$stepId);
+                    }
+                } else {
                     return $result('manual_reconciliation_required',$stepId);
                 }
             } catch (\Throwable) {
@@ -297,6 +354,42 @@ final readonly class FederationCanonicalWorkflowBridge
             return $result('manual_reconciliation_required',$selection->stepId);
         }
         $step=$this->findStep($id,(string)$selection->stepId);
+        if ($step->sideEffectLevel==='none') {
+            $pinned=null;
+            foreach($steps as $candidate) if(($candidate['id']??null)===$step->stepId) $pinned=$candidate;
+            if (!is_array($pinned) || !is_string($pinned['evidence']['reference']??null)) {
+                throw new DomainException('Non-Action Step lacks immutable receipt reference.');
+            }
+            $reference=$pinned['evidence']['reference'];
+            if ($selection->state===WorkflowStepSelectionState::PENDING) {
+                // A native fact is read later; neither step claim nor receipt
+                // can invoke an Action handler or synthesize business evidence.
+                $this->workflow->claim(new WorkflowStepClaim(
+                    $command,$step->stepId,'goal-evidence:'.$actor->userId()->value(),86400));
+                return $result('awaiting_domain_evidence',$step->stepId);
+            }
+            if ($selection->state!==WorkflowStepSelectionState::CLAIMED) {
+                return $result('manual_reconciliation_required',$step->stepId);
+            }
+            $claim=$this->db->fetchAssociative(
+                'SELECT claim_token,claim_expires_at FROM cos_workflow_steps
+                 WHERE organization_id=:org AND run_id=:run AND step_id=:step',
+                ['org'=>$org,'run'=>$runId,'step'=>$step->stepId],
+            );
+            if (!is_string($claim['claim_token']??null)
+                || strtotime((string)($claim['claim_expires_at']??'').' UTC')<=time()) {
+                return $result('manual_reconciliation_required',$step->stepId);
+            }
+            try {
+                $this->nonActions->assertVerified($id,$step->stepId,$reference,$run->inputDigest,$pinned);
+                $this->workflow->checkpoint(new WorkflowStepCheckpoint(
+                    $command,$step->stepId,$claim['claim_token'],StepStatus::COMPLETED,$reference));
+            } catch (\Throwable) {
+                // Absence of an independent fact is not proof of a completed step.
+                return $result('awaiting_domain_evidence',$step->stepId);
+            }
+            return $result('step_completed',$step->stepId);
+        }
         $key='wf:'.$step->idempotencyKey;
         $actions=$this->db->fetchAllAssociative(
             'SELECT id,status FROM cos_actions WHERE organization_id=:org AND idempotency_key=:key',

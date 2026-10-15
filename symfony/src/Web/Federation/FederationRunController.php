@@ -60,8 +60,10 @@ final readonly class FederationRunController
         if ($actor === null) return self::reply(['error' => 'forbidden'], 403);
         if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
         try {
-            $runId = 'run-' . bin2hex(random_bytes(12));
             $planId = (string) $request->request->get('plan_id', '');
+            $runId = $this->canonical->newRunsEnabled($actor)
+                ? ($this->canonical->plannedRunId($actor,$planId) ?? 'run-' . bin2hex(random_bytes(12)))
+                : 'run-' . bin2hex(random_bytes(12));
             $approvalId = (string) $request->request->get('approval_action_id', '');
             // NO legacy fallback. Disabled rollout denies new work rather than
             // creating a second technical authority.

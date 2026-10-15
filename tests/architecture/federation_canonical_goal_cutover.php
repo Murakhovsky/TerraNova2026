@@ -39,8 +39,8 @@ foreach ([
     [$claim,"'PENDING_APPROVAL','QUEUED'"],
     [$claim,"'status'] !== 'PENDING'"],
     [$services,"alias: App\\Persistence\\Workflow\\DoctrineWorkflowActionWorkerAdmission"],
-    [$services,"$"."admission: '@App\\Persistence\\Workflow\\DoctrineWorkflowActionClaimAdmission'"],
-    [$services,"$"."receipts: '@App\\Persistence\\Workflow\\DoctrineWorkflowActionReceiptVerifier'"],
+    [$services,"$"."admission: '@App\\Persistence\\Workflow\\WorkflowClaimAdmissionRouter'"],
+    [$services,"$"."receipts: '@App\\Persistence\\Workflow\\WorkflowReceiptAttestationRouter'"],
 ] as [$source,$marker]) {
     if (!str_contains($source,$marker)) {
         throw new RuntimeException('Canonical Federation single-writer contract missing: '.$marker);
