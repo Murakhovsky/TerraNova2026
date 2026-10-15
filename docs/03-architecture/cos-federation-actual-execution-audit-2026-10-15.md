@@ -119,3 +119,9 @@ Tool: існуючі permission/schema gates виконуються ДО canonic
 Той самий Recovery API підтримує `inspect` на конкретному Kernel Run із read-only незалежним re-attestation. Для детального операційного списку лишається `cos:workflow:kernel-recovery TENANT --limit=100`.
 
 **Важлива межа:** цей reconciliation підтверджує технічний native execution, **не** завершення downstream Action proposals, бізнес-Goal або безпечність загального production cutover. Останні мають окремі release gates.
+
+## Canonical Agent job completion and proposal handoff
+
+For enrolled Agent jobs, successful native LLM reasoning and native AgentRun persistence are **not yet a complete queue job** when the result includes Action proposals. `AgentRunJobHandler` publishes every proposal using the job-stable Action idempotency key and enqueues any approved Action *before* marking its canonical technical Run `completed`. Failure during handoff quarantines the claim and stops automatic Agent execution replay; the reason and any already-created Actions require independent operator investigation. This ordering is enforced by `tests/architecture/workflow_kernel_agent_handoff_order.php`.
+
+This is not a full transactional outbox between the native AgentRun, Action submission and Queue. Therefore a crash during multi-proposal handoff still needs operator reconciliation, and verified native Agent receipt does not prove all proposed Actions were published or performed. Such incomplete outcomes must not be promoted to business success or automatic release.

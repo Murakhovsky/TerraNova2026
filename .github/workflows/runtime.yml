@@ -103,6 +103,7 @@ jobs:
           php tests/architecture/cos_execution_authority_paths.php
           php tests/architecture/workflow_kernel_single_authority.php
           php tests/architecture/workflow_kernel_two_person_recovery.php
+          php tests/architecture/workflow_kernel_agent_handoff_order.php
       - name: Federation execution authority inventory
         run: |
           set -euo pipefail

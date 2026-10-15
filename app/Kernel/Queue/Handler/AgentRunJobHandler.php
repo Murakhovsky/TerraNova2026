@@ -53,51 +53,63 @@ final readonly class AgentRunJobHandler implements JobHandlerInterface
         $agent = $this->domains->agent($agentName);
         $claim = $this->canonical?->beginAgent($job, $agentName);
         try {
-        $execution = $this->runtime->run($agent, new AgentInvocation(
-            $job->organizationId,
-            $subjectType,
-            $subjectId,
-            $question,
-            $job->correlationId,
-            is_array($job->payload['context_references'] ?? null) ? $job->payload['context_references'] : [],
-            $agentName,
-            $claim !== null ? $job->id : null,
-            $claim?->token,
-        ));
-        if ($claim !== null) $this->canonical->completeAgent($claim, $execution->runId);
+            $execution = $this->runtime->run($agent, new AgentInvocation(
+                $job->organizationId,
+                $subjectType,
+                $subjectId,
+                $question,
+                $job->correlationId,
+                is_array($job->payload['context_references'] ?? null) ? $job->payload['context_references'] : [],
+                $agentName,
+                $claim !== null ? $job->id : null,
+                $claim?->token,
+            ));
+
+            // Native reasoning result alone is not the complete queued job.
+            // Publish Action proposals under job-stable idempotency keys first.
+            // If publication fails after any side effect, quarantine for operator
+            // reconciliation rather than completing the technical Run prematurely.
+            foreach ($execution->proposals as $index => $proposal) {
+                $stableProposal = new ActionProposal(
+                    $proposal->type,
+                    $proposal->targetType,
+                    $proposal->targetId,
+                    $proposal->parameters,
+                    $proposal->sourceType,
+                    $proposal->sourceId,
+                    $proposal->executionMode,
+                    $proposal->riskLevel,
+                    implode(':', ['agent-job', $job->id, $index, $proposal->type, $proposal->targetId ?? 'none']),
+                );
+                $action = $this->policies->submit($job->organizationId, $stableProposal, $job->correlationId);
+                if ($action->status === ActionStatus::Queued) {
+                    $this->queue->enqueue(
+                        $job->organizationId,
+                        ActionExecutionJobHandler::TYPE,
+                        ['action_id' => $action->id],
+                        $job->correlationId,
+                        'action-execution:' . $action->id,
+                        5,
+                        120,
+                    );
+                }
+            }
+
+            // Only now has the Agent job reached its local hand-off boundary.
+            // This is not proof that downstream Actions achieved business results.
+            if ($claim !== null) {
+                $this->canonical->completeAgent($claim, $execution->runId);
+            }
         } catch (Throwable $error) {
             if ($claim !== null) {
-                try { $this->canonical->quarantine($claim); }
-                catch (Throwable) { /* Operator reconcile; no replay. */ }
+                try {
+                    $this->canonical->quarantine($claim);
+                } catch (Throwable) {
+                    // An expired/completed claim still blocks replay. The exact
+                    // persisted outcome requires independent operator recovery.
+                }
             }
             throw $error;
-        }
-
-        foreach ($execution->proposals as $index => $proposal) {
-            // The job identity, rather than the individual LLM run, makes retries idempotent.
-            $stableProposal = new ActionProposal(
-                $proposal->type,
-                $proposal->targetType,
-                $proposal->targetId,
-                $proposal->parameters,
-                $proposal->sourceType,
-                $proposal->sourceId,
-                $proposal->executionMode,
-                $proposal->riskLevel,
-                implode(':', ['agent-job', $job->id, $index, $proposal->type, $proposal->targetId ?? 'none']),
-            );
-            $action = $this->policies->submit($job->organizationId, $stableProposal, $job->correlationId);
-            if ($action->status === ActionStatus::Queued) {
-                $this->queue->enqueue(
-                    $job->organizationId,
-                    ActionExecutionJobHandler::TYPE,
-                    ['action_id' => $action->id],
-                    $job->correlationId,
-                    'action-execution:' . $action->id,
-                    5,
-                    120,
-                );
-            }
         }
     }
 }
