@@ -154,6 +154,25 @@ SQL;
         foreach($streamRows->fetchAll(PDO::FETCH_ASSOC) as $t){
             $symbolTrust[$t['source_id'].'|'.$t['instrument_id'].'|'.$t['channel']]=$t;
         }
+        // Only actual protocol ACK + accepted canonical LIVE quotes qualify.
+        // Both current session and valid lease token are checked in receipts.
+        $receiptRows=$this->connection->prepare(
+            "SELECT p.source_id,p.instrument_id,p.channel,p.status,p.session_epoch,
+                    p.ack_at,p.last_live_quote_at,p.last_quality_score,p.quote_count,
+                    CASE WHEN l.owner_id<>'' AND l.fencing_token=p.fencing_token
+                          AND l.expires_at>UTC_TIMESTAMP(6)
+                         THEN 1 ELSE 0 END AS current_lease
+             FROM tn_capital_market_provider_stream_receipts p
+             LEFT JOIN tn_capital_market_stream_worker_leases l
+               ON l.organization_id=p.organization_id
+              AND l.source_id=p.source_id AND l.shard_key=p.shard_key
+             WHERE p.organization_id=:org");
+        $receiptRows->execute(['org'=>$org]);
+        $verifiedReceipts=[];
+        foreach($receiptRows->fetchAll(PDO::FETCH_ASSOC) as $item){
+            $key=$item['source_id'].'|'.$item['instrument_id'].'|'.$item['channel'];
+            $verifiedReceipts[$key]=$item;
+        }
         $rows=[];
         foreach($raw as $r){
             $source=$sources[$r['source_id']]??null;
@@ -186,8 +205,22 @@ SQL;
                 &&($t['last_rejected_at']===null
                     ||(($badAt=strtotime($t['last_rejected_at'].' UTC'))!==false
                         &&$badAt<time()-86400));
+            $receipt=$verifiedReceipts[$assignmentKey]??null;
+            $quoteTime=is_array($receipt)&&is_string($receipt['last_live_quote_at'])
+                ?strtotime($receipt['last_live_quote_at'].' UTC'):false;
+            $ackTime=is_array($receipt)&&is_string($receipt['ack_at'])
+                ?strtotime($receipt['ack_at'].' UTC'):false;
+            $providerVerified=is_array($receipt)
+                &&(int)$receipt['current_lease']===1
+                &&$receipt['status']==='LIVE_QUOTE'
+                &&(int)$receipt['session_epoch']>0
+                &&(int)$receipt['quote_count']>0
+                &&(int)$receipt['last_quality_score']>=80
+                &&$quoteTime!==false&&$quoteTime>=time()-300&&$quoteTime<=time()+5
+                &&$ackTime!==false&&$ackTime<=time()+5;
             $rows[]=[
                 'stream_trust_confirmed'=>$symbolGood,
+                'provider_live_verified'=>$providerVerified,
                 'assignment_registered'=>$shard!==null,
                 'source_healthy'=>$healthy[$r['source_id']]??false,
                 'subscription_active'=>$activeSubscription,
@@ -334,6 +367,20 @@ SQL;
                AND last_event_at>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 120 SECOND)");
         $health->execute(['org'=>$org]);
         $healthy=array_fill_keys($health->fetchAll(PDO::FETCH_COLUMN),true);
+        // Canary requires a real protocol ACK and a quality-accepted LIVE
+        // quote from an unexpired, currently leased provider session.
+        $receiptQ=$this->connection->prepare(
+            "SELECT DISTINCT p.source_id FROM tn_capital_market_provider_stream_receipts p
+             JOIN tn_capital_market_stream_worker_leases l
+               ON l.organization_id=p.organization_id
+              AND l.source_id=p.source_id AND l.shard_key=p.shard_key
+              AND l.fencing_token=p.fencing_token AND l.owner_id<>''
+              AND l.expires_at>UTC_TIMESTAMP(6)
+             WHERE p.organization_id=:org AND p.status='LIVE_QUOTE'
+               AND p.session_epoch>0 AND p.quote_count>0 AND p.last_quality_score>=80
+               AND p.last_live_quote_at>DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 5 MINUTE)");
+        $receiptQ->execute(['org'=>$org]);
+        $ackSources=array_fill_keys($receiptQ->fetchAll(PDO::FETCH_COLUMN),true);
         $symbolQ=$this->connection->prepare(
             "SELECT DISTINCT source_id FROM tn_capital_market_instrument_stream_trust
              WHERE organization_id=:org AND status='TRUSTED' AND recovery_required=0
@@ -342,7 +389,7 @@ SQL;
         $symbolQ->execute(['org'=>$org]);
         $symbolSources=array_fill_keys($symbolQ->fetchAll(PDO::FETCH_COLUMN),true);
         foreach($allowedSourceIds as $source){
-            if(!isset($symbolSources[$source]))return false;
+            if(!isset($symbolSources[$source])||!isset($ackSources[$source]))return false;
             if(!is_string($source)||!isset($seen[$source])||!isset($active[$source])||!isset($healthy[$source])
                 ||!isset($approvals['SOURCE_ENTITLEMENT|'.$source]))return false;
         }
