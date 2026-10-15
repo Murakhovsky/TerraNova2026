@@ -13,6 +13,13 @@ $raw=$read('app/Domains/CapitalMarkets/Infrastructure/Persistence/MySql/MysqlRaw
 $replay=$read('app/Domains/CapitalMarkets/Application/Service/RawMarketReplaySimulator.php');
 $audit=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Streaming/MysqlRawMarketProvenance.php');
 $policy=$read('app/Domains/CapitalMarkets/Application/Service/CrossVenueBboConsensus.php');
+$venueReader=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Streaming/MysqlCrossVenueBboReconciliation.php');
+if(!str_contains($venueReader,"proof.kind='SOURCE_ENTITLEMENT'")
+    ||!str_contains($venueReader,"proof.status='APPROVED'")
+    ||!str_contains($venueReader,'VALIDATION_SOURCE')){
+    throw new RuntimeException('Cross-venue fallback bypasses independently approved data entitlements.');
+}
+
 $placement=$read('app/Domains/CapitalMarkets/Application/Service/StreamingFleetPlacementPolicy.php');
 $fleet=$read('symfony/src/Command/CapitalMarketsMultiSymbolFleetCommand.php');
 $rest=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Adapter/Okx/OkxSpotMarketDataAdapter.php');

@@ -42,6 +42,18 @@ final readonly class MysqlCrossVenueBboReconciliation
                 ON q.organization_id=e.organization_id AND q.canonical_event_id=e.canonical_event_id
              WHERE s.organization_id=:org AND s.enabled=1
                AND s.license_profile<>'UNSPECIFIED'
+               AND (JSON_SEARCH(s.roles_json,'one','TRADING_SOURCE') IS NOT NULL
+                 OR JSON_SEARCH(s.roles_json,'one','VALIDATION_SOURCE') IS NOT NULL)
+               AND EXISTS (
+                   SELECT 1 FROM tn_capital_market_pool_external_evidence proof
+                   WHERE proof.organization_id=s.organization_id
+                     AND proof.subject_id=s.source_id
+                     AND proof.kind='SOURCE_ENTITLEMENT'
+                     AND proof.status='APPROVED'
+                     AND proof.valid_until>UTC_TIMESTAMP(6)
+                     AND proof.reviewed_by IS NOT NULL
+                     AND proof.reviewed_by<>proof.submitted_by
+               )
              ORDER BY s.priority,s.source_id LIMIT 101");
         $q->execute(['org'=>$org,'instrument_sub'=>$instrument]);
         $rows=$q->fetchAll(PDO::FETCH_ASSOC);

@@ -14,7 +14,7 @@ updated: 2026-10-15
 
 API OKX може повертати дані зі незалежних кешів, тому послідовні REST-відповіді не гарантують монотонного часу. Реальний LIVE stream і provider ACK з OKX Spot **ще не впроваджені**. Джерело можна використовувати як окрему контрольну REST-копію, але не підміняти ним підтверджені WebSocket sessions.
 
-Reconciliation використовує тільки однаковий canonical instrument ID, активні subscription, незалежні venues, придатні LIVE BBO, quality >= 80, надійний годинник та свіжість не більше 120 секунд. Схожі тикери токенізованих активів не визнаються економічно ідентичними; USD та USDT не конвертуються без підтвердженого FX-потоку. Порівняння через Decimal, без binary float. При divergence, недостатньому кворумі або різній валюті повертається fail-closed результат, а не альтернативна ціна для виконання.
+Reconciliation використовує тільки однаковий canonical instrument ID, активні subscription, незалежно схвалені SOURCE_ENTITLEMENT, ролі Trading/Validation, незалежні venues, придатні LIVE BBO, quality >= 80, надійний годинник та свіжість не більше 120 секунд. Схожі тикери токенізованих активів не визнаються економічно ідентичними; USD та USDT не конвертуються без підтвердженого FX-потоку. Порівняння через Decimal, без binary float. При divergence, недостатньому кворумі або різній валюті повертається fail-closed результат, а не альтернативна ціна для виконання.
 
     php symfony/bin/console cos:capital-markets:market-data:evidence reconcile ORG ACTOR --instrument=INSTRUMENT --max-bps=30
 
