@@ -374,7 +374,8 @@ try {
     'General Kernel technical executor wrote forbidden legacy Federation Run');
  echo "Kernel canonical Agent/Tool MySQL PASSED: real queue, native AgentRun, Tool audit, fencing, duplicate replay, tenant, quarantine.\n";
 } finally {
- foreach(['cos_workflow_steps','cos_workflow_runs','cos_audit_log','cos_agent_runs',
+ foreach(['cos_workflow_recovery_decisions',
+          'cos_workflow_steps','cos_workflow_runs','cos_audit_log','cos_agent_runs',
           'cos_action_attempts','cos_approvals','cos_policy_evaluations','cos_actions',
           'cos_jobs','cos_kernel_execution_rollouts'] as $table) {
   $db->executeStatement("DELETE FROM $table WHERE organization_id=:org",['org'=>$org]);
