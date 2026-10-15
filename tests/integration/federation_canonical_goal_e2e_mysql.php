@@ -230,7 +230,9 @@ try {
             new SalesLocalTaskOutcomeEvidenceProvider(new MysqlSalesLocalTaskOutcomeReadModel($pdo)),
         ]),$planReader);
     $bridge=new FederationCanonicalWorkflowBridge($db,$store,new WorkflowStepScheduler(),
-        $goals,$planEvidence,$receipts,$planReader,$capabilities,$domains,$modules,
+        $goals,$planEvidence,$receipts,
+        new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence(),
+        $planReader,$capabilities,$domains,$modules,
         $policies,$policyEngine,$contexts,$policyService);
 
     $goal=new GoalSpecification($goalId,$org,$owner,'Створити одну Sales CRM задачу',
