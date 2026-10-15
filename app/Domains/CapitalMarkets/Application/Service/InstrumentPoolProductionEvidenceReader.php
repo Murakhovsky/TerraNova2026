@@ -157,7 +157,7 @@ SQL;
         // Only actual protocol ACK + accepted canonical LIVE quotes qualify.
         // Both current session and valid lease token are checked in receipts.
         $receiptRows=$this->connection->prepare(
-            "SELECT p.source_id,p.instrument_id,p.channel,p.status,p.session_epoch,
+            "SELECT p.source_id,p.instrument_id,p.channel,p.shard_key,p.status,p.session_epoch,
                     p.ack_at,p.last_live_quote_at,p.last_quality_score,p.quote_count,
                     CASE WHEN l.owner_id<>'' AND l.fencing_token=p.fencing_token
                           AND l.expires_at>UTC_TIMESTAMP(6)
@@ -214,6 +214,7 @@ SQL;
             // protocol; BBO receipt rows must originate from the two approved
             // multi-symbol WS protocols. Do not forge L2 provider ACKs.
             $providerVerified=is_array($receipt)
+                &&$shard!==null&&$receipt['shard_key']===$shard
                 &&(int)$receipt['current_lease']===1
                 &&$receipt['status']==='LIVE_QUOTE'
                 &&(int)$receipt['session_epoch']>0

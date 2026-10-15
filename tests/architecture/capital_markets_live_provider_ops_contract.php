@@ -61,6 +61,11 @@ if(!str_contains($audit,'SOURCE_GUARD_SHARD')
     ||!str_contains($cli,'COS_CM_STREAM_FAILOVER_DRILL_ARMED')){
     throw new RuntimeException('Failover drill not source-fenced and double armed.');
 }
+$ops=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Streaming/MysqlStreamingOperationsSnapshot.php');
+if(!str_contains($ops,"live_sub.status='ACTIVE'")
+    ||!str_contains($reader,"$receipt['shard_key']")){
+    throw new RuntimeException('Live provider coverage can be fabricated by stale/other-shard subscriptions.');
+}
 if(!str_contains($reader,"'SOURCE_FAILOVER_PROVEN'")
     ||!str_contains($reader,"'provider_live_verified'")){
     throw new RuntimeException('24h acceptance bypasses provider/failover proof.');

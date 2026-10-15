@@ -102,6 +102,13 @@ final readonly class MysqlStreamingOperationsSnapshot
                    AND p.last_live_quote_at>DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 120 SECOND)
                    AND l.owner_id<>'' AND l.fencing_token=p.fencing_token
                    AND l.expires_at>UTC_TIMESTAMP(6)
+                   AND EXISTS (
+                       SELECT 1 FROM tn_capital_market_subscriptions live_sub
+                       WHERE live_sub.organization_id=p.organization_id
+                         AND live_sub.source_id=p.source_id
+                         AND live_sub.instrument_id=p.instrument_id
+                         AND live_sub.status='ACTIVE' AND live_sub.data_type='BBO'
+                   )
                     THEN 1 ELSE 0 END) AS confirmed,
                 SUM(CASE WHEN p.status='REVOKED' THEN 1 ELSE 0 END) AS revoked
              FROM tn_capital_market_provider_stream_receipts p
