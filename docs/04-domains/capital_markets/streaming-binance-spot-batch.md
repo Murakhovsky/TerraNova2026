@@ -1,48 +1,51 @@
 ---
-title: Binance Spot multi-symbol WebSocket BBO pilot
-description: Safe bounded subscription batch with per-symbol BBO trust fencing
+title: Багатосимвольний потік котирувань Binance Spot
+description: Контрольований пакет підписок та незалежна перевірка довіри до котирувань кожного інструмента.
 status: draft
 kind: engineering
 updated: 2026-10-15
 ---
 
-# Binance Spot multi-symbol BBO pilot
+# Багатосимвольний потік котирувань Binance Spot
 
-This opt-in pilot consumes 2..100 active **BBO-only** Binance Spot subscriptions
-for exactly one tenant-scoped MarketSource and venue, using one socket, one source
-lease and one durable fencing token. It is **not** a horizontally scaled streaming
-service and must not be connected to live trading.
+Цей пілот дозволяє отримувати котирування BBO для **2–100 інструментів** через один
+WebSocket, один MarketSource та один fenced lease. Підтримуються лише активні
+підписки BBO для одного майданчика та одного орендаря. Це ще не
+горизонтально масштабований сервіс і не дозвіл на реальну торгівлю.
 
-## Preconditions
+## Передумови
 
-- All instruments, venue mappings, source and active BBO subscriptions must
-  already exist in the canonical Capital Markets repository; unmapped, repeated
-  or cross-venue instruments block startup.
-- Domain, Market Data, Binance and Streaming feature flags must all be enabled,
-  and environment variable `COS_CM_STREAMING_BINANCE_SPOT_BATCH_PILOT=1` supplied.
-- A second shard (including the existing single-symbol pilot) for this source
-  cannot acquire the source-exclusive lease. The expired lease sweeper supports
-  `binance-spot-multi-bbo` as a fail-closed recovery candidate.
+- Усі інструменти, відповідності символів, джерело і підписки вже зареєстровані
+  в канонічній базі Capital Markets. Невідомі, повторні або чужі символи
+  блокують запуск.
+- Потрібні увімкнені прапорці Domain, Market Data, Binance і Streaming, а також
+  змінна середовища `COS_CM_STREAMING_BINANCE_SPOT_BATCH_PILOT=1`.
+- Другий воркер на іншому shard того самого джерела не може отримати lease
+  одночасно. Аварійний sweeper підтримує `binance-spot-multi-bbo`.
 
-## Run (controlled)
+## Контрольований запуск
 
 ```bash
 COS_CM_STREAMING_BINANCE_SPOT_BATCH_PILOT=1 php symfony/bin/console \
   cos:capital-markets:market-data:stream:binance-spot-batch ORG SOURCE --seconds=60
 ```
 
-This is a public Binance Spot `@bookTicker` feed. Initial batch ACK
-is required before publishing any symbol. For each symbol, last received time and
-monotonic (non-contiguous) update ID are separate. Repeated update IDs cannot
-republish. A stale ticker gets a soft per-instrument trust revocation and may
-recover only on a newer valid full BBO. A malformed, crossed or sequence-rollback
-ticker needs isolated unsubscribe ACK, subscribe ACK and a new full BBO before
-recovery. Healthy symbols remain live. Source-wide socket, auth, lease or
-unknown-symbol failures still require whole-session fail-closed recovery.
+Спочатку воркер вимагає підтвердження підписки на весь пакет символів.
+До отримання ACK жодне котирування не передається в Market State.
+Для кожного інструмента незалежно зберігаються момент останнього повідомлення
+та монотонний (але не обов'язково неперервний) номер оновлення.
+Повторення номера не створює нове котирування.
 
-## Not yet production accepted
+Якщо окремий символ застарів, система відкликає його довіру й очікує
+нове валідне повне BBO. Для некоректного котирування або повернення sequence
+назад потрібні окремі підтвердження відписки та повторної підписки.
+Здорові символи продовжують роботу. Втрата socket, lease або невідомий
+символ запускає загальне відновлення джерела.
 
-No live WebSocket+MySQL evidence was collected in this increment; neither 72-hour
-nor 7-day soak, chaos, provider-wide discovery, rate-limit adaptation or operator
-incident screens are complete. Streaming remains OFF by default and no live
-trading is allowed. Enabling this pilot is a manual controlled canary action.
+## Що ще не пройшло виробниче приймання
+
+Реальний WebSocket + MySQL canary, 72-годинне та семиденне випробування,
+chaos-тести, автоматичне оновлення пулу символів, адаптивні ліміти
+провайдера та екран керування інцидентами ще не підтверджені.
+Streaming за замовчуванням вимкнений. Реальна торгівля заборонена
+до окремого виробничого приймання.
