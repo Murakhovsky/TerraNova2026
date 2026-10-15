@@ -15,6 +15,18 @@ use Kernel\Shared\Domain\UserId;
 use Kernel\Tool\Model\ToolDefinition;
 use Kernel\Tool\Model\ToolInvocation;
 use Kernel\Tool\Model\ToolEffect;
+use Kernel\Tool\Model\ToolResult;
+use Kernel\Tool\Service\ToolRuntime;
+use Kernel\Tool\Service\ToolRegistry;
+use Kernel\Tool\Contract\ToolInterface;
+use Kernel\Tool\Contract\ToolPermissionCheckerInterface;
+use Kernel\Tool\Contract\ToolInputValidatorInterface;
+use Kernel\Tool\Model\ToolPermission;
+use Kernel\Tool\Model\ToolRetryPolicy;
+use Infrastructure\Platform\Persistence\MySql\Audit\MysqlAuditRepository;
+use Infrastructure\Audit\KernelAuditSink;
+use Infrastructure\Audit\PlatformToolAudit;
+use Platform\Audit\Service\AuditRecorder;
 
 $db=DriverManager::getConnection([
  'driver'=>'pdo_mysql','host'=>(string)(getenv('DB_HOST')?:'mysql'),
@@ -137,6 +149,42 @@ try {
     UserId::fromString($user),'write-'.$token),
     new ToolDefinition('sales.customer.write','external write',[],[],ToolEffect::EXTERNAL),
     bin2hex(random_bytes(16))),'mutation Tool without human approved Action');
+
+ // Full ToolRuntime -> PlatformToolAudit -> native SQL -> canonical Store.
+ // This exercises the actual runtime, not only the gateway API.
+ $toolStub=new class implements ToolInterface {
+    public int $invocations=0;
+    public function definition():ToolDefinition {
+        return new ToolDefinition('ci.echo.read','read-only actual ToolRuntime',[],[],ToolEffect::READ);
+    }
+    public function invoke(ToolInvocation $invocation):ToolResult {
+        ++$this->invocations;
+        return ToolResult::success(['source'=>'real-tool-runtime','count'=>$this->invocations]);
+    }
+ };
+ $permit=new class implements ToolPermissionCheckerInterface {
+    public function allows(ToolPermission $p,ToolDefinition $d,ToolInvocation $i):bool{return true;}
+ };
+ $schema=new class implements ToolInputValidatorInterface {
+    public function validate(ToolDefinition $d,ToolInvocation $i):void{}
+ };
+ $audit=new PlatformToolAudit(new AuditRecorder(
+    new KernelAuditSink(new MysqlAuditRepository($db->getNativeConnection()))));
+ $toolRuntime=new ToolRuntime(new ToolRegistry([$toolStub]),$permit,$schema,$audit,
+    new ToolRetryPolicy(4,true),$fence);
+ $toolReal=new ToolInvocation(OrganizationId::fromString($org),'ci.echo.read',
+    ['query'=>'fresh-'.$token],$trace,UserId::fromString($user),'actual-'.$token);
+ $actual=$toolRuntime->execute($toolReal);
+ $expect($actual->result()?->isSuccess()===true && $toolStub->invocations===1,
+    'Full actual Tool runtime bypassed canonical fencing or native audit.');
+ $nativeToolRun=(string)$db->fetchOne(
+    'SELECT run_id FROM cos_workflow_runs WHERE organization_id=:org
+     AND definition_id="kernel.tool_execution"
+     AND checkpoint_reference LIKE "kernel:tool:%"
+     ORDER BY updated_at DESC LIMIT 1',['org'=>$org]);
+ $expect($nativeToolRun!=='' && $store->get(
+    new \Platform\Workflow\Model\WorkflowRunIdentity($org,$nativeToolRun))?->status->value==='completed',
+    'Real ToolRuntime did not checkpoint the native audit into canonical Store.');
 
  // Native WRITE Tool: explicit independent human approval and pinned Action attempt.
  $actionId=bin2hex(random_bytes(16));$writeAudit=bin2hex(random_bytes(16));
