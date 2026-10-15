@@ -1494,6 +1494,7 @@ services:
   Kernel\Agent\Service\AgentRuntimeEngine:
     arguments:
       $llm: '@Kernel\Agent\Contract\LlmProviderInterface'
+      $canonical: '@Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface'
 
   Kernel\Agent\Contract\AgentRuntimeInterface:
     alias: Kernel\Agent\Service\AgentRuntimeEngine

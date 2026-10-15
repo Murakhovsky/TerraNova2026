@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kernel\Agent\Service;
 
 use Kernel\Agent\Contract\AgentRuntimeInterface;
+use Kernel\Execution\Contract\KernelCanonicalExecutionFenceInterface;
 use Kernel\Agent\Contract\LlmProviderInterface;
 use Kernel\Agent\Model\AgentContext;
 use Kernel\Agent\Model\AgentInstance;
@@ -14,7 +15,10 @@ use Throwable;
 
 final readonly class AgentRuntimeEngine implements AgentRuntimeInterface
 {
-    public function __construct(private LlmProviderInterface $llm)
+    public function __construct(
+        private LlmProviderInterface $llm,
+        private ?KernelCanonicalExecutionFenceInterface $canonical = null,
+    )
     {
     }
 
@@ -24,6 +28,9 @@ final readonly class AgentRuntimeEngine implements AgentRuntimeInterface
             throw new RuntimeException('Agent instance is disabled.');
         }
 
+        // This in-memory engine has no native persistent AgentRun receipt.
+        // Once this tenant is enrolled, do not let it bypass the canonical Store.
+        $this->canonical?->assertLegacyAgentRuntimeAllowed($instance->organizationId->value());
         $run = new AgentRun($this->id(), $instance, $context);
         $run->queue();
         $run->start();

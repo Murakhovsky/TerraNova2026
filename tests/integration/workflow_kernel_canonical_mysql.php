@@ -47,6 +47,8 @@ $toolDefinition=new ToolDefinition($readName,'read-only CI verifier',[],[],ToolE
 $toolInvocation=new ToolInvocation(OrganizationId::fromString($org),$readName,
  $readInput,$trace,UserId::fromString($user),'read-'.$token);
 try {
+ $deny(static fn()=> $fence->assertLegacyAgentRuntimeAllowed($org),
+    'in-memory AgentRuntimeEngine bypasses enrolled canonical tenant');
  $job=new Job($jobId,$org,'AGENT_RUN',$payload,1,3,7200,$trace,null,$worker);
  $expect($fence->beginAgent($job,$agent)===null,'Unenrolled Agent should retain legacy path.');
  $expect($fence->beginTool($toolInvocation,$toolDefinition,$toolId)===null,

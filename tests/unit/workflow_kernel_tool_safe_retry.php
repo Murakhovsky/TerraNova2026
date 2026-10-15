@@ -52,6 +52,7 @@ $fence=new class implements KernelCanonicalExecutionFenceInterface {
  public int $completed=0;
  public function beginAgent(Job $j,string $a):?KernelExecutionClaim {return null;}
  public function assertAgentAdmitted(AgentInvocation $i):void {}
+ public function assertLegacyAgentRuntimeAllowed(string $organizationId):void {}
  public function completeAgent(KernelExecutionClaim $c,string $id):void {}
  public function beginTool(ToolInvocation $i,ToolDefinition $d,string $id):?KernelExecutionClaim {
     return $this->enabled ? new KernelExecutionClaim($i->organizationId()->value(),

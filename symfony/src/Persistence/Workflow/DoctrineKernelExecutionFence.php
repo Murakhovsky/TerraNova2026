@@ -40,6 +40,13 @@ final readonly class DoctrineKernelExecutionFence implements KernelCanonicalExec
         return new KernelExecutionClaim($id->organizationId,$id->runId,'agent',$token,$job->correlationId);
     }
 
+    public function assertLegacyAgentRuntimeAllowed(string $organizationId):void
+    {
+        if($this->enrolled($organizationId,'agent')) {
+            throw new DomainException('In-memory AgentRuntimeEngine has no canonical persisted evidence; use queued AgentRuntime.');
+        }
+    }
+
     public function assertAgentAdmitted(AgentInvocation $invocation):void
     {
         if(!$this->enrolled($invocation->organizationId,'agent')) {
