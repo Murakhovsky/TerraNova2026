@@ -107,6 +107,8 @@ generated: true
 | `capital_markets` | `app/migrations/20261015_000147_capital_markets_derivatives_stream.sql` | `tn_capital_market_derivative_contract_status` |
 | `capital_markets` | `app/migrations/20261015_000147_capital_markets_derivatives_stream.sql` | `tn_capital_market_derivative_contract_transitions` |
 | `capital_markets` | `app/migrations/20261015_000147_capital_markets_derivatives_stream.sql` | `tn_capital_market_derivative_stream_trust` |
+| `capital_markets` | `app/migrations/20261015_000148_capital_markets_replay_scaling.sql` | `tn_capital_market_raw_provenance` |
+| `capital_markets` | `app/migrations/20261015_000148_capital_markets_replay_scaling.sql` | `tn_capital_market_venue_reconciliation` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
