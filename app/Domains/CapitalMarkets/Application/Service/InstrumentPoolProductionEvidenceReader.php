@@ -45,6 +45,9 @@ SELECT e.source_id,e.instrument_id,
   COUNT(DISTINCT FLOOR(TIMESTAMPDIFF(SECOND,e.received_timestamp,UTC_TIMESTAMP(6))/300)) AS five_minute_buckets,
   SUM(CASE WHEN q.trust_status<>'TRUSTED' OR q.trust_status IS NULL
          OR q.quality_score<80 OR e.data_mode<>'LIVE'
+         OR q.event_age_ms>120000 OR q.ingestion_latency_ms>10000
+         OR q.processing_latency_ms>10000
+         OR ABS(TIMESTAMPDIFF(SECOND,e.source_timestamp,e.received_timestamp))>120
          OR e.source_timestamp>DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 5 SECOND)
          OR e.received_timestamp>DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 5 SECOND)
     THEN 1 ELSE 0 END) AS bad_samples,
@@ -75,6 +78,45 @@ SQL;
         $src->execute(['org'=>$org]);
         $sources=[];
         foreach($src->fetchAll(PDO::FETCH_ASSOC) as $row)$sources[$row['source_id']]=$row;
+        $health=$this->connection->prepare(
+            "SELECT source_id,connection_state,clock_reliable,queue_lag,rate_limit_state,
+                    last_event_at,updated_at
+             FROM tn_capital_market_source_health WHERE organization_id=:org");
+        $health->execute(['org'=>$org]);
+        $now=time();$healthy=[];
+        foreach($health->fetchAll(PDO::FETCH_ASSOC) as $h){
+            $eventTime=$h['last_event_at']===null?false:strtotime($h['last_event_at'].' UTC');
+            $updateTime=strtotime($h['updated_at'].' UTC');
+            $healthy[$h['source_id']]=$h['connection_state']==='ACTIVE'
+                &&(int)$h['clock_reliable']===1
+                &&(int)$h['queue_lag']<=100
+                &&!in_array($h['rate_limit_state'],['THROTTLED','EXHAUSTED'],true)
+                &&$eventTime!==false&&$updateTime!==false
+                &&$eventTime<=$now+5&&$eventTime>=$now-120
+                &&$updateTime<=$now+5&&$updateTime>=$now-120;
+        }
+        $sub=$this->connection->prepare(
+            "SELECT source_id,instrument_id,data_type
+             FROM tn_capital_market_subscriptions
+             WHERE organization_id=:org AND status='ACTIVE'
+               AND data_type IN ('BBO','ORDER_BOOK_SNAPSHOT','ORDER_BOOK_DELTA')");
+        $sub->execute(['org'=>$org]);
+        $subscribed=[];
+        foreach($sub->fetchAll(PDO::FETCH_ASSOC) as $entry){
+            $subscribed[$entry['source_id'].'|'.$entry['instrument_id'].'|'.$entry['data_type']]=true;
+        }
+        $gaps=$this->connection->prepare(
+            "SELECT source_id,instrument_id,data_type
+             FROM tn_capital_market_data_gaps
+             WHERE organization_id=:org AND status NOT IN ('RESOLVED','CLOSED')
+               AND gap_from<=UTC_TIMESTAMP(6)
+               AND gap_to>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 24 HOUR)
+               AND data_type IN ('BBO','ORDER_BOOK_SNAPSHOT','ORDER_BOOK_DELTA')");
+        $gaps->execute(['org'=>$org]);
+        $unresolved=[];
+        foreach($gaps->fetchAll(PDO::FETCH_ASSOC) as $gap){
+            $unresolved[$gap['source_id'].'|'.$gap['instrument_id'].'|'.$gap['data_type']]=true;
+        }
         $lease=$this->connection->prepare(
             "SELECT DISTINCT source_id
              FROM tn_capital_market_stream_worker_leases
@@ -100,7 +142,17 @@ SQL;
             $issuerOk=!$needsIssuer||isset($approvals['ISSUER_IDENTITY|'.$r['instrument_id']]);
             $isAllowedSource=is_array($source)&&$source['license_profile']!=='UNSPECIFIED'
                 &&isset($approvals['SOURCE_ENTITLEMENT|'.$r['source_id']]);
+            $subKey=$r['source_id'].'|'.$r['instrument_id'].'|';
+            $types=$r['kind']==='BBO'?['BBO']:['ORDER_BOOK_SNAPSHOT','ORDER_BOOK_DELTA'];
+            $activeSubscription=false;$hasGap=false;
+            foreach($types as $type){
+                if(isset($subscribed[$subKey.$type]))$activeSubscription=true;
+                if(isset($unresolved[$subKey.$type]))$hasGap=true;
+            }
             $rows[]=[
+                'source_healthy'=>$healthy[$r['source_id']]??false,
+                'subscription_active'=>$activeSubscription,
+                'unresolved_gap'=>$hasGap,
                 'source_id'=>(string)$r['source_id'],
                 'instrument_id'=>(string)$r['instrument_id'],
                 'kind'=>(string)$r['kind'],
@@ -140,6 +192,8 @@ SQL;
             "SELECT e.source_id, COUNT(*) AS observations,
               SUM(CASE WHEN q.trust_status='TRUSTED'
                  AND q.quality_score>=80 AND e.data_mode='LIVE'
+                 AND q.event_age_ms<=120000
+                 AND q.ingestion_latency_ms<=10000
                  AND e.received_timestamp<=UTC_TIMESTAMP(6)
                  THEN 1 ELSE 0 END) AS trusted
              FROM tn_capital_market_canonical_events e
@@ -165,8 +219,17 @@ SQL;
                AND expires_at>UTC_TIMESTAMP(6)");
         $leases->execute(['org'=>$org]);
         $active=array_fill_keys($leases->fetchAll(PDO::FETCH_COLUMN),true);
+        $health=$this->connection->prepare(
+            "SELECT source_id FROM tn_capital_market_source_health
+             WHERE organization_id=:org AND connection_state='ACTIVE'
+               AND clock_reliable=1 AND queue_lag<=100
+               AND rate_limit_state NOT IN ('THROTTLED','EXHAUSTED')
+               AND updated_at>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 120 SECOND)
+               AND last_event_at>=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 120 SECOND)");
+        $health->execute(['org'=>$org]);
+        $healthy=array_fill_keys($health->fetchAll(PDO::FETCH_COLUMN),true);
         foreach($allowedSourceIds as $source){
-            if(!is_string($source)||!isset($seen[$source])||!isset($active[$source])
+            if(!is_string($source)||!isset($seen[$source])||!isset($active[$source])||!isset($healthy[$source])
                 ||!isset($approvals['SOURCE_ENTITLEMENT|'.$source]))return false;
         }
         return true;

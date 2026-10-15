@@ -84,6 +84,22 @@ try{
     $pdo->prepare("UPDATE tn_capital_market_instruments
         SET metadata_json='{}' WHERE organization_id=? AND instrument_id=?")
         ->execute([$org,$l2]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_source_health
+         (organization_id,source_id,connection_state,last_event_at,last_heartbeat_at,
+          failure_count,queue_lag,clock_reliable,rate_limit_state)
+         VALUES (:org,:src,'ACTIVE',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0,0,1,'NORMAL')")
+        ->execute(['org'=>$org,'src'=>$source]);
+    $subscribe=$pdo->prepare(
+        "INSERT INTO tn_capital_market_subscriptions
+         (organization_id,subscription_id,source_id,instrument_id,target_fingerprint,
+          data_type,status,subscribed_at)
+         VALUES (:org,:id,:src,:instrument,:fingerprint,:type,'ACTIVE',UTC_TIMESTAMP(6))");
+    foreach([[$token,'BBO'],[$l2,'ORDER_BOOK_SNAPSHOT']] as [$id,$type]){
+        $subscribe->execute(['org'=>$org,'id'=>'ci-'.bin2hex(random_bytes(10)),
+            'src'=>$source,'instrument'=>$id,'fingerprint'=>hash('sha256',$org.$id.$type),
+            'type'=>$type]);
+    }
     $lease=$pdo->prepare(
         "INSERT INTO tn_capital_market_stream_worker_leases
          (organization_id,source_id,shard_key,owner_id,fencing_token,expires_at,updated_at)
@@ -137,6 +153,35 @@ try{
         &&$result['gates']['L2_50']===false,
         'Fixture passed 250 BBO/50 L2 production acceptance or trusted symbols were not counted.');
     $assert($reader->canaryHealthy($org,[$source]),'Trusted live MySQL canary rejected.');
+    $pdo->prepare("UPDATE tn_capital_market_subscriptions SET status='DISABLED'
+                   WHERE organization_id=? AND instrument_id=?")
+        ->execute([$org,$l2]);
+    $noSub=$reader->report($org,$start,[$source]);
+    $assert($noSub['verified']['L2']===0&&!$noSub['accepted'],
+        'Live event with disabled canonical subscription was accepted.');
+    $pdo->prepare("UPDATE tn_capital_market_subscriptions SET status='ACTIVE'
+                   WHERE organization_id=? AND instrument_id=?")
+        ->execute([$org,$l2]);
+    $pdo->prepare("UPDATE tn_capital_market_source_health SET clock_reliable=0
+                   WHERE organization_id=? AND source_id=?")
+        ->execute([$org,$source]);
+    $badClock=$reader->report($org,$start,[$source]);
+    $assert($badClock['verified']['L2']===0&&!$reader->canaryHealthy($org,[$source]),
+        'Unreliable source clock was accepted.');
+    $pdo->prepare("UPDATE tn_capital_market_source_health SET clock_reliable=1
+                   WHERE organization_id=? AND source_id=?")
+        ->execute([$org,$source]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_data_gaps
+         (organization_id,gap_id,source_id,instrument_id,data_type,gap_from,gap_to,reason,status)
+         VALUES (:org,:gap,:src,:instrument,'ORDER_BOOK_SNAPSHOT',
+          DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 60 MINUTE),
+          DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 30 MINUTE),'CI gap','OPEN')")
+        ->execute(['org'=>$org,'gap'=>'ci-gap-'.bin2hex(random_bytes(4)),'src'=>$source,'instrument'=>$l2]);
+    $gapReport=$reader->report($org,$start,[$source]);
+    $assert($gapReport['verified']['L2']===0,'Unresolved source data gap was accepted.');
+    $pdo->prepare("DELETE FROM tn_capital_market_data_gaps
+                   WHERE organization_id=?")->execute([$org]);
     $pdo->prepare("UPDATE tn_capital_market_quality_metrics
       SET trust_status='UNTRUSTED' WHERE organization_id=? AND canonical_event_id=?")
       ->execute([$org,$firstEvent]);
@@ -147,9 +192,10 @@ try{
         'Other tenant stole real canonical acceptance evidence.');
     echo "Production attestation, canary, LIVE 24h MySQL quality, lease, issuer and tenant isolation passed. Fixtures are NOT real soak.\n";
 }finally{
-    foreach(['tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
+    foreach(['tn_capital_market_data_gaps','tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
         'tn_capital_market_stream_worker_leases',
         'tn_capital_market_pool_external_evidence',
+        'tn_capital_market_subscriptions','tn_capital_market_source_health',
         'tn_capital_market_instruments','tn_capital_market_data_sources'] as $table){
         $pdo->prepare("DELETE FROM $table WHERE organization_id=:org")->execute(['org'=>$org]);
     }

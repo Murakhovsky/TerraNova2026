@@ -42,6 +42,9 @@ final readonly class InstrumentPoolProductionSoakPolicy
             if(($row['issuer_verified']??false)!==true)$reasons[]='ISSUER_UNVERIFIED';
             if(($row['source_enabled']??false)!==true)$reasons[]='SOURCE_DISABLED';
             if(($row['worker_active']??false)!==true)$reasons[]='NO_ACTIVE_FENCED_WORKER';
+            if(($row['source_healthy']??false)!==true)$reasons[]='SOURCE_HEALTH_DEGRADED';
+            if(($row['subscription_active']??false)!==true)$reasons[]='NO_ACTIVE_SUBSCRIPTION';
+            if(($row['unresolved_gap']??true)!==false)$reasons[]='UNRESOLVED_DATA_GAP';
             if(($row['samples']??0)<276||($row['hour_buckets']??0)<24
                 ||($row['five_minute_buckets']??0)<276)$reasons[]='24H_CONTINUITY_NOT_PROVEN';
             if(($row['bad_samples']??0)>0)$reasons[]='UNTRUSTED_OR_MISSING_QUALITY';

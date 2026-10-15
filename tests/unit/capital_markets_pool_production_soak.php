@@ -12,7 +12,8 @@ foreach(['BBO'=>250,'L2'=>50] as $kind=>$total){
             'instrument_id'=>$kind.'-'.$i,'samples'=>288,
             'hour_buckets'=>24,'five_minute_buckets'=>288,'bad_samples'=>0,'age_seconds'=>10,
             'mode'=>'LIVE','approved_entitlement'=>true,
-            'issuer_verified'=>true,'source_enabled'=>true,'worker_active'=>true];
+            'issuer_verified'=>true,'source_enabled'=>true,'worker_active'=>true,
+            'source_healthy'=>true,'subscription_active'=>true,'unresolved_gap'=>false];
     }
 }
 $good=$policy->evaluate($rows,true);
@@ -33,6 +34,12 @@ $bad=$rows;$bad[0]['approved_entitlement']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Missing external entitlement passed.');
 $bad=$rows;$bad[0]['issuer_verified']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Unverified token issuer passed.');
+$bad=$rows;$bad[0]['source_healthy']=false;
+$assert(!$policy->evaluate($bad,true)['accepted'],'Degraded health passed.');
+$bad=$rows;$bad[0]['subscription_active']=false;
+$assert(!$policy->evaluate($bad,true)['accepted'],'Inactive subscription passed.');
+$bad=$rows;$bad[0]['unresolved_gap']=true;
+$assert(!$policy->evaluate($bad,true)['accepted'],'Unresolved data gap passed.');
 $bad=$rows;$bad[0]['worker_active']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Unleased market writer passed.');
 $bad=$rows;$bad[0]['age_seconds']=301;
