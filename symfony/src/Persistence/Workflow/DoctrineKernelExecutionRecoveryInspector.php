@@ -21,12 +21,18 @@ final readonly class DoctrineKernelExecutionRecoveryInspector
     ) {}
 
     /** @return array<string,mixed> */
-    public function inspectTenant(string $organizationId,int $limit=100):array
+    public function inspectTenant(string $organizationId,int $limit=100,?string $runId=null):array
     {
         if(trim($organizationId)==='' || strlen($organizationId)>40) {
             throw new \DomainException('Recovery inspection requires a bounded tenant.');
         }
+        if($runId!==null && (trim($runId)==='' || strlen($runId)>190)) {
+            throw new \DomainException('Kernel recovery Run filter must be bounded and non-empty.');
+        }
         $limit=max(1,min(100,$limit));
+        $runFilter=$runId!==null?' AND r.run_id=:target':'';
+        $parameters=['org'=>$organizationId];
+        if($runId!==null)$parameters['target']=$runId;
         $rows=$this->db->fetchAllAssociative(
             'SELECT r.run_id,r.definition_id,r.definition_json,r.definition_digest,
                     r.input_digest,r.correlation_id,r.state AS run_state,r.revision AS run_revision,
@@ -37,9 +43,10 @@ final readonly class DoctrineKernelExecutionRecoveryInspector
              LEFT JOIN cos_workflow_steps s ON s.organization_id=r.organization_id
                AND s.run_id=r.run_id
              WHERE r.organization_id=:org
-               AND r.definition_id IN ("kernel.agent_execution","kernel.tool_execution")
+               AND r.definition_id IN ("kernel.agent_execution","kernel.tool_execution")'
+             .$runFilter.'
              ORDER BY r.updated_at DESC,r.run_id,s.step_id LIMIT '.($limit+1),
-            ['org'=>$organizationId],
+            $parameters,
         );
         $truncated=count($rows)>$limit;
         $rows=array_slice($rows,0,$limit);

@@ -319,6 +319,12 @@ try {
     'Expired claim must remain explicitly unreconciled, not auto-completed');
  $postCrash=(new DoctrineKernelExecutionRecoveryInspector($db,$evidence))
     ->inspectTenant($org,100);
+ $filtered=(new DoctrineKernelExecutionRecoveryInspector($db,$evidence))
+    ->inspectTenant($org,1,$expiredClaim->runId);
+ $expect(($filtered['runs'][0]['run_id']??null)===$expiredClaim->runId
+    && ($filtered['counts']['manual_required']??0)===1
+    && $filtered['coverage_complete']===true,
+    'Exact tenant/Run recovery inspection did not isolate expired claim.');
  $expect(($postCrash['counts']['manual_required']??0)===2
     && $postCrash['status']==='manual_reconciliation_required'
     && $postCrash['automatic_replay_authorized']===false,

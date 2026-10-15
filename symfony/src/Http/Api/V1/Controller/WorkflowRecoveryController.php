@@ -5,6 +5,7 @@ namespace App\Http\Api\V1\Controller;
 
 use App\Persistence\Workflow\DoctrineWorkflowRecoveryManager;
 use App\Persistence\Workflow\DoctrineKernelExecutionRecoveryManager;
+use App\Persistence\Workflow\DoctrineKernelExecutionRecoveryInspector;
 use App\Security\SessionCsrfValidator;
 use DomainException;
 use InvalidArgumentException;
@@ -28,6 +29,7 @@ final readonly class WorkflowRecoveryController
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
         private ?DoctrineKernelExecutionRecoveryManager $kernel = null,
+        private ?DoctrineKernelExecutionRecoveryInspector $kernelInspector = null,
     ) {}
 
     public function worklist(Request $request): JsonResponse
@@ -58,7 +60,29 @@ final readonly class WorkflowRecoveryController
         if($actor instanceof JsonResponse)return $actor;
         try {
             $rev=(int)$request->query->get('revision',0);
-            $result=$this->recovery->inspect($this->command($actor,$runId,$rev,null));
+            $command=$this->command($actor,$runId,$rev,null);
+            if($this->kernel !== null && $this->kernel->owns($command->identity)) {
+                if($this->kernelInspector===null) {
+                    throw new DomainException('Kernel recovery inspector is not configured.');
+                }
+                $report=$this->kernelInspector->inspectTenant(
+                    $actor->organizationId()->value(),1,$runId);
+                $item=$report['runs'][0]??null;
+                if(!is_array($item) || $item['run_id']!==$runId) {
+                    throw new DomainException('Canonical Kernel Run was not found for this tenant.');
+                }
+                if($rev!==(int)$item['run_revision']) {
+                    throw new LogicException('Stale Kernel recovery Run revision.');
+                }
+                return new JsonResponse(['ok'=>true,'data'=>[
+                    'run_id'=>$runId,'disposition'=>$item['disposition'],
+                    'reason'=>$item['reason'],
+                    'external_outcome_unknown'=>$item['disposition']!=='verified',
+                    'external_effect_replayed'=>false,
+                    'business_outcome_verified'=>false,
+                ]]);
+            }
+            $result=$this->recovery->inspect($command);
             return new JsonResponse(['ok'=>true,'data'=>[
                 'run_id'=>$runId,'disposition'=>$result->disposition->value,
                 'reason'=>$result->reason,'external_outcome_unknown'=>$result->externalOutcomeUnknown,

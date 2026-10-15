@@ -23,6 +23,7 @@ foreach([
     [$controller,'$this->kernel->request('],
     [$controller,'$this->kernel->approve('],
     [$controller,'$this->kernel->reconcile('],
+    [$controller,'$this->kernelInspector->inspectTenant('],
 ] as [$source,$needle]) {
     if(!str_contains($source,$needle)) {
         throw new RuntimeException('Missing two-manager canonical Kernel recovery safety: '.$needle);

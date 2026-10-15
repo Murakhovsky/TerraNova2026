@@ -105,3 +105,17 @@ Tool: існуючі permission/schema gates виконуються ДО canonic
 **Recovery:** `php symfony/bin/console cos:workflow:kernel-recovery TENANT --limit=100`. Читає technical state, independent native receipts, expired claims і підозрілий drift. Не робить replay, не видає production дозволів, не виправляє невідомий ефект автоматично. Неповна вибірка або невизначені native outcomes забороняють позитивне приймання.
 
 **Межі приймання:** `tests/integration/workflow_kernel_canonical_mysql.php` перевіряє реальний MySQL queue / AgentRun / Tool-audit / CAS / replay / tenant / quarantine; це не означає, що всі Tool Action handlers наявні, а всі consumer invocations в production активовані. Повний fleet acceptance та незалежний операторський cutover залишаються окремими gates.
+
+## P0. Двоосібне verified-receipt reconciliation для Kernel
+
+Після закінчення claim lease або quarantine оператор **не перезапускає LLM/Tool**. Якщо з'явився реально збережений native результат, доступний через `cos_agent_runs` або `cos_audit_log`, існуючий Workflow Recovery API використовує Kernel-specific гілку:
+
+1. Автентифікований tenant manager із `MANAGE` подає запит `verified_complete` із точними Run/Step revisions, `execute`, 32-hex request ID, доказовим `kernel:agent/ tool` receipt і поясненням.
+2. Інший автентифікований tenant manager незалежно погоджує запит (self-approval заборонено).
+3. Apply в межах 15 хвилин після другого approval повторно перевіряє persisted native output/Tool audit і tenant, pinned input, Job/Action provenance, immutable definition, revisions та оригінальний claim identity. **Лише Platform Store** атомарно оновлює Run/Step і переводить recovery decision у `APPLIED`.
+
+Оригінальний active lease не підлягає такому reconciler; він доступний тільки після expiry або явно `AMBIGUOUS`. Неперевірений / підроблений receipt, інший tenant, не той Tool audit ID, інша ревізія, повторне застосування та прострочене погодження відхиляються. Жодної перезапущеної зовнішньої операції й «відновлення за прапорцем» немає.
+
+Той самий Recovery API підтримує `inspect` на конкретному Kernel Run із read-only незалежним re-attestation. Для детального операційного списку лишається `cos:workflow:kernel-recovery TENANT --limit=100`.
+
+**Важлива межа:** цей reconciliation підтверджує технічний native execution, **не** завершення downstream Action proposals, бізнес-Goal або безпечність загального production cutover. Останні мають окремі release gates.
