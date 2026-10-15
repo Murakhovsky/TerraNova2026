@@ -18,7 +18,7 @@ COS_CM_INSTRUMENT_POOL_SNAPSHOT_ENABLED=1 php symfony/bin/console \
   cos:capital-markets:instrument-pool:snapshot ORG BINANCE VENUE --actor-id=1 --limit=200
 ```
 
-Зберігаються SHA-256 оригінального каталогу, час, статус джерела, кількість
+Зберігаються SHA-256 ланцюга оригінальних сторінок каталогу, час, статус джерела, кількість
 спостережень і результат зіставлення з наявними venue mappings. При збої
 провайдера фіксується `UNAVAILABLE`, а не помилковий `DELISTED`.
 Нові символи отримують `UNMAPPED_REVIEW`, без автоматичного ототожнення
@@ -58,6 +58,14 @@ COS_CM_INSTRUMENT_POOL_SCHEDULER_INTERVAL_MINUTES=15
 COS_CM_INSTRUMENT_POOL_SCHEDULER_ACTOR_ID=1
 COS_CM_INSTRUMENT_POOL_SCHEDULER_TARGETS_JSON=[{"organization_id":"ORG","provider":"BINANCE","venue_id":"VENUE"}]
 ```
+
+Потрібен service actor із правом `capital_markets.market_data.manage` або
+`capital_markets.manage` для кожної організації. Без такого права
+сканування завершується помилкою без запису доказів. Для автоматичних
+`PENDING`-заявок також потрібне `capital_markets.instrument_pool.propose`.
+Bybit читається з усіма сторінками курсора (до 25); циклічний, обірваний
+або недоступний каталог позначається `UNAVAILABLE`, а не доказом
+відсутності активів. Порівняння включає і спотові пари не лише в USD/USDT.
 
 Максимум 25 явно налаштованих організацій та майданчиків, дублікати
 відхиляються. Кожен провайдер має незалежний atomic cooldown, збої

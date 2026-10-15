@@ -58,14 +58,11 @@ final readonly class InstrumentPoolCatalogAudit
             throw new DomainException('Instrument pool canonical mapping limit exceeded.');
         }
         try{
-            $raw=$this->http->get(
-                $organizationId,'capital_markets.instrument_pool.'.strtolower($provider),
-                $url,[],[(string)parse_url($url,PHP_URL_HOST)],
+            $loaded=CrossVenueCatalogDiscovery::loadProviderCatalog(
+                $this->http,$organizationId,$provider,
+                'capital_markets.instrument_pool.'.strtolower($provider),
             );
-            $catalog=CrossVenueCatalogDiscovery::catalog($provider,$raw);
-            // A valid catalog may be genuinely empty; require review rather than
-            // implicitly declaring every known mapping delisted.
-            if($catalog===[])throw new RuntimeException('Provider returned no eligible active symbols.');
+            $catalog=$loaded['catalog'];
         }catch(Throwable $error){
             return [
                 'provider'=>$provider,'venue_id'=>$venueId,
@@ -83,7 +80,8 @@ final readonly class InstrumentPoolCatalogAudit
             'provider'=>$provider,'venue_id'=>$venueId,
             'as_of_utc'=>(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format(DATE_ATOM),
             'health'=>'AVAILABLE',
-            'evidence_sha256'=>hash('sha256',$raw),
+            'evidence_sha256'=>$loaded['evidence_sha256'],
+            'provider_pages'=>$loaded['pages'],
             'provider_count'=>count($catalog),
             'mapping_count'=>count($mappings),
             ...$diff,

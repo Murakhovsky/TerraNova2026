@@ -3,6 +3,8 @@ declare(strict_types=1);
 namespace App\Application\CapitalMarkets\Handler;
 use App\Application\CapitalMarkets\Command\RunInstrumentPoolSnapshotScans;
 use Domains\CapitalMarkets\Application\Service\InstrumentPoolCatalogAudit;
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
+use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Domains\CapitalMarkets\Application\Service\InstrumentPoolApprovalService;
 use Domains\CapitalMarkets\Application\Service\InstrumentPoolScheduleTargets;
 use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentPoolSnapshotRepository;
@@ -20,6 +22,7 @@ final readonly class RunInstrumentPoolSnapshotScansHandler
         private InstrumentPoolApprovalService $approvals,
         private MysqlInstrumentPoolSnapshotRepository $snapshots,
         private ActiveModuleResolver $modules,
+        private CapitalMarketsAccessControlInterface $access,
         private LoggerInterface $logger,
         private string $targetsJson,
         private int $actorId,
@@ -39,6 +42,10 @@ final readonly class RunInstrumentPoolSnapshotScansHandler
             try{
                 if(!$this->modules->isEnabled($org,'capital_markets')){
                     $result['skipped']++;continue;
+                }
+                if(!$this->access->hasCapability($org,$this->actorId,CapitalMarketsCapability::MarketDataManage->value)
+                    && !$this->access->hasCapability($org,$this->actorId,CapitalMarketsCapability::Manage->value)){
+                    throw new \DomainException('Instrument Pool scheduler actor lacks Market Data authority.');
                 }
                 if(!$this->snapshots->reserveScan($org,$provider,$venue,90)){
                     $result['skipped']++;continue;

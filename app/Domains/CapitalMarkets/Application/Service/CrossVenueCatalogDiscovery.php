@@ -39,44 +39,15 @@ final readonly class CrossVenueCatalogDiscovery
         $health = [];
         foreach (self::SOURCES as $name=>$url) {
             try {
-                $host = (string)parse_url($url, PHP_URL_HOST);
-                $body = $this->http->get($organizationId, 'capital_markets.discovery.'.strtolower($name), $url, [], [$host]);
-                if (strlen($body) > 8000000) throw new InvalidArgumentException('Provider catalog exceeds size cap.');
-                $catalog = self::catalog($name, $body);
-                $pages = 1;
-                $hashes = [hash('sha256', $body)];
-                if ($name === 'BYBIT') {
-                    $decoded = json_decode($body, true, 64, JSON_THROW_ON_ERROR);
-                    $cursor = (string)($decoded['result']['nextPageCursor'] ?? '');
-                    $seen = [];
-                    while ($cursor !== '') {
-                        if (isset($seen[$cursor]) || $pages >= 25) {
-                            throw new InvalidArgumentException('Bybit catalog pagination incomplete or cyclic.');
-                        }
-                        $seen[$cursor] = true;
-                        $pageUrl = self::SOURCES['BYBIT'].'&cursor='.rawurlencode($cursor);
-                        $page = $this->http->get($organizationId, 'capital_markets.discovery.bybit', $pageUrl, [], ['api.bybit.com']);
-                        if (strlen($page) > 8000000) throw new InvalidArgumentException('Bybit catalog page too large.');
-                        $next = json_decode($page, true, 64, JSON_THROW_ON_ERROR);
-                        if (!is_array($next)) throw new InvalidArgumentException('Invalid Bybit page.');
-                        foreach (self::catalog('BYBIT', $page) as $key => $item) {
-                            if (isset($catalog[$key]) && $catalog[$key] !== $item) {
-                                throw new InvalidArgumentException('Conflicting Bybit catalog pages.');
-                            }
-                            $catalog[$key] = $item;
-                        }
-                        $hashes[] = hash('sha256', $page);
-                        $cursor = (string)($next['result']['nextPageCursor'] ?? '');
-                        ++$pages;
-                    }
-                }
-                if ($catalog===[]) {
-                    throw new InvalidArgumentException('Provider returned an empty or unusable spot catalog.');
-                }
-                $catalogs[$name] = $catalog;
+                $loaded = self::loadProviderCatalog(
+                    $this->http, $organizationId, $name,
+                    'capital_markets.discovery.'.strtolower($name),
+                );
+                $catalogs[$name] = $loaded['catalog'];
                 $health[$name] = [
-                    'state'=>'AVAILABLE','count'=>count($catalogs[$name]),
-                    'pages'=>$pages, 'evidence_sha256'=>hash('sha256',implode(':',$hashes)),
+                    'state'=>'AVAILABLE','count'=>count($loaded['catalog']),
+                    'pages'=>$loaded['pages'],
+                    'evidence_sha256'=>$loaded['evidence_sha256'],
                 ];
             } catch (Throwable $e) {
                 // No silent upgrade of missing catalog to empty/zero coverage.
@@ -137,6 +108,78 @@ final readonly class CrossVenueCatalogDiscovery
         ];
     }
 
+
+    /**
+     * Single complete catalog loader shared by tenant discovery and the
+     * Instrument Pool lifecycle auditor. A partial Bybit page is NOT a
+     * complete listing: false absence could suspend a legitimate mapping.
+     *
+     * @return array{catalog:array<string,array<string,mixed>>,pages:int,evidence_sha256:string}
+     */
+    public static function loadProviderCatalog(
+        MarketJsonHttpClientInterface $http,
+        string $organizationId,
+        string $provider,
+        string $serviceKey,
+    ): array {
+        $url = self::SOURCES[$provider] ?? null;
+        if ($url === null || $organizationId === '' || $serviceKey === '') {
+            throw new InvalidArgumentException('Invalid provider catalog scope.');
+        }
+        $host = (string)parse_url($url, PHP_URL_HOST);
+        $catalog = [];
+        $hashes = [];
+        $pages = 0;
+        $cursor = '';
+        $seen = [];
+        do {
+            if ($pages >= 25) {
+                throw new InvalidArgumentException('Provider catalog exceeds the 25-page safety bound.');
+            }
+            $requestUrl = $url.($cursor !== '' ? '&cursor='.rawurlencode($cursor) : '');
+            $body = $http->get($organizationId, $serviceKey, $requestUrl, [], [$host]);
+            if (strlen($body) > 8000000) {
+                throw new InvalidArgumentException('Provider catalog page exceeds size cap.');
+            }
+            $page = self::catalog($provider, $body);
+            foreach ($page as $key => $item) {
+                if (isset($catalog[$key]) && $catalog[$key] !== $item) {
+                    throw new InvalidArgumentException('Conflicting provider catalog pages.');
+                }
+                $catalog[$key] = $item;
+            }
+            if (count($catalog) > 20000) {
+                throw new InvalidArgumentException('Provider catalog exceeds 20000 eligible instruments.');
+            }
+            $hashes[] = hash('sha256', $body);
+            ++$pages;
+            $next = '';
+            if ($provider === 'BYBIT') {
+                $decoded = json_decode($body, true, 64, JSON_THROW_ON_ERROR);
+                $next = $decoded['result']['nextPageCursor'] ?? '';
+                if (!is_string($next) || strlen($next) > 256) {
+                    throw new InvalidArgumentException('Invalid Bybit catalog cursor.');
+                }
+                if ($next !== '') {
+                    if (isset($seen[$next])) {
+                        throw new InvalidArgumentException('Bybit catalog pagination incomplete or cyclic.');
+                    }
+                    $seen[$next] = true;
+                }
+            }
+            $cursor = $next;
+        } while ($cursor !== '');
+        if ($catalog === []) {
+            throw new InvalidArgumentException('Provider returned an empty or unusable spot catalog.');
+        }
+        ksort($catalog, SORT_STRING);
+        return [
+            'catalog'=>$catalog,
+            'pages'=>$pages,
+            'evidence_sha256'=>hash('sha256', implode(':', $hashes)),
+        ];
+    }
+
     /**
      * @return array<string,array{symbol:string,base:string,quote:string,status:string}>
      */
@@ -175,7 +218,7 @@ final readonly class CrossVenueCatalogDiscovery
             $good=$provider==='BINANCE'?$status==='TRADING':
                 ($provider==='BYBIT'?$status==='Trading':$status==='online');
             if (!$good || preg_match('/^[A-Za-z0-9.]{1,40}$/D',$base)!==1
-                || !in_array($quote,['USD','USDT'],true)
+                || preg_match('/^[A-Za-z0-9.]{2,16}$/D',$quote)!==1
                 || preg_match('/^[A-Za-z0-9._\/-]{2,80}$/D',$symbol)!==1)continue;
             $canonicalBase=strtoupper($base);
             $out[$canonicalBase.'|'.$quote]=['symbol'=>$symbol,'base'=>$canonicalBase,

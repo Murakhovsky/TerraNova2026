@@ -34,10 +34,18 @@ foreach([
     "getenv('COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED')!=='1'",
     'isEnabled($org,\'capital_markets\')','reserveScan(','->record(',
     'InstrumentPoolScheduleTargets::parse','catch(Throwable $error)',
+    '->hasCapability(', 'CapitalMarketsCapability::MarketDataManage',
 ] as $needle){
     if(!str_contains($handler,$needle))throw new RuntimeException('Instrument Pool handler guard missing '.$needle);
 }
 foreach(['count($targets)>25','Duplicate Instrument Pool schedule target','BINANCE','BYBIT','KRAKEN'] as $needle){
     if(!str_contains($targets,$needle))throw new RuntimeException('Instrument Pool scope validation missing '.$needle);
+}
+$catalogAudit=$read('app/Domains/CapitalMarkets/Application/Service/InstrumentPoolCatalogAudit.php');
+$fullCatalog=$read('app/Domains/CapitalMarkets/Application/Service/CrossVenueCatalogDiscovery.php');
+if(!str_contains($catalogAudit,'CrossVenueCatalogDiscovery::loadProviderCatalog')
+    || !str_contains($fullCatalog,'public static function loadProviderCatalog')
+    || !str_contains($fullCatalog,'nextPageCursor')){
+    throw new RuntimeException('Lifecycle audit must use paginated shared catalog reader.');
 }
 echo "Instrument Pool opt-in scheduler contracts passed.\n";

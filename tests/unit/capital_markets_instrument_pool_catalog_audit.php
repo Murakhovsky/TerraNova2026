@@ -47,4 +47,9 @@ $assert($reject(fn()=>InstrumentPoolCatalogAudit::reconcile(
     ['a'=>['symbol'=>'BTCUSDT','base'=>'BTC','quote'=>'USDT'],
      'b'=>['symbol'=>'BTCUSDT','base'=>'BTC','quote'=>'USDT']],[],
 )),'Conflicting duplicated provider symbol was accepted.');
+$allQuotes=CrossVenueCatalogDiscovery::catalog('BINANCE',json_encode(['symbols'=>[
+    ['symbol'=>'ETHBTC','baseAsset'=>'ETH','quoteAsset'=>'BTC','status'=>'TRADING'],
+]],JSON_THROW_ON_ERROR));
+$assert(isset($allQuotes['ETH|BTC']),
+    'Non-USD spot mapping must not be marked absent by a quote-filtered catalog.');
 echo "Instrument Pool cross-venue mapping audit and no-auto-delist policy passed.\n";

@@ -87,7 +87,22 @@ $http->data['capital_markets.discovery.bybit|second']=json_encode(['retCode'=>0,
 ],'nextPageCursor'=>'']],JSON_THROW_ON_ERROR);
 $paged=$scanner->scan('tenant-alpha',[$aapl]);
 $assert($paged['source_health']['BYBIT']['pages']===2 && $paged['rows'][0]['venues'][1]['status']==='DISTINCT_TOKEN_REVIEW_REQUIRED','Paginated Bybit item was missed.');
+$audited=CrossVenueCatalogDiscovery::loadProviderCatalog(
+    $http,'tenant-alpha','BYBIT','capital_markets.discovery.bybit',
+);
+$assert($audited['pages']===2 && isset($audited['catalog']['AAPLX|USDT'])
+    && preg_match('/^[a-f0-9]{64}$/D',$audited['evidence_sha256'])===1,
+    'Audited catalog loader failed to aggregate full Bybit pagination.');
 $http->data['capital_markets.discovery.bybit|second']=json_encode(['retCode'=>0,'result'=>['list'=>[],'nextPageCursor'=>'second']],JSON_THROW_ON_ERROR);
+$paginationFailed=false;
+try {
+    CrossVenueCatalogDiscovery::loadProviderCatalog(
+        $http,'tenant-alpha','BYBIT','capital_markets.discovery.bybit',
+    );
+} catch (InvalidArgumentException) {
+    $paginationFailed=true;
+}
+$assert($paginationFailed,'Incomplete Bybit pagination cannot support lifecycle decisions.');
 $bad=$scanner->scan('tenant-alpha',[$aapl]);
 $assert($bad['source_health']['BYBIT']['state']==='UNAVAILABLE' && $bad['rows'][0]['venues'][1]['status']==='UNAVAILABLE','Cyclic pagination must fail closed.');
 $http->data['capital_markets.discovery.bybit']=json_encode(['retCode'=>0,'result'=>['list'=>[]]],JSON_THROW_ON_ERROR);
