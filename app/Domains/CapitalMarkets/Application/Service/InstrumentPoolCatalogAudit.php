@@ -98,7 +98,7 @@ final readonly class InstrumentPoolCatalogAudit
      *
      * @param array<string,array<string,mixed>> $catalog
      * @param list<array{venue_symbol:string,instrument_id:string,mapping_status:string}> $mappings
-     * @return array{counts:array<string,int>,rows:list<array<string,mixed>>,truncated:bool}
+     * @return array{counts:array<string,int>,rows:list<array<string,mixed>>,truncated:bool,mapped_coverage_complete:bool}
      */
     public static function reconcile(array $catalog,array $mappings,int $limit=200):array
     {
@@ -157,11 +157,19 @@ final readonly class InstrumentPoolCatalogAudit
                 ...$details,'automatically_mutated'=>false,
             ];
         }
-        usort($out,static fn(array $a,array $b):int=>strcmp(
-            $a['venue_symbol'],$b['venue_symbol'],
-        ));
+        // Prioritize ALL registered mappings before new candidates. Without
+        // this guarantee, alphabetical paging can silently hide a stale mapped
+        // symbol behind thousands of unrelated new provider listings.
+        usort($out,static function(array $a,array $b):int{
+            $aNew=$a['instrument_id']===null?1:0;
+            $bNew=$b['instrument_id']===null?1:0;
+            return ($aNew<=>$bNew)?:strcmp($a['venue_symbol'],$b['venue_symbol']);
+        });
         $total=count($out);
-        return ['counts'=>$counts,'rows'=>array_slice($out,0,$limit),
-            'truncated'=>$total>$limit];
+        return [
+            'counts'=>$counts,'rows'=>array_slice($out,0,$limit),
+            'truncated'=>$total>$limit,
+            'mapped_coverage_complete'=>count($mapped)<=$limit,
+        ];
     }
 }

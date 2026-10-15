@@ -27,6 +27,10 @@ $outage=$base;$outage['health']='UNAVAILABLE';
 $halt=$p->review([$base,$outage,$base]);
 $assert($halt['rows'][0]['consecutive_healthy_observations']===1,
     'Provider outage incorrectly counted as a healthy observation.');
+$covered=$base;$covered['truncated']=true;$covered['mapped_coverage_complete']=true;
+$coverageDecision=$p->review([$covered,$covered,$covered]);
+$assert($coverageDecision['rows'][0]['decision']==='OPERATOR_REVIEW_REQUIRED',
+    'Safe mapped-symbol coverage in a truncated provider catalog was lost.');
 $truncated=$base;$truncated['truncated']=true;
 $assert($p->review([$truncated,$base,$base])['status']==='INSUFFICIENT_EVIDENCE',
     'Incomplete catalog must not establish mapping absence.');

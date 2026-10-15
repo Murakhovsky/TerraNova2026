@@ -17,7 +17,8 @@ final readonly class InstrumentPoolLifecycleReviewer
         if($history===[])return ['status'=>'NO_EVIDENCE','rows'=>[],'required_consecutive'=>$requiredConsecutive];
         $current=$history[0];
         if(!is_array($current)||($current['health']??null)!=='AVAILABLE'
-            ||($current['truncated']??null)!==false){
+            ||(($current['truncated']??null)!==false
+                &&($current['mapped_coverage_complete']??false)!==true)){
             return ['status'=>'INSUFFICIENT_EVIDENCE','rows'=>[],'required_consecutive'=>$requiredConsecutive];
         }
         $scope=[$current['provider']??null,$current['venue_id']??null];
@@ -42,7 +43,8 @@ final readonly class InstrumentPoolLifecycleReviewer
             $same=0;
             foreach($history as $snapshot){
                 if(!is_array($snapshot)||($snapshot['health']??null)!=='AVAILABLE'
-                    ||($snapshot['truncated']??null)!==false
+                    ||(($snapshot['truncated']??null)!==false
+                        &&($snapshot['mapped_coverage_complete']??false)!==true)
                     ||[$snapshot['provider']??null,$snapshot['venue_id']??null]!==$scope
                     ||!is_array($snapshot['rows']??null))break;
                 $found=null;

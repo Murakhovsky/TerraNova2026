@@ -31,6 +31,11 @@ $assert($by['AAPLBUSDT']['instrument_id']==='token:b-stock'
 $assert($by['STALEUSDT']['observation']==='MAPPED_NOT_OBSERVED_REVIEW'
     &&$by['STALEUSDT']['automatically_mutated']===false,
     'Missing catalog symbols must not automatically delist canonical instruments.');
+$covered=InstrumentPoolCatalogAudit::reconcile($catalog,$mapping,3);
+$assert($covered['mapped_coverage_complete']===true
+    &&$covered['truncated']===true
+    &&count(array_filter($covered['rows'],static fn(array $row):bool=>$row['instrument_id']!==null))===3,
+    'Large provider catalog hid canonical mappings behind unmapped symbols.');
 $small=InstrumentPoolCatalogAudit::reconcile($catalog,$mapping,1);
 $assert($small['truncated']===true&&count($small['rows'])===1
     &&$small['counts']===$a['counts'],
