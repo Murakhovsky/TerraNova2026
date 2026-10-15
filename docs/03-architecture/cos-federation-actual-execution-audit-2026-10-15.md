@@ -22,6 +22,8 @@ kind: architecture
 6. **Порівняння даних:** `DoctrineWorkflowShadowParityReader` і `cos:workflow:shadow-audit` виконують read-only звірення. Повний доказ паритету для всіх реальних tenant/Run відсутній. У попередньому реєстрі дублювання 20 записів із `NOT_STARTED`, а 25 сценаріїв parity мають `NOT_IMPLEMENTED`.
 7. **Перевірки:** на базовому коміті аудит встановив успішні `CI`, `Runtime`, `Frontend`, `Documentation`. Це не доказ перенесення production-даних чи відсутності подвійних writer.
 
+**Додатковий дефект ownership:** раніше `TableOwnership` помилково відносив `cos_federation_*` та `cos_experience_*` до `CapitalMarkets`. Карту виправлено: ці тимчасові Goal/Experience записи та canonical `cos_workflow_*` належать Platform. Це зміна декларації володіння, не фізична SQL-міграція.
+
 ## Матриця відповідальності за виконання
 
 | Контур | Наявні записи | Цільове рішення |

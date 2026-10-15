@@ -94,9 +94,6 @@ final class TableOwnership
             'tn_capital_market_portfolio_valuation_snapshots',
             'tn_capital_market_nav_financial_evidence',
             'tn_capital_market_paper_nav_snapshots',
-            'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
-            'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
-            'cos_experience_profiles', 'cos_workspace_experience_states',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [
@@ -117,6 +114,14 @@ final class TableOwnership
             'cos_action_attempts', 'cos_approvals', 'cos_policies', 'cos_policy_evaluations',
             'cos_rules', 'cos_rule_evaluations', 'cos_agent_runs', 'cos_audit_log', 'cos_decisions',
             'cos_jobs', 'cos_configuration_provisions', 'cos_operational_metrics', 'cos_crm_inbox',
+            // Federation is an architectural property: Goal and Experience
+            // compatibility tables are Platform-owned, not CapitalMarkets.
+            'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
+            'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
+            'cos_experience_profiles', 'cos_workspace_experience_states',
+            // Canonical technical Run/Step state belongs to Platform Workflow.
+            'cos_workflow_runs', 'cos_workflow_steps',
+            'cos_workflow_recovery_decisions', 'cos_workflow_recovery_events',
             'cos_external_references', 'cos_integrations', 'cos_sync_state', 'cos_llm_budgets', 'cos_llm_usage',
             'cos_documents', 'cos_document_files', 'cos_document_versions', 'cos_document_relations',
             'cos_feature_flags', 'cos_feature_flag_overrides', 'cos_notification_deliveries',
