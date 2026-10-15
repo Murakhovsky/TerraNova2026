@@ -248,3 +248,5 @@ Allowed resolutions: `quarantine` (unknown, no replay), `verified_complete` (onl
 
 
 Для оператора доступний tenant-scoped CSRF-захищений API: `GET /api/v1/workflows/recovery/worklist`, `GET /api/v1/workflows/{runId}/recovery`, `GET /api/v1/workflows/{runId}/recovery/requests`, `POST /api/v1/workflows/{runId}/recovery/request`, `POST /api/v1/workflows/{runId}/recovery/approve` і `POST /api/v1/workflows/{runId}/recovery/apply`. POST-запити вимагають CSRF та менеджерський tenant-контекст із сесії. Після карантину невизначений Step залишається у списку оператора; status Action зчитується, але ніколи не змінюється механізмом recovery. `cancel_uncertain` блокується, доки інші кроки того самого Run активні або теж невизначені.
+
+Recovery inspection використовує окрему перевірку receipts: `external` через canonical Action + Federation Plan, `none` через зареєстрований Domain Evidence Adapter. Повернення стану `terminal_receipts_verified` можливе лише після перевірки всіх завершених кроків і цілісності pinned DAG. Глобальний execution verifier при цьому залишається `FailClosed`.

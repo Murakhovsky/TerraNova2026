@@ -303,6 +303,59 @@ try {
     $deny(static fn()=>$managerService->approve($command($id,$foreign,4),$completeId),
         'cross-tenant recovery approval');
 
+    // A falsified side-effect class must not make an external binding retryable.
+    $forgedId=$identity('mislabelled');
+    $forgedDefinition=new WorkflowDefinitionSnapshot('test.unsafe-read','1.0.0',[
+        ['id'=>'read','capability_id'=>'test.read','capability_version'=>'1.0.0',
+         'side_effect_level'=>'none','execution_binding'=>'action:test.publish',
+         'depends_on'=>[]],
+    ]);
+    $store->create(new WorkflowRunDraft(
+        $forgedId,$forgedDefinition->id,$forgedDefinition->version,
+        hash('sha256','input-'.$forgedId->runId),$first->userId()->value(),
+        'corr-'.$forgedId->runId,'plan-'.$forgedId->runId,
+        'approval-'.$forgedId->runId,hash('sha256','approved-'.$forgedId->runId),
+        $forgedDefinition,
+    ),$first);
+    $store->compareAndTransition(new WorkflowRunTransition(
+        $command($forgedId,$first,1),WorkflowStatus::CREATED,WorkflowStatus::RUNNING,
+        'synthetic invalid side-effect binding',
+    ));
+    $store->claim(new WorkflowStepClaim(
+        $command($forgedId,$first,2),'read','unsafe-binding-worker',120,
+    ));
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps SET claim_expires_at=DATE_SUB(NOW(6),INTERVAL 2 MINUTE)
+         WHERE organization_id=:org AND run_id=:run AND step_id="read"',
+        ['org'=>$org,'run'=>$forgedId->runId],
+    );
+    $badReset=$petition($forgedId,$first,3,'read',2,WorkflowRecoveryResolution::RESET_READ_ONLY);
+    $badResetId=$managerService->request($badReset);
+    $managerService->approve($command($forgedId,$second,3),$badResetId);
+    $deny(static fn()=>$managerService->reconcile(
+        $command($forgedId,$first,3,$badResetId),
+    ),'external binding falsely marked read-only');
+
+    // Competing state mutation after approval must invalidate this entire decision.
+    [$staleId]=$create('stale-read',false);
+    $stalePetition=$petition($staleId,$first,3,'read',2,WorkflowRecoveryResolution::RESET_READ_ONLY);
+    $staleRequestId=$managerService->request($stalePetition);
+    $managerService->approve($command($staleId,$second,3),$staleRequestId);
+    $db->executeStatement(
+        'UPDATE cos_workflow_runs SET revision=revision+1 WHERE organization_id=:org AND run_id=:run',
+        ['org'=>$org,'run'=>$staleId->runId],
+    );
+    $deny(static fn()=>$managerService->reconcile(
+        $command($staleId,$first,3,$staleRequestId),
+    ),'concurrent Run revision changed after human approval');
+    if($db->fetchOne(
+        'SELECT state FROM cos_workflow_steps
+         WHERE organization_id=:org AND run_id=:run AND step_id="read"',
+        ['org'=>$org,'run'=>$staleId->runId],
+    )!=='claimed') {
+        throw new RuntimeException('Stale recovery mutated a still-claimed Step.');
+    }
+
     $audits=$db->fetchAllAssociative(
         'SELECT request_id,event_type,actor_id FROM cos_workflow_recovery_events
          WHERE organization_id=:org ORDER BY id',['org'=>$org],

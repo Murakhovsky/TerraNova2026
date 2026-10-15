@@ -228,6 +228,13 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
                 $this->verifyReceipt($command,$run,$step,$graph,(string)$request['receipt_reference']);
             }
             if ($resolution===WorkflowRecoveryResolution::RESET_READ_ONLY) {
+                $definition=array_values(array_filter($graph,static fn($x):bool=>
+                    is_array($x) && ($x['id']??null)===$step['step_id']));
+                if(count($definition)!==1
+                    || !is_string($definition[0]['execution_binding']??null)
+                    || !str_starts_with($definition[0]['execution_binding'],'read:')) {
+                    throw new DomainException('Read-only reset requires a pinned read-only execution binding.');
+                }
                 $this->assertNoExternalAction($identity,(string)$step['idempotency_key']);
             }
 

@@ -10,6 +10,8 @@ use Kernel\Workflow\Model\WorkflowStatus;
 use LogicException;
 use Platform\Workflow\Contract\WorkflowRecoveryInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
+use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
+use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 use Platform\Workflow\Model\WorkflowReceiptRequest;
 use Platform\Workflow\Model\WorkflowRecoveryAssessment;
 use Platform\Workflow\Model\WorkflowRecoveryDisposition;
@@ -28,6 +30,7 @@ final readonly class DoctrineWorkflowRecoveryInspector implements WorkflowRecove
     public function __construct(
         private Connection $db,
         private WorkflowReceiptVerifierInterface $receipts,
+        private ?WorkflowNonActionReceiptEvidenceInterface $nonActions = null,
     ) {}
 
     public function inspect(WorkflowRunCommand $command): WorkflowRecoveryAssessment
@@ -39,7 +42,7 @@ final readonly class DoctrineWorkflowRecoveryInspector implements WorkflowRecove
         }
         $keys = ['org' => $identity->organizationId, 'run' => $identity->runId];
         $run = $this->db->fetchAssociative(
-            'SELECT state, revision, input_digest FROM cos_workflow_runs
+            'SELECT state, revision, input_digest, definition_json, definition_digest FROM cos_workflow_runs
              WHERE organization_id=:org AND run_id=:run',
             $keys,
         );
@@ -69,6 +72,30 @@ final readonly class DoctrineWorkflowRecoveryInspector implements WorkflowRecove
             return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'unknown_run_state');
         }
 
+        $pinned=[];
+        if($this->nonActions!==null) {
+            try {
+                $graph=json_decode((string)$run['definition_json'],true,512,JSON_THROW_ON_ERROR);
+                if(!is_array($graph) || !array_is_list($graph)
+                    || !hash_equals((string)$run['definition_digest'],
+                        WorkflowDefinitionFingerprint::digest($graph))) {
+                    return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED,'invalid_pinned_recovery_graph');
+                }
+                foreach($graph as $item) {
+                    if(!is_array($item) || !is_string($item['id']??null)
+                        || isset($pinned[$item['id']])) {
+                        return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED,'invalid_pinned_recovery_steps');
+                    }
+                    $pinned[$item['id']]=$item;
+                }
+                if(count($pinned)!==count($steps)) {
+                    return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED,'recovery_definition_step_count_mismatch');
+                }
+            }catch(Throwable) {
+                return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED,'invalid_pinned_recovery_graph');
+            }
+        }
+
         // Independent receipt verification precedes any "healthy" assessment,
         // even when a stored flag says that the Step has completed.
         foreach ($steps as $step) {
@@ -78,14 +105,25 @@ final readonly class DoctrineWorkflowRecoveryInspector implements WorkflowRecove
                 return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'completed_step_without_receipt');
             }
             try {
-                $attestation = $this->receipts->attest(new WorkflowReceiptRequest(
-                    $identity, $actor, (string) $step['step_id'],
-                    $reference, (string) $run['input_digest'],
-                ));
-                if (!$attestation->verified || $attestation->identity != $identity
-                    || $attestation->stepId !== $step['step_id']
-                    || $attestation->evidenceReference !== $reference) {
-                    return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'completed_step_untrusted_receipt');
+                if ($step['side_effect_level'] === 'none' && $this->nonActions !== null) {
+                    $definition=$pinned[$step['step_id']]??null;
+                    if(!is_array($definition) || ($definition['side_effect_level']??null)!=='none') {
+                        return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED,'completed_step_untrusted_receipt');
+                    }
+                    $this->nonActions->assertVerified(
+                        $identity,(string)$step['step_id'],$reference,
+                        (string)$run['input_digest'],$definition,
+                    );
+                } else {
+                    $attestation = $this->receipts->attest(new WorkflowReceiptRequest(
+                        $identity, $actor, (string) $step['step_id'],
+                        $reference, (string) $run['input_digest'],
+                    ));
+                    if (!$attestation->verified || $attestation->identity != $identity
+                        || $attestation->stepId !== $step['step_id']
+                        || $attestation->evidenceReference !== $reference) {
+                        return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'completed_step_untrusted_receipt');
+                    }
                 }
             } catch (Throwable) {
                 return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'completed_step_untrusted_receipt');
