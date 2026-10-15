@@ -33,6 +33,7 @@ final readonly class BybitPerpetualMarketDataDecoder implements MarketDataDecode
         };
         return match($event->eventType){
             'bybit.linear.ticker.bbo'=>$this->bbo($event,$timestamp,$status),
+            'bybit.linear.ws.topbook.bbo'=>$this->wsTopBook($event,$timestamp,$status),
             'bybit.linear.ticker.volume'=>$this->scalar($event,$timestamp,$status,MarketEventType::Volume,'volume24h'),
             'bybit.linear.ticker.mark_price'=>$this->scalar($event,$timestamp,$status,MarketEventType::MarkPrice,'markPrice'),
             'bybit.linear.ticker.index_price'=>$this->scalar($event,$timestamp,$status,MarketEventType::IndexPrice,'indexPrice'),
@@ -50,6 +51,27 @@ final readonly class BybitPerpetualMarketDataDecoder implements MarketDataDecode
         return $this->decoded(MarketEventType::Bbo,$event,$timestamp,$status,[
             'bid_price'=>$row['bid1Price'],'bid_quantity'=>$row['bid1Size'],
             'ask_price'=>$row['ask1Price'],'ask_quantity'=>$row['ask1Size'],
+        ]);
+    }
+
+    /**
+     * WebSocket orderbook.1 is a complete top-of-book snapshot, never L2
+     * continuity evidence and never a REST derivatives ticker structure.
+     */
+    private function wsTopBook(
+        RawMarketEvent $event,DateTimeImmutable $timestamp,MarketStatus $status,
+    ):DecodedMarketEvent{
+        $body=$event->rawPayload['raw_json']??null;
+        if(!is_string($body)||$body==='')throw new InvalidArgumentException('Bybit linear BBO snapshot missing.');
+        $book=$this->orderBooks->parse($body,$event->externalInstrument);
+        if(count($book['bids'])!==1||count($book['asks'])!==1){
+            throw new InvalidArgumentException('Bybit linear BBO snapshot requires exactly one best bid and ask.');
+        }
+        return $this->decoded(MarketEventType::Bbo,$event,$timestamp,$status,[
+            'bid_price'=>$book['bids'][0]['price'],
+            'bid_quantity'=>$book['bids'][0]['quantity'],
+            'ask_price'=>$book['asks'][0]['price'],
+            'ask_quantity'=>$book['asks'][0]['quantity'],
         ]);
     }
 

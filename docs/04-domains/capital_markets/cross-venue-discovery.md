@@ -194,3 +194,19 @@ php symfony/bin/console cos:capital-markets:subscriptions:reference-plan ORG_ID 
 ## Розширений operator review queue
 
 `/capital-markets/discovery?listingPage=1` показує до 40 лістингів за раз. Записи `UNVERIFIED` сортуються першими, є переходи до 38 сторінок, тобто 1500 venue observations для максимально 500 токенів на трьох біржах. Після зміни статусу сортування оновлюється, тому при масовому review рекомендовано повертатися на першу сторінку та проходити решту неперевірених. MySQL acceptance перевіряє 42 доступних записи на двох сторінках і ізоляцію інших організацій.
+
+## Допуск кандидатів пулу до Opportunity
+
+`BStocksOpportunityEvidenceGate` вимагає доказу емітента SHA-256, підтвердженого underlying, множника та корпоративних подій. E3 дозволяє лише reference-порівняння без hedging, E4 з підтвердженими conversion rights, fees і route може потрапити до наступних market/risk gates. Неверифіковані bStocks не надходять до H1/H2. Інші стратегії не отримують автоматичного торгового дозволу.
+
+Вбудовані opt-in WebSocket та L2 з інших draft-гілок повинні пройти інтеграційні й live acceptance перевірки. Копіювання компонентів у гілку не означає production streaming SLA.
+
+## Автоматичне планування підписок на перевірений пул
+
+`BStocksPoolSubscriptionReconciler` використовує чинні BBO planners і audited `MarketDataAdministrationService`, а не створює паралельний ingestion. Планування відбувається лише для увімкнених джерел Binance Spot, Bybit Spot, Kraken Spot та Massive, які пройшли provider/license/venue/reviewer gates. Кожне джерело обмежено 100 активами за цикл, не більше чотирьох джерел і максимум 250 активних або нових BBO intent сумарно. Відмови не запускають торгових дій.
+
+Для ввімкнення (тільки після налаштування tenant і прав service actor): `COS_CM_POOL_SUBSCRIPTIONS_SCHEDULER_ENABLED=1`, `COS_CM_POOL_SUBSCRIPTIONS_ACTOR_ID` та `COS_CM_POOL_SUBSCRIPTIONS_INTERVAL_MINUTES=15`. За замовчуванням процес вимкнено. Застосування intent не підтверджує активний WebSocket чи trusted MarketState.
+
+## Контрольований запуск пошуку Opportunity
+
+Команда `cos:capital-markets:opportunity:bstocks-scan ORGANIZATION_ID --max-instruments=100` використовує **тільки** імпортовані seed-інструменти і наявний Tokenized Equity Universe Scanner. Перед запуском потрібне явне `COS_CM_BSTOCKS_OPPORTUNITY_ENABLED=1`. Відсутність імпорту або перевищення ліміту зупиняє сканування; непідтверджені relationship evidence, котирування чи risk gates блокують торгову придатність. Реальних угод команда не здійснює.

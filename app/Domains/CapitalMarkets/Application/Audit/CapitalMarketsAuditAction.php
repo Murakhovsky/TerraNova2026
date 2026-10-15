@@ -14,6 +14,10 @@ enum CapitalMarketsAuditAction:string
     case VenueUpdated='capital_markets.venue.updated';
     case VenueStatusChanged='capital_markets.venue.status_changed';
     case VenueInstrumentRegistered='capital_markets.venue_instrument.registered';
+    case InstrumentPoolProposed='capital_markets.instrument_pool.proposed';
+    case InstrumentPoolApplied='capital_markets.instrument_pool.applied';
+    case InstrumentPoolRejected='capital_markets.instrument_pool.rejected';
+    case InstrumentPoolMappingStatusChanged='capital_markets.instrument_pool.mapping_status_changed';
     case PermissionChanged='capital_markets.permission.changed';
     case FeatureFlagChanged='capital_markets.feature_flag.changed';
     case MarketDataSourceCreated='capital_markets.market_data.source.created';

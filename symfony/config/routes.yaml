@@ -2825,6 +2825,23 @@ capital_markets_market_data_poll:
   methods: [POST]
   requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
 
+# Canonical Instrument Pool governance, same Capital Markets bounded context
+capital_markets_instrument_pool:
+  path: /capital-markets/instrument-pool
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::instrumentPool
+  methods: [GET]
+
+capital_markets_instrument_pool_propose:
+  path: /capital-markets/instrument-pool/proposals
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::proposeInstrumentPoolChange
+  methods: [POST]
+
+capital_markets_instrument_pool_decide:
+  path: /capital-markets/instrument-pool/proposals/{id}/decision
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::decideInstrumentPoolChange
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
+
 # Capital Markets CM-FOUNDATION API
 cos_api_v1_capital_markets_instruments:
   path: /api/v1/capital-markets/instruments

@@ -80,6 +80,8 @@ jobs:
           php tests/integration/capital_markets_decision_workspace_manager_acceptance.php
       - name: Compose validation
         run: docker compose config --quiet
+      - name: Validate optional Capital Markets streaming lease monitor
+        run: docker compose --profile cm-stream-sweeper config --quiet
       - name: Build runtime
         run: docker compose build php nginx
       - name: Start dependencies
@@ -93,6 +95,48 @@ jobs:
           docker compose run --rm --no-deps php sh -c 'test -r /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv && test "$(wc -l < /var/www/html/resources/capital-markets/universes/binance-bstocks-2026-09-27.csv)" -eq 81'
       - name: Start runtime
         run: docker compose up -d --remove-orphans
+      - name: Capital Markets cross-provider expired lease recovery MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_all_provider_sweeper_mysql.php php:/tmp/cm-all-provider-sweep.php
+          docker compose exec -T \
+            -e COS_CM_EXPIRED_SWEEP_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-all-provider-sweep.php
+      - name: Capital Markets REST-vs-WS MySQL two-connection race
+        run: |
+          docker compose cp tests/integration/capital_markets_rest_stream_writer_gate_mysql.php php:/tmp/cm-rest-ws-race.php
+          docker compose exec -T \
+            -e COS_CM_WRITER_GATE_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-rest-ws-race.php
+      - name: Capital Markets approved Instrument Pool import MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_instrument_pool_approval_mysql.php php:/tmp/cm-pool-approval.php
+          docker compose exec -T \
+            -e COS_CM_POOL_APPROVAL_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-pool-approval.php
+      - name: Capital Markets Instrument Pool snapshot MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_instrument_pool_snapshot_mysql.php php:/tmp/cm-pool-snapshot.php
+          docker compose exec -T \
+            -e COS_CM_POOL_SNAPSHOT_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-pool-snapshot.php
+      - name: Capital Markets read-only streaming operations MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_streaming_ops_mysql.php php:/tmp/capital_markets_streaming_ops_mysql.php
+          docker compose exec -T \
+            -e COS_CM_STREAM_OPS_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/capital_markets_streaming_ops_mysql.php
+      - name: Capital Markets per-instrument streaming trust MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_instrument_stream_trust_mysql.php php:/tmp/cm-instrument-trust.php
+          docker compose exec -T \
+            -e COS_CM_INSTRUMENT_TRUST_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-instrument-trust.php
       - name: Capital Markets bStocks seed import MySQL acceptance
         run: |
           docker compose cp tests/integration/capital_markets_bstocks_mysql.php php:/tmp/capital_markets_bstocks_mysql.php
@@ -232,6 +276,20 @@ jobs:
       - name: Container and routes
         run: |
           docker compose exec -T php php bin/console lint:container
+          docker compose --profile l2 config --quiet
+          # Exercise the exact Compose-managed worker image/CLI without starting a live feed.
+          docker compose --profile l2 run --rm --no-deps l2-stream \
+            php bin/console cos:capital-markets:l2:stream --help > /tmp/l2-stream-help.txt
+          grep -q -- '--venue' /tmp/l2-stream-help.txt
+          grep -q -- '--source' /tmp/l2-stream-help.txt
+          docker compose exec -T php php bin/console list --raw | grep -q '^cos:capital-markets:l2:stream '
+          # The command must be invokable in the real Symfony container, not just PHP linted.
+          if docker compose exec -T -e FOS_L2_ENABLED=0 php php bin/console cos:capital-markets:l2:stream \
+            --organization=default --source=source:nonexistent --venue=BINANCE_SPOT \
+            --symbol=BTCUSDT --base=BTC --quote=USDT --dry-run; then
+            echo 'L2 preflight accepted an unregistered source.' >&2
+            exit 1
+          fi
           docker compose exec -T php php bin/console debug:router > /tmp/routes.txt
           grep -q 'cos_symfony_home' /tmp/routes.txt
           docker compose exec -T php php bin/console cos:experience:inventory --strict --compile --no-interaction

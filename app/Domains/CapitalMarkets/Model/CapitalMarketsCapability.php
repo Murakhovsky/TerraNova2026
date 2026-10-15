@@ -9,6 +9,9 @@ enum CapitalMarketsCapability:string
     case Manage='capital_markets.manage';
     case InstrumentView='capital_markets.instrument.view';
     case InstrumentManage='capital_markets.instrument.manage';
+    case InstrumentPoolView='capital_markets.instrument_pool.view';
+    case InstrumentPoolPropose='capital_markets.instrument_pool.propose';
+    case InstrumentPoolApprove='capital_markets.instrument_pool.approve';
     case RelationshipView='capital_markets.relationship.view';
     case RelationshipManage='capital_markets.relationship.manage';
     case VenueView='capital_markets.venue.view';

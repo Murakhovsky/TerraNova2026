@@ -1,0 +1,52 @@
+name: L2 Live Venue Reconnect
+
+# External-network acceptance is intentionally separate from deterministic CI.
+# Run on the feature pull request or by explicit manual dispatch.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Domains/CapitalMarkets/Infrastructure/MarketData/L2/**'
+      - 'tests/live/l2_public_reconnect.php'
+      - '.github/workflows/l2-live-venues.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reconnect-live:
+    name: live ${{ matrix.venue }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        venue: [BINANCE_SPOT, BINANCE_FUTURES, BYBIT_SPOT, BYBIT_LINEAR, KRAKEN_SPOT]
+    env:
+      FOS_L2_LIVE_TEST_ENABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, openssl, pcntl
+          coverage: none
+      - name: Install project autoload
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Real WSS + forced disconnect + trusted recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=5s 120s \
+            php tests/live/l2_public_reconnect.php --venue=${{ matrix.venue }} \
+            2>&1 | tee "l2-live-${{ matrix.venue }}.log"
+      - name: Archive venue-specific evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l2-live-${{ matrix.venue }}
+          path: l2-live-${{ matrix.venue }}.log
+          if-no-files-found: warn
+          retention-days: 14

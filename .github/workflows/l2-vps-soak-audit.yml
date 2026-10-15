@@ -1,0 +1,99 @@
+name: FOS L2 VPS Soak Audit
+
+on:
+  push:
+    branches: [feature/fos-l2-orderbook-recovery]
+    paths:
+      - '.github/workflows/l2-vps-soak-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Read-only 24h L2 soak status and MySQL evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: Check source, resource bounds, live data, completion marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            if [ -z "${!key:-}" ]; then echo "::error::Missing SSH setting $key"; exit 1; fi
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/l2_readonly_key
+          chmod 600 ~/.ssh/l2_readonly_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -i ~/.ssh/l2_readonly_key \
+            -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" bash -s <<'REMOTE'
+          set -Eeuo pipefail
+          D='docker'
+          if ! docker info >/dev/null 2>&1; then
+            if sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
+            else echo "::error::Cannot inspect Docker"; exit 1; fi
+          fi
+          NAME='cos-l2-soak-1'
+          if ! $D inspect "$NAME" >/dev/null 2>&1; then
+            echo "::error::Expected isolated L2 soak container not found"; exit 1
+          fi
+          LABEL="$($D inspect -f '{{ index .Config.Labels "com.docker.compose.service" }}' "$NAME")"
+          if [ "$LABEL" != "l2-soak" ]; then
+            echo "::error::Container ownership mismatch"; exit 1
+          fi
+          STATUS="$($D inspect -f '{{.State.Status}}' "$NAME")"
+          EXIT="$($D inspect -f '{{.State.ExitCode}}' "$NAME")"
+          STARTED="$($D inspect -f '{{.State.StartedAt}}' "$NAME")"
+          ORG="$($D inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$NAME" | sed -n 's/^FOS_L2_ACCEPTANCE_ORG=//p' | tail -n 1)"
+          if ! [[ "$ORG" =~ ^l2-vps-accept-[0-9]{8}-[a-f0-9]{8}$ ]]; then
+            echo "::error::Container missing valid acceptance-only organization"; exit 1
+          fi
+          echo "l2_soak_container: $NAME"
+          echo "l2_soak_status: $STATUS"
+          echo "l2_soak_exit_code: $EXIT"
+          echo "l2_soak_started_at: $STARTED"
+          echo "l2_soak_organization: $ORG"
+          echo 'vps_resources:'
+          free -m | head -n 2
+          df -h / | tail -n 1
+          if [ "$STATUS" = "running" ]; then
+            $D stats --no-stream --format '{{.Name}}|{{.MemUsage}}|{{.CPUPerc}}' "$NAME"
+          fi
+          echo 'l2_soak_recent_session_results:'
+          $D logs --tail=60 "$NAME" 2>&1 | grep -E 'L2_SOAK_(STARTED|DEADLINE|SESSION|FAILED|24H_COMPLETE)' | tail -n 15 || true
+          echo 'mysql_l2_acceptance_counters:'
+          $D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<SQL
+          SELECT 'raw', COUNT(*) FROM tn_capital_market_raw_events WHERE organization_id='$ORG'
+          UNION ALL SELECT 'canonical', COUNT(*) FROM tn_capital_market_canonical_events WHERE organization_id='$ORG'
+          UNION ALL SELECT 'quality', COUNT(*) FROM tn_capital_market_quality_metrics WHERE organization_id='$ORG'
+          UNION ALL SELECT 'state', COUNT(*) FROM tn_capital_market_states WHERE organization_id='$ORG';
+          SELECT 'latest_canonical_age_seconds', COALESCE(TIMESTAMPDIFF(SECOND,MAX(received_timestamp),UTC_TIMESTAMP()),-1)
+          FROM tn_capital_market_canonical_events WHERE organization_id='$ORG';
+          SQL
+          ROWS="$($D exec -i cos-mysql-1 sh -c 'mysql -N -B -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' 2>/dev/null <<SQL
+          SELECT COUNT(*) FROM tn_capital_market_canonical_events WHERE organization_id='$ORG';
+          SQL
+          )"
+          if ! [[ "$ROWS" =~ ^[0-9]+$ ]] || [ "$ROWS" -lt 2 ]; then
+            echo "::error::L2 soak has not persisted multiple real snapshots"; exit 1
+          fi
+          if $D logs "$NAME" 2>&1 | grep -q 'L2_SOAK_FAILED'; then
+            echo "::error::L2 soak reported fatal failure"; exit 1
+          fi
+          if [ "$STATUS" = "running" ]; then
+            echo 'L2_SOAK_AUDIT_RUNNING'
+          elif [ "$STATUS" = "exited" ] && [ "$EXIT" = "0" ] \
+              && $D logs "$NAME" 2>&1 | grep -q 'L2_SOAK_24H_COMPLETE'; then
+            echo 'L2_SOAK_AUDIT_24H_COMPLETED'
+          else
+            echo "::error::L2 soak unexpectedly stopped: $STATUS / $EXIT"; exit 1
+          fi
+          REMOTE

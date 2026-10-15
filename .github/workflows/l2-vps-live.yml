@@ -1,0 +1,94 @@
+name: FOS L2 Live Test on VPS
+
+# Public market-data checks run from a clean temporary directory on AWS TN2026.
+# No deployment, compose changes, production DB writes or external orders.
+on:
+  push:
+    branches: [feature/fos-l2-orderbook-recovery]
+    paths:
+      - '.github/workflows/l2-vps-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vps-live:
+    name: Live Binance Bybit Kraken on VPS (isolated)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          for required in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            if [ -z "${!required:-}" ]; then echo "::error::Missing SSH credential $required"; exit 1; fi
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/fos_l2_vps_test_key
+          chmod 600 ~/.ssh/fos_l2_vps_test_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Run production L2 processors against real exchanges from VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH=(ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes
+            -i "$HOME/.ssh/fos_l2_vps_test_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST")
+          STAGE="$("${SSH[@]}" "mktemp -d /tmp/fos-l2-vps-XXXXXXXX")"
+          if [[ ! "$STAGE" =~ ^/tmp/fos-l2-vps-[A-Za-z0-9]+$ ]]; then
+            echo "::error::Unsafe temporary directory returned by VPS"
+            exit 1
+          fi
+          cleanup() {
+            "${SSH[@]}" "rm -rf -- '$STAGE'" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          # Transfer only isolated source dependencies, never .env, DB, vendor,
+          # production configs or access credentials.
+          tar -cf - \
+            app/Kernel/Shared/Domain \
+            app/Domains/CapitalMarkets/Domain \
+            app/Domains/CapitalMarkets/Infrastructure/MarketData/L2 \
+            tests/live/l2_public_reconnect.php \
+            | "${SSH[@]}" "tar -xf - -C '$STAGE'"
+          "${SSH[@]}" "mkdir -p '$STAGE/vendor'"
+          "${SSH[@]}" "cat > '$STAGE/vendor/autoload.php'" <<'PHP'
+          <?php
+          declare(strict_types=1);
+          spl_autoload_register(static function (string $class): void {
+              $root = dirname(__DIR__) . '/app/';
+              foreach (['Domains\\' => 'Domains/', 'Kernel\\' => 'Kernel/'] as $prefix => $directory) {
+                  if (!str_starts_with($class, $prefix)) continue;
+                  $relative = substr($class, strlen($prefix));
+                  $file = $root . $directory . str_replace('\\', '/', $relative) . '.php';
+                  if (is_file($file)) require $file;
+                  return;
+              }
+          });
+          PHP
+          "${SSH[@]}" "bash -s -- '$STAGE'" <<'REMOTE'
+          set -euo pipefail
+          STAGE="$1"
+          cd "$STAGE"
+          echo '=== Isolated FOS L2 live tests on VPS (no production writes) ==='
+          php -r 'echo "PHP ", PHP_VERSION, "\n";'
+          php -r 'foreach (["mbstring", "openssl"] as $name) { if (!extension_loaded($name)) { fwrite(STDERR, "Missing ".$name."\n"); exit(1); }}'
+          for venue in BINANCE_SPOT BINANCE_FUTURES BYBIT_SPOT BYBIT_LINEAR KRAKEN_SPOT; do
+            echo "=== Venue: $venue ==="
+            FOS_L2_LIVE_TEST_ENABLED=1 timeout --signal=TERM --kill-after=3s 100s \
+              nice -n 10 php -d memory_limit=192M \
+              tests/live/l2_public_reconnect.php --venue="$venue"
+          done
+          echo '=== VPS LIVE TEST PASS: 5/5 ==='
+          REMOTE

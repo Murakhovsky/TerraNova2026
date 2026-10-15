@@ -39,11 +39,19 @@ final readonly class TokenizedEquityUniverseScanner
         foreach($references as $reference)$referenceByInstrument[$reference->instrumentId->value()][]=$reference;
 
         $h1=[];$h2=[];$errors=[];
+        $evidenceGate=new BStocksOpportunityEvidenceGate();
         foreach($relationships as $relationship){
             if(!$relationship instanceof EconomicRelationship||$relationship->status!==EconomicRelationshipStatus::Active)continue;
+            $h1Admission=$evidenceGate->admit($relationship,'H1');
+            $h2Admission=$evidenceGate->admit($relationship,'H2');
+            if ($h1Admission==='BLOCKED' && $h2Admission==='BLOCKED') {
+                $errors[]=['relationship_id'=>$relationship->id->value(),
+                    'error'=>'BSTOCKS_ECONOMIC_EVIDENCE_REQUIRED'];
+                continue;
+            }
             $left=$relationship->sourceInstrument->value();
             $right=$relationship->targetInstrument->value();
-            if($universe->allowsHypothesis('H1'))foreach([[$left,$right],[$right,$left]] as [$underlying,$token]){
+            if($h1Admission!=='BLOCKED' && $universe->allowsHypothesis('H1'))foreach([[$left,$right],[$right,$left]] as [$underlying,$token]){
                 if(!$universe->allowsUnderlying($underlying)||!$universe->allowsToken($token))continue;
                 foreach($referenceByInstrument[$underlying]??[] as $reference){
                     foreach($stateByInstrument[$token]??[] as $tokenState){
@@ -52,14 +60,17 @@ final readonly class TokenizedEquityUniverseScanner
                         try{
                             $h1[]=$this->verticalSlice->scanReference(
                                 $organizationId,$pairId,$reference->sourceId->value(),$underlying,
-                                $tokenState->venueId->value(),$token,$options
+                                $tokenState->venueId->value(),$token,
+                                $h1Admission==='REFERENCE_ONLY'
+                                    ? array_diff_key($options,array_flip(['hedge_venue_id','hedge_instrument_id']))
+                                    : $options
                             );
                         }catch(\Throwable $error){$errors[]=['hypothesis'=>'H1','market_pair_id'=>$pairId,'error'=>$error->getMessage()];}
                     }
                 }
             }
 
-            if(!$universe->allowsHypothesis('H2'))continue;
+            if($h2Admission==='BLOCKED'||!$universe->allowsHypothesis('H2'))continue;
             $combined=[];
             foreach([$left,$right] as $instrument){
                 if(!$universe->allowsToken($instrument))continue;

@@ -42,12 +42,20 @@ parameters:
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '3'
+  env(COS_CM_INSTRUMENT_POOL_AUTO_PROPOSE_ENABLED): '0'
+  env(COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED): '0'
+  env(COS_CM_INSTRUMENT_POOL_SCHEDULER_INTERVAL_MINUTES): '15'
+  env(COS_CM_INSTRUMENT_POOL_SCHEDULER_TARGETS_JSON): '[]'
+  env(COS_CM_INSTRUMENT_POOL_SCHEDULER_ACTOR_ID): '0'
   env(COS_CM_BBO_FENCE_SCHEDULER_ENABLED): '0'
   env(COS_CM_BBO_FENCE_ACTOR_ID): '0'
   env(COS_CM_BBO_FENCE_INTERVAL_MINUTES): '5'
   env(COS_CM_BBO_POLL_SCHEDULER_ENABLED): '0'
   env(COS_CM_BBO_POLL_ACTOR_ID): '0'
   env(COS_CM_BBO_POLL_INTERVAL_MINUTES): '15'
+  env(COS_CM_POOL_SUBSCRIPTIONS_SCHEDULER_ENABLED): '0'
+  env(COS_CM_POOL_SUBSCRIPTIONS_ACTOR_ID): '0'
+  env(COS_CM_POOL_SUBSCRIPTIONS_INTERVAL_MINUTES): '15'
   env(COS_CM_POOL_DISCOVERY_SCHEDULER_ENABLED): '0'
   env(COS_CM_POOL_DISCOVERY_ACTOR_ID): '0'
   env(COS_CM_POOL_DISCOVERY_INTERVAL_MINUTES): '1440'
@@ -323,6 +331,8 @@ services:
       $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringDomainAutonomyEnabled: '%env(bool:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED)%'
       $engineeringDomainAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
+      $capitalMarketsInstrumentPoolScheduledEnabled: '%env(bool:COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED)%'
+      $capitalMarketsInstrumentPoolIntervalMinutes: '%env(int:COS_CM_INSTRUMENT_POOL_SCHEDULER_INTERVAL_MINUTES)%'
       $capitalMarketsPaperNavEnabled: '%env(bool:COS_CM_PAPER_NAV_SCHEDULER_ENABLED)%'
       $capitalMarketsPaperNavOrganizationId: '%env(COS_ORGANIZATION_ID)%'
       $capitalMarketsPaperNavIntervalMinutes: '%env(int:COS_CM_PAPER_NAV_SCHEDULER_INTERVAL_MINUTES)%'
@@ -330,6 +340,10 @@ services:
       $capitalMarketsDiscoveryOrganizationId: '%env(COS_ORGANIZATION_ID)%'
       $capitalMarketsDiscoveryActorId: '%env(int:COS_CM_POOL_DISCOVERY_ACTOR_ID)%'
       $capitalMarketsDiscoveryIntervalMinutes: '%env(int:COS_CM_POOL_DISCOVERY_INTERVAL_MINUTES)%'
+      $capitalMarketsPoolSubscriptionsEnabled: '%env(bool:COS_CM_POOL_SUBSCRIPTIONS_SCHEDULER_ENABLED)%'
+      $capitalMarketsPoolSubscriptionsOrganizationId: '%env(COS_ORGANIZATION_ID)%'
+      $capitalMarketsPoolSubscriptionsActorId: '%env(int:COS_CM_POOL_SUBSCRIPTIONS_ACTOR_ID)%'
+      $capitalMarketsPoolSubscriptionsIntervalMinutes: '%env(int:COS_CM_POOL_SUBSCRIPTIONS_INTERVAL_MINUTES)%'
       $capitalMarketsBboPollEnabled: '%env(bool:COS_CM_BBO_POLL_SCHEDULER_ENABLED)%'
       $capitalMarketsBboPollOrganizationId: '%env(COS_ORGANIZATION_ID)%'
       $capitalMarketsBboPollActorId: '%env(int:COS_CM_BBO_POLL_ACTOR_ID)%'
@@ -1947,6 +1961,8 @@ services:
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceMarketDataDecoder: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceUsdmBboMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceUsdmBboMarketDataDecoder: ~
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter: ~
@@ -1963,16 +1979,21 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceUsdmBboMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2VerifiedMarketDataDecoder: ~
 
   Domains\CapitalMarkets\Application\Service\MarketDataDecoderRegistry:
     arguments:
       $decoders:
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2VerifiedMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceUsdmBboMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveMarketDataDecoder'
 
@@ -1981,14 +2002,75 @@ services:
   Domains\CapitalMarkets\Application\Contract\MarketDataProviderAvailabilityInterface:
     alias: Domains\CapitalMarkets\Infrastructure\MarketData\CapitalMarketsMarketDataProviderAvailability
 
+  # CM-STREAM-BINANCE pilot; feature-gated, no automatic production activation.
+  # REST-vs-WS writer arbitration: source sentinel shares the worker-lease table.
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlMarketSourceWriterGate:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\MarketSourceRestWriterGateInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlMarketSourceWriterGate
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingWorkerLease:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\StreamingWorkerLeaseInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingWorkerLease
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingTrustInvalidator:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Contract\StreamingTrustInvalidatorInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingTrustInvalidator
+
+  Domains\CapitalMarkets\Application\Contract\StreamingInstrumentTrustInvalidatorInterface:
+    alias: Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingTrustInvalidator
+
+  Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingExpiredLeaseSweeper:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingOperationsSnapshot:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlBinanceStreamingExpiredLeaseSweeper:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Application\Service\MarketSourcePollingService: ~
 
   Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery: ~
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolCatalogAudit: ~
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolApprovalService:
+    public: true
+    arguments:
+      $pdo: '@cos.database.pdo'
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolLifecycleReviewer: ~
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolScheduleTargets: ~
+
+  App\Application\CapitalMarkets\Handler\RunInstrumentPoolSnapshotScansHandler:
+    arguments:
+      $targetsJson: '%env(COS_CM_INSTRUMENT_POOL_SCHEDULER_TARGETS_JSON)%'
+      $actorId: '%env(int:COS_CM_INSTRUMENT_POOL_SCHEDULER_ACTOR_ID)%'
+  Domains\CapitalMarkets\Application\Service\StreamingOperationsHealthEvaluator: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler: ~
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentPoolSnapshotRepository:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository:
     arguments:
       $connection: '@cos.database.pdo'
@@ -2003,6 +2085,7 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\CrossVenueSubscriptionPlanner: ~
+  Domains\CapitalMarkets\Application\Service\BStocksPoolSubscriptionReconciler: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueMarketSourceAdmission: ~
   Domains\CapitalMarkets\Application\Service\BStocksReferenceBboPlanner: ~
   Domains\CapitalMarkets\Application\Service\BStocksCanonicalDraftProjection: ~
@@ -3494,3 +3577,6 @@ services:
 
   App\Application\System\Contract\DependencyHealthCheckInterface:
     alias: App\Infrastructure\Health\DatabaseDependencyHealthCheck
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2LiveWorkerFactory: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2AlertDelivery: ~
