@@ -54,3 +54,5 @@ kind: architecture
 Виконані, claimed, failed або неоднозначні legacy Actions **не імпортуються як нові Executions**. Вони є архівними доказами, які потребують human recovery/receipt reconciliation. Неперевірений ефект не можна перетворити в `wf:*` Action і вважати новою успішною спробою. Для такого Run команда поверне blocker замість удаваного PASS.
 
 Non-Action кроки використовують `read:<kind>` і pinned `evidence` із `run_id`, `input_digest`, `reference` та доменно-специфічними полями. `Plan.run_id` потрібно визначити до незалежного людського погодження, а `input_digest` обчислюється як SHA256(organization + NUL + run + NUL + plan). Claim резервується один раз, а завершення можливе виключно за дійсним доменним receipt. Жодне read-evidence не замінює Approval чи фактичний Outcome.
+
+Для старих Runs команда `cos:federation:history:cutover` повертає також `step_reconciliation`: стан кожного кроку, число історичних Action attempts, посилання на Action і причину, чому неможливе автоматичне перенесення. Позначка `independent_action_receipt_attestation_required` **не є перевіреним receipt** і не означає дозвіл повторити Action.

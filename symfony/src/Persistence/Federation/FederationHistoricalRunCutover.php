@@ -61,7 +61,67 @@ final readonly class FederationHistoricalRunCutover
             'reasons'=>array_values(array_unique($reasons)),
             'parity'=>$ledger ? $this->parity->federation($org,$runId)->status->value : 'no_target',
             'read_only'=>true,
+            // Operator diagnosis is read-only; no Action claim, queue or retry.
+            'step_reconciliation'=>$this->stepReconciliation($org,$source['steps']),
         ];
+    }
+
+    /** @param list<array<string,mixed>> $steps
+     *  @return list<array{step_id:string,side_effect_level:string,legacy_state:string,
+     *      legacy_attempts:int,action_id:?string,action_status:?string,
+     *      persisted_action_attempts:int,diagnosis:string}>
+     */
+    private function stepReconciliation(string $org,array $steps):array
+    {
+        $items=[];
+        foreach($steps as $step){
+            $side=(string)$step['side_effect_level'];
+            $key=(string)$step['idempotency_key'];
+            $attempts=(int)$step['attempts'];
+            $receipt=$step['result_reference'];
+            $actions=$this->db->fetchAllAssociative(
+                'SELECT id,status FROM cos_actions
+                 WHERE organization_id=:org AND idempotency_key=:key',
+                ['org'=>$org,'key'=>'fed:'.$key],
+            );
+            $action=count($actions)===1?$actions[0]:null;
+            // DBAL fetchAllAssociative returns arrays, not entities.
+            $actionId=is_array($action)?(string)$action['id']:null;
+            $attemptRows=$actionId===null?[]:$this->db->fetchAllAssociative(
+                'SELECT attempt,status FROM cos_action_attempts
+                 WHERE organization_id=:org AND action_id=:action ORDER BY attempt',
+                ['org'=>$org,'action'=>$actionId],
+            );
+            $diagnosis='manual_reconciliation_required';
+            if ($side==='none') {
+                $diagnosis=$step['state']==='completed'
+                    ? 'domain_receipt_attestation_required'
+                    : 'non_action_legacy_state_review';
+            } elseif($side==='external' && count($actions)===0
+                && $step['state']==='pending' && $attempts===0 && $receipt===null) {
+                $diagnosis='not_dispatched_pristine';
+            } elseif($side==='external' && $action!==null
+                && $action['status']==='COMPLETED'
+                && count($attemptRows)===1
+                && (int)$attemptRows[0]['attempt']===1
+                && $attemptRows[0]['status']==='COMPLETED'
+                && $receipt==='action:'.$actionId) {
+                // Correlation is diagnostic ONLY. FederatedActionAdmission must
+                // re-attest Plan, Approval, Policy and Action before any archive.
+                $diagnosis='independent_action_receipt_attestation_required';
+            }
+            $items[]=[
+                'step_id'=>(string)$step['step_id'],
+                'side_effect_level'=>$side,
+                'legacy_state'=>(string)$step['state'],
+                'legacy_attempts'=>$attempts,
+                'action_id'=>$actionId,
+                'action_status'=>$action['status']??null,
+                'persisted_action_attempts'=>count($attemptRows),
+                'diagnosis'=>$diagnosis,
+            ];
+        }
+        return $items;
     }
 
     /** @return array<string,mixed> */

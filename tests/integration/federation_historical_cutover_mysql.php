@@ -215,6 +215,10 @@ try {
         ['org'=>$org,'run'=>$blocked,'key'=>$blockedKey],
     );
     $examination=$cutover->inspect($org,$blocked);
+    if (($examination['step_reconciliation'][0]['diagnosis']??null)!=='manual_reconciliation_required'
+        || ($examination['step_reconciliation'][0]['legacy_attempts']??null)!==1) {
+        throw new RuntimeException('Historical claimed Action missing operator reconciliation diagnosis.');
+    }
     if($examination['promotable'] || !in_array('step_executed_claimed_or_changed',
         $examination['reasons'],true)) {
         throw new RuntimeException('Previously attempted Action was offered unsafe promotion.');
