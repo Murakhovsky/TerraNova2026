@@ -108,6 +108,27 @@ try {
        || count($fleet['features'])!==1 || $fleet['cutover_authorized']!==false) {
         throw new RuntimeException('Real Engineering fleet audit did not preserve business gate ownership.');
     }
+    // A second legacy-only workflow for this SAME opt-in Feature must not
+    // disappear just because the latest canonical AgentRun is healthy.
+    $legacyWorkflow=EngineeringId::generate();
+    $db->executeStatement(
+        'INSERT INTO cos_engineering_workflows
+         (id,feature_id,workflow_type,current_state,status,started_at,
+          last_activity_at,version,trace_id,lock_key)
+         VALUES (:id,:feature,"ENGINEERING","ANALYSIS","RUNNING",
+                 UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),1,:trace,:lock)',
+        ['id'=>$legacyWorkflow,'feature'=>$feature,'trace'=>'history-'.$tag,
+         'lock'=>'engineering:feature:'.$feature.':legacy-history'],
+    );
+    $history=$reader->engineeringFleet($org);
+    if($history['status']!=='no_target'
+       || $history['coverage_complete']!==true
+       || count($history['features'][0]['workflows']??[])!==2
+       || ($history['features'][0]['workflow_counts']['no_target']??0)!==1) {
+        throw new RuntimeException('Fleet shadow masked historical Engineering Workflow missing canonical execution.');
+    }
+    $db->executeStatement('DELETE FROM cos_engineering_workflows WHERE id=:id',['id'=>$legacyWorkflow]);
+
     $batch=$reader->engineeringWorkflow($org,$workflow);
     if($batch['status']!=='partial' || ($batch['technical_counts']['match']??0)!==1
        || $batch['business_gate_authority']!=='legacy_engineering') {

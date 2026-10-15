@@ -127,39 +127,79 @@ final readonly class DoctrineWorkflowShadowParityReader
              ORDER BY o.feature_id LIMIT '.$limit,
             ['org'=>$organizationId],
         );
+        $total=(int)$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_engineering_technical_rollouts o
+             JOIN cos_engineering_features f ON f.id=o.feature_id
+                AND f.organization_id=o.organization_id
+             WHERE o.organization_id=:org',
+            ['org'=>$organizationId],
+        );
         $counts=['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0];
         $reports=[];
+        $historyTruncated=false;
         foreach($features as $feature) {
+            // Analyze all known technical workflows, not only the latest
+            // successful one. A previously unreconciled/legacy execution
+            // MUST remain visible to the migration decision.
             $ids=$this->db->fetchFirstColumn(
                 'SELECT w.id FROM cos_engineering_workflows w
-                 WHERE w.feature_id=:feature ORDER BY w.started_at DESC,w.id DESC LIMIT 1',
+                 WHERE w.feature_id=:feature
+                 ORDER BY w.started_at DESC,w.id DESC LIMIT 101',
                 ['feature'=>$feature['feature_id']],
             );
-            $workflow=$ids!==[]
-                ? $this->engineeringWorkflow($organizationId,(string)$ids[0])
-                : ['status'=>'no_target','reason'=>'engineering_business_workflow_not_found',
-                    'technical_counts'=>['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0],
-                    'read_only'=>true,'cutover_authorized'=>false];
-            $status=(string)$workflow['status'];
-            if (!array_key_exists($status,$counts)) $status='drift';
+            $truncated=count($ids)>100;
+            $historyTruncated=$historyTruncated || $truncated;
+            $workflows=[];
+            $technical=['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0];
+            $agentCounts=['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0];
+            foreach(array_slice($ids,0,100) as $id) {
+                $report=$this->engineeringWorkflow($organizationId,(string)$id);
+                foreach(($report['technical_counts']??[]) as $key=>$count) {
+                    if (array_key_exists($key,$agentCounts)) $agentCounts[$key]+=(int)$count;
+                }
+                $workflows[]=[
+                    'workflow_id'=>$id,
+                    'business_stage'=>$report['business_stage']??null,
+                    'status'=>$report['status'],
+                    'technical_counts'=>$report['technical_counts']??null,
+                ];
+                $state=(string)$report['status'];
+                if (array_key_exists($state,$technical)) ++$technical[$state];
+                else ++$technical['drift'];
+            }
+            $status=$technical['drift']>0?'drift':
+                ($technical['no_target']>0 || $ids===[] || $truncated?'no_target':'partial');
+            // Removing a permit while a technical claim exists must be
+            // surfaced as drift rather than silently returning MATCH.
+            $hasLinked=($technical['partial']+$technical['match']+$technical['drift'])>0;
+            $permit=$feature['mode']==='canonical'
+                && trim((string)$feature['approved_by'])!==''
+                && $feature['approved_at']!==null;
+            if ($hasLinked && !$permit) $status='drift';
             ++$counts[$status];
             $reports[]=[
                 'feature_id'=>$feature['feature_id'],
                 'rollout_mode'=>$feature['mode'],
-                'operator_approved'=>$feature['approved_by']!==null && $feature['approved_at']!==null,
+                'operator_approved'=>$permit,
                 'feature_status'=>$feature['feature_status'],
                 'workflow_id'=>$ids[0]??null,
-                'technical_counts'=>$workflow['technical_counts'],
+                'workflows'=>$workflows,
+                'history_truncated'=>$truncated,
+                'workflow_counts'=>$technical,
+                'technical_counts'=>$agentCounts,
                 'status'=>$status,
                 'business_gate_authority'=>'legacy_engineering',
                 'cutover_authorized'=>false,
             ];
         }
+        $incomplete=$historyTruncated || $total>count($features);
         $status=$counts['drift']>0?'drift':
-            ($counts['no_target']>0 || $reports===[]?'no_target':'partial');
+            ($incomplete || $counts['no_target']>0 || $reports===[]?'no_target':'partial');
         return [
             'source'=>'engineering_fleet','organization_id'=>$organizationId,
             'status'=>$status,'counts'=>$counts,'features'=>$reports,
+            'total_rollout_features'=>$total,'evaluated_features'=>count($features),
+            'history_truncated'=>$historyTruncated,'coverage_complete'=>!$incomplete,
             'read_only'=>true,'cutover_authorized'=>false,
             'business_gate_authority'=>'legacy_engineering',
         ];
