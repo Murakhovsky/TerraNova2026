@@ -202,6 +202,14 @@ final readonly class FederationCanonicalWorkflowBridge
         $org=$actor->organizationId()->value();
         $id=new WorkflowRunIdentity($org,$runId);
         $run=$this->requireRun($id);
+        $conflictingLegacy=$this->db->fetchOne(
+            'SELECT run_id FROM cos_federation_runs
+             WHERE organization_id=:org AND plan_id=:plan',
+            ['org'=>$org,'plan'=>$run->sourcePlanId],
+        );
+        if ($conflictingLegacy !== false) {
+            throw new DomainException('Dual canonical/legacy execution ownership: operator reconciliation required.');
+        }
         $result=static fn(string $state,?string $step=null,?string $action=null): array => [
             'run_id'=>$runId,'state'=>$state,'step_id'=>$step,'action_id'=>$action,
             'execution_authority'=>'platform_workflow',

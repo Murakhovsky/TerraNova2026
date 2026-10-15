@@ -61,6 +61,16 @@ final readonly class FederationSequentialOrchestrator
         if (!$run || $run['plan_state'] !== 'approved') {
             throw new DomainException('Federation Run or its approved Plan is unavailable.');
         }
+        // Fail closed on corrupted/cross-migrated Plan lineage. A Plan must
+        // NEVER have two authoritative technical Runs or Action key spaces.
+        $canonicalCollision = $this->db->fetchOne(
+            'SELECT run_id FROM cos_workflow_runs
+             WHERE organization_id=:org AND source_plan_id=:plan',
+            ['org'=>$org,'plan'=>$run['plan_id']],
+        );
+        if ($canonicalCollision !== false) {
+            throw new DomainException('Dual legacy/canonical execution ownership: operator reconciliation required.');
+        }
         $goal = $this->goals->specification($actor, (string) $run['goal_id']);
         if ($goal === null || $goal->version !== (int) $run['spec_version']) {
             throw new DomainException('Federation approved Goal specification is stale.');

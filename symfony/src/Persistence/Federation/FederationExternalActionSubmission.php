@@ -44,6 +44,18 @@ final readonly class FederationExternalActionSubmission
         // All goal, plan, step, tenant and immutable schema checks happen here.
         $proposal = $this->intents->create($actor, $runId, $stepId, $planApprovalActionId);
         $org = $actor->organizationId()->value();
+        $planId = $proposal->policyContext['federation']['plan_id'] ?? null;
+        if (!is_string($planId) || $planId === '') {
+            throw new DomainException('Federated Action has no immutable source Plan.');
+        }
+        $canonicalCollision = $this->db->fetchOne(
+            'SELECT run_id FROM cos_workflow_runs
+             WHERE organization_id=:org AND source_plan_id=:plan',
+            ['org'=>$org,'plan'=>$planId],
+        );
+        if ($canonicalCollision !== false) {
+            throw new DomainException('Canonical Workflow already owns this Plan; legacy Action submission blocked.');
+        }
         $owner = $this->domains->ownerOfAction($proposal->type);
         if ($owner === null || !$this->modules->isEnabled($org, $owner)) {
             throw new DomainException('Domain owner module disabled before Federation Action submission.');
