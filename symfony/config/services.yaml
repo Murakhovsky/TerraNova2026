@@ -2055,6 +2055,13 @@ services:
     public: true
     arguments:
       $pdo: '@cos.database.pdo'
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolExternalEvidence:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolProductionSoakPolicy: ~
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolProductionEvidenceReader:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\InstrumentPoolLifecycleReviewer: ~
   Domains\CapitalMarkets\Application\Service\InstrumentPoolScheduleTargets: ~
 
