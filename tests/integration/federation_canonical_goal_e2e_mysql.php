@@ -70,6 +70,8 @@ use Platform\Orchestration\Goal\GoalOutcomeEvaluator;
 use Platform\Orchestration\Goal\GoalPlanValidator;
 use Platform\Orchestration\Goal\GoalSpecification;
 use Platform\Workflow\Model\WorkflowRunIdentity;
+use Platform\Workflow\Model\WorkflowRunCommand;
+use Platform\Workflow\Model\WorkflowStepClaim;
 use Platform\Workflow\Service\WorkflowStepScheduler;
 
 $host=(string)(getenv('DB_HOST') ?: 'mysql');
@@ -297,6 +299,25 @@ try {
     $pdo->prepare('UPDATE cos_policies SET decision="APPROVAL_REQUIRED" WHERE id=:id')
         ->execute(['id'=>$policyId]);
     $pending=$bridge->advance($actor,$runId,$planApproval);
+    if($pending['state']!=='awaiting_human_approval'){
+        // A controlled CI-only diagnostic: no handler execution, no replay.
+        // Catch the precise Store claim/admission failure rather than weakening
+        // the fail-closed result returned to production operators.
+        $debugIdentity=new WorkflowRunIdentity($org,$runId);
+        $debugRun=$store->get($debugIdentity);
+        if($debugRun!==null){
+            try{
+                $store->claim(new WorkflowStepClaim(
+                    new WorkflowRunCommand($debugIdentity,$actor,$debugRun->revision,$debugRun->correlationId),
+                    'task','ci-claim-diagnostic',60,
+                ));
+                fwrite(STDERR,"DIAGNOSTIC: direct canonical claim succeeded after bridge rejection.\n");
+            }catch(Throwable $error){
+                fwrite(STDERR,'DIAGNOSTIC: '.get_class($error).': '.$error->getMessage()."\n");
+            }
+        }
+        fwrite(STDERR,'DIAGNOSTIC: bridge state='.(string)$pending['state']."\n");
+    }
     $assert($pending['state']==='awaiting_human_approval','Action not submitted through Policy service');
     $actionId=$pending['action_id']??null;
     $assert(is_string($actionId),'missing Action id');
