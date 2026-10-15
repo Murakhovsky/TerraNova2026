@@ -58,14 +58,14 @@ Non-Action кроки використовують `read:<kind>` і pinned `evid
 Для старих Runs команда `cos:federation:history:cutover` повертає також `step_reconciliation`: стан кожного кроку, число історичних Action attempts, посилання на Action і причину, чому неможливе автоматичне перенесення. Позначка `independent_action_receipt_attestation_required` **не є перевіреним receipt** і не означає дозвіл повторити Action.
 
 
-## P0: Federation Migration Safety
+## P0: Безпека історичної міграції Federation
 
 Historical migration is **no replay**. Only pristine, not-yet-dispatched
 legacy Runs are promotable. All claimed, ambiguous, completed or missing
 receipts remain archived for operator reconciliation, never converted into a
 new `wf:` Action or silently marked successful.
 
-### Two separate invariants
+### Окремі гарантії cutover і подальшої цілісності
 
 - **Cutover parity** is checked once inside the promotion transaction, at the
   instant before the new authority is committed. The result `match`, the
@@ -92,7 +92,7 @@ checker when available, as `verified_historical_receipt_archive_only`.
 **That result is archival evidence, not permission to execute, checkpoint
 or requeue any old Action.** The global legacy Action worker remains retired.
 
-### Trusted operator authorization
+### Авторизація оператора
 
 The old `--operator=arbitrary-string` switch is no longer sufficient.
 The privileged CLI accepts:
@@ -143,7 +143,7 @@ Legacy migrations recorded before this safety pack have no canonical
 identity baseline and are therefore reported as **requiring manual
 reconciliation**, not retroactively declared `healthy` without proof.
 
-### Acceptance gates
+### Критерії приймання
 
 `tests/integration/federation_historical_cutover_mysql.php` checks real
 MySQL tenant authorization, forged/missing permits, exactly one accepted

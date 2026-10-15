@@ -90,6 +90,9 @@ jobs:
       - name: Install Symfony dependencies
         working-directory: symfony
         run: composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Configure isolated MySQL CI function privileges
+        run: |
+          php -r '$db=new PDO("mysql:host=127.0.0.1;port=3306","root","ci-root-password", [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); $db->exec("SET GLOBAL log_bin_trust_function_creators = 1");'
       - name: Apply real MySQL schemas
         run: |
           php symfony/bin/console cos:schema:migrate

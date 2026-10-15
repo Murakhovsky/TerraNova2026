@@ -1,4 +1,12 @@
-# CI Performance Pack: measured, isolated, non-bypassing acceptance
+---
+title: CI Performance Pack
+description: Паралельні перевірки MySQL і Runtime, кешування образів Docker та вимірювання тривалості етапів без зниження контролю якості.
+kind: architecture
+status: proposed
+updated: 2026-10-15
+---
+
+# CI Performance Pack: паралельне виконання та контроль якості
 
 **Purpose:** reduce time to a useful failure on Federation without weakening the
 whole-production runtime acceptance. The jobs below run independently when the
@@ -16,7 +24,7 @@ longer prevents the other independent packs from running. The deployment job has
 restricted to successful `main` pushes. A manual workflow dispatch never
 deploys or modifies live production.
 
-## Docker caching
+## Кешування Docker
 
 The runtime job uses `docker/setup-buildx-action@v3` and two separate
 `docker/build-push-action@v6` builds with `load: true`. Their
@@ -37,7 +45,7 @@ Root and Symfony Composer archives also have independent lockfile-keyed
 `actions/cache@v4` caches. Node uses `setup-node`'s npm archive cache;
 `npm ci` and asset builds are still executed when required.
 
-## Timings and observability
+## Вимірювання тривалості та спостережуваність
 
 Every independent job invokes `bin/ci/step_timings.py` with `if: always()`.
 It obtains finished *GitHub Actions step* durations using the read-only
@@ -52,7 +60,7 @@ cold-cache and second warm-cache executions of the *same* lockfiles and
 Dockerfiles before quoting improvements. Use the actual GitHub job conclusion
 and commit SHA as the only acceptance signal.
 
-## Boundaries
+## Межі застосування
 
 The fast Federation gate uses the same MySQL 8.4 schema migrations and
 independent Action/receipt/Plan adapters, but uses host PHP 8.3 rather than
