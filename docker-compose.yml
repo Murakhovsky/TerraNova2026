@@ -36,6 +36,9 @@ x-app-environment: &app-environment
   COS_CM_BSTOCKS_OPPORTUNITY_ENABLED: ${COS_CM_BSTOCKS_OPPORTUNITY_ENABLED:-0}
   COS_CM_POOL_PRODUCTION_ARMED: ${COS_CM_POOL_PRODUCTION_ARMED:-0}
   COS_CM_INSTRUMENT_TRUST_SWEEPER_ENABLED: ${COS_CM_INSTRUMENT_TRUST_SWEEPER_ENABLED:-0}
+  COS_CM_STREAMING_MULTI_FLEET_ENABLED: ${COS_CM_STREAMING_MULTI_FLEET_ENABLED:-0}
+  COS_CM_STREAMING_BINANCE_SPOT_BATCH_PILOT: ${COS_CM_STREAMING_BINANCE_SPOT_BATCH_PILOT:-0}
+  COS_CM_STREAMING_MASSIVE_STOCKS_PILOT: ${COS_CM_STREAMING_MASSIVE_STOCKS_PILOT:-0}
   N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-}
   N8N_OUTBOUND_URL: ${N8N_OUTBOUND_URL:-}
   N8N_OUTBOUND_SECRET: ${N8N_OUTBOUND_SECRET:-}
@@ -258,6 +261,40 @@ services:
     networks: [backend]
 
   # OFF by default; one tenant + one source per bounded sweeper.
+  # OFF by default: explicit per-tenant, pre-approved source fleet only.
+  cm-stream-fleet:
+    profiles: [cm-stream-fleet]
+    image: cos-symfony-php:local
+    restart: on-failure:3
+    init: true
+    stop_grace_period: 45s
+    mem_limit: 2048m
+    cpus: "2.0"
+    command:
+      - sh
+      - -ec
+      - |
+        test -n "$COS_CM_FLEET_ORGANIZATION"
+        test -n "$COS_CM_FLEET_SOURCES"
+        case "$COS_CM_FLEET_ACTOR" in
+          ''|0|*[!0-9]*) echo "Invalid fleet operator"; exit 1 ;;
+        esac
+        php bin/console cos:capital-markets:market-data:stream:multi-fleet \
+          "$COS_CM_FLEET_ORGANIZATION" "$COS_CM_FLEET_ACTOR" \
+          --sources="$COS_CM_FLEET_SOURCES" --max-workers=16 \
+          --seconds=0 --execute
+    environment:
+      <<: *app-environment
+      COS_CM_STREAMING_MULTI_FLEET_ENABLED: "1"
+      COS_CM_FLEET_ORGANIZATION: ${COS_CM_FLEET_ORGANIZATION:-}
+      COS_CM_FLEET_ACTOR: ${COS_CM_FLEET_ACTOR:-0}
+      COS_CM_FLEET_SOURCES: ${COS_CM_FLEET_SOURCES:-}
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck: { disable: true }
+    networks: [backend]
+
   cm-instrument-trust-sweeper:
     profiles: [cm-instrument-trust-sweeper]
     image: cos-symfony-php:local

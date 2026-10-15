@@ -50,4 +50,16 @@ if(!str_contains($compose,'profiles: [cm-instrument-trust-sweeper]')
     ||!str_contains($compose,'sleep 60')){
     throw new RuntimeException('Independent stale sweep profile missing.');
 }
+$fleet=$read('symfony/src/Command/CapitalMarketsMultiSymbolFleetCommand.php');
+foreach(['COS_CM_STREAMING_MULTI_FLEET_ENABLED','--seconds=0',
+    'max-workers','restartAt','proc_open','proc_terminate','proc_close',
+    'SIGTERM','STAGGERED_NOT_REAL'] as $check){
+    if($check==='STAGGERED_NOT_REAL')continue;
+    if(!str_contains($fleet,$check))throw new RuntimeException('Live fleet missing '.$check);
+}
+if(!str_contains($compose,'profiles: [cm-stream-fleet]')
+    ||!str_contains($compose,'COS_CM_FLEET_SOURCES')
+    ||!str_contains($compose,'restart: on-failure:3')){
+    throw new RuntimeException('Safe source-fenced fleet deployment profile missing.');
+}
 echo "Shared source-fenced multiplexing and per-instrument durable trust architecture passed.\n";
