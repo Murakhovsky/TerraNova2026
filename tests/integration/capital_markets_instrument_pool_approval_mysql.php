@@ -232,11 +232,12 @@ try{
         'tn_capital_market_venues',
         'cos_organization_memberships',
         'tn_users',
-        'cos_organizations',
     ];
     foreach($tables as $table){
         $delete=$pdo->prepare('DELETE FROM '.$table.' WHERE organization_id IN (:a,:b)');
         $delete->execute(['a'=>$org,'b'=>$other]);
     }
+    $deleteOrg=$pdo->prepare('DELETE FROM cos_organizations WHERE id IN (:a,:b)');
+    $deleteOrg->execute(['a'=>$org,'b'=>$other]);
     $kernel->shutdown();
 }
