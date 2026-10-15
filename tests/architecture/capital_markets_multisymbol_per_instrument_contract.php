@@ -44,4 +44,10 @@ if(!str_contains($module,'20261015_000145_capital_markets_instrument_stream_trus
     ||!str_contains($services,'MysqlPerInstrumentStreamTrust:')){
     throw new RuntimeException('Production schema/service wiring missing.');
 }
+$compose=$read('docker-compose.yml');
+if(!str_contains($compose,'profiles: [cm-instrument-trust-sweeper]')
+    ||!str_contains($compose,'COS_CM_INSTRUMENT_TRUST_SWEEPER_ENABLED')
+    ||!str_contains($compose,'sleep 60')){
+    throw new RuntimeException('Independent stale sweep profile missing.');
+}
 echo "Shared source-fenced multiplexing and per-instrument durable trust architecture passed.\n";
