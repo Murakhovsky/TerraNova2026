@@ -137,7 +137,7 @@ final readonly class FederationGoalStore
                   AND NOT EXISTS (
                       SELECT 1 FROM cos_federation_execution_migrations m
                       WHERE m.organization_id=r.organization_id
-                        AND m.legacy_run_id=r.run_id AND m.migration_state='promoted'
+                        AND m.legacy_run_id=r.run_id AND m.migration_state=\'promoted\'
                   )
                 UNION ALL
                 SELECT w.run_id,p.goal_id,p.plan_id,w.state,w.revision,w.created_at
@@ -445,7 +445,7 @@ final readonly class FederationGoalStore
                    AND NOT EXISTS (
                      SELECT 1 FROM cos_federation_execution_migrations m
                      WHERE m.organization_id=r.organization_id AND m.legacy_run_id=r.run_id
-                       AND m.migration_state='promoted'
+                       AND m.migration_state=\'promoted\'
                    ) FOR UPDATE',
                 ['org' => $org, 'run' => $runId],
             );

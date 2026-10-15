@@ -173,8 +173,12 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
                 throw new DomainException('Workflow claim bypasses the immutable dependency order or active claim.');
             }
             $row = $byId[$claim->stepId];
-            // Canonical worker admission is mandatory for any external operation.
-            if ($row['side_effect_level'] === 'external') {
+            // Production's composite admission explicitly guards BOTH Action
+            // and evidence-only claims. Historical isolated Store callers using
+            // a custom admission retain their narrow fixture semantics.
+            if ($row['side_effect_level'] === 'external'
+                || ($row['side_effect_level'] === 'none'
+                    && $this->admission instanceof WorkflowClaimAdmissionRouter)) {
                 $this->admission->assertAuthorized($claim, self::stepSnapshot($row));
             }
             $token = bin2hex(random_bytes(16));
@@ -224,6 +228,21 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             if ($checkpoint->nextState === StepStatus::COMPLETED) {
                 if ($checkpoint->resultReference === null || $checkpoint->resultReference === '') {
                     throw new DomainException('Completed Workflow Step must provide an independently attested receipt.');
+                }
+                if ($row['side_effect_level'] === 'none') {
+                    // Verify the independently persisted fact against the
+                    // exact checkpoint time, not the old claim timestamp.
+                    // Both timestamp update and receipt attestation happen
+                    // inside ONE transaction: failure rolls back the timestamp,
+                    // retains the claimed Step and cannot invent completion.
+                    $changed=$this->db->executeStatement(
+                        'UPDATE cos_workflow_steps SET updated_at=NOW(6)
+                         WHERE organization_id=:org AND run_id=:run AND step_id=:step
+                           AND state=:state AND claim_token=:token',
+                        [...self::keys($command->identity),'step'=>$checkpoint->stepId,
+                            'state'=>StepStatus::CLAIMED->value,'token'=>$checkpoint->claimToken],
+                    );
+                    if ($changed!==1) throw new DomainException('Stale evidence-only Step claim.');
                 }
                 $this->assertReceipt(
                     $command->actor, $command->identity, $run,

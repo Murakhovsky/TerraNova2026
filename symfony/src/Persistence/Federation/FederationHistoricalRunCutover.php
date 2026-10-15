@@ -33,7 +33,6 @@ final readonly class FederationHistoricalRunCutover
         private Connection $db,
         private WorkflowExecutionStoreInterface $store,
         private DoctrineWorkflowShadowParityReader $parity,
-        private FederationGoalStore $goals,
         private FederationPlanApprovalEvidenceReader $approvals,
     ) {}
 
