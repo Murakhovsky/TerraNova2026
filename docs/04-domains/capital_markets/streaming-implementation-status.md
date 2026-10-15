@@ -14,6 +14,8 @@ updated: 2026-10-14
 
 Реалізовано машину станів відновлення, контроль поколінь підключення, узгодження підписок, контроль heartbeat і часу останнього повідомлення, читання підписок із наявного сховища, керування lease та захищені транзакційні операції. Незалежний sweeper охоплює всі відомі пілотні shards, включно з багатосимвольним Massive; невдала інвалідація зберігає право власності до повторного відновлення. Додано транзакційний source writer gate: за активного WebSocket lease REST-опитувач не перезаписує котирування і статус здоров'я джерела.
 
+Додано opt-in Binance Spot multi-symbol BBO batch для 2–100 пар зі спільним source lease, підтвердженням підписки, незалежною перевіркою update ID / freshness і per-instrument quarantine; emergency sweeper знає його shard. Реальний live canary та production-soak ще не проведені.
+
 Додано початковий WebSocket-транспорт і пілотні адаптери Binance Spot BBO, Bybit Spot BBO, Kraken Spot ticker BBO, Binance USD-M Perpetual BBO, Bybit Linear Perpetual BBO та Massive Stocks NBBO (reference-only), початково для одного інструмента. Додано окремий batch-пілот Massive NBBO до 25 акцій на одному socket з незалежним ACK і перевіркою послідовності за тикером. Додано per-instrument trust invalidation: stale/one-sided NBBO ізолюють equity до наступного свіжого повного quote без зайвих підписок; malformed/crossed NBBO та sequence rollback запускають unsubscribe/re-ACK/re-subscribe лише для цього ticker. Здорові символи й спільний transport health залишаються активними. Створені модульні й архітектурні тести не замінюють виконання інтеграційних перевірок.
 
 ## Незавершені компоненти

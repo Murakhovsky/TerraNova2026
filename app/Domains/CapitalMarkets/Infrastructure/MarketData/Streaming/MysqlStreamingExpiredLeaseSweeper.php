@@ -24,6 +24,7 @@ final readonly class MysqlStreamingExpiredLeaseSweeper
     /** @var list<string> */
     public const PILOT_SHARDS=[
         'binance-spot-single-bbo',
+        'binance-spot-multi-bbo',
         'bybit-spot-single-bbo',
         'kraken-spot-single-bbo',
         'binance-usdm-single-bbo',
