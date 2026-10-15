@@ -217,8 +217,9 @@ final readonly class FederationHistoricalRunCutover
             'SELECT owner_id FROM cos_federation_goals WHERE organization_id=:org AND goal_id=:goal',
             ['org'=>$org,'goal'=>$row['goal_id']],
         );
-        if (!$plan || !is_string($owner) || $owner==='') {
-            throw new DomainException('Historical Run Plan/Goal ownership is missing.');
+        if (!$plan || !is_string($owner) || $owner===''
+            || (string)$plan['goal_id']!==(string)$row['goal_id']) {
+            throw new DomainException('Historical Run Plan/Goal ownership is missing or mismatched.');
         }
         $steps=$this->db->fetchAllAssociative(
             'SELECT * FROM cos_federation_steps WHERE organization_id=:org AND run_id=:run ORDER BY step_id'

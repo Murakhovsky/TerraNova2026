@@ -167,6 +167,22 @@ try {
     }
     $reject(static fn()=> $cutover->promotePristine($org,$runId,'operator-ci'),
         'duplicate historical promotion');
+    // Once promoted, historical Run/Step rows are pinned to their exact
+    // pre-cutover checksum and can never become silent new authority.
+    $db->executeStatement(
+        'UPDATE cos_federation_steps SET attempts=1
+         WHERE organization_id=:org AND run_id=:run AND step_id=:step',
+        ['org'=>$org,'run'=>$runId,'step'=>'publish'],
+    );
+    $mutated=$cutover->inspect($org,$runId);
+    if (!in_array('legacy_source_mutated_after_cutover',$mutated['reasons'],true)) {
+        throw new RuntimeException('Changed historical Step bypassed immutable source checksum.');
+    }
+    $db->executeStatement(
+        'UPDATE cos_federation_steps SET attempts=0
+         WHERE organization_id=:org AND run_id=:run AND step_id=:step',
+        ['org'=>$org,'run'=>$runId,'step'=>'publish'],
+    );
     $actions=(int)$db->fetchOne(
         'SELECT COUNT(*) FROM cos_actions WHERE organization_id=:org AND idempotency_key LIKE :key',
         ['org'=>$org,'key'=>'fed:%'],
@@ -225,6 +241,15 @@ try {
     }
     $reject(static fn()=> $cutover->promotePristine($org,$blocked,'operator-ci'),
         'previously claimed Action could replay');
+    $mixed='mixed-'.$token;
+    $db->executeStatement(
+        'INSERT INTO cos_federation_runs
+         (organization_id,run_id,goal_id,plan_id,state,revision,created_at,updated_at)
+         VALUES (:org,:run,:goal,:plan,"pending",1,NOW(6),NOW(6))',
+        ['org'=>$org,'run'=>$mixed,'goal'=>$blockedGoal,'plan'=>$planId],
+    );
+    $reject(static fn()=> $cutover->inspect($org,$mixed),
+        'legacy Run points to a Plan owned by a different Goal');
     $other=$shadow->federation('other-tenant',$runId);
     if($other->status->value!=='no_target') {
         throw new RuntimeException('Historical shadow leaked tenant information.');

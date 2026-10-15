@@ -547,6 +547,16 @@ final readonly class FederationGoalStore
             if ($runState !== 'running') {
                 throw new DomainException('Cannot finish a Federation Step outside a running Run.');
             }
+            // A promoted legacy Run is immutable shadow evidence. Its Action
+            // receipts can only be inspected, never written by old recovery.
+            $migration = $this->db->fetchOne(
+                'SELECT migration_state FROM cos_federation_execution_migrations
+                 WHERE organization_id=:org AND legacy_run_id=:run',
+                ['org'=>$org,'run'=>$runId],
+            );
+            if ($migration !== false) {
+                throw new DomainException('Migrated Federation Run is immutable; use canonical Workflow reconciliation.');
+            }
             $step = $this->db->fetchAssociative(
                 'SELECT state, side_effect_level FROM cos_federation_steps
                  WHERE organization_id = :org AND run_id = :run AND step_id = :step FOR UPDATE',

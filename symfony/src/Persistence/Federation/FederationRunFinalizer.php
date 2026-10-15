@@ -44,6 +44,14 @@ final readonly class FederationRunFinalizer
                 || (int) $run['revision'] !== $expectedRevision) {
                 throw new LogicException('Run is not running or the expected revision is stale.');
             }
+            $migration=$this->db->fetchOne(
+                'SELECT migration_state FROM cos_federation_execution_migrations
+                 WHERE organization_id=:org AND legacy_run_id=:run',
+                ['org'=>$org,'run'=>$runId],
+            );
+            if ($migration !== false) {
+                throw new DomainException('Historical promoted Run cannot be finalized by legacy executor.');
+            }
             $steps = $this->db->fetchAllAssociative(
                 'SELECT step_id, side_effect_level, state, idempotency_key, result_reference
                  FROM cos_federation_steps WHERE organization_id = :org AND run_id = :run
