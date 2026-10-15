@@ -60,6 +60,19 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_pool_stream_assignments (
     CONSTRAINT chk_cm_pool_shard_kind CHECK (kind IN ('BBO','L2'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Durable 5-minute receipts from a real tenant-scoped runtime watchdog.
+-- Run epoch is bound to soak_started_at; old test/rollout receipts cannot be reused.
+CREATE TABLE IF NOT EXISTS tn_capital_market_pool_soak_checkpoints (
+    organization_id VARCHAR(190) NOT NULL,
+    soak_started_at DATETIME(6) NOT NULL,
+    bucket_at DATETIME(6) NOT NULL,
+    healthy TINYINT(1) NOT NULL,
+    evidence_sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    observed_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (organization_id,soak_started_at,bucket_at),
+    CONSTRAINT chk_cm_pool_checkpoint_healthy CHECK (healthy IN (0,1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Time-range evidence reads must avoid unindexed whole-table scans.
 ALTER TABLE tn_capital_market_canonical_events
     ADD INDEX ix_cm_pool_soak_window

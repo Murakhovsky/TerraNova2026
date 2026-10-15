@@ -23,6 +23,7 @@ foreach(['COS_CM_POOL_PRODUCTION_ARMED','CANARY','SOAK','ACCEPTED','LIVE',
 foreach(['source_id IN (__SOURCE_PLACEHOLDERS__)','tn_capital_market_canonical_events',
     'tn_capital_market_quality_metrics','tn_capital_market_stream_worker_leases',
     'tn_capital_market_pool_stream_assignments',
+    'tn_capital_market_pool_soak_checkpoints',
     'ALL_SUPERVISED_SOURCES_OBSERVED','mode','ISSUER_IDENTITY'] as $part){
     if(!str_contains($reader,$part))throw new RuntimeException('Production MySQL evidence missing '.$part);
 }
@@ -32,6 +33,11 @@ foreach(['instrument_pool.approve','instrument_pool.propose',
     if(!str_contains($proof,$part)){
         throw new RuntimeException('Independent attestation and revocation contract missing '.$part);
     }
+}
+if(!str_contains($reader,'function recordSoakCheckpoint(')
+    ||!str_contains($reader,'function soakCheckpoints(')
+    ||!str_contains($command,'RECORDING_LIVE_OBSERVATIONS')){
+    throw new RuntimeException('Durable watchdog checkpoint evidence gate missing.');
 }
 if(!str_contains($schema,'reviewed_by <> submitted_by')
     ||!str_contains($schema,'tn_capital_market_pool_stream_assignments')

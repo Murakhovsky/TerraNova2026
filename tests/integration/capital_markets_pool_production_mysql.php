@@ -179,6 +179,18 @@ try{
         &&$result['gates']['L2_50']===false,
         'Fixture passed 250 BBO/50 L2 production acceptance or trusted symbols were not counted.');
     $assert($reader->canaryHealthy($org,[$source]),'Trusted live MySQL canary rejected.');
+    $assert(!$reader->soakCheckpoints($org,$start)['accepted'],
+        'Absent live watchdog checkpoints passed production acceptance.');
+    $c=$reader->recordSoakCheckpoint($org,$start,[$source]);
+    $assert($c['healthy']===true
+        &&$c['checkpoint']['observations']===1,
+        'Live watchdog checkpoint was not persisted.');
+    $pdo->prepare(
+        "UPDATE tn_capital_market_pool_soak_checkpoints SET healthy=0
+         WHERE organization_id=?")->execute([$org]);
+    $reader->recordSoakCheckpoint($org,$start,[$source]);
+    $assert($reader->soakCheckpoints($org,$start)['healthy']===0,
+        'Healthy retry resurrected previously failing watchdog bucket.');
     $pdo->prepare("UPDATE tn_capital_market_pool_stream_assignments
                    SET shard_key='absent-worker' WHERE organization_id=? AND instrument_id=?")
         ->execute([$org,$l2]);
@@ -227,7 +239,8 @@ try{
         'Other tenant stole real canonical acceptance evidence.');
     echo "Production attestation, canary, LIVE 24h MySQL quality, lease, issuer and tenant isolation passed. Fixtures are NOT real soak.\n";
 }finally{
-    foreach(['tn_capital_market_pool_stream_assignments','tn_capital_market_data_gaps','tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
+    foreach(['tn_capital_market_pool_soak_checkpoints',
+        'tn_capital_market_pool_stream_assignments','tn_capital_market_data_gaps','tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
         'tn_capital_market_stream_worker_leases',
         'tn_capital_market_pool_external_evidence',
         'tn_capital_market_subscriptions','tn_capital_market_source_health',

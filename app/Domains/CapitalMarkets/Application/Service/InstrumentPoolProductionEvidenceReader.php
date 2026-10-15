@@ -198,6 +198,62 @@ SQL;
         return $result;
     }
 
+    /**
+     * Record one authoritative per-5-minute checkpoint from the running watchdog.
+     * A failing observation poisons the bucket even if a later retry succeeds.
+     * Fixtures may exercise the SQL in CI but are never production receipts.
+     */
+    public function recordSoakCheckpoint(string $org,string $soakStart,array $sources):array
+    {
+        if($soakStart===''||$sources===[]||count($sources)>64
+            ||count(array_unique($sources))!==count($sources)){
+            throw new DomainException('Explicit active soak epoch and source scope required.');
+        }
+        $valid=\DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$soakStart,
+            new \DateTimeZone('UTC'));
+        if($valid===false||$valid->format('Y-m-d H:i:s')!==$soakStart){
+            throw new DomainException('Invalid soak epoch.');
+        }
+        $healthy=$this->canaryHealthy($org,$sources);
+        $digest=hash('sha256',json_encode([$org,$soakStart,$sources,$healthy],
+            JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
+        $save=$this->connection->prepare(
+            "INSERT INTO tn_capital_market_pool_soak_checkpoints
+             (organization_id,soak_started_at,bucket_at,healthy,evidence_sha256)
+             VALUES (:org,:epoch,
+                FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(UTC_TIMESTAMP(6))/300)*300),
+                :healthy,:digest)
+             ON DUPLICATE KEY UPDATE
+                healthy=LEAST(healthy,VALUES(healthy)),
+                evidence_sha256=IF(VALUES(healthy)=0,VALUES(evidence_sha256),evidence_sha256)");
+        $save->execute(['org'=>$org,'epoch'=>$soakStart,'healthy'=>$healthy?1:0,
+            'digest'=>$digest]);
+        return ['healthy'=>$healthy,'checkpoint'=>$this->soakCheckpoints($org,$soakStart)];
+    }
+
+    /** @return array{observations:int,healthy:int,required:int,current:bool,accepted:bool} */
+    public function soakCheckpoints(string $org,string $soakStart):array
+    {
+        $query=$this->connection->prepare(
+            "SELECT COUNT(*) AS observations,COALESCE(SUM(healthy),0) AS healthy,
+             MAX(bucket_at) AS last_bucket
+             FROM tn_capital_market_pool_soak_checkpoints
+             WHERE organization_id=:org AND soak_started_at=:epoch
+               AND bucket_at>=:start_after
+               AND bucket_at<DATE_ADD(:start_before,INTERVAL 24 HOUR)");
+        $query->execute(['org'=>$org,'epoch'=>$soakStart,
+            'start_after'=>$soakStart,'start_before'=>$soakStart]);
+        $row=$query->fetch(PDO::FETCH_ASSOC);
+        $observations=(int)($row['observations']??0);
+        $healthy=(int)($row['healthy']??0);
+        $last=$row['last_bucket']??null;
+        $timestamp=is_string($last)?strtotime($last.' UTC'):false;
+        $current=$timestamp!==false&&$timestamp>=time()-600;
+        return ['observations'=>$observations,'healthy'=>$healthy,'required'=>276,
+            'current'=>$current,
+            'accepted'=>$observations>=276&&$healthy>=276&&$current];
+    }
+
     public function canaryHealthy(string $org,array $allowedSourceIds):bool
     {
         if($allowedSourceIds===[]||count($allowedSourceIds)>64)return false;

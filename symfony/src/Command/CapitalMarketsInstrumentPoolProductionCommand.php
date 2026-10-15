@@ -273,6 +273,10 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         if(!$report['accepted'])throw new DomainException(
             '24h LIVE 250 BBO + 50 L2 quality/entitlement gates are not green.'
         );
+        $checkpoints=$this->reader->soakCheckpoints($org,$old['soak_started_at']);
+        if(!$checkpoints['accepted']){
+            throw new DomainException('Durable 5-minute soak watchdog observations are insufficient.');
+        }
         $this->transactions->transactional(function() use ($org,$actor,$old,$report):void {
             $locked=$this->lockedControl($org);
             if(!is_array($locked)||$locked['phase']!=='SOAK'||$locked['soak_started_at']!==$old['soak_started_at']){
@@ -284,7 +288,8 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                  last_reviewed_by=:actor WHERE organization_id=:org");
             $q->execute(['digest'=>$report['digest'],'actor'=>$actor,'org'=>$org]);
         });
-        return ['phase'=>'ACCEPTED','acceptance'=>$report,'production_running'=>false];
+        return ['phase'=>'ACCEPTED','acceptance'=>$report,
+            'checkpoints'=>$checkpoints,'production_running'=>false];
     }
 
     private function promote(string $org,int $actor):array
@@ -297,7 +302,10 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
         }
         $this->assertSourceAttested($org,$this->decodeIds($old['source_ids_json']));
         $report=$this->reader->report($org,$old['soak_started_at'],$this->decodeIds($old['source_ids_json']));
-        if(!$report['accepted'])throw new DomainException('Live production evidence degraded since acceptance.');
+        if(!$report['accepted']
+            ||!$this->reader->soakCheckpoints($org,$old['soak_started_at'])['accepted']){
+            throw new DomainException('Live evidence or durable soak checkpoints degraded.');
+        }
         $this->transactions->transactional(function() use ($org,$actor):void {
             $locked=$this->lockedControl($org);
             if(!is_array($locked)||$locked['phase']!=='ACCEPTED'){
@@ -358,8 +366,22 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
     private function watchdog(string $org,int $actor):array
     {
         $control=$this->control($org);
-        if(!is_array($control)||$control['phase']!=='LIVE'){
-            return ['phase'=>$control['phase']??'OFF','monitoring'=>'NOT_LIVE'];
+        if(!is_array($control)){
+            return ['phase'=>'OFF','monitoring'=>'NOT_LIVE'];
+        }
+        if($control['phase']==='CANARY'){
+            return ['phase'=>'CANARY','monitoring'=>'PILOT',
+                'healthy'=>$this->reader->canaryHealthy($org,
+                    $this->decodeIds($control['source_ids_json']))];
+        }
+        if($control['phase']==='SOAK'){
+            return ['phase'=>'SOAK','monitoring'=>'RECORDING_LIVE_OBSERVATIONS',
+                'checkpoint'=>$this->reader->recordSoakCheckpoint(
+                    $org,$control['soak_started_at'],
+                    $this->decodeIds($control['source_ids_json']))];
+        }
+        if($control['phase']!=='LIVE'){
+            return ['phase'=>$control['phase'],'monitoring'=>'NOT_LIVE'];
         }
         try{
             $report=$this->reader->report($org,$control['soak_started_at'],
