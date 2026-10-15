@@ -187,12 +187,13 @@ final readonly class EngineeringSecurityRecoveryService
     {
         $checkpoint = $this->lock->synchronized(
             $featureId,
-            function () use ($featureId, $organizationId, $recoveryId): array {
+            function () use ($featureId, $organizationId, $recoveryId): ?array {
                 $feature = $this->ownedFeature($featureId, $organizationId);
                 $last = self::latestCheckpoint($feature);
-                if ($last === null || $last['recovery_id'] !== $recoveryId || $last['state'] !== 'QUEUED') {
-                    throw new RuntimeException('Recovery already started or does not match prepared checkpoint.');
+                if ($last === null || $last['recovery_id'] !== $recoveryId) {
+                    throw new RuntimeException('Recovery does not match the authorized checkpoint.');
                 }
+                if ($last['state'] !== 'QUEUED') return null; // Duplicate message, no second LLM.
                 $workflow = $this->workflows->get($last['workflow_id']);
                 if ($workflow->currentState() !== EngineeringWorkflowState::ARCHITECTURE_PENDING) {
                     throw new RuntimeException('Targeted recovery Architect stage is no longer pending.');
@@ -204,6 +205,7 @@ final readonly class EngineeringSecurityRecoveryService
             },
         );
 
+        if ($checkpoint === null) return ['state' => 'DUPLICATE_IGNORED', 'executed_llm' => false];
         $workflowId = (string) $checkpoint['workflow_id'];
         $correlation = 'engineering:security-recovery:'.$recoveryId;
         try {
@@ -232,7 +234,7 @@ final readonly class EngineeringSecurityRecoveryService
                 ])));
             $this->specialists->executeRole(
                 $featureId, $workflowId, $organizationId, $correlation,
-                AgentRole::SECURITY_SPECIALIST, 'PRE_DEVELOPMENT',
+                AgentRole::SECURITY_SPECIALIST, 'TARGETED_RECOVERY',
             );
 
             $review = $this->artifacts->latest($featureId, ArtifactType::SECURITY_REVIEW_REPORT);
