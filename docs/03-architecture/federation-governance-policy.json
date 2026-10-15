@@ -34,6 +34,16 @@
       "version": "1.0.0"
     },
     {
+      "id": "FED-INV-04",
+      "description": "No new generic Federation execution engine or Run/Step persistence writer; legacy writers are frozen until verified canonical cutover.",
+      "scope": "execution",
+      "severity": "error",
+      "check": "execution_authority_freeze",
+      "exception_policy": "none",
+      "owner": "cos.architecture",
+      "version": "1.0.0"
+    },
+    {
       "id": "FED-INV-07",
       "description": "Operations use authenticated tenant context.",
       "scope": "security",

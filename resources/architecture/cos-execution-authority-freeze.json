@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0.0",
+  "baseline_head": "a8b2cd5cb921ef96dacaf648af7e5f5767937e4a",
+  "status": "ACTIVE_FREEZE__CANONICAL_CUTOVER_NOT_COMPLETE",
+  "coverage": "Static direct SQL/DBAL writer detection in app/, symfony/src/, bin/; not a runtime call graph or live DB audit.",
+  "canonical_authority": "Platform Workflow Execution",
+  "allowed_writers": {
+    "cos_federation_runs": [
+      "symfony/src/Persistence/Federation/FederationGoalStore.php",
+      "symfony/src/Persistence/Federation/FederationRunFinalizer.php"
+    ],
+    "cos_federation_steps": [
+      "symfony/src/Persistence/Federation/FederationGoalStore.php"
+    ],
+    "cos_workflow_runs": [
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php",
+      "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionGateway.php"
+    ],
+    "cos_workflow_steps": [
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php",
+      "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionGateway.php"
+    ]
+  },
+  "legacy_exception": {
+    "status": "FROZEN_NO_NEW_WRITERS",
+    "sources": [
+      "cos_federation_runs",
+      "cos_federation_steps"
+    ],
+    "sunset_gate": "verified migration and shadow parity of every tenant/run/step/Action receipt, in-flight drain and single-writer fence"
+  },
+  "engineering_exception": {
+    "status": "DIRECT_CANONICAL_SQL_DEBT",
+    "path": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionGateway.php",
+    "sunset_gate": "route canonical create/claim/checkpoint/recovery via WorkflowExecutionStoreInterface; preserve AgentRun business history and human gates"
+  },
+  "grandfathered_legacy_executors": [
+    "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
+    "symfony/src/Persistence/Federation/FederationReadOnlyWorkflowRunner.php"
+  ],
+  "governance_rule": "FED-INV-04"
+}
