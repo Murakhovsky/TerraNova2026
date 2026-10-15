@@ -10,8 +10,14 @@ on:
       - 'docker/**'
       - 'docker-compose.yml'
       - 'deploy/**'
-      - 'tests/smoke/**'
+      - 'tests/**'
+      - 'resources/contracts/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
       - 'bin/verify'
+      - 'bin/ci/**'
       - '.github/workflows/runtime.yml'
   pull_request:
     branches: [main]
@@ -19,15 +25,36 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  runtime:
+  federation-mysql:
+    name: Federation MySQL
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    # Host PHP + MySQL, not the whole Docker/Nginx/frontend image.
+    # Mirrors real schema migrations and real MySQL-backed test repositories.
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: cos
+          MYSQL_USER: cos
+          MYSQL_PASSWORD: ci-cos-password
+          MYSQL_ROOT_PASSWORD: ci-root-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password --silent"
+          --health-interval=10s --health-timeout=5s --health-retries=15
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
     env:
-      MYSQL_DATABASE: cos
-      MYSQL_USER: cos
-      MYSQL_PASSWORD: ci-cos-password
-      MYSQL_ROOT_PASSWORD: ci-root-password
+      APP_ENV: prod
+      APP_DEBUG: '0'
+      APP_SECRET: ci-app-secret-0123456789abcdef
       SYMFONY_APP_SECRET: ci-app-secret-0123456789abcdef
       COS_ORGANIZATION_ID: default
       COS_AGENT_LLM_MODE: fixture
@@ -37,6 +64,74 @@ jobs:
       N8N_WEBHOOK_SECRET: ci-n8n-secret
       MERCURE_JWT_SECRET: ci-mercure-secret-0123456789abcdef
       MERCURE_PUBLIC_URL: http://127.0.0.1:8081/.well-known/mercure
+      DATABASE_URL: mysql://cos:ci-cos-password@127.0.0.1:3306/cos?serverVersion=8.4.0&charset=utf8mb4
+      REDIS_URL: redis://127.0.0.1:6379
+      MESSENGER_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_async
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://127.0.0.1:6379/cos_failed
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: cos
+      DB_USERNAME: cos
+      DB_PASSWORD: ci-cos-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: intl, pdo_mysql, curl, zip, redis, pcntl
+          coverage: none
+      - name: Cache Symfony Composer archives
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: symfony-composer-${{ runner.os }}-php83-${{ hashFiles('symfony/composer.lock') }}
+          restore-keys: |
+            symfony-composer-${{ runner.os }}-php83-
+      - name: Install Symfony dependencies
+        working-directory: symfony
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
+      - name: Apply real MySQL schemas
+        run: |
+          php symfony/bin/console cos:schema:migrate
+          php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Federation single-writer architecture gate
+        run: php tests/architecture/federation_canonical_goal_cutover.php
+      - name: Federation core MySQL admission/receipt/Goal E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: |
+          set -euo pipefail
+          php tests/integration/workflow_federation_plan_evidence_mysql.php
+          php tests/integration/workflow_action_claim_admission_mysql.php
+          php tests/integration/workflow_action_receipt_mysql.php
+          php tests/integration/federation_canonical_goal_e2e_mysql.php
+      - name: Federation historical cutover and non-Action MySQL
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: |
+          set -euo pipefail
+          php tests/integration/federation_historical_cutover_mysql.php
+          php tests/integration/federation_non_action_goal_mysql.php
+      - name: Publish per-step timings
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CI_TIMING_JOB: Federation MySQL
+        run: python3 bin/ci/step_timings.py
+      - name: Upload timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-timings-federation
+          path: ${{ runner.temp }}/cos-ci-timings.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  capital-markets-unit:
+    name: Capital Markets Pack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -47,11 +142,17 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: composer install --no-interaction --prefer-dist --no-progress
-      - run: npm ci
-      - run: npm run build
-      - name: Current verification
-        run: bash bin/verify fast
+      - name: Cache root Composer archives
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: root-composer-${{ runner.os }}-php83-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            root-composer-${{ runner.os }}-php83-
+      - name: Install root dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Build frontend dependencies for parity
+        run: npm ci && npm run build
       - name: Capital Markets Capital Risk and Decision Workspace acceptance
         run: |
           php tests/unit/capital_markets_cross_venue_discovery.php
@@ -77,10 +178,91 @@ jobs:
           php tests/unit/capital_markets_decision_workspace_freshness.php
           php tests/integration/capital_markets_decision_workspace_acceptance.php
           php tests/integration/capital_markets_decision_workspace_manager_acceptance.php
+      - name: Publish per-step timings
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CI_TIMING_JOB: Capital Markets Pack
+        run: python3 bin/ci/step_timings.py
+      - name: Upload timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-timings-capital-markets
+          path: ${{ runner.temp }}/cos-ci-timings.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  runtime:
+    name: runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      MYSQL_DATABASE: cos
+      MYSQL_USER: cos
+      MYSQL_PASSWORD: ci-cos-password
+      MYSQL_ROOT_PASSWORD: ci-root-password
+      SYMFONY_APP_SECRET: ci-app-secret-0123456789abcdef
+      COS_ORGANIZATION_ID: default
+      COS_AGENT_LLM_MODE: fixture
+      LLM_PROVIDER: fixture
+      LLM_MODEL: ci-fixture
+      SPATIAL_JWT_SECRET: ci-spatial-secret-0123456789abcdef
+      N8N_WEBHOOK_SECRET: ci-n8n-secret
+      MERCURE_JWT_SECRET: ci-mercure-secret-0123456789abcdef
+      MERCURE_PUBLIC_URL: http://127.0.0.1:8081/.well-known/mercure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cache root Composer archives
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: root-composer-${{ runner.os }}-php83-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            root-composer-${{ runner.os }}-php83-
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci
+      - run: npm run build
+      - name: Current verification
+        run: bash bin/verify fast
       - name: Compose validation
         run: docker compose config --quiet
-      - name: Build runtime
-        run: docker compose build php nginx
+      # Load cache-backed production images into the runner's Docker engine.
+      # Subsequent "docker compose up" uses these exact local tags without
+      # an implicit rebuild. Each service has its own mutable GHA cache scope.
+      - name: Initialize BuildKit
+        uses: docker/setup-buildx-action@v3
+      - name: Build PHP runtime (BuildKit GHA cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/symfony/php/Dockerfile
+          load: true
+          tags: cos-symfony-php:local
+          cache-from: type=gha,scope=cos-runtime-php-v1
+          cache-to: type=gha,scope=cos-runtime-php-v1,mode=max,ignore-error=true
+      - name: Build Nginx runtime (BuildKit GHA cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/symfony/nginx/Dockerfile
+          load: true
+          tags: cos-nginx:latest
+          cache-from: type=gha,scope=cos-runtime-nginx-v1
+          cache-to: type=gha,scope=cos-runtime-nginx-v1,mode=max,ignore-error=true
+      - name: Verify runtime image tags
+        run: |
+          docker image inspect cos-symfony-php:local >/dev/null
+          docker image inspect cos-nginx:latest >/dev/null
       - name: Start dependencies
         run: docker compose up -d --wait mysql redis mercure
       - name: Apply schema
@@ -494,7 +676,7 @@ jobs:
         with:
           name: golden-eight-evidence
           path: tmp/golden-eight
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 14
 
       - name: External reference browser QA
@@ -514,12 +696,28 @@ jobs:
         with:
           name: external-reference-evidence
           path: tmp/external-reference
-          if-no-files-found: warn
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Publish per-step timings
+        if: always()
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CI_TIMING_JOB: runtime
+        run: python3 bin/ci/step_timings.py
+      - name: Upload timing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-timings-runtime
+          path: ${{ runner.temp }}/cos-ci-timings.json
+          if-no-files-found: ignore
           retention-days: 14
 
   deploy-dev:
     name: Deploy main to AWS dev
-    needs: runtime
+    needs: [runtime, federation-mysql, capital-markets-unit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: AWS TN2026
