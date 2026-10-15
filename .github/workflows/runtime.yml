@@ -149,6 +149,17 @@ jobs:
             -e DB_USERNAME="$MYSQL_USER" \
             -e DB_PASSWORD="$MYSQL_PASSWORD" \
             php php /tmp/workflow_action_claim_admission_mysql.php
+      - name: Federation canonical Goal-to-Outcome MySQL E2E acceptance
+        run: |
+          docker compose cp tests/integration/federation_canonical_goal_e2e_mysql.php php:/tmp/federation_canonical_goal_e2e_mysql.php
+          docker compose exec -T \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            -e DB_HOST=mysql \
+            -e DB_PORT=3306 \
+            -e DB_DATABASE="$MYSQL_DATABASE" \
+            -e DB_USERNAME="$MYSQL_USER" \
+            -e DB_PASSWORD="$MYSQL_PASSWORD" \
+            php php /tmp/federation_canonical_goal_e2e_mysql.php
       - name: Workflow DAG worker predecessor receipts MySQL acceptance
         run: |
           docker compose cp tests/integration/workflow_worker_predecessor_receipts_mysql.php php:/tmp/workflow_worker_predecessor_receipts_mysql.php
