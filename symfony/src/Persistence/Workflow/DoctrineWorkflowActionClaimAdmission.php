@@ -114,10 +114,16 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
             $identity, (string) $context['source_plan_id'],
             (string) $context['source_plan_digest'], (string) $context['approval_reference'],
         );
+        // ActionPolicyService persists through a separate PDO transaction.
+        // The caller's canonical Run transaction may have established a MySQL
+        // REPEATABLE READ snapshot before that Action was committed.
+        // Locking current reads see the newly committed Action, Policy and
+        // Approval rather than making an incorrect "missing Action" decision.
+        // This does not relax any independent human / Policy / attempt gate.
         $actions = $this->db->fetchAllAssociative(
             'SELECT id,status,type,target_type,target_id,parameters,source_type,source_id,
                     execution_mode,idempotency_key,correlation_id
-             FROM cos_actions WHERE organization_id=:org AND idempotency_key=:key',
+             FROM cos_actions WHERE organization_id=:org AND idempotency_key=:key FOR UPDATE',
             ['org' => $identity->organizationId, 'key' => 'wf:' . $step->idempotencyKey],
         );
         if (count($actions) !== 1) {
@@ -150,7 +156,7 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
         $policy = $this->db->fetchOne(
             'SELECT decision FROM cos_policy_evaluations
              WHERE organization_id=:org AND action_id=:action
-             ORDER BY evaluated_at DESC,id DESC LIMIT 1',
+             ORDER BY evaluated_at DESC,id DESC LIMIT 1 FOR UPDATE',
             ['org' => $identity->organizationId, 'action' => $action['id']],
         );
         if ($policy !== 'APPROVAL_REQUIRED') {
@@ -158,7 +164,7 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
         }
         $decisions = $this->db->fetchAllAssociative(
             'SELECT status,decided_by_type,decided_by_id,decided_at,expires_at
-             FROM cos_approvals WHERE organization_id=:org AND action_id=:action',
+             FROM cos_approvals WHERE organization_id=:org AND action_id=:action FOR UPDATE',
             ['org' => $identity->organizationId, 'action' => $action['id']],
         );
         if (count($decisions) !== 1) {
