@@ -41,6 +41,7 @@ final readonly class InstrumentPoolProductionSoakPolicy
             if(($row['approved_entitlement']??false)!==true)$reasons[]='ENTITLEMENT_UNVERIFIED';
             if(($row['issuer_verified']??false)!==true)$reasons[]='ISSUER_UNVERIFIED';
             if(($row['source_enabled']??false)!==true)$reasons[]='SOURCE_DISABLED';
+            if(($row['assignment_registered']??false)!==true)$reasons[]='MISSING_SHARD_ASSIGNMENT';
             if(($row['worker_active']??false)!==true)$reasons[]='NO_ACTIVE_FENCED_WORKER';
             if(($row['source_healthy']??false)!==true)$reasons[]='SOURCE_HEALTH_DEGRADED';
             if(($row['subscription_active']??false)!==true)$reasons[]='NO_ACTIVE_SUBSCRIPTION';

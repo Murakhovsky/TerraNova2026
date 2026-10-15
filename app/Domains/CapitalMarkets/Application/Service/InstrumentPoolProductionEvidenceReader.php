@@ -117,13 +117,24 @@ SQL;
         foreach($gaps->fetchAll(PDO::FETCH_ASSOC) as $gap){
             $unresolved[$gap['source_id'].'|'.$gap['instrument_id'].'|'.$gap['data_type']]=true;
         }
+        $assignments=$this->connection->prepare(
+            'SELECT source_id,instrument_id,kind,shard_key
+             FROM tn_capital_market_pool_stream_assignments WHERE organization_id=:org');
+        $assignments->execute(['org'=>$org]);
+        $assignmentMap=[];
+        foreach($assignments->fetchAll(PDO::FETCH_ASSOC) as $a){
+            $assignmentMap[$a['source_id'].'|'.$a['instrument_id'].'|'.$a['kind']]=$a['shard_key'];
+        }
         $lease=$this->connection->prepare(
-            "SELECT DISTINCT source_id
+            "SELECT source_id,shard_key
              FROM tn_capital_market_stream_worker_leases
              WHERE organization_id=:org AND owner_id<>'' AND fencing_token>0
                AND expires_at>UTC_TIMESTAMP(6)");
         $lease->execute(['org'=>$org]);
-        $leased=array_fill_keys($lease->fetchAll(PDO::FETCH_COLUMN),true);
+        $leased=[];
+        foreach($lease->fetchAll(PDO::FETCH_ASSOC) as $l){
+            $leased[$l['source_id'].'|'.$l['shard_key']]=true;
+        }
         $instruments=$this->connection->prepare(
             'SELECT instrument_id,family,status,metadata_json
              FROM tn_capital_market_instruments WHERE organization_id=:org');
@@ -149,7 +160,10 @@ SQL;
                 if(isset($subscribed[$subKey.$type]))$activeSubscription=true;
                 if(isset($unresolved[$subKey.$type]))$hasGap=true;
             }
+            $assignmentKey=$r['source_id'].'|'.$r['instrument_id'].'|'.$r['kind'];
+            $shard=$assignmentMap[$assignmentKey]??null;
             $rows[]=[
+                'assignment_registered'=>$shard!==null,
                 'source_healthy'=>$healthy[$r['source_id']]??false,
                 'subscription_active'=>$activeSubscription,
                 'unresolved_gap'=>$hasGap,
@@ -166,7 +180,7 @@ SQL;
                 'issuer_verified'=>$issuerOk&&is_array($instrument)
                     &&$instrument['status']==='ACTIVE',
                 'source_enabled'=>is_array($source)&&(int)$source['enabled']===1,
-                'worker_active'=>isset($leased[$r['source_id']]),
+                'worker_active'=>$shard!==null&&isset($leased[$r['source_id'].'|'.$shard]),
             ];
         }
         $result=$this->policy->evaluate($rows,$elapsed);
@@ -201,6 +215,14 @@ SQL;
                ON q.organization_id=e.organization_id AND q.canonical_event_id=e.canonical_event_id
              JOIN tn_capital_market_data_sources s
                ON s.organization_id=e.organization_id AND s.source_id=e.source_id AND s.enabled=1
+             JOIN tn_capital_market_pool_stream_assignments a
+               ON a.organization_id=e.organization_id AND a.source_id=e.source_id
+              AND a.instrument_id=e.instrument_id
+              AND a.kind=CASE WHEN e.event_type='BBO' THEN 'BBO' ELSE 'L2' END
+             JOIN tn_capital_market_stream_worker_leases lease
+               ON lease.organization_id=e.organization_id AND lease.source_id=e.source_id
+              AND lease.shard_key=a.shard_key AND lease.owner_id<>'' AND lease.fencing_token>0
+              AND lease.expires_at>UTC_TIMESTAMP(6)
              WHERE e.organization_id=:org
                AND e.received_timestamp>DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 5 MINUTE)
                AND e.event_type IN ('BBO','ORDER_BOOK_SNAPSHOT')

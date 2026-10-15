@@ -13,7 +13,8 @@ foreach(['BBO'=>250,'L2'=>50] as $kind=>$total){
             'hour_buckets'=>24,'five_minute_buckets'=>288,'bad_samples'=>0,'age_seconds'=>10,
             'mode'=>'LIVE','approved_entitlement'=>true,
             'issuer_verified'=>true,'source_enabled'=>true,'worker_active'=>true,
-            'source_healthy'=>true,'subscription_active'=>true,'unresolved_gap'=>false];
+            'source_healthy'=>true,'subscription_active'=>true,'unresolved_gap'=>false,
+            'assignment_registered'=>true];
     }
 }
 $good=$policy->evaluate($rows,true);
@@ -34,6 +35,8 @@ $bad=$rows;$bad[0]['approved_entitlement']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Missing external entitlement passed.');
 $bad=$rows;$bad[0]['issuer_verified']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Unverified token issuer passed.');
+$bad=$rows;$bad[0]['assignment_registered']=false;
+$assert(!$policy->evaluate($bad,true)['accepted'],'Missing shard assignment passed.');
 $bad=$rows;$bad[0]['source_healthy']=false;
 $assert(!$policy->evaluate($bad,true)['accepted'],'Degraded health passed.');
 $bad=$rows;$bad[0]['subscription_active']=false;

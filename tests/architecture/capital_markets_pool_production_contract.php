@@ -22,6 +22,7 @@ foreach(['COS_CM_POOL_PRODUCTION_ARMED','CANARY','SOAK','ACCEPTED','LIVE',
 }
 foreach(['source_id IN (__SOURCE_PLACEHOLDERS__)','tn_capital_market_canonical_events',
     'tn_capital_market_quality_metrics','tn_capital_market_stream_worker_leases',
+    'tn_capital_market_pool_stream_assignments',
     'ALL_SUPERVISED_SOURCES_OBSERVED','mode','ISSUER_IDENTITY'] as $part){
     if(!str_contains($reader,$part))throw new RuntimeException('Production MySQL evidence missing '.$part);
 }

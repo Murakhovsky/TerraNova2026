@@ -40,6 +40,12 @@ Production actions are disabled by default. Configure COS_CM_POOL_PRODUCTION_ARM
 
 For tokenized securities, create and independently review ISSUER_IDENTITY using the canonical instrument ID as subject. The URL must be a permanent HTTPS document URL with no credential in the query, username or password. Proof expires in at most 30 days. A new PENDING/REJECTED/expired document for the same scope blocks an older approval. Revocation immediately removes production rights; the watchdog rolls the rollout back after its next check.
 
+**Реєстрація точних потокових shards перед запуском**
+
+    ... assign-shard --organization=ORG --actor=OPERATOR --source=SOURCE_A --instrument=CANONICAL_INSTRUMENT_ID --kind=BBO --shard=WORKER_SHARD_KEY --confirm=ASSIGN_POOL_SHARD
+
+Виконайте реєстрацію для кожного інструмента і призначеного shard. Ключ повинен точно відповідати активному запису worker lease. Операція дозволена лише коли rollout вимкнений; не створює нових фінансових інструментів, мапінгів чи потокових підписок.
+
 **Пілотний запуск**
 
     ... canary --organization=ORG --actor=OPERATOR --sources=SOURCE_A --confirm=CANARY_INSTRUMENT_POOL

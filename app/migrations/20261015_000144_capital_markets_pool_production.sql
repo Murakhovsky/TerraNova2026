@@ -38,6 +38,28 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_pool_production_control (
       ('OFF','CANARY','SOAK','ACCEPTED','LIVE','ROLLED_BACK'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Operational shard assignments only. No shadow identity registry and no auto-subscribe.
+CREATE TABLE IF NOT EXISTS tn_capital_market_pool_stream_assignments (
+    organization_id VARCHAR(190) NOT NULL,
+    source_id VARCHAR(190) NOT NULL,
+    instrument_id VARCHAR(190) NOT NULL,
+    kind VARCHAR(8) NOT NULL,
+    shard_key VARCHAR(190) NOT NULL,
+    assigned_by BIGINT UNSIGNED NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (organization_id,source_id,instrument_id,kind),
+    KEY ix_cm_pool_shard_assignment (organization_id,source_id,shard_key),
+    CONSTRAINT fk_cm_pool_shard_source FOREIGN KEY (organization_id,source_id)
+      REFERENCES tn_capital_market_data_sources(organization_id,source_id)
+      ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT fk_cm_pool_shard_instrument FOREIGN KEY (organization_id,instrument_id)
+      REFERENCES tn_capital_market_instruments(organization_id,instrument_id)
+      ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT chk_cm_pool_shard_kind CHECK (kind IN ('BBO','L2'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Time-range evidence reads must avoid unindexed whole-table scans.
 ALTER TABLE tn_capital_market_canonical_events
     ADD INDEX ix_cm_pool_soak_window

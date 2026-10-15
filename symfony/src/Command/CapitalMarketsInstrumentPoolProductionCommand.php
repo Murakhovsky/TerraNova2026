@@ -38,11 +38,15 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
     protected function configure():void
     {
         $this->addArgument('action',\Symfony\Component\Console\Input\InputArgument::REQUIRED,
-                'status|attest|review|revoke|canary|soak|accept|promote|rollback|watchdog')
+                'status|attest|review|revoke|assign-shard|canary|soak|accept|promote|rollback|watchdog')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Tenant (required)',null)
             ->addOption('actor',null,InputOption::VALUE_REQUIRED,'Authorized operator id','0')
             ->addOption('sources',null,InputOption::VALUE_REQUIRED,'Comma-separated approved source IDs')
-            ->addOption('kind',null,InputOption::VALUE_REQUIRED,'SOURCE_ENTITLEMENT|ISSUER_IDENTITY')
+            ->addOption('source',null,InputOption::VALUE_REQUIRED,'Existing canonical market source ID')
+            ->addOption('instrument',null,InputOption::VALUE_REQUIRED,'Existing canonical ACTIVE instrument ID')
+            ->addOption('kind',null,InputOption::VALUE_REQUIRED,'BBO|L2')
+            ->addOption('shard',null,InputOption::VALUE_REQUIRED,'Exact supervised worker shard key')
+
             ->addOption('subject',null,InputOption::VALUE_REQUIRED,'Source or canonical instrument ID')
             ->addOption('document-url',null,InputOption::VALUE_REQUIRED,'Permanent HTTPS evidence URL')
             ->addOption('sha256',null,InputOption::VALUE_REQUIRED,'SHA256 of reviewed document')
@@ -93,6 +97,13 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                     (string)$input->getOption('reason'));
                 return $this->out($output,['status'=>'REVOKED'],Command::SUCCESS);
             }
+            if($action==='assign-shard'){
+                $this->confirm($input,'ASSIGN_POOL_SHARD');
+                $assignment=$this->assignShard($org,$actor,
+                    (string)$input->getOption('source'),(string)$input->getOption('instrument'),
+                    (string)$input->getOption('kind'),(string)$input->getOption('shard'));
+                return $this->out($output,$assignment,Command::SUCCESS);
+            }
             if(!in_array($action,['canary','soak','accept','promote','rollback','watchdog'],true)){
                 throw new DomainException('Unknown production action.');
             }
@@ -116,6 +127,51 @@ final class CapitalMarketsInstrumentPoolProductionCommand extends Command
                 'error_type'=>get_class($e),'error'=>$e instanceof DomainException
                     ?$e->getMessage():'Production action failed without credential disclosure.'],Command::FAILURE);
         }
+    }
+
+    /** @return array<string,string> */
+    private function assignShard(string $org,int $actor,string $source,string $instrument,
+        string $kind,string $shard):array
+    {
+        $this->evidence->assertAuthorized($org,$actor,'capital_markets.market_data.manage');
+        if(getenv('COS_CM_POOL_PRODUCTION_ARMED')!=='1'){
+            throw new DomainException('Explicit production arming required for shard assignment.');
+        }
+        if(!in_array($kind,['BBO','L2'],true)
+            ||$shard===''||strlen($shard)>190
+            ||preg_match('/^[a-zA-Z0-9:_-]+$/D',$shard)!==1
+            ||$source===''||$instrument===''||strlen($instrument)>190){
+            throw new DomainException('Exact source, canonical instrument, BBO/L2 and shard required.');
+        }
+        $sourceId=MarketSourceId::fromString($source);
+        return $this->transactions->transactional(function()use(
+            $org,$actor,$source,$instrument,$kind,$shard,$sourceId):array {
+            $control=$this->lockedControl($org);
+            if(!in_array($control['phase']??null,['OFF','ROLLED_BACK'],true)){
+                throw new DomainException('Shard configuration is immutable while a rollout is running.');
+            }
+            $src=$this->sources->get($org,$sourceId);
+            if($src===null||$src->enabled){
+                throw new DomainException('Configure only an existing disabled source.');
+            }
+            $exists=$this->connection->prepare(
+                "SELECT status FROM tn_capital_market_instruments
+                 WHERE organization_id=:org AND instrument_id=:instrument");
+            $exists->execute(['org'=>$org,'instrument'=>$instrument]);
+            if($exists->fetchColumn()!=='ACTIVE'){
+                throw new DomainException('Only ACTIVE canonical instruments can be assigned.');
+            }
+            $save=$this->connection->prepare(
+                "INSERT INTO tn_capital_market_pool_stream_assignments
+                 (organization_id,source_id,instrument_id,kind,shard_key,assigned_by)
+                 VALUES (:org,:source,:instrument,:kind,:shard,:actor)
+                 ON DUPLICATE KEY UPDATE shard_key=VALUES(shard_key),
+                    assigned_by=VALUES(assigned_by),updated_at=UTC_TIMESTAMP(6)");
+            $save->execute(['org'=>$org,'source'=>$source,'instrument'=>$instrument,
+                'kind'=>$kind,'shard'=>$shard,'actor'=>$actor]);
+            return ['status'=>'REGISTERED','source_id'=>$source,
+                'instrument_id'=>$instrument,'kind'=>$kind,'shard_key'=>$shard];
+        });
     }
 
     /** @return list<string> */
