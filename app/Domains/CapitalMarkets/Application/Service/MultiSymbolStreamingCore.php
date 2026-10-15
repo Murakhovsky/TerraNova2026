@@ -23,7 +23,7 @@ final readonly class MultiSymbolStreamingCore
     private const PROVIDERS=[
         'binance.spot.rest'=>['provider'=>'BINANCE_SPOT','limit'=>100,'minimum'=>2,
             'command'=>'cos:capital-markets:market-data:stream:binance-spot-batch'],
-        'massive.stocks.reference'=>['provider'=>'MASSIVE_STOCKS','limit'=>25,'minimum'=>2,
+        'massive.stocks.v2'=>['provider'=>'MASSIVE_STOCKS','limit'=>25,'minimum'=>2,
             'command'=>'cos:capital-markets:market-data:stream:massive-stocks-batch'],
     ];
     public function __construct(
