@@ -99,4 +99,63 @@ final readonly class MysqlPerInstrumentStreamTrust
         }
         return $decision['status'];
     }
+
+    /**
+     * Independently expire stale symbols without claiming the provider
+     * transport itself is disconnected. Safe to rerun: only TRUSTED rows
+     * expire, and no sibling instrument can be modified.
+     *
+     * @return array{expired:int,remaining:bool}
+     */
+    public function sweepStale(string $org,string $source,int $thresholdSeconds=120,int $limit=250):array
+    {
+        if($org===''||trim($org)!==$org||strlen($org)>190||$source===''||strlen($source)>190
+            ||$thresholdSeconds<30||$thresholdSeconds>3600||$limit<1||$limit>500
+            ||$this->pdo->inTransaction()){
+            throw new DomainException('Invalid or nested symbol freshness sweep.');
+        }
+        $this->pdo->beginTransaction();
+        try{
+            $q=$this->pdo->prepare(
+                "SELECT instrument_id,channel FROM tn_capital_market_instrument_stream_trust
+                 WHERE organization_id=:org AND source_id=:source AND status='TRUSTED'
+                   AND (last_event_at IS NULL OR
+                     last_event_at<DATE_SUB(UTC_TIMESTAMP(6),INTERVAL :age SECOND))
+                 ORDER BY instrument_id,channel LIMIT :lim FOR UPDATE SKIP LOCKED");
+            $q->bindValue(':org',$org);
+            $q->bindValue(':source',$source);
+            $q->bindValue(':age',$thresholdSeconds,PDO::PARAM_INT);
+            $q->bindValue(':lim',$limit,PDO::PARAM_INT);
+            $q->execute();
+            $rows=$q->fetchAll(PDO::FETCH_ASSOC);
+            foreach($rows as $row){
+                $params=['org'=>$org,'source'=>$source,'instrument'=>$row['instrument_id'],
+                    'channel'=>$row['channel']];
+                $u=$this->pdo->prepare(
+                    "UPDATE tn_capital_market_instrument_stream_trust
+                     SET status='STALE',recovery_required=1,reason='INSTRUMENT_STALE',
+                         last_quality_score=0,updated_at=UTC_TIMESTAMP(6)
+                     WHERE organization_id=:org AND source_id=:source
+                       AND instrument_id=:instrument AND channel=:channel AND status='TRUSTED'");
+                $u->execute($params);
+                if($u->rowCount()!==1)continue;
+                foreach(['tn_capital_market_states','tn_capital_market_reference_states'] as $table){
+                    $stmt=$this->pdo->prepare(
+                        "UPDATE $table SET trust_status='UNTRUSTED',quality_score=0,
+                            state_json=JSON_SET(state_json,'$.trust_status','UNTRUSTED',
+                               '$.quality_status','UNTRUSTED','$.quality.status','UNTRUSTED',
+                               '$.quality.score',0),
+                            updated_at=UTC_TIMESTAMP(6)
+                         WHERE organization_id=:org AND source_id=:source
+                           AND instrument_id=:instrument AND trust_status<>'UNTRUSTED'");
+                    $stmt->execute(['org'=>$org,'source'=>$source,'instrument'=>$row['instrument_id']]);
+                }
+            }
+            $this->pdo->commit();
+            return ['expired'=>count($rows),'remaining'=>count($rows)===$limit];
+        }catch(\Throwable $e){
+            if($this->pdo->inTransaction())$this->pdo->rollBack();
+            throw $e;
+        }
+    }
 }
