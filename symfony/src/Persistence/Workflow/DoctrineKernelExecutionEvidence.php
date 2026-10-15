@@ -18,7 +18,8 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
 
     public function assertBegin(
         WorkflowRunIdentity $identity,string $kind,string $sourceId,string $capability,
-        string $inputDigest,string $correlation,string $worker
+        string $inputDigest,string $correlation,string $worker,
+        bool $historicalReceipt=false
     ):void {
         if ($kind==='agent') {
             $job=$this->db->fetchAssociative(
@@ -53,7 +54,8 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
              WHERE organization_id=:org AND id=:action FOR UPDATE',
             ['org'=>$identity->organizationId,'action'=>$parts[1]]);
         if(!$a || $a['type']!=='kernel.tool.invoke' || $a['target_type']!=='tool'
-            || $a['target_id']!==$capability || $a['status']!=='RUNNING'
+            || $a['target_id']!==$capability
+            || !in_array($a['status'],$historicalReceipt?['RUNNING','COMPLETED']:['RUNNING'],true)
             || $a['execution_mode']!=='APPROVAL_REQUIRED'
             || $a['correlation_id']!==$correlation) {
             throw new DomainException('Tool does not have an approved canonical Action in execution.');
@@ -79,7 +81,7 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
             || !$approvals[0]['decided_at']
             || !$approvals[0]['decided_by_id']
             || $approvals[0]['decided_by_id']===$a['source_id']
-            || ($approvals[0]['expires_at']!==null
+            || (!$historicalReceipt && $approvals[0]['expires_at']!==null
                 && strtotime($approvals[0]['expires_at'].' UTC')<=time())) {
             throw new DomainException('Tool Action has no independent live human approval.');
         }
@@ -121,7 +123,7 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
         }
         $row=$this->db->fetchAssociative(
             'SELECT id,source_type,category,action,subject_type,subject_id,
-                    input_references,result,changes,metadata,correlation_id
+                    input_references,result,changes,metadata,correlation_id,created_at
              FROM cos_audit_log WHERE organization_id=:org AND id=:audit',
             ['org'=>$identity->organizationId,'audit'=>$matches[1]]);
         if(!$row || $row['source_type']!=='TOOL' || $row['category']!=='platform_activity'
@@ -146,7 +148,24 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
         if(!str_starts_with($sourceId,'read:') && ($metadata['tool_effect']??null)==='READ') {
             throw new DomainException('Approved mutation Action was paired with read-only Tool metadata.');
         }
-        $this->assertBegin($identity,'tool',$sourceId,$capability,$inputDigest,$correlation,'');
+        $this->assertBegin($identity,'tool',$sourceId,$capability,$inputDigest,$correlation,'',true);
+        // Historical approval is only valid if it existed at audit execution
+        // time. Its later expiry must not rewrite an authentic prior receipt.
+        if(str_starts_with($sourceId,'act:')) {
+            $parts=explode(':',$sourceId,3);
+            $approval=$this->db->fetchAssociative(
+                'SELECT decided_at,expires_at FROM cos_approvals
+                 WHERE organization_id=:org AND action_id=:action AND status="APPROVED"',
+                ['org'=>$identity->organizationId,'action'=>$parts[1]],
+            );
+            $at=strtotime((string)$row['created_at'].' UTC');
+            if(!$approval || $at===false
+                || strtotime((string)$approval['decided_at'].' UTC')>$at
+                || ($approval['expires_at']!==null
+                    && strtotime((string)$approval['expires_at'].' UTC')<=$at)) {
+                throw new DomainException('Tool audit did not occur within its independently approved window.');
+            }
+        }
     }
 
     private function assertBeginAgentReadonly(
@@ -157,7 +176,7 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
              WHERE organization_id=:org AND id=:job',
             ['org'=>$identity->organizationId,'job'=>$sourceId]);
         $payload=$job?json_decode((string)$job['payload'],true,512,JSON_THROW_ON_ERROR):null;
-        if(!$job || $job['type']!=='AGENT_RUN' || $job['status']!=='RUNNING'
+        if(!$job || $job['type']!=='AGENT_RUN' || !in_array($job['status'],['RUNNING','COMPLETED'],true)
             || (int)$job['attempts']!==1 || $job['correlation_id']!==$correlation
             || !is_array($payload) || ($payload['agent_name']??null)!==$agent
             || WorkflowDefinitionFingerprint::digest([$payload])!==$digest) {

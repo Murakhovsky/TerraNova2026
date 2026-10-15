@@ -100,6 +100,9 @@ try {
     && $store->steps($agentRun->identity)[0]->resultReference!==null,
     'Canonical Agent completion not independently attested.');
  $deny(static fn()=> $fence->completeAgent($claim,$nativeId),'duplicate Agent completion');
+ $db->executeStatement('UPDATE cos_jobs SET status="COMPLETED",completed_at=NOW(6)
+    WHERE organization_id=:org AND id=:job',
+    ['org'=>$org,'job'=>$jobId]);
 
  // Read-only Tool: audited receipt must match native tenant, identity and input.
  $toolClaim=$fence->beginTool($toolInvocation,$toolDefinition,$toolId);
@@ -193,6 +196,9 @@ try {
     $org,$writeClaim->runId))?->status->value==='completed',
     'Native WRITE Tool independent proof was not accepted.');
  $deny(static fn()=> $fence->completeTool($writeClaim,$writeAudit),'replay of WRITE Tool');
+ $db->executeStatement('UPDATE cos_actions SET status="COMPLETED",executed_at=NOW(6)
+    WHERE organization_id=:org AND id=:action',
+    ['org'=>$org,'action'=>$actionId]);
 
  // An in-flight Agent with no receipt is quarantined, never replayed.
  $job2=bin2hex(random_bytes(16));$trace2='crash-'.$token;
