@@ -1,6 +1,6 @@
 ---
 title: Instrument Pool production acceptance
-description: Controlled canary, 24h MySQL live verification and rollback for BBO/L2 monitoring.
+description: Контрольований пілотний запуск, добова перевірка потокових котирувань BBO/L2 у MySQL та аварійне відновлення.
 status: draft
 kind: operations
 updated: 2026-10-15
