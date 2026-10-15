@@ -127,6 +127,19 @@ final readonly class StreamingTrustInvalidator implements
                 }
             }
 
+            // Revoke durable per-symbol recovery too: stale recovered streams
+            // cannot be admitted from an older lease/epoch after quarantine.
+            $trust=$this->pdo->prepare(
+                'UPDATE tn_capital_market_instrument_stream_trust
+                 SET status=\'UNTRUSTED\',recovery_required=1,
+                     reason=:reason,last_quality_score=0,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND source_id=:source'.
+                 ($instrumentId===null?'':' AND instrument_id=:instrument')
+            );
+            $trust->execute(array_merge([
+                'reason'=>$flag,'org'=>$organizationId,'source'=>$sourceId,
+            ],$scopeParams));
+
             // A single ticker problem is not a transport outage.
             if($instrumentId===null){
                 $health=$this->pdo->prepare(

@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_instrument_stream_trust (
   source_id VARCHAR(190) NOT NULL,
   instrument_id VARCHAR(190) NOT NULL,
   channel VARCHAR(8) NOT NULL,
+  shard_key VARCHAR(190) NOT NULL DEFAULT '',
   status VARCHAR(16) NOT NULL DEFAULT 'UNTRUSTED',
   fencing_token BIGINT UNSIGNED NOT NULL,
   last_sequence VARCHAR(190) NULL,

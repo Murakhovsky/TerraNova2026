@@ -2035,9 +2035,18 @@ services:
 
   Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner: ~
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlPerInstrumentStreamTrust:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Service\PerInstrumentStreamTrustMachine: ~
+  Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner: ~
+  Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore: ~
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway:
     arguments:
       $pdo: '@cos.database.pdo'
+      $instrumentTrust: '@Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlPerInstrumentStreamTrust'
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingExpiredLeaseSweeper:
     arguments:

@@ -100,6 +100,7 @@ generated: true
 | `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_pool_production_control` |
 | `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_pool_soak_checkpoints` |
 | `capital_markets` | `app/migrations/20261015_000144_capital_markets_pool_production.sql` | `tn_capital_market_pool_stream_assignments` |
+| `capital_markets` | `app/migrations/20261015_000145_capital_markets_instrument_stream_trust.sql` | `tn_capital_market_instrument_stream_trust` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
