@@ -2039,6 +2039,10 @@ services:
 
   Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner: ~
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingIncidentManager:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification:
     arguments:
       $pdo: '@cos.database.pdo'

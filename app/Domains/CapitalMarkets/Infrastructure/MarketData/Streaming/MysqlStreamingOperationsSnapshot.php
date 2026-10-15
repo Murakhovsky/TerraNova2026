@@ -100,7 +100,8 @@ final readonly class MysqlStreamingOperationsSnapshot
              LEFT JOIN tn_capital_market_stream_worker_leases l
                ON l.organization_id=p.organization_id
               AND l.source_id=p.source_id AND l.shard_key=p.shard_key
-             WHERE p.".$where." GROUP BY p.source_id LIMIT 501");
+             WHERE p.organization_id=:org".($sourceId===null?'':' AND p.source_id=:source')."
+             GROUP BY p.source_id LIMIT 501");
         $acks->execute($args);
         $provider=[];
         foreach($acks->fetchAll(PDO::FETCH_ASSOC) as $receipt){
