@@ -363,6 +363,18 @@ try {
  $deny(static fn()=> $recover->reconcile($cmd($one,2),$requestId),
     'reconciliation without second manager');
  $recover->approve($cmd($two,2),$requestId);
+ // Even an already second-approved operator request is not an evidence source.
+ $forged='kernel:agent:'.str_repeat('0',32).':'.str_repeat('f',64);
+ $db->executeStatement(
+    'UPDATE cos_workflow_recovery_decisions SET receipt_reference=:forged
+     WHERE organization_id=:org AND request_id=:request AND status="APPROVED"',
+    ['forged'=>$forged,'org'=>$org,'request'=>$requestId]);
+ $deny(static fn()=> $recover->reconcile($cmd($two,2),$requestId),
+    'approved but forged native Agent receipt');
+ $db->executeStatement(
+    'UPDATE cos_workflow_recovery_decisions SET receipt_reference=:valid
+     WHERE organization_id=:org AND request_id=:request AND status="APPROVED"',
+    ['valid'=>$expectedReceipt,'org'=>$org,'request'=>$requestId]);
  $recover->reconcile($cmd($two,2),$requestId);
  $expect($store->get($expiredIdentity)?->status->value==='completed'
     && $store->steps($expiredIdentity)[0]->resultReference===$expectedReceipt,
