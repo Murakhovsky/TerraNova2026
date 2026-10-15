@@ -1887,9 +1887,14 @@ services:
   Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSubscriptionRepository
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRawMarketEventRepository:
     arguments:
       $connection: '@cos.database.pdo'
+      $provenance: '@Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance'
 
   Domains\CapitalMarkets\Application\Contract\RawMarketEventRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRawMarketEventRepository
