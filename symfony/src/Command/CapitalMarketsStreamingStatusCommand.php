@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingOperationsSnapshot;
+use Domains\CapitalMarkets\Application\Service\StreamingOperationsHealthEvaluator;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -20,7 +21,8 @@ use Throwable;
     description:'Read tenant-filtered streaming lease and market trust status as JSON.')]
 final class CapitalMarketsStreamingStatusCommand extends Command
 {
-    public function __construct(private readonly MysqlStreamingOperationsSnapshot $snapshot)
+    public function __construct(private readonly MysqlStreamingOperationsSnapshot $snapshot,
+        private readonly StreamingOperationsHealthEvaluator $alerts,)
     {parent::__construct();}
 
     protected function configure():void
@@ -38,6 +40,7 @@ final class CapitalMarketsStreamingStatusCommand extends Command
         }
         try{
             $result=$this->snapshot->inspect($org,$source);
+            $result['health_evaluation']=$this->alerts->evaluate($result);
             $output->writeln(json_encode($result,JSON_THROW_ON_ERROR));
             return Command::SUCCESS;
         }catch(Throwable $error){

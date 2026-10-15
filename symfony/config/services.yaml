@@ -2013,6 +2013,7 @@ services:
   Domains\CapitalMarkets\Application\Service\CrossVenueUniverse: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueCatalogDiscovery: ~
   Domains\CapitalMarkets\Application\Service\InstrumentPoolCatalogAudit: ~
+  Domains\CapitalMarkets\Application\Service\StreamingOperationsHealthEvaluator: ~
   Domains\CapitalMarkets\Application\Service\CrossVenueQuoteSampler: ~
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository:
     arguments:
