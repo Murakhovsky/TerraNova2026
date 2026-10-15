@@ -112,7 +112,10 @@ jobs:
       - name: Capital Markets read-only streaming operations MySQL
         run: |
           docker compose cp tests/integration/capital_markets_streaming_ops_mysql.php php:/tmp/capital_markets_streaming_ops_mysql.php
-          docker compose exec -T -e COS_CM_STREAM_OPS_TEST=1 php php /tmp/capital_markets_streaming_ops_mysql.php
+          docker compose exec -T \
+            -e COS_CM_STREAM_OPS_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/capital_markets_streaming_ops_mysql.php
       - name: Capital Markets per-instrument streaming trust MySQL
         run: |
           docker compose cp tests/integration/capital_markets_instrument_stream_trust_mysql.php php:/tmp/cm-instrument-trust.php
