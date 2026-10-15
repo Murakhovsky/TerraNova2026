@@ -63,7 +63,7 @@ if(!str_contains($audit,'SOURCE_GUARD_SHARD')
 }
 $ops=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/Streaming/MysqlStreamingOperationsSnapshot.php');
 if(!str_contains($ops,"live_sub.status='ACTIVE'")
-    ||!str_contains($reader,"$receipt['shard_key']")){
+    ||!str_contains($reader,"\$receipt['shard_key']")){
     throw new RuntimeException('Live provider coverage can be fabricated by stale/other-shard subscriptions.');
 }
 if(!str_contains($reader,"'SOURCE_FAILOVER_PROVEN'")
