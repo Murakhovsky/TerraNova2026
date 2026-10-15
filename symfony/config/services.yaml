@@ -113,6 +113,10 @@ services:
   App\:
     resource: '../src/'
 
+  App\Command\CapitalMarketsInstrumentStreamTrustCommand:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   App\Command\CapitalMarketsInstrumentPoolProductionCommand:
     arguments:
       $connection: '@cos.database.pdo'
