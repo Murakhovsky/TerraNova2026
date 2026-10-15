@@ -70,6 +70,41 @@ final readonly class StreamingOperationsHealthEvaluator
                 }
             }
         }
+        // A valid socket and an active subscription are not confirmation
+        // of real provider ACK plus trusted LIVE quotes.
+        $activeSources=[];
+        foreach(($snapshot['leases']??[]) as $lease){
+            if($lease['lease_state']==='ACTIVE')$activeSources[$lease['source_id']]=true;
+        }
+        foreach(($snapshot['provider_by_source']??[]) as $source=>$proof){
+            if(!is_string($source)||!is_array($proof))throw new DomainException('Malformed provider status.');
+            $requested=$proof['requested_bbo']??null;
+            $confirmed=$proof['confirmed_live']??null;
+            $revoked=$proof['revoked']??null;
+            if(!is_int($requested)||!is_int($confirmed)||!is_int($revoked)
+                ||$requested<0||$confirmed<0||$revoked<0){
+                throw new DomainException('Invalid provider ACK verification counters.');
+            }
+            if($requested>0 && $confirmed<$requested){
+                $alerts[]=[
+                    'severity'=>'CRITICAL',
+                    'code'=>isset($activeSources[$source])
+                        ?'STREAM_PROVIDER_LIVE_NOT_VERIFIED':'STREAM_WORKER_NOT_ACTIVE',
+                    'source_id'=>$source,
+                    'count'=>$requested-$confirmed,
+                    'operator_action'=>'VERIFY_ACK_LIVE_RECEIPTS_LEASE_AND_RECONNECT',
+                ];
+                $tally['CRITICAL']++;
+            }
+            if($revoked>0){
+                $alerts[]=[
+                    'severity'=>'WARNING','code'=>'STREAM_SUBSCRIPTIONS_REVOKED',
+                    'source_id'=>$source,'count'=>$revoked,
+                    'operator_action'=>'CHECK_PROVIDER_RESET_OR_SOURCE_FENCING',
+                ];
+                $tally['WARNING']++;
+            }
+        }
         $hasEvidence=($snapshot['leases']??[])!==[]
             ||($snapshot['quality_by_source']??[])!==[];
         return [

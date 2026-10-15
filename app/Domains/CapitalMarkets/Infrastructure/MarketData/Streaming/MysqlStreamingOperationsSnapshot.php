@@ -78,12 +78,53 @@ final readonly class MysqlStreamingOperationsSnapshot
         }
         ksort($quality,SORT_STRING);
 
+        $wanted=$this->pdo->prepare(
+            "SELECT source_id,COUNT(*) AS requested FROM tn_capital_market_subscriptions
+             WHERE ".$where." AND status='ACTIVE' AND data_type='BBO'
+             GROUP BY source_id LIMIT 501");
+        $wanted->execute($args);
+        $desiredBbo=[];
+        foreach($wanted->fetchAll(PDO::FETCH_ASSOC) as $sub){
+            $desiredBbo[$sub['source_id']]=(int)$sub['requested'];
+        }
+        $acks=$this->pdo->prepare(
+            "SELECT p.source_id,COUNT(*) AS receipts,
+                SUM(CASE WHEN p.status='LIVE_QUOTE'
+                   AND p.quote_count>0 AND p.last_quality_score>=80
+                   AND p.last_live_quote_at>DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 120 SECOND)
+                   AND l.owner_id<>'' AND l.fencing_token=p.fencing_token
+                   AND l.expires_at>UTC_TIMESTAMP(6)
+                    THEN 1 ELSE 0 END) AS confirmed,
+                SUM(CASE WHEN p.status='REVOKED' THEN 1 ELSE 0 END) AS revoked
+             FROM tn_capital_market_provider_stream_receipts p
+             LEFT JOIN tn_capital_market_stream_worker_leases l
+               ON l.organization_id=p.organization_id
+              AND l.source_id=p.source_id AND l.shard_key=p.shard_key
+             WHERE p.".$where." GROUP BY p.source_id LIMIT 501");
+        $acks->execute($args);
+        $provider=[];
+        foreach($acks->fetchAll(PDO::FETCH_ASSOC) as $receipt){
+            $provider[$receipt['source_id']]=[
+                'receipts'=>(int)$receipt['receipts'],
+                'confirmed_live'=>(int)$receipt['confirmed'],
+                'revoked'=>(int)$receipt['revoked'],
+            ];
+        }
+        foreach($desiredBbo as $source=>$count){
+            $provider[$source]??=['receipts'=>0,'confirmed_live'=>0,'revoked'=>0];
+        }
+        foreach($provider as $source=>&$numbers){
+            $numbers['requested_bbo']=$desiredBbo[$source]??0;
+        }
+        unset($numbers);
+        ksort($provider,SORT_STRING);
         return [
             'organization_id'=>$organizationId,
             'source_filter'=>$sourceId,
             'lease_counts'=>$counts,
             'leases'=>$leases,
             'quality_by_source'=>$quality,
+            'provider_by_source'=>$provider,
             'operating_mode'=>'READ_ONLY',
         ];
     }
