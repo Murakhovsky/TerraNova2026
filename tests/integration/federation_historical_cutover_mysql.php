@@ -378,6 +378,33 @@ try {
     if($other->status->value!=='no_target') {
         throw new RuntimeException('Historical shadow leaked tenant information.');
     }
+    // Full tenant fleet inventory is read-only and fails closed on mixed,
+    // unmigrated or source-corrupt historical records.
+    $fleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover))
+        ->inspect($org,100);
+    if (($fleet['source']??null)!=='federation_fleet'
+        || $fleet['cutover_authorized']!==false
+        || $fleet['read_only']!==true
+        || $fleet['legacy_total']<2
+        || $fleet['migration_total']<1
+        || $fleet['status']==='match'
+        || $fleet['status']==='ready') {
+        throw new RuntimeException('Federation fleet audit falsely certified operator cutover.');
+    }
+    $truncatedFleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover))
+        ->inspect($org,1);
+    if ($truncatedFleet['history_truncated']!==true
+        || $truncatedFleet['inventory_coverage_complete']!==false
+        || $truncatedFleet['cutover_authorized']!==false) {
+        throw new RuntimeException('Truncated Federation cohort falsely certified as complete.');
+    }
+    $foreignFleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover))
+        ->inspect('other-tenant',100);
+    if ($foreignFleet['legacy_total']!==0 || $foreignFleet['canonical_total']!==0
+        || $foreignFleet['migration_total']!==0
+        || $foreignFleet['status']!=='no_target') {
+        throw new RuntimeException('Federation fleet inventory leaked foreign tenant records.');
+    }
     echo "Federation historical canonical cutover MySQL passed: atomic Store migration, shadow MATCH, immutable ledger, no Action replay, claimed legacy fenced, tenant isolation.\n";
 } finally {
     if ($oldMigration===false)putenv('COS_FEDERATION_HISTORICAL_MIGRATION');

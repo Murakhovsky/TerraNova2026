@@ -63,3 +63,11 @@ kind: architecture
 | Kernel Workflow / generic capabilities | Separate existing infrastructure | Partial isolated unit/DB coverage | All capabilities, consumers, wait/signal and failure injection |
 
 **Епістемічна межа:** green MySQL fixtures доводять перевірені code paths, але не production стан tenant або відсутність невідомих consumers. `EX-002/EX-003=IN_PROGRESS`, а не `VERIFIED`. Уся PR #346 залишається без merge.
+
+## P0. Інвентаризація федеративного виконання та міграцій
+
+Новий операторський CLI: `php symfony/bin/console cos:federation:execution-fleet TENANT --limit=100`.
+
+Він окремо рахує legacy Runs, canonical Runs та migration ledger; перевіряє історичні Run через наявний `FederationHistoricalRunCutover::inspect()`, post-cutover integrity та конфлікти Plan authority. Усі SQL-запити прив'язані до одного tenant, результати обмежені. Truncated cohort, відсутній link, невідомий canonical Plan чи подвійний execution ownership завжди відображаються як неповнота/дрейф. Команда **завжди повертає nonzero**, навіть для здорового технічного зрізу; ніякого automatic cutover, recovery або Action replay.
+
+CI регресія: `tests/integration/federation_historical_cutover_mysql.php` перевіряє read-only audit на реальних MySQL fixture records та foreign-tenant isolation. `tests/architecture/cos_federation_fleet_audit.php` фіксує відсутність side-effect path. Це не замінює fleet-wide staging evidence чи operator signoff.
