@@ -101,6 +101,7 @@ jobs:
         run: |
           php tests/architecture/federation_canonical_goal_cutover.php
           php tests/architecture/cos_execution_authority_paths.php
+          php tests/architecture/workflow_kernel_single_authority.php
       - name: Federation execution authority inventory
         run: |
           set -euo pipefail
@@ -134,6 +135,7 @@ jobs:
           php tests/integration/federation_historical_cutover_mysql.php
           php tests/integration/federation_non_action_goal_mysql.php
           php tests/integration/workflow_wait_signal_mysql.php
+          php tests/integration/workflow_kernel_canonical_mysql.php
       - name: Publish per-step timings
         if: always()
         continue-on-error: true
