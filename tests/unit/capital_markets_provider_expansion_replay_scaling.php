@@ -107,7 +107,7 @@ $clock=new class implements MarketClockInterface {
 };
 $venue=VenueId::fromString('venue:okx');
 $id=InstrumentId::fromString('instrument:btc');
-$instrument=new InstrumentDescriptor($id,'BTC','BTC','Bitcoin',InstrumentFamily::CryptoSpot,
+$instrument=new InstrumentDescriptor($id,'BTC','BTC','Bitcoin',InstrumentFamily::SpotMarket,
     InstrumentStatus::Active,null,new AssetCode('USDT'),null,null,
     $venue->value(),[],new DateTimeImmutable('2025-01-01'),new DateTimeImmutable('2025-01-01'));
 $mapping=new VenueInstrument($venue,$id,'BTC-USDT',VenueInstrumentStatus::Active,3,8);
