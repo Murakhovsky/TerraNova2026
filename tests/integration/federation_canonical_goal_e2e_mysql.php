@@ -35,6 +35,7 @@ use Domains\Sales\Model\DealChangeSet;
 use Infrastructure\Platform\Persistence\MySql\Action\MysqlActionRepository;
 use Infrastructure\Platform\Persistence\MySql\Approval\MysqlApprovalRepository;
 use Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyEvaluationRepository;
+use Infrastructure\Platform\Persistence\MySql\Policy\MysqlPolicyRepository;
 use Kernel\Action\ActionStatus;
 use Kernel\Action\Service\ActionExecutor;
 use Kernel\Action\Service\ActionService;
@@ -208,14 +209,15 @@ try {
             $callback();
         }
     };
-    $policies=new class($org) implements PolicyRepositoryInterface {
-        public function __construct(private string $org){}
-        public function activeFor(string $organizationId,string $actionType):array{
-            return $organizationId===$this->org && $actionType==='sales.create_task'
-                ? [new ActionPolicy('policy-e2e-'.$this->org,$this->org,'sales.create_task',[],
-                    PolicyDecision::ApprovalRequired)] : [];
-        }
-    };
+    // Policy is genuinely stored in MySQL, not an in-memory decision. This
+    // also exercises the FK from cos_policy_evaluations to cos_policies.
+    $policyId='policy-'.$token;
+    $pdo->prepare('INSERT INTO cos_policies
+        (id,organization_id,code,name,action_type,conditions,decision,priority,version,status)
+        VALUES (:id,:org,"acceptance-goal","Federation E2E human gate",
+                "sales.create_task",:conditions,"APPROVAL_REQUIRED",1,1,"ACTIVE")')
+        ->execute(['id'=>$policyId,'org'=>$org,'conditions'=>'[]']);
+    $policies=new MysqlPolicyRepository($pdo);
     $policyEngine=new PolicyEngine(new ConditionEvaluator());
     $contexts=new PolicyContextBuilder($domains);
     $policyService=new ActionPolicyService($actionService,$policies,
@@ -287,6 +289,13 @@ try {
         'canonical created-to-running transition failed');
     $reject(static fn()=> $bridge->advance($actor,$runId,'wrong-approval'),
         'forged Plan Approval');
+    $pdo->prepare('UPDATE cos_policies SET decision="DENIED" WHERE id=:id')
+        ->execute(['id'=>$policyId]);
+    $reject(static fn()=> $bridge->advance($actor,$runId,$planApproval),
+        'latest MySQL policy denied Action admission');
+    $assert($rows('cos_actions')===1,'denied Policy persisted an unauthorized external Action');
+    $pdo->prepare('UPDATE cos_policies SET decision="APPROVAL_REQUIRED" WHERE id=:id')
+        ->execute(['id'=>$policyId]);
     $pending=$bridge->advance($actor,$runId,$planApproval);
     $assert($pending['state']==='awaiting_human_approval','Action not submitted through Policy service');
     $actionId=$pending['action_id']??null;
@@ -363,7 +372,7 @@ try {
     // Isolated test tenant only. Retain no temporary business records.
     foreach (['cos_federation_evaluations','cos_workflow_steps','cos_workflow_runs',
         'cos_approvals','cos_policy_evaluations','cos_action_attempts','cos_actions',
-        'cos_federation_steps','cos_federation_runs','cos_federation_plans',
+        'cos_policies','cos_federation_steps','cos_federation_runs','cos_federation_plans',
         'cos_federation_goal_specs','cos_federation_goals',
         'tn_client_case_activities','tn_client_cases','tn_people'] as $table) {
         $pdo->prepare("DELETE FROM $table WHERE organization_id=:org")->execute(['org'=>$org]);
