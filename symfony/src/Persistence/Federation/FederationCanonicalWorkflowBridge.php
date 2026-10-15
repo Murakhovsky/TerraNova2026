@@ -202,13 +202,38 @@ final readonly class FederationCanonicalWorkflowBridge
         $org=$actor->organizationId()->value();
         $id=new WorkflowRunIdentity($org,$runId);
         $run=$this->requireRun($id);
-        $conflictingLegacy=$this->db->fetchOne(
-            'SELECT run_id FROM cos_federation_runs
+        $conflictingLegacy=$this->db->fetchAssociative(
+            'SELECT * FROM cos_federation_runs
              WHERE organization_id=:org AND plan_id=:plan',
             ['org'=>$org,'plan'=>$run->sourcePlanId],
         );
-        if ($conflictingLegacy !== false) {
-            throw new DomainException('Dual canonical/legacy execution ownership: operator reconciliation required.');
+        if ($conflictingLegacy) {
+            // An auditable, same-identity promotion is not a dual execution:
+            // the old rows are immutable shadow evidence, never an executor.
+            $permit=$this->db->fetchAssociative(
+                'SELECT source_sha256 FROM cos_federation_execution_migrations
+                 WHERE organization_id=:org AND legacy_run_id=:run
+                   AND canonical_run_id=:run AND plan_id=:plan
+                   AND migration_state=:state AND parity_status=:parity',
+                ['org'=>$org,'run'=>$runId,'plan'=>$run->sourcePlanId,
+                    'state'=>'promoted','parity'=>'match'],
+            );
+            $legacyPlan=$this->db->fetchOne(
+                'SELECT plan_json FROM cos_federation_plans
+                 WHERE organization_id=:org AND plan_id=:plan',
+                ['org'=>$org,'plan'=>$run->sourcePlanId],
+            );
+            $sourceSteps=$this->db->fetchAllAssociative(
+                'SELECT * FROM cos_federation_steps
+                 WHERE organization_id=:org AND run_id=:run ORDER BY step_id',
+                ['org'=>$org,'run'=>$runId],
+            );
+            $fingerprint=hash('sha256',json_encode(
+                [$conflictingLegacy,$sourceSteps,$legacyPlan],
+                JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
+            if (!$permit || !hash_equals((string)$permit['source_sha256'],$fingerprint)) {
+                throw new DomainException('Dual canonical/legacy execution ownership: operator reconciliation required.');
+            }
         }
         $result=static fn(string $state,?string $step=null,?string $action=null): array => [
             'run_id'=>$runId,'state'=>$state,'step_id'=>$step,'action_id'=>$action,

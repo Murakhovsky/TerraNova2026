@@ -44,3 +44,13 @@ kind: architecture
 Міграція всіх Federation Goal Runs допускається тільки після перевірки активних legacy references, адитивного backfill з єдиним ID mapping, повної receipt-based parity за tenant, закриття невизначених Action, керованого rollback і перевірки Golden 50. Усі статуси виконання перевіряються по канонічних Run/Step, не по текстовій декларації Federation.
 
 **Не вважати цей обмежений opt-in завершеною міграцією всієї COS.**
+
+## Історичне перенесення та завершення роботи legacy
+
+Нові Federation Runs тепер маршрутизуються **тільки** до Platform Workflow. Якщо tenant не має opt-in, створення блокується, без fallback на legacy. Історичні записи залишаються доступними для читання та окремого recovery, але legacy executor забороняє виклики `start` і `advance`.
+
+Команда `cos:federation:history:cutover <organization> <run>` проводить read-only оцінку. Для **незапущених**, незмінених Run із нульовими Step attempts і без будь-яких `fed:*/wf:*` Actions оператор може встановити `COS_FEDERATION_HISTORICAL_MIGRATION=explicit_operator_approved` та виконати `--apply --operator=<id>`. Canonical Store створює Run/Step в тій самій DB-транзакції, Parity Reader підтверджує MATCH, після чого пишеться фіксуючий migration ledger. Жоден Action не запускається повторно.
+
+Виконані, claimed, failed або неоднозначні legacy Actions **не імпортуються як нові Executions**. Вони є архівними доказами, які потребують human recovery/receipt reconciliation. Неперевірений ефект не можна перетворити в `wf:*` Action і вважати новою успішною спробою. Для такого Run команда поверне blocker замість удаваного PASS.
+
+Non-Action кроки використовують `read:<kind>` і pinned `evidence` із `run_id`, `input_digest`, `reference` та доменно-специфічними полями. `Plan.run_id` потрібно визначити до незалежного людського погодження, а `input_digest` обчислюється як SHA256(organization + NUL + run + NUL + plan). Claim резервується один раз, а завершення можливе виключно за дійсним доменним receipt. Жодне read-evidence не замінює Approval чи фактичний Outcome.

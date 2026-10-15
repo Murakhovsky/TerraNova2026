@@ -134,6 +134,11 @@ final readonly class FederationGoalStore
             'SELECT run_id,goal_id,plan_id,state,revision,created_at FROM (
                 SELECT r.run_id,r.goal_id,r.plan_id,r.state,r.revision,r.created_at
                 FROM cos_federation_runs r WHERE r.organization_id=:legacy_org
+                  AND NOT EXISTS (
+                      SELECT 1 FROM cos_federation_execution_migrations m
+                      WHERE m.organization_id=r.organization_id
+                        AND m.legacy_run_id=r.run_id AND m.migration_state='promoted'
+                  )
                 UNION ALL
                 SELECT w.run_id,p.goal_id,p.plan_id,w.state,w.revision,w.created_at
                 FROM cos_workflow_runs w
@@ -436,7 +441,12 @@ final readonly class FederationGoalStore
                  FROM cos_federation_runs r
                  INNER JOIN cos_federation_plans p
                    ON p.organization_id = r.organization_id AND p.plan_id = r.plan_id
-                 WHERE r.organization_id = :org AND r.run_id = :run FOR UPDATE',
+                 WHERE r.organization_id = :org AND r.run_id = :run
+                   AND NOT EXISTS (
+                     SELECT 1 FROM cos_federation_execution_migrations m
+                     WHERE m.organization_id=r.organization_id AND m.legacy_run_id=r.run_id
+                       AND m.migration_state='promoted'
+                   ) FOR UPDATE',
                 ['org' => $org, 'run' => $runId],
             );
             if (!$run || $run['run_state'] !== 'running' || $run['plan_state'] !== 'approved') {
@@ -621,6 +631,11 @@ final readonly class FederationGoalStore
               AND p.spec_version = e.spec_version
              WHERE r.organization_id = :org AND r.run_id = :run
                AND r.state = 'completed' AND p.state = 'approved'
+               AND NOT EXISTS (
+                 SELECT 1 FROM cos_federation_execution_migrations m
+                 WHERE m.organization_id=r.organization_id AND m.legacy_run_id=r.run_id
+                   AND m.migration_state='promoted'
+               )
                AND JSON_UNQUOTE(JSON_EXTRACT(e.evaluation_json, '$.run_id')) = :evaluation_run
                AND JSON_UNQUOTE(JSON_EXTRACT(e.evaluation_json, '$.evidence_policy')) = 'domain_read_model_v1'
              ORDER BY e.evaluated_at DESC, e.evaluation_id DESC LIMIT 1",

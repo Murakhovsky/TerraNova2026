@@ -278,10 +278,17 @@ services:
   App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+  App\Persistence\Workflow\FederationNonActionClaimAdmission:
+    arguments:
+      $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+  App\Persistence\Workflow\WorkflowReceiptAttestationRouter:
+    arguments:
+      $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+      $nonActions: '@Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface'
   App\Persistence\Workflow\DoctrineWorkflowExecutionStore:
     arguments:
-      $receipts: '@App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier'
-      $admission: '@App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission'
+      $receipts: '@App\Persistence\Workflow\WorkflowReceiptAttestationRouter'
+      $admission: '@App\Persistence\Workflow\WorkflowClaimAdmissionRouter'
   # Recovery uses trusted Federation Plan evidence only for read-only Action proof.
   # Global WorkflowReceiptVerifierInterface remains fail-closed for normal execution.
   App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier:

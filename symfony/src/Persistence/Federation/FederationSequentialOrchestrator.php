@@ -31,6 +31,9 @@ final readonly class FederationSequentialOrchestrator
     /** @return array{run_id:string,state:string} */
     public function start(TenantContext $actor, string $runId, string $planId, string $approvalActionId): array
     {
+        // Intentionally retired. Preserve class for read-only compatibility,
+        // but no legacy Run/Step mutation or Action submission is reachable.
+        throw new DomainException('Legacy Federation executor retired: use Platform Workflow.');
         $this->authorized($actor);
         $this->goals->startApprovedRun($actor, $runId, $planId, $approvalActionId);
         // Starting an Execution never submits an external Domain Action.
@@ -46,6 +49,7 @@ final readonly class FederationSequentialOrchestrator
      */
     public function advance(TenantContext $actor, string $runId, string $approvalActionId): array
     {
+        throw new DomainException('Legacy Federation executor retired: reconciliation only.');
         $this->authorized($actor);
         self::identifier($runId);
         $org = $actor->organizationId()->value();

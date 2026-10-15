@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Web\Federation;
 
 use App\Persistence\Federation\FederationGoalStore;
-use App\Persistence\Federation\FederationSequentialOrchestrator;
 use App\Security\SessionCsrfValidator;
 use DomainException;
 use LogicException;
@@ -25,7 +24,6 @@ final readonly class FederationRunController
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
         private FederationGoalStore $goals,
-        private FederationSequentialOrchestrator $orchestrator,
         private \App\Persistence\Federation\FederationCanonicalWorkflowBridge $canonical,
         private \App\Persistence\Federation\FederationRunRecoveryService $recovery,
     ) {}
@@ -65,9 +63,9 @@ final readonly class FederationRunController
             $runId = 'run-' . bin2hex(random_bytes(12));
             $planId = (string) $request->request->get('plan_id', '');
             $approvalId = (string) $request->request->get('approval_action_id', '');
-            return self::reply($this->canonical->newRunsEnabled($actor)
-                ? $this->canonical->start($actor, $runId, $planId, $approvalId)
-                : $this->orchestrator->start($actor, $runId, $planId, $approvalId), 201);
+            // NO legacy fallback. Disabled rollout denies new work rather than
+            // creating a second technical authority.
+            return self::reply($this->canonical->start($actor,$runId,$planId,$approvalId),201);
         } catch (DomainException|\InvalidArgumentException) {
             return self::reply(['error' => 'plan_not_executable'], 422);
         } catch (Throwable) {
@@ -82,9 +80,13 @@ final readonly class FederationRunController
         if (!$this->csrf->isValid($request)) return self::reply(['error' => 'csrf'], 400);
         try {
             $approvalId = (string) $request->request->get('approval_action_id', '');
-            return self::reply($this->canonical->owns($actor, $runId)
-                ? $this->canonical->advance($actor, $runId, $approvalId)
-                : $this->orchestrator->advance($actor, $runId, $approvalId));
+            if (!$this->canonical->owns($actor,$runId)) {
+                // Historical Runs remain readable and explicitly reconcilable,
+                // but the old executor can no longer submit another Action.
+                return self::reply(['error'=>'legacy_run_execution_retired',
+                    'migration'=>'cos:federation:history:cutover'],409);
+            }
+            return self::reply($this->canonical->advance($actor,$runId,$approvalId));
         } catch (DomainException|\InvalidArgumentException|\LogicException) {
             return self::reply(['error' => 'run_not_executable_or_stale'], 422);
         } catch (Throwable) {

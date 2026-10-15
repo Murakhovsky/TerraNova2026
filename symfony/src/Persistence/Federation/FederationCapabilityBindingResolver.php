@@ -65,9 +65,17 @@ final readonly class FederationCapabilityBindingResolver
             || !is_string($contract->permission)
             || !$actor->allows($contract->permission)
             || $contract->kind !== 'command'
-            || !str_starts_with($contract->executionBinding, 'action:')
+            || !(str_starts_with($contract->executionBinding, 'action:')
+                || ($contract->sideEffectLevel==='none' && str_starts_with($contract->executionBinding,'read:')))
             || !$this->modules->isEnabled($actor->organizationId()->value(), $contract->ownerDomain)) {
             return false;
+        }
+        if ($contract->sideEffectLevel==='none'
+            && str_starts_with($contract->executionBinding,'read:')) {
+            // Domain read-only verifiers are registered separately. A declared
+            // capability alone never proves the evidence, which is checked
+            // against the pinned Plan at claim and checkpoint.
+            return $contract->kind==='query' || $contract->kind==='command';
         }
         $actionType = substr($contract->executionBinding, 7);
         $handlers = $this->domains->actionHandlerMap();
