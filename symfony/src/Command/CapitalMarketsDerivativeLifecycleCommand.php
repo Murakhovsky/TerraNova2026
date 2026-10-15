@@ -3,6 +3,8 @@ declare(strict_types=1);
 namespace App\Command;
 use DomainException;
 use Domains\CapitalMarkets\Application\Feature\{CapitalMarketsFeatureFlag,CapitalMarketsFeatureGate};
+use Domains\CapitalMarkets\Application\Contract\CapitalMarketsAccessControlInterface;
+use Domains\CapitalMarkets\Model\CapitalMarketsCapability;
 use Domains\CapitalMarkets\Application\Service\BybitDerivativesStreamScope;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\{
@@ -20,6 +22,7 @@ final class CapitalMarketsDerivativeLifecycleCommand extends Command
 {
     public function __construct(
         private readonly CapitalMarketsFeatureGate $flags,
+        private readonly CapitalMarketsAccessControlInterface $access,
         private readonly BybitDerivativesStreamScope $scope,
         private readonly BybitPerpetualMarketDataAdapter $provider,
         private readonly MysqlDerivativeLifecycleRegistry $lifecycle,
@@ -29,6 +32,7 @@ final class CapitalMarketsDerivativeLifecycleCommand extends Command
         $this->addArgument('operation',InputArgument::REQUIRED,'poll|status|sweep')
             ->addArgument('organization',InputArgument::REQUIRED)
             ->addArgument('source',InputArgument::REQUIRED)
+            ->addArgument('actor',InputArgument::REQUIRED,'Authorized operator ID')
             ->addOption('stale-seconds',null,InputOption::VALUE_REQUIRED,'Freshness threshold 30..3600','120');
     }
     protected function execute(InputInterface $in,OutputInterface $out):int{
@@ -39,6 +43,17 @@ final class CapitalMarketsDerivativeLifecycleCommand extends Command
             if($org===''||$source===''||strlen($org)>190||strlen($source)>190
                 ||!in_array($op,['poll','status','sweep'],true)){
                 throw new DomainException('Invalid derivatives operator scope.');
+            }
+            $actor=filter_var($in->getArgument('actor'),FILTER_VALIDATE_INT);
+            if($actor===false||$actor<1){
+                throw new DomainException('Positive operator actor required.');
+            }
+            $cap=$op==='status'
+                ?CapitalMarketsCapability::MarketDataView->value
+                :CapitalMarketsCapability::MarketDataManage->value;
+            if(!$this->access->hasCapability($org,$actor,$cap)
+                &&!$this->access->hasCapability($org,$actor,CapitalMarketsCapability::Manage->value)){
+                throw new DomainException('Derivative operator not authorized.');
             }
             if($op==='status'){
                 $out->writeln(json_encode(['status'=>'READ_ONLY',
