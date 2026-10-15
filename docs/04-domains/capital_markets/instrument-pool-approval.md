@@ -68,3 +68,13 @@ Discovery snapshots є лише доказами, а `tn_capital_market_instrume
 architecture contract і окремий MySQL acceptance test на CI Runtime.
 Production cutover, live trading і автоматичне присвоєння
 економічної ідентичності в цей пакет не входять.
+
+## Наслідки для Market Data
+
+Під час схваленої зміни mapping на `SUSPENDED` у тій самій транзакції
+всі чинні торгові Market States відповідної пари venue+instrument
+примусово отримують `UNTRUSTED`, а активні підписки переходять у
+`DISABLED`. Resolver не пропускає неактивні venue mappings чи
+неактивні канонічні інструменти до нормалізації. Повторна активація
+mapping не відновлює автоматично ні підписки, ні довіру до старих
+котирувань: потрібні нове свідоме налаштування підписки й свіжий ринок.

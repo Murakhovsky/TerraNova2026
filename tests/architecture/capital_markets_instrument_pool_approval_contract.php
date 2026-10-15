@@ -25,6 +25,7 @@ foreach(['function propose(','function decide(','function queue(','capital_marke
     "WHERE organization_id=:org AND id=:id FOR UPDATE",
     "'PENDING'","'APPLIED'","'REJECTED'",
     'evidence_digest','latestHealthy(','assertProposable(','$this->transactions->transactional(',
+    "trust_status='UNTRUSTED'","status='DISABLED'",
     'registerVenueInstrument(new RegisterVenueInstrument','createInstrument(new CreateInstrument',
     "'status'=>'SUSPENDED'",'Three consecutive healthy full-mapping observations required.',
     "['ACTIVE','SUSPENDED']",'tn_capital_market_venue_instruments',

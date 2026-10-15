@@ -190,6 +190,24 @@ final readonly class InstrumentPoolApprovalService
                 'id'=>$id,'previous'=>$current['status'],
             ]);
             if($stmt->rowCount()!==1)throw new DomainException('Mapping compare-and-swap failed.');
+            if($target==='SUSPENDED'){
+                // Revoking the mapping must also revoke existing decision-grade
+                // market evidence and active subscriptions before commit.
+                $invalidate=$this->pdo->prepare(
+                    "UPDATE tn_capital_market_states
+                     SET trust_status='UNTRUSTED',quality_score=0,
+                         state_version=state_version+1,updated_at=UTC_TIMESTAMP(6)
+                     WHERE organization_id=:org AND venue_id=:venue AND instrument_id=:id"
+                );
+                $invalidate->execute(['org'=>$org,'venue'=>$venue,'id'=>$id]);
+                $disable=$this->pdo->prepare(
+                    "UPDATE tn_capital_market_subscriptions
+                     SET status='DISABLED',updated_at=UTC_TIMESTAMP(6)
+                     WHERE organization_id=:org AND venue_id=:venue AND instrument_id=:id
+                       AND status IN ('ACTIVE','DEGRADED','PENDING')"
+                );
+                $disable->execute(['org'=>$org,'venue'=>$venue,'id'=>$id]);
+            }
             $this->audit->record($org,$actor,CapitalMarketsAuditAction::InstrumentPoolMappingStatusChanged,
                 CapitalMarketsAuditResourceType::VenueInstrument,$venue.'|'.$id,
                 ['status'=>$current['status']],['status'=>$target,'provider'=>$change['provider'],

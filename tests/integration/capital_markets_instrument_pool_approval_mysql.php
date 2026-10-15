@@ -24,7 +24,7 @@ $org='ci-pool-approve-'.bin2hex(random_bytes(4));$other=$org.'-foreign';
 $venue='venue:ci:approvals';
 $symbol='CI'.strtoupper(bin2hex(random_bytes(4))).'USDT';
 $id='pool:'.strtolower($symbol);
-$proposer=98101;$approver=98102;
+$proposer=0;$approver=0;$foreignActor=0;
 $assert=static function(bool $ok,string $message):void{if(!$ok)throw new RuntimeException($message);};
 $reject=static function(callable $fn,string $message)use($assert):void{
     $raised=false;try{$fn();}catch(DomainException|\PDOException|\ValueError){$raised=true;}
@@ -32,7 +32,7 @@ $reject=static function(callable $fn,string $message)use($assert):void{
 };
 $snapshotRepo=new MysqlInstrumentPoolSnapshotRepository($pdo);
 $record=static function(array $rows,int $mappedCount=0,bool $available=true)
-    use($snapshotRepo,$org,$venue,$proposer):int{
+    use($snapshotRepo,$org,$venue,&$proposer):int{
     return $snapshotRepo->record($org,$proposer,[
         'provider'=>'BINANCE','venue_id'=>$venue,
         'health'=>$available?'AVAILABLE':'UNAVAILABLE',
@@ -52,6 +52,29 @@ $select=static function(string $table,string $col,string $org,string $id)use($pd
     $value=$stmt->fetchColumn();return $value===false?null:(string)$value;
 };
 try{
+    $createOrg=$pdo->prepare(
+        "INSERT INTO cos_organizations(id,name,status) VALUES(:id,'CI Pool Approval','ACTIVE')"
+    );
+    foreach([$org,$other] as $tenant)$createOrg->execute(['id'=>$tenant]);
+    $insertUser=$pdo->prepare(
+        "INSERT INTO tn_users(organization_id,email,password_hash,full_name,role,status)
+         VALUES(:org,:email,:hash,'CI Pool Acceptance','manager','active')"
+    );
+    $join=$pdo->prepare(
+        "INSERT INTO cos_organization_memberships(organization_id,user_id,role,status)
+         VALUES(:org,:user,'manager','ACTIVE')"
+    );
+    foreach([[$org,'proposer'],[$org,'approver'],[$other,'foreign']] as [$tenant,$role]){
+        $insertUser->execute([
+            'org'=>$tenant,'email'=>'ci.pool.'.bin2hex(random_bytes(8)).'@example.invalid',
+            'hash'=>password_hash(bin2hex(random_bytes(16)),PASSWORD_DEFAULT),
+        ]);
+        $user=(int)$pdo->lastInsertId();
+        $join->execute(['org'=>$tenant,'user'=>$user]);
+        if($role==='proposer')$proposer=$user;
+        if($role==='approver')$approver=$user;
+        if($role==='foreign')$foreignActor=$user;
+    }
     $venues=$pdo->prepare(
         "INSERT INTO tn_capital_market_venues
         (organization_id,venue_id,name,code,venue_type,status,timezone,metadata_json)
@@ -63,12 +86,10 @@ try{
         (organization_id,user_id,capability,status,granted_by)
         VALUES (:org,:user,:cap,'ACTIVE','ci-approval')"
     );
-    foreach([$org,$other] as $tenant){
-        foreach([$proposer,$approver] as $user){
-            foreach(['capital_markets.instrument_pool.view','capital_markets.instrument_pool.propose',
-                'capital_markets.instrument_pool.approve'] as $cap){
-                $grant->execute(['org'=>$tenant,'user'=>$user,'cap'=>$cap]);
-            }
+    foreach([[$org,$proposer],[$org,$approver],[$other,$foreignActor]] as [$tenant,$user]){
+        foreach(['capital_markets.instrument_pool.view','capital_markets.instrument_pool.propose',
+            'capital_markets.instrument_pool.approve'] as $cap){
+            $grant->execute(['org'=>$tenant,'user'=>$user,'cap'=>$cap]);
         }
     }
     $s1=$record([[
@@ -82,7 +103,7 @@ try{
         'reason'=>'Explicit verified symbol onboarding',
     ],'CI-POOL-CREATE');
     $assert($change>0,'No pending import.');
-    $assert(count($service->queue($other,$proposer))===0,'Cross-tenant proposal leaked.');
+    $assert(count($service->queue($other,$foreignActor))===0,'Cross-tenant proposal leaked.');
     $reject(fn()=>$service->decide($org,$proposer,$change,true,
         'Self approval should fail','CI-SELF'),'Self approval bypassed.');
     $assert($select('tn_capital_market_instruments','status',$org,$id)===null,
@@ -96,7 +117,7 @@ try{
         'New venue mapping was not safety-quarantined.');
     $reject(fn()=>$service->decide($org,$approver,$change,true,
         'Replay approval should fail','CI-REPLAY'),'Approval replay was accepted.');
-    $reject(fn()=>$service->decide($other,$approver,$change,true,
+    $reject(fn()=>$service->decide($other,$foreignActor,$change,true,
         'Foreign decision should fail','CI-TENANT'),'Foreign org approved change.');
     $s2=$record([[
         'venue_symbol'=>$symbol,'instrument_id'=>$id,'mapping_status'=>'SUSPENDED',
@@ -140,11 +161,17 @@ try{
         'tn_capital_market_instrument_pool_changes',
         'tn_capital_market_instrument_pool_snapshots',
         'tn_capital_market_instrument_pool_scan_gates',
+        'tn_capital_market_subscriptions',
+        'tn_capital_market_states',
+        'tn_capital_market_data_sources',
         'tn_capital_market_venue_instruments',
         'tn_capital_market_instrument_identifiers',
         'tn_capital_market_instruments',
         'capital_market_user_capabilities',
         'tn_capital_market_venues',
+        'cos_organization_memberships',
+        'tn_users',
+        'cos_organizations',
     ];
     foreach($tables as $table){
         $delete=$pdo->prepare('DELETE FROM '.$table.' WHERE organization_id IN (:a,:b)');
