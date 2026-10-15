@@ -3,7 +3,7 @@
   "package_id": "COS-FED-EXEC-CONTRACT-CONSOLIDATION-P0",
   "evidence_ref": "372947c9c02577880332d6f1bad9993c465991fd",
   "evidence_scope": "code-inspected references, not exhaustive runtime call graph",
-  "status": "baseline_inventory_needs_complete_callgraph",
+  "status": "incremental_implementation__fleet_acceptance_pending",
   "owner": "Platform Architecture / Engineering",
   "allowed_decisions": [
     "KEEP",
@@ -69,8 +69,18 @@
       "decision": "ADAPT",
       "guardrail": "preserve stages, ORM optimistic version, human decisions, transition/audit history",
       "baseline_test": "tests/architecture/engineering_workflow_version_contract.php",
-      "migration_status": "NOT_STARTED",
-      "runtime_consumers_verified": false
+      "migration_status": "IN_PROGRESS",
+      "runtime_consumers_verified": false,
+      "implementation_evidence": {
+        "commit_sha": "4432c6aee6cd2ec397aa17bba83bf7080bfc18fb",
+        "source_port": "app/Platform/Workflow/Contract/WorkflowTechnicalExternalStoreInterface.php",
+        "technical_writer": "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+        "domain_evidence": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionEvidence.php",
+        "mysql_regression": "tests/integration/workflow_engineering_technical_shadow_mysql.php",
+        "acceptance": "PENDING_LATEST_CI_AND_FLEET_PARITY",
+        "scope": "canonical Engineering AgentRun path only; Engineering business workflow remains Domain owned"
+      },
+      "implementation_note": "Engineering gateway delegates canonical Run/Step writes to shared Platform Store, with transactional link and source evidence; no fleet-wide cutover or consumer exhaustiveness proof."
     },
     {
       "id": "EX-004",

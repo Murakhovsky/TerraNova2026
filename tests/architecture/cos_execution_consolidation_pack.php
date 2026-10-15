@@ -40,8 +40,27 @@ foreach ($registry['entries'] as $item) {
         || !in_array($item['migration_status'] ?? null, ['NOT_STARTED','IN_PROGRESS','VERIFIED','RETIRED'], true)) {
         throw new RuntimeException('Consolidation entry has unsupported decision/status: ' . $id);
     }
-    if (($item['migration_status'] ?? null) !== 'NOT_STARTED' && ($item['runtime_consumers_verified'] ?? null) !== true) {
-        throw new RuntimeException('Migration progress requires verified consumers: ' . $id);
+    // IN_PROGRESS means inspected implementation work exists, NOT that
+    // every runtime consumer was migrated or production acceptance passed.
+    $migrationState=$item['migration_status'];
+    if ($migrationState==='IN_PROGRESS') {
+        $evidence=$item['implementation_evidence']??null;
+        if (!is_array($evidence)
+            || !preg_match('/^[a-f0-9]{40}$/D',(string)($evidence['commit_sha']??''))
+            || ($evidence['acceptance']??null)!=='PENDING_LATEST_CI_AND_FLEET_PARITY') {
+            throw new RuntimeException('Partial migration requires an explicit unaccepted implementation trail: '.$id);
+        }
+        foreach (['source_port','technical_writer','domain_evidence','mysql_regression'] as $field) {
+            if (!is_string($evidence[$field]??null)
+                || str_contains($evidence[$field],'..')
+                || !is_file($root.'/'.$evidence[$field])) {
+                throw new RuntimeException('Missing in-progress implementation source evidence: '.$id.':'.$field);
+            }
+        }
+    }
+    if (in_array($migrationState,['VERIFIED','RETIRED'],true)
+        && ($item['runtime_consumers_verified']??null)!==true) {
+        throw new RuntimeException('Completed migration requires exhaustive verified consumers: '.$id);
     }
     foreach (['implementation', 'known_consumer'] as $source) {
         $path = $item[$source]['path'] ?? null;
@@ -69,16 +88,29 @@ foreach ($cases['tests'] as $test) {
     $id = $test['id'] ?? null;
     if (!is_string($id) || isset($testIds[$id])) throw new RuntimeException('Duplicate/invalid parity case ID.');
     $testIds[$id] = true;
-    if (($test['target_status'] ?? null) !== 'NOT_IMPLEMENTED') {
-        // Once canonical executor exists, implement and run real parity runner
-        // and change this guard together with credible run evidence.
-        throw new RuntimeException('Parity cannot be self-certified by a design-pack inventory: ' . $id);
+    $status=$test['target_status']??null;
+    if (!in_array($status,['NOT_IMPLEMENTED','IN_PROGRESS'],true)) {
+        // Final acceptance is exclusively a runtime/CI/operator gate,
+        // never a green light from this static inventory.
+        throw new RuntimeException('Parity cannot self-certify VERIFIED status: '.$id);
+    }
+    if ($status==='IN_PROGRESS') {
+        $runner=$test['target_test']??null;
+        if (!is_string($runner) || str_contains($runner,'..')
+            || !str_starts_with($runner,'tests/')
+            || !is_file($root.'/'.$runner)
+            || ($test['target_evidence_status']??null)!=='RUNNER_PRESENT_NOT_FULL_CASE_ACCEPTANCE'
+            || trim((string)($test['implementation_note']??''))==='') {
+            throw new RuntimeException('Partial parity work has no grounded target runner: '.$id);
+        }
     }
     if (!is_file($root . '/' . ($test['baseline_anchor'] ?? ''))) {
         throw new RuntimeException('Missing parity baseline anchor: ' . $id);
     }
 }
+$activeMigrations=count(array_filter($registry['entries'],static fn(array $e):bool=>($e['migration_status']??null)==='IN_PROGRESS'));
+$activeParity=count(array_filter($cases['tests'],static fn(array $t):bool=>($t['target_status']??null)==='IN_PROGRESS'));
 echo sprintf(
-    "Execution consolidation P0 inventory baseline passed: %d concerns; %d planned parity cases (target parity NOT IMPLEMENTED).\n",
-    count($seen), count($testIds)
+    "Execution consolidation P0 inventory passed: %d concerns (%d unaccepted increments); %d parity cases (%d partial runners; no full acceptance).\n",
+    count($seen),$activeMigrations,count($testIds),$activeParity
 );

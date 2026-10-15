@@ -222,11 +222,14 @@
       "area": "cutover",
       "scenario": "Read-only shadow comparison agrees old vs new state with same evidence",
       "baseline_anchor": "tests/architecture/federation_execution_authorization.php",
-      "target_status": "NOT_IMPLEMENTED",
+      "target_status": "IN_PROGRESS",
       "target_runner_kind": "mysql",
       "baseline_evidence_status": "NOT_RE_RUN_FOR_THIS_PACK",
       "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
-      "blocking": true
+      "blocking": true,
+      "target_test": "tests/integration/workflow_engineering_technical_shadow_mysql.php",
+      "implementation_note": "Real MySQL Engineering shadow MATCH/DRIFT/PARTIAL assertions exist, but full Kernel/Federation/Engineering read-only parity and real fleet sign-off remain pending.",
+      "target_evidence_status": "RUNNER_PRESENT_NOT_FULL_CASE_ACCEPTANCE"
     },
     {
       "id": "CP-21",
