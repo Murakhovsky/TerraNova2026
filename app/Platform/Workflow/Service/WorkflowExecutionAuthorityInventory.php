@@ -23,6 +23,14 @@ final class WorkflowExecutionAuthorityInventory
         ),true,512,JSON_THROW_ON_ERROR);
         $allowed=$config['allowed_writers']??[];
         $actual=[];$readers=[];$phpFiles=0;$dynamic=[];
+        $contractSymbols=[
+            'WorkflowExecutionStoreInterface','WorkflowTechnicalExternalStoreInterface',
+            'WorkflowExecutionCoordinatorInterface','WorkflowEvidenceSignalStoreInterface',
+            'FederationCanonicalWorkflowBridge','EngineeringCanonicalTechnicalExecutionGateway',
+            'FederationSequentialOrchestrator','FederationGoalStore','WorkflowEngine',
+            'ActionExecutionJobHandler','AgentRunJobHandler','ToolRuntime',
+        ];
+        $consumers=[];
         $dml='~\\b(?:INSERT\\s+(?:IGNORE\\s+)?INTO|REPLACE\\s+INTO|UPDATE|DELETE\\s+FROM)\\s+[`"]?(cos_(?:federation|workflow)_(?:runs|steps))[`"]?\\b~i';
         $dbal='~->\\s*(?:insert|update|delete)\\s*\\(\\s*[\'"](cos_(?:federation|workflow)_(?:runs|steps))[\'"]~i';
         foreach(['app','symfony/src','bin'] as $relative) {
@@ -38,6 +46,11 @@ final class WorkflowExecutionAuthorityInventory
                 foreach(token_get_all($source) as $token) {
                     if(is_array($token)&&in_array($token[0],[T_COMMENT,T_DOC_COMMENT],true))continue;
                     $body.=is_array($token)?$token[1]:$token;
+                }
+                foreach($contractSymbols as $symbol) {
+                    if(preg_match('/\\b'.preg_quote($symbol,'/').'\\b/',$body)) {
+                        $consumers[$symbol][$path]=true;
+                    }
                 }
                 foreach([$dml,$dbal] as $pattern) {
                     if(preg_match_all($pattern,$body,$m)) {
@@ -120,6 +133,7 @@ final class WorkflowExecutionAuthorityInventory
             'technical_writers'=>$normalized($actual),
             'read_consumer_candidates'=>$normalized($readers),
             'runtime_surfaces'=>$surfaces,
+            'consumer_symbol_references'=>$normalized($consumers),
             'dynamic_dml_candidates'=>array_keys($dynamic),
             'errors'=>$errors,
             'consumer_fleet_verified'=>false,

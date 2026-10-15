@@ -24,5 +24,15 @@ foreach(['cos_federation_runs','cos_federation_steps','cos_workflow_runs',
         throw new RuntimeException('No auditable technical writer/read consumer: '.$table);
     }
 }
+foreach(['WorkflowExecutionStoreInterface','WorkflowTechnicalExternalStoreInterface',
+    'WorkflowExecutionCoordinatorInterface','WorkflowEvidenceSignalStoreInterface',
+    'ActionExecutionJobHandler','AgentRunJobHandler','ToolRuntime'] as $symbol) {
+    if(empty($report['consumer_symbol_references'][$symbol])) {
+        throw new RuntimeException('Runtime contract/consumer is absent: '.$symbol);
+    }
+}
+if(!is_file($root.'/bin/cos-execution-authority-report.php')) {
+    throw new RuntimeException('Operator static execution evidence report missing.');
+}
 echo sprintf("COS execution authority static inventory passed: %d PHP files; distinct writer paths fenced; runtime fleet NOT verified.\n",
     $report['php_files_scanned']);

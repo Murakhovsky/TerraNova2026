@@ -71,3 +71,23 @@ kind: architecture
 Він окремо рахує legacy Runs, canonical Runs та migration ledger; перевіряє історичні Run через наявний `FederationHistoricalRunCutover::inspect()`, post-cutover integrity та конфлікти Plan authority. Усі SQL-запити прив'язані до одного tenant, результати обмежені. Truncated cohort, відсутній link, невідомий canonical Plan чи подвійний execution ownership завжди відображаються як неповнота/дрейф. Команда **завжди повертає nonzero**, навіть для здорового технічного зрізу; ніякого automatic cutover, recovery або Action replay.
 
 CI регресія: `tests/integration/federation_historical_cutover_mysql.php` перевіряє read-only audit на реальних MySQL fixture records та foreign-tenant isolation. `tests/architecture/cos_federation_fleet_audit.php` фіксує відсутність side-effect path. Це не замінює fleet-wide staging evidence чи operator signoff.
+
+## P0. Виконуваний аудит джерел стану та споживачів
+
+Команда з кореня репозиторію: `php bin/cos-execution-authority-report.php`. Вона сканує PHP-код `app/`, `symfony/src/` і `bin/`, зіставляє SQL/DBAL технічних writers чотирьох таблиць зі списком зафіксованих власників, знаходить посилання на runtime-контракти й ключові споживачі та повертає машинний звіт. Непідтверджені writer або зниклі основні entrypoint виявляє `tests/architecture/cos_execution_authority_inventory.php`. Цей звіт не модифікує дані.
+
+**Реальна межа аудиту:** статичний граф посилань не доводить відсутності викликів через reflection, контейнер, сторонні пакети, cron, зовнішні черги й production traffic. Тому `consumer_fleet_verified=false` та `live_tenant_verified=false` зберігаються свідомо, навіть коли CI пройшов.
+
+## P0. Матриця фактично підтриманого життєвого циклу Capability
+
+| Тип | Підтримуваний технічний шлях | Межа приймання |
+| --- | --- | --- |
+| Action | Затверджений Goal → спільний coordinator → canonical Store → Action/Policy/Approval/Queue → attested receipt | Реальні tenant, усі handlers і тривалі збої ще потребують перевірки |
+| Agent | Engineering AgentRun → tenant/Feature rollout → `WorkflowTechnicalExternalStoreInterface` → fenced claim/output | Лише Engineering pilot, не весь Kernel Agent registry та human gates |
+| Tool | Окремий `Kernel\\Tool\\Service\\ToolRuntime` | Немає спільної транзакційної прив'язки до canonical Run і незалежного receipt для довільного Tool; автоматичний dispatch заборонено |
+| Wait/Signal | Canonical read-only Step → `waiting` → незалежна перевірка Domain evidence → CAS completion | Лише pinned `read:` із зареєстрованим доказом; arbitrary push Signal не приймається |
+| Domain Outcome | Read-model verifier після terminal Run | Завершення Workflow саме по собі не означає успіх Goal |
+
+`DoctrineWorkflowExecutionCoordinator` управляє лише технічними переходами `start/advance/resume/cancel`. Він не створює паралельного worker і не підміняє власників Action, Agent та Tool. Доступ невідомим bindings закритий.
+
+**Поточний статус:** статичний аудит і підтримувані вузькі шляхи реалізовані; повний Package A acceptance, production fleet та універсальні Agent/Tool залишаються незавершеними. Статуси `VERIFIED`/merge без окремих доказів заборонені.
