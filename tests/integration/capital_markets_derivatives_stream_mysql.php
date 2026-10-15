@@ -34,6 +34,95 @@ try{
     try{$lifecycle->assertTrading($other,$source,$instrument);}
     catch(DomainException){$foreignFails=true;}
     $assert($foreignFails,'Foreign tenant inherited derivative Trading status.');
+    // A real MySQL canonical event, ACTIVE subscription, quality row and
+    // currently fenced source lease are all required for capability trust.
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_data_sources
+         (organization_id,source_id,venue_id,adapter_type,enabled,priority,
+          roles_json,credentials_reference,rate_limit_policy_json,reconnect_policy_json,
+          health_policy_json,license_profile,metadata_json)
+         VALUES (:org,:source,NULL,'bybit.linear-perpetual.v5',1,10,
+                 '[\"trading_source\"]',NULL,'{}','{}','{}','PUBLIC_FEED','{}')")
+        ->execute(['org'=>$org,'source'=>$source]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_instruments
+         (organization_id,instrument_id,symbol,canonical_symbol,name,family,status,
+          metadata_json,created_at,updated_at)
+         VALUES (:org,:id,'BTCUSDT','BTCUSDT-CI','CI perpetual','perpetual',
+                 'ACTIVE','{}',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))")
+        ->execute(['org'=>$org,'id'=>$instrument]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_subscriptions
+         (organization_id,subscription_id,source_id,instrument_id,target_fingerprint,
+          data_type,status,subscribed_at)
+         VALUES (:org,:id,:src,:instrument,:fp,'MARK_PRICE','ACTIVE',UTC_TIMESTAMP(6))")
+        ->execute(['org'=>$org,'id'=>'ci-'.bin2hex(random_bytes(6)),
+            'src'=>$source,'instrument'=>$instrument,
+            'fp'=>hash('sha256',$org.$instrument.'MARK_PRICE')]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_stream_worker_leases
+         (organization_id,source_id,shard_key,owner_id,fencing_token,expires_at,updated_at)
+         VALUES (:org,:src,'ci-derivative-shard','ci-worker',8,
+                 DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 10 MINUTE),UTC_TIMESTAMP(6))")
+        ->execute(['org'=>$org,'src'=>$source]);
+    $observation=new class implements \Domains\CapitalMarkets\Domain\MarketData\MarketObservation{
+        public function eventType():\Domains\CapitalMarkets\Domain\MarketData\MarketEventType{
+            return \Domains\CapitalMarkets\Domain\MarketData\MarketEventType::MarkPrice;
+        }
+        public function toArray():array{return ['value'=>'100.0123'];}
+    };
+    $makeResult=static function(string $id)use($source,$instrument,$observation){
+        $stamp=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+        $event=new \Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent(
+            $id,\Domains\CapitalMarkets\Domain\MarketData\MarketSourceId::fromString($source),
+            null,\Domains\CapitalMarkets\Domain\Instrument\InstrumentId::fromString($instrument),
+            new \Domains\CapitalMarkets\Domain\MarketData\MarketTimestamps($stamp,$stamp,$stamp),
+            '100',$observation,[],1,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketDataMode::Live,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketStatus::Open
+        );
+        $quality=new \Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment(
+            \Domains\CapitalMarkets\Domain\MarketData\MarketTrustStatus::Trusted,99,[],1,1,1
+        );
+        return new \Domains\CapitalMarkets\Application\DTO\MarketDataIngestionResult(
+            'ACCEPTED',true,true,true,$event,$quality,null
+        );
+    };
+    $eventId='ci-derivative-'.bin2hex(random_bytes(10));
+    $failed=false;
+    try{$trust->record($org,$source,'ci-derivative-shard','ci-worker',8,1,$makeResult($eventId));}
+    catch(DomainException){$failed=true;}
+    $assert($failed,'Derivative stream accepted an unpersisted synthetic canonical event.');
+    $stamp=(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format('Y-m-d H:i:s.u');
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_canonical_events
+         (organization_id,canonical_event_id,source_id,venue_id,instrument_id,
+          event_type,source_timestamp,received_timestamp,processed_timestamp,
+          sequence_value,payload_json,quality_flags_json,schema_version,fingerprint,
+          data_mode,market_status)
+         VALUES (:org,:event,:src,NULL,:instrument,'MARK_PRICE',:stamp,:received,
+                 :processed,'100','{}','[]',1,:fingerprint,'LIVE','OPEN')")
+        ->execute(['org'=>$org,'event'=>$eventId,'src'=>$source,'instrument'=>$instrument,
+            'stamp'=>$stamp,'received'=>$stamp,'processed'=>$stamp,
+            'fingerprint'=>hash('sha256',$eventId)]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_quality_metrics
+         (organization_id,canonical_event_id,source_id,venue_id,instrument_id,
+          trust_status,quality_score,flags_json,ingestion_latency_ms,
+          processing_latency_ms,event_age_ms,recorded_at)
+         VALUES (:org,:event,:src,NULL,:instrument,'TRUSTED',99,'[]',1,1,1,:stamp)")
+        ->execute(['org'=>$org,'event'=>$eventId,'src'=>$source,'instrument'=>$instrument,
+            'stamp'=>$stamp]);
+    $assert($trust->record($org,$source,'ci-derivative-shard','ci-worker',8,1,
+        $makeResult($eventId)),'Fenced canonical LIVE derivative with quality proof was rejected.');
+    $good=$trust->status($org,$source);
+    $assert(count($good)===1&&$good[0]['status']==='TRUSTED'
+        &&(int)$good[0]['accepted_count']===1,
+        'Per-derivative trust did not persist after fenced canonical data.');
+    $failed=false;
+    try{$trust->record($org,$source,'ci-derivative-shard','stolen-worker',8,1,$makeResult($eventId));}
+    catch(DomainException){$failed=true;}
+    $assert($failed,'Foreign lease owner replayed derivative evidence.');
     $insert=$pdo->prepare(
         "INSERT INTO tn_capital_market_derivative_stream_trust
          (organization_id,source_id,instrument_id,data_type,shard_key,
@@ -86,7 +175,9 @@ try{
         'Per-capability derivative trust leaks between tenants.');
     echo "Derivative contract transitions, stale gates, tenant isolation and trust quarantine MySQL passed.\n";
 }finally{
-    foreach(['tn_capital_market_derivative_stream_trust',
+    foreach(['tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
+        'tn_capital_market_subscriptions','tn_capital_market_instruments',
+        'tn_capital_market_data_sources','tn_capital_market_derivative_stream_trust',
         'tn_capital_market_derivative_contract_transitions',
         'tn_capital_market_derivative_contract_status',
         'tn_capital_market_stream_worker_leases'] as $table){
