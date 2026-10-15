@@ -119,6 +119,7 @@ jobs:
           set -euo pipefail
           php tests/integration/federation_historical_cutover_mysql.php
           php tests/integration/federation_non_action_goal_mysql.php
+          php tests/integration/workflow_wait_signal_mysql.php
       - name: Publish per-step timings
         if: always()
         continue-on-error: true

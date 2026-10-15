@@ -62,9 +62,9 @@ final readonly class WorkflowStepScheduler implements WorkflowStepSchedulerInter
                 $completedSet[$id] = true;
             } elseif ($persisted->state === 'pending') {
                 $pending[] = $id;
-            } elseif ($persisted->state === 'claimed' || $persisted->state === 'ambiguous') {
+            } elseif (in_array($persisted->state, ['claimed', 'waiting', 'ambiguous'], true)) {
                 if ($active !== null) {
-                    throw new DomainException('Concurrent externally claimed steps are not supported.');
+                    throw new DomainException('Concurrent active or waiting Workflow steps are not supported.');
                 }
                 $active = ['state' => $persisted->state, 'step_id' => $id];
             } else {

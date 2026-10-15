@@ -7,6 +7,7 @@ enum WorkflowStepSelectionState: string
 {
     case PENDING = 'pending';
     case CLAIMED = 'claimed';
+    case WAITING = 'waiting';
     case AMBIGUOUS = 'ambiguous';
     case COMPLETE = 'complete';
 }

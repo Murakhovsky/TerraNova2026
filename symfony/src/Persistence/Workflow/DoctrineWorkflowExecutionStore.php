@@ -11,6 +11,8 @@ use Kernel\Workflow\Model\StepStatus;
 use Kernel\Workflow\Model\WorkflowStatus;
 use LogicException;
 use Platform\Workflow\Contract\WorkflowExecutionStoreInterface;
+use Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface;
+use Platform\Workflow\Model\WorkflowEvidenceSignal;
 use Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface;
 use Platform\Workflow\Contract\WorkflowTechnicalExternalEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
@@ -34,7 +36,7 @@ use Platform\Workflow\Service\WorkflowStepScheduler;
  * No Action dispatch, Agent execution, automatic recovery or dual writes.
  * A run row serializes every transition/claim/checkpoint for its tenant.
  */
-final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface, WorkflowTechnicalExternalStoreInterface
+final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface, WorkflowTechnicalExternalStoreInterface, WorkflowEvidenceSignalStoreInterface
 {
     public function __construct(
         private Connection $db,
@@ -228,6 +230,11 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
             }
             DurableWorkflowTransitionPolicy::assertTransition(
                 StepStatus::CLAIMED->value, $checkpoint->nextState->value, true);
+            if ($checkpoint->nextState === StepStatus::WAITING
+                && ($row['side_effect_level'] !== 'none'
+                    || $checkpoint->resultReference !== null)) {
+                throw new DomainException('Only a read-only Step may wait for independent Domain evidence.');
+            }
             if ($checkpoint->nextState === StepStatus::COMPLETED) {
                 if ($checkpoint->resultReference === null || $checkpoint->resultReference === '') {
                     throw new DomainException('Completed Workflow Step must provide an independently attested receipt.');
@@ -274,6 +281,96 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
         });
     }
 
+
+    /**
+     * Complete a deliberately WAITING read-only Step using independent,
+     * already persisted Domain evidence. No worker replay, no arbitrary
+     * Signal payload, no Action/Tool/Agent invocation.
+     *
+     * Run and Step are locked together. Timestamp update and receipt proof
+     * share one transaction so an absent/tampered Domain fact rolls back.
+     */
+    public function completeWaitingEvidence(WorkflowEvidenceSignal $signal): WorkflowStepSnapshot
+    {
+        $command = $signal->command;
+        self::authorized($command->actor, $command->identity);
+        return $this->db->transactional(function () use ($signal, $command): WorkflowStepSnapshot {
+            $run = $this->lockedRun($command->identity);
+            self::assertRunRevision($run,$command->expectedRevision,WorkflowStatus::RUNNING);
+            if ($run['definition_id'] !== 'federation.approved-plan'
+                || !is_string($run['source_plan_id'])
+                || !is_string($run['approval_reference'])
+                || !is_string($run['source_plan_digest'])) {
+                throw new DomainException('Wait/Signal requires an approved canonical Goal Run.');
+            }
+            $graph = json_decode((string) $run['definition_json'],true,512,JSON_THROW_ON_ERROR);
+            if (!is_array($graph) || !array_is_list($graph)
+                || !hash_equals((string)$run['definition_digest'],
+                    WorkflowDefinitionFingerprint::digest($graph))) {
+                throw new DomainException('Wait/Signal definition digest is untrusted.');
+            }
+            $row = $this->db->fetchAssociative(
+                'SELECT * FROM cos_workflow_steps
+                 WHERE organization_id=:org AND run_id=:run AND step_id=:step FOR UPDATE',
+                [...self::keys($command->identity),'step'=>$signal->stepId],
+            );
+            $matches=array_values(array_filter($graph,static fn($part):bool=>
+                is_array($part) && ($part['id']??null)===$signal->stepId));
+            $pinned=$matches[0]??null;
+            if (!$row || $row['state']!==StepStatus::WAITING->value
+                || $row['side_effect_level']!=='none'
+                || (int)$row['revision']!==$signal->expectedStepRevision
+                || (int)$row['attempts']!==1
+                || $row['claim_token']!==null
+                || $row['result_reference']!==null
+                || count($matches)!==1 || !is_array($pinned)
+                || ($pinned['side_effect_level']??null)!=='none'
+                || ($pinned['capability_id']??null)!==$row['capability_id']
+                || ($pinned['capability_version']??null)!==$row['capability_version']
+                || !is_string($pinned['execution_binding']??null)
+                || !str_starts_with($pinned['execution_binding'],'read:')
+                || ($pinned['evidence']['reference']??null)!==$signal->resultReference
+                || ($pinned['evidence']['run_id']??null)!==$command->identity->runId
+                || ($pinned['evidence']['input_digest']??null)!==$run['input_digest']
+                || $command->correlationId!==$run['correlation_id']
+                || $command->actor->userId()->value()!==$run['actor_id']) {
+                throw new DomainException('Wait/Signal is not a trusted, tenant-owned read-only checkpoint.');
+            }
+            // Independent verifiers that compare event times to Step.updated_at
+            // must see the exact candidate checkpoint instant before proof.
+            $updated=$this->db->executeStatement(
+                'UPDATE cos_workflow_steps SET updated_at=NOW(6)
+                 WHERE organization_id=:org AND run_id=:run AND step_id=:step
+                   AND state=:state AND revision=:revision',
+                [...self::keys($command->identity),'step'=>$signal->stepId,
+                    'state'=>StepStatus::WAITING->value,'revision'=>$signal->expectedStepRevision],
+            );
+            if ($updated!==1) throw new LogicException('Waiting evidence candidate lost CAS.');
+            $this->assertReceipt($command->actor,$command->identity,$run,[
+                'step_id'=>$signal->stepId,'result_reference'=>$signal->resultReference,
+            ]);
+            $updated=$this->db->executeStatement(
+                'UPDATE cos_workflow_steps
+                 SET state=:completed,revision=revision+1,result_reference=:receipt,
+                     updated_at=NOW(6)
+                 WHERE organization_id=:org AND run_id=:run AND step_id=:step
+                   AND state=:waiting AND revision=:revision',
+                ['completed'=>StepStatus::COMPLETED->value,
+                    'receipt'=>$signal->resultReference,...self::keys($command->identity),
+                    'step'=>$signal->stepId,'waiting'=>StepStatus::WAITING->value,
+                    'revision'=>$signal->expectedStepRevision],
+            );
+            if ($updated!==1) throw new LogicException('Waiting evidence Step CAS lost.');
+            $this->advanceRunRevision($command->identity,$command->expectedRevision);
+            $fresh=$this->db->fetchAssociative(
+                'SELECT * FROM cos_workflow_steps
+                 WHERE organization_id=:org AND run_id=:run AND step_id=:step',
+                [...self::keys($command->identity),'step'=>$signal->stepId],
+            );
+            if (!$fresh) throw new LogicException('Completed Signal Step disappeared.');
+            return self::stepSnapshot($fresh);
+        });
+    }
 
     /**
      * Trusted, narrow technical Agent admission. Domain owns AgentRun proof

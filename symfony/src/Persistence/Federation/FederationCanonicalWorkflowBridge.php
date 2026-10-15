@@ -5,6 +5,8 @@ namespace App\Persistence\Federation;
 
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
+use Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface;
+use Platform\Workflow\Model\WorkflowEvidenceSignal;
 use App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence;
 use Doctrine\DBAL\Connection;
 use DomainException;
@@ -48,6 +50,7 @@ final readonly class FederationCanonicalWorkflowBridge
     public function __construct(
         private Connection $db,
         private WorkflowExecutionStoreInterface $workflow,
+        private WorkflowEvidenceSignalStoreInterface $signals,
         private WorkflowStepScheduler $scheduler,
         private FederationGoalStore $goals,
         private FederationWorkflowPlanApprovalEvidence $planEvidence,
@@ -391,6 +394,24 @@ final readonly class FederationCanonicalWorkflowBridge
                 $this->workflow->claim(new WorkflowStepClaim(
                     $command,$step->stepId,'goal-evidence:'.$actor->userId()->value(),86400));
                 return $result('awaiting_domain_evidence',$step->stepId);
+            }
+            if ($selection->state===WorkflowStepSelectionState::WAITING) {
+                $waiting=$this->db->fetchAssociative(
+                    'SELECT revision FROM cos_workflow_steps
+                     WHERE organization_id=:org AND run_id=:run AND step_id=:step',
+                    ['org'=>$org,'run'=>$runId,'step'=>$step->stepId],
+                );
+                if (!$waiting) return $result('manual_reconciliation_required',$step->stepId);
+                try {
+                    $this->signals->completeWaitingEvidence(new WorkflowEvidenceSignal(
+                        $command,$step->stepId,(int)$waiting['revision'],$reference,
+                    ));
+                    return $result('step_completed',$step->stepId);
+                } catch (\Throwable) {
+                    // A missing/forged/domain-unverified signal MUST remain
+                    // waiting, never claim an achieved business result.
+                    return $result('awaiting_domain_evidence',$step->stepId);
+                }
             }
             if ($selection->state!==WorkflowStepSelectionState::CLAIMED) {
                 return $result('manual_reconciliation_required',$step->stepId);

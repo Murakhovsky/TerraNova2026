@@ -43,7 +43,7 @@ final readonly class WorkflowReceiptAttestationRouter implements WorkflowReceipt
         }
         if ($ctx['side_effect_level']==='external') return $this->actions->attest($request);
         if ($ctx['side_effect_level']!=='none' || $ctx['definition_id']!=='federation.approved-plan'
-            || !in_array($ctx['state'],['claimed','completed'],true)
+            || !in_array($ctx['state'],['claimed','waiting','completed'],true)
             || ($ctx['result_reference']!==null
                 && $ctx['result_reference']!==$request->resultReference)) {
             throw new DomainException('Non-Action receipt cannot attest this Workflow Step.');

@@ -284,6 +284,8 @@ services:
     alias: App\Persistence\Workflow\DoctrineWorkflowActionWorkerAdmission
   Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
+  Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface:
+    alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
   # Plan verifier stays fail-closed. Real Action receipt verifier is not promoted.
   Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface:
     alias: App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence
