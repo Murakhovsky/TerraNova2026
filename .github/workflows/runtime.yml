@@ -133,6 +133,10 @@ jobs:
             -e COS_CM_POOL_APPROVAL_TEST=1 \
             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
             php php /tmp/cm-pool-approval.php
+      - name: P1 derivatives lifecycle and freshness MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_derivatives_stream_mysql.php php:/tmp/cm-derivatives.php
+          docker compose exec -T             -e COS_CM_DERIVATIVES_TEST=1             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php             php php /tmp/cm-derivatives.php
       - name: Capital Markets guarded production pool MySQL acceptance
         run: |
           docker compose cp tests/integration/capital_markets_pool_production_mysql.php php:/tmp/cm-pool-production.php
