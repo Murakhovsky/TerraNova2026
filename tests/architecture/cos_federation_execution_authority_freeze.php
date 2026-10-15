@@ -50,6 +50,14 @@ foreach ($existingExecutors as $path => $_) {
     }
 }
 
+/* Only this transactional, rolled-back MySQL smoke command is excluded;
+ * do not allow an arbitrary registry waiver for a production source file. */
+$fixture = 'symfony/src/Command/FederationPersistenceSmokeCommand.php';
+if (($registry['nonproduction_fixture_exclusions'] ?? []) !== [$fixture]
+    || !is_file($root . '/' . $fixture)) {
+    throw new RuntimeException('Fixture exemption inventory changed without review.');
+}
+
 $actual = [];
 $inspected = 0;
 $roots = ['app', 'symfony/src', 'bin'];
@@ -65,6 +73,7 @@ foreach ($roots as $relativeRoot) {
         $path = str_replace(DIRECTORY_SEPARATOR, '/', $path);
         $content = (string) file_get_contents($entry->getPathname());
         ++$inspected;
+        if ($path === $fixture) continue; // Synthetic transaction smoke, not a production Run/Step writer.
         // A business Domain or Goal application must not gain a new generic
         // Federation engine. Existing two legacy adapters remain frozen.
         if (preg_match('~/(?:Federation|Goal)[^/]*(?:WorkflowEngine|WorkflowRunner|Orchestrator|Scheduler|QueueWorker|EventBus)\.php$~', $path)

@@ -1,44 +1,50 @@
 ---
-title: COS Federation — actual execution authority audit, 2026-10-15
-description: Verified PR #346 technical execution owners, duplicate Run/Step persistence and safe cutover blockers.
+title: COS Federation — фактичний аудит виконання
+description: Перевірка актуального коду COS, дублювання технічних Run/Step, джерел стану та перешкод безпечній консолідації.
 status: active
 updated: 2026-10-15
 kind: architecture
 ---
 
-# Actual execution authority audit (PR #346)
+# Фактичний аудит джерел виконання COS
 
-**Reviewed head:** \`a8b2cd5cb921ef96dacaf648af7e5f5767937e4a\`, branch \`feature/cos-federation-foundation-phase1-20261008\`. Review is based on GitHub source, existing contract/CI evidence and DI wiring. **No production database read, runtime traffic trace or deployment verification was performed in this audit.** This audit is not a full runtime call graph.
+**Перевірений коміт:** `a8b2cd5cb921ef96dacaf648af7e5f5767937e4a`, PR #346, гілка `feature/cos-federation-foundation-phase1-20261008`.
 
-## Verified observations
+**Межа перевірки:** вихідний код GitHub, реєстрація залежностей, контракти та результати наявного CI. Прямої перевірки production-БД, реального трафіку і deployment не проводилося. Це не повний динамічний граф викликів.
 
-1. **Platform Workflow:** \`DoctrineWorkflowExecutionStore\` writes \`cos_workflow_runs/steps\`; its tenant-bound create, CAS transitions, claim/checkpoint, receipt and recovery foundation exists. The generic \`WorkflowExecutionCoordinatorInterface\` is defined, but the active federation endpoint does not delegate start/advance to a canonical coordinator.
-2. **Goal/Federation:** \`FederationRunController\` calls \`FederationSequentialOrchestrator\`, which invokes \`FederationGoalStore\` for persisted \`cos_federation_runs/steps\` and \`FederationRunFinalizer\` for completion. This is an active second technical execution state authority, **not merely a projection**. Goal/Plan/Outcome data are legitimate application-owned concepts and must survive.
-3. **Shared technical primitives:** \`FederationStepDependencyGraph\` delegates to \`WorkflowDependencyGraph\`, \`FederationStepCursor\` to \`WorkflowStepScheduler\`, and \`ExecutionRunPolicy\` to \`DurableWorkflowTransitionPolicy\`. These are real partial consolidations, not yet a single execution lifecycle.
-4. **Engineering:** \`EngineeringCanonicalTechnicalExecutionGateway\` directly writes to canonical \`cos_workflow_runs/steps\` for human-allowlisted AgentRuns, bypassing the generic Store API. It also creates an Engineering technical link. The Engineering business Workflow and human gates remain separate by design. \`EngineeringCanonicalTechnicalExecutionAdmission\` requires real shadow parity. This technical writer is a migration debt, not proof of universal execution convergence.
-5. **Worker safety:** \`DoctrineWorkflowActionWorkerAdmission\`, \`WorkflowPredecessorReceiptVerifier\` and registered non-Action evidence adapters exist; generic receipt/claim defaults remain fail-closed in \`symfony/config/services.yaml\`. Safety adapters should be retained during cutover.
-6. **Read-only parity:** \`DoctrineWorkflowShadowParityReader\` and \`cos:workflow:shadow-audit\` can compare real persisted sources. Code and tests do not establish parity for every live tenant/legacy run. The previous duplication registry still records all 20 entries as \`NOT_STARTED\`, and all 25 planned parity cases as \`NOT_IMPLEMENTED\`.
-7. **CI:** At the reviewed head, GitHub reported completed/success for \`CI\`, \`Runtime\`, \`Frontend\`, \`Documentation\`. Successful checks do not prove actual dual-writer removal or production DB cutover.
+## Підтверджений фактичний стан
 
-## Current authority / cutover matrix
+1. **Спільний Workflow:** `DoctrineWorkflowExecutionStore` вже записує `cos_workflow_runs/steps`. Присутні tenant-bound create, CAS, claim/checkpoint, receipts та recovery. Однак `WorkflowExecutionCoordinatorInterface` ще не став єдиною активною точкою виконання Federation.
+2. **Goal / Federation:** `FederationRunController` досі викликає `FederationSequentialOrchestrator`. Через `FederationGoalStore` та `FederationRunFinalizer` зберігається другий, самостійний технічний стан `cos_federation_runs/steps`. Це не лише read projection. Goal, Plan і Outcome як окремі бізнес-сутності необхідно зберегти.
+3. **Часткова консолідація:** `FederationStepDependencyGraph` делегує `WorkflowDependencyGraph`; `FederationStepCursor` делегує `WorkflowStepScheduler`; `ExecutionRunPolicy` делегує `DurableWorkflowTransitionPolicy`. Це повторне використання вже працює, але життєвий цикл Run/Step не об'єднано.
+4. **Engineering:** `EngineeringCanonicalTechnicalExecutionGateway` безпосередньо пише в `cos_workflow_runs/steps` для дозволених AgentRun замість виклику загального Store API. Бізнес-етапи Engineering, незалежні перевірки та людські погодження повинні залишитися у власному контексті. `EngineeringCanonicalTechnicalExecutionAdmission` перевіряє shadow parity, але не означає завершений cutover.
+5. **Безпека виконання:** наявні `DoctrineWorkflowActionWorkerAdmission`, `WorkflowPredecessorReceiptVerifier` та адаптери нативних доказів. Типові загальні реалізації claim/receipt у `services.yaml` залишаються fail-closed. Їх не можна вилучати під час міграції.
+6. **Порівняння даних:** `DoctrineWorkflowShadowParityReader` і `cos:workflow:shadow-audit` виконують read-only звірення. Повний доказ паритету для всіх реальних tenant/Run відсутній. У попередньому реєстрі дублювання 20 записів із `NOT_STARTED`, а 25 сценаріїв parity мають `NOT_IMPLEMENTED`.
+7. **Перевірки:** на базовому коміті аудит встановив успішні `CI`, `Runtime`, `Frontend`, `Documentation`. Це не доказ перенесення production-даних чи відсутності подвійних writer.
 
-| Source | Existing technical writer | Source of truth today | Target |
-| --- | --- | --- | --- |
-| Legacy Kernel Workflow | \`Kernel/Workflow/Service/WorkflowEngine\` | PHP execution objects | Adapter or retire only after consumer parity |
-| Federation Goals | \`FederationGoalStore\`, \`FederationRunFinalizer\` | \`cos_federation_runs/steps\` | \`Platform Workflow\` (Goal/Plan/Outcome remain in Goal Management) |
-| Generic durable Workflow | \`DoctrineWorkflowExecutionStore\`, \`DoctrineWorkflowRecoveryManager\` | \`cos_workflow_runs/steps\` | One canonical execution persistence and admission |
-| Engineering technical AgentRun | \`EngineeringCanonicalTechnicalExecutionGateway\` | Canonical Run/Step for allowlisted AgentRuns plus Engineering legacy business stage | Store-backed technical execution; preserve Engineering domain stages, audit and human decisions |
+## Матриця відповідальності за виконання
 
-**Stage 0 implemented by this increment:** \`resources/architecture/cos-execution-authority-freeze.json\` is a machine-readable, reviewed allowlist of existing direct execution writers. \`tests/architecture/cos_federation_execution_authority_freeze.php\` scans runtime PHP for new direct Run/Step SQL/DBAL writes and parallel Federation engines. It fails CI for new sources rather than legitimizing them. All existing writers are **grandfathered debt**, not approved target design. It is a static regression gate, **not** a database migration, complete AST/SQL dataflow scan, run-time ownership proof, or authorization to delete legacy storage.
+| Контур | Наявні записи | Цільове рішення |
+| --- | --- | --- |
+| Kernel Workflow | Переважно in-memory об'єкти `WorkflowExecution` | Adapter або зняття з виконання після перевірки consumers |
+| Федеративні Goal | `cos_federation_runs/steps`, writer `FederationGoalStore` та `FederationRunFinalizer` | Лише Goal/Plan/Outcome у Goal Management; технічні Run/Step у спільному Workflow |
+| Canonical Workflow | `cos_workflow_runs/steps`, `DoctrineWorkflowExecutionStore` і `DoctrineWorkflowRecoveryManager` | Єдине технічне сховище з перевірюваним execution admission |
+| Engineering AgentRun | Canonical Run/Step через власний прямий SQL та окремий бізнес-Workflow | Загальний Store API для технічного виконання, незмінні бізнес-етапи та human gates |
 
-## Mandatory next cutover work (no automatic deletion)
+## Реалізований захист від нових дублікатів
 
-1. Implement and wire a **single** durable \`WorkflowExecutionCoordinatorInterface\` on top of the canonical Workflow Store, Action/Agent/Tool handlers and Queue, preserving tenant CAS, approval revalidation, receipts and uncertainty safety.
-2. Produce complete consumer and DB write graph, including web/CLI/queue/Engineering, and lock down tenant+plan identity uniqueness across old/new runtimes. The registry must record verified consumers before migration status advances.
-3. Add additive legacy-to-canonical ID mapping, transactional read-only backfill, independent receipt attestation and **fleet-wide** shadow parity, with explicit \`NO_TARGET/DRIFT/AMBIGUOUS\` quarantine.
-4. Fence legacy submissions and drain/reconcile in-flight side effects; switch one tenant/plan cohort at a time. Never dual dispatch, dual write or blindly retry an unknown external outcome.
-5. Move \`FederationSequentialOrchestrator\` behind a Goal-to-Workflow adapter, retire its old Run/Step writer after parity, then remove the inert read-only bridge. Keep historical rows immutable until retention decision.
-6. Move Engineering canonical AgentRun write/claim/checkpoint paths into the shared Workflow Store while retaining Engineering business state, human merge/approval, AgentRun artifacts and transition history.
-7. Validate Golden 50 and all installed business Domains through published capabilities with trusted native evidence. Require live CI MySQL/failure-injection evidence and a verified operations rollback strategy before declaring completion.
+У цьому інкременті впроваджено правило `FED-INV-04`, реєстр `resources/architecture/cos-execution-authority-freeze.json` і CI-перевірку `tests/architecture/cos_federation_execution_authority_freeze.php`. Перевірка шукає нових прямих SQL/DBAL writer для чотирьох таблиць Run/Step та нові загальні механізми Federation execution у runtime-коді. Існуючі writer внесені до зафіксованого переліку технічного боргу. Окремо виключена одна транзакційна smoke-команда, яка створює синтетичні тестові записи.
 
-**Do not conflate an architectural freeze or green tests with production convergence.**
+Це **статичний регресійний бар'єр**, а не автоматична міграція, не доведений повний call graph і не дозвіл видаляти legacy таблиці.
+
+## Обов'язкова послідовність завершення консолідації
+
+1. Реалізувати та підключити один durable `WorkflowExecutionCoordinatorInterface` до спільного Workflow Store, Action/Agent/Tool, Policy, Approval та Queue. Не створювати окремий Federation worker.
+2. Перевірити всіх runtime consumers, web/CLI/queue, власників DB writes та єдину прив'язку tenant+Plan до Run.
+3. Зробити additive ID mapping, read-only backfill старих Run/Step, незалежну перевірку receipts, точну звірку станів і карантин сумнівних записів.
+4. Передати право запису через fence/drain для окремих груп tenant/Plan. Жодних dual writes, подвійних Action dispatch чи автоматичних повторів невизначеного зовнішнього ефекту.
+5. Замінити `FederationSequentialOrchestrator` тонким Goal-to-Workflow adapter, вимкнути legacy writer, прибрати інертний міст лише після доказового cutover.
+6. Перенести прямі Engineering SQL-операції до загального Store API, не втрачаючи AgentRun artifacts, human approval, review/QA і transition history.
+7. Перевірити Golden 50 та інші Domains через реальні зареєстровані capabilities і підтверджені бізнес-факти. Перед production acceptance потрібні MySQL failure-injection, fleet-wide parity та процедура відновлення.
+
+**Статус:** консолідація триває; нормативну федеративну модель ще не можна вважати впровадженою повністю.

@@ -40,5 +40,8 @@
     "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
     "symfony/src/Persistence/Federation/FederationReadOnlyWorkflowRunner.php"
   ],
-  "governance_rule": "FED-INV-04"
+  "governance_rule": "FED-INV-04",
+  "nonproduction_fixture_exclusions": [
+    "symfony/src/Command/FederationPersistenceSmokeCommand.php"
+  ]
 }
