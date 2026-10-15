@@ -163,6 +163,92 @@ final readonly class InstrumentPoolApprovalService
         return $counts;
     }
 
+    /**
+     * Source namespace for exchange-symbol identifiers that have already been
+     * explicitly validated in the canonical Foundation by an authorized operator.
+     * Unlike a ticker, this binds one concrete venue and provider, not economics.
+     */
+    public static function exactIdentifierSource(string $provider,string $venueId):string
+    {
+        if(!in_array($provider,['BINANCE','BYBIT','KRAKEN'],true)
+            ||$venueId===''||trim($venueId)!==$venueId||strlen($venueId)>190){
+            throw new DomainException('Invalid explicit exchange identifier scope.');
+        }
+        return 'CM_POOL_'.$provider.'_'.substr(hash('sha256',$venueId),0,24);
+    }
+
+    /**
+     * Stage only evidence-matched LINK approvals for already ACTIVE instruments
+     * with an explicit venue-specific EXCHANGE_SYMBOL identifier. Symbol
+     * similarity, historical seed rows and matching underlyings never qualify.
+     * No mapping is written until an independent human approves the proposal.
+     *
+     * @return array{created:int,skipped:int}
+     */
+    public function stageExactIdentityLinks(string $org,int $actor,int $snapshotId,int $limit=25):array
+    {
+        $this->allow($org,$actor,'capital_markets.instrument_pool.propose');
+        if($limit<1||$limit>100)throw new DomainException('Invalid exact-link proposal budget.');
+        $snapshot=$this->snapshot($org,$snapshotId);
+        $symbols=[];
+        foreach($snapshot['rows']??[] as $row){
+            if(is_array($row)&&($row['observation']??null)==='UNMAPPED_REVIEW'
+                &&is_string($row['venue_symbol']??null)
+                &&is_string($row['base']??null)&&is_string($row['quote']??null)){
+                $symbols[]=$row['venue_symbol'];
+            }
+        }
+        $counts=['created'=>0,'skipped'=>0];
+        if($symbols===[])return $counts;
+        $symbols=array_values(array_unique($symbols));
+        if(count($symbols)>500)throw new DomainException('Too many unmapped link candidates.');
+        $source=self::exactIdentifierSource($snapshot['provider'],$snapshot['venue_id']);
+        $markers=implode(',',array_fill(0,count($symbols),'?'));
+        $q=$this->pdo->prepare(
+            "SELECT x.identifier_value AS venue_symbol,x.instrument_id
+             FROM tn_capital_market_instrument_identifiers x
+             INNER JOIN tn_capital_market_instruments i
+                ON i.organization_id=x.organization_id AND i.instrument_id=x.instrument_id
+             WHERE x.organization_id=? AND x.identifier_type='EXCHANGE_SYMBOL'
+               AND x.identifier_source=? AND i.status='ACTIVE'
+               AND x.identifier_value IN ($markers)"
+        );
+        $q->execute([$org,$source,...$symbols]);
+        $identified=[];
+        foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
+            $identified[(string)$row['venue_symbol']]=(string)$row['instrument_id'];
+        }
+        $pending=$this->pdo->prepare(
+            "SELECT id FROM tn_capital_market_instrument_pool_changes
+             WHERE organization_id=:org AND venue_id=:venue AND venue_symbol=:symbol
+               AND status='PENDING' LIMIT 1"
+        );
+        $alreadyMapped=$this->pdo->prepare(
+            'SELECT venue_symbol FROM tn_capital_market_venue_instruments
+             WHERE organization_id=:org AND venue_id=:venue AND instrument_id=:id LIMIT 1'
+        );
+        foreach($symbols as $symbol){
+            $id=$identified[$symbol]??null;
+            if($id===null)continue;
+            if($counts['created']>=$limit)break;
+            $pending->execute(['org'=>$org,'venue'=>$snapshot['venue_id'],'symbol'=>$symbol]);
+            if($pending->fetchColumn()!==false){++$counts['skipped'];continue;}
+            $alreadyMapped->execute(['org'=>$org,'venue'=>$snapshot['venue_id'],'id'=>$id]);
+            if($alreadyMapped->fetchColumn()!==false){++$counts['skipped'];continue;}
+            try{
+                $this->propose($org,$actor,[
+                    'snapshot_id'=>$snapshotId,'action'=>'LINK','venue_symbol'=>$symbol,
+                    'instrument_id'=>$id,
+                    'reason'=>'Exact operator-registered exchange identifier; independent approval required.',
+                ],'CM-POOL-EXACT-'.bin2hex(random_bytes(8)));
+                ++$counts['created'];
+            }catch(\DomainException|\PDOException){
+                ++$counts['skipped'];
+            }
+        }
+        return $counts;
+    }
+
     /** @return array<string,mixed> */
     public function decide(string $org,int $actor,int $id,bool $approve,string $reason,string $correlationId):array
     {

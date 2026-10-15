@@ -41,6 +41,13 @@ foreach([
 foreach(['count($targets)>25','Duplicate Instrument Pool schedule target','BINANCE','BYBIT','KRAKEN'] as $needle){
     if(!str_contains($targets,$needle))throw new RuntimeException('Instrument Pool scope validation missing '.$needle);
 }
+$approval=$read('app/Domains/CapitalMarkets/Application/Service/InstrumentPoolApprovalService.php');
+if(!str_contains($handler,'stageExactIdentityLinks')
+    ||!str_contains($approval,'exactIdentifierSource')
+    ||!str_contains($approval,"identifier_type='EXCHANGE_SYMBOL'")
+    ||!str_contains($approval,"i.status='ACTIVE'")){
+    throw new RuntimeException('Explicit exact-id mapping proposal gate missing.');
+}
 $catalogAudit=$read('app/Domains/CapitalMarkets/Application/Service/InstrumentPoolCatalogAudit.php');
 $fullCatalog=$read('app/Domains/CapitalMarkets/Application/Service/CrossVenueCatalogDiscovery.php');
 if(!str_contains($catalogAudit,'CrossVenueCatalogDiscovery::loadProviderCatalog')

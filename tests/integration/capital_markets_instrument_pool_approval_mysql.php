@@ -148,6 +148,48 @@ try{
     $assert($select('tn_capital_market_venue_instruments','status',$org,$linkedId)==='SUSPENDED',
         'Approved LINK must create a suspended venue mapping.');
 
+    // Autonomous exact-link proposals are permitted ONLY when an active
+    // canonical instrument has a pre-registered, venue-specific identity.
+    $explicitSymbol='AUT'.strtoupper(bin2hex(random_bytes(3))).'USDT';
+    $explicitId='pool:explicit:'.strtolower($explicitSymbol);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_instruments
+         (organization_id,instrument_id,symbol,canonical_symbol,name,family,status,
+          metadata_json,created_at,updated_at)
+         VALUES (:org,:id,:symbol,:canonical_symbol,'Explicit issuer identity',
+          'spot_market','ACTIVE','{}',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))"
+    )->execute(['org'=>$org,'id'=>$explicitId,'symbol'=>$explicitSymbol,
+        'canonical_symbol'=>$explicitSymbol]);
+    $pdo->prepare(
+        "INSERT INTO tn_capital_market_instrument_identifiers
+          (organization_id,instrument_id,identifier_type,identifier_source,identifier_value)
+          VALUES (:org,:id,'EXCHANGE_SYMBOL',:source,:symbol)"
+    )->execute([
+        'org'=>$org,'id'=>$explicitId,
+        'source'=>InstrumentPoolApprovalService::exactIdentifierSource('BINANCE',$venue),
+        'symbol'=>$explicitSymbol,
+    ]);
+    $explicitSnapshot=$record([[
+        'venue_symbol'=>$explicitSymbol,'instrument_id'=>null,'mapping_status'=>null,
+        'observation'=>'UNMAPPED_REVIEW','base'=>'AUT','quote'=>'USDT',
+    ]],2);
+    $exact=$service->stageExactIdentityLinks($org,$proposer,$explicitSnapshot,5);
+    $assert($exact['created']===1,'Exact registered exchange identity was not staged.');
+    $assert($select('tn_capital_market_venue_instruments','status',$org,$explicitId)===null,
+        'Automatic link staging bypassed human approval.');
+    $exactAgain=$service->stageExactIdentityLinks($org,$proposer,$explicitSnapshot,5);
+    $assert($exactAgain['created']===0,'Duplicate automatic mapping proposal was staged.');
+    $exactId=(int)$service->queue($org,$proposer)[0]['id'];
+    $reject(fn()=>$service->decide($org,$proposer,$exactId,true,
+        'Service actor must not self approve','CI-EXACT-SELF'),
+        'Auto mapping circumvented independent human approval.');
+    $service->decide($org,$approver,$exactId,true,
+        'Verified exact venue identity mapping','CI-EXACT-LINK');
+    $assert($select('tn_capital_market_venue_instruments','status',$org,$explicitId)==='SUSPENDED',
+        'Approved exact identity LINK must remain SUSPENDED.');
+    $assert($service->stageExactIdentityLinks($org,$proposer,$explicitSnapshot,5)['created']===0,
+        'Existing venue mapping was proposed again.');
+
     $reject(fn()=>$service->decide($other,$foreignActor,$change,true,
         'Foreign decision should fail','CI-TENANT'),'Foreign org approved change.');
     $candidateSet=$service->stageStatusCandidates($org,$proposer,$s1);

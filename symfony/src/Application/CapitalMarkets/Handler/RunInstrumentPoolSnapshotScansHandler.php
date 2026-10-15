@@ -53,7 +53,15 @@ final readonly class RunInstrumentPoolSnapshotScansHandler
                 $data=$this->audit->inspect($org,$provider,$venue,500);
                 $snapshotId=$this->snapshots->record($org,$this->actorId,$data);
                 if(getenv('COS_CM_INSTRUMENT_POOL_AUTO_PROPOSE_ENABLED')==='1' && $data['health']==='AVAILABLE'){
-                    $this->approvals->stageStatusCandidates($org,$this->actorId,$snapshotId,50);
+                    $statusProposals=$this->approvals->stageStatusCandidates(
+                        $org,$this->actorId,$snapshotId,50,
+                    );
+                    $remaining=50-$statusProposals['created'];
+                    if($remaining>0){
+                        $this->approvals->stageExactIdentityLinks(
+                            $org,$this->actorId,$snapshotId,$remaining,
+                        );
+                    }
                 }
                 $result['saved']++;
                 if($data['health']!=='AVAILABLE')$result['unavailable']++;
