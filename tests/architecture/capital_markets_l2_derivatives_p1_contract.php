@@ -20,8 +20,9 @@ if(!str_contains($cmd,'COS_CM_L2_FENCED_ENABLED')
 foreach(['BinanceL2RecoveryCoordinator.php','BybitL2RecoveryCoordinator.php',
     'KrakenL2BookRecovery.php'] as $name){
     $s=$read('app/Domains/CapitalMarkets/Infrastructure/MarketData/L2/'.$name);
-    if(!str_contains($s,'snapshot')||!str_contains($s,'sequence')
-        &&!str_contains($s,'Sequence')){
+    if(!str_contains($s,'snapshot')
+        ||(!str_contains($s,'sequence')&&!str_contains($s,'Sequence')
+            &&!str_contains($s,'Checksum')&&!str_contains($s,'checksum'))){
         throw new RuntimeException('Venue-specific snapshot/sequence recovery missing: '.$name);
     }
 }
