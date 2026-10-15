@@ -109,6 +109,13 @@ jobs:
             -e COS_CM_WRITER_GATE_TEST=1 \
             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
             php php /tmp/cm-rest-ws-race.php
+      - name: Capital Markets approved Instrument Pool import MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_instrument_pool_approval_mysql.php php:/tmp/cm-pool-approval.php
+          docker compose exec -T \
+            -e COS_CM_POOL_APPROVAL_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-pool-approval.php
       - name: Capital Markets Instrument Pool snapshot MySQL
         run: |
           docker compose cp tests/integration/capital_markets_instrument_pool_snapshot_mysql.php php:/tmp/cm-pool-snapshot.php

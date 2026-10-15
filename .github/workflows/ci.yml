@@ -67,6 +67,7 @@ jobs:
           php tests/unit/capital_markets_instrument_pool_lifecycle_review.php
           php tests/unit/capital_markets_instrument_pool_schedule_targets.php
           php tests/architecture/capital_markets_instrument_pool_scheduler_contract.php
+          php tests/architecture/capital_markets_instrument_pool_approval_contract.php
           php tests/unit/capital_markets_streaming_operations_alerts.php
           php tests/architecture/capital_markets_instrument_pool_snapshot_contract.php
           php tests/architecture/capital_markets_binance_spot_multi_streaming_contract.php

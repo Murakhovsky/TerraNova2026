@@ -1096,6 +1096,93 @@
       {% endif %}
     </section>
 
+  {% elseif cmView == 'instrument_pool' %}
+    <section class="cos-panel">
+      <h2>Погодження Instrument Pool</h2>
+      <p>Жодна пропозиція не змінює реєстр. Для застосування потрібна друга особа з правом затвердження. Докази мають залишатися актуальними.</p>
+      {% if query.saved|default(false) %}<p class="alert alert-success">Рішення збережено.</p>{% endif %}
+      {% if query.error|default(false) %}<p class="alert alert-warning">{{ query.error }}</p>{% endif %}
+    </section>
+    <section class="cos-panel">
+      <h2>Черга змін</h2>
+      {% if w.changes|default([]) is empty %}
+        <p>Запитів на погодження поки немає.</p>
+      {% endif %}
+      {% for change in w.changes|default([]) %}
+        <div class="border rounded p-3 mb-3">
+          <strong>#{{ change.id }} · {{ change.action }} · {{ change.venue_symbol }}</strong>
+          <p>Статус: {{ change.status }} · {{ change.provider }} · {{ change.venue_id }} · Snapshot #{{ change.snapshot_id }}</p>
+          <p>Ініціатор: {{ change.proposed_by }} · Причина: {{ change.reason }}</p>
+          {% if change.status == 'PENDING' and canApproveInstrumentPool %}
+            <form method="post" action="/capital-markets/instrument-pool/proposals/{{ change.id }}/decision" class="row g-2">
+              <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+              <div class="col-md-8"><input name="reason" class="form-control" minlength="12" maxlength="500" placeholder="Причина рішення (не менше 12 символів)" required></div>
+              <div class="col-md-2"><button class="btn btn-primary" name="decision" value="approve">Затвердити і застосувати</button></div>
+              <div class="col-md-2"><button class="btn btn-outline-secondary" name="decision" value="reject">Відхилити</button></div>
+            </form>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </section>
+    <section class="cos-panel">
+      <h2>Останні discovery snapshots</h2>
+      {% if w.discoveries|default([]) is empty %}
+        <p>Немає сканувань. Спочатку запустіть контрольований discovery у CLI або штатному Scheduler.</p>
+      {% endif %}
+      {% for snapshot in w.discoveries|default([]) %}
+        <div class="border rounded p-3 mb-3">
+          <h3>{{ snapshot.provider }} / {{ snapshot.venue_id }}</h3>
+          <p>Snapshot #{{ snapshot.snapshot_id }} · {{ snapshot.stored_at_utc }} · {{ snapshot.health }} · {{ snapshot.provider_count|default('—') }} символів</p>
+          {% if snapshot.health == 'AVAILABLE' %}
+            {% for row in snapshot.rows|default([]) %}
+              {% if row.observation in ['UNMAPPED_REVIEW','MAPPED_STATUS_REVIEW','MAPPED_NOT_OBSERVED_REVIEW'] %}
+                <details class="border-bottom py-2">
+                  <summary><strong>{{ row.venue_symbol }}</strong> · {{ row.observation }} · {{ row.instrument_id|default('Не зіставлено') }}</summary>
+                  {% if canProposeInstrumentPool %}
+                    <form method="post" action="/capital-markets/instrument-pool/proposals" class="row g-2 mt-2">
+                      <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                      <input type="hidden" name="snapshot_id" value="{{ snapshot.snapshot_id }}">
+                      <input type="hidden" name="venue_symbol" value="{{ row.venue_symbol }}">
+                      {% if row.observation == 'UNMAPPED_REVIEW' %}
+                        <div class="col-md-3">
+                          <select name="action" class="form-select">
+                            <option value="LINK">Зв'язати з існуючим інструментом</option>
+                            <option value="CREATE">Створити новий інструмент</option>
+                          </select>
+                        </div>
+                        <div class="col-md-3"><input class="form-control" name="instrument_id" maxlength="190" placeholder="Точний canonical instrument_id" required></div>
+                        <div class="col-md-3"><input class="form-control" name="symbol" maxlength="64" placeholder="Symbol (тільки для CREATE)"></div>
+                        <div class="col-md-3"><input class="form-control" name="canonical_symbol" maxlength="64" placeholder="Canonical symbol (CREATE)"></div>
+                        <div class="col-md-4"><input class="form-control" name="name" maxlength="190" placeholder="Назва (CREATE)"></div>
+                        <div class="col-md-3">
+                          <select name="family" class="form-select">
+                            <option value="">Тип нового інструменту</option>
+                            <option value="spot_market">Spot market</option>
+                            <option value="tokenized_security">Tokenized security</option>
+                            <option value="crypto_asset">Crypto asset</option>
+                            <option value="stablecoin">Stablecoin</option>
+                            <option value="equity">Equity</option>
+                            <option value="fund">Fund</option>
+                          </select>
+                        </div>
+                      {% else %}
+                        <input type="hidden" name="action" value="STATUS">
+                        <input type="hidden" name="target_status" value="{{ row.observation == 'MAPPED_NOT_OBSERVED_REVIEW' ? 'SUSPENDED' : 'ACTIVE' }}">
+                        <p>Запит на {{ row.observation == 'MAPPED_NOT_OBSERVED_REVIEW' ? 'SUSPENDED (3 успішних спостереження)' : 'ACTIVE' }} після погодження.</p>
+                      {% endif %}
+                      <div class="col-md-6"><input class="form-control" name="reason" minlength="12" maxlength="500" placeholder="Підстава зіставлення або зміни (від 12 символів)" required></div>
+                      <div class="col-md-2"><button class="btn btn-outline-primary" type="submit">Створити заявку</button></div>
+                    </form>
+                  {% endif %}
+                </details>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <p class="alert alert-warning">Провайдер недоступний: змін на основі цього знімка немає.</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </section>
   {% elseif cmView == 'market_data' %}
     <section class="cos-kpi-strip" aria-label="Capital Markets market data state">
       <twig:CosMetric label="Sources" value="{{ w.sources|default([])|length }}" hint="configured providers" />
@@ -1106,6 +1193,7 @@
 
     <section class="cos-panel" aria-label="Streaming operations">
       <h2>Streaming operations (read only)</h2>
+      <p><a href="/capital-markets/instrument-pool">Погодження імпорту та змін Instrument Pool</a></p>
       <p>Active, expired and released worker leases. Market quality is shown independently; missing evidence is never treated as healthy.</p>
       {% set stream = w.streaming_ops|default({}) %}
       {% set streamHealth = stream.health_evaluation|default({}) %}

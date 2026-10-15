@@ -24,6 +24,9 @@ use Domains\CapitalMarkets\Application\Query\ListInstruments;
 use Domains\CapitalMarkets\Application\Query\ListRelationships;
 use Domains\CapitalMarkets\Application\Query\ListVenues;
 use Domains\CapitalMarkets\Application\Service\MarketDataAdministrationService;
+use Domains\CapitalMarkets\Application\Service\InstrumentPoolApprovalService;
+use Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentPoolSnapshotRepository;
+use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
 use Domains\CapitalMarkets\Application\Service\StreamingOperationsHealthEvaluator;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingOperationsSnapshot;
 use Domains\CapitalMarkets\Application\Service\TokenizedEquityPaperExecutionService;
@@ -57,6 +60,9 @@ final readonly class CapitalMarketsPageController
         private CapitalMarketsFeatureGate $features,
         private CapitalMarketsFoundationBoundary $capitalMarkets,
         private MarketDataAdministrationService $marketData,
+        private InstrumentPoolApprovalService $poolApprovals,
+        private MysqlInstrumentPoolSnapshotRepository $poolSnapshots,
+        private VenueRepository $poolVenues,
         private MysqlStreamingOperationsSnapshot $streamingOps,
         private StreamingOperationsHealthEvaluator $streamingHealth,
         private TokenizedEquityVerticalSliceService $tokenizedEquity,
@@ -256,6 +262,59 @@ final readonly class CapitalMarketsPageController
                 'health_evaluation'=>['health'=>'UNAVAILABLE','alerts'=>[]],
             ];
         }
+    }
+
+    public function instrumentPool(Request $request):Response
+    {
+        return $this->page(
+            $request,'Instrument Pool Approvals','capital-markets-market-data','instrument_pool',
+            CapitalMarketsCapability::InstrumentPoolView,CapitalMarketsFeatureFlag::InstrumentRegistry,
+            function(TenantContext $tenant):array{
+                $org=$tenant->organizationId()->value();
+                $sources=[];
+                foreach($this->poolVenues->list($org,20) as $venue){
+                    foreach(['BINANCE','BYBIT','KRAKEN'] as $provider){
+                        $snapshot=$this->poolSnapshots->latest($org,$provider,$venue->id->value());
+                        if($snapshot===null)continue;
+                        $snapshot['rows']=array_slice($snapshot['rows']??[],0,60);
+                        $sources[]=$snapshot;
+                    }
+                }
+                usort($sources,static fn(array $a,array $b):int=>strcmp(
+                    (string)($b['stored_at_utc']??''),(string)($a['stored_at_utc']??'')
+                ));
+                return ['workspace'=>[
+                    'discoveries'=>array_slice($sources,0,12),
+                    'changes'=>$this->poolApprovals->queue($org,(int)$tenant->userId()->value(),100),
+                ]];
+            }
+        );
+    }
+
+    public function proposeInstrumentPoolChange(Request $request):Response
+    {
+        return $this->mutate(
+            $request,CapitalMarketsCapability::InstrumentPoolPropose,CapitalMarketsFeatureFlag::InstrumentRegistry,
+            function(TenantContext $tenant,int $actor,array $input,string $correlation):string{
+                $this->poolApprovals->propose($tenant->organizationId()->value(),$actor,$input,$correlation);
+                return '/capital-markets/instrument-pool?saved=1';
+            },'/capital-markets/instrument-pool'
+        );
+    }
+
+    public function decideInstrumentPoolChange(Request $request,string $id):Response
+    {
+        return $this->mutate(
+            $request,CapitalMarketsCapability::InstrumentPoolApprove,CapitalMarketsFeatureFlag::InstrumentRegistry,
+            function(TenantContext $tenant,int $actor,array $input,string $correlation)use($id):string{
+                if(!ctype_digit($id)||!in_array($input['decision']??null,['approve','reject'],true)){
+                    throw new DomainException('Unknown Instrument Pool decision.');
+                }
+                $this->poolApprovals->decide($tenant->organizationId()->value(),$actor,
+                    (int)$id,$input['decision']==='approve',(string)($input['reason']??''),$correlation);
+                return '/capital-markets/instrument-pool?saved=1';
+            },'/capital-markets/instrument-pool'
+        );
     }
 
     public function createMarketDataSource(Request $request):Response
@@ -494,6 +553,8 @@ final readonly class CapitalMarketsPageController
             'csrfToken'=>$this->csrf->token($request),
             'query'=>$request->query->all(),
             'canManageInstruments'=>$this->allowed($org,$actor,CapitalMarketsCapability::InstrumentManage),
+            'canProposeInstrumentPool'=>$this->access->hasCapability($org,$actor,CapitalMarketsCapability::InstrumentPoolPropose->value),
+            'canApproveInstrumentPool'=>$this->access->hasCapability($org,$actor,CapitalMarketsCapability::InstrumentPoolApprove->value),
             'canManageRelationships'=>$this->allowed($org,$actor,CapitalMarketsCapability::RelationshipManage),
             'canManageVenues'=>$this->allowed($org,$actor,CapitalMarketsCapability::VenueManage),
             'canManageMarketData'=>$this->allowed($org,$actor,CapitalMarketsCapability::MarketDataManage),

@@ -9,6 +9,7 @@ enum CapitalMarketsAuditResourceType:string
     case Relationship='capital_markets.relationship';
     case Venue='capital_markets.venue';
     case VenueInstrument='capital_markets.venue_instrument';
+    case InstrumentPoolChange='capital_markets.instrument_pool.change';
     case Permission='capital_markets.permission';
     case FeatureFlag='capital_markets.feature_flag';
     case MarketDataSource='capital_markets.market_data.source';
