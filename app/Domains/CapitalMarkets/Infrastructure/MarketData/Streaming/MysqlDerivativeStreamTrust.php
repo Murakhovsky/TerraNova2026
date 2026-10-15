@@ -57,6 +57,27 @@ final readonly class MysqlDerivativeStreamTrust
             if($proof->fetchColumn()===false){
                 throw new DomainException('Derivative proof missing canonical event, quality or active intent.');
             }
+            // Reject replay across reconnects: canonical event existence alone
+            // cannot authorize a new session to relabel an old observation.
+            $previous=$this->pdo->prepare(
+                "SELECT last_event_id,last_provider_at,fencing_token,session_epoch
+                 FROM tn_capital_market_derivative_stream_trust
+                 WHERE organization_id=:org AND source_id=:source
+                   AND instrument_id=:instrument AND data_type=:type FOR UPDATE");
+            $previous->execute(['org'=>$org,'source'=>$source,
+                'instrument'=>$instrument,'type'=>$type]);
+            $last=$previous->fetch(PDO::FETCH_ASSOC);
+            if(is_array($last)){
+                $providerAt=$event->timestamps->sourceTimestamp
+                    ->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u');
+                if($last['last_event_id']===$event->eventId
+                    ||($last['last_provider_at']!==null
+                        &&strcmp($providerAt,(string)$last['last_provider_at'])<0)
+                    ||((int)$last['fencing_token']===$token
+                        &&(int)$last['session_epoch']>$epoch)){
+                    throw new DomainException('Derivative event replay, clock rollback or session epoch regression.');
+                }
+            }
             $q=$this->pdo->prepare(
                 "INSERT INTO tn_capital_market_derivative_stream_trust
                  (organization_id,source_id,instrument_id,data_type,shard_key,

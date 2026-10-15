@@ -115,6 +115,12 @@ try{
             'stamp'=>$stamp]);
     $assert($trust->record($org,$source,'ci-derivative-shard','ci-worker',8,1,
         $makeResult($eventId)),'Fenced canonical LIVE derivative with quality proof was rejected.');
+    $replayed=false;
+    try{
+        $trust->record($org,$source,'ci-derivative-shard','ci-worker',8,2,
+            $makeResult($eventId));
+    }catch(DomainException){$replayed=true;}
+    $assert($replayed,'Canonical derivative event replayed into a newer session.');
     $good=$trust->status($org,$source);
     $assert(count($good)===1&&$good[0]['status']==='TRUSTED'
         &&(int)$good[0]['accepted_count']===1,
