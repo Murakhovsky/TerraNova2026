@@ -27,6 +27,7 @@ updated: 2026-10-14
 - `app/Platform/Orchestration/Goal/FederationGolden50GoalProfile.php`: допустимі Action для Goal із ціллю 50.
 - `symfony/src/Persistence/Federation/FederationCandidateFanoutService.php`: перевірка реальних даних Growth і пропозиція дочірніх планів.
 - `symfony/src/Persistence/Federation/FederationGoalOutcomeAggregationService.php`: повторна незалежна звірка джерела, Action receipts, Sales і Documents.
+- `symfony/src/Persistence/Federation/FederationVerifiedRunReadModel.php`: єдиний read-only evidence view для canonical Platform Workflow та історичних Federation Run. Подвійна authority для Plan/Run заборонена. Canonical Action перевіряється через незалежний `DoctrineWorkflowActionReceiptVerifier`, старі завершені receipts через frozen historical adapter. Це **не** dual-write, не новий scheduler та не operator sign-off.
 - `app/Platform/Orchestration/Goal/FederationDiscoverySourceMatcher.php`: достовірність native Growth membership.
 - `symfony/src/Web/Federation/FederationGoalAggregateController.php`: read-only агрегат і CSRF-guarded запис Goal evaluation.
 
@@ -68,3 +69,9 @@ Growth Market Discovery повертає Account, але Candidate з'являє
 ## Межа автоматизованого тесту
 
 Операторські маршрути усувають необхідність вручну створювати початковий Discovery Plan. Вони НЕ створюють 50 реальних кандидатів, не замінюють Growth signal/research/scoring, champion-контакти, незалежні погодження та native Action worker. Без фактичного тестового tenant з 50 справжніми Growth Candidate та 50 незалежно підтвердженими native Lead/Document receipts Package A не вважається прийнятим незалежно від зеленого CI.
+
+## Canonical evidence coverage (2026-10-15)
+
+Golden 50 fan-out preview і Goal outcome aggregation тепер читають **новий** `cos_workflow_runs/steps` через read-only authority adapter, а не вимагають legacy `cos_federation_runs/steps`. Усі completed canonical Actions повторно перевіряються за pinned Plan, independent human Approval, Policy, єдиною успішною attempt, native action identity і tenant. Історичні rows зберігають read-only adapter; колізія двох execution authorities завершується помилкою, не обирає «кращу».
+
+Зміни в коді **не сертифікують** live Golden 50. До release gate потрібні 50 фактичних native Growth Candidates/Accounts, 50 human-approved child Plans та їх 200 окремо погоджених Actions, 50 persisted Sales Leads, 50 persisted Documents relations, незалежний `native_goal_aggregate_v1` evaluation, staging parity усіх трьох контурів, migration/recovery негативні випробування та operator sign-off на єдиному фінальному SHA. Без цих доказів merge заборонено.

@@ -37,7 +37,7 @@ final readonly class FederationGoalOutcomeAggregationService
         private Connection $db,
         private FederationGoalStore $goals,
         private ActiveModuleResolver $modules,
-        private FederationExternalActionReceiptReconciler $receipts,
+        private FederationVerifiedRunReadModel $runReader,
         private GrowthHandoffBoundary $growth,
         private GrowthMarketDiscoveryBoundary $market,
         private FederationDiscoverySourceMatcher $sourceMatcher,
@@ -65,11 +65,8 @@ final readonly class FederationGoalOutcomeAggregationService
             }
         }
         $rows=$this->db->fetchAllAssociative(
-            'SELECT p.plan_id,p.state AS plan_state,p.spec_version,p.plan_json,
-                    r.run_id,r.state AS run_state
+            'SELECT p.plan_id,p.state AS plan_state,p.spec_version,p.plan_json
              FROM cos_federation_plans p
-             LEFT JOIN cos_federation_runs r
-               ON r.organization_id=p.organization_id AND r.plan_id=p.plan_id
              WHERE p.organization_id=:org AND p.goal_id=:goal
              ORDER BY p.plan_version,p.plan_id LIMIT 1025',
             ['org'=>$org,'goal'=>$goalId],
@@ -139,19 +136,17 @@ final readonly class FederationGoalOutcomeAggregationService
                 !==$lineage['account_id']) {
                 throw new DomainException('Document account does not match immutable Growth provenance.');
             }
-            $runId=$row['run_id']===null?null:(string)$row['run_id'];
-            $runState=$row['run_state']===null?null:(string)$row['run_state'];
+            $execution=$this->runReader->forPlan($actor,(string)$row['plan_id']);
+            $runId=$execution['run_id']??null;
+            $runState=$execution['run_state']??null;
             $actions=array_fill_keys($names,false);
             $ids=[];
+            $proposalKey=null;
             $sourceVerified=false;
             if ($row['plan_state']==='approved' && $runId!==null && $runState==='completed') {
                 $this->assertNativeDiscovery($actor,$goalId,$goal->version,$lineage,$sourceSnapshots);
                 $sourceVerified=true;
-                $actualSteps=$this->db->fetchAllAssociative(
-                    'SELECT step_id,capability_id,state FROM cos_federation_steps
-                     WHERE organization_id=:org AND run_id=:run',
-                    ['org'=>$org,'run'=>$runId],
-                );
+                $actualSteps=$this->runReader->stepsForRun($actor,$runId,$execution['authority']);
                 if (count($actualSteps)!==4) {
                     throw new DomainException('Finalized Candidate Run contains a mismatched Step set.');
                 }
@@ -163,13 +158,16 @@ final readonly class FederationGoalOutcomeAggregationService
                         || isset($ids[$name])) {
                         throw new DomainException('Finalized Candidate Run has incomplete or duplicated Actions.');
                     }
-                    $receipt=$this->receipts->reconcile($actor,$runId,$name);
-                    if (($receipt['status']??null)!=='completed'
-                        || !is_string($receipt['action_id']??null)) {
-                        throw new DomainException('Finalized Candidate Run lost its independently attested Action receipt.');
+                    $proofStep=$this->runReader->step($actor,$runId,$name);
+                    if ($proofStep===null || $proofStep['side_effect_level']!=='external') {
+                        throw new DomainException('Candidate Action step has no matching authority.');
                     }
+                    $actionId=$this->runReader->requireCompletedAction($actor,$runId,$name);
                     $actions[$name]=true;
-                    $ids[$name]=$receipt['action_id'];
+                    $ids[$name]=$actionId;
+                    if ($name==='proposal') {
+                        $proposalKey=$this->runReader->actionKey($proofStep);
+                    }
                 }
             }
             $handoff=false;
@@ -215,7 +213,7 @@ final readonly class FederationGoalOutcomeAggregationService
                         && $action['target_type']==='growth_candidate'
                         && $action['target_id']===$candidate
                         && is_string($action['idempotency_key']??null)
-                        && str_starts_with($action['idempotency_key'],'fed:')) {
+                        && $action['idempotency_key']===$proposalKey) {
                         $key='fed-proposal-'.substr(hash('sha256',$action['idempotency_key']),0,40);
                         $documentIdExpected='DOC-'.strtoupper(substr(hash('sha256',
                             $org.':generate:'.$key.'-generate'),0,20));
@@ -280,18 +278,7 @@ final readonly class FederationGoalOutcomeAggregationService
         $stepId=(string)$lineage['source_federation_step'];
         $cacheKey=$runId."\0".$stepId;
         if (!isset($cache[$cacheKey])) {
-            $source=$this->db->fetchAssociative(
-                'SELECT r.goal_id,r.state AS run_state,p.state AS plan_state,
-                        p.spec_version,s.state AS step_state,s.capability_id,
-                        s.side_effect_level,s.idempotency_key,s.result_reference
-                 FROM cos_federation_runs r
-                 JOIN cos_federation_plans p
-                   ON p.organization_id=r.organization_id AND p.plan_id=r.plan_id
-                 JOIN cos_federation_steps s
-                   ON s.organization_id=r.organization_id AND s.run_id=r.run_id
-                 WHERE r.organization_id=:org AND r.run_id=:run AND s.step_id=:step',
-                ['org'=>$org,'run'=>$runId,'step'=>$stepId],
-            );
+            $source=$this->runReader->step($actor,$runId,$stepId);
             if (!$source || $source['goal_id']!==$goalId
                 || $source['run_state']!=='completed'
                 || $source['plan_state']!=='approved'
@@ -303,15 +290,8 @@ final readonly class FederationGoalOutcomeAggregationService
                 || !preg_match('/^[a-f0-9]{64}$/D',$source['idempotency_key'])) {
                 throw new DomainException('Candidate native source has no finalized approved Discovery Run.');
             }
-            $receipt=$this->receipts->reconcile($actor,$runId,$stepId);
-            $actionId=$receipt['action_id']??null;
-            if (($receipt['status']??null)!=='completed'
-                || !is_string($actionId)
-                || !preg_match('/^[a-f0-9]{32}$/D',$actionId)
-                || $source['result_reference']!=='action:'.$actionId) {
-                throw new DomainException('Candidate source has no attested completed Discovery Action.');
-            }
-            $key='fed:'.$source['idempotency_key'];
+            $actionId=$this->runReader->requireCompletedAction($actor,$runId,$stepId);
+            $key=$this->runReader->actionKey($source);
             $action=$this->db->fetchAssociative(
                 'SELECT type,status,target_type,target_id,idempotency_key
                  FROM cos_actions WHERE organization_id=:org AND id=:id',

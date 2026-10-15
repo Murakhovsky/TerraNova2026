@@ -58,7 +58,7 @@ RUN APP_ENV=prod APP_DEBUG=0 APP_SECRET=build-only-secret COS_ORGANIZATION_ID=de
     MERCURE_JWT_SECRET="build-only-mercure-secret-0123456789abcdef" \
     TELEGRAM_BOT_TOKEN="" \
     TELEGRAM_BOT_NAME="" \
-    sh -c 'php -d memory_limit=512M bin/console cache:warmup && php -d memory_limit=512M bin/console importmap:install && php -d memory_limit=512M bin/console asset-map:compile'
+    sh -c 'php -d memory_limit=512M bin/console cache:warmup && for attempt in 1 2 3 4; do if php -d memory_limit=512M bin/console importmap:install; then break; fi; if [ "$attempt" -eq 4 ]; then echo "Pinned importmap download failed after four bounded attempts" >&2; exit 1; fi; sleep "$attempt"; done && php -d memory_limit=512M bin/console asset-map:compile'
 
 EXPOSE 9000
 

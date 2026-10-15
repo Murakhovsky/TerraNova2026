@@ -28,7 +28,7 @@ final readonly class FederationCandidateFanoutService
         private Connection $db,
         private FederationGoalStore $goals,
         private FederationCapabilityBindingResolver $bindings,
-        private FederationExternalActionReceiptReconciler $receipts,
+        private FederationVerifiedRunReadModel $runReader,
         private GrowthMarketDiscoveryBoundary $market,
         private GrowthApplicationBoundary $growth,
         private GrowthBuyingCommitteeRepositoryInterface $buyingCommittees,
@@ -73,19 +73,7 @@ final readonly class FederationCandidateFanoutService
         }
 
         $org = $actor->organizationId()->value();
-        $source = $this->db->fetchAssociative(
-            'SELECT r.goal_id, r.state AS run_state, p.state AS plan_state,
-                    p.spec_version, s.state AS step_state, s.capability_id,
-                    s.side_effect_level, s.idempotency_key, s.result_reference
-             FROM cos_federation_runs r
-             JOIN cos_federation_plans p
-               ON p.organization_id = r.organization_id AND p.plan_id = r.plan_id
-             JOIN cos_federation_steps s
-               ON s.organization_id = r.organization_id AND s.run_id = r.run_id
-             WHERE r.organization_id = :org AND r.run_id = :run
-               AND s.step_id = :step',
-            ['org'=>$org, 'run'=>$sourceRunId, 'step'=>$sourceStepId],
-        );
+        $source = $this->runReader->step($actor,$sourceRunId,$sourceStepId);
         if (!$source || $source['goal_id'] !== $goalId
             || $source['run_state'] !== 'completed'
             || $source['plan_state'] !== 'approved'
@@ -100,19 +88,13 @@ final readonly class FederationCandidateFanoutService
 
         // The completed-step receipt path is strictly read-only. It also
         // independently re-attests Action provenance, policy and one attempt.
-        $receipt = $this->receipts->reconcile($actor, $sourceRunId, $sourceStepId);
-        $actionId = $receipt['action_id'] ?? null;
-        if (($receipt['status'] ?? null) !== 'completed'
-            || !is_string($actionId) || !preg_match('/^[a-f0-9]{32}$/', $actionId)
-            || $source['result_reference'] !== 'action:' . $actionId) {
-            throw new DomainException('Source Discovery has no attested single-attempt Action receipt.');
-        }
+        $actionId=$this->runReader->requireCompletedAction($actor,$sourceRunId,$sourceStepId);
         $action = $this->db->fetchAssociative(
             'SELECT type, status, target_type, target_id, idempotency_key
              FROM cos_actions WHERE organization_id = :org AND id = :action',
             ['org'=>$org, 'action'=>$actionId],
         );
-        $key = 'fed:' . $source['idempotency_key'];
+        $key = $this->runReader->actionKey($source);
         if (!$action || $action['type'] !== 'growth.market.discovery'
             || $action['status'] !== 'COMPLETED'
             || $action['target_type'] !== 'growth_market_universe'
