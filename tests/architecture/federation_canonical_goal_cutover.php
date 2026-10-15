@@ -34,6 +34,8 @@ foreach ([
     [$bridge,"cos_federation_execution_migrations"],
     [$goals,"UNION ALL"],
     [$goals,"Migrated Federation Run is immutable"],
+    [(string)file_get_contents($root.'/symfony/src/Persistence/Federation/FederationRunRecoveryService.php'),
+        "Promoted Federation history requires canonical shadow audit"],
     [(string)file_get_contents($root.'/symfony/src/Persistence/Federation/FederationRunFinalizer.php'),
         "Historical promoted Run cannot be finalized"],
     [$controller,"newRunsEnabled("],

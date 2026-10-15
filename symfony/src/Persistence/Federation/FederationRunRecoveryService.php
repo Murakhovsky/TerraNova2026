@@ -42,6 +42,16 @@ final readonly class FederationRunRecoveryService
         if (!$run) {
             throw new DomainException('Federation Run unavailable in tenant.');
         }
+        $migrated=$this->db->fetchOne(
+            'SELECT migration_state FROM cos_federation_execution_migrations
+             WHERE organization_id=:org AND legacy_run_id=:run',
+            ['org'=>$org,'run'=>$runId],
+        );
+        if ($migrated !== false) {
+            // Do not even classify promoted legacy Steps as eligible for
+            // mutation. Their original state is sealed shadow evidence.
+            throw new DomainException('Promoted Federation history requires canonical shadow audit, not legacy recovery.');
+        }
         $steps = $this->db->fetchAllAssociative(
             'SELECT step_id, side_effect_level, state, updated_at,
                     idempotency_key, result_reference
