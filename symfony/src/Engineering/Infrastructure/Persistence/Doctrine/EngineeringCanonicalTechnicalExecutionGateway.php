@@ -76,10 +76,10 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
         if ($selection->stepId!=='execute' || $selection->state->value!=='pending') {
             throw new DomainException('Engineering technical Step is not DAG-admissible.');
         }
-        $inputDigest=hash('sha256',json_encode([
+        $inputDigest=WorkflowDefinitionFingerprint::digest([[
             'feature'=>$task->featureId,'role'=>$task->role->value,
             'key'=>$task->idempotencyKey,'snapshot'=>$task->inputSnapshot,
-        ],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+        ]]);
         $stepKey=hash('sha256',$org."\0".$canonicalRun."\0execute");
         $token=bin2hex(random_bytes(16));
         $this->db->executeStatement(

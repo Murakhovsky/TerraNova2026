@@ -52,14 +52,18 @@ $deny=static function(callable $action,string $why):void {
     try{$action();}catch(DomainException){return;}
     throw new RuntimeException('Unsafe Engineering canonical execution accepted: '.$why);
 };
-$createAgent=static function(string $id, string $key, string $role,string $agentTrace) use ($db,$org,$workflow,$feature):void {
+$createAgent=static function(string $id, EngineeringAgentTask $task,string $agentTrace) use ($db,$org,$workflow,$feature):void {
     $db->executeStatement(
         'INSERT INTO cos_engineering_agent_runs
          (id,feature_id,workflow_execution_id,agent_id,agent_role,idempotency_key,
           model_provider,model,input_snapshot,status,technical_retry,logical_attempt,trace_id,started_at)
          VALUES (:id,:feature,:workflow,"fixture",:role,:key,
-                 "test","test","{}","RUNNING",0,1,:trace,UTC_TIMESTAMP(6))',
-        ['id'=>$id,'feature'=>$feature,'workflow'=>$workflow,'role'=>$role,'key'=>$key,'trace'=>$agentTrace],
+                 "test","test",:input,"RUNNING",0,1,:trace,UTC_TIMESTAMP(6))',
+        ['id'=>$id,'feature'=>$feature,'workflow'=>$workflow,
+         'role'=>$task->role->value,'key'=>$task->idempotencyKey,'trace'=>$agentTrace,
+         'input'=>json_encode(array_merge($task->inputSnapshot,[
+              '_execution_task_id'=>$task->id,
+         ]),JSON_THROW_ON_ERROR)],
     );
 };
 try {
@@ -76,7 +80,7 @@ try {
                UTC_TIMESTAMP(6),1,:trace,:lock)',
        ['id'=>$workflow,'feature'=>$feature,'trace'=>$trace,'lock'=>'engineering:feature:'.$feature.':workflow'],
     );
-    $createAgent($agent,$task->idempotencyKey,$task->role->value,$runTrace);
+    $createAgent($agent,$task,$runTrace);
     $gate->begin($agent,$workflow,$task,$runTrace);
     if($reader->engineeringAgent($org,$agent)->status->value!=='no_target') {
         throw new RuntimeException('Legacy-only AgentRun must not shadow as canonical.');
@@ -102,7 +106,7 @@ try {
     $other=EngineeringId::generate();
     $otherTask=new EngineeringAgentTask(EngineeringId::generate(),$feature,AgentRole::REVIEWER,
        'Reviewer fixture',[],[],[],'schema',[],'eng-other-'.$tag,['logical_attempt'=>1]);
-    $createAgent($other,$otherTask->idempotencyKey,$otherTask->role->value,$trace.':agent:'.$otherTask->id);
+    $createAgent($other,$otherTask,$trace.':agent:'.$otherTask->id);
     $deny(static fn()=> $gate->begin($other,$workflow,$otherTask,$trace.':agent:'.$otherTask->id),
         'overlapping external AgentRun while first claim is held');
 
@@ -120,6 +124,27 @@ try {
         ['trace'=>$runTrace,'org'=>$org,'run'=>$link['canonical_run_id']],
     );
     $result=['status'=>'COMPLETE','report'=>['pass'=>true],'_kernel_run_id'=>'kernel-fixture'];
+    $db->executeStatement(
+        'UPDATE cos_workflow_runs SET definition_digest=:modified
+         WHERE organization_id=:org AND run_id=:run',
+        ['org'=>$org,'run'=>$link['canonical_run_id'],
+         'modified'=>hash('sha256','tampered-workflow-definition')],
+    );
+    if($reader->engineeringAgent($org,$agent)->status->value!=='drift') {
+        throw new RuntimeException('SQL shadow ignored canonical immutable graph digest tampering.');
+    }
+    $canonicalGraph=$db->fetchOne(
+        'SELECT definition_json FROM cos_workflow_runs
+         WHERE organization_id=:org AND run_id=:run',
+        ['org'=>$org,'run'=>$link['canonical_run_id']],
+    );
+    $graph=json_decode((string)$canonicalGraph,true,512,JSON_THROW_ON_ERROR);
+    $db->executeStatement(
+        'UPDATE cos_workflow_runs SET definition_digest=:digest
+         WHERE organization_id=:org AND run_id=:run',
+        ['org'=>$org,'run'=>$link['canonical_run_id'],
+         'digest'=>\Platform\Workflow\Service\WorkflowDefinitionFingerprint::digest($graph)],
+    );
     $db->executeStatement(
         'UPDATE cos_engineering_agent_runs
          SET status="COMPLETED",output=:output,finished_at=UTC_TIMESTAMP(6)
@@ -160,7 +185,7 @@ try {
     $third=EngineeringId::generate();
     $thirdTask=new EngineeringAgentTask(EngineeringId::generate(),$feature,AgentRole::DEVELOPER,
        'No replay',[],[],[],'schema',[],'eng-third-'.$tag,['logical_attempt'=>1]);
-    $createAgent($third,$thirdTask->idempotencyKey,$thirdTask->role->value,$trace.':agent:'.$thirdTask->id);
+    $createAgent($third,$thirdTask,$trace.':agent:'.$thirdTask->id);
     $deny(static fn()=> $gate->begin($third,$workflow,$thirdTask,$trace.':agent:'.$thirdTask->id),
         'ambiguous previous external effect cannot replay');
     if($reader->engineeringAgent('wrong-tenant',$agent)->status->value!=='no_target') {

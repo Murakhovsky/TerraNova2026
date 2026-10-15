@@ -10,6 +10,7 @@ use Platform\Workflow\Model\WorkflowParityReport;
 use Platform\Workflow\Model\WorkflowParityStatus;
 use Platform\Workflow\Model\WorkflowRunIdentity;
 use Platform\Workflow\Service\WorkflowShadowParityComparator;
+use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 
 /**
  * Read-only production-schema shadow comparator. This does not create a
@@ -116,7 +117,7 @@ final readonly class DoctrineWorkflowShadowParityReader
         }
         $legacy=$this->db->fetchAssociative(
             'SELECT a.id,a.feature_id,a.workflow_execution_id,a.agent_role,
-                    a.status,a.output,a.trace_id,a.idempotency_key,
+                    a.status,a.output,a.trace_id,a.idempotency_key,a.input_snapshot,
                     a.logical_attempt,a.technical_retry,a.finished_at,w.current_state,
                     w.resume_state,w.version AS workflow_version,w.status AS workflow_status,
                     f.organization_id
@@ -143,7 +144,39 @@ final readonly class DoctrineWorkflowShadowParityReader
         $identity=new WorkflowRunIdentity($organizationId,(string)$link['canonical_run_id']);
         $canonical=$this->canonical->get($identity);
         $steps=$this->canonical->steps($identity);
+        $persisted=$this->db->fetchAssociative(
+            'SELECT definition_json,definition_digest,input_digest,actor_id
+             FROM cos_workflow_runs WHERE organization_id=:org AND run_id=:run',
+            ['org'=>$organizationId,'run'=>$identity->runId],
+        );
+        $definition=null;
+        if ($persisted) {
+            $decoded=json_decode((string)$persisted['definition_json'],true,512,JSON_THROW_ON_ERROR);
+            if (is_array($decoded) && array_is_list($decoded) && count($decoded)===1
+                && is_array($decoded[0])) $definition=$decoded[0];
+        }
+        $sourceInput=json_decode((string)$legacy['input_snapshot'],true,512,JSON_THROW_ON_ERROR);
+        if (!is_array($sourceInput)) $sourceInput=[];
+        unset($sourceInput['_execution_task_id']);
+        $expectedInput=WorkflowDefinitionFingerprint::digest([[
+            'feature'=>$legacy['feature_id'],'role'=>$legacy['agent_role'],
+            'key'=>$legacy['idempotency_key'],'snapshot'=>$sourceInput,
+        ]]);
         $drift=[];
+        if (!$persisted || !$definition || !hash_equals(
+                (string)$persisted['definition_digest'],
+                WorkflowDefinitionFingerprint::digest([$definition]))
+            || $persisted['input_digest']!==$expectedInput
+            || $persisted['actor_id']!=='engineering:'.$legacy['agent_role']
+            || ($definition['id']??null)!=='execute'
+            || ($definition['capability_id']??null)!==
+                'engineering.agent.'.strtolower((string)$legacy['agent_role'])
+            || ($definition['side_effect_level']??null)!=='external'
+            || ($definition['execution_binding']??null)!=='engineering:agent-run'
+            || ($definition['input']['feature_id']??null)!==$legacy['feature_id']
+            || ($definition['input']['idempotency_key']??null)!==$legacy['idempotency_key']) {
+            $drift[]='engineering_immutable_definition_or_input_mismatch';
+        }
         if (!$canonical || count($steps)!==1) {
             $drift[]='canonical_technical_run_or_step_missing';
         } elseif ($canonical->definitionId!=='engineering.agent_execution'
