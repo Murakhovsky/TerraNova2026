@@ -92,8 +92,8 @@ final readonly class MysqlPerInstrumentStreamTrust
                 $sql="UPDATE $table SET trust_status='UNTRUSTED',quality_score=0,
                     state_json=JSON_SET(state_json,'$.trust_status','UNTRUSTED',
                         '$.quality_status','UNTRUSTED','$.quality.status','UNTRUSTED',
-                        '$.quality.score',0),
-                    updated_at=UTC_TIMESTAMP(6)
+                        '$.quality.score',0,'$.state_version',state_version+1),
+                    state_version=state_version+1,updated_at=UTC_TIMESTAMP(6)
                     WHERE organization_id=:org AND source_id=:source
                       AND instrument_id=:instrument AND trust_status<>'UNTRUSTED'";
                 $stmt=$this->pdo->prepare($sql);
@@ -119,6 +119,19 @@ final readonly class MysqlPerInstrumentStreamTrust
         }
         $this->pdo->beginTransaction();
         try{
+            // Source guard then source worker leases is the global lock order:
+            // ingress holds a worker lease before updating states/ledger.
+            // Sweeper must not invert this order (ledger -> state -> lease).
+            MysqlMarketSourceWriterGate::lockSource($this->pdo,$org,$source);
+            $workerLease=$this->pdo->prepare(
+                'SELECT shard_key FROM tn_capital_market_stream_worker_leases
+                 WHERE organization_id=:org AND source_id=:source
+                   AND shard_key<>:guard ORDER BY shard_key FOR UPDATE');
+            $workerLease->execute([
+                'org'=>$org,'source'=>$source,
+                'guard'=>MysqlMarketSourceWriterGate::SOURCE_GUARD_SHARD,
+            ]);
+            $workerLease->fetchAll(PDO::FETCH_COLUMN);
             $q=$this->pdo->prepare(
                 "SELECT instrument_id,channel FROM tn_capital_market_instrument_stream_trust
                  WHERE organization_id=:org AND source_id=:source AND status='TRUSTED'
@@ -148,8 +161,8 @@ final readonly class MysqlPerInstrumentStreamTrust
                         "UPDATE $table SET trust_status='UNTRUSTED',quality_score=0,
                             state_json=JSON_SET(state_json,'$.trust_status','UNTRUSTED',
                                '$.quality_status','UNTRUSTED','$.quality.status','UNTRUSTED',
-                               '$.quality.score',0),
-                            updated_at=UTC_TIMESTAMP(6)
+                               '$.quality.score',0,'$.state_version',state_version+1),
+                            state_version=state_version+1,updated_at=UTC_TIMESTAMP(6)
                          WHERE organization_id=:org AND source_id=:source
                            AND instrument_id=:instrument AND trust_status<>'UNTRUSTED'");
                     $stmt->execute(['org'=>$org,'source'=>$source,'instrument'=>$row['instrument_id']]);

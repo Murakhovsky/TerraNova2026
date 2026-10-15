@@ -36,6 +36,10 @@ foreach(['tn_capital_market_instrument_stream_trust','recovery_required','fencin
 foreach(['$this->instrumentTrust->observe(','$this->ingestion->ingest('] as $item){
     if(!str_contains($gateway,$item))throw new RuntimeException('Gateway skipped atomic per-instrument recording.');
 }
+if(!str_contains($repo,'MysqlMarketSourceWriterGate::lockSource')
+    ||!str_contains($repo,'state_version=state_version+1')){
+    throw new RuntimeException('Symbol sweep must respect source lease locking and advance state version.');
+}
 if(!str_contains($repo,'FOR UPDATE')||!str_contains($repo,"'UNTRUSTED'")
     ||!str_contains($repo,'last_sequence')||!str_contains($repo,'trust_status')){
     throw new RuntimeException('Per-symbol trust is not isolated/fenced.');
