@@ -28,6 +28,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Security\MarketSourceCreden
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MassiveStocksMultiNbboProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -56,6 +57,7 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
         private readonly StreamingInstrumentTrustInvalidatorInterface $instrumentTrust,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){
         parent::__construct();
     }
@@ -172,6 +174,10 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                         }
                         if($event['kind']==='ack'){
                             $session->subscribed($epoch,$event['key']);
+                            $id=$instrumentIdsBySymbol[$event['symbol']]??null;
+                            if(!is_string($id))throw new \DomainException('Massive ACK unmapped.');
+                            $this->verification->acknowledged($org,$sourceName,$shard,$workerId,
+                                $token,$epoch,'MASSIVE_STOCKS',$id);
                             continue;
                         }
                         if($event['kind']==='unsubscribed'){
@@ -214,7 +220,12 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                         if(!in_array($stored->status,['ACCEPTED','DUPLICATE'],true)){
                             throw new \DomainException('Massive reference NBBO ingestion rejected.');
                         }
-                        if($stored->status==='ACCEPTED')$accepted++;
+                        if($stored->status==='ACCEPTED'){
+                            $this->verification->acceptedQuote(
+                                $org,$sourceName,$shard,$workerId,$token,$epoch,$stored
+                            );
+                            $accepted++;
+                        }
                     }
                 },
                 2097152,

@@ -25,6 +25,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpot
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\BinanceSpotMultiBboProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -51,6 +52,7 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
         private readonly StreamingInstrumentTrustInvalidatorInterface $instrumentTrust,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){parent::__construct();}
 
     protected function configure():void
@@ -141,20 +143,38 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $epoch)use(
                     $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,
-                    $instrumentIdsBySymbol,&$leaseToken,&$accepted,&$transport,
+                    $instrumentIdsBySymbol,$keyToSymbol,&$leaseToken,&$accepted,&$transport,
                 ):void{
                     $event=$protocol->decode(
                         $payload,new DateTimeImmutable('now',new DateTimeZone('UTC')),
                     );
                     if($event['kind']==='ack'){
-                        foreach($event['keys'] as $key)$session->subscribed($epoch,$key);
+                        foreach($event['keys'] as $key){
+                            $session->subscribed($epoch,$key);
+                            $symbol=$keyToSymbol[$key]??null;
+                            $instrumentId=is_string($symbol)?($instrumentIdsBySymbol[$symbol]??null):null;
+                            if(!is_string($instrumentId)){
+                                throw new \DomainException('ACK has no approved instrument mapping.');
+                            }
+                            $this->verification->acknowledged(
+                                $org,$sourceName,$shard,$workerId,$leaseToken,
+                                $epoch,'BINANCE_SPOT',$instrumentId
+                            );
+                        }
                         return;
                     }
                     if($event['kind']==='unsubscribed'){
                         $transport->sendText($protocol->resubscribeFrame($event['symbol']),$epoch);
                         return;
                     }
-                    if($event['kind']==='resubscribed'||$event['kind']==='quarantined')return;
+                    if($event['kind']==='resubscribed'){
+                        $id=$instrumentIdsBySymbol[$event['symbol']]??null;
+                        if(!is_string($id))throw new \DomainException('Resubscribe lacks canonical mapping.');
+                        $this->verification->acknowledged($org,$sourceName,$shard,$workerId,
+                            $leaseToken,$epoch,'BINANCE_SPOT',$id);
+                        return;
+                    }
+                    if($event['kind']==='quarantined')return;
                     if($event['kind']==='heartbeat'){
                         $session->message($epoch,$clock());
                         return;
@@ -187,7 +207,12 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
                     if(!in_array($stored->status,['ACCEPTED','DUPLICATE'],true)){
                         throw new \DomainException('Binance batch fenced ingestion rejected quote.');
                     }
-                    if($stored->status==='ACCEPTED')$accepted++;
+                    if($stored->status==='ACCEPTED'){
+                        $this->verification->acceptedQuote(
+                            $org,$sourceName,$shard,$workerId,$leaseToken,$epoch,$stored
+                        );
+                        $accepted++;
+                    }
                 },
                 2097152,
                 function(string $kind,int $epoch)use($session,$clock):void{

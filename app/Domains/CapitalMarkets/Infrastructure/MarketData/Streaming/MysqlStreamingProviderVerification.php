@@ -59,6 +59,8 @@ final readonly class MysqlStreamingProviderVerification
         if($event->sourceId->value()!==$source||$event->eventType()->value!=='BBO'){
             throw new DomainException('Provider quote source/channel mismatch.');
         }
+        // DELAYED is allowed for reference research but cannot be used as LIVE.
+        if($event->mode->value!=='LIVE')return;
         $live=$event->mode->value==='LIVE'&&$result->quality->trusted()
             &&$result->quality->score>=80;
         $this->fenced($org,$source,$shard,$worker,$token,function()use(

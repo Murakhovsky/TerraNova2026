@@ -141,6 +141,17 @@ final readonly class StreamingTrustInvalidator implements
                 'reason'=>$flag,'org'=>$organizationId,'source'=>$sourceId,
             ],$scopeParams));
 
+            // Never accept ACK or quote receipts from an invalidated socket or ticker.
+            $receiptScope=$instrumentId===null?'':' AND instrument_id=:instrument';
+            $receipt=$this->pdo->prepare(
+                "UPDATE tn_capital_market_provider_stream_receipts
+                 SET status='REVOKED',last_error_code=:reason,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND source_id=:source".$receiptScope
+            );
+            $receipt->execute(array_merge([
+                'org'=>$organizationId,'source'=>$sourceId,'reason'=>$reason,
+            ],$scopeParams));
+
             // A single ticker problem is not a transport outage.
             if($instrumentId===null){
                 $health=$this->pdo->prepare(
