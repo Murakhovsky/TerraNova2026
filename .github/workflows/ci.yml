@@ -67,6 +67,17 @@ jobs:
           php tests/architecture/capital_markets_bstocks_scheduler_opportunity_contract.php
           php tests/unit/capital_markets_instrument_pool_catalog_audit.php
           php tests/unit/capital_markets_instrument_pool_lifecycle_review.php
+          php tests/unit/capital_markets_per_instrument_stream_trust.php
+          php tests/unit/capital_markets_multi_symbol_300_planner.php
+          php tests/architecture/capital_markets_multisymbol_per_instrument_contract.php
+          php tests/unit/capital_markets_provider_expansion_replay_scaling.php
+          php tests/architecture/capital_markets_provider_replay_scaling_contract.php
+          php tests/unit/capital_markets_bybit_derivative_ws.php
+          php tests/architecture/capital_markets_l2_derivatives_p1_contract.php
+          php tests/unit/capital_markets_stream_provider_ops_alerts.php
+          php tests/architecture/capital_markets_live_provider_ops_contract.php
+          php tests/unit/capital_markets_pool_production_soak.php
+          php tests/architecture/capital_markets_pool_production_contract.php
           php tests/unit/capital_markets_instrument_pool_schedule_targets.php
           php tests/architecture/capital_markets_instrument_pool_scheduler_contract.php
           php tests/architecture/capital_markets_instrument_pool_approval_contract.php

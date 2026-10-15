@@ -13,6 +13,7 @@ use Domains\CapitalMarkets\Domain\MarketData\MarketSourceHealth;
 use Domains\CapitalMarkets\Domain\MarketData\RawMarketEvent;
 use Kernel\Transaction\Contract\TransactionManagerInterface;
 use PDO;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlPerInstrumentStreamTrust;
 
 /**
  * Streaming-only raw -> canonical ingest guarded by a held DB lease row.
@@ -27,6 +28,7 @@ final readonly class StreamingFencedIngestionGateway
         private MarketSourceRepositoryInterface $sources,
         private MarketDataIngestionInterface $ingestion,
         private MarketClockInterface $clock,
+        private ?MysqlPerInstrumentStreamTrust $instrumentTrust=null,
     ){}
 
     public function ingest(
@@ -62,7 +64,11 @@ final readonly class StreamingFencedIngestionGateway
                 $previous?->errorCount??0,$previous?->reconnectCount??0,
                 $previous?->rateLimitState??\Domains\CapitalMarkets\Domain\MarketData\MarketRateLimitState::Unknown,
             ));
-            return $this->ingestion->ingest($organizationId,$raw);
+            $result=$this->ingestion->ingest($organizationId,$raw);
+            if($this->instrumentTrust!==null){
+                $this->instrumentTrust->observe($organizationId,$sourceId,$shard,$fencingToken,$result);
+            }
+            return $result;
         });
     }
 }

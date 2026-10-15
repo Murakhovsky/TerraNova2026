@@ -25,6 +25,7 @@ final readonly class L2IngestionPublisher
         private ?VenueId $venueId,
         private string $symbol,
         private string $eventType = 'l2.verified.snapshot',
+        private ?\Closure $fencedWriter = null,
     ) {
         if ($eventType !== 'l2.verified.snapshot') throw new \DomainException('Unsupported verified L2 event type.');
     }
@@ -52,6 +53,8 @@ final readonly class L2IngestionPublisher
             ['transport'=>'WEBSOCKET','recovery'=>'VERIFIED','timestamp_authority'=>'RECEIVED_AT'],
             MarketDataMode::Live,
         );
-        return $this->ingestion->ingest($this->organizationId, $event);
+        return $this->fencedWriter !== null
+            ? ($this->fencedWriter)($event)
+            : $this->ingestion->ingest($this->organizationId, $event);
     }
 }

@@ -42,6 +42,7 @@ parameters:
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '3'
+  env(COS_CM_POOL_PRODUCTION_ARMED): '0'
   env(COS_CM_INSTRUMENT_POOL_AUTO_PROPOSE_ENABLED): '0'
   env(COS_CM_INSTRUMENT_POOL_SCHEDULER_ENABLED): '0'
   env(COS_CM_INSTRUMENT_POOL_SCHEDULER_INTERVAL_MINUTES): '15'
@@ -111,6 +112,14 @@ services:
 
   App\:
     resource: '../src/'
+
+  App\Command\CapitalMarketsInstrumentStreamTrustCommand:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  App\Command\CapitalMarketsInstrumentPoolProductionCommand:
+    arguments:
+      $connection: '@cos.database.pdo'
 
   App\Controller\:
     resource: '../src/Controller/'
@@ -1878,9 +1887,18 @@ services:
   Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlMarketSubscriptionRepository
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlReplayCanonicalComparator:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRawMarketEventRepository:
     arguments:
       $connection: '@cos.database.pdo'
+      $provenance: '@Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance'
 
   Domains\CapitalMarkets\Application\Contract\RawMarketEventRepositoryInterface:
     alias: Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlRawMarketEventRepository
@@ -1956,7 +1974,9 @@ services:
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPublicPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxSpotMarketDataAdapter: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxSpotMarketDataDecoder: ~
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotPayloadParser: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter: ~
@@ -1978,6 +1998,7 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceUsdmBboMarketDataAdapter'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter'
@@ -1992,6 +2013,7 @@ services:
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataDecoder'
+        - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxSpotMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceUsdmBboMarketDataDecoder'
         - '@Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenMarketDataDecoder'
@@ -2030,9 +2052,47 @@ services:
 
   Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner: ~
 
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingFailoverAudit:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingIncidentDelivery: ~
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingIncidentManager:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlDerivativeLifecycleRegistry:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlDerivativeStreamTrust:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlPerInstrumentStreamTrust:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
+  Domains\CapitalMarkets\Application\Service\PerInstrumentStreamTrustMachine: ~
+  Domains\CapitalMarkets\Application\Service\BybitDerivativesStreamScope: ~
+  Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner: ~
+  Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore: ~
+  Domains\CapitalMarkets\Application\Service\StreamingFleetPlacementPolicy: ~
+  Domains\CapitalMarkets\Application\Service\RawMarketReplaySimulator: ~
+  Domains\CapitalMarkets\Application\Service\CrossVenueBboConsensus: ~
+  Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlCrossVenueBboReconciliation:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway:
     arguments:
       $pdo: '@cos.database.pdo'
+      $instrumentTrust: '@Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlPerInstrumentStreamTrust'
 
   Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingExpiredLeaseSweeper:
     arguments:
@@ -2055,6 +2115,13 @@ services:
     public: true
     arguments:
       $pdo: '@cos.database.pdo'
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolExternalEvidence:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolProductionSoakPolicy: ~
+  Domains\CapitalMarkets\Application\Service\InstrumentPoolProductionEvidenceReader:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\CapitalMarkets\Application\Service\InstrumentPoolLifecycleReviewer: ~
   Domains\CapitalMarkets\Application\Service\InstrumentPoolScheduleTargets: ~
 
