@@ -9,6 +9,10 @@ require (string)(getenv('COS_TEST_AUTOLOAD') ?: dirname(__DIR__,2).'/symfony/ven
 
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
+use App\Persistence\Workflow\DoctrineWorkflowShadowParityReader;
+use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
+use App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence;
+use Platform\Workflow\Service\WorkflowShadowParityComparator;
 use App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence;
 use App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier;
 use Doctrine\DBAL\DriverManager;
@@ -123,6 +127,61 @@ try {
         $owner,'fed-proof-'.$token,$planId,$approvalId,$digest,$definition,
     ),$actor);
     $adapter->assertTrusted($runIdentity,$planId,$digest,$approvalId);
+
+    // Real legacy Federation source + canonical Run; operator shadow reads SQL,
+    // not a pre-built comparator array. Unknown receipt never becomes MATCH.
+    $db->executeStatement(
+        'INSERT INTO cos_federation_runs
+         (organization_id,run_id,goal_id,plan_id,state,revision,created_at,updated_at)
+         VALUES (:org,:run,:goal,:plan,"pending",1,NOW(6),NOW(6))',
+        ['org'=>$org,'run'=>$runId,'goal'=>$goalId,'plan'=>$planId],
+    );
+    $stepKey=hash('sha256',$org."\0".$runId."\0publish");
+    $db->executeStatement(
+        'INSERT INTO cos_federation_steps
+         (organization_id,run_id,step_id,capability_id,capability_version,
+          side_effect_level,state,attempts,idempotency_key,updated_at)
+         VALUES (:org,:run,"publish","sales.create_task","1.0.0",
+                 "external","pending",0,:key,NOW(6))',
+        ['org'=>$org,'run'=>$runId,'key'=>$stepKey],
+    );
+    $shadow=new DoctrineWorkflowShadowParityReader(
+        $db,$store,new WorkflowShadowParityComparator(),$adapter,
+        new DoctrineWorkflowActionReceiptVerifier($db,$adapter),
+        new FailClosedWorkflowNonActionReceiptEvidence(),
+    );
+    if($shadow->federation($org,$runId)->status->value!=='match') {
+        throw new RuntimeException('Real approved Federation shadow should match initial canonical Run.');
+    }
+    $db->executeStatement(
+        'UPDATE cos_federation_steps SET attempts=1
+         WHERE organization_id=:org AND run_id=:run AND step_id="publish"',
+        ['org'=>$org,'run'=>$runId],
+    );
+    if($shadow->federation($org,$runId)->status->value!=='drift') {
+        throw new RuntimeException('Federation SQL shadow ignored legacy execution drift.');
+    }
+    $db->executeStatement(
+        'UPDATE cos_federation_steps SET attempts=0
+         WHERE organization_id=:org AND run_id=:run AND step_id="publish"',
+        ['org'=>$org,'run'=>$runId],
+    );
+    $db->executeStatement(
+        'UPDATE cos_approvals SET decided_by_id=:self WHERE organization_id=:org AND action_id=:id',
+        ['self'=>$owner,'org'=>$org,'id'=>$approvalId],
+    );
+    if($shadow->federation($org,$runId)->status->value!=='partial') {
+        throw new RuntimeException('Revoked human approval cannot yield full Federation shadow MATCH.');
+    }
+    $db->executeStatement(
+        'UPDATE cos_approvals SET decided_by_id=:approver WHERE organization_id=:org AND action_id=:id',
+        ['approver'=>$independent,'org'=>$org,'id'=>$approvalId],
+    );
+    if($shadow->federation('other-tenant',$runId)->status->value!=='no_target') {
+        throw new RuntimeException('Federation shadow leaked another tenant.');
+    }
+    echo "Real Federation SQL shadow passed: initial MATCH, execution DRIFT, untrusted approval PARTIAL and tenant isolation.\n";
+
     $deny(static fn()=> $adapter->assertTrusted($runIdentity,$planId,hash('sha256','forged'),$approvalId),
         'incorrect Plan snapshot digest');
     $deny(static fn()=> $adapter->assertTrusted(
@@ -178,6 +237,8 @@ try {
     $adapter->assertTrusted($runIdentity,$planId,$digest,$approvalId);
     echo "Federation approved Plan MySQL adapter passed: real Action/Policy/Approval proof, tenant, specification, immutable graph and fail-closed drift.\n";
 } finally {
+    $db->executeStatement('DELETE FROM cos_federation_steps WHERE organization_id=:org',['org'=>$org]);
+    $db->executeStatement('DELETE FROM cos_federation_runs WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_workflow_steps WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_workflow_runs WHERE organization_id=:org',['org'=>$org]);
     $db->executeStatement('DELETE FROM cos_approvals WHERE organization_id=:org',['org'=>$org]);

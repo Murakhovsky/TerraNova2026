@@ -274,6 +274,14 @@ services:
   App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+  # Operator-only SQL-backed shadow audit; never authorizes a cutover.
+  App\Persistence\Workflow\DoctrineWorkflowShadowParityReader:
+    arguments:
+      $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+      $actions: '@App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier'
+  # Per-feature rollout is persisted explicitly in MySQL, not enabled by DI.
+  App\Engineering\Infrastructure\Persistence\Doctrine\EngineeringCanonicalTechnicalExecutionGateway: ~
+
   App\Persistence\Workflow\DoctrineWorkflowRecoveryInspector:
     arguments:
       $receipts: '@App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier'

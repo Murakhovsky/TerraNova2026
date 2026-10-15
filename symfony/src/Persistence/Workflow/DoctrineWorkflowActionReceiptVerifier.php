@@ -40,6 +40,18 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
     }
 
     /**
+     * Internal operator shadow-audit: uses real source Plan/Policy/Approval,
+     * never fabricates a TenantContext and cannot mutate any Action.
+     * Not exposed through a public controller.
+     */
+    public function attestForAudit(
+        WorkflowRunIdentity $identity, string $stepId,
+        string $reference, string $inputDigest,
+    ): WorkflowReceiptAttestation {
+        return $this->attestTrusted($identity, $stepId, $reference, $inputDigest);
+    }
+
+    /**
      * Worker-only read-only attestation. The current RUNNING Action identity
      * is itself checked against the tenant and pinned Run owner/correlation.
      * No synthetic TenantContext or forged user privileges are introduced.
