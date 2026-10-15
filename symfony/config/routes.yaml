@@ -2651,6 +2651,26 @@ capital_markets_discovery_scan:
   controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::scan
   methods: [POST]
 
+capital_markets_discovery_import:
+  path: /capital-markets/discovery/import
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::importSeed
+  methods: [POST]
+
+capital_markets_discovery_drafts:
+  path: /capital-markets/discovery/canonical-drafts
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::seedCanonicalDrafts
+  methods: [POST]
+
+capital_markets_discovery_listing_review:
+  path: /capital-markets/discovery/listing-review
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::reviewListing
+  methods: [POST]
+
+capital_markets_discovery_subscription_plan:
+  path: /capital-markets/discovery/subscription-plan
+  controller: App\Web\CapitalMarkets\CrossVenueDiscoveryController::planPoolBbo
+  methods: [POST]
+
 # Capital Markets CM-FOUNDATION UI
 capital_markets_overview:
   path: /capital-markets
@@ -2804,6 +2824,23 @@ capital_markets_market_data_poll:
   controller: App\Web\CapitalMarkets\CapitalMarketsPageController::pollMarketDataSource
   methods: [POST]
   requirements: { id: '[A-Za-z0-9._:-]{1,190}' }
+
+# Canonical Instrument Pool governance, same Capital Markets bounded context
+capital_markets_instrument_pool:
+  path: /capital-markets/instrument-pool
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::instrumentPool
+  methods: [GET]
+
+capital_markets_instrument_pool_propose:
+  path: /capital-markets/instrument-pool/proposals
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::proposeInstrumentPoolChange
+  methods: [POST]
+
+capital_markets_instrument_pool_decide:
+  path: /capital-markets/instrument-pool/proposals/{id}/decision
+  controller: App\Web\CapitalMarkets\CapitalMarketsPageController::decideInstrumentPoolChange
+  methods: [POST]
+  requirements: { id: '[0-9]+' }
 
 # Capital Markets CM-FOUNDATION API
 cos_api_v1_capital_markets_instruments:

@@ -11,6 +11,7 @@ final class BuiltinNotificationTemplateRepository implements TemplateRepositoryI
 {
     public const GROWTH_OUTBOUND_MESSAGE='growth.outbound.message';
     public const GROWTH_COLLECTOR_INCIDENT='growth.collector.incident';
+    public const CAPITAL_MARKETS_L2_ALERT='capital_markets.l2.alert';
 
     public function find(string $key,Channel $channel,string $locale):?Template
     {
@@ -28,6 +29,14 @@ final class BuiltinNotificationTemplateRepository implements TemplateRepositoryI
             self::GROWTH_COLLECTOR_INCIDENT=>new Template(
                 'builtin-growth-collector-incident-email-v1',
                 self::GROWTH_COLLECTOR_INCIDENT,
+                Channel::EMAIL,
+                trim($locale)!==''?trim($locale):'en',
+                '{{subject}}',
+                '{{body}}',
+            ),
+            self::CAPITAL_MARKETS_L2_ALERT=>new Template(
+                'builtin-capital-markets-l2-alert-email-v1',
+                self::CAPITAL_MARKETS_L2_ALERT,
                 Channel::EMAIL,
                 trim($locale)!==''?trim($locale):'en',
                 '{{subject}}',

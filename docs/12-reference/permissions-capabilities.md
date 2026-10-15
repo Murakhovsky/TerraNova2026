@@ -18,7 +18,7 @@ generated: true
 
 | Класифікація | Кількість | Значення |
 | --- | ---: | --- |
-| `both` | 45 | Capability присутня і в runtime catalogue, і в manifest. |
+| `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
 | `manifest-only` | 130 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
@@ -32,6 +32,9 @@ generated: true
 | `capital_markets` | `capital_markets.audit.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.instrument.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.instrument.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.instrument_pool.approve` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.instrument_pool.propose` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.instrument_pool.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.market_data.history.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.market_data.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |

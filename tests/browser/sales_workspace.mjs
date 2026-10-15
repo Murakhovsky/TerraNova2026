@@ -141,6 +141,10 @@ try {
   const leadCard = leadQualify.locator('xpath=ancestor::*[@data-lead-id][1]');
   const leadId = await leadCard.getAttribute('data-lead-id');
   if (!leadId) throw new Error('Qualify fixture lead must expose data-lead-id.');
+  // networkidle is not the same as a connected Stimulus controller. A click
+  // before deferred AssetMapper modules initialize produces no PATCH request.
+  await page.locator(`[data-lead-id="${leadId}"][data-sales-lead-ready="1"]`)
+    .waitFor({ state: 'visible', timeout: 20000 });
   await waitMutation(page, `/api/v1/sales/leads/${leadId}`, () => leadQualify.click(), 'Qualify Lead', 'PATCH');
   assertOk(await page.goto(absolute('/sales/leads?status=qualified'), { waitUntil: 'networkidle' }), 'Qualified Lead postcondition');
   await assertCount(page.locator(`[data-lead-id="${leadId}"]`), 1, 'Qualified Lead must persist after reload');

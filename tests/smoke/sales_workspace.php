@@ -11,6 +11,13 @@ foreach (['data-lead-id', 'data-sales-lead-status', 'data-sales-lead-owner', 'da
     if (!str_contains($leads, $marker)) throw new RuntimeException('Canonical Lead Inbox missing ' . $marker);
 }
 
+$leadRuntime=(string)file_get_contents($root . '/symfony/assets/controllers/sales_lead_controller.js');
+$browser=(string)file_get_contents($root . '/tests/browser/sales_workspace.mjs');
+if(!str_contains($leadRuntime, "this.element.dataset.salesLeadReady = '1'")
+    || !str_contains($browser, '[data-sales-lead-ready="1"]')){
+    throw new RuntimeException('Lead mutation acceptance must wait for connected Stimulus controller.');
+}
+
 $migration=(string)file_get_contents($root.'/app/migrations/20260904_000021_sales_runtime_workspace.sql');
 foreach (['sales_pipelines','sales_pipeline_stages','sales_pipeline_transitions','sales_communications','cos_action_outcomes','sales_metric_snapshots'] as $table) if (!str_contains($migration,$table)) throw new RuntimeException('Migration missing '.$table);
 

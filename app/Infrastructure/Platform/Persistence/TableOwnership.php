@@ -94,6 +94,9 @@ final class TableOwnership
             'tn_capital_market_portfolio_valuation_snapshots',
             'tn_capital_market_nav_financial_evidence',
             'tn_capital_market_paper_nav_snapshots',
+            'tn_capital_market_instrument_pool_snapshots',
+            'tn_capital_market_instrument_pool_scan_gates',
+            'tn_capital_market_instrument_pool_changes',
         ],
         'Content' => ['tn_content_items', 'tn_content_revisions'],
         'Diagnostic' => [
