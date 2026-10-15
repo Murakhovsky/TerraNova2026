@@ -15,7 +15,7 @@ $protocol=new BybitLinearDerivativesProtocol(
 $received=new DateTimeImmutable('now',new DateTimeZone('UTC'));
 $ms=(string)($received->getTimestamp()*1000);
 $raw=static fn(array $row):string=>json_encode($row,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES);
-$frame=static fn(string $type,array $data,string $stamp)use($raw):string=>$raw([
+$frame=static fn(string $type,array $data,string $stamp):string=>$raw([
     'topic'=>'tickers.BTCUSDT','type'=>$type,'ts'=>$stamp,'data'=>$data,
 ]);
 $data=['symbol'=>'BTCUSDT','markPrice'=>'67500.00010000',
