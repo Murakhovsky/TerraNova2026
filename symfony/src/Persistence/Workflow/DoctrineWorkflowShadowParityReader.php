@@ -106,6 +106,58 @@ final readonly class DoctrineWorkflowShadowParityReader
     }
 
     /**
+     * Fleet-facing read-only technical parity for the entire Engineering
+     * workflow. Never equate AgentRun parity with business-stage/QA approval.
+     *
+     * @return array<string,mixed>
+     */
+    public function engineeringWorkflow(string $organizationId, string $workflowId): array
+    {
+        if ($organizationId==='' || $workflowId==='') {
+            throw new DomainException('Engineering shadow requires scoped workflow and tenant.');
+        }
+        $workflow=$this->db->fetchAssociative(
+            'SELECT w.id,w.feature_id,w.current_state,w.status,w.version,
+                    w.trace_id,w.resume_state
+             FROM cos_engineering_workflows w
+             JOIN cos_engineering_features f ON f.id=w.feature_id
+             WHERE f.organization_id=:org AND w.id=:workflow',
+            ['org'=>$organizationId,'workflow'=>$workflowId],
+        );
+        if (!$workflow) return [
+            'source'=>'engineering_workflow','workflow_id'=>$workflowId,
+            'status'=>'no_target','reason'=>'legacy_engineering_workflow_not_found',
+            'read_only'=>true,'cutover_authorized'=>false,
+        ];
+        $ids=$this->db->fetchFirstColumn(
+            'SELECT id FROM cos_engineering_agent_runs
+             WHERE feature_id=:feature AND workflow_execution_id=:workflow
+             ORDER BY started_at,id',
+            ['feature'=>$workflow['feature_id'],'workflow'=>$workflowId],
+        );
+        $runs=[];$counts=['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0];
+        foreach($ids as $id) {
+            $report=$this->engineeringAgent($organizationId,(string)$id);
+            $counts[$report->status->value]++;
+            $runs[]=['agent_run_id'=>$id,'status'=>$report->status->value,
+                'differences'=>$report->differences];
+        }
+        $overall=$counts['drift']>0?'drift':
+            ($counts['no_target']>0 || $runs===[]?'no_target':'partial');
+        return [
+            'source'=>'engineering_workflow','workflow_id'=>$workflowId,
+            'feature_id'=>$workflow['feature_id'],
+            'business_stage'=>$workflow['current_state'],
+            'business_status'=>$workflow['status'],
+            'business_version'=>(int)$workflow['version'],
+            'business_gate_authority'=>'legacy_engineering',
+            'technical_counts'=>$counts,'technical_runs'=>$runs,
+            'status'=>$overall,'read_only'=>true,
+            'cutover_authorized'=>false,
+        ];
+    }
+
+    /**
      * Technical AgentRun parity: each migrated AgentRun is one canonical
      * technical Run with a single fenced Step. Business stage and human
      * approvals remain with the original Engineering domain.
@@ -157,6 +209,7 @@ final readonly class DoctrineWorkflowShadowParityReader
         }
         $sourceInput=json_decode((string)$legacy['input_snapshot'],true,512,JSON_THROW_ON_ERROR);
         if (!is_array($sourceInput)) $sourceInput=[];
+        $executionTaskId=$sourceInput['_execution_task_id']??null;
         unset($sourceInput['_execution_task_id']);
         $expectedInput=WorkflowDefinitionFingerprint::digest([[
             'feature'=>$legacy['feature_id'],'role'=>$legacy['agent_role'],
@@ -174,7 +227,9 @@ final readonly class DoctrineWorkflowShadowParityReader
             || ($definition['side_effect_level']??null)!=='external'
             || ($definition['execution_binding']??null)!=='engineering:agent-run'
             || ($definition['input']['feature_id']??null)!==$legacy['feature_id']
-            || ($definition['input']['idempotency_key']??null)!==$legacy['idempotency_key']) {
+            || ($definition['input']['idempotency_key']??null)!==$legacy['idempotency_key']
+            || !is_string($executionTaskId)
+            || ($definition['input']['execution_task_id']??null)!==$executionTaskId) {
             $drift[]='engineering_immutable_definition_or_input_mismatch';
         }
         if (!$canonical || count($steps)!==1) {
@@ -196,8 +251,22 @@ final readonly class DoctrineWorkflowShadowParityReader
                 WorkflowParityStatus::DRIFT,$drift);
         }
         $step=$steps[0];
+        $lease=$this->db->fetchAssociative(
+            'SELECT state,revision,claim_token,claimed_by,
+                    (claim_expires_at>UTC_TIMESTAMP(6)) AS lease_active
+             FROM cos_workflow_steps
+             WHERE organization_id=:org AND run_id=:run AND step_id="execute"',
+            ['org'=>$organizationId,'run'=>$identity->runId],
+        );
+        if (!$lease || $lease['claim_token']!==$link['claim_token']
+            || $lease['claimed_by']!==$agentRunId) {
+            $drift[]='engineering_fenced_claim_identity_mismatch';
+        }
         if ($legacy['status']==='RUNNING') {
-            if ($canonical->status->value!=='running' || $step->state!=='claimed') {
+            if ($canonical->status->value!=='running' || $step->state!=='claimed'
+                || $link['technical_state']!=='claimed'
+                || (int)($lease['lease_active']??0)!==1
+                || (int)($lease['revision']??0)!==2) {
                 $drift[]='agent_running_claim_mismatch';
             }
         } elseif ($legacy['status']==='COMPLETED') {
@@ -206,11 +275,13 @@ final readonly class DoctrineWorkflowShadowParityReader
                 JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
             $expected='engineering:agent-run:completed:v1:'.$agentRunId.':'.$hash;
             if ($canonical->status->value!=='completed' || $step->state!=='completed'
+                || $link['technical_state']!=='completed'
                 || !hash_equals($expected,(string)$step->resultReference)) {
                 $drift[]='agent_completed_receipt_mismatch';
             }
         } elseif ($legacy['status']==='FAILED') {
-            if ($canonical->status->value!=='ambiguous' || $step->state!=='ambiguous') {
+            if ($canonical->status->value!=='ambiguous' || $step->state!=='ambiguous'
+                || $link['technical_state']!=='ambiguous') {
                 $drift[]='agent_failed_ambiguous_reconciliation_mismatch';
             }
         } else {

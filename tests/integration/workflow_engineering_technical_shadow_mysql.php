@@ -95,6 +95,11 @@ try {
     if($reader->engineeringAgent($org,$agent)->status->value!=='match') {
         throw new RuntimeException('Active claimed Engineering AgentRun did not match canonical technical Run.');
     }
+    $batch=$reader->engineeringWorkflow($org,$workflow);
+    if($batch['status']!=='partial' || ($batch['technical_counts']['match']??0)!==1
+       || $batch['business_gate_authority']!=='legacy_engineering') {
+        throw new RuntimeException('Engineering workflow shadow incorrectly promoted business approval.');
+    }
     $link=$db->fetchAssociative(
         'SELECT * FROM cos_engineering_technical_links
          WHERE organization_id=:org AND agent_run_id=:id',
@@ -103,6 +108,19 @@ try {
     if(!$link || !preg_match('/^[a-f0-9]{32}$/',$link['claim_token'])) {
         throw new RuntimeException('Canonical claim fencing link absent.');
     }
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps SET claim_expires_at=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 1 SECOND)
+         WHERE organization_id=:org AND run_id=:run AND step_id="execute"',
+        ['org'=>$org,'run'=>$link['canonical_run_id']],
+    );
+    if($reader->engineeringAgent($org,$agent)->status->value!=='drift') {
+        throw new RuntimeException('Shadow ignored expired canonical technical lease.');
+    }
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps SET claim_expires_at=DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 7200 SECOND)
+         WHERE organization_id=:org AND run_id=:run AND step_id="execute"',
+        ['org'=>$org,'run'=>$link['canonical_run_id']],
+    );
     $other=EngineeringId::generate();
     $otherTask=new EngineeringAgentTask(EngineeringId::generate(),$feature,AgentRole::REVIEWER,
        'Reviewer fixture',[],[],[],'schema',[],'eng-other-'.$tag,['logical_attempt'=>1]);

@@ -22,7 +22,7 @@ final class WorkflowShadowAuditCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('source',InputArgument::REQUIRED,'federation or engineering-agent');
+        $this->addArgument('source',InputArgument::REQUIRED,'federation, engineering-agent or engineering-workflow');
         $this->addArgument('organization',InputArgument::REQUIRED,'Verified tenant organization ID');
         $this->addArgument('run',InputArgument::REQUIRED,'Legacy run/AgentRun ID');
     }
@@ -32,10 +32,16 @@ final class WorkflowShadowAuditCommand extends Command
         $source=(string)$input->getArgument('source');
         $org=(string)$input->getArgument('organization');
         $run=(string)$input->getArgument('run');
+        if ($source==='engineering-workflow') {
+            $report=$this->reader->engineeringWorkflow($org,$run);
+            $output->writeln(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
+            // Technical parity never overrides Human/QA/Release ownership.
+            return Command::FAILURE;
+        }
         $report=match($source) {
             'federation'=>$this->reader->federation($org,$run),
             'engineering-agent'=>$this->reader->engineeringAgent($org,$run),
-            default=>throw new \InvalidArgumentException('Only federation and engineering-agent are supported.'),
+            default=>throw new \InvalidArgumentException('Only federation, engineering-agent and engineering-workflow are supported.'),
         };
         $output->writeln(json_encode([
             'source'=>$report->source,'run_id'=>$report->sourceRunId,

@@ -67,7 +67,8 @@ final readonly class EngineeringCanonicalTechnicalExecutionGateway
             'execution_binding'=>'engineering:agent-run',
             'side_effect_level'=>'external','depends_on'=>[],
             'input'=>['feature_id'=>$task->featureId,'agent_role'=>$task->role->value,
-                'idempotency_key'=>$task->idempotencyKey]];
+                'idempotency_key'=>$task->idempotencyKey,
+                'execution_task_id'=>$task->id]];
         $definition=new WorkflowDefinitionSnapshot('engineering.agent_execution','1.0.0',[$step]);
         // Reuse shared graph scheduler before minting a fenced technical lease.
         $selection=(new WorkflowStepScheduler())->select($definition,
