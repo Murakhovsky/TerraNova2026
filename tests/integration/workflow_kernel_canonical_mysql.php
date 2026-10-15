@@ -5,6 +5,7 @@ declare(strict_types=1);
 require (string)(getenv('COS_TEST_AUTOLOAD')?:dirname(__DIR__,2).'/symfony/vendor/autoload.php');
 use App\Persistence\Workflow\DoctrineKernelExecutionEvidence;
 use App\Persistence\Workflow\DoctrineKernelExecutionFence;
+use App\Persistence\Workflow\DoctrineKernelExecutionRecoveryInspector;
 use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
 use App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier;
 use App\Persistence\Workflow\FailClosedWorkflowStepClaimAdmission;
