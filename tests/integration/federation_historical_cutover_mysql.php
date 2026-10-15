@@ -362,7 +362,7 @@ try {
     $db->executeStatement(
         'INSERT INTO cos_federation_plans
          (organization_id,plan_id,goal_id,spec_version,plan_version,state,plan_json,created_at)
-         VALUES (:org,:plan,:goal,1,1,"approved",:json,NOW(6))',
+         VALUES (:org,:plan,:goal,1,2,"approved",:json,NOW(6))',
         ['org'=>$org,'plan'=>$mixedPlan,'goal'=>$goalId,
          'json'=>json_encode(['steps'=>$sourceSteps],JSON_THROW_ON_ERROR)],
     );
