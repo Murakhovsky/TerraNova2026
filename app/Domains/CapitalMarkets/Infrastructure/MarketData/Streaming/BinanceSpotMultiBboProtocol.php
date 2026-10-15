@@ -144,7 +144,9 @@ final class BinanceSpotMultiBboProtocol
             }
             if($request['action']==='resubscribe'){
                 $this->subscribed[$symbol]=true;
-                unset($this->sequences[$symbol]);
+                // Provider re-ACK ends hard quarantine; first fresh complete
+                // BBO still controls re-admission to trusted Market State.
+                unset($this->hardRecovery[$symbol],$this->sequences[$symbol]);
                 $this->lastReceived[$symbol]=$receivedAt;
                 return ['kind'=>'resubscribed','symbol'=>$symbol];
             }
