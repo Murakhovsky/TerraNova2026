@@ -153,11 +153,12 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
         WorkflowRunIdentity $identity,string $sourceId,string $agent,string $digest,string $correlation
     ):void {
         $job=$this->db->fetchAssociative(
-            'SELECT type,correlation_id,payload FROM cos_jobs
+            'SELECT type,status,attempts,correlation_id,payload FROM cos_jobs
              WHERE organization_id=:org AND id=:job',
             ['org'=>$identity->organizationId,'job'=>$sourceId]);
         $payload=$job?json_decode((string)$job['payload'],true,512,JSON_THROW_ON_ERROR):null;
-        if(!$job || $job['type']!=='AGENT_RUN' || $job['correlation_id']!==$correlation
+        if(!$job || $job['type']!=='AGENT_RUN' || $job['status']!=='RUNNING'
+            || (int)$job['attempts']!==1 || $job['correlation_id']!==$correlation
             || !is_array($payload) || ($payload['agent_name']??null)!==$agent
             || WorkflowDefinitionFingerprint::digest([$payload])!==$digest) {
             throw new DomainException('Agent result has no pinned native source job.');

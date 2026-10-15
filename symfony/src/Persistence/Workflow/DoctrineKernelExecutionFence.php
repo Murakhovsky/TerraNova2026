@@ -36,13 +36,18 @@ final readonly class DoctrineKernelExecutionFence implements KernelCanonicalExec
         $id=$this->identity($job->organizationId,'agent',$source);
         $token=$this->store->beginKernel($id,'agent',$source,$agentName,
             WorkflowDefinitionFingerprint::digest([$job->payload]),$job->correlationId,
-            $job->claimedBy,7200);
+            $job->claimedBy,max(1,min(7200,$job->timeoutSeconds)));
         return new KernelExecutionClaim($id->organizationId,$id->runId,'agent',$token,$job->correlationId);
     }
 
     public function assertAgentAdmitted(AgentInvocation $invocation):void
     {
-        if(!$this->enrolled($invocation->organizationId,'agent'))return;
+        if(!$this->enrolled($invocation->organizationId,'agent')) {
+            if($invocation->canonicalSourceJobId!==null || $invocation->canonicalClaimToken!==null) {
+                throw new DomainException('Canonical Agent claim cannot be transferred to a legacy tenant.');
+            }
+            return;
+        }
         $source=$invocation->canonicalSourceJobId;
         $token=$invocation->canonicalClaimToken;
         if(!is_string($source) || $source==='' || !is_string($token)
@@ -52,13 +57,19 @@ final readonly class DoctrineKernelExecutionFence implements KernelCanonicalExec
         $id=$this->identity($invocation->organizationId,'agent',$source);
         $row=$this->db->fetchAssociative(
             'SELECT r.state AS run_state,r.correlation_id,s.claim_token,s.state AS step_state,
-                    s.claim_expires_at,s.attempts,r.definition_json
+                    s.claim_expires_at,s.attempts,s.claimed_by,r.definition_json
              FROM cos_workflow_runs r
              JOIN cos_workflow_steps s ON s.organization_id=r.organization_id AND s.run_id=r.run_id
              WHERE r.organization_id=:org AND r.run_id=:run AND s.step_id="execute"',
             ['org'=>$id->organizationId,'run'=>$id->runId]);
         $steps=$row?json_decode((string)$row['definition_json'],true,512,JSON_THROW_ON_ERROR):null;
-        if(!$row || $row['run_state']!=='running' || $row['step_state']!=='claimed'
+        $job=$this->db->fetchAssociative(
+            'SELECT status,attempts,locked_by,correlation_id FROM cos_jobs
+             WHERE organization_id=:org AND id=:job',
+            ['org'=>$id->organizationId,'job'=>$source]);
+        if(!$job || $job['status']!=='RUNNING' || (int)$job['attempts']!==1
+            || ($row['claimed_by']??null)!==$job['locked_by'] || $job['correlation_id']!==$invocation->correlationId
+            || !$row || $row['run_state']!=='running' || $row['step_state']!=='claimed'
             || $row['correlation_id']!==$invocation->correlationId
             || (int)$row['attempts']!==1
             || !is_string($row['claim_token']) || !hash_equals($row['claim_token'],$token)
