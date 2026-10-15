@@ -233,7 +233,9 @@ try {
         $goals,$planEvidence,$receipts,
         new \App\Persistence\Workflow\FailClosedWorkflowNonActionReceiptEvidence(),
         $planReader,$capabilities,$domains,$modules,
-        $policies,$policyEngine,$contexts,$policyService);
+        $policies,$policyEngine,$contexts,$policyService,
+        new \App\Persistence\Workflow\DoctrineWorkflowExecutionCoordinator(
+            $db,$store,new WorkflowStepScheduler(),$planEvidence,$receipts));
 
     $goal=new GoalSpecification($goalId,$org,$owner,'Створити одну Sales CRM задачу',
         [['id'=>'sales.local_tasks_created','operator'=>'at_least','expected'=>1]],

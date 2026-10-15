@@ -6,6 +6,7 @@ namespace App\Persistence\Federation;
 use App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier;
 use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface;
+use Platform\Workflow\Contract\WorkflowExecutionCoordinatorInterface;
 use Platform\Workflow\Model\WorkflowEvidenceSignal;
 use App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence;
 use Doctrine\DBAL\Connection;
@@ -63,6 +64,7 @@ final readonly class FederationCanonicalWorkflowBridge
         private PolicyEngine $policyEngine,
         private PolicyContextBuilder $contexts,
         private ActionPolicyService $actions,
+        private ?WorkflowExecutionCoordinatorInterface $coordinator = null,
     ) {}
 
     public function newRunsEnabled(TenantContext $actor): bool
@@ -219,7 +221,8 @@ final readonly class FederationCanonicalWorkflowBridge
             $id=new WorkflowRunIdentity($org,$runId);
             $draft=new WorkflowRunDraft($id,$definition->id,$definition->version,$inputDigest,
                 $actor->userId()->value(),'federation:'.$runId,$planId,$approvalId,$digest,$definition);
-            $this->workflow->create($draft,$actor);
+            if ($this->coordinator !== null) $this->coordinator->start($draft,$actor);
+            else $this->workflow->create($draft,$actor);
             // Zero writes to cos_federation_runs/steps, no Action submission.
             return ['run_id'=>$runId,'state'=>'pending','execution_authority'=>'platform_workflow'];
         });
@@ -341,7 +344,8 @@ final readonly class FederationCanonicalWorkflowBridge
 
         $command=new WorkflowRunCommand($id,$actor,$run->revision,$run->correlationId);
         if ($run->status === WorkflowStatus::CREATED) {
-            $this->workflow->compareAndTransition(new WorkflowRunTransition(
+            if ($this->coordinator !== null) $this->coordinator->advance($command);
+            else $this->workflow->compareAndTransition(new WorkflowRunTransition(
                 $command,WorkflowStatus::CREATED,WorkflowStatus::RUNNING,'approved Goal run started'));
             return $result('running');
         }
@@ -372,7 +376,8 @@ final readonly class FederationCanonicalWorkflowBridge
             }
         }
         if ($selection->state === WorkflowStepSelectionState::COMPLETE) {
-            $this->workflow->compareAndTransition(new WorkflowRunTransition(
+            if ($this->coordinator !== null) $this->coordinator->advance($command);
+            else $this->workflow->compareAndTransition(new WorkflowRunTransition(
                 $command,WorkflowStatus::RUNNING,WorkflowStatus::COMPLETED,'all Action receipts attested'));
             return $result('completed');
         }
