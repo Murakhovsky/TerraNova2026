@@ -40,6 +40,7 @@ return [
             'app/migrations/20261012_000135_capital_markets_stream_worker_leases.sql',
             'app/migrations/20261015_000141_capital_markets_instrument_pool_snapshots.sql',
             'app/migrations/20261015_000142_capital_markets_instrument_pool_approval.sql',
+            'app/migrations/20261015_000144_capital_markets_pool_production.sql',
         ],
         'capabilities'=>[
             'capital_markets.view',
