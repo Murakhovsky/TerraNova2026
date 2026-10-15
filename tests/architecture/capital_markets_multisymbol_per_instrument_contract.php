@@ -21,6 +21,11 @@ foreach(['source_scoped_leases','no_parallel_same_source_shards',
     if(!str_contains($multi,$item))throw new RuntimeException('Multi-symbol admission guard missing '.$item);
 }
 foreach([$binance,$massive] as $worker){
+    if(!str_contains($worker,'STREAM_TOPOLOGY_CHANGED')
+        ||!str_contains($worker,'$lastTopologyReview>=30000')
+        ||!str_contains($worker,'hash_equals($initialTopologyDigest')){
+        throw new RuntimeException('Long-lived worker must fence changed subscription/mapping intent.');
+    }
     if(!str_contains($worker,'$this->multiSymbolCore->plan(')
         ||!str_contains($worker,'StreamingWorkerRunner')){
         throw new RuntimeException('Production batch worker bypasses shared admission or fenced runner.');

@@ -108,6 +108,10 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
             }
             // Unified preflight: exact mapping, per-source capacity and one fenced lease.
             $streamPlan=$this->multiSymbolCore->plan($org,[$sourceName]);
+            $initialTopologyDigest=hash('sha256',json_encode(
+                $streamPlan['sources'][0],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES
+            ));
+            $lastTopologyReview=0;
             if(($streamPlan['totals']['SOURCES']??0)!==1){
                 throw new \DomainException('Multi-symbol streaming capacity admission rejected.');
             }
@@ -233,8 +237,23 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                 function(int $epoch)use(
                     $session,$clock,$transport,$protocol,&$lastPing,
                     $org,$sourceName,$shard,$workerId,&$token,$instrumentIdsBySymbol,
+                    $initialTopologyDigest,&$lastTopologyReview,
                 ):void{
                     $now=$clock();
+                    // Runtime revocation fence: a stale process may not keep
+                    // streaming removed, re-mapped or disabled subscriptions.
+                    // A changed topology fails the runner, invalidates source
+                    // trust and lets the bounded supervisor restart it.
+                    if($now-$lastTopologyReview>=30000){
+                        $latest=$this->multiSymbolCore->plan($org,[$sourceName]);
+                        $fingerprint=hash('sha256',json_encode(
+                            $latest['sources'][0],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES
+                        ));
+                        if(!hash_equals($initialTopologyDigest,$fingerprint)){
+                            throw new \DomainException('STREAM_TOPOLOGY_CHANGED');
+                        }
+                        $lastTopologyReview=$now;
+                    }
                     if($now-$lastPing>=25000){
                         $transport->sendPing($epoch);
                         $lastPing=$now;
