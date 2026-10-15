@@ -98,7 +98,9 @@ jobs:
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
       - name: Federation single-writer architecture gate
-        run: php tests/architecture/federation_canonical_goal_cutover.php
+        run: |
+          php tests/architecture/federation_canonical_goal_cutover.php
+          php tests/architecture/cos_execution_authority_paths.php
       - name: Federation migration authorization integrity gate
         run: php tests/architecture/federation_migration_safety.php
       - name: Federation core MySQL admission/receipt/Goal E2E

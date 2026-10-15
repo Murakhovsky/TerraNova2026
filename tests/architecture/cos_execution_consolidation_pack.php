@@ -47,8 +47,16 @@ foreach ($registry['entries'] as $item) {
         $evidence=$item['implementation_evidence']??null;
         if (!is_array($evidence)
             || !preg_match('/^[a-f0-9]{40}$/D',(string)($evidence['commit_sha']??''))
-            || ($evidence['acceptance']??null)!=='PENDING_LATEST_CI_AND_FLEET_PARITY') {
+            || !in_array(($evidence['acceptance']??null), ['PENDING_LATEST_CI_AND_FLEET_PARITY','CI_MYSQL_PASS__FLEET_ACCEPTANCE_PENDING'],true)) {
             throw new RuntimeException('Partial migration requires an explicit unaccepted implementation trail: '.$id);
+        }
+        if (($evidence['acceptance']??null)==='CI_MYSQL_PASS__FLEET_ACCEPTANCE_PENDING') {
+            if (($evidence['ci_run_id']??null)!==38750264374
+                || ($evidence['ci_verified_head']??null)!=='d52eec68af964eb7f20e2e6ac7181b42ff61b531'
+                || ($evidence['ci_runtime_job']??null)!=='runtime'
+                || ($item['runtime_consumers_verified']??false)!==false) {
+                throw new RuntimeException('Bounded CI evidence must not certify fleet consumers: '.$id);
+            }
         }
         foreach (['source_port','technical_writer','domain_evidence','mysql_regression'] as $field) {
             if (!is_string($evidence[$field]??null)
@@ -56,6 +64,13 @@ foreach ($registry['entries'] as $item) {
                 || !is_file($root.'/'.$evidence[$field])) {
                 throw new RuntimeException('Missing in-progress implementation source evidence: '.$id.':'.$field);
             }
+        }
+    }
+    if ($migrationState==='IN_PROGRESS' && isset($item['implementation_evidence']['source_entrypoint'])) {
+        $entrypoint=$item['implementation_evidence']['source_entrypoint'];
+        if (!is_string($entrypoint) || str_contains($entrypoint,'..')
+            || !is_file($root.'/'.$entrypoint)) {
+            throw new RuntimeException('In-progress execution entrypoint unverified: '.$id);
         }
     }
     if (in_array($migrationState,['VERIFIED','RETIRED'],true)

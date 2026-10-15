@@ -228,8 +228,11 @@
       "acceptance": "Equivalent or stricter verified invariant on canonical runtime with no duplicate side effects",
       "blocking": true,
       "target_test": "tests/integration/workflow_engineering_technical_shadow_mysql.php",
-      "implementation_note": "Real MySQL Engineering shadow MATCH/DRIFT/PARTIAL assertions exist, but full Kernel/Federation/Engineering read-only parity and real fleet sign-off remain pending.",
-      "target_evidence_status": "RUNNER_PRESENT_NOT_FULL_CASE_ACCEPTANCE"
+      "implementation_note": "Canonical Federation Goal MySQL E2E, Engineering real SQL shadow MySQL and migration integrity tests passed on d52eec68, but full Kernel/Federation/Engineering fleet parity, live tenant state and human business-stage signoff remain pending.",
+      "target_evidence_status": "RUNNER_PRESENT_NOT_FULL_CASE_ACCEPTANCE",
+      "verified_ci_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+      "verified_ci_run_id": 38750264374,
+      "ci_runtime_step": "Engineering canonical technical execution and real SQL shadow MySQL acceptance"
     },
     {
       "id": "CP-21",
@@ -287,5 +290,5 @@
       "blocking": true
     }
   ],
-  "contract_iteration": "2026-10-15: unit-level shared DAG adapter parity covered separately; target durable runtime parity still NOT_IMPLEMENTED"
+  "contract_iteration": "2026-10-15: bounded real SQL shadow and canonical new-run cases passed on d52eec68. CP-20 remains IN_PROGRESS: full-source/tenant/fleet signoff not proven."
 }

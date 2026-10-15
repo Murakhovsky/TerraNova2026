@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "package_id": "COS-FED-EXEC-CONTRACT-CONSOLIDATION-P0",
   "evidence_ref": "372947c9c02577880332d6f1bad9993c465991fd",
-  "evidence_scope": "code-inspected references, not exhaustive runtime call graph",
+  "evidence_scope": "Static source/entrypoint inspection and named MySQL Runtime CI steps at d52eec68; not exhaustive consumer call graph, live tenant, Golden 50 or production operator proof.",
   "status": "incremental_implementation__fleet_acceptance_pending",
   "owner": "Platform Architecture / Engineering",
   "allowed_decisions": [
@@ -49,9 +49,22 @@
       "decision": "MIGRATE",
       "guardrail": "split store; preserve goals/plans/evaluations, tenant CAS and one run per plan",
       "baseline_test": "tests/architecture/federation_execution_authorization.php",
-      "migration_status": "NOT_STARTED",
+      "migration_status": "IN_PROGRESS",
       "runtime_consumers_verified": false,
-      "implementation_note": "Federation ExecutionRunPolicy delegates pure transition validation to Platform Workflow DurableWorkflowTransitionPolicy. Persisted Federation Run/Step writer has NOT migrated."
+      "implementation_note": "New Federation Run controller delegates to canonical Goal-to-Workflow bridge and Platform WorkflowExecutionStoreInterface; historical legacy technical rows are blocked from new Action dispatch. This is bounded new-run cutover, not fleet-wide verified migration.",
+      "implementation_evidence": {
+        "commit_sha": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+        "source_port": "app/Platform/Workflow/Contract/WorkflowExecutionStoreInterface.php",
+        "technical_writer": "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+        "domain_evidence": "symfony/src/Persistence/Federation/FederationCanonicalWorkflowBridge.php",
+        "mysql_regression": "tests/integration/federation_canonical_goal_e2e_mysql.php",
+        "acceptance": "CI_MYSQL_PASS__FLEET_ACCEPTANCE_PENDING",
+        "ci_verified_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+        "ci_run_id": 38750264374,
+        "ci_runtime_job": "runtime",
+        "scope": "opt-in new canonical Federation Run/Step only; historical federation run/step retained as read-only evidence and no production tenant cutover",
+        "source_entrypoint": "symfony/src/Web/Federation/FederationRunController.php"
+      }
     },
     {
       "id": "EX-003",
@@ -77,10 +90,14 @@
         "technical_writer": "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
         "domain_evidence": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionEvidence.php",
         "mysql_regression": "tests/integration/workflow_engineering_technical_shadow_mysql.php",
-        "acceptance": "PENDING_LATEST_CI_AND_FLEET_PARITY",
-        "scope": "canonical Engineering AgentRun path only; Engineering business workflow remains Domain owned"
+        "acceptance": "CI_MYSQL_PASS__FLEET_ACCEPTANCE_PENDING",
+        "scope": "canonical Engineering AgentRun path only; Engineering business workflow remains Domain owned",
+        "ci_verified_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+        "ci_run_id": 38750264374,
+        "ci_runtime_job": "runtime",
+        "source_entrypoint": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php"
       },
-      "implementation_note": "Engineering gateway delegates canonical Run/Step writes to shared Platform Store, with transactional link and source evidence; no fleet-wide cutover or consumer exhaustiveness proof."
+      "implementation_note": "Allowlisted Engineering AgentRun delegates guarded technical Run/Step begin/complete/quarantine to shared Platform Store in the same SQL transaction. Runtime real MySQL integration passed at d52eec68; fleet, tenant rollout and Engineering human/business gates remain unaccepted."
     },
     {
       "id": "EX-004",
@@ -408,5 +425,5 @@
       "runtime_consumers_verified": false
     }
   ],
-  "contract_iteration": "2026-10-15: shared pure WorkflowStepScheduler/WorkflowDependencyGraph and durable transition policy, compatible Federation adapters; no persisted execution cutover."
+  "contract_iteration": "2026-10-15 @ d52eec68: bounded canonical Federation new-run + feature-allowlisted Engineering AgentRun verified by same-HEAD real MySQL Runtime; complete consumer audit, production fleet and business-stage cutover not accepted."
 }
