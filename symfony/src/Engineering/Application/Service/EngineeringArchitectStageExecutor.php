@@ -150,7 +150,33 @@ final readonly class EngineeringArchitectStageExecutor
                 ],
             );
         }
+        $lastRecovery = EngineeringSecurityRecoveryService::latestCheckpoint($this->features->view($featureId));
+        $targetedSecurityRecovery = $securityRecovery !== null
+            && $lastRecovery !== null
+            && ($lastRecovery['workflow_id'] ?? null) === $workflowId
+            && ($lastRecovery['state'] ?? null) === 'RUNNING'
+            && ($lastRecovery['source_review_artifact_id'] ?? null) === $securityRecovery['source_artifact_id'];
+        $maxEvidenceRounds = $targetedSecurityRecovery ? 1 : null;
+        // Recovery front-loads the known security evidence instead of asking
+        // the same expensive Architect to rediscover those files from scratch.
         $contextPaths = self::CANONICAL_ARCHITECTURE_CONTEXT;
+        if ($targetedSecurityRecovery) {
+            $contextPaths = array_merge($contextPaths, [
+                'symfony/src/Web/PublicSite/HomeController.php',
+                'symfony/src/Security/CosIdentityLoader.php',
+                'symfony/src/Security/SessionAuthenticator.php',
+                'symfony/config/packages/security.yaml',
+                'symfony/public/sw.js',
+                'symfony/assets/pwa_runtime.js',
+                'symfony/src/Web/Auth/AuthPageController.php',
+                'symfony/templates/experience/public/home.html.twig',
+                'symfony/src/Web/PublicSite/PublicCosController.php',
+                'docker/symfony/nginx/default.conf',
+                'tests/history/architecture/web_experience_wave13_public_home.php',
+                'tests/history/architecture/web_experience_wave12_pwa.php',
+                'symfony/config/routes.yaml',
+            ]);
+        }
         foreach (is_array($contextMap['content']['files'] ?? null) ? $contextMap['content']['files'] : [] as $file) {
             if (is_array($file) && isset($file['path']) && is_string($file['path'])) {
                 $contextPaths[] = $file['path'];
@@ -264,7 +290,7 @@ final readonly class EngineeringArchitectStageExecutor
                 ],
                 'repository_diff' => $compactRepositoryDiff,
                 'repository_files' => $repositoryFiles,
-                'repository_evidence_budget' => $evidencePlanner->budget(0, 0, $initialEvidencePaths),
+                'repository_evidence_budget' => $evidencePlanner->budget(0, 0, $initialEvidencePaths, $maxEvidenceRounds),
                 'database_schema' => $databaseSchema,
                 'human_decisions' => $humanDecisionHistory,
                 'tasks' => $this->tasks->forFeature($featureId),
@@ -502,6 +528,7 @@ final readonly class EngineeringArchitectStageExecutor
                     $this->repository->available()
                         ? fn (array $requested): array => $this->repository->existingPathsAtRevision($requested, $repositoryRevision)
                         : null,
+                    $maxEvidenceRounds,
                 );
                 $this->journal->event(
                     $featureId, $workflowId, 'MANAGER', 'architect.evidence_request_evaluated',
@@ -610,7 +637,7 @@ final readonly class EngineeringArchitectStageExecutor
                             'additional_paths' => $extraPaths,
                             'round' => $round,
                         ],
-                        'repository_evidence_budget' => $evidencePlanner->budget($round, count($extraPaths), $seenPaths),
+                        'repository_evidence_budget' => $evidencePlanner->budget($round, count($extraPaths), $seenPaths, $maxEvidenceRounds),
                         'repository_evidence_feedback' => [
                             'rejected' => $plan['rejected'],
                             'partially_collected' => $plan['partial'],

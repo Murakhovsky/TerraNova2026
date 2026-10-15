@@ -11,6 +11,10 @@ use App\Engineering\Application\Service\EngineeringContinueService;
 use App\Engineering\Application\Service\EngineeringHumanDecisionService;
 use App\Engineering\Application\Service\EngineeringOrchestrator;
 use App\Engineering\Application\Service\EngineeringStatusService;
+use App\Engineering\Application\Service\EngineeringSecurityRecoveryService;
+use App\Application\Engineering\Command\RunEngineeringSecurityRecoveryCommand;
+use App\Application\Engineering\Command\RunEngineeringFeatureCommand;
+use Symfony\Component\Messenger\MessageBusInterface;
 use App\Engineering\Domain\Workflow\EngineeringId;
 use App\Security\SessionCsrfValidator;
 use Kernel\Observability\CorrelationId;
@@ -28,6 +32,8 @@ final readonly class EngineeringController
         private EngineeringCancelService $cancel,
         private EngineeringHumanDecisionService $decisions,
         private EngineeringStatusService $status,
+        private EngineeringSecurityRecoveryService $securityRecovery,
+        private MessageBusInterface $commandBus,
         private EngineeringMetricsProviderInterface $metrics,
         private EngineeringAuditQueryInterface $audit,
         private TenantContextProviderInterface $tenants,
@@ -197,6 +203,83 @@ final readonly class EngineeringController
                 'agent' => $result->next->agent?->value,
                 'reason' => $result->next->reason,
             ]], 202);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
+    public function securityRecoveryPreview(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, false)) !== null) return $denied;
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->assertTenantFeature($featureId);
+            return new JsonResponse(['ok' => true, 'data' => $this->securityRecovery->preview(
+                $featureId, $this->tenants->current()->organizationId()->value(),
+            )]);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
+    public function securityRecoveryPrepare(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->assertTenantFeature($featureId);
+            $tenant = $this->tenants->current();
+            return new JsonResponse(['ok' => true, 'data' => $this->securityRecovery->prepare(
+                $featureId, $tenant->organizationId()->value(), 'user:'.$tenant->userId()->value(),
+            )], 202);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
+    public function securityRecoveryExecute(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->assertTenantFeature($featureId);
+            $tenant = $this->tenants->current();
+            $feature = $this->status->status($featureId)['feature'];
+            $checkpoint = EngineeringSecurityRecoveryService::latestCheckpoint($feature);
+            if (($checkpoint['state'] ?? '') !== 'PREPARED') {
+                throw new \RuntimeException('One-shot Security recovery is not prepared.');
+            }
+            $this->securityRecovery->enqueue(
+                $featureId, $tenant->organizationId()->value(), (string) $checkpoint['recovery_id'],
+            );
+            $this->commandBus->dispatch(new RunEngineeringSecurityRecoveryCommand(
+                $featureId, $tenant->organizationId()->value(), (string) $checkpoint['recovery_id'],
+            ));
+            return new JsonResponse(['ok' => true, 'data' => [
+                'state' => 'QUEUED', 'recovery_id' => $checkpoint['recovery_id'],
+                'role_limit' => ['PRINCIPAL_ARCHITECT', 'SECURITY_SPECIALIST'],
+            ]], 202);
+        } catch (Throwable $e) {
+            return $this->exception($e);
+        }
+    }
+
+    public function securityRecoveryRelease(Request $request, string $id): JsonResponse
+    {
+        if (($denied = $this->authorize($request, true)) !== null) return $denied;
+        try {
+            $featureId = EngineeringId::assert($id);
+            $this->assertTenantFeature($featureId);
+            $tenant = $this->tenants->current();
+            $result = $this->securityRecovery->release(
+                $featureId, $tenant->organizationId()->value(), 'user:'.$tenant->userId()->value(),
+            );
+            $this->commandBus->dispatch(new RunEngineeringFeatureCommand(
+                featureId: $featureId,
+                organizationId: $tenant->organizationId()->value(),
+                trigger: 'security-recovery-operator-release',
+            ));
+            return new JsonResponse(['ok' => true, 'data' => $result], 202);
         } catch (Throwable $e) {
             return $this->exception($e);
         }

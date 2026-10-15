@@ -139,6 +139,25 @@
             <a class="cos-button cos-button--ghost" href="/admin/engineering">До списку</a>
             {% if summary.pull_request.url %}<a class="cos-button cos-button--ghost" href="{{ summary.pull_request.url }}">Pull request</a>{% endif %}
             {% set actions = summary.actions|default({}) %}
+            {% set recoveryCheckpoint = securityRecovery.checkpoint|default(null) %}
+            {% if securityRecovery.eligible|default(false) %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery/prepare">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Підготувати Security recovery</button>
+                </form>
+            {% elseif recoveryCheckpoint.state|default('') == 'PREPARED' %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery/execute">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Один Architect + Security Review</button>
+                </form>
+            {% elseif recoveryCheckpoint.state|default('') == 'SECURITY_APPROVED_AWAITING_RELEASE' %}
+                <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/security-recovery/release">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <button class="cos-button cos-button--primary" type="submit">Дозволити Development після Security</button>
+                </form>
+            {% elseif recoveryCheckpoint.state|default('') in ['QUEUED','RUNNING','SECURITY_REVIEW','ARCHITECT_NOT_APPROVED','SECURITY_REWORK_REQUIRED','FAILED'] %}
+                <span class="cos-badge">Security recovery: {{ recoveryCheckpoint.state }}</span>
+            {% endif %}
             {% if actions.run|default(false) %}
                 <form method="post" action="/admin/engineering/{{ engineering.feature.id }}/run">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">

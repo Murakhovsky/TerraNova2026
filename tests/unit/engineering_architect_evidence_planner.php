@@ -48,4 +48,9 @@ if ($allMissing['status'] !== 'REJECTED' || $allMissing['reason'] !== 'NO_USABLE
     throw new RuntimeException('All missing files must produce typed technical blocker.');
 }
 
+$targeted = $planner->plan(['src/C.php'], ['src/A.php'], 1, 1, null, 1);
+if ($targeted['status'] !== 'EXHAUSTED' || $targeted['reason'] !== 'ROUND_LIMIT'
+    || $targeted['budget']['rounds_max'] !== 1) {
+    throw new RuntimeException('Targeted recovery exceeded one additional evidence round.');
+}
 echo "Engineering evidence planner V2 passed.\n";

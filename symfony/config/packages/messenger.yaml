@@ -69,6 +69,7 @@ framework:
     routing:
       'App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand': engineering
       'App\Application\Engineering\Command\RunEngineeringFeatureCommand': engineering_immediate
+      'App\Application\Engineering\Command\RunEngineeringSecurityRecoveryCommand': engineering_immediate
       'App\Application\Engineering\Command\WatchEngineeringRuntimeCommand': engineering
       'App\Application\System\Command\SchedulerHeartbeatCommand': async
       'App\Application\Sales\Command\RunSalesAutomationCommand': async
@@ -77,6 +78,7 @@ framework:
       'App\Application\Growth\Command\RunGrowthAutonomousContentCommand': async
       'App\Application\Growth\Command\RunGrowthOutreachSequencesCommand': async
       'App\Application\Growth\Command\RunGrowthMarketDiscoveryCommand': async
+      'App\Application\CapitalMarkets\Command\RunInstrumentPoolSnapshotScans': async
       'App\Application\Sales\Command\RunSalesAgentCommand': async
       'App\Application\System\Command\DrainSalesOutboxCommand': async
       'App\Application\System\Command\ExecuteSalesActionCommand': async
