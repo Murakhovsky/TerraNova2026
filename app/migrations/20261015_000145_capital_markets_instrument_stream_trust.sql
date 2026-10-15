@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS tn_capital_market_instrument_stream_trust (
   fencing_token BIGINT UNSIGNED NOT NULL,
   last_sequence VARCHAR(190) NULL,
   last_event_at DATETIME(6) NULL,
+  last_rejected_at DATETIME(6) NULL,
   last_quality_score TINYINT UNSIGNED NOT NULL DEFAULT 0,
   recovery_required TINYINT UNSIGNED NOT NULL DEFAULT 1,
   reason VARCHAR(100) NOT NULL DEFAULT 'NOT_OBSERVED',

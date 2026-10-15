@@ -145,7 +145,7 @@ SQL;
         // Healthy transport/source is insufficient if one instrument is stale.
         $streamRows=$this->connection->prepare(
             'SELECT source_id,instrument_id,channel,status,recovery_required,
-                    last_event_at,last_quality_score
+                    last_event_at,last_rejected_at,last_quality_score
              FROM tn_capital_market_instrument_stream_trust
              WHERE organization_id=:org'
         );
@@ -182,7 +182,10 @@ SQL;
                 &&(int)$t['last_quality_score']>=80
                 &&is_string($t['last_event_at'])
                 &&($last=strtotime($t['last_event_at'].' UTC'))!==false
-                &&$last>=time()-300&&$last<=time()+5;
+                &&$last>=time()-300&&$last<=time()+5
+                &&($t['last_rejected_at']===null
+                    ||(($badAt=strtotime($t['last_rejected_at'].' UTC'))!==false
+                        &&$badAt<time()-86400));
             $rows[]=[
                 'stream_trust_confirmed'=>$symbolGood,
                 'assignment_registered'=>$shard!==null,

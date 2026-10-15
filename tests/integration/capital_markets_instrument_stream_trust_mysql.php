@@ -211,12 +211,13 @@ try{
         $blocked=$sweeper->observe($org,$source,$shard,$token,$makeResult('199'));
         $assert($blocked==='UNTRUSTED','Regressing symbol sequence escaped persisted trust.');
         $read=$pdo->prepare(
-            'SELECT status,recovery_required,last_sequence FROM tn_capital_market_instrument_stream_trust
+            'SELECT status,recovery_required,last_sequence,last_rejected_at FROM tn_capital_market_instrument_stream_trust
              WHERE organization_id=? AND source_id=? AND instrument_id=? AND channel=?');
         $read->execute([$org,$source,$instruments[0],'BBO']);
         $symbol=$read->fetch(PDO::FETCH_ASSOC);
         $assert(is_array($symbol)&&$symbol['status']==='UNTRUSTED'
-            &&(int)$symbol['recovery_required']===1&&$symbol['last_sequence']==='200',
+            &&(int)$symbol['recovery_required']===1&&$symbol['last_sequence']==='200'
+            &&$symbol['last_rejected_at']!==null,
             'Sequence regression rewound trusted per-symbol baseline.');
         $read->execute([$org,$source,$instruments[1],'BBO']);
         $sibling=$read->fetch(PDO::FETCH_ASSOC);

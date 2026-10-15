@@ -72,6 +72,8 @@ final readonly class MysqlPerInstrumentStreamTrust
                  last_event_at=CASE WHEN last_event_at IS NULL OR last_event_at<:stamp
                       THEN :stamp_copy ELSE last_event_at END,
                  last_quality_score=:score,
+                 last_rejected_at=CASE WHEN :mark_bad=1 THEN UTC_TIMESTAMP(6)
+                   ELSE last_rejected_at END,
                  accepted_count=accepted_count+:accepted,rejected_count=rejected_count+:rejected,
                  updated_at=UTC_TIMESTAMP(6)
              WHERE organization_id=:org AND source_id=:source
@@ -80,7 +82,8 @@ final readonly class MysqlPerInstrumentStreamTrust
             'status'=>$decision['status'],'reason'=>$decision['reason'],
             'recovery'=>$decision['recovery_required'],'token'=>$token,'shard'=>$shard,
             'sequence'=>$decision['sequence'],'stamp'=>$stamp,'stamp_copy'=>$stamp,
-            'score'=>$result->quality->score,'accepted'=>$trusted?1:0,'rejected'=>$trusted?0:1,
+            'score'=>$result->quality->score,'accepted'=>$trusted?1:0,
+            'rejected'=>$trusted?0:1,'mark_bad'=>$trusted?0:1,
         ]);
         if(!$trusted){
             // Same transaction as canonical ingest: a rejected symbol cannot
@@ -134,7 +137,8 @@ final readonly class MysqlPerInstrumentStreamTrust
                 $u=$this->pdo->prepare(
                     "UPDATE tn_capital_market_instrument_stream_trust
                      SET status='STALE',recovery_required=1,reason='INSTRUMENT_STALE',
-                         last_quality_score=0,updated_at=UTC_TIMESTAMP(6)
+                         last_quality_score=0,last_rejected_at=UTC_TIMESTAMP(6),
+                         updated_at=UTC_TIMESTAMP(6)
                      WHERE organization_id=:org AND source_id=:source
                        AND instrument_id=:instrument AND channel=:channel AND status='TRUSTED'");
                 $u->execute($params);

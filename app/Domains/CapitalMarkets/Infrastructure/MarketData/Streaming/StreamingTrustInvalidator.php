@@ -132,7 +132,8 @@ final readonly class StreamingTrustInvalidator implements
             $trust=$this->pdo->prepare(
                 'UPDATE tn_capital_market_instrument_stream_trust
                  SET status=\'UNTRUSTED\',recovery_required=1,
-                     reason=:reason,last_quality_score=0,updated_at=UTC_TIMESTAMP(6)
+                     reason=:reason,last_quality_score=0,
+                     last_rejected_at=UTC_TIMESTAMP(6),updated_at=UTC_TIMESTAMP(6)
                  WHERE organization_id=:org AND source_id=:source'.
                  ($instrumentId===null?'':' AND instrument_id=:instrument')
             );
