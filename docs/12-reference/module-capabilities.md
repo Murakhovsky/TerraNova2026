@@ -365,6 +365,7 @@ Manifest capabilities не задекларовані.
 - `sales.admin.teams.manage`;
 - `sales.admin.view`;
 - `sales.create_task`;
+- `sales.deal.won.observation`;
 - `sales.director.view`;
 - `sales.workspace.use`;
 
