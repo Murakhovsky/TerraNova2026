@@ -102,7 +102,7 @@ COS_FEDERATION_HISTORICAL_MIGRATION=explicit_operator_approved \
 php symfony/bin/console cos:federation:history:cutover \
   '<tenant-id>' '<legacy-run-id>' --apply \
   --operator='<active-tenant-admin-tn_users-id>' \
-  --permit='<independently-issued-short-lived-permit>'
+  --permit-file='/run/secrets/federation-cutover-permit'
 ```
 
 The separate authorizing service must issue a permit with the grammar
@@ -149,3 +149,9 @@ MySQL job and/or full Runtime.
 
 Do not turn off the environment rollout gate or batch-promote uncertain
 historical Actions to make migration coverage appear green.
+
+The CLI requires a **regular, non-symlink permission-restricted permit file**
+(mode `0600` or stricter), rather than a raw `--permit` command-line value.
+Provision the permit out of band and remove it after the one-time migration.
+This prevents the signed authorization from being stored in shell history or
+exposed by operating-system process argument inspection.

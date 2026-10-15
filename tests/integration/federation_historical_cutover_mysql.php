@@ -237,6 +237,30 @@ try {
         || ($progress['post_cutover_integrity']['canonical_state']??null)!=='running') {
         throw new RuntimeException('Normal canonical progress incorrectly marked as post-cutover drift.');
     }
+    // An Action reference flag alone is NOT a receipt. Even after the
+    // canonical Run advances, a forged completed Step cannot pass integrity
+    // without first-attempt Action/Policy/Approval evidence. No re-dispatch.
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps SET state="completed",attempts=1,
+         result_reference=:fake WHERE organization_id=:org
+         AND run_id=:run AND step_id=:step',
+        ['fake'=>'action:'.str_repeat('0',32),'org'=>$org,'run'=>$runId,'step'=>'publish']);
+    $forged=$cutover->inspect($org,$runId);
+    if (($forged['cutover_parity']??null)!=='match'
+        || ($forged['post_cutover_integrity']['status']??null)!=='reconciliation_required'
+        || !in_array('completed_receipt_requires_reconciliation:publish',
+            $forged['post_cutover_integrity']['findings']??[],true)) {
+        throw new RuntimeException('Forged canonical receipt bypassed independent reconciliation.');
+    }
+    $db->executeStatement(
+        'UPDATE cos_workflow_steps SET state="pending",attempts=0,
+         result_reference=NULL WHERE organization_id=:org
+         AND run_id=:run AND step_id=:step',
+        ['org'=>$org,'run'=>$runId,'step'=>'publish']);
+    $afterForged=$cutover->inspect($org,$runId);
+    if (($afterForged['post_cutover_integrity']['status']??null)!=='healthy') {
+        throw new RuntimeException('Canonical Step restoration unexpectedly changed immutable baseline.');
+    }
     // Once promoted, historical Run/Step rows are pinned to their exact
     // pre-cutover checksum and can never become silent new authority.
     $db->executeStatement(
