@@ -128,7 +128,9 @@ try{
          (organization_id,source_id,instrument_id,data_type,shard_key,
           fencing_token,session_epoch,status,last_received_at,quality_score)
          VALUES (:org,:src,:instrument,'MARK_PRICE','ci-shard',7,1,
-           'TRUSTED',DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 180 SECOND),99)");
+           'TRUSTED',DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 180 SECOND),99)
+         ON DUPLICATE KEY UPDATE status='TRUSTED',
+           last_received_at=VALUES(last_received_at),quality_score=99");
     $insert->execute(['org'=>$org,'src'=>$source,'instrument'=>$instrument]);
     $assert($trust->sweep($org,$source,120)===1,
         'Stale derivative capability was not independently expired.');
