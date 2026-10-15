@@ -42,6 +42,7 @@ SELECT e.source_id,e.instrument_id,
   CASE WHEN e.event_type='BBO' THEN 'BBO' ELSE 'L2' END AS kind,
   COUNT(*) AS samples,
   COUNT(DISTINCT FLOOR(TIMESTAMPDIFF(SECOND,e.received_timestamp,UTC_TIMESTAMP(6))/3600)) AS hour_buckets,
+  COUNT(DISTINCT FLOOR(TIMESTAMPDIFF(SECOND,e.received_timestamp,UTC_TIMESTAMP(6))/300)) AS five_minute_buckets,
   SUM(CASE WHEN q.trust_status<>'TRUSTED' OR q.trust_status IS NULL
          OR q.quality_score<80 OR e.data_mode<>'LIVE'
          OR e.source_timestamp>DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 5 SECOND)
@@ -105,6 +106,7 @@ SQL;
                 'kind'=>(string)$r['kind'],
                 'samples'=>(int)$r['samples'],
                 'hour_buckets'=>(int)$r['hour_buckets'],
+                'five_minute_buckets'=>(int)$r['five_minute_buckets'],
                 'bad_samples'=>(int)$r['bad_samples'],
                 'age_seconds'=>(int)$r['age_seconds'],
                 'mode'=>$r['min_mode']===$r['max_mode']?$r['min_mode']:'MIXED',

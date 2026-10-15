@@ -31,7 +31,7 @@ final readonly class InstrumentPoolProductionSoakPolicy
             $key=$kind.'|'.$row['source_id'].'|'.$row['instrument_id'];
             if(isset($seen[$key]))throw new DomainException('Duplicate production instrument evidence.');
             $seen[$key]=true;
-            foreach(['samples','hour_buckets','bad_samples','age_seconds'] as $field){
+            foreach(['samples','hour_buckets','five_minute_buckets','bad_samples','age_seconds'] as $field){
                 if(!is_int($row[$field]??null)||$row[$field]<0){
                     throw new DomainException('Incomplete or invalid production event counters.');
                 }
@@ -42,7 +42,8 @@ final readonly class InstrumentPoolProductionSoakPolicy
             if(($row['issuer_verified']??false)!==true)$reasons[]='ISSUER_UNVERIFIED';
             if(($row['source_enabled']??false)!==true)$reasons[]='SOURCE_DISABLED';
             if(($row['worker_active']??false)!==true)$reasons[]='NO_ACTIVE_FENCED_WORKER';
-            if(($row['samples']??0)<24||($row['hour_buckets']??0)<24)$reasons[]='24H_CONTINUITY_NOT_PROVEN';
+            if(($row['samples']??0)<276||($row['hour_buckets']??0)<24
+                ||($row['five_minute_buckets']??0)<276)$reasons[]='24H_CONTINUITY_NOT_PROVEN';
             if(($row['bad_samples']??0)>0)$reasons[]='UNTRUSTED_OR_MISSING_QUALITY';
             if(($row['age_seconds']??999999)>300)$reasons[]='STALE_LAST_EVENT';
             if($reasons===[])++$good[$kind];

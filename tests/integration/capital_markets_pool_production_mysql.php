@@ -105,12 +105,12 @@ try{
           ingestion_latency_ms,processing_latency_ms,event_age_ms,recorded_at)
          VALUES (:org,:event,:src,NULL,:instrument,'TRUSTED',99,'[]',1,1,1,:timestamp)");
     $firstEvent=null;
-    for($hour=0;$hour<24;$hour++){
+    for($slot=0;$slot<288;$slot++){
         foreach([[$token,'BBO'],[$l2,'ORDER_BOOK_SNAPSHOT']] as [$instrument,$kind]){
-            $timestamp=gmdate('Y-m-d H:i:s',time()-($hour*3600)-20);
+            $timestamp=gmdate('Y-m-d H:i:s',time()-($slot*300)-20);
             $event='ci-'.bin2hex(random_bytes(12));
             $data=['org'=>$org,'event'=>$event,'src'=>$source,'instrument'=>$instrument,
-                'kind'=>$kind,'timestamp'=>$timestamp,'seq'=>(string)(1000-$hour),
+                'kind'=>$kind,'timestamp'=>$timestamp,'seq'=>(string)(2000-$slot),
                 'fp'=>hash('sha256',$event),
                 'source_time'=>$timestamp,'received_time'=>$timestamp,'processed_time'=>$timestamp];
             $insertEvent->execute(array_intersect_key($data,array_flip(

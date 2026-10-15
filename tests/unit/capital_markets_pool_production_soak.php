@@ -9,8 +9,8 @@ $rows=[];
 foreach(['BBO'=>250,'L2'=>50] as $kind=>$total){
     for($i=0;$i<$total;$i++){
         $rows[]=['kind'=>$kind,'source_id'=>'live-source',
-            'instrument_id'=>$kind.'-'.$i,'samples'=>240,
-            'hour_buckets'=>24,'bad_samples'=>0,'age_seconds'=>10,
+            'instrument_id'=>$kind.'-'.$i,'samples'=>288,
+            'hour_buckets'=>24,'five_minute_buckets'=>288,'bad_samples'=>0,'age_seconds'=>10,
             'mode'=>'LIVE','approved_entitlement'=>true,
             'issuer_verified'=>true,'source_enabled'=>true,'worker_active'=>true];
     }
@@ -23,6 +23,9 @@ $assert($policy->evaluate($rows,false)['accepted']===false,
 $bad=$rows;$bad[0]['hour_buckets']=23;
 $assert($policy->evaluate($bad,true)['accepted']===false,
     '23 of 24 hourly buckets must fail release.');
+$bad=$rows;$bad[0]['five_minute_buckets']=275;
+$assert(!$policy->evaluate($bad,true)['accepted'],
+    'Sparse once-per-hour stream must not pass continuous 24h soak.');
 $bad=$rows;$bad[0]['bad_samples']=1;
 $assert($policy->evaluate($bad,true)['accepted']===false,
     'Quality/recovery defects must fail release.');
