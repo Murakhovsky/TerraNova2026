@@ -28,6 +28,8 @@ final readonly class MysqlDerivativeStreamTrust
         $this->pdo->beginTransaction();
         try{
             MysqlMarketSourceWriterGate::lockSource($this->pdo,$org,$source);
+            // Serialize lifecycle status change with stream publication.
+            $this->lifecycle->assertTrading($org,$source,$instrument);
             $lease=$this->pdo->prepare(
                 'SELECT 1 FROM tn_capital_market_stream_worker_leases
                  WHERE organization_id=:org AND source_id=:source AND shard_key=:shard

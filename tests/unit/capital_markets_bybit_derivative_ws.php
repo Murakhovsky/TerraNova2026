@@ -43,6 +43,32 @@ $funding=array_values(array_filter($parsed['events'],
 $assert($funding[0]->rawPayload['value']==='-0.00012000'
     &&$funding[0]->rawPayload['funding_interval_seconds']===28800,
     'Decimal funding normalization lost or hardcoded interval.');
+// Test the actual canonical market decoder, not merely WebSocket parsing.
+$marketSource=new \Domains\CapitalMarkets\Domain\MarketData\MarketSourceDescriptor(
+    MarketSourceId::fromString('ci-derivatives'),VenueId::fromString('ci-bybit'),
+    'bybit.linear-perpetual.v5',true,10,
+    [\Domains\CapitalMarkets\Domain\MarketData\MarketSourceRole::TradingSource],
+    null,
+    new \Domains\CapitalMarkets\Domain\MarketData\RateLimitPolicy(100,60),
+    new \Domains\CapitalMarkets\Domain\MarketData\ReconnectPolicy(),
+    new \Domains\CapitalMarkets\Domain\MarketData\MarketHealthPolicy(),
+);
+$decoder=new \Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualMarketDataDecoder(
+    new \Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualTickerPayloadParser(),
+    new \Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitPerpetualInstrumentPayloadParser(),
+    new \Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitOrderBookPayloadParser()
+);
+foreach($parsed['events'] as $rawEvent){
+    $decoded=$decoder->decode($marketSource,$rawEvent);
+    $assert($decoded->externalInstrument==='BTCUSDT'
+        &&$decoded->values['value']===$rawEvent->rawPayload['value'],
+        'Canonical derivative event dropped precise provider scalar.');
+    if($decoded->eventType->value==='FUNDING_RATE'){
+        $assert($decoded->values['funding_interval_seconds']===28800
+            &&$decoded->values['rate_type']==='NORMALIZED_LONGS_PAY_SHORTS',
+            'Normalized WS funding missing settlement period.');
+    }
+}
 $delta=$protocol->decode($frame('delta',['symbol'=>'BTCUSDT','markPrice'=>'67501.0000001'],
     (string)((int)$ms+1000)),$received);
 $assert($delta['kind']==='delta'&&count($delta['events'])===1
