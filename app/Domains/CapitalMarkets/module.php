@@ -38,6 +38,7 @@ return [
             'app/migrations/20261009_000139_capital_markets_cross_venue_discovery.sql',
             'app/migrations/20261009_000140_capital_markets_cross_venue_quotes.sql',
             'app/migrations/20261012_000135_capital_markets_stream_worker_leases.sql',
+            'app/migrations/20261015_000141_capital_markets_instrument_pool_snapshots.sql',
         ],
         'capabilities'=>[
             'capital_markets.view',

@@ -2018,6 +2018,10 @@ services:
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueQuoteSnapshotRepository:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\CapitalMarkets\Infrastructure\Persistence\MySql\MysqlInstrumentPoolSnapshotRepository:
+    arguments:
+      $pdo: '@cos.database.pdo'
+
   Domains\CapitalMarkets\Infrastructure\Persistence\MySql\CrossVenueDiscoverySnapshotRepository:
     arguments:
       $connection: '@cos.database.pdo'

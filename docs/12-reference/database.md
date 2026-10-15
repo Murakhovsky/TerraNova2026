@@ -87,6 +87,9 @@ generated: true
 | `capital_markets` | `app/migrations/20261009_000140_capital_markets_cross_venue_quotes.sql` | `tn_capital_market_cross_venue_quote_snapshots` |
 | `capital_markets` | `app/migrations/20261009_000140_capital_markets_cross_venue_quotes.sql` | `tn_capital_market_quote_scan_gates` |
 | `capital_markets` | `app/migrations/20261012_000135_capital_markets_stream_worker_leases.sql` | `tn_capital_market_stream_worker_leases` |
+| `capital_markets` | `app/migrations/20261015_000141_capital_markets_instrument_pool_snapshots.sql` | `tn_capital_market_instrument_pool_scan_gates` |
+| `capital_markets` | `app/migrations/20261015_000141_capital_markets_instrument_pool_snapshots.sql` | `tn_capital_market_instrument_pool_snapshots` |
+| `capital_markets` | `app/migrations/20261015_000141_capital_markets_instrument_pool_snapshots.sql` | `tn_capital_market_venues` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |
