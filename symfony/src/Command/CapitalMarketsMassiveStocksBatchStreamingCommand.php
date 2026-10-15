@@ -13,6 +13,7 @@ use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\StreamingSessionCoordinator;
 use Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner;
+use Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore;
 use Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataMode;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentFamily;
@@ -51,6 +52,7 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
         private readonly MarketSubscriptionRepositoryInterface $subscriptions,
         private readonly MarketInstrumentResolverInterface $resolver,
         private readonly MarketSourceCredentialResolver $credentials,
+        private readonly MultiSymbolStreamingCore $multiSymbolCore,
         private readonly StreamingInstrumentTrustInvalidatorInterface $instrumentTrust,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
@@ -103,6 +105,11 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                 ?'MASSIVE_STOCKS_WS_Q_LIVE':'MASSIVE_STOCKS_WS_Q_DELAYED';
             if($source->licenseProfile!==$requiredProfile){
                 throw new \DomainException('Massive stock WS entitlement must be explicitly attested.');
+            }
+            // Unified preflight: exact mapping, per-source capacity and one fenced lease.
+            $streamPlan=$this->multiSymbolCore->plan($org,[$sourceName]);
+            if(($streamPlan['totals']['SOURCES']??0)!==1){
+                throw new \DomainException('Multi-symbol streaming capacity admission rejected.');
             }
             $subscribed=$this->subscriptions->forSource($org,$sourceId,true);
             if(count($subscribed)<2||count($subscribed)>25){

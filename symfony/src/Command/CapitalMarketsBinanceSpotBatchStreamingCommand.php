@@ -13,6 +13,7 @@ use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\StreamingSessionCoordinator;
 use Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner;
+use Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore;
 use Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
@@ -46,6 +47,7 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
         private readonly MarketSubscriptionRepositoryInterface $subscriptions,
         private readonly MarketInstrumentResolverInterface $resolver,
         private readonly BinanceSpotPayloadParser $parser,
+        private readonly MultiSymbolStreamingCore $multiSymbolCore,
         private readonly StreamingInstrumentTrustInvalidatorInterface $instrumentTrust,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
@@ -83,6 +85,11 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
                 ||$source->adapterType!==BinanceSpotMarketDataAdapter::ADAPTER_TYPE
                 ||$source->venueId===null){
                 throw new \DomainException('Enabled Binance Spot trading source with venue mapping required.');
+            }
+            // Unified preflight: exact mapping, per-source capacity and one fenced lease.
+            $streamPlan=$this->multiSymbolCore->plan($org,[$sourceName]);
+            if(($streamPlan['totals']['SOURCES']??0)!==1){
+                throw new \DomainException('Multi-symbol streaming capacity admission rejected.');
             }
             $active=$this->subscriptions->forSource($org,$sourceId,true);
             if(count($active)<2||count($active)>100){
