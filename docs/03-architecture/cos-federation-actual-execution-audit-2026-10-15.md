@@ -15,7 +15,7 @@ kind: architecture
 ## Підтверджений фактичний стан
 
 1. **Спільний Workflow:** `DoctrineWorkflowExecutionStore` вже записує `cos_workflow_runs/steps`. Присутні tenant-bound create, CAS, claim/checkpoint, receipts та recovery. Однак `WorkflowExecutionCoordinatorInterface` ще не став єдиною активною точкою виконання Federation.
-2. **Goal / Federation:** `FederationRunController` досі викликає `FederationSequentialOrchestrator`. Через `FederationGoalStore` та `FederationRunFinalizer` зберігається другий, самостійний технічний стан `cos_federation_runs/steps`. Це не лише read projection. Goal, Plan і Outcome як окремі бізнес-сутності необхідно зберегти.
+2. **Goal / Federation:** `FederationRunController` досі викликає `FederationSequentialOrchestrator`. Через `FederationGoalStore`, `FederationExternalActionSubmission` та `FederationRunFinalizer` зберігається другий, самостійний технічний стан `cos_federation_runs/steps`. Це не лише read projection. Goal, Plan і Outcome як окремі бізнес-сутності необхідно зберегти.
 3. **Часткова консолідація:** `FederationStepDependencyGraph` делегує `WorkflowDependencyGraph`; `FederationStepCursor` делегує `WorkflowStepScheduler`; `ExecutionRunPolicy` делегує `DurableWorkflowTransitionPolicy`. Це повторне використання вже працює, але життєвий цикл Run/Step не об'єднано.
 4. **Engineering:** `EngineeringCanonicalTechnicalExecutionGateway` безпосередньо пише в `cos_workflow_runs/steps` для дозволених AgentRun замість виклику загального Store API. Бізнес-етапи Engineering, незалежні перевірки та людські погодження повинні залишитися у власному контексті. `EngineeringCanonicalTechnicalExecutionAdmission` перевіряє shadow parity, але не означає завершений cutover.
 5. **Безпека виконання:** наявні `DoctrineWorkflowActionWorkerAdmission`, `WorkflowPredecessorReceiptVerifier` та адаптери нативних доказів. Типові загальні реалізації claim/receipt у `services.yaml` залишаються fail-closed. Їх не можна вилучати під час міграції.
@@ -27,7 +27,7 @@ kind: architecture
 | Контур | Наявні записи | Цільове рішення |
 | --- | --- | --- |
 | Kernel Workflow | Переважно in-memory об'єкти `WorkflowExecution` | Adapter або зняття з виконання після перевірки consumers |
-| Федеративні Goal | `cos_federation_runs/steps`, writer `FederationGoalStore` та `FederationRunFinalizer` | Лише Goal/Plan/Outcome у Goal Management; технічні Run/Step у спільному Workflow |
+| Федеративні Goal | `cos_federation_runs/steps`, writer `FederationGoalStore`, `FederationExternalActionSubmission` та `FederationRunFinalizer` | Лише Goal/Plan/Outcome у Goal Management; технічні Run/Step у спільному Workflow |
 | Canonical Workflow | `cos_workflow_runs/steps`, `DoctrineWorkflowExecutionStore` і `DoctrineWorkflowRecoveryManager` | Єдине технічне сховище з перевірюваним execution admission |
 | Engineering AgentRun | Canonical Run/Step через власний прямий SQL та окремий бізнес-Workflow | Загальний Store API для технічного виконання, незмінні бізнес-етапи та human gates |
 

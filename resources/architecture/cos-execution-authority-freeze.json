@@ -10,7 +10,8 @@
       "symfony/src/Persistence/Federation/FederationRunFinalizer.php"
     ],
     "cos_federation_steps": [
-      "symfony/src/Persistence/Federation/FederationGoalStore.php"
+      "symfony/src/Persistence/Federation/FederationGoalStore.php",
+      "symfony/src/Persistence/Federation/FederationExternalActionSubmission.php"
     ],
     "cos_workflow_runs": [
       "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
