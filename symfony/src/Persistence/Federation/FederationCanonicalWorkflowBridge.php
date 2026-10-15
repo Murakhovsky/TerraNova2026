@@ -301,15 +301,41 @@ final readonly class FederationCanonicalWorkflowBridge
              WHERE organization_id=:org AND plan_id=:plan',
             ['org'=>$org,'plan'=>$run->sourcePlanId],
         );
-        if (!$row || $row['state'] !== 'approved'
-            || $approvalId !== $this->db->fetchOne(
-                'SELECT approval_reference FROM cos_workflow_runs WHERE organization_id=:org AND run_id=:run',
-                ['org'=>$org,'run'=>$runId],
-            )) {
+        // Input digest is a persisted, immutable Workflow Run field. The
+        // lightweight WorkflowRunSnapshot deliberately does not expose it.
+        // Read both authorities inside the already locked Run transaction
+        // rather than using an undefined snapshot property (which caused
+        // false manual reconciliation after successful Action receipts).
+        $execution=$this->db->fetchAssociative(
+            'SELECT input_digest,approval_reference FROM cos_workflow_runs
+             WHERE organization_id=:org AND run_id=:run
+               AND definition_id=:definition',
+            ['org'=>$org,'run'=>$runId,'definition'=>'federation.approved-plan'],
+        );
+        if (!$row || $row['state'] !== 'approved' || !$execution
+            || $approvalId !== $execution['approval_reference']) {
             throw new DomainException('Canonical advance requires the original Plan Approval reference.');
         }
-        $this->planEvidence->assertTrusted($id,$run->sourcePlanId,
-            hash('sha256',(string)$row['plan_json']),$approvalId);
+        $steps=json_decode((string)$row['plan_json'],true,512,JSON_THROW_ON_ERROR)['steps']??null;
+        if (!is_array($steps) || !array_is_list($steps) || $steps===[]) {
+            throw new DomainException('Pinned Plan topology missing.');
+        }
+        $hasNonAction=false;
+        foreach ($steps as $candidate) {
+            if (!is_array($candidate)) {
+                throw new DomainException('Invalid pinned Plan Step.');
+            }
+            if (($candidate['side_effect_level']??null)==='none') $hasNonAction=true;
+        }
+        $planDigest=hash('sha256',(string)$row['plan_json']);
+        $expectedInputDigest=$hasNonAction
+            ? hash('sha256',$org."\0".$runId."\0".$run->sourcePlanId)
+            : $planDigest;
+        $inputDigest=$execution['input_digest'];
+        if (!is_string($inputDigest) || !hash_equals($expectedInputDigest,$inputDigest)) {
+            throw new DomainException('Canonical Run input digest differs from immutable approved Plan.');
+        }
+        $this->planEvidence->assertTrusted($id,$run->sourcePlanId,$planDigest,$approvalId);
 
         $command=new WorkflowRunCommand($id,$actor,$run->revision,$run->correlationId);
         if ($run->status === WorkflowStatus::CREATED) {
@@ -317,8 +343,6 @@ final readonly class FederationCanonicalWorkflowBridge
                 $command,WorkflowStatus::CREATED,WorkflowStatus::RUNNING,'approved Goal run started'));
             return $result('running');
         }
-        $steps=json_decode((string)$row['plan_json'],true,512,JSON_THROW_ON_ERROR)['steps']??null;
-        if (!is_array($steps) || !array_is_list($steps)) throw new DomainException('Pinned Plan topology missing.');
         $selection=$this->scheduler->select(
             new WorkflowDefinitionSnapshot('federation.approved-plan','1.0.0',$steps),
             $this->workflow->steps($id),['external','none'],
@@ -332,9 +356,9 @@ final readonly class FederationCanonicalWorkflowBridge
                 $pinned=null;
                 foreach($steps as $candidate) if(($candidate['id']??null)===$stepId) $pinned=$candidate;
                 if ($completed->sideEffectLevel==='none' && is_array($pinned)) {
-                    $this->nonActions->assertVerified($id,$stepId,$receipt,$run->inputDigest,$pinned);
+                    $this->nonActions->assertVerified($id,$stepId,$receipt,$inputDigest,$pinned);
                 } elseif ($completed->sideEffectLevel==='external') {
-                    $proof=$this->receipts->attestForAudit($id,$stepId,$receipt,$run->inputDigest);
+                    $proof=$this->receipts->attestForAudit($id,$stepId,$receipt,$inputDigest);
                     if (!$proof->verified || $proof->evidenceReference !== $receipt) {
                         return $result('manual_reconciliation_required',$stepId);
                     }
@@ -381,7 +405,7 @@ final readonly class FederationCanonicalWorkflowBridge
                 return $result('manual_reconciliation_required',$step->stepId);
             }
             try {
-                $this->nonActions->assertVerified($id,$step->stepId,$reference,$run->inputDigest,$pinned);
+                $this->nonActions->assertVerified($id,$step->stepId,$reference,$inputDigest,$pinned);
                 $this->workflow->checkpoint(new WorkflowStepCheckpoint(
                     $command,$step->stepId,$claim['claim_token'],StepStatus::COMPLETED,$reference));
             } catch (\Throwable) {

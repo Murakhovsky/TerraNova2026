@@ -289,6 +289,29 @@ try {
         'technical run duplicated in legacy');
     $reject(static fn()=> $bridge->start($actor,'duplicate-'.$token,$planId,$planApproval),
         'second execution for one approved Plan');
+    // A Run's persisted input digest is immutable. Receipt audit must not
+    // accept a mutated digest or substitute the approved Plan digest later.
+    $originalDigest=(string)$db->fetchOne(
+        'SELECT input_digest FROM cos_workflow_runs
+         WHERE organization_id=:org AND run_id=:run',
+        ['org'=>$org,'run'=>$runId],
+    );
+    $assert(preg_match('/^[a-f0-9]{64}$/',$originalDigest)===1,
+        'canonical Run did not persist an input digest');
+    $db->executeStatement(
+        'UPDATE cos_workflow_runs SET input_digest=:tampered
+         WHERE organization_id=:org AND run_id=:run',
+        ['tampered'=>str_repeat('0',64),'org'=>$org,'run'=>$runId],
+    );
+    $reject(static fn()=> $bridge->advance($actor,$runId,$planApproval),
+        'tampered canonical Run input digest');
+    $assert($rows('cos_actions')===1 && $rows('cos_action_attempts')===0,
+        'tampered Run dispatched an Action');
+    $db->executeStatement(
+        'UPDATE cos_workflow_runs SET input_digest=:original
+         WHERE organization_id=:org AND run_id=:run',
+        ['original'=>$originalDigest,'org'=>$org,'run'=>$runId],
+    );
     $assert($bridge->advance($actor,$runId,$planApproval)['state']==='running',
         'canonical created-to-running transition failed');
     $reject(static fn()=> $bridge->advance($actor,$runId,'wrong-approval'),

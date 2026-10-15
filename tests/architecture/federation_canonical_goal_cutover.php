@@ -54,6 +54,13 @@ foreach ([
         throw new RuntimeException('Canonical Federation single-writer contract missing: '.$marker);
     }
 }
+// A WorkflowRunSnapshot does not expose inputDigest. Canonical Goal must
+// independently read the actual MySQL Run digest and fence Plan mutation.
+if (str_contains($bridge, '$run->inputDigest')
+    || !str_contains($bridge,'SELECT input_digest,approval_reference FROM cos_workflow_runs')
+    || !str_contains($bridge,'hash_equals($expectedInputDigest,$inputDigest)')) {
+    throw new RuntimeException('Canonical Goal must verify persisted Workflow Run input digest.');
+}
 // No new general Run/Step DB writer is permitted in the Goal application.
 foreach ([
     '/\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+cos_(?:workflow|federation)_(?:runs|steps)\b/i',
