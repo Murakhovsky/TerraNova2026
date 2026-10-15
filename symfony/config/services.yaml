@@ -269,8 +269,16 @@ services:
   # Plan verifier stays fail-closed. Real Action receipt verifier is not promoted.
   Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface:
     alias: App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence
+  # Recovery uses trusted Federation Plan evidence only for read-only Action proof.
+  # Global WorkflowReceiptVerifierInterface remains fail-closed for normal execution.
+  App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier:
+    arguments:
+      $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+  App\Persistence\Workflow\DoctrineWorkflowRecoveryManager:
+    arguments:
+      $receipts: '@App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier'
   Platform\Workflow\Contract\WorkflowRecoveryInterface:
-    alias: App\Persistence\Workflow\DoctrineWorkflowRecoveryInspector
+    alias: App\Persistence\Workflow\DoctrineWorkflowRecoveryManager
   # Domain-owned read-only evidence registry. Unknown kinds/modules still fail closed.
   App\Persistence\Workflow\WorkflowNonActionReceiptRegistry:
     arguments:

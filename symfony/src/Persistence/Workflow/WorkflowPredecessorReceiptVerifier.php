@@ -73,7 +73,9 @@ final readonly class WorkflowPredecessorReceiptVerifier
                 || ($row['capability_version'] ?? null) !== ($pinned['capability_version'] ?? null)
                 || ($row['side_effect_level'] ?? null) !== ($pinned['side_effect_level'] ?? null)
                 || ($row['idempotency_key'] ?? null) !== $expectedKey
-                || (int) ($row['attempts'] ?? 0) !== 1
+                || (int) ($row['attempts'] ?? 0) < 1
+                || ($row['side_effect_level'] ?? null) === 'external'
+                    && (int) ($row['attempts'] ?? 0) !== 1
                 || (int) ($row['revision'] ?? 0) < 2
                 || !is_string($receipt) || $receipt === '') {
                 throw new DomainException('Completed Workflow Step has no pinned, versioned, one-attempt receipt.');

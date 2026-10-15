@@ -88,8 +88,8 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             $keys,
         );
         if (!$context
-            || !in_array($context['run_state'], ['running','waiting','completed'], true)
-            || !in_array($context['step_state'], ['claimed','completed'], true)
+            || !in_array($context['run_state'], ['running','waiting','ambiguous','completed'], true)
+            || !in_array($context['step_state'], ['claimed','ambiguous','completed'], true)
             || $context['side_effect_level'] !== 'external'
             || $context['input_digest'] !== $inputDigest
             || !preg_match('/^[a-f0-9]{64}$/', (string) $context['idempotency_key'])

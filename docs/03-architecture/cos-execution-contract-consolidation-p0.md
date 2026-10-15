@@ -232,3 +232,17 @@ interface WorkflowRecoveryInterface
 - Зафіксувати regression Kernel Workflow, Federation, Engineering, tenant і legacy read projections.
 - Переконатися, що загальний Workflow не знає Growth/Sales/Documents/Engineering stage semantics.
 - Коміти групувати за цілісним пакетом, не створювати коміт на кожний файл. Merge лише після green CI + реального runtime evidence.
+
+
+## Safe mutating reconciliation for uncertain execution
+
+Shared `WorkflowRecoveryInterface` now routes to `DoctrineWorkflowRecoveryManager`. It exposes a three-stage **explicit** recovery workflow rather than an automatic replay:
+
+1. `request(new WorkflowRecoveryPetition(command, requestId, stepId, expectedStepRevision, resolution, reason, receiptReference))` with a tenant manager, durable Run/Step revision and an honest human rationale.
+2. `approve(new WorkflowRunCommand(identity, DIFFERENT_MANAGER, runRevision, correlation), requestId)` validates fresh revisions, tenant membership and distinct human approval.
+3. `reconcile(new WorkflowRunCommand(identity, authorizedManager, runRevision, correlation, requestId))` transactionally rechecks the approved decision, immutable definition, independent source receipts and attempts, applies a **single Run/Step CAS**, and appends an immutable audit event.
+
+Allowed resolutions: `quarantine` (unknown, no replay), `verified_complete` (only independently persisted canonical Action COMPLETED receipt or registered Domain read-model evidence, all predecessors reverified), `reset_read_only` (expired read-only lease only, with **zero** canonical `wf:` Actions; all previous receipts validated) and `cancel_uncertain` (explicit two-manager risk acceptance, never asserts remote success or retries). Requester and approver **must differ**. The Run can move `ambiguous → waiting` only when no other ambiguous/running steps remain; normal `waiting → running` requires an explicit authenticated Run transition. Late worker claims are invalidated with the original claim token + revision CAS, and external Actions themselves are never requeued or rewritten. Manual operator must reconcile any still-in-flight external provider effect.
+
+`expiredClaims(command, limit)` offers a tenant-scoped bounded recovery worklist. Tables `cos_workflow_recovery_decisions` and append-only `cos_workflow_recovery_events` preserve approvals, state, actor IDs and transitions. No scheduler or automatic external dispatch is added. Global Worker Admission and general WorkflowReceiptVerifierInterface stay fail closed; the isolated recovery verifier uses *Federation's already validated Plan approval* for canonical Action receipt verification.
+
