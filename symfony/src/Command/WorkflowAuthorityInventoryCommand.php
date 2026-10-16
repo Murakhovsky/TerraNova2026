@@ -46,7 +46,16 @@ final class WorkflowAuthorityInventoryCommand extends Command
             || ($kernelCounts['in_flight']??0)>0;
         $kernelIncomplete=($kernel['coverage_complete']??false)!==true
             || $kernelUnsettled
-            || (($kernelCounts['verified']??0)===0);
+            || (($kernelCounts['verified']??0)===0)
+            || ($kernel['status']??null)!=='technical_read_only_consistent';
+        $engineeringUnsettled=(int)($engineering['unsettled_technical_claims']??0)>0;
+        $engineeringUnrolled=(int)($engineering['legacy_unrolled_features']??0)>0;
+        $federationUnmigrated=(int)($federation['legacy_total']??0)
+            !==(int)($federation['migration_total']??-1);
+        $federationReviewPending=isset($federation['historical_runs'])
+            && count(array_filter($federation['historical_runs'],
+                static fn(array $r):bool=>($r['status']??null)
+                    !=='promoted_integrity_healthy_not_release'))>0;
         $report=[
             'source'=>'cos_execution_authority_combined_v1',
             'organization_id'=>$org,
@@ -56,7 +65,9 @@ final class WorkflowAuthorityInventoryCommand extends Command
             'contours_checked'=>['federation','engineering','kernel'],
             'status'=>($federation['status']==='drift'
                 || $engineering['status']==='drift'
-                || $kernelDrift)?'drift':
+                || $kernelDrift
+                || (int)($engineering['orphaned_technical_links']??0)>0
+                || (int)($engineering['orphaned_canonical_runs']??0)>0)?'drift':
                 (($federation['history_truncated']??true)
                  || ($engineering['history_truncated']??true)
                  || !($engineering['coverage_complete']??false)
@@ -64,6 +75,10 @@ final class WorkflowAuthorityInventoryCommand extends Command
                  || $federation['status']==='no_target'
                  || $engineering['status']==='no_target'
                  || $kernelIncomplete
+                 || $engineeringUnsettled
+                 || $engineeringUnrolled
+                 || $federationUnmigrated
+                 || $federationReviewPending
                     ? 'incomplete':'technical_partial'),
             'read_only'=>true,
             'live_business_outcome_verified'=>false,

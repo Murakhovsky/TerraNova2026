@@ -157,6 +157,12 @@ try {
         ['id'=>$legacyOnlyFeature]);
 
     $fleet=$reader->engineeringFleet($org);
+    if(($fleet['unsettled_technical_claims']??0)!==1
+       || ($fleet['orphaned_technical_links']??1)!==0
+       || ($fleet['orphaned_canonical_runs']??1)!==0
+       || ($fleet['total_rollout_features']??0)!==1) {
+       throw new RuntimeException('Live Engineering claim/link completeness not visible in fleet inventory.');
+    }
     if($fleet['status']!=='partial' || ($fleet['counts']['partial']??0)!==1
        || count($fleet['features'])!==1 || $fleet['cutover_authorized']!==false) {
         throw new RuntimeException('Real Engineering fleet audit did not preserve business gate ownership.');

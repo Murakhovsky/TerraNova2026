@@ -135,6 +135,35 @@ final readonly class DoctrineWorkflowShadowParityReader
              WHERE organization_id=:org',
             ['org'=>$organizationId],
         );
+        $rolloutTotal=(int)$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_engineering_technical_rollouts
+             WHERE organization_id=:org',
+            ['org'=>$organizationId],
+        );
+        $unsettled=(int)$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_engineering_technical_links
+             WHERE organization_id=:org AND technical_state IN ("claimed","ambiguous")',
+            ['org'=>$organizationId],
+        );
+        $orphanedLinks=(int)$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_engineering_technical_links l
+             LEFT JOIN cos_workflow_runs w ON w.organization_id=l.organization_id
+               AND w.run_id=l.canonical_run_id
+             LEFT JOIN cos_engineering_agent_runs a ON a.id=l.agent_run_id
+             LEFT JOIN cos_engineering_features f ON f.id=l.feature_id
+               AND f.organization_id=l.organization_id
+             WHERE l.organization_id=:org AND
+               (w.run_id IS NULL OR a.id IS NULL OR f.id IS NULL)',
+            ['org'=>$organizationId],
+        );
+        $orphanedCanonical=(int)$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_workflow_runs w
+             LEFT JOIN cos_engineering_technical_links l
+               ON l.organization_id=w.organization_id AND l.canonical_run_id=w.run_id
+             WHERE w.organization_id=:org AND w.definition_id="engineering.agent_execution"
+               AND l.canonical_run_id IS NULL',
+            ['org'=>$organizationId],
+        );
         $counts=['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0];
         $reports=[];
         $unrolledFeatures=0;
@@ -198,14 +227,17 @@ final readonly class DoctrineWorkflowShadowParityReader
         }
         $incomplete=$historyTruncated || $total>count($features)
             || $unrolledFeatures>0;
-        $status=$counts['drift']>0?'drift':
-            ($incomplete || $counts['no_target']>0 || $reports===[]?'no_target':'partial');
+        $status=$counts['drift']>0 || $orphanedLinks>0 || $orphanedCanonical>0
+            ? 'drift' : ($incomplete || $counts['no_target']>0 || $reports===[]?'no_target':'partial');
         return [
             'source'=>'engineering_fleet','organization_id'=>$organizationId,
             'status'=>$status,'counts'=>$counts,'features'=>$reports,
             'total_tenant_features'=>$total,
-            'total_rollout_features'=>$total-$unrolledFeatures,
-            'legacy_unrolled_features'=>$unrolledFeatures,
+            'total_rollout_features'=>$rolloutTotal,
+            'legacy_unrolled_features'=>max(0,$total-$rolloutTotal),
+            'unsettled_technical_claims'=>$unsettled,
+            'orphaned_technical_links'=>$orphanedLinks,
+            'orphaned_canonical_runs'=>$orphanedCanonical,
             'evaluated_features'=>count($features),
             'history_truncated'=>$historyTruncated,'coverage_complete'=>!$incomplete,
             'read_only'=>true,'cutover_authorized'=>false,
