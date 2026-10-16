@@ -629,6 +629,16 @@ turbo-frame[aria-busy="true"] .cos-command__list {
 
 @media (max-width: 1050px) {
   .cos-shell__locale-select {
-    max-width: 6.4rem;
+    max-width: 5.25rem;
+  }
+}
+
+@media (max-width: 650px) {
+  /* Keep the menu's touch target inside its grid track at phone widths.
+     Abbreviated option labels remain accessible via the full aria-label. */
+  .cos-shell__locale-select {
+    width: 3.75rem;
+    max-width: 3.75rem;
+    padding-inline: 0.25rem;
   }
 }
