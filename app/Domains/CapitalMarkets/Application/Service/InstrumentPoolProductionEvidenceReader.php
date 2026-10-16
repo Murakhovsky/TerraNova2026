@@ -36,7 +36,9 @@ final readonly class InstrumentPoolProductionEvidenceReader
         }
         $start=$soakStartedAt===null?false:strtotime($soakStartedAt.' UTC');
         $elapsed=$start!==false&&$start<=time()-86400;
-        $approvals=$this->attestations->approved($org);
+        $digests=$this->attestations->approvedDigests($org);
+        $approvals=array_fill_keys(array_keys($digests),true);
+        $issuerRoutes=$this->verifiedIssuerRoutes($org,$digests);
         $sql=<<<'SQL'
 SELECT e.source_id,e.instrument_id,
   CASE WHEN e.event_type='BBO' THEN 'BBO' ELSE 'L2' END AS kind,
@@ -73,7 +75,8 @@ SQL;
         $raw=$query->fetchAll(PDO::FETCH_ASSOC);
         if(count($raw)>3000)throw new DomainException('Soak evidence capacity exceeded.');
         $src=$this->connection->prepare(
-            'SELECT source_id,enabled,license_profile,adapter_type
+            'SELECT source_id,venue_id,enabled,license_profile,adapter_type,
+                    credentials_reference,metadata_json
              FROM tn_capital_market_data_sources WHERE organization_id=:org');
         $src->execute(['org'=>$org]);
         $sources=[];
@@ -182,9 +185,9 @@ SQL;
                 in_array($instrument['family'],['tokenized_security','tokenized_fixed_income','rwa'],true)
                 ||(is_array($metadata)&&($metadata['origin']??null)==='BINANCE_BSTOCKS_SEED')
             );
-            $issuerOk=!$needsIssuer||isset($approvals['ISSUER_IDENTITY|'.$r['instrument_id']]);
-            $isAllowedSource=is_array($source)&&$source['license_profile']!=='UNSPECIFIED'
-                &&isset($approvals['SOURCE_ENTITLEMENT|'.$r['source_id']]);
+            $issuerOk=!$needsIssuer||(isset($digests['ISSUER_IDENTITY|'.$r['instrument_id']])
+                &&isset($issuerRoutes[$r['instrument_id']]));
+            $isAllowedSource=is_array($source)&&$this->sourceApproved($source,$approvals);
             $subKey=$r['source_id'].'|'.$r['instrument_id'].'|';
             $types=$r['kind']==='BBO'?['BBO']:['ORDER_BOOK_SNAPSHOT','ORDER_BOOK_DELTA'];
             $activeSubscription=false;$hasGap=false;
@@ -282,6 +285,58 @@ SQL;
         return $result;
     }
 
+    /** @param array<string,mixed> $source @param array<string,bool> $approvals */
+    private function sourceApproved(array $source,array $approvals):bool
+    {
+        $id=(string)($source['source_id']??'');
+        $venue=(string)($source['venue_id']??'');
+        $metadata=json_decode((string)($source['metadata_json']??''),true);
+        if($id===''||(int)($source['enabled']??0)!==1
+            ||($source['license_profile']??null)==='UNSPECIFIED'
+            ||!isset($approvals['SOURCE_ENTITLEMENT|'.$id])
+            ||!is_array($metadata)||($metadata['data_mode']??null)!=='LIVE')return false;
+        if($venue!==''&&!isset($approvals['VENUE_ENTITLEMENT|'.$venue]))return false;
+        if(($source['adapter_type']??null)==='massive.stocks.v2'
+            &&(!isset($approvals['MASSIVE_NBBO_ENTITLEMENT|'.$id])
+                ||($source['credentials_reference']??null)===null
+                ||$source['license_profile']!=='MASSIVE_STOCKS_WS_Q_LIVE'))return false;
+        return true;
+    }
+
+    /** @param array<string,string> $digests @return array<string,bool> */
+    private function verifiedIssuerRoutes(string $org,array $digests):array
+    {
+        $q=$this->connection->prepare(
+            "SELECT r.source_instrument_id,r.target_instrument_id,r.metadata_json
+             FROM tn_capital_market_relationships r
+             JOIN tn_capital_market_instruments a
+               ON a.organization_id=r.organization_id
+              AND a.instrument_id=r.source_instrument_id AND a.status='ACTIVE'
+             JOIN tn_capital_market_instruments b
+               ON b.organization_id=r.organization_id
+              AND b.instrument_id=r.target_instrument_id AND b.status='ACTIVE'
+             WHERE r.organization_id=:org AND r.status='ACTIVE'
+               AND r.effective_from<=UTC_TIMESTAMP(6)
+               AND (r.effective_to IS NULL OR r.effective_to>UTC_TIMESTAMP(6))
+             LIMIT 5001");
+        $q->execute(['org'=>$org]);
+        $rows=$q->fetchAll(PDO::FETCH_ASSOC);
+        if(count($rows)>5000)throw new DomainException('Issuer relationships exceed bounded review scope.');
+        $routes=[];
+        foreach($rows as $row){
+            $meta=json_decode((string)$row['metadata_json'],true);
+            if(!is_array($meta))continue;
+            foreach(['source_instrument_id','target_instrument_id'] as $field){
+                $id=(string)$row[$field];
+                $digest=$digests['ISSUER_IDENTITY|'.$id]??null;
+                if($digest!==null && InstrumentPoolIssuerE4Policy::valid($meta,$digest)){
+                    $routes[$id]=true;
+                }
+            }
+        }
+        return $routes;
+    }
+
     /**
      * Record one authoritative per-5-minute checkpoint from the running watchdog.
      * A failing observation poisons the bucket even if a later retry succeeds.
@@ -345,6 +400,14 @@ SQL;
     {
         if($allowedSourceIds===[]||count($allowedSourceIds)>64)return false;
         $approvals=$this->attestations->approved($org);
+        $sourceQ=$this->connection->prepare(
+            'SELECT source_id,venue_id,enabled,license_profile,adapter_type,
+                    credentials_reference,metadata_json
+             FROM tn_capital_market_data_sources WHERE organization_id=:org');
+        $sourceQ->execute(['org'=>$org]);$admitted=[];
+        foreach($sourceQ->fetchAll(PDO::FETCH_ASSOC) as $source){
+            if($this->sourceApproved($source,$approvals))$admitted[$source['source_id']]=true;
+        }
         $q=$this->connection->prepare(
             "SELECT e.source_id, COUNT(*) AS observations,
               SUM(CASE WHEN q.trust_status='TRUSTED'
@@ -417,7 +480,7 @@ SQL;
         foreach($allowedSourceIds as $source){
             if(!isset($symbolSources[$source])||!isset($ackSources[$source]))return false;
             if(!is_string($source)||!isset($seen[$source])||!isset($active[$source])||!isset($healthy[$source])
-                ||!isset($approvals['SOURCE_ENTITLEMENT|'.$source]))return false;
+                ||!isset($admitted[$source]))return false;
         }
         return true;
     }

@@ -82,6 +82,7 @@ jobs:
           php tests/unit/capital_markets_stream_provider_ops_alerts.php
           php tests/architecture/capital_markets_live_provider_ops_contract.php
           php tests/unit/capital_markets_pool_production_soak.php
+          php tests/unit/capital_markets_pool_issuer_e4.php
           php tests/architecture/capital_markets_pool_production_contract.php
           php tests/unit/capital_markets_instrument_pool_schedule_targets.php
           php tests/architecture/capital_markets_instrument_pool_scheduler_contract.php

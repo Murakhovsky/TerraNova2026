@@ -193,6 +193,41 @@ try{
         'https://example.org/audit/issuer.pdf',str_repeat('b',64),
         gmdate('Y-m-d H:i:s',time()+86400));
     $proof->review($org,702,$issuer,true);
+    $assert(($proof->approvedDigests($org)['ISSUER_IDENTITY|'.$token]??null)===str_repeat('b',64),
+        'Independent reviewed issuer digest was lost.');
+    $withoutRelationship=$reader->report($org,$start,[$source]);
+    $assert($withoutRelationship['verified']['BBO']===0,
+        'Issuer approval without canonical E4 relationship was trusted.');
+    $underlying='instrument:ci:underlying';
+    $makeInstrument->execute(['org'=>$org,'id'=>$underlying,'symbol'=>'CIUNDERLYING',
+        'canonical'=>$org.'-underlying','name'=>'CI Underlying','family'=>'equity']);
+    $pdo->prepare("UPDATE tn_capital_market_instruments SET metadata_json='{}'
+         WHERE organization_id=? AND instrument_id=?")->execute([$org,$underlying]);
+    $e4=[
+        'evidence_tier'=>'E4','issuer_evidence_sha256'=>str_repeat('a',64),
+        'underlying_verified'=>true,'unit_multiplier_verified'=>true,
+        'corporate_action_version_verified'=>true,'route_verified'=>true,
+        'fees_verified'=>true,'conversion_rights_verified'=>true,
+    ];
+    $setRelationship=$pdo->prepare("INSERT INTO tn_capital_market_relationships
+        (organization_id,relationship_id,source_instrument_id,target_instrument_id,
+         relationship_type,strength,effective_from,status,metadata_json)
+        VALUES (:org,:rid,:token,:underlying,'tokenized_underlying','VERIFIED',
+         DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 2 DAY),'ACTIVE',:metadata)");
+    $setRelationship->execute(['org'=>$org,'rid'=>'ci-issuer-e4-'.$org,
+         'token'=>$token,'underlying'=>$underlying,
+         'metadata'=>json_encode($e4,JSON_THROW_ON_ERROR)]);
+    $assert($reader->report($org,$start,[$source])['verified']['BBO']===0,
+        'Wrong issuer digest bypassed E4.');
+    $e4['issuer_evidence_sha256']=str_repeat('b',64);
+    $e4['corporate_action_version_verified']=false;
+    $updateRoute=$pdo->prepare("UPDATE tn_capital_market_relationships SET metadata_json=:metadata
+         WHERE organization_id=:org");
+    $updateRoute->execute(['org'=>$org,'metadata'=>json_encode($e4,JSON_THROW_ON_ERROR)]);
+    $assert($reader->report($org,$start,[$source])['verified']['BBO']===0,
+        'Missing E4 corporate action check was admitted.');
+    $e4['corporate_action_version_verified']=true;
+    $updateRoute->execute(['org'=>$org,'metadata'=>json_encode($e4,JSON_THROW_ON_ERROR)]);
     $result=$reader->report($org,$start,[$source]);
     $assert($result['verified']['BBO']===1&&$result['verified']['L2']===1
         &&$result['accepted']===false
@@ -408,7 +443,7 @@ try{
         'tn_capital_market_pool_stream_assignments','tn_capital_market_data_gaps','tn_capital_market_quality_metrics','tn_capital_market_canonical_events',
         'tn_capital_market_stream_worker_leases',
         'tn_capital_market_pool_external_evidence',
-        'tn_capital_market_subscriptions','tn_capital_market_source_health',
+        'tn_capital_market_subscriptions','tn_capital_market_relationships','tn_capital_market_source_health',
         'tn_capital_market_instruments','tn_capital_market_data_sources'] as $table){
         $pdo->prepare("DELETE FROM $table WHERE organization_id=:org")->execute(['org'=>$org]);
     }

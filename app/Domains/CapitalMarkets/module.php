@@ -67,6 +67,7 @@ return [
             'app/migrations/20261015_000146_capital_markets_provider_ops.sql',
             'app/migrations/20261015_000147_capital_markets_derivatives_stream.sql',
             'app/migrations/20261015_000148_capital_markets_replay_scaling.sql',
+            'app/migrations/20261016_000149_capital_markets_pool_evidence_scope.sql',
         ],
         'capabilities'=>[
             'capital_markets.research.result.record',

@@ -129,30 +129,35 @@ final readonly class InstrumentPoolExternalEvidence
     /** @return array<string,bool> */
     public function approved(string $org):array
     {
-        if($org===''||strlen($org)>190)throw new DomainException('Invalid tenant.');
+        return array_fill_keys(array_keys($this->approvedDigests($org)),true);
+    }
+
+    /** @return array<string,string> Latest independently reviewed, unexpired SHA-256 per exact scope. */
+    public function approvedDigests(string $org):array
+    {
+        if($org===''||strlen($org)>190||trim($org)!==$org)throw new DomainException('Invalid tenant.');
         $q=$this->connection->prepare(
-            "SELECT kind,subject_id,status,valid_until,submitted_by,reviewed_by
+            "SELECT kind,subject_id,status,valid_until,submitted_by,reviewed_by,document_sha256
              FROM tn_capital_market_pool_external_evidence
-             WHERE organization_id=:org
-             ORDER BY kind,subject_id,id DESC");
+             WHERE organization_id=:org ORDER BY kind,subject_id,id DESC");
         $q->execute(['org'=>$org]);
         $out=[];$processed=[];
         foreach($q->fetchAll(PDO::FETCH_ASSOC) as $row){
             $key=$row['kind'].'|'.$row['subject_id'];
             if(isset($processed[$key]))continue;
             $processed[$key]=true;
-            if($row['status']!=='APPROVED'
-                ||$row['reviewed_by']===null
+            if($row['status']!=='APPROVED'||$row['reviewed_by']===null
                 ||(int)$row['reviewed_by']===(int)$row['submitted_by']
-                ||strtotime($row['valid_until'].' UTC')<=time())continue;
-            $out[$key]=true;
+                ||strtotime($row['valid_until'].' UTC')<=time()
+                ||preg_match('/^[a-f0-9]{64}$/D',(string)$row['document_sha256'])!==1)continue;
+            $out[$key]=(string)$row['document_sha256'];
         }
         return $out;
     }
 
     private function checkScope(string $kind,string $subject):void
     {
-        if(!in_array($kind,['SOURCE_ENTITLEMENT','ISSUER_IDENTITY'],true)
+        if(!in_array($kind,['SOURCE_ENTITLEMENT','VENUE_ENTITLEMENT','MASSIVE_NBBO_ENTITLEMENT','ISSUER_IDENTITY'],true)
             ||$subject===''||strlen($subject)>190||trim($subject)!==$subject){
             throw new DomainException('Invalid production evidence subject.');
         }
