@@ -1,3 +1,13 @@
+---
+title: Консолідація застарілих PR інженерного та фінансового доменів
+description: Збереження унікальних інженерних правил і перевірок фінансових досліджень із застарілих PR без дублювання процесів виконання та власників даних.
+status: active
+updated: 2026-10-16
+kind: domain
+contract: domain-v1
+version: 1.0.0
+---
+
 # Консолідація застарілих PR: Engineering V2 і Tokenized Equity v0.6
 Date: 2026-10-16
 Canonical baseline: `34a6694d55b43939f89387ca0b1b01159f509d38`
