@@ -60,6 +60,33 @@ cos_federation_goals_create:
   controller: App\Web\Federation\GoalsWorkspaceController::create
   methods: [POST]
 
+# Saved Goal -> typed bounded Plan (never dispatches work).
+cos_federation_goals_build_plan:
+  path: /workspace/goals/{goalId}/plans/build
+  controller: App\Web\Federation\GoalsWorkspaceController::buildPlan
+  methods: [POST]
+  requirements: { goalId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
+# Existing canonical Action/Policy + independent human Approval.
+cos_federation_goals_request_approval:
+  path: /workspace/goals/plans/{planId}/request-approval
+  controller: App\Web\Federation\GoalsWorkspaceController::requestApproval
+  methods: [POST]
+  requirements: { planId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
+# Canonical Platform Workflow Run and explicit advance only.
+cos_federation_goals_start_plan:
+  path: /workspace/goals/plans/{planId}/start
+  controller: App\Web\Federation\GoalsWorkspaceController::startPlan
+  methods: [POST]
+  requirements: { planId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
+cos_federation_goals_advance_run:
+  path: /workspace/goals/runs/{runId}/advance
+  controller: App\Web\Federation\GoalsWorkspaceController::advanceRun
+  methods: [POST]
+  requirements: { runId: '[a-z0-9][a-z0-9_:-]{0,63}' }
+
 cos_federation_goals_mode:
   path: /workspace/goals/mode
   controller: App\Web\Federation\GoalsWorkspaceController::selectMode

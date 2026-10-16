@@ -121,6 +121,120 @@ final readonly class FederationGoalStore
     }
 
     /**
+     * Upgrade an older, inert sales Goal only on explicit operator planning.
+     * In-flight or already proposed Plans forbid changes to their signed spec.
+     * Must be invoked under a tenant Goal FOR UPDATE transaction lock.
+     */
+    public function enableSalesTaskPlanning(TenantContext $actor, string $goalId): GoalSpecification
+    {
+        $this->writer($actor);
+        $this->identifier($goalId);
+        $org = $actor->organizationId()->value();
+        $row = $this->db->fetchAssociative(
+            'SELECT g.owner_id,g.current_spec_version,s.specification
+             FROM cos_federation_goals g
+             INNER JOIN cos_federation_goal_specs s
+               ON s.organization_id=g.organization_id AND s.goal_id=g.goal_id
+              AND s.spec_version=g.current_spec_version
+             WHERE g.organization_id=:org AND g.goal_id=:goal FOR UPDATE',
+            ['org'=>$org,'goal'=>$goalId],
+        );
+        if (!$row || $row['owner_id'] !== $actor->userId()->value()) {
+            throw new DomainException('Only the Goal owner can configure its planning capability.');
+        }
+        $spec = GoalSpecification::fromArray(self::decode((string) $row['specification']));
+        if (!\Platform\Orchestration\Goal\FederationSmallTaskPlanFactory::supports($spec)) {
+            throw new DomainException('Small Sales tasks support Sales deal or task outcomes only.');
+        }
+        if (in_array('sales.create_task', $spec->allowedCapabilities, true)) return $spec;
+        if ($spec->allowedCapabilities !== []) {
+            throw new DomainException('Goal has a different immutable capability allowlist.');
+        }
+        $plans = (int) $this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_federation_plans
+             WHERE organization_id=:org AND goal_id=:goal',
+            ['org'=>$org,'goal'=>$goalId],
+        );
+        if ($plans > 0) {
+            throw new DomainException('This Goal already has Plans; an existing specification cannot be amended.');
+        }
+        $updated = $spec->toArray();
+        $updated['version'] = $spec->version + 1;
+        $updated['allowed_capabilities'] = ['sales.create_task'];
+        $next = GoalSpecification::fromArray($updated);
+        $this->db->insert('cos_federation_goal_specs', [
+            'organization_id'=>$org,'goal_id'=>$goalId,'spec_version'=>$next->version,
+            'specification'=>self::json($next->toArray()),'created_at'=>self::now(),
+        ]);
+        $changed = $this->db->executeStatement(
+            'UPDATE cos_federation_goals
+             SET current_spec_version=:next,revision=revision+1,updated_at=:now
+             WHERE organization_id=:org AND goal_id=:goal AND current_spec_version=:previous',
+            ['next'=>$next->version,'previous'=>$spec->version,'now'=>self::now(),
+             'org'=>$org,'goal'=>$goalId],
+        );
+        if ($changed !== 1) throw new LogicException('Concurrent Goal specification update rejected.');
+        return $next;
+    }
+
+    /** Bounded, tenant-scoped persisted Plan state for the Goals UI. */
+    public function listGoalPlans(TenantContext $actor, int $limit = 50): array
+    {
+        $this->writer($actor);
+        $limit = max(1,min(100,$limit));
+        $org = $actor->organizationId()->value();
+        $rows = $this->db->fetchAllAssociative(
+            'SELECT p.plan_id,p.goal_id,p.state,p.plan_version,p.created_at,p.plan_json
+             FROM cos_federation_plans p
+             WHERE p.organization_id=:org ORDER BY p.created_at DESC,p.plan_id DESC LIMIT '.$limit,
+            ['org'=>$org],
+        );
+        $plans=[];
+        foreach($rows as $p) {
+            $json=self::decode((string)$p['plan_json']);
+            $p['steps']=array_map(static fn(array $step):array => [
+                'id'=>(string)($step['id']??''),
+                'capability'=>(string)($step['capability_id']??''),
+                'target'=>(string)($step['input']['target_id']??''),
+                'title'=>(string)($step['input']['parameters']['title']??''),
+            ], is_array($json['steps']??null) ? $json['steps'] : []);
+            unset($p['plan_json']);
+            $p['approval'] = $this->planApprovalAction($actor,(string)$p['plan_id']);
+            $p['run_id'] = $this->db->fetchOne(
+                'SELECT run_id FROM cos_workflow_runs
+                 WHERE organization_id=:org AND source_plan_id=:plan
+                   AND definition_id=:definition LIMIT 1',
+                ['org'=>$org,'plan'=>$p['plan_id'],'definition'=>'federation.approved-plan'],
+            ) ?: null;
+            $p['legacy_run_id']=$this->db->fetchOne(
+                'SELECT run_id FROM cos_federation_runs
+                 WHERE organization_id=:org AND plan_id=:plan LIMIT 1',
+                ['org'=>$org,'plan'=>$p['plan_id']],
+            ) ?: null;
+            $plans[]=$p;
+        }
+        return $plans;
+    }
+
+    /** Read-only hint; canonical Plan approval evidence is reverified on start. */
+    public function planApprovalAction(TenantContext $actor, string $planId): ?array
+    {
+        $this->writer($actor);
+        $this->identifier($planId);
+        $row=$this->db->fetchAssociative(
+            'SELECT a.id,a.status FROM cos_actions a
+             INNER JOIN cos_federation_plans p
+               ON p.organization_id=a.organization_id AND p.plan_id=a.target_id
+             WHERE a.organization_id=:org AND a.target_type=:type
+               AND a.type=:action_type AND a.target_id=:plan
+             ORDER BY a.created_at DESC,a.id DESC LIMIT 1',
+            ['org'=>$actor->organizationId()->value(),'type'=>'cos_federation_plan',
+             'action_type'=>'cos.federation.plan.approval','plan'=>$planId],
+        );
+        return $row ? ['id'=>(string)$row['id'],'status'=>(string)$row['status']] : null;
+    }
+
+    /**
      * Tenant-scoped read model for a bounded operator Run list.
      * The list never reveals the canonical Action idempotency keys.
      *

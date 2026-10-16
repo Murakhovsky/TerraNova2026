@@ -24,6 +24,40 @@
         <p class="cos-card__copy">Ці режими змінюють кількість деталей, але не ваші права та не стан бізнес-операцій.</p>
     </nav>
 
+    {% set notices = {
+        'plan_proposed':'План збережено. Це ще не запуск. Наступний крок: запросити незалежне погодження.',
+        'approval_requested':'Запит на погодження створено. Інший уповноважений користувач має підтвердити його в системі Action/Approval.',
+        'run_started':'План прийнято до виконання через Platform Workflow. Для переходу до наступного кроку натисніть «Продовжити».',
+        'run_advanced':'Стан виконання оновлено. Перевірте кроки та необхідні погодження.',
+        'action_queued':'Дію передано до канонічної черги Action. Дочекайтесь перевіреного результату, повторний запуск не потрібен.',
+        'evidence_pending':'Очікується підтвердження результату від відповідального домену. Повторний Action не надсилається.'
+    } %}
+    {% set blockers = {
+        'rollout_disabled':'Запуск заблоковано: для цієї організації не активовано COS_FEDERATION_CANONICAL_ORGANIZATION. Налаштувати може адміністратор; старий виконавець не використовується.',
+        'already_started':'Цей план уже має виконання. Повторний запуск заборонений, перевірте існуючий Run.',
+        'spec_frozen':'Ціль уже має плани. Змінювати дозволені дії після створення плану не можна.',
+        'not_found':'Ціль, план або запуск відсутній у вашій організації чи став недоступним.',
+        'approval_policy':'Немає активної політики, яка вимагає незалежного погодження цього плану або дії. Налаштуйте Policy/Approval.',
+        'waiting_approval':'План ще не має завершеної канонічної квитанції незалежного погодження. Потрібне рішення іншої уповноваженої особи та виконання Approval Action.',
+        'universe_unavailable':'Не знайдено активний Growth Universe цієї організації, спрямований у Sales. Перевірте ID і активацію джерела.',
+        'capability_unavailable':'Операція недоступна: модуль або реальний Action handler не активований для організації, або бракує дозволу менеджера.',
+        'invalid_steps':'Перевірте кількість дій (1–3), справжні ID угод, назви та терміни задач.',
+        'owner_required':'Змінити чи запустити план може лише власник цієї цілі.',
+        'stale_execution':'План або його погодження застаріли після зміни специфікації.',
+        'reconcile_required':'Виконання очікує перевірки квитанції чи ручного втручання. Повторювати зовнішню дію небезпечно.',
+        'step_approval_waiting':'Поточна операція очікує окремого незалежного погодження Action. Поки його не прийнято, виконання зупинене.',
+        'approval_unavailable':'Сервіс погоджень тимчасово недоступний. Погодження не підтверджене.',
+        'start_unavailable':'Platform Workflow не зміг створити Run. Перевірте стан затвердження, доступність сховища та журнал виконання.',
+        'advance_unavailable':'Platform Workflow не зміг продовжити Run. Перевірте статус кроків і погоджень.',
+        'storage_unavailable':'План не збережено: сховище або перевірка даних недоступні.',
+        'plan_blocked':'План заблоковано: дані цілі, схема Action або підтвердження не пройшли перевірку.'
+    } %}
+    {% if notices[notice|default('')] is defined %}
+        <div class="cos-alert cos-alert--success" role="status">{{ notices[notice] }}</div>
+    {% endif %}
+    {% if blockers[blocker|default('')] is defined %}
+        <div class="cos-alert" role="alert" data-goal-blocker="{{ blocker }}"><strong>Що заважає:</strong> {{ blockers[blocker] }}</div>
+    {% endif %}
     {% if created %}
         <div class="cos-alert cos-alert--success" role="status">Чернетку цілі збережено.</div>
     {% endif %}
@@ -60,6 +94,7 @@
                     <input class="cos-input" type="number" name="target" min="1" max="1000000" value="5" required>
                 </label>
             </div>
+            <p class="cos-card__copy">Для простого старту виберіть <code>sales.local_tasks_created</code> і, наприклад, ціль 1. Після збереження можна побудувати план із 1–3 завдань для реальних угод Sales. Заплановані завдання не гарантують виграної угоди.</p>
             <p class="cos-card__copy">Для еталонного сценарію Package A виберіть <code>federation.verified_proposals</code> та значення <strong>50</strong>. Лише цей профіль Goal отримує п’ять дозволених Growth/Sales/Documents Action у плані. Кожен план і кожна дія потребують окремого погодження; жодне виконання не запускається при створенні Goal.</p>
             <p class="cos-card__copy">Автоматично підтверджуються <code>sales.won_deals</code>, <code>sales.closed_deals</code> і <code>sales.local_tasks_created</code>, якщо Sales активний. Додатково підтримуються <code>growth.inbound_responses_recorded</code>, <code>capital_markets.research_results_validated</code> і <code>documents.signatures_recorded</code>. Run-linked метрики Research і Documents наразі непідтверджені, поки не активовано перевірені Action handlers. Інші коди без довіреного джерела також залишаються непідтвердженими.</p>
             <button class="cos-button cos-button--primary" type="submit">Зберегти чернетку Goal</button>
@@ -87,11 +122,121 @@
                     <small>Лише читання. Не означає автоматичного підтвердження бізнес-цілі.</small>
                 </p>
 
-                {% if mode in ['process', 'expert'] %}
-                    <div class="cos-card__copy" data-goal-process>
-                        <strong>Процес:</strong> специфікацію збережено; план виконання ще не погоджений.
-                        Жоден зовнішній крок не запускається з цієї сторінки.
+                {% set criterionId = goal.criteria[0].id|default('') %}
+                <details class="cos-page__stack" data-goal-plan-builder>
+                    <summary class="cos-button cos-button--primary">Побудувати план</summary>
+                    {% if criterionId == 'federation.verified_proposals' and goal.criteria[0].expected|default(0) == 50 %}
+                        <p class="cos-card__copy">Еталонний Golden 50. Спочатку побудуємо один Discovery-крок із реального Growth Universe, а не 50 фіктивних лідів.</p>
+                        <form method="post" action="{{ path('cos_federation_goals_build_plan', {goalId:goal.id}) }}" class="cos-page__stack">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <input type="hidden" name="scenario" value="golden-discovery">
+                            <label class="cos-field"><span>ID активного Sales Growth Universe</span>
+                                <input class="cos-input" name="universe_id" maxlength="80" required placeholder="ID реального Growth Universe"></label>
+                            <div class="cos-section-grid">
+                                <label class="cos-field"><span>Слот збору (1–10)</span>
+                                    <input class="cos-input" type="number" min="1" max="10" name="slot" value="1" required></label>
+                                <label class="cos-field"><span>Максимум кандидатів (1–200)</span>
+                                    <input class="cos-input" type="number" min="1" max="200" name="limit" value="3" required></label>
+                            </div>
+                            <button class="cos-button cos-button--primary" type="submit">Зберегти Discovery-план</button>
+                        </form>
+                    {% elseif criterionId in ['sales.local_tasks_created','sales.won_deals','sales.closed_deals'] %}
+                        <p class="cos-card__copy">Малий сценарій: 1–3 послідовні створення завдань для наявних угод у CRM. Без запуску до погоджень.</p>
+                        <form method="post" action="{{ path('cos_federation_goals_build_plan', {goalId:goal.id}) }}" class="cos-page__stack">
+                            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                            <input type="hidden" name="scenario" value="small-tasks">
+                            <label class="cos-field"><span>Кількість операцій</span>
+                                <select class="cos-input" name="task_count">
+                                    <option value="1">1 дія</option>
+                                    <option value="2">2 дії</option>
+                                    <option value="3">3 дії</option>
+                                </select></label>
+                            {% for i in 1..3 %}
+                                <fieldset class="cos-card">
+                                    <legend>Дія {{ i }}{% if i > 1 %} (лише якщо обрано {{ i }} чи більше){% endif %}</legend>
+                                    <label class="cos-field"><span>ID існуючої угоди Sales</span>
+                                        <input class="cos-input" name="deal_{{ i }}" maxlength="100" placeholder="deal-123" {% if i == 1 %}required{% endif %}></label>
+                                    <label class="cos-field"><span>Назва завдання</span>
+                                        <input class="cos-input" name="title_{{ i }}" maxlength="220" placeholder="Зателефонувати клієнту" {% if i == 1 %}required{% endif %}></label>
+                                    <label class="cos-field"><span>Термін, хвилин від створення</span>
+                                        <input class="cos-input" type="number" name="minutes_{{ i }}" min="1" max="43200" value="60"></label>
+                                </fieldset>
+                            {% endfor %}
+                            <button class="cos-button cos-button--primary" type="submit">Зберегти план на погодження</button>
+                        </form>
+                    {% else %}
+                        <p class="cos-card__copy" role="status">Для цього показника поки немає перевіреного шаблону дій. Ціль збережена, але виконання заблоковано. Доступні малі сценарії Sales та еталонний Golden 50.</p>
+                    {% endif %}
+                </details>
+                {% for plan in plansByGoal[goal.id]|default([]) %}
+                    <section class="cos-card" data-goal-plan="{{ plan.plan_id }}">
+                        <h4 class="cos-card__title">План №{{ plan.plan_version }} · {{ plan.steps|length }} операцій</h4>
+                        <p class="cos-card__copy">Статус: <strong>{{ plan.state == 'approved' ? 'Погоджений' : (plan.state == 'proposed' ? 'Очікує погодження' : plan.state) }}</strong></p>
+                        <ol class="cos-card__copy">
+                            {% for step in plan.steps %}
+                                <li>{{ step.capability }}{% if step.title %}: {{ step.title }}{% endif %}{% if step.target %} · {{ step.target }}{% endif %}</li>
+                            {% endfor %}
+                        </ol>
+                        {% if plan.approval %}
+                            <p class="cos-card__copy">Approval Action: {{ plan.approval.status }}{% if mode == 'expert' %} <code>{{ plan.approval.id }}</code>{% endif %}.
+                                {% if plan.approval.status == 'PENDING_APPROVAL' %}
+                                    Очікує рішення іншого уповноваженого користувача.
+                                {% elseif plan.approval.status == 'QUEUED' %}
+                                    Погодження підтверджене, але Approval Action ще не виконано.
+                                {% endif %}
+                            </p>
+                        {% endif %}
+                        {% if plan.state == 'proposed' and not plan.approval %}
+                            <form method="post" action="{{ path('cos_federation_goals_request_approval',{planId:plan.plan_id}) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                <button class="cos-button cos-button--primary" type="submit">Запросити незалежне погодження</button>
+                            </form>
+                        {% elseif plan.state == 'approved' and not plan.run_id and not plan.legacy_run_id %}
+                            {% if canonicalRolloutEnabled %}
+                                <form method="post" action="{{ path('cos_federation_goals_start_plan',{planId:plan.plan_id}) }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <button class="cos-button cos-button--primary" type="submit">Запустити через Platform Workflow</button>
+                                </form>
+                            {% else %}
+                                <p class="cos-card__copy" role="status">Запуск заблоковано: Platform Workflow не активований для цієї організації (COS_FEDERATION_CANONICAL_ORGANIZATION).</p>
+                            {% endif %}
+                        {% elseif plan.run_id %}
+                            <p class="cos-card__copy">Виконується в Platform Workflow. Run: <code>{{ plan.run_id }}</code>.</p>
+                        {% elseif plan.legacy_run_id %}
+                            <p class="cos-card__copy">Історичний Federation Run; повторний запуск заборонено.</p>
+                        {% endif %}
+                    </section>
+                {% endfor %}
+                {% for linkedRun in runsByGoal[goal.id]|default([]) %}
+                    <div class="cos-card__copy" data-goal-progress="{{ linkedRun.run_id }}">
+                        <strong>Виконання:</strong> {{ linkedRun.completed_steps }}/{{ linkedRun.total_steps }} кроків завершено ({{ linkedRun.state }}).
+                        {% if linkedRun.outcome %}
+                            Бізнес-результат: {{ linkedRun.outcome.result }}.
+                            {% for measure in linkedRun.outcome.criteria %}
+                                {{ measure.criterion_id }}: {{ measure.observed is not null ? measure.observed : 'не виміряно' }} / {{ measure.expected }}.
+                            {% endfor %}
+                        {% else %}
+                            Бізнес-результат ще не підтверджено.
+                        {% endif %}
+                        {% if mode in ['process','expert'] %}
+                            <ul>
+                            {% for step in linkedRun.steps %}
+                                <li>{{ step.capability_id }}: {{ step.state }}{% if mode == 'expert' and step.receipt %} (квитанція: <code>{{ step.receipt }}</code>){% endif %}</li>
+                            {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if linkedRun.canonical and linkedRun.state in ['created','running'] %}
+                            <form method="post" action="{{ path('cos_federation_goals_advance_run',{runId:linkedRun.run_id}) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                <button type="submit" class="cos-button cos-button--ghost">Продовжити виконання</button>
+                            </form>
+                        {% elseif linkedRun.state in ['waiting','ambiguous'] %}
+                            <strong>Потрібна перевірка погоджень або квитанцій. Повторні Action не запускаються автоматично.</strong>
+                        {% endif %}
                     </div>
+                {% endfor %}
+                {% if mode in ['process','expert'] and plansByGoal[goal.id]|default([]) is empty %}
+                    <p class="cos-card__copy" data-goal-process>Плану ще немає. Відкрийте «Побудувати план» вище.</p>
                 {% endif %}
 
                 {% if mode == 'expert' %}
@@ -215,6 +360,19 @@
                         </form>
                     {% endif %}
                 </div>
+                <p class="cos-card__copy" data-goal-run-progress>
+                    <strong>Прогрес:</strong> {{ run.completed_steps }}/{{ run.total_steps }} завершених кроків.
+                    {% if run.canonical %}Джерело: Platform Workflow.{% else %}Історичний Federation Run.{% endif %}
+                </p>
+                {% if run.progress_error %}
+                    <p class="cos-card__copy" role="alert">Стан кроків не вдалося перевірити. Виконання не слід вважати завершеним.</p>
+                {% endif %}
+                {% if run.canonical and run.state in ['created','running'] %}
+                    <form method="post" action="{{ path('cos_federation_goals_advance_run',{runId:run.run_id}) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <button class="cos-button cos-button--ghost" type="submit">Продовжити Platform Workflow</button>
+                    </form>
+                {% endif %}
                 {% if run.recovery %}
                     <p class="cos-card__copy">Потребують уваги: <strong>{{ run.recovery.attention_count }}</strong>.
                         Готові до перевірки квитанцій: <strong>{{ run.recovery.recoverable_count }}</strong>.</p>
@@ -240,8 +398,10 @@
                             <button type="submit" class="cos-button cos-button--ghost">Звірити завершені дії без повторного запуску</button>
                         </form>
                     {% endif %}
-                {% else %}
-                    <p class="cos-card__copy">Діагностика виконання недоступна. Перевірте активацію модуля Federation або зверніться до адміністратора.</p>
+                {% elseif not run.canonical %}
+                    <p class="cos-card__copy">Діагностика історичного виконання недоступна. Зверніться до адміністратора.</p>
+                {% elseif run.state in ['waiting','ambiguous'] %}
+                    <p class="cos-card__copy">Workflow очікує погодження Action, зовнішньої квитанції або ручного reconciliation. Автоматичний повтор заблокований.</p>
                 {% endif %}
                 {% if mode == 'expert' %}
                     <p class="cos-card__copy"><code>Run ID: {{ run.run_id }}</code>,

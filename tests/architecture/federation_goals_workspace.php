@@ -17,4 +17,36 @@ foreach (['data-experience-mode', 'Результат', 'Процес', 'Екс�
     'csrf_token'] as $required) {
     if (!str_contains($template, $required)) throw new RuntimeException('Goal Workspace template missing: ' . $required);
 }
+// Native UI must never dispatch legacy technical Runs or fake human Approvals.
+foreach ([
+    'cos_federation_goals_build_plan',
+    'cos_federation_goals_request_approval',
+    'cos_federation_goals_start_plan',
+    'cos_federation_goals_advance_run',
+] as $route) {
+    if (!str_contains($routes,$route)) throw new RuntimeException('Goal operator route missing: '.$route);
+}
+foreach ([
+    '$this->smallPlans->propose(',
+    '$this->discoveryPlans->propose(',
+    '$this->planApprovals->requestApproval(',
+    '$this->canonical->start(',
+    '$this->canonical->advance(',
+] as $contract) {
+    if (!str_contains($controller,$contract)) throw new RuntimeException('Goal canonical execution contract missing: '.$contract);
+}
+foreach ([
+    'Побудувати план',
+    'Запросити незалежне погодження',
+    'Запустити через Platform Workflow',
+    'data-goal-progress',
+    'data-goal-blocker',
+] as $contract) {
+    if (!str_contains($template,$contract)) throw new RuntimeException('Goal operator UX contract missing: '.$contract);
+}
+if (str_contains($controller,'$this->goals->startApprovedRun(')
+    || str_contains($controller,'FederationSequentialOrchestrator')) {
+    throw new RuntimeException('Goal UI cannot execute via retired Federation authority.');
+}
+
 echo "Federation Goal Workspace mode, tenant and CSRF contracts passed.\n";
