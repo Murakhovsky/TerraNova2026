@@ -18,6 +18,7 @@ final readonly class FederationExecutionFleetAudit
     public function __construct(
         private Connection $db,
         private FederationHistoricalRunCutover $historical,
+        private FederationCanonicalReceiptInspector $canonicalProof,
     ) {}
 
     /** @return array<string,mixed> */
@@ -123,8 +124,18 @@ final readonly class FederationExecutionFleetAudit
             ];
         }
 
+        $canonicalVerified=0;$canonicalIncomplete=0;$canonicalDrift=0;
         foreach($canonical as $row) {
             $id=(string)$row['run_id'];
+            $canonicalAttestation=$this->canonicalProof->inspect($organizationId,$id);
+            if($canonicalAttestation['status']==='verified') ++$canonicalVerified;
+            elseif($canonicalAttestation['status']==='incomplete') {
+                ++$canonicalIncomplete;
+                $findings['canonical_execution_not_terminal_or_unverified']=true;
+            }else{
+                ++$canonicalDrift;
+                $findings['canonical_execution_receipt_drift']=true;
+            }
             $plan=$row['source_plan_id']===null?'':(string)$row['source_plan_id'];
             if($plan===''||$row['plan_exists']===null) {
                 $findings['orphaned_canonical_plan']=true;
@@ -159,6 +170,7 @@ final readonly class FederationExecutionFleetAudit
                 'orphaned_canonical_plan',
                 'duplicate_legacy_plan_runs',
                 'duplicate_canonical_plan_runs',
+                'canonical_execution_receipt_drift',
             ],true));
         $status=$critical!==[]?'drift':($truncated||$legacyTotal===0&&$canonicalTotal===0
             ?'no_target':'partial');
@@ -169,6 +181,9 @@ final readonly class FederationExecutionFleetAudit
             'migration_total'=>$migrationTotal,
             'evaluated_legacy_runs'=>count($legacy),
             'evaluated_canonical_runs'=>count($canonical),
+            'canonical_verified'=>$canonicalVerified,
+            'canonical_incomplete'=>$canonicalIncomplete,
+            'canonical_drift'=>$canonicalDrift,
             'evaluated_migration_links'=>count($migrations),
             'history_truncated'=>$truncated,'inventory_coverage_complete'=>!$truncated,
             'read_only'=>true,'cutover_authorized'=>false,

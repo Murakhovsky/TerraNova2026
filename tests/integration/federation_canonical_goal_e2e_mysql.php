@@ -14,6 +14,7 @@ use App\Persistence\Federation\FederationCanonicalWorkflowBridge;
 use App\Persistence\Federation\FederatedActionAdmission;
 use App\Persistence\Federation\FederationExternalActionReceiptReconciler;
 use App\Persistence\Federation\FederationVerifiedRunReadModel;
+use App\Persistence\Federation\FederationCanonicalReceiptInspector;
 use App\Persistence\Federation\FederationHistoricalRunCutover;
 use App\Persistence\Federation\FederationMigrationOperatorAuthorization;
 use App\Persistence\Federation\FederationPostCutoverIntegrity;
@@ -410,6 +411,11 @@ try {
     $assert($rows('cos_federation_runs')===0 && $rows('cos_federation_steps')===0,
         'legacy Run/Step received duplicate writes');
 
+    $canonicalAudit=new FederationCanonicalReceiptInspector(
+        $db,$planEvidence,$receipts,new FailClosedWorkflowNonActionReceiptEvidence(),
+    );
+    $assert($canonicalAudit->inspect($org,$runId)['status']==='verified',
+        'Fleet attestation failed on completed canonical Action');
     // The Golden 50 read path must recognize canonical Runs and perform its
     // own independent Action/Policy/Approval/attempt attestation. All SQL
     // mutations below are isolated test-tenant tamper fixtures, never workers.
@@ -448,6 +454,8 @@ try {
     );
     $reject(static fn()=> $nativeReader->requireCompletedAction($actor,$runId,'task'),
         'Golden 50 read admitted a tampered successful Action attempt');
+    $assert($canonicalAudit->inspect($org,$runId)['status']==='drift',
+        'Fleet accepted a forged canonical receipt');
     $db->executeStatement(
         'UPDATE cos_action_attempts SET status="COMPLETED"
          WHERE organization_id=:org AND action_id=:id',

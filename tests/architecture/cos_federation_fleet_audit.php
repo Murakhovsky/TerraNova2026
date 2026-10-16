@@ -9,6 +9,7 @@ foreach ([
     'organization_id=:org','cos_federation_runs','cos_workflow_runs',
     'cos_federation_execution_migrations','->historical->inspect(',
     'fleet_inventory_truncated','unmapped_dual_execution_authority',
+    'canonical_execution_receipt_drift','->canonicalProof->inspect(',
     "'cutover_authorized'=>false","'read_only'=>true",
 ] as $marker) {
     if(!str_contains($audit,$marker)) throw new RuntimeException('Fleet scope gate missing: '.$marker);

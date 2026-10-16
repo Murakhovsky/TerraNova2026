@@ -52,6 +52,7 @@ final class WorkflowAuthorityInventoryCommand extends Command
         $engineeringUnrolled=(int)($engineering['legacy_unrolled_features']??0)>0;
         $federationUnmigrated=(int)($federation['legacy_total']??0)
             !==(int)($federation['migration_total']??-1);
+        $federationNewIncomplete=(int)($federation['canonical_incomplete']??0)>0;
         $federationReviewPending=isset($federation['historical_runs'])
             && count(array_filter($federation['historical_runs'],
                 static fn(array $r):bool=>($r['status']??null)
@@ -79,6 +80,7 @@ final class WorkflowAuthorityInventoryCommand extends Command
                  || $engineeringUnrolled
                  || $federationUnmigrated
                  || $federationReviewPending
+                 || $federationNewIncomplete
                     ? 'incomplete':'technical_partial'),
             'read_only'=>true,
             'live_business_outcome_verified'=>false,

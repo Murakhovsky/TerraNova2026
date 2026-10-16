@@ -394,7 +394,10 @@ try {
     }
     // Full tenant fleet inventory is read-only and fails closed on mixed,
     // unmigrated or source-corrupt historical records.
-    $fleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover))
+    $fleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover,new \App\Persistence\Federation\FederationCanonicalReceiptInspector(
+        $db,$adapter,new DoctrineWorkflowActionReceiptVerifier($db,$adapter),
+        new FailClosedWorkflowNonActionReceiptEvidence(),
+    )))
         ->inspect($org,100);
     if (($fleet['source']??null)!=='federation_fleet'
         || $fleet['cutover_authorized']!==false
@@ -405,14 +408,20 @@ try {
         || $fleet['status']==='ready') {
         throw new RuntimeException('Federation fleet audit falsely certified operator cutover.');
     }
-    $truncatedFleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover))
+    $truncatedFleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover,new \App\Persistence\Federation\FederationCanonicalReceiptInspector(
+        $db,$adapter,new DoctrineWorkflowActionReceiptVerifier($db,$adapter),
+        new FailClosedWorkflowNonActionReceiptEvidence(),
+    )))
         ->inspect($org,1);
     if ($truncatedFleet['history_truncated']!==true
         || $truncatedFleet['inventory_coverage_complete']!==false
         || $truncatedFleet['cutover_authorized']!==false) {
         throw new RuntimeException('Truncated Federation cohort falsely certified as complete.');
     }
-    $foreignFleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover))
+    $foreignFleet=(new \App\Persistence\Federation\FederationExecutionFleetAudit($db,$cutover,new \App\Persistence\Federation\FederationCanonicalReceiptInspector(
+        $db,$adapter,new DoctrineWorkflowActionReceiptVerifier($db,$adapter),
+        new FailClosedWorkflowNonActionReceiptEvidence(),
+    )))
         ->inspect('other-tenant',100);
     if ($foreignFleet['legacy_total']!==0 || $foreignFleet['canonical_total']!==0
         || $foreignFleet['migration_total']!==0
