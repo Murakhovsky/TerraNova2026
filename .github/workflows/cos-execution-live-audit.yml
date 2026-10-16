@@ -134,6 +134,9 @@ jobs:
       AUDIT_TENANT: ${{ github.event_name == 'workflow_dispatch' && inputs.tenant_id || vars.COS_EXECUTION_AUDIT_TENANT }}
       EXPECTED_HEAD: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Guard real tenant, deployed SHA and SSH access
         shell: bash
         run: |
@@ -157,18 +160,35 @@ jobs:
           ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
           chmod 600 "$HOME/.ssh/known_hosts"
 
+      - name: Bind operator-selected release SHA to trusted main source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "$EXPECTED_HEAD^{commit}" || { echo "::error::Unknown expected commit"; exit 1; }
+          git merge-base --is-ancestor "$EXPECTED_HEAD" origin/main ||
+            { echo "::error::Expected SHA is not a commit on main"; exit 1; }
+          git checkout --quiet --detach "$EXPECTED_HEAD"
+          EXPECTED_CODE_SHA="$( {
+            find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
+            sha256sum symfony/config/services.yaml
+          } | sha256sum | cut -d' ' -f1 )"
+          EXPECTED_ROUTES_SHA="$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)"
+          echo "EXPECTED_CODE_SHA=$EXPECTED_CODE_SHA" >> "$GITHUB_ENV"
+          echo "EXPECTED_ROUTES_SHA=$EXPECTED_ROUTES_SHA" >> "$GITHUB_ENV"
       - name: Verify active consumer images and inspect live tenant (no writes)
         shell: bash
         run: |
           set -euo pipefail
           ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
             -i "$HOME/.ssh/cos_execution_audit_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            bash -s -- "$DEV_PATH" "$AUDIT_TENANT" "$EXPECTED_HEAD" <<'REMOTE'
+            bash -s -- "$DEV_PATH" "$AUDIT_TENANT" "$EXPECTED_HEAD" "$EXPECTED_CODE_SHA" "$EXPECTED_ROUTES_SHA" <<'REMOTE'
           set -Eeuo pipefail
           umask 077
           ROOT="$1"
           TENANT="$2"
           EXPECTED="$3"
+          TRUSTED_CODE_SHA="$4"
+          TRUSTED_ROUTES_SHA="$5"
           MANIFEST="$ROOT/.cos-deployment-attestation.json"
           test -f "$MANIFEST" || { echo "::error::Deployment attestation absent; deploy manifest-enabled main first"; exit 1; }
           ACTUAL="$(php -r '
@@ -198,8 +218,9 @@ jobs:
           DECLARED_SOURCE_SHA="$(php -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);echo $m["execution_source_sha256"];' "$MANIFEST")"
           DECLARED_ROUTES_SHA="$(php -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);echo $m["routes_sha256"];' "$MANIFEST")"
           ACTUAL_ROUTES_SHA="$(sha256sum "$ROOT/symfony/config/routes.yaml" | cut -d' ' -f1)"
-          if [ "$SOURCE_SHA" != "$DECLARED_SOURCE_SHA" ] || [ "$ACTUAL_ROUTES_SHA" != "$DECLARED_ROUTES_SHA" ]; then
-            echo "::error::Deployment source differs from commit-bound manifest"; exit 1
+          if [ "$SOURCE_SHA" != "$DECLARED_SOURCE_SHA" ] || [ "$ACTUAL_ROUTES_SHA" != "$DECLARED_ROUTES_SHA" ] ||
+             [ "$SOURCE_SHA" != "$TRUSTED_CODE_SHA" ] || [ "$ACTUAL_ROUTES_SHA" != "$TRUSTED_ROUTES_SHA" ]; then
+            echo "::error::Deployed source differs from expected GitHub main commit or release manifest"; exit 1
           fi
           BASE_IMAGE=''
           declare -A VERIFIED_SERVICES=()
