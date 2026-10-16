@@ -48,7 +48,7 @@
     </div>
   </header>
 
-  <nav class="cos-growth-actions" aria-label="{{ 'Capital Markets'|trans }} primary workspace navigation">
+  <nav class="cos-growth-actions" data-cm-primary-navigation aria-label="{{ 'Capital Markets'|trans }} primary workspace navigation">
     {% if permissions.view|default(false) %}<a class="btn {{ cmView == 'overview' ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets">{{ 'Overview'|trans }}</a>{% endif %}
     {% if permissions.opportunity_view|default(false) %}<a class="btn {{ cmView in ['opportunities','opportunity'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/opportunities">{{ 'Opportunities'|trans }}</a>{% endif %}
     {% if permissions.market_data_view|default(false) %}<a class="btn {{ cmView in ['markets','market_detail','relationship_detail'] ? 'btn-primary' : 'btn-outline-secondary' }}" href="/capital-markets/markets">Markets</a>{% endif %}
