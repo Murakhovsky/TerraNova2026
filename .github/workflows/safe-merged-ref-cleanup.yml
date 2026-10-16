@@ -1,0 +1,74 @@
+name: Safe merged ref cleanup
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup-verified-refs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Delete only pinned and safely merged refs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const candidates = [
+              { name: 'integration/experience-golden-evidence-provenance-20261016', sha: 'b790decc457b2ef6b84d6516ea19149f1f7394ca' },
+              { name: 'integration/experience-v1-ux-governance-20261016', sha: '13daaee31882baad3eef83853ddee821f647c727' },
+              { name: 'feat/experience-v1-preacceptance-closure', sha: '77a76ae658b70f963977daecca9e590fc0170eb4' },
+              { name: 'integration/cm-federation-streaming-20261016', sha: 'd9834167214ee8a16cfbfd25f8ee17d90a39143e' }
+            ];
+            const get = async name => {
+              try {
+                const res = await github.rest.git.getRef({owner,repo,ref:'heads/'+name});
+                return res.data.object.sha;
+              } catch (e) {
+                if (e.status === 404) return null;
+                throw e;
+              }
+            };
+            const deletions = [], skipped = [];
+            for (const candidate of candidates) {
+              const observed = await get(candidate.name);
+              if (!observed) { skipped.push(candidate.name+': absent'); continue; }
+              if (observed !== candidate.sha) { skipped.push(candidate.name+': HEAD CHANGED'); continue; }
+              const open = await github.rest.pulls.list({
+                owner, repo, state:'open', head:owner+':'+candidate.name, per_page:100
+              });
+              if (open.data.length) { skipped.push(candidate.name+': open PR'); continue; }
+              const compare = await github.rest.repos.compareCommits({
+                owner, repo, base:context.sha, head:candidate.sha
+              });
+              if (compare.data.ahead_by !== 0) {
+                skipped.push(candidate.name+': not an ancestor of main');
+                continue;
+              }
+              await github.rest.git.deleteRef({owner,repo,ref:'heads/'+candidate.name});
+              deletions.push(candidate.name);
+            }
+            const duplicate = 'backup-engineering-domain-runtime-v20-730fe900';
+            const retained = 'backup/engineering-domain-runtime-v20-730fe900';
+            const expected = '730fe900ad5771a77f0ae6b0d9d01166349e0a60';
+            if (await get(duplicate) === expected && await get(retained) === expected) {
+              const open = await github.rest.pulls.list({
+                owner,repo,state:'open',head:owner+':'+duplicate,per_page:100
+              });
+              if (open.data.length) skipped.push(duplicate+': open PR');
+              else {
+                await github.rest.git.deleteRef({owner,repo,ref:'heads/'+duplicate});
+                deletions.push(duplicate+' (duplicate retained at '+retained+')');
+              }
+            } else {
+              skipped.push(duplicate+': counterpart/head mismatch or already absent');
+            }
+            core.summary.addHeading('Verified ref cleanup');
+            core.summary.addRaw('Deleted ('+deletions.length+'): '+JSON.stringify(deletions)+'\n\n');
+            core.summary.addRaw('Skipped ('+skipped.length+'): '+JSON.stringify(skipped)+'\n');
+            await core.summary.write();
+            console.log(JSON.stringify({deleted:deletions,skipped}));
