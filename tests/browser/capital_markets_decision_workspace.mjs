@@ -31,6 +31,18 @@ try {
     login.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
     login.locator('button[type="submit"]').click(),
   ]);
+  // Explicitly select English for historical English-content Decision Workspace assertions.
+  // The locale switch itself is exercised through the real authenticated CSRF endpoint.
+  await assertOk(await login.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' }), 'locale preflight');
+  const csrf = await login.locator('form.cos-shell__locale-form input[name="_token"]').inputValue();
+  const localeResponse = await loginContext.request.post(absolute('/workspace/locale'), {
+    form: { _token: csrf, locale: 'en' },
+    maxRedirects: 0,
+  });
+  if (localeResponse.status() !== 303) throw new Error('English locale switch rejected: HTTP ' + localeResponse.status());
+  await assertOk(await login.reload({ waitUntil: 'domcontentloaded' }), 'English locale preflight');
+  const lang = await login.locator('html').getAttribute('lang');
+  if (lang !== 'en') throw new Error('Expected switched English workspace locale, got ' + lang);
   const storageState = await loginContext.storageState();
   await loginContext.close();
 
