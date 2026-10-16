@@ -11,64 +11,97 @@ permissions:
 jobs:
   cleanup-verified-refs:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Delete only pinned and safely merged refs
+      - name: Verify and delete ancestor-only merged refs
         uses: actions/github-script@v7
         with:
           script: |
-            const { owner, repo } = context.repo;
-            const candidates = [
-              { name: 'integration/experience-golden-evidence-provenance-20261016', sha: 'b790decc457b2ef6b84d6516ea19149f1f7394ca' },
-              { name: 'integration/experience-v1-ux-governance-20261016', sha: '13daaee31882baad3eef83853ddee821f647c727' },
-              { name: 'feat/experience-v1-preacceptance-closure', sha: '77a76ae658b70f963977daecca9e590fc0170eb4' },
-              { name: 'integration/cm-federation-streaming-20261016', sha: 'd9834167214ee8a16cfbfd25f8ee17d90a39143e' }
-            ];
+            const {owner,repo} = context.repo;
+            const expectedRepository = owner+'/'+repo;
+            const closed = await github.paginate(github.rest.pulls.list, {
+              owner,repo,state:'closed',per_page:100
+            });
+            const opened = await github.paginate(github.rest.pulls.list, {
+              owner,repo,state:'open',per_page:100
+            });
+            const busy = new Set(opened
+              .filter(pr => pr.head.repo?.full_name === expectedRepository)
+              .map(pr => pr.head.ref));
+            const candidateMap = new Map();
+            for (const pr of closed) {
+              if (!pr.merged_at || pr.head.repo?.full_name !== expectedRepository) continue;
+              const name = pr.head.ref;
+              // Original, release and backup branches are retained. Only named feature/work branches.
+              if (!/^(?:feature|feat|fix|integration|docs|test|work|engineering)\//.test(name)) continue;
+              if (busy.has(name) || name === 'main') continue;
+              const older = candidateMap.get(name);
+              if (!older || older.merged_at < pr.merged_at) {
+                candidateMap.set(name, {
+                  name,sha:pr.head.sha,pr:pr.number,merged_at:pr.merged_at
+                });
+              }
+            }
             const get = async name => {
               try {
-                const res = await github.rest.git.getRef({owner,repo,ref:'heads/'+name});
-                return res.data.object.sha;
+                return (await github.rest.git.getRef({owner,repo,ref:'heads/'+name})).data.object.sha;
               } catch (e) {
                 if (e.status === 404) return null;
                 throw e;
               }
             };
-            const deletions = [], skipped = [];
-            for (const candidate of candidates) {
+            const deleted = [],skipped = [],errors = [];
+            for (const candidate of candidateMap.values()) {
               const observed = await get(candidate.name);
-              if (!observed) { skipped.push(candidate.name+': absent'); continue; }
-              if (observed !== candidate.sha) { skipped.push(candidate.name+': HEAD CHANGED'); continue; }
-              const open = await github.rest.pulls.list({
-                owner, repo, state:'open', head:owner+':'+candidate.name, per_page:100
-              });
-              if (open.data.length) { skipped.push(candidate.name+': open PR'); continue; }
-              const compare = await github.rest.repos.compareCommits({
-                owner, repo, base:context.sha, head:candidate.sha
-              });
-              if (compare.data.ahead_by !== 0) {
-                skipped.push(candidate.name+': not an ancestor of main');
+              if (!observed) continue;
+              if (observed !== candidate.sha) {
+                skipped.push(candidate.name+': HEAD_CHANGED_FROM_MERGED_PR_'+candidate.pr);
                 continue;
               }
-              await github.rest.git.deleteRef({owner,repo,ref:'heads/'+candidate.name});
-              deletions.push(candidate.name);
+              try {
+                const comparison = await github.rest.repos.compareCommits({
+                  owner,repo,base:context.sha,head:candidate.sha
+                });
+                if (comparison.data.ahead_by !== 0) {
+                  skipped.push(candidate.name+': NOT_IN_MAIN');
+                  continue;
+                }
+                // Fencing: verify SHA and open-PR status again just before deletion.
+                const nowOpen = await github.rest.pulls.list({
+                  owner,repo,state:'open',head:owner+':'+candidate.name,per_page:100
+                });
+                if (nowOpen.data.length || await get(candidate.name) !== candidate.sha) {
+                  skipped.push(candidate.name+': REF_CHANGED_OR_OPEN_PR');
+                  continue;
+                }
+                await github.rest.git.deleteRef({owner,repo,ref:'heads/'+candidate.name});
+                deleted.push(candidate.name+' (#'+candidate.pr+')');
+              } catch (e) {
+                errors.push(candidate.name+': '+String(e.message||e).slice(0,200));
+              }
             }
+            // An explicit, independently verified duplicate. Retain the slash-form backup.
             const duplicate = 'backup-engineering-domain-runtime-v20-730fe900';
             const retained = 'backup/engineering-domain-runtime-v20-730fe900';
             const expected = '730fe900ad5771a77f0ae6b0d9d01166349e0a60';
-            if (await get(duplicate) === expected && await get(retained) === expected) {
-              const open = await github.rest.pulls.list({
-                owner,repo,state:'open',head:owner+':'+duplicate,per_page:100
-              });
-              if (open.data.length) skipped.push(duplicate+': open PR');
-              else {
-                await github.rest.git.deleteRef({owner,repo,ref:'heads/'+duplicate});
-                deletions.push(duplicate+' (duplicate retained at '+retained+')');
-              }
-            } else {
-              skipped.push(duplicate+': counterpart/head mismatch or already absent');
+            try {
+              if (await get(duplicate) === expected && await get(retained) === expected) {
+                const open = await github.rest.pulls.list({
+                  owner,repo,state:'open',head:owner+':'+duplicate,per_page:100
+                });
+                if (!open.data.length && await get(duplicate) === expected) {
+                  await github.rest.git.deleteRef({owner,repo,ref:'heads/'+duplicate});
+                  deleted.push(duplicate+' (retained '+retained+')');
+                } else skipped.push(duplicate+': HEAD_CHANGED_OR_OPEN_PR');
+              } else skipped.push(duplicate+': BACKUP_SHA_MISMATCH_OR_ABSENT');
+            } catch (e) {
+              errors.push(duplicate+': '+String(e.message||e).slice(0,200));
             }
-            core.summary.addHeading('Verified ref cleanup');
-            core.summary.addRaw('Deleted ('+deletions.length+'): '+JSON.stringify(deletions)+'\n\n');
-            core.summary.addRaw('Skipped ('+skipped.length+'): '+JSON.stringify(skipped)+'\n');
+            core.summary.addHeading('Safe, exact-SHA merged-branch cleanup');
+            core.summary.addRaw('Candidates: '+candidateMap.size+'\\n\\n');
+            core.summary.addRaw('Deleted ('+deleted.length+'): '+JSON.stringify(deleted)+'\\n\\n');
+            core.summary.addRaw('Skipped ('+skipped.length+'): '+JSON.stringify(skipped)+'\\n\\n');
+            core.summary.addRaw('Errors ('+errors.length+'): '+JSON.stringify(errors)+'\\n');
             await core.summary.write();
-            console.log(JSON.stringify({deleted:deletions,skipped}));
+            console.log(JSON.stringify({candidates:candidateMap.size,deleted,skipped,errors}));
+            if (errors.length) core.setFailed('Some protected refs could not be deleted; see audited list.');
