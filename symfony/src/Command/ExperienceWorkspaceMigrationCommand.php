@@ -42,7 +42,8 @@ final class ExperienceWorkspaceMigrationCommand extends Command
 
         $io->title('COS Experience EX-005 Workspace Migration');
         $io->definitionList(
-            ['State' => $plan->blocked ? 'BLOCKED' : 'READY'],
+            ['Planning' => 'READY'],
+            ['Execution gate' => $plan->blocked ? 'BLOCKED' : 'READY'],
             ['Reason' => $plan->blockedReason !== '' ? $plan->blockedReason : 'Golden gate satisfied'],
             ['Pages queued' => $plan->pages],
             ['Autonomy' => 'L3 max; HIGH risk capped at L2'],
