@@ -44,6 +44,13 @@ $check(str_contains($gateway,'new CapabilityJsonInputValidator()'), 'Gateway mus
 $check(str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetGetAdapter.php'),'new GetPropertyQuery(')
     && str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetUpdateAdapter.php'),'new UpdatePropertyCommand('),
     'Additional Property capabilities must delegate to existing buses.');
+$form=$get('symfony/src/Web/Capability/CapabilityLibraryController.php');
+$check(str_contains($form,"'property.asset.create'") && str_contains($form,"'property.asset.get'")
+    && str_contains($form,'$this->csrf->isValid($request)')
+    && str_contains($get('symfony/templates/experience/capability/library.html.twig'),"path('cos_capabilities_property_create')"),
+    'Canonical Property form must reuse Gateway, CSRF and independent read.');
+$check(str_contains($get('symfony/config/routes.yaml'),'cos_capabilities_property_create'),
+    'Property form route missing.');
 $check(!str_contains($gateway,'PDO')&&!str_contains($gateway,'ActionExecutor'),
     'Parallel execution authority not permitted.');
 echo "Canonical capability library contract PASS.\n";

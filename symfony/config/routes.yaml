@@ -21,6 +21,11 @@ cos_capabilities_workspace:
   controller: App\Web\Capability\CapabilityLibraryController::index
   methods: [GET]
 
+cos_capabilities_property_create:
+  path: /workspace/capabilities/property/create
+  controller: App\Web\Capability\CapabilityLibraryController::createProperty
+  methods: [POST]
+
 
 # COS Federation Goal/Outcome draft workspace.
 # Read-only, Domain-attested Goal-wide progress (no auto approval or execution).

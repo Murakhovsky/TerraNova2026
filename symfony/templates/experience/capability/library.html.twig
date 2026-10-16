@@ -8,6 +8,45 @@
     <p class="cos-card__copy">Єдині контракти Domain-операцій для UI, API, AI та автоматизацій. Опис команди не є дозволом на її виконання.</p>
     <a class="cos-button cos-button--ghost" href="/workspace/goals">До цілей</a>
   </header>
+  {% if verifiedPropertyId %}
+    <div class="cos-alert cos-alert--success" role="status">
+      Property Asset <code>{{ verifiedPropertyId }}</code> знайдено повторним читанням із Domain.
+      Це ще не Inventory і не публічне оголошення.
+    </div>
+  {% elseif notice == 'invalid' %}
+    <div class="cos-alert" role="alert">Не вдалося зберегти об'єкт. Перевірте поля, права та повторіть із новим ключем операції.</div>
+  {% elseif notice == 'unverified' %}
+    <div class="cos-alert" role="alert">Створення потребує додаткової перевірки. Не повторюйте операцію без звірки з Property.</div>
+  {% elseif notice == 'unavailable' %}
+    <div class="cos-alert" role="alert">Операція тимчасово недоступна. Перевірте поточний стан Property перед повторенням.</div>
+  {% endif %}
+  <section class="cos-card" aria-labelledby="property-asset-quick-create">
+    <p class="cos-card__eyebrow">Property · тестова операція</p>
+    <h2 id="property-asset-quick-create" class="cos-card__title">Створити об'єкт нерухомості</h2>
+    <p class="cos-card__copy">Один об'єкт за раз. Запис лише в Property Asset, без створення пропозиції продажу чи публікації.</p>
+    <form class="cos-page__stack" method="post" action="{{ path('cos_capabilities_property_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+      <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
+      <div class="cos-section-grid">
+        <label class="cos-field"><span>Тип об'єкта</span>
+          <input class="cos-input" name="type_code" value="house" maxlength="200" required>
+        </label>
+        <label class="cos-field"><span>Місто</span>
+          <input class="cos-input" name="city" maxlength="200" required>
+        </label>
+        <label class="cos-field"><span>Область</span>
+          <input class="cos-input" name="region" maxlength="200">
+        </label>
+        <label class="cos-field"><span>Адреса</span>
+          <input class="cos-input" name="address" maxlength="400">
+        </label>
+        <label class="cos-field"><span>Загальна площа, м²</span>
+          <input class="cos-input" name="area_total" type="number" step="0.01" min="0" max="1000000">
+        </label>
+      </div>
+      <button class="cos-button cos-button--primary" type="submit">Створити Property Asset</button>
+    </form>
+  </section>
   {% for capability in capabilities %}
     <article class="cos-card" data-capability-id="{{ capability.id }}">
       <p class="cos-card__eyebrow">{{ capability.owner_domain }} · {{ capability.status }}</p>
