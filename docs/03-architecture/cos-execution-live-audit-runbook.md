@@ -20,23 +20,28 @@ Workflow перевіряє Git SHA на VPS, SHA файла CLI всереди�
 
 Навіть за наявності трьох read-only звітів комбінована команда повертає `incomplete`, якщо лишилися непромотовані історичні Federation Runs, Engineering Features без rollout-атестації, поточні/невизначені Engineering claims, або Kernel не має достовірних незалежних receipts. Окремо виявляються Engineering links без native AgentRun чи canonical Run та canonical technical Runs без links; це `drift`. Обсяг Engineering cohort рахується від **усіх** tenant Features, не від pilot allowlist. Protected live workflow звіряє вихід із розгорнутим Git SHA і повним manifest production PHP code/DI на кожному активному PHP контейнері; наявність GitHub workflow без реально успішного job не є доказом перевірки.
 
-## AWS dev non-mutating preflight (2026-10-16)
+## Безпечний попередній аудит AWS dev (2026-10-16)
 
-A push to the Federation feature branch that changes the live-audit workflow invokes a
-**separate infrastructure-only preflight** under protected GitHub Environment `AWS TN2026`.
-It requires existing SSH secrets and `DEV_PATH`, **not** a tenant ID. It reads available
-memory/disk, Docker container state, deployed route source and compares the route-file hash
-against checked-out `main` and Federation source. It never deploys, creates a tenant,
-modifies a database, runs migrations or changes containers. Its exit status means only
-that the read-only inventory ran, **not** that staging or Golden 50 passed.
+Коли у гілці Federation змінюється файл workflow, запуск через push виконує
+**окремий попередній аудит інфраструктури** із захищеним середовищем GitHub
+`AWS TN2026`. Для нього необхідні наявні SSH-секрети та `DEV_PATH`,
+але не потрібен ідентифікатор tenant. Аудит лише читає доступну оперативну
+пам'ять, місце на диску, стан контейнерів Docker і маршрути Symfony.
+Контрольна сума розгорнутого файлу маршрутів зіставляється зі станом `main`
+та Federation. Аудит не розгортає код, не створює tenant, не змінює БД,
+не запускає міграції та не перезапускає контейнери. Успішний job означає
+виключно успішне збирання відомостей, **не приймання staging чи Golden 50**.
 
-The original tenant-wide authority inspection remains manual-only
-(`workflow_dispatch`); it still requires an existing tenant, exact deployed SHA and
-operator/environment authorization. **Known deployment mismatch:** the `main` runtime
-workflow uses `rsync --exclude='.git/'`, whereas the existing live-audit expects
-`DEV_PATH/.git` and equates deployed SHA with the feature workflow SHA. Thus a
-successful preflight cannot fix the missing deployed-SHA attestation. Before tenant
-inspection or staging, introduce an authenticated, immutable release manifest emitted
-by deployment, compare running PHP consumers against that manifest, and use an
-explicit isolated staging tenant/compose project. Never fake a deployed PR SHA, and
-never infer Golden 50 acceptance from green CI or an accessible `/workspace/goals`.
+Повний аудит технічного виконання конкретного tenant запускається окремо
+лише вручну через `workflow_dispatch`. Для нього потрібні дійсний tenant,
+точний SHA розгорнутого коду та дозвіл оператора і захищеного середовища.
+
+**Виявлена невідповідність:** поточне розгортання `main` використовує
+`rsync --exclude='.git/'`, але попередня реалізація повного live-аудиту
+вимагає `DEV_PATH/.git` і помилково прирівнює SHA розгорнутого коду
+до SHA workflow з гілки Federation. Тому попередній аудит не закриває
+відсутню атестацію фактичної версії. Перед повним аудитом і staging
+потрібно додати незмінний маніфест релізу з перевіркою поточних PHP
+контейнерів, а також ізолювати tenant, БД і Docker Compose project.
+Не можна підміняти SHA чи вважати доступну сторінку `/workspace/goals`
+доказом успішного Golden 50.
