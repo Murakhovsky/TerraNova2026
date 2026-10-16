@@ -1,0 +1,31 @@
+version: 1
+status: draft
+purpose: "Keep Experience V1 priorities tied to user and business impact instead of route count or implementation convenience."
+principles:
+  - "Priority expresses the cost of failure for the user or business, not how visible or easy a route is to implement."
+  - "Do not automatically reclassify routes without evidence that can be reviewed."
+  - "Keep security, authorization, data integrity, and irreversible actions as explicit risk multipliers."
+  - "A public route is not P0 merely because it is public; an admin route is not low priority merely because it is internal."
+evidence_dimensions:
+  impact: "What user, revenue, safety, compliance, or data-integrity harm occurs if the workflow fails?"
+  frequency: "How often do target users perform the workflow? Prefer observed analytics or operational counts."
+  failure_cost: "What is the cost of delay, duplicate work, incorrect decisions, or recovery?"
+  workaround: "Is there a safe and practical alternative path?"
+  risk: "Could failure expose data, violate authorization, corrupt records, or cause irreversible effects?"
+levels:
+  P0:
+    meaning: "Critical path; failure blocks a core operation or creates material security, data-integrity, compliance, or irreversible-action risk."
+    evidence_required: [impact, failure_cost, risk, accountable_owner]
+  P1:
+    meaning: "High-value operational workflow; failure materially slows frequent work or blocks an important business outcome, with limited workaround."
+    evidence_required: [impact, frequency, workaround, accountable_owner]
+  P2:
+    meaning: "Important capability with a usable workaround or a moderate cost of failure."
+    evidence_required: [impact, workaround, accountable_owner]
+  P3:
+    meaning: "Occasional, low-impact workflow where failure has a small and recoverable cost."
+    evidence_required: [frequency, failure_cost, accountable_owner]
+review:
+  cadence: "At each release-planning cycle and when usage or failure evidence materially changes."
+  decision_record_fields: [route_id, current_priority, proposed_priority, evidence, rationale, reviewer, reviewed_at]
+  rule: "Until evidence is reviewed, preserve the existing priority and keep the uncertainty visible."

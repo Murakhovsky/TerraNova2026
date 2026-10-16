@@ -1,0 +1,51 @@
+version: 1
+status: active
+
+items:
+  - id: UX-001
+    severity: MAJOR
+    status: CLOSED
+    category: contract_quality
+    scope: registry
+    problem: "Auto-inventoried Page Contracts still contain generic primary-goal/page-purpose copy instead of page-specific product intent."
+    exit: "Every active P0/P1 contract has page-specific user goal and purpose."
+
+  - id: UX-002
+    severity: MAJOR
+    status: CLOSED
+    category: prioritization
+    scope: registry
+    problem: "P0/P1 currently covers most registered pages, weakening migration ordering and release signal."
+    exit: "Priority distribution is reviewed and P0 is restricted to truly critical journeys."
+
+  - id: UX-003
+    severity: MAJOR
+    status: OPEN
+    category: golden_quality
+    scope: growth.overview
+    problem: "Growth Golden page has automated browser evidence but remains below production-acceptable UX/visual quality score."
+    exit: "Human review resolves UX/visual findings and the page reaches the agreed Golden target without automatic V1_READY promotion."
+
+  - id: UX-004
+    severity: MAJOR
+    status: OPEN
+    category: capital_markets_experience
+    scope: Capital Markets
+    problem: "Capital Markets functionality has expanded faster than its visual/responsive Experience quality."
+    exit: "Capital Markets active P0/P1 surfaces complete governed visual, responsive and accessibility delivery."
+
+  - id: UX-005
+    severity: MAJOR
+    status: OPEN
+    category: contract_quality
+    scope: registry
+    problem: "Route-specific goals alone do not establish actionable primary controls, real error/empty/permission states, or verifiable outcomes (preserved from #366 UXD-001)."
+    exit: "Validate active P0/P1 user actions and state transitions against the implemented pages; do not auto-promote V1_READY."
+
+  - id: UX-006
+    severity: MAJOR
+    status: OPEN
+    category: evidence_provenance
+    scope: registry
+    problem: "Automated Golden Eight evidence is not consistently reconciled into page contracts with run, SHA and artifact provenance (preserved from #366 UXD-003)."
+    exit: "Bind QA evidence to commit, run and artifact identifiers while keeping human acceptance a separate decision."

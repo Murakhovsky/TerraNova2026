@@ -12,7 +12,7 @@ final class PageDeliveryAgentContract
     {
         return [
             AgentRole::PRODUCT_REQUIREMENTS->value => [
-                'responsibility' => 'Convert Page Contract and product intent into a bounded Feature Specification and delivery plan.',
+                'responsibility' => 'Act as Product UX Architect: convert Page Contract, persona, journey and product intent into a bounded Feature Specification and delivery plan.',
                 'must_preserve' => ['page_id','route','domain','capability','priority','primary_goal','human_gate'],
             ],
             AgentRole::QA_PLANNER->value => [
@@ -20,8 +20,8 @@ final class PageDeliveryAgentContract
                 'must_verify' => ['functional','browser','desktop','mobile','overflow','keyboard','accessibility','browser_errors','screenshots'],
             ],
             AgentRole::PRINCIPAL_ARCHITECT->value => [
-                'responsibility' => 'Select canonical Experience architecture without creating parallel frontend or Domain UI infrastructure.',
-                'must_preserve' => ['archetype','patterns','states','responsive','security_boundaries'],
+                'responsibility' => 'Act as Design System Guardian and Principal Architect: select canonical Experience architecture, resolve Design System gaps through governed decisions, and prevent parallel frontend or Domain UI infrastructure.',
+                'must_preserve' => ['archetype','patterns','states','responsive','security_boundaries','design_system_gap_policy'],
             ],
             AgentRole::DEVELOPER->value => [
                 'responsibility' => 'Implement the registered page using canonical Experience components and the approved architecture.',

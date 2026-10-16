@@ -7,6 +7,7 @@ use App\Web\Experience\DesignSystem\DesignSystemAuditService;
 use App\Web\Experience\External\ExternalReferenceAuditService;
 use App\Web\Experience\Golden\GoldenExperienceSet;
 use App\Web\Experience\Golden\GoldenDecisionRegistry;
+use App\Web\Experience\Governance\ProductUxGovernanceService;
 use App\Web\Experience\Registry\ExperienceRouteInventory;
 use App\Web\Experience\Registry\PageContractRegistryInterface;
 use App\Web\Experience\Registry\PageExperienceStatus;
@@ -24,6 +25,7 @@ final readonly class ExperienceReleaseHardeningService
         private ExternalReferenceAuditService $externalReferences,
         private ExperienceAssetDebtScanner $assetDebt,
         private ExperienceRouteDebtScanner $routeDebt,
+        private ProductUxGovernanceService $productUx,
     ) {}
 
     public function report(): ExperienceReleaseReport
@@ -32,9 +34,12 @@ final readonly class ExperienceReleaseHardeningService
         $routes = $this->routes->productionHtmlRoutes();
         $exemptions = $this->exemptions->all();
 
+        // Canonical release-candidate set excludes retired or exempt contracts.
+        $retired = [PageExperienceStatus::Deprecated, PageExperienceStatus::Superseded, PageExperienceStatus::Exempt];
+        $releaseCandidates = array_values(array_filter($contracts, static fn ($page): bool => !in_array($page->status, $retired, true)));
         $p0 = [];
         $p1 = [];
-        foreach ($contracts as $page) {
+        foreach ($releaseCandidates as $page) {
             if ($page->priority === 'P0') $p0[] = $page;
             if ($page->priority === 'P1') $p1[] = $page;
         }
@@ -61,9 +66,11 @@ final readonly class ExperienceReleaseHardeningService
         $external = $this->externalReferences->audit();
         $assets = $this->assetDebt->scan();
         $routeDebt = $this->routeDebt->scan();
+        $productUx = $this->productUx->report();
 
         $gates = [
             'registry_coverage' => ['actual' => $coverage, 'required' => 100, 'pass' => $coverage === 100],
+            'release_candidate_scope' => ['active' => count($releaseCandidates), 'excluded_retired' => count($contracts) - count($releaseCandidates), 'pass' => true],
             'design_system' => ['pass' => $design->isGreen(), 'deprecated_components' => $design->deprecated],
             'deprecated_component_cleanup' => ['pass' => $design->deprecated === 0, 'actual' => $design->deprecated, 'required' => 0],
             'stale_route_cleanup' => [
@@ -71,6 +78,27 @@ final readonly class ExperienceReleaseHardeningService
                 'missing' => count($routeDebt->missing),
                 'stale' => count($routeDebt->stale),
                 'mismatched' => count($routeDebt->mismatched),
+            ],
+            'product_ux_structure' => [
+                'pass' => $productUx->isStructurallyReady(),
+                'personas' => $productUx->personas,
+                'journeys' => $productUx->journeys,
+                'terminology_terms' => $productUx->terminologyTerms,
+            ],
+            'product_contract_copy' => [
+                'pass' => $productUx->genericContractCopy === [],
+                'actual' => count($productUx->genericContractCopy),
+                'required' => 0,
+            ],
+            'ux_debt_blockers' => [
+                'pass' => $productUx->blockingUxDebt === 0,
+                'actual' => $productUx->blockingUxDebt,
+                'required' => 0,
+            ],
+            'design_system_gap_blockers' => [
+                'pass' => $productUx->blockingDesignSystemGaps === 0,
+                'actual' => $productUx->blockingDesignSystemGaps,
+                'required' => 0,
             ],
             'golden_decision_ledger' => ['actual' => count($this->goldenDecisions->all()), 'required' => 8, 'pass' => count($this->goldenDecisions->all()) === 8],
             'golden_human_approval' => ['actual' => $this->goldenDecisions->acceptedCount(), 'required' => $golden->required, 'pass' => $golden->isComplete()],
