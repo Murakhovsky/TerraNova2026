@@ -1,3 +1,20 @@
+# HMAC-authenticated machine proposals only, no Action dispatch.
+cos_automation_intents_submit:
+  path: /api/v1/capability-intents/property-bulk
+  controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submit
+  methods: [POST]
+
+cos_automation_intents_workspace:
+  path: /workspace/capabilities/intents
+  controller: App\Web\Capability\AutomationIntentReviewController::index
+  methods: [GET]
+
+cos_automation_intents_adopt:
+  path: /workspace/capabilities/intents/{intentId}/adopt
+  controller: App\Web\Capability\AutomationIntentReviewController::adopt
+  methods: [POST]
+  requirements: { intentId: 'intent-[a-f0-9]{24}' }
+
 # Property bulk review: only canonical Federation Plan proposal, no bypass.
 cos_property_bulk_workspace:
   path: /workspace/property/bulk

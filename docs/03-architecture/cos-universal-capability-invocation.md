@@ -123,3 +123,36 @@ Property search/read. Неоднозначне зіставлення або п�
 Domain-backed Run evidence provider: перевірений Action receipt,
 immutable approved Plan, завершений Run і фактично існуючі native
 Property Assets. Статус Workflow сам по собі не є бізнес-результатом.
+
+## Машинні запити AI/CRON, без виконання від імені людини
+
+`POST /api/v1/capability-intents/property-bulk` приймає тільки
+`{"capability_id":"property.bulk.create","items":[...]}`, не більше
+10 об'єктів. Машинні headers:
+
+- `X-COS-Automation-Origin`: `ai` або `cron`;
+- `X-COS-Automation-Timestamp`: unix time у секундах;
+- `X-COS-Automation-Nonce`: випадкова ASCII послідовність 16–80 знаків;
+- `X-COS-Automation-Signature`: lowercase hex HMAC-SHA256.
+
+Підписуються точні байти:
+`origin + "\n" + timestamp + "\n" + nonce + "\n" + raw_request_body`.
+Два різні ключі (`COS_AI_CAPABILITY_INTENT_SECRET` і
+`COS_CRON_CAPABILITY_INTENT_SECRET`), не менш як 32 байти кожний.
+`COS_AUTOMATION_TENANT_ORGANIZATION` задає **серверну**
+організацію. Порожні секрети й org блокують виклики за замовчуванням.
+Підпис чинний не більше 300 секунд. Повторний nonce заборонений.
+Тіло запиту не може вказувати tenant або права.
+
+Машина зберігає тільки `pending_review` у
+`cos_capability_automation_intents`. Ніякого Action/Workflow старту.
+Менеджер відкриває `/workspace/capabilities/intents`, перевіряє
+дані й з CSRF приймає їх у Property staging. Далі працюють ті самі
+перевірки дублікатів та незалежні Plan/Action approvals у Goals.
+Тому джерела AI та CRON тепер підключені до **одного шляху Plan →
+Platform Workflow**, не маючи повноважень запускати мутації напряму.
+
+Цей режим не є повністю автономним безлюдним виконанням. Автоматичне
+продовження затвердженого Run від сервісного облікового запису
+потребує окремої керованої делегації й чинної Identity/Policy,
+якої ця версія не видає. Це навмисне обмеження безпеки.

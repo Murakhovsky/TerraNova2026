@@ -65,3 +65,25 @@ pages:
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: core.automation.intents
+    route: { name: cos_automation_intents_workspace, path: "/workspace/capabilities/intents", methods: [GET] }
+    surface: workspace
+    domain: Core
+    capability: core.capabilities.view
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Переглянути, перевірити і прийняти пропозицію AI/CRON без машинних дозволів на виконання."
+      page_purpose: "Людське погодження переходу машинного intent до незмінного Property staging."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: property.bulk.intent.adopt
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }

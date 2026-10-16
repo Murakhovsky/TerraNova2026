@@ -1,4 +1,7 @@
 parameters:
+  env(COS_AI_CAPABILITY_INTENT_SECRET): ''
+  env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
+  env(COS_AUTOMATION_TENANT_ORGANIZATION): ''
   env(N8N_WEBHOOK_SECRET): ''
   env(COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY): '0'
   env(COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY): '0'
@@ -119,6 +122,12 @@ services:
 
   App\:
     resource: '../src/'
+
+  App\Application\Capability\AutomationIntentSignatureVerifier:
+    arguments:
+      $aiSecret: '%env(COS_AI_CAPABILITY_INTENT_SECRET)%'
+      $cronSecret: '%env(COS_CRON_CAPABILITY_INTENT_SECRET)%'
+      $organizationId: '%env(COS_AUTOMATION_TENANT_ORGANIZATION)%'
 
   App\Application\Capability\CanonicalCapabilityGateway:
     arguments:
@@ -642,6 +651,7 @@ services:
 
   Domains\Property\Application\Service\PropertyIdentityWorkflowService: ~
 
+  Domains\Property\Automation\Action\PropertyBulkCreateHandler: ~
   Domains\Property\Bootstrap\PropertyDomainModule:
     arguments:
       $bulkHandler: '@Domains\Property\Automation\Action\PropertyBulkCreateHandler'
@@ -3799,6 +3809,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Sales\ClientCaseMutationController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Capability\AutomationIntentReviewController:
     public: true
     tags: ['controller.service_arguments']
 

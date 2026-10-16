@@ -68,6 +68,8 @@ jobs:
         run: php tests/architecture/property_bulk_intake_workflow_contract.php
       - name: Property Bulk Intake fail-closed normalization
         run: php tests/unit/property_bulk_intake_normalization.php
+      - name: AI and CRON intent signature and review admission
+        run: php tests/unit/cos_automation_intent_security.php
       - name: Kernel Tool canonical retry contract
         run: php tests/unit/workflow_kernel_tool_safe_retry.php
       - name: Capital Markets streaming core, reconnect and Binance protocol acceptance

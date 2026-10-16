@@ -52,6 +52,7 @@ return [
             'app/migrations/20260915_000059_property_v0120_runtime_cutover.sql',
             'app/migrations/20260928_000117_property_v100_hardening.sql',
             'app/migrations/20261016_000150_property_bulk_intake.sql',
+            'app/migrations/20261016_000151_capability_automation_intents.sql',
         ],
         'capability_contracts' => [
             [
