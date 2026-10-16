@@ -36,8 +36,8 @@
             <p class="cos-card__eyebrow">New automation</p>
             <h2 class="cos-card__title">Create draft rule</h2>
             <form data-action="submit->sales-admin-rules#create" class="cos-pattern-stack">
-                <label class="cos-field"><span>Name</span><input class="cos-input" name="name" required maxlength="220"></label>
-                <label class="cos-field"><span>Code</span><input class="cos-input" name="code" pattern="sales\.[a-z0-9_.-]{3,140}" placeholder="sales.admin.no_activity_48h"></label>
+                <label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" required maxlength="220"></label>
+                <label class="cos-field"><span>{{ 'Code'|trans }}</span><input class="cos-input" name="code" pattern="sales\.[a-z0-9_.-]{3,140}" placeholder="sales.admin.no_activity_48h"></label>
                 <label class="cos-field"><span>WHEN</span><select class="cos-select" name="trigger_key" required>{% for trigger in catalog.triggers ?? [] %}<option value="{{ trigger.key }}">{{ trigger.label }}</option>{% endfor %}</select></label>
                 <label class="cos-field"><span>Initial THEN</span><select class="cos-select" name="action_type" required>{% for action in draftActions %}{% if not (action.required ?? false) %}<option value="{{ action.type }}">{{ action.label ?? action.type }}</option>{% endif %}{% endfor %}</select></label>
                 <button class="cos-button cos-button--primary" type="submit">Create draft</button>

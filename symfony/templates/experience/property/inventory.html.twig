@@ -28,7 +28,7 @@
 
     <twig:CosToolbar label="Property collection tools" density="compact">
         {% block start %}
-            <span class="cos-card__copy">Search, filters, pagination і mobile cards працюють через один DataGrid contract.</span>
+            <span class="cos-card__copy">{{ 'Search, filters, pagination і mobile cards працюють через один DataGrid contract.'|trans }}</span>
         {% endblock %}
         {% block end %}
             <twig:CosButton label="Reset view" href="{{ inventory.baseUrl }}" variant="ghost" size="sm" />

@@ -32,12 +32,12 @@
             tone="warning"
         />
     {% elseif dashboard.error %}
-        <twig:CosAlert title="Company Home недоступний" copy="{{ dashboard.error }}" tone="danger" />
+        <twig:CosAlert title="{{ 'Company Home недоступний'|trans }}" copy="{{ dashboard.error }}" tone="danger" />
     {% else %}
         <section class="cos-page__section" aria-labelledby="executive-kpis">
-            <h2 id="executive-kpis" class="cos-section-title">Company pulse</h2>
+            <h2 id="executive-kpis" class="cos-section-title">{{ 'Company pulse'|trans }}</h2>
             {% if dashboard.metrics is empty %}
-                <twig:CosEmptyState title="Немає KPI для показу" copy="Активні модулі поки не повернули керівні метрики." />
+                <twig:CosEmptyState title="{{ 'Немає KPI для показу'|trans }}" copy="Активні модулі поки не повернули керівні метрики." />
             {% else %}
                 <div class="cos-kpi-strip">
                     {% for metric in dashboard.metrics %}
@@ -50,9 +50,9 @@
             {% endif %}
         </section>
 
-        <section class="cos-page__section cos-section-grid" aria-label="Operational attention">
+        <section class="cos-page__section cos-section-grid" aria-label="{{ 'Operational attention'|trans }}">
             <article class="cos-card">
-                <p class="cos-card__eyebrow">Today</p>
+                <p class="cos-card__eyebrow">{{ 'Today'|trans }}</p>
                 <h2 class="cos-card__title">Операційний фокус</h2>
                 {% set salesState = dashboard.sectionStates.sales %}
                 {% if salesState.state == 'normal' %}
@@ -67,7 +67,7 @@
             </article>
 
             <article class="cos-card">
-                <p class="cos-card__eyebrow">COS attention</p>
+                <p class="cos-card__eyebrow">{{ 'COS attention'|trans }}</p>
                 <h2 class="cos-card__title">Автоматизація та контроль</h2>
                 {% set cosState = dashboard.sectionStates.cos %}
                 {% if cosState.state == 'normal' %}
@@ -82,9 +82,9 @@
             </article>
         </section>
 
-        <section class="cos-page__section cos-section-grid" aria-label="Business pulse">
+        <section class="cos-page__section cos-section-grid" aria-label="{{ 'Business pulse'|trans }}">
             <article class="cos-card">
-                <p class="cos-card__eyebrow">Fresh demand</p>
+                <p class="cos-card__eyebrow">{{ 'Fresh demand'|trans }}</p>
                 <h2 class="cos-card__title">Нові ліди</h2>
                 {% set salesState = dashboard.sectionStates.sales %}
                 {% if salesState.state != 'normal' %}
@@ -106,19 +106,19 @@
             </article>
 
             <article class="cos-card">
-                <p class="cos-card__eyebrow">Property pulse</p>
+                <p class="cos-card__eyebrow">{{ 'Property pulse'|trans }}</p>
                 <h2 class="cos-card__title">Публічний каталог</h2>
                 {% set propertyState = dashboard.sectionStates.property %}
                 {% if propertyState.state != 'normal' %}
                     <twig:CosAlert title="{{ propertyState.title }}" copy="{{ propertyState.copy }}" tone="{{ propertyState.state == 'error' ? 'warning' : 'info' }}" />
                 {% else %}
-                    <div class="cos-entity-summary" aria-label="Property catalog summary">
+                    <div class="cos-entity-summary" aria-label="{{ 'Property catalog summary'|trans }}">
                         <div class="cos-entity-summary__item">
-                            <span>Published</span>
+                            <span>{{ 'Published'|trans }}</span>
                             <strong>{{ dashboard.propertySummary.published }}</strong>
                         </div>
                         <div class="cos-entity-summary__item">
-                            <span>Active</span>
+                            <span>{{ 'Active'|trans }}</span>
                             <strong>{{ dashboard.propertySummary.active }}</strong>
                         </div>
                     </div>
@@ -142,7 +142,7 @@
 
         <section class="cos-page__section">
             <article class="cos-card">
-                <p class="cos-card__eyebrow">Runtime modules</p>
+                <p class="cos-card__eyebrow">{{ 'Runtime modules'|trans }}</p>
                 <h2 class="cos-card__title">Підключені модулі</h2>
                 {% set modulesState = dashboard.sectionStates.modules %}
                 {% if modulesState.state != 'normal' %}
@@ -167,7 +167,7 @@
 
         <section class="cos-page__section">
             <article class="cos-card">
-                <p class="cos-card__eyebrow">Decision queue</p>
+                <p class="cos-card__eyebrow">{{ 'Decision queue'|trans }}</p>
                 <h2 class="cos-card__title">Що чекає рішення</h2>
                 {% if dashboard.decisions is empty %}
                     <twig:CosEmptyState title="Черга рішень порожня" copy="Немає відкритих actions або approvals, що потребують уваги." />

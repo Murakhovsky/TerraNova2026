@@ -598,3 +598,35 @@ turbo-frame[aria-busy="true"] .cos-command__list {
     transition: none;
   }
 }
+
+
+/* Locale switcher: compact, persistent control in the global workspace shell. */
+.cos-shell__locale-form {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.cos-shell__locale-select {
+  max-width: 8.5rem;
+  min-height: 2.5rem;
+  padding: 0 var(--cos-space-3);
+  color: var(--cos-color-shell-text);
+  background: var(--cos-color-shell);
+  border: 1px solid var(--cos-color-shell-border);
+  border-radius: var(--cos-radius-sm);
+  font: inherit;
+  font-size: var(--cos-font-xs);
+  font-weight: 650;
+}
+
+.cos-shell__locale-select:focus-visible {
+  outline: 2px solid var(--cos-color-primary-strong);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1050px) {
+  .cos-shell__locale-select {
+    max-width: 6.4rem;
+  }
+}

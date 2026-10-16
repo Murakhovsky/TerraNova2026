@@ -43,9 +43,9 @@
             <input class="cos-input" type="search" name="q" value="{{ spatial.filters.q }}" placeholder="Сцена або об’єкт">
         </label>
         <label class="cos-field">
-            <span>Статус</span>
+            <span>{{ 'Статус'|trans }}</span>
             <select class="cos-select" name="status">
-                <option value="">Усі</option>
+                <option value="">{{ 'Усі'|trans }}</option>
                 {% for code, label in spatial.statusOptions %}
                     <option value="{{ code }}" {% if spatial.filters.status == code %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -73,7 +73,7 @@
                 </div>
 
                 {% if spatial.scenes is empty %}
-                    <twig:CosEmptyState title="Spatial сцен ще немає" copy="Створіть першу сцену або змініть фільтри." />
+                    <twig:CosEmptyState title="Spatial сцен {{ 'ще немає'|trans }}" copy="Створіть першу сцену або змініть фільтри." />
                 {% else %}
                     <div class="cos-entity-list" role="list">
                         {% for scene in spatial.scenes %}
@@ -95,8 +95,8 @@
                     <p class="cos-card__copy">Spatial лишається окремою supporting domain. Property лише посилається на scene lifecycle через явні contracts.</p>
                     <dl class="cos-entity-summary">
                         <div><dt>Processing</dt><dd>{{ spatial.stats.processing ?? 0 }}</dd></div>
-                        <div><dt>Review</dt><dd>{{ spatial.stats.review ?? 0 }}</dd></div>
-                        <div><dt>Failed</dt><dd>{{ spatial.stats.failed ?? 0 }}</dd></div>
+                        <div><dt>{{ 'Review'|trans }}</dt><dd>{{ spatial.stats.review ?? 0 }}</dd></div>
+                        <div><dt>{{ 'Failed'|trans }}</dt><dd>{{ spatial.stats.failed ?? 0 }}</dd></div>
                         <div><dt>Pending jobs</dt><dd>{{ spatial.stats.pending_jobs ?? 0 }}</dd></div>
                     </dl>
                     <a class="cos-button cos-button--primary" href="/spatial/edit">Створити сцену</a>

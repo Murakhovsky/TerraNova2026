@@ -1,5 +1,32 @@
 import { Controller } from '@hotwired/stimulus';
 
+const UI = {
+    uk: {
+        staleProcess:'процес неактивний', stalledProcess:'процес зупинено', completedProcess:'процес завершено',
+        stopPrefix:'оновлення зупинено · ', heartbeatPrefix:'сигнал: ', noNewEvents:'без нових подій · перевірено щойно',
+        newEvent:'нова подія · щойно', updateError:this.ui().updateError, checkedNow:'перевірено щойно',
+        checkedSecondsAgo:'перевірено {n} с тому', heartbeatNA:'heartbeat немає', noData:'немає даних', justNow:'щойно',
+        secondsAgo:'{n} с тому', minutesAgo:'{n} хв тому', hoursAgo:'{n} г{minutes} тому', daysAgo:'{n} д{hours} тому',
+        noActiveOperations:this.ui().noActiveOperations, lastPrefix:'останнє: ', event:'подія',
+        noExecutionEvents:this.ui().noExecutionEvents, seconds:'с', minutes:'хв', hours:'г', days:'д',
+        status:{RUNNING:'ВИКОНУЄТЬСЯ',HEALTHY:'НОРМА',STALE:'НЕАКТИВНИЙ',STALLED:'ЗУПИНЕНО',WAITING:'ОЧІКУЄ',TERMINAL:'ЗАВЕРШЕНО',COMPLETED:'ЗАВЕРШЕНО',CANCELLED:'СКАСОВАНО',FAILED:'ПОМИЛКА',ERROR:'ПОМИЛКА',STARTED:'РОЗПОЧАТО',APPROVED:'СХВАЛЕНО',PASS:'ПРОЙДЕНО',PASSED:'ПРОЙДЕНО',SUCCESS:'УСПІШНО',TIMED_OUT:'ЧАС ВИЙШОВ',NOT_REACHED:'ЩЕ НЕ РОЗПОЧАТО',ANALYSIS:'АНАЛІЗ',QA_PLANNING:'ПЛАН ПЕРЕВІРКИ',ARCHITECTURE_PENDING:'АРХІТЕКТУРА',DEVELOPMENT_RUNNING:'РОЗРОБКА',REVIEW_PENDING:'РЕВ’Ю',QA_PENDING:'QA',READY_FOR_HUMAN_APPROVAL:'ОЧІКУЄ ПІДТВЕРДЖЕННЯ',HUMAN_DECISION_REQUIRED:'ПОТРІБНЕ РІШЕННЯ',BLOCKED:'ЗАБЛОКОВАНО',ESCALATED:'ЕСКАЛОВАНО',DONE:'ГОТОВО',QUEUED:'У ЧЕРЗІ',NEW:'НОВЕ',UNKNOWN:'НЕВІДОМО'},
+        role:{ENGINEERING_MANAGER:'Менеджер / координатор',PRODUCT_REQUIREMENTS:'Продукт / вимоги',QA_PLANNER:'Планувальник QA',PRINCIPAL_ARCHITECT:'Головний архітектор',ARCHITECT:'Архітектор',DEVELOPER:'Розробник',REVIEWER:'Рев’юер',QA_EXECUTOR:'Виконавець QA',INTEGRATION_RELEASE:'Інтеграція / реліз',SECURITY_SPECIALIST:'Фахівець із безпеки',DATABASE_MIGRATION_SPECIALIST:'Фахівець із міграцій БД',PERFORMANCE_SPECIALIST:'Фахівець із продуктивності',DEVOPS_SPECIALIST:'Фахівець DevOps',DOCUMENTATION_SPECIALIST:'Фахівець із документації',API_SPECIALIST:'Фахівець з API',QA:'QA (застарілий)',AGENT:'Агент'},
+        eventType:{REPOSITORY:'РЕПОЗИТОРІЙ',WATCHDOG:'КОНТРОЛЬ',RUNTIME:'СИСТЕМА',AGENT:'АГЕНТ',TOOL:'ІНСТРУМЕНТ',WORKFLOW:'ПРОЦЕС',LLM:'LLM',EVENT:'ПОДІЯ'}
+    },
+    en: {
+        staleProcess:'process is stale', stalledProcess:'process is stalled', completedProcess:'workflow ended',
+        stopPrefix:'Live updates stopped · ', heartbeatPrefix:'Signal: ', noNewEvents:'No new events · checked just now',
+        newEvent:'New event · just now', updateError:'Update failed · retrying', checkedNow:'Checked just now',
+        checkedSecondsAgo:'Checked {n}s ago', heartbeatNA:'No heartbeat', noData:'No data', justNow:'just now',
+        secondsAgo:'{n}s ago', minutesAgo:'{n}m ago', hoursAgo:'{n}h{minutes} ago', daysAgo:'{n}d{hours} ago',
+        noActiveOperations:'No active operations', lastPrefix:'Last: ', event:'event',
+        noExecutionEvents:'No execution events yet.', seconds:'s', minutes:'m', hours:'h', days:'d',
+        status:{RUNNING:'RUNNING',HEALTHY:'HEALTHY',STALE:'STALE',STALLED:'STALLED',WAITING:'WAITING',TERMINAL:'TERMINAL',COMPLETED:'COMPLETED',CANCELLED:'CANCELLED',FAILED:'FAILED',ERROR:'ERROR',STARTED:'STARTED',APPROVED:'APPROVED',PASS:'PASSED',PASSED:'PASSED',SUCCESS:'SUCCEEDED',TIMED_OUT:'TIMED OUT',NOT_REACHED:'NOT REACHED',ANALYSIS:'ANALYSIS',QA_PLANNING:'QA PLANNING',ARCHITECTURE_PENDING:'ARCHITECTURE',DEVELOPMENT_RUNNING:'DEVELOPMENT',REVIEW_PENDING:'REVIEW',QA_PENDING:'QA',READY_FOR_HUMAN_APPROVAL:'AWAITING HUMAN APPROVAL',HUMAN_DECISION_REQUIRED:'DECISION REQUIRED',BLOCKED:'BLOCKED',ESCALATED:'ESCALATED',DONE:'DONE',QUEUED:'QUEUED',NEW:'NEW',UNKNOWN:'UNKNOWN'},
+        role:{ENGINEERING_MANAGER:'Manager / coordinator',PRODUCT_REQUIREMENTS:'Product / requirements',QA_PLANNER:'QA planner',PRINCIPAL_ARCHITECT:'Principal architect',ARCHITECT:'Principal architect',DEVELOPER:'Developer',REVIEWER:'Reviewer',QA_EXECUTOR:'QA executor',INTEGRATION_RELEASE:'Integration / release',SECURITY_SPECIALIST:'Security specialist',DATABASE_MIGRATION_SPECIALIST:'Database migration specialist',PERFORMANCE_SPECIALIST:'Performance specialist',DEVOPS_SPECIALIST:'DevOps specialist',DOCUMENTATION_SPECIALIST:'Documentation specialist',API_SPECIALIST:'API specialist',QA:'QA (legacy)',AGENT:'Agent'},
+        eventType:{REPOSITORY:'REPOSITORY',WATCHDOG:'WATCHDOG',RUNTIME:'RUNTIME',AGENT:'AGENT',TOOL:'TOOL',WORKFLOW:'WORKFLOW',LLM:'LLM',EVENT:'EVENT'}
+    }
+};
+
 export default class extends Controller {
     static targets = [
         'workflowStatus',
@@ -117,7 +144,7 @@ export default class extends Controller {
             if (this.hasHeartbeatTarget) {
                 const heartbeat = workflow.heartbeat_at || workflow.last_activity_at || '';
                 this.heartbeatTarget.dataset.timestamp = heartbeat;
-                this.heartbeatTarget.title = heartbeat ? this.formatTimestamp(heartbeat) : 'heartbeat n/a';
+                this.heartbeatTarget.title = heartbeat ? this.formatTimestamp(heartbeat) : this.ui().heartbeatNA;
             }
 
             if (this.hasAgentRunsTarget) {
@@ -174,13 +201,13 @@ export default class extends Controller {
 
         if (this.hasHeartbeatTarget) {
             const timestamp = this.heartbeatTarget.dataset.timestamp || '';
-            this.heartbeatTarget.textContent = 'сигнал: ' + this.relativeTime(timestamp);
+            this.heartbeatTarget.textContent = this.ui().heartbeatPrefix + this.relativeTime(timestamp);
         }
 
         if (!this.liveUpdatesStopped && this.hasPollStatusTarget && this.lastPollAt !== null) {
             const age = Math.max(0, Math.floor((Date.now() - this.lastPollAt) / 1000));
             if (!this.pollStatusTarget.dataset.eventMessage) {
-                this.pollStatusTarget.textContent = age < 2 ? 'перевірено щойно' : 'перевірено ' + age + ' с тому';
+                this.pollStatusTarget.textContent = age < 2 ? this.ui().checkedNow : this.ui().checkedSecondsAgo.replace('{n}', String(age));
             }
         }
 
@@ -214,13 +241,13 @@ export default class extends Controller {
         const latest = events[0] || null;
         if (latest) {
             this.currentActivityTarget.dataset.lastEventTime = String(latest.time || '');
-            this.currentActivityTarget.dataset.lastEventTitle = String(latest.title || 'подія');
+            this.currentActivityTarget.dataset.lastEventTitle = String(latest.title || this.ui().event);
         }
 
         const title = this.currentActivityTarget.dataset.lastEventTitle || '';
         const time = this.currentActivityTarget.dataset.lastEventTime || '';
         this.currentActivityTarget.textContent = title
-            ? 'останнє: ' + title + ' · ' + this.relativeTime(time)
+            ? this.ui().lastPrefix + title + ' · ' + this.relativeTime(time)
             : 'активних операцій немає';
     }
 
@@ -290,7 +317,7 @@ export default class extends Controller {
 
         if (this.hasPollStatusTarget) {
             this.pollStatusTarget.dataset.eventMessage = changed ? '1' : '';
-            this.pollStatusTarget.textContent = changed ? 'нова подія · щойно' : 'без нових подій · перевірено щойно';
+            this.pollStatusTarget.textContent = changed ? this.ui().newEvent : this.ui().noNewEvents;
             if (changed) {
                 window.setTimeout(() => {
                     if (this.hasPollStatusTarget) {
@@ -339,9 +366,9 @@ export default class extends Controller {
 
     stopReason(health, state, status) {
         const normalized = String(health || '').toUpperCase();
-        if (normalized === 'STALE') return 'процес неактивний';
-        if (normalized === 'STALLED') return 'процес зупинено';
-        if (this.isTerminal(state, status)) return 'процес завершено';
+        if (normalized === 'STALE') return this.ui().staleProcess;
+        if (normalized === 'STALLED') return this.ui().stalledProcess;
+        if (this.isTerminal(state, status)) return this.ui().completedProcess;
         return '';
     }
 
@@ -357,7 +384,7 @@ export default class extends Controller {
         }
         if (message && this.hasPollStatusTarget) {
             delete this.pollStatusTarget.dataset.eventMessage;
-            this.pollStatusTarget.textContent = 'оновлення зупинено · ' + message;
+            this.pollStatusTarget.textContent = this.ui().stopPrefix + message;
             this.pollStatusTarget.title = '';
         }
     }
@@ -376,29 +403,29 @@ export default class extends Controller {
 
     formatDuration(seconds) {
         const value = Math.max(0, Math.floor(seconds));
-        if (value < 60) return value + 'с';
-        if (value < 3600) return Math.floor(value / 60) + 'хв ' + (value % 60) + 'с';
+        if (value < 60) return value + this.ui().seconds;
+        if (value < 3600) return Math.floor(value / 60) + this.ui().minutes + ' ' + (value % 60) + this.ui().seconds;
         const hours = Math.floor(value / 3600);
         const minutes = Math.floor((value % 3600) / 60);
-        if (hours < 24) return hours + 'г ' + String(minutes).padStart(2, '0') + 'хв';
-        return Math.floor(hours / 24) + 'д ' + (hours % 24) + 'г';
+        if (hours < 24) return hours + this.ui().hours + ' ' + String(minutes).padStart(2, '0') + this.ui().minutes;
+        return Math.floor(hours / 24) + this.ui().days + ' ' + (hours % 24) + this.ui().hours;
     }
 
     relativeTime(timestamp) {
         const then = this.parseTimestamp(timestamp);
-        if (then === null) return 'немає даних';
+        if (then === null) return this.ui().noData;
         const age = Math.max(0, Math.floor((Date.now() - then) / 1000));
-        if (age < 5) return 'щойно';
-        if (age < 60) return age + ' с тому';
-        if (age < 3600) return Math.floor(age / 60) + ' хв тому';
+        if (age < 5) return this.ui().justNow;
+        if (age < 60) return this.ui().secondsAgo.replace('{n}', String(age));
+        if (age < 3600) return this.ui().minutesAgo.replace('{n}', String(Math.floor(age / 60)));
         if (age < 86400) {
             const hours = Math.floor(age / 3600);
             const minutes = Math.floor((age % 3600) / 60);
-            return hours + ' г' + (minutes > 0 ? ' ' + minutes + ' хв' : '') + ' тому';
+            return this.ui().hoursAgo.replace('{n}', String(hours)).replace('{minutes}', minutes > 0 ? ' ' + minutes + ' ' + this.ui().minutes : '') + (this.locale() === 'en' ? '' : ' тому');
         }
         const days = Math.floor(age / 86400);
         const hours = Math.floor((age % 86400) / 3600);
-        return days + ' д' + (hours > 0 ? ' ' + hours + ' г' : '') + ' тому';
+        return this.ui().daysAgo.replace('{n}', String(days)).replace('{hours}', hours > 0 ? ' ' + hours + ' ' + this.ui().hours : '') + (this.locale() === 'en' ? '' : ' тому');
     }
 
     parseTimestamp(timestamp) {
@@ -419,11 +446,10 @@ export default class extends Controller {
         const parsed = this.parseTimestamp(timestamp);
         if (parsed === null) return String(timestamp || '').replace(/\.\d+$/, '');
         const date = new Date(parsed);
-        const pad = (value) => String(value).padStart(2, '0');
-        return [
-            pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + '.' + date.getFullYear(),
-            pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds()),
-        ].join(' ');
+        return new Intl.DateTimeFormat(this.locale() === 'en' ? 'en-GB' : 'uk-UA', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+        }).format(date);
     }
 
     formatStaticTimestamps() {
@@ -436,76 +462,25 @@ export default class extends Controller {
 
     localizeStatus(value) {
         const key = String(value || '').toUpperCase();
-        const labels = {
-            RUNNING: 'ВИКОНУЄТЬСЯ',
-            HEALTHY: 'НОРМА',
-            STALE: 'НЕАКТИВНИЙ',
-            STALLED: 'ЗУПИНЕНО',
-            WAITING: 'ОЧІКУЄ',
-            TERMINAL: 'ЗАВЕРШЕНО',
-            COMPLETED: 'ЗАВЕРШЕНО',
-            CANCELLED: 'СКАСОВАНО',
-            FAILED: 'ПОМИЛКА',
-            ERROR: 'ПОМИЛКА',
-            STARTED: 'РОЗПОЧАТО',
-            APPROVED: 'СХВАЛЕНО',
-            PASS: 'ПРОЙДЕНО',
-            PASSED: 'ПРОЙДЕНО',
-            SUCCESS: 'УСПІШНО',
-            TIMED_OUT: 'ТАЙМАУТ',
-            NOT_REACHED: 'ЩЕ НЕ РОЗПОЧАТО',
-            ANALYSIS: 'АНАЛІЗ',
-            QA_PLANNING: 'ПЛАН ПЕРЕВІРКИ',
-            ARCHITECTURE_PENDING: 'АРХІТЕКТУРА',
-            DEVELOPMENT_RUNNING: 'РОЗРОБКА',
-            REVIEW_PENDING: 'РЕВ’Ю',
-            QA_PENDING: 'QA',
-            READY_FOR_HUMAN_APPROVAL: 'ОЧІКУЄ ПІДТВЕРДЖЕННЯ',
-            HUMAN_DECISION_REQUIRED: 'ПОТРІБНЕ РІШЕННЯ',
-            BLOCKED: 'ЗАБЛОКОВАНО',
-            ESCALATED: 'ЕСКАЛАЦІЯ',
-            DONE: 'ГОТОВО',
-        };
-        return labels[key] || String(value || '—');
+        return this.ui().status[key] || String(value || '—');
     }
 
     localizeRole(value) {
         const key = String(value || '').toUpperCase();
-        const labels = {
-            ENGINEERING_MANAGER: 'Менеджер / координатор',
-            PRODUCT_REQUIREMENTS: 'Продукт / вимоги',
-            QA_PLANNER: 'Планувальник QA',
-            PRINCIPAL_ARCHITECT: 'Головний архітектор',
-            ARCHITECT: 'Архітектор',
-            DEVELOPER: 'Розробник',
-            REVIEWER: 'Рев’юер',
-            QA_EXECUTOR: 'QA виконавець',
-            INTEGRATION_RELEASE: 'Інтеграція / реліз',
-            SECURITY_SPECIALIST: 'Спеціаліст з безпеки',
-            DATABASE_MIGRATION_SPECIALIST: 'Спеціаліст з міграцій',
-            PERFORMANCE_SPECIALIST: 'Спеціаліст з продуктивності',
-            DEVOPS_SPECIALIST: 'DevOps спеціаліст',
-            DOCUMENTATION_SPECIALIST: 'Спеціаліст з документації',
-            API_SPECIALIST: 'API спеціаліст',
-            QA: 'QA (legacy)',
-            AGENT: 'Агент',
-        };
-        return labels[key] || String(value || 'Агент');
+        return this.ui().role[key] || String(value || this.ui().role.AGENT);
     }
 
     localizeEventType(value) {
         const key = String(value || '').toUpperCase();
-        const labels = {
-            REPOSITORY: 'РЕПОЗИТОРІЙ',
-            WATCHDOG: 'КОНТРОЛЬ',
-            RUNTIME: 'СИСТЕМА',
-            AGENT: 'АГЕНТ',
-            TOOL: 'ІНСТРУМЕНТ',
-            WORKFLOW: 'ПРОЦЕС',
-            LLM: 'LLM',
-            EVENT: 'ПОДІЯ',
-        };
-        return labels[key] || key;
+        return this.ui().eventType[key] || key;
+    }
+
+    locale() {
+        return String(document.documentElement.lang || 'uk').toLowerCase().startsWith('en') ? 'en' : 'uk';
+    }
+
+    ui() {
+        return UI[this.locale()];
     }
 
     setText(targets, value) {

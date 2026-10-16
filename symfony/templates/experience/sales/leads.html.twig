@@ -30,9 +30,9 @@
                 <input class="cos-input" type="search" name="q" value="{{ leads.filters.q }}" placeholder="Ім’я, телефон, email">
             </label>
             <label class="cos-field">
-                <span>Статус</span>
+                <span>{{ 'Статус'|trans }}</span>
                 <select class="cos-select" name="status">
-                    <option value="">Усі</option>
+                    <option value="">{{ 'Усі'|trans }}</option>
                     {% for value in ['new','contacted','qualified','disqualified'] %}
                         <option value="{{ value }}" {% if leads.filters.status == value %}selected{% endif %}>{{ value|capitalize }}</option>
                     {% endfor %}
@@ -49,9 +49,9 @@
             <div class="cos-card__header">
                 <div>
                     <p class="cos-card__eyebrow">Demand</p>
-                    <h2 class="cos-card__title">Leads</h2>
+                    <h2 class="cos-card__title">{{ 'Leads'|trans }}</h2>
                 </div>
-                <span class="cos-card__copy">Page {{ leads.page }}</span>
+                <span class="cos-card__copy">{{ 'Page'|trans }} {{ leads.page }}</span>
             </div>
 
             {% if leads.items is empty %}
@@ -127,7 +127,7 @@
                             </twig:CosActionBar>
 
                             <label class="cos-field">
-                                <span>Owner</span>
+                                <span>{{ 'Owner'|trans }}</span>
                                 <select class="cos-select" data-sales-lead-owner data-action="change->sales-lead#owner">
                                     <option value="">Оберіть</option>
                                     {% for owner in leads.owners %}

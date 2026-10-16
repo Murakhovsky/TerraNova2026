@@ -171,6 +171,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Experience\Locale\LocaleController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Experience\Dev\WorkspacePlatformPreviewController:
     public: true
     tags: ['controller.service_arguments']

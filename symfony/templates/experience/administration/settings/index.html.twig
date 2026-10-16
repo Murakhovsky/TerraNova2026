@@ -1,12 +1,12 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}Platform Settings | COS{% endblock %}
+{% block title %}{{ 'Platform Settings'|trans }} | COS{% endblock %}
 
 {% block workspace_content %}
 <section class="cos-page__stack" data-cos-archetype="{{ page.archetypeId() }}" data-cos-page-state="{{ page.state }}">
     <twig:CosPageHeader
         eyebrow="Administration · Platform"
-        title="Platform Settings"
+        title="{{ 'Platform Settings'|trans }}"
         subtitle="Централізовані runtime-налаштування COS з tenant scope, audit і окремим encrypted secrets storage."
     >
         <twig:CosButton label="Dashboard" href="/admin" variant="ghost" />
@@ -36,7 +36,7 @@
             <div>
                 <p class="cos-card__eyebrow">Platform</p>
                 <h2 class="cos-card__title">Integrations</h2>
-                <p class="cos-card__copy">Наступна дочірня реалізація Platform Settings: зовнішні інтеграції та їх credentials.</p>
+                <p class="cos-card__copy">Наступна дочірня реалізація {{ 'Platform Settings'|trans }}: зовнішні інтеграції та їх credentials.</p>
             </div>
             <span class="cos-badge">planned</span>
         </article>

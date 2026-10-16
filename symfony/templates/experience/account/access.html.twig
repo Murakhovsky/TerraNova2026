@@ -14,12 +14,12 @@
 
     <section class="cos-page__section cos-section-grid" aria-label="Identity context">
         <article class="cos-card">
-            <p class="cos-card__eyebrow">Identity</p>
+            <p class="cos-card__eyebrow">{{ 'Identity'|trans }}</p>
             <h2 class="cos-card__title">Поточний контекст</h2>
             <dl class="cos-entity-summary">
-                <div class="cos-entity-summary__item"><dt>User</dt><dd>#{{ userId }}</dd></div>
-                <div class="cos-entity-summary__item"><dt>Organization</dt><dd>{{ organizationId }}</dd></div>
-                <div class="cos-entity-summary__item"><dt>Role</dt><dd>{{ role }}</dd></div>
+                <div class="cos-entity-summary__item"><dt>{{ 'User'|trans }}</dt><dd>#{{ userId }}</dd></div>
+                <div class="cos-entity-summary__item"><dt>{{ 'Organization'|trans }}</dt><dd>{{ organizationId }}</dd></div>
+                <div class="cos-entity-summary__item"><dt>{{ 'Role'|trans }}</dt><dd>{{ role }}</dd></div>
             </dl>
         </article>
 
@@ -29,7 +29,7 @@
             <div class="cos-entity-list" role="list">
                 {% for permission in permissions %}
                     <div class="cos-entity-summary__item" role="listitem">
-                        <span><code>{{ permission.code }}</code></span>
+                        <span><code>{{ permission.code }}</code>code</span>
                         <strong>{{ permission.allowed ? 'ALLOWED' : 'DENIED' }}</strong>
                     </div>
                 {% endfor %}

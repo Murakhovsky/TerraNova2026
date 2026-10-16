@@ -26,7 +26,7 @@
             <a class="cos-button cos-button--ghost cos-button--sm" href="#role-model">Рольова модель</a>
         {% endblock %}
         {% block end %}
-            <a class="cos-button cos-button--ghost cos-button--sm" href="/admin/users">Reset filters</a>
+            <a class="cos-button cos-button--ghost cos-button--sm" href="/admin/users">{{ 'Reset filters'|trans }}</a>
         {% endblock %}
     </twig:CosToolbar>
 
@@ -48,21 +48,21 @@
     <twig:CosFilterBar action="/admin/users" label="Users filters">
         <label class="cos-field">
             <span>Пошук</span>
-            <input class="cos-input" type="search" name="q" value="{{ users.filters.q }}" placeholder="Імʼя, email, телефон">
+            <input class="cos-input" type="search" name="q" value="{{ users.filters.q }}" placeholder="{{ 'Імʼя, email, телефон'|trans }}">
         </label>
         <label class="cos-field">
-            <span>Роль</span>
+            <span>{{ 'Роль'|trans }}</span>
             <select class="cos-select" name="role">
-                <option value="">Усі</option>
+                <option value="">{{ 'Усі'|trans }}</option>
                 {% for code, label in users.roleLabels %}
                     <option value="{{ code }}" {% if users.filters.role == code %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </label>
         <label class="cos-field">
-            <span>Статус</span>
+            <span>{{ 'Статус'|trans }}</span>
             <select class="cos-select" name="status">
-                <option value="">Усі</option>
+                <option value="">{{ 'Усі'|trans }}</option>
                 {% for code, label in users.statusLabels %}
                     <option value="{{ code }}" {% if users.filters.status == code %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
@@ -83,7 +83,7 @@
         <div class="cos-card">
             <p class="cos-card__eyebrow">Рольова модель</p>
             <h2 id="role-model-title" class="cos-card__title">Права доступу</h2>
-            <p class="cos-card__copy">Огляд effective capabilities для базових ролей.</p>
+            <p class="cos-card__copy">{{ 'Огляд effective capabilities для базових ролей.'|trans }}</p>
         </div>
         <twig:CosDataGrid
             id="administration-role-capabilities"
@@ -102,17 +102,17 @@
             <div>
                 <p class="cos-card__eyebrow">Новий доступ</p>
                 <h2 id="create-user-title" class="cos-card__title">Створити користувача</h2>
-                <p class="cos-card__copy">Новий акаунт створюється тільки через admin mutation із CSRF-перевіркою.</p>
+                <p class="cos-card__copy">{{ 'Новий акаунт створюється тільки через admin mutation із CSRF-перевіркою.'|trans }}</p>
             </div>
         </div>
         <form class="cos-section-grid" action="/admin/createUser" method="post">
             <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
             <label class="cos-field"><span>Імʼя</span><input class="cos-input" name="full_name" type="text" maxlength="160" required></label>
-            <label class="cos-field"><span>Email</span><input class="cos-input" name="email" type="email" maxlength="160" required></label>
+            <label class="cos-field"><span>{{ 'Email'|trans }}</span><input class="cos-input" name="email" type="email" maxlength="160" required></label>
             <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" maxlength="50"></label>
             <label class="cos-field"><span>Пароль</span><input class="cos-input" name="password" type="password" minlength="8" autocomplete="new-password" required></label>
             <label class="cos-field">
-                <span>Роль</span>
+                <span>{{ 'Роль'|trans }}</span>
                 <select class="cos-select" name="role">
                     {% for code, label in users.roleLabels %}
                         <option value="{{ code }}" {% if code == 'manager' %}selected{% endif %}>{{ label }}</option>
@@ -120,7 +120,7 @@
                 </select>
             </label>
             <label class="cos-field">
-                <span>Статус</span>
+                <span>{{ 'Статус'|trans }}</span>
                 <select class="cos-select" name="status">
                     {% for code, label in users.statusLabels %}
                         <option value="{{ code }}" {% if code == 'active' %}selected{% endif %}>{{ label }}</option>
@@ -128,7 +128,7 @@
                 </select>
             </label>
             <twig:CosActionBar label="Create user">
-                <button class="cos-button cos-button--primary" type="submit">Створити</button>
+                <button class="cos-button cos-button--primary" type="submit">{{ 'Створити'|trans }}</button>
             </twig:CosActionBar>
         </form>
     </section>
@@ -158,7 +158,7 @@
                             <label class="cos-field"><span>Імʼя</span><input class="cos-input" name="full_name" type="text" maxlength="160" value="{{ user.name }}"></label>
                             <label class="cos-field"><span>Телефон</span><input class="cos-input" name="phone" type="tel" maxlength="50" value="{{ user.phone }}"></label>
                             <label class="cos-field">
-                                <span>Роль</span>
+                                <span>{{ 'Роль'|trans }}</span>
                                 <select class="cos-select" name="role">
                                     {% for code, label in users.roleLabels %}
                                         <option value="{{ code }}" {% if user.role == code %}selected{% endif %}>{{ label }}</option>
@@ -166,7 +166,7 @@
                                 </select>
                             </label>
                             <label class="cos-field">
-                                <span>Статус</span>
+                                <span>{{ 'Статус'|trans }}</span>
                                 <select class="cos-select" name="status">
                                     {% for code, label in users.statusLabels %}
                                         <option value="{{ code }}" {% if user.status == code %}selected{% endif %}>{{ label }}</option>
@@ -175,7 +175,7 @@
                             </label>
                             <label class="cos-field"><span>Новий пароль</span><input class="cos-input" name="password" type="password" minlength="8" autocomplete="new-password" placeholder="не змінювати"></label>
                             <twig:CosActionBar label="Update {{ user.email }}">
-                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">Зберегти</button>
+                                <button class="cos-button cos-button--primary cos-button--sm" type="submit">{{ 'Зберегти'|trans }}</button>
                             </twig:CosActionBar>
                         </form>
                     </article>

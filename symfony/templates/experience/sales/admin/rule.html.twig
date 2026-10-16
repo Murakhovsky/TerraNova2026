@@ -32,7 +32,7 @@
             <span class="cos-card__copy">WHEN → IF → THEN · cfg v{{ rule.configuration_version ?? 0 }}</span>
         {% endblock %}
         {% block end %}
-            <button class="cos-button cos-button--primary cos-button--sm" type="button" data-action="click->sales-admin-rule-editor#save">Save draft</button>
+            <button class="cos-button cos-button--primary cos-button--sm" type="button" data-action="click->sales-admin-rule-editor#save">{{ 'Save draft'|trans }}</button>
             <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="click->sales-admin-rule-editor#dryRun">Test Rule</button>
             <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-rule-lifecycle="activate" data-action="click->sales-admin-rule-editor#lifecycle">Activate</button>
             <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-rule-lifecycle="disable" data-action="click->sales-admin-rule-editor#lifecycle">Disable</button>
@@ -68,8 +68,8 @@
 
             <div class="cos-pattern-stack" data-sales-admin-rule-editor-target="basic">
                 <div class="cos-section-grid">
-                    <label class="cos-field"><span>Name</span><input class="cos-input" data-rule-name maxlength="220" value="{{ rule.name ?? '' }}"></label>
-                    <label class="cos-field"><span>Priority</span><input class="cos-input" data-rule-priority type="number" min="1" max="10000" value="{{ rule.priority ?? 100 }}"></label>
+                    <label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" data-rule-name maxlength="220" value="{{ rule.name ?? '' }}"></label>
+                    <label class="cos-field"><span>{{ 'Priority'|trans }}</span><input class="cos-input" data-rule-priority type="number" min="1" max="10000" value="{{ rule.priority ?? 100 }}"></label>
                 </div>
 
                 <section class="cos-card">
@@ -104,7 +104,7 @@
                     copy="The same trigger, field, operator, action and parameter allowlists are enforced server-side. SQL/PHP or unknown keys are rejected."
                     tone="info"
                 />
-                <textarea class="cos-textarea" rows="26" spellcheck="false" data-sales-admin-rule-editor-target="json"></textarea>
+                <textarea class="cos-textarea" rows="26" spellcheck="false" data-sales-admin-rule-editor-target="json"></textarea>textarea
             </div>
 
             <p class="cos-card__copy" data-sales-admin-rule-editor-target="status" aria-live="polite"></p>
