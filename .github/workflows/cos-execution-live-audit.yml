@@ -26,7 +26,8 @@ concurrency:
 jobs:
   inspect:
     name: Protected tenant-wide technical authority audit
-    if: github.event_name == 'workflow_dispatch' || vars.COS_EXECUTION_AUDIT_TENANT != ''
+    # Protected environment resolves tenant input/approval at runtime.
+    # Missing tenant/permissions must produce an explicit failed proof, not a silent skip.
     environment: AWS TN2026
     runs-on: ubuntu-24.04
     timeout-minutes: 12
@@ -83,9 +84,13 @@ jobs:
             if sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
             else echo "::error::No Docker inspection access"; exit 1; fi
           fi
-          SOURCE="symfony/src/Command/WorkflowAuthorityInventoryCommand.php"
-          test -f "$ROOT/$SOURCE" || { echo "::error::Missing deployed audit CLI"; exit 1; }
-          SOURCE_SHA="$(sha256sum "$ROOT/$SOURCE" | cut -d' ' -f1)"
+          # Proof of *all* repository execution consumers, not just one CLI.
+          # Full production PHP source trees + dependency injection bindings.
+          MANIFEST_ROOTS="app/Kernel app/Platform app/Domains app/Infrastructure symfony/src"
+          SOURCE_SHA="$(cd "$ROOT" && {
+            find $MANIFEST_ROOTS -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
+            sha256sum symfony/config/services.yaml
+          } | sha256sum | cut -d' ' -f1)"
           BASE_IMAGE=''
           for SERVICE in php worker kernel-worker engineering-worker engineering-immediate-worker; do
             FOUND=0
@@ -93,7 +98,10 @@ jobs:
               case "$NAME" in cos-*) ;; *) continue;; esac
               FOUND=1
               IMAGE="$($D inspect --format '{{.Image}}' "$NAME")"
-              CODE_SHA="$($D exec "$NAME" sha256sum "/var/www/html/$SOURCE" | cut -d' ' -f1)"
+              CODE_SHA="$($D exec "$NAME" sh -c 'cd /var/www/html && {
+                find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name "*.php" -print | LC_ALL=C sort | xargs sha256sum
+                sha256sum symfony/config/services.yaml
+              } | sha256sum | cut -d" " -f1')"
               if [ "$CODE_SHA" != "$SOURCE_SHA" ]; then
                 echo "::error::Execution consumer code mismatch: $SERVICE"; exit 1
               fi
@@ -139,6 +147,7 @@ jobs:
           ' "$REPORT" "$TENANT" || { echo "::error::Actual tenant execution evidence incomplete"; exit 1; }
           echo "report_sha256: $(sha256sum "$REPORT" | cut -d' ' -f1)"
           echo "deployed_sha: $ACTUAL"
+          echo "production_php_and_di_manifest_sha256: $SOURCE_SHA"
           echo "execution_image: $BASE_IMAGE"
           echo 'execution_authority_audit: technical evidence only; no cutover or release approval'
           REMOTE
