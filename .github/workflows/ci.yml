@@ -60,6 +60,8 @@ jobs:
         run: bash bin/verify fast
       - name: Canonical Capability Library contract
         run: php tests/architecture/cos_canonical_capability_library_contract.php
+      - name: Canonical Property capability input validation
+        run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Kernel Tool canonical retry contract
         run: php tests/unit/workflow_kernel_tool_safe_retry.php
       - name: Capital Markets streaming core, reconnect and Binance protocol acceptance

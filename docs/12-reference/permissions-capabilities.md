@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 139 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 141 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -169,7 +169,9 @@ generated: true
 | `property` | `property.analytics` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.asset.create` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `property` | `property.asset.get` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.asset.search` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
+| `property` | `property.asset.update` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.business.cutover` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.catalog` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.history` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |

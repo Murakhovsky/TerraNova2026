@@ -28,8 +28,13 @@ final readonly class CanonicalCapabilityController {
     }
     public function invoke(Request $request,string $id):JsonResponse {
         if (!$this->csrf->isValid($request)) return $this->reply(['error'=>'invalid_csrf_token'],400);
-        $input=json_decode((string)$request->getContent(),true);
-        if (!is_array($input)||array_is_list($input)) return $this->reply(['error'=>'invalid_json_object'],422);
+        $raw=(string)$request->getContent();
+        if (strlen($raw)>16384) return $this->reply(['error'=>'input_too_large'],413);
+        // Preserve the distinction between an empty JSON object and an array.
+        $root=json_decode($raw);
+        if (!$root instanceof \stdClass) return $this->reply(['error'=>'invalid_json_object'],422);
+        $input=json_decode($raw,true);
+        if (!is_array($input)) return $this->reply(['error'=>'invalid_json_object'],422);
         try {
             $trace=$request->attributes->get('_cos_correlation_id');
             $correlation=$trace instanceof CorrelationId?$trace->value():CorrelationId::generate()->value();

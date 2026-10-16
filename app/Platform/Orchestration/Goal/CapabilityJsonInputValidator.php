@@ -58,7 +58,7 @@ final readonly class CapabilityJsonInputValidator
         }
         $types = is_array($types) ? $types : [$types];
         $matches = static fn (string $type): bool => match ($type) {
-            'object' => is_array($value) && !array_is_list($value),
+            'object' => is_array($value) && ($value === [] || !array_is_list($value)),
             'array' => is_array($value) && array_is_list($value),
             'string' => is_string($value),
             'integer' => is_int($value),
@@ -103,7 +103,7 @@ final readonly class CapabilityJsonInputValidator
                 throw new DomainException('Capability number above maximum at ' . $path);
             }
         }
-        if (is_array($value) && !array_is_list($value)) {
+        if (is_array($value) && in_array('object', $types, true) && ($value === [] || !array_is_list($value))) {
             $properties = $schema['properties'] ?? [];
             if (!is_array($properties)) {
                 throw new DomainException('Capability schema properties malformed.');

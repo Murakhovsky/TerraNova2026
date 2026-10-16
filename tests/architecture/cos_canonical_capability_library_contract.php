@@ -11,7 +11,7 @@ $get=static function(string $path)use($root):string {
 $definition=require $root.'/app/Domains/Property/module.php';
 $ids=$definition['contributions']['capabilities'];
 $contracts=$definition['contributions']['capability_contracts'];
-foreach (['property.asset.create','property.asset.search'] as $id) {
+foreach (['property.asset.create','property.asset.search','property.asset.get','property.asset.update'] as $id) {
     $check(in_array($id,$ids,true),'Unregistered '.$id);
     $matching=array_values(array_filter($contracts,static fn(array $c):bool=>($c['id']??'')===$id));
     $check(count($matching)===1,'Missing typed contract '.$id);
@@ -40,6 +40,10 @@ $check(str_contains($get('symfony/config/routes.yaml'),'/workspace/capabilities'
 $check(str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetCreateAdapter.php'),'new CreatePropertyCommand(')
     &&str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetSearchAdapter.php'),'new SearchPropertiesQuery('),
     'Adapters bypass existing buses.');
+$check(str_contains($gateway,'new CapabilityJsonInputValidator()'), 'Gateway must validate local typed schemas before dispatch.');
+$check(str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetGetAdapter.php'),'new GetPropertyQuery(')
+    && str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetUpdateAdapter.php'),'new UpdatePropertyCommand('),
+    'Additional Property capabilities must delegate to existing buses.');
 $check(!str_contains($gateway,'PDO')&&!str_contains($gateway,'ActionExecutor'),
     'Parallel execution authority not permitted.');
 echo "Canonical capability library contract PASS.\n";

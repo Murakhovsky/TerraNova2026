@@ -10,6 +10,7 @@ use Kernel\Module\CanonicalCapabilityCatalog;
 use Kernel\Module\CapabilityContract;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
+use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
 use LogicException;
 
 /** Catalog projection + guarded dispatch to existing Domain Command/Query buses. */
@@ -79,6 +80,9 @@ final class CanonicalCapabilityGateway {
         }
         if (!in_array($origin,['human_api','human_ui','trusted_read'],true)
             || $correlationId===''||strlen($correlationId)>191) throw new DomainException('Untrusted source or trace.');
+        // Same fail-closed local schema validator used by Federation approved Plans.
+        // Validation occurs before any Domain side effect or idempotency claim.
+        (new CapabilityJsonInputValidator())->validate($contract,$input);
         return $adapter->invoke($actor,$input,$key,$correlationId);
     }
 
