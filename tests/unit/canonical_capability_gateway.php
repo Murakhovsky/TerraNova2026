@@ -20,6 +20,14 @@ use Kernel\Tenant\Model\TenantPermissions;
 $root = dirname(__DIR__,2);
 require $root.'/vendor/autoload.php';
 
+// Fast CI intentionally installs root composer only. Resolve these pure
+// Symfony App application classes from source, without requiring vendor stack.
+spl_autoload_register(static function(string $class) use($root):void {
+    if (!str_starts_with($class,'App\\')) return;
+    $candidate=$root.'/symfony/src/'.str_replace('\\','/',substr($class,4)).'.php';
+    if (is_file($candidate)) require $candidate;
+});
+
 $manifest=require $root.'/app/Domains/Property/module.php';
 $catalog=new CanonicalCapabilityCatalog(new ModuleCatalog([ModuleDefinition::fromArray($manifest)]));
 $state=new class implements ModuleStateRepositoryInterface {
