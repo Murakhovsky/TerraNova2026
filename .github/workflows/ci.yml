@@ -58,6 +58,8 @@ jobs:
         run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: Canonical Capability Library contract
+        run: php tests/architecture/cos_canonical_capability_library_contract.php
       - name: Kernel Tool canonical retry contract
         run: php tests/unit/workflow_kernel_tool_safe_retry.php
       - name: Capital Markets streaming core, reconnect and Binance protocol acceptance

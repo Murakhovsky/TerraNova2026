@@ -1,0 +1,26 @@
+{% extends 'experience/portal_shell.html.twig' %}
+{% block title %}Бібліотека можливостей COS{% endblock %}
+{% block portal_content %}
+<section class="cos-page__stack" data-cos-capability-library>
+  <header class="cos-card">
+    <p class="cos-card__eyebrow">COS / Canonical Capability Library</p>
+    <h1 class="cos-card__title">Бібліотека команд і запитів</h1>
+    <p class="cos-card__copy">Єдині контракти Domain-операцій для UI, API, AI та автоматизацій. Опис команди не є дозволом на її виконання.</p>
+    <a class="cos-button cos-button--ghost" href="/workspace/goals">До цілей</a>
+  </header>
+  {% for capability in capabilities %}
+    <article class="cos-card" data-capability-id="{{ capability.id }}">
+      <p class="cos-card__eyebrow">{{ capability.owner_domain }} · {{ capability.status }}</p>
+      <h2 class="cos-card__title">{{ capability.id }}</h2>
+      <p class="cos-card__copy">{{ capability.reason }}</p>
+      {% if capability.contract %}
+        <p class="cos-card__copy">Тип: {{ capability.contract.kind }} · Версія: {{ capability.contract.version }} · Ризик: {{ capability.contract.side_effect_level }} · Погодження: {{ capability.contract.approval_policy }}</p>
+        <p class="cos-card__copy"><code>{{ capability.contract.input_schema }}</code> → <code>{{ capability.contract.output_schema }}</code></p>
+      {% endif %}
+      <a class="cos-button cos-button--ghost" href="/api/v1/capabilities/{{ capability.id }}">Переглянути JSON</a>
+    </article>
+  {% else %}
+    <article class="cos-card">Можливостей поки не зареєстровано.</article>
+  {% endfor %}
+</section>
+{% endblock %}

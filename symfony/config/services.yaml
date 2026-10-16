@@ -86,6 +86,9 @@ services:
     autoconfigure: true
 
   _instanceof:
+    App\Application\Capability\Contract\CapabilityInvocationAdapterInterface:
+      tags:
+        - { name: 'cos.capability.invoker' }
     Kernel\Application\Command\CommandHandlerInterface:
       tags:
         - { name: 'messenger.message_handler', bus: 'command.bus' }
@@ -116,6 +119,10 @@ services:
 
   App\:
     resource: '../src/'
+
+  App\Application\Capability\CanonicalCapabilityGateway:
+    arguments:
+      $adapters: !tagged_iterator cos.capability.invoker
 
   App\Command\CapitalMarketsInstrumentStreamTrustCommand:
     arguments:

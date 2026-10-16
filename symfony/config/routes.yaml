@@ -1,3 +1,26 @@
+# Canonical Domain capability discovery and explicitly gated human invocation.
+cos_capabilities_index:
+  path: /api/v1/capabilities
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::index
+  methods: [GET]
+
+cos_capabilities_invoke:
+  path: /api/v1/capabilities/{id}/invoke
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::invoke
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_capabilities_show:
+  path: /api/v1/capabilities/{id}
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::show
+  methods: [GET]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_capabilities_workspace:
+  path: /workspace/capabilities
+  controller: App\Web\Capability\CapabilityLibraryController::index
+  methods: [GET]
+
 
 # COS Federation Goal/Outcome draft workspace.
 # Read-only, Domain-attested Goal-wide progress (no auto approval or execution).
