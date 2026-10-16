@@ -20,8 +20,9 @@ final readonly class FederationVerifiedRunReadModel
 {
     public function __construct(
         private Connection $db,
-        private FederationExternalActionReceiptReconciler $historical,
         private DoctrineWorkflowActionReceiptVerifier $canonical,
+        private FederationHistoricalRunCutover $migrations,
+        private ?FederationExternalActionReceiptReconciler $historical = null,
     ) {}
 
     /** @return array{run_id:string,run_state:string,authority:string}|null */
@@ -40,8 +41,14 @@ final readonly class FederationVerifiedRunReadModel
              WHERE organization_id=:org AND source_plan_id=:plan LIMIT 2',
             ['org'=>$org,'plan'=>$planId],
         );
-        if (count($legacy)>1 || count($canonical)>1 || ($legacy!==[] && $canonical!==[])) {
-            throw new DomainException('Plan has conflicting execution authorities; operator reconciliation required.');
+        if (count($legacy)>1 || count($canonical)>1) {
+            throw new DomainException('Plan has duplicate execution authorities; operator reconciliation required.');
+        }
+        if ($legacy!==[] && $canonical!==[]) {
+            if ($legacy[0]['run_id']!==$canonical[0]['run_id']) {
+                throw new DomainException('Plan has unrelated historical and canonical Runs.');
+            }
+            $this->requireVerifiedMigration($org,$planId,(string)$legacy[0]['run_id']);
         }
         if ($canonical!==[]) {
             if ($canonical[0]['definition_id']!=='federation.approved-plan') {
@@ -86,8 +93,17 @@ final readonly class FederationVerifiedRunReadModel
              WHERE w.organization_id=:org AND w.run_id=:run AND s.step_id=:step',
             ['org'=>$org,'run'=>$runId,'step'=>$stepId],
         );
-        if ($canonical!==false && $legacy!==false) {
-            throw new DomainException('Run has concurrent historical and canonical execution authorities.');
+        if ($canonical!==false && $legacy!==false
+            && $canonical['plan_id']!==$legacy['plan_id']) {
+            throw new DomainException('Run has mismatched historical and canonical Plan identity.');
+        }
+        $selected=$canonical!==false?$canonical:$legacy;
+        if ($selected!==false) {
+            $owner=$this->forPlan($actor,(string)$selected['plan_id']);
+            if ($owner===null || $owner['run_id']!==$runId
+                || $owner['authority']!==($canonical!==false?'canonical':'historical')) {
+                throw new DomainException('Step is not owned by the verified Plan execution authority.');
+            }
         }
         if ($canonical!==false) {
             if ($canonical['definition_id']!=='federation.approved-plan') {
@@ -149,6 +165,9 @@ final readonly class FederationVerifiedRunReadModel
                 throw new DomainException('Independent canonical Action receipt attestation failed.');
             }
         } else {
+            if ($this->historical===null) {
+                throw new DomainException('Historical Action attestor is not installed.');
+            }
             $receipt=$this->historical->reconcile($actor,$runId,$stepId);
             if (($receipt['status']??null)!=='completed'
                 || ($receipt['action_id']??null)!==$match[1]) {
@@ -168,6 +187,57 @@ final readonly class FederationVerifiedRunReadModel
             throw new DomainException('Action idempotency provenance is missing.');
         }
         return ($authority==='canonical'?'wf:':'fed:').$id;
+    }
+
+    /**
+     * Historical rows intentionally remain frozen after a legitimate cutover.
+     * Trust only the signed, audited migration ledger AND fresh independent
+     * post-cutover integrity; matching identifiers or a status flag alone do
+     * not authorize an overlapping execution projection.
+     */
+    private function requireVerifiedMigration(string $org,string $planId,string $runId): void
+    {
+        $audit=$this->migrations->inspect($org,$runId);
+        if (($audit['migration_state']??null)!=='promoted'
+            || ($audit['cutover_parity']??null)!=='match'
+            || ($audit['post_cutover_integrity']['status']??null)!=='healthy'
+            || in_array('legacy_source_mutated_after_cutover',$audit['reasons']??[],true)) {
+            throw new DomainException('Historical/canonical overlap lacks independently verified migration.');
+        }
+        // The ledger includes the frozen one-to-one Plan mapping; both
+        // the approved legacy and canonical rows must point to it.
+        $ledger=$this->db->fetchAssociative(
+            'SELECT plan_id,canonical_run_id,source_sha256,
+                    canonical_identity_sha256,permit_sha256,operator_id
+             FROM cos_federation_execution_migrations
+             WHERE organization_id=:org AND legacy_run_id=:run
+               AND migration_state=:state AND parity_status=:parity',
+            ['org'=>$org,'run'=>$runId,'state'=>'promoted','parity'=>'match'],
+        );
+        if (!$ledger || $ledger['plan_id']!==$planId
+            || $ledger['canonical_run_id']!==$runId
+            || !is_string($ledger['source_sha256'])
+            || !preg_match('/^[a-f0-9]{64}$/D',$ledger['source_sha256'])
+            || !is_string($ledger['canonical_identity_sha256'])
+            || !preg_match('/^[a-f0-9]{64}$/D',$ledger['canonical_identity_sha256'])
+            || !is_string($ledger['permit_sha256'])
+            || !preg_match('/^[a-f0-9]{64}$/D',$ledger['permit_sha256'])
+            || !is_string($ledger['operator_id']) || $ledger['operator_id']==='') {
+            throw new DomainException('Immutable historical cutover identity or permit evidence is unavailable.');
+        }
+        $event=$this->db->fetchAssociative(
+            'SELECT source_sha256,canonical_identity_sha256,permit_sha256,operator_id
+             FROM cos_federation_migration_audit
+             WHERE organization_id=:org AND legacy_run_id=:run AND event_code=:event',
+            ['org'=>$org,'run'=>$runId,'event'=>'cutover_accepted'],
+        );
+        if (!$event
+            || $event['source_sha256']!==$ledger['source_sha256']
+            || $event['canonical_identity_sha256']!==$ledger['canonical_identity_sha256']
+            || $event['permit_sha256']!==$ledger['permit_sha256']
+            || $event['operator_id']!==$ledger['operator_id']) {
+            throw new DomainException('Canonical cutover has no matching independent accepted operator audit.');
+        }
     }
 
     private function manager(TenantContext $actor): void

@@ -11,6 +11,7 @@ use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Federation\FederationHistoricalRunCutover;
 use App\Persistence\Federation\FederationMigrationOperatorAuthorization;
 use App\Persistence\Federation\FederationPostCutoverIntegrity;
+use App\Persistence\Federation\FederationVerifiedRunReadModel;
 use Platform\Workflow\Model\WorkflowRunCommand;
 use Platform\Workflow\Model\WorkflowRunTransition;
 use Kernel\Workflow\Model\WorkflowStatus;
@@ -219,6 +220,15 @@ try {
         || $shadow->federation($org,$runId)->status->value!=='match') {
         throw new RuntimeException('No-replay historical promotion did not prove exact parity.');
     }
+    $migratedEvidence=new FederationVerifiedRunReadModel(
+        $db,new DoctrineWorkflowActionReceiptVerifier($db,$adapter),$cutover,
+    );
+    $migratedAuthority=$migratedEvidence->forPlan($actor,$planId);
+    if (($migratedAuthority['authority']??null)!=='canonical'
+        || ($migratedAuthority['run_id']??null)!==$runId
+        || ($migratedEvidence->step($actor,$runId,'publish')['authority']??null)!=='canonical') {
+        throw new RuntimeException('Legitimately migrated frozen legacy history was rejected as dual authority.');
+    }
     $read=$cutover->inspect($org,$runId);
     if ($read['migration_state']!=='promoted' || $read['parity']!=='match'
         || $read['cutover_parity']!=='match'
@@ -274,6 +284,8 @@ try {
          WHERE organization_id=:org AND run_id=:run AND step_id=:step',
         ['org'=>$org,'run'=>$runId,'step'=>'publish'],
     );
+    $reject(static fn()=> $migratedEvidence->forPlan($actor,$planId),
+        'Golden 50 projection trusted a tampered frozen legacy source');
     $mutated=$cutover->inspect($org,$runId);
     if (!in_array('legacy_source_mutated_after_cutover',$mutated['reasons'],true)
         || ($mutated['cutover_parity']??null)!=='match'
@@ -289,6 +301,8 @@ try {
         'UPDATE cos_workflow_runs SET correlation_id=:tampered
          WHERE organization_id=:org AND run_id=:run',
         ['tampered'=>'forged-'.$token,'org'=>$org,'run'=>$runId]);
+    $reject(static fn()=> $migratedEvidence->forPlan($actor,$planId),
+        'Golden 50 projection trusted changed canonical immutable identity');
     $changed=$cutover->inspect($org,$runId);
     if (($changed['post_cutover_integrity']['status']??null)!=='drift'
         || !in_array('canonical_immutable_identity_changed',

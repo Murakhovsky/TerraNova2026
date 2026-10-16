@@ -14,6 +14,11 @@ use App\Persistence\Federation\FederationCanonicalWorkflowBridge;
 use App\Persistence\Federation\FederatedActionAdmission;
 use App\Persistence\Federation\FederationExternalActionReceiptReconciler;
 use App\Persistence\Federation\FederationVerifiedRunReadModel;
+use App\Persistence\Federation\FederationHistoricalRunCutover;
+use App\Persistence\Federation\FederationMigrationOperatorAuthorization;
+use App\Persistence\Federation\FederationPostCutoverIntegrity;
+use App\Persistence\Workflow\DoctrineWorkflowShadowParityReader;
+use Platform\Workflow\Service\WorkflowShadowParityComparator;
 use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
@@ -408,12 +413,20 @@ try {
     // The Golden 50 read path must recognize canonical Runs and perform its
     // own independent Action/Policy/Approval/attempt attestation. All SQL
     // mutations below are isolated test-tenant tamper fixtures, never workers.
+    $migrationAudit=new FederationHistoricalRunCutover(
+        $db,$store,new DoctrineWorkflowShadowParityReader(
+            $db,$store,new WorkflowShadowParityComparator(),$planEvidence,
+            $receipts,new FailClosedWorkflowNonActionReceiptEvidence(),
+        ),$planReader,new FederationMigrationOperatorAuthorization($db),
+        new FederationPostCutoverIntegrity(
+            $db,$planEvidence,$receipts,new FailClosedWorkflowNonActionReceiptEvidence(),
+        ),
+    );
     $nativeReader=new FederationVerifiedRunReadModel(
-        $db,
+        $db,$receipts,$migrationAudit,
         new FederationExternalActionReceiptReconciler(
             $db,$goals,new FederatedActionAdmission($db,$capabilities,$planReader),
         ),
-        $receipts,
     );
     $proof=$nativeReader->forPlan($actor,$planId);
     $assert(($proof['authority']??null)==='canonical'
