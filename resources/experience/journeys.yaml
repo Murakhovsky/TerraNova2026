@@ -1,0 +1,51 @@
+version: 1
+status: governed
+
+journeys:
+  - id: core.daily_control
+    title: Daily business control
+    personas: [executive, manager]
+    outcome: "Understand the current business state, identify attention areas and move into the next governed action."
+    pages: [core.executive.dashboard, activity.center, ai.panel]
+
+  - id: sales.revenue_execution
+    title: Sales revenue execution
+    personas: [sales_manager, sales_agent]
+    outcome: "Move prioritized sales work from attention to a meaningful deal outcome."
+    pages: [sales.dashboard, sales.today, sales.leads.collection, sales.deal.workspace, sales.pipeline]
+
+  - id: growth.prospect_to_sales
+    title: Prospect intelligence to Sales
+    personas: [growth_manager, specialist]
+    outcome: "Discover and qualify a prospect, understand why-now evidence and hand a qualified opportunity to Sales."
+    pages: [growth.overview, growth.candidates, growth.candidate, growth.accounts, growth.signals, sales.leads.collection]
+
+  - id: property.discovery_to_presentation
+    title: Property discovery to presentation
+    personas: [manager, specialist]
+    outcome: "Find the relevant property, inspect its context and move to a client-ready presentation."
+    pages: [property.catalog, property.show, property.presentation, property.map]
+
+  - id: diagnostic.methodology_to_report
+    title: Diagnostic methodology to report
+    personas: [administrator, specialist]
+    outcome: "Maintain governed diagnostic methodology and inspect the resulting diagnostic report."
+    pages: [diagnostic.methodology.studio, diagnostic.report]
+
+  - id: engineering.feature_delivery
+    title: Engineering feature delivery
+    personas: [engineering_manager, engineer]
+    outcome: "Understand engineering work state, inspect agent execution and move a feature through governed delivery."
+    pages: [engineering, engineering.feature]
+
+  - id: capital_markets.decision_cycle
+    title: Capital Markets decision cycle
+    personas: [capital_markets_user, portfolio_manager, risk_manager, researcher]
+    outcome: "Move from market evidence and opportunity to portfolio-aware risk, allocation, execution and performance review."
+    pages: [capital_markets.overview, capital_markets.opportunities, capital_markets.opportunity, capital_markets.risk, capital_markets.allocation, capital_markets.execution, capital_markets.performance]
+
+  - id: public.discovery_to_account
+    title: Public discovery to account
+    personas: [visitor]
+    outcome: "Understand COS, decide whether it is relevant and continue into an authenticated account journey."
+    pages: [symfony.home, public.cos, auth.register, cabinet]

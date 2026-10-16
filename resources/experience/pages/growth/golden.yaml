@@ -18,5 +18,5 @@ pages:
     primary_action: growth.open_priority
     states: [normal, loading, empty, error, permission_denied]
     responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
-    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    qa: { functional: true, visual: true, responsive: true, accessibility: true, human_acceptance: false }
     quality: { functionality: 2, ux: 2, visual: 2, responsive: 2, accessibility: 2, content: 3 }

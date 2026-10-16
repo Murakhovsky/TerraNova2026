@@ -5,6 +5,7 @@ namespace App\Web\Experience\Delivery;
 
 use App\Web\Experience\Archetype\PageArchetypeRegistry;
 use App\Web\Experience\Pattern\PatternRegistry;
+use App\Web\Experience\Governance\ProductUxContextProvider;
 use App\Web\Experience\Registry\PageContractRegistryInterface;
 
 final readonly class PageDeliveryContextPackageBuilder
@@ -14,6 +15,7 @@ final readonly class PageDeliveryContextPackageBuilder
         private PageArchetypeRegistry $archetypes,
         private PatternRegistry $patterns,
         private PageDeliveryAgentContract $agents,
+        private ProductUxContextProvider $productUx,
     ) {}
 
     public function build(string $pageId): PageDeliveryContextPackage
@@ -52,6 +54,7 @@ final readonly class PageDeliveryContextPackageBuilder
             ],
             $archetype->toArray(),
             $patterns,
+            $this->productUx->forPage($page),
             [
                 'functional' => true,
                 'browser' => true,
@@ -73,6 +76,7 @@ final readonly class PageDeliveryContextPackageBuilder
                 'Do not mark human_acceptance=true automatically.',
                 'Do not promote V1_READY without human acceptance and quality thresholds.',
                 'Return concrete QA evidence for every claimed PASS.',
+                'Use Product UX personas, journeys and canonical terminology from the context package; do not invent a competing vocabulary.',
                 ],
             ],
         );

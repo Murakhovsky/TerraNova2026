@@ -12,6 +12,7 @@ use App\Web\Experience\Golden\GoldenExperienceSet;
 use App\Web\Experience\Golden\GoldenDecisionRegistry;
 use App\Web\Experience\Golden\GoldenStructureAuditService;
 use App\Web\Experience\Golden\GoldenHumanReviewPacketBuilder;
+use App\Web\Experience\Governance\ProductUxGovernanceService;
 use App\Web\Experience\Migration\WorkspaceMigrationPlanner;
 use App\Web\Experience\External\ExternalExperiencePlanner;
 use App\Web\Experience\External\ExternalReferenceAuditService;
@@ -45,6 +46,7 @@ final readonly class ExperienceDashboardController
         private ExternalExperiencePlanner $externalExperience,
         private ExternalReferenceAuditService $externalReferences,
         private ExperienceReleaseHardeningService $releaseHardening,
+        private ProductUxGovernanceService $productUx,
         private TenantContextProviderInterface $tenants,
         private WorkspaceShellFactory $shells,
     ) {
@@ -164,6 +166,7 @@ final readonly class ExperienceDashboardController
                     'externalExperience' => $this->externalExperience->report()->toArray(),
                     'externalReferences' => $this->externalReferences->audit()->toArray(),
                     'release' => $this->releaseHardening->report()->toArray(),
+                    'productUx' => $this->productUx->report()->toArray(),
                     'pages' => array_values(array_map(
                         static fn ($contract): array => [
                             'id' => $contract->id->value,

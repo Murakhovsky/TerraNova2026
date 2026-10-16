@@ -1,0 +1,9 @@
+version: 1
+status: active
+
+policy:
+  evidence_required: true
+  new_primitive_requires_guardian_review: true
+  prefer_existing_component: true
+
+items: []

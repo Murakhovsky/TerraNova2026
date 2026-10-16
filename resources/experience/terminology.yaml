@@ -1,0 +1,24 @@
+version: 1
+status: governed
+
+terms:
+  - { id: account, canonical: Account, uk: Компанія, en: Account, scope: Growth }
+  - { id: candidate, canonical: Candidate, uk: Кандидат, en: Candidate, scope: Growth }
+  - { id: signal, canonical: Signal, uk: Сигнал, en: Signal, scope: Growth }
+  - { id: opportunity, canonical: Opportunity, uk: Можливість, en: Opportunity, scope: cross-domain }
+  - { id: lead, canonical: Lead, uk: Лід, en: Lead, scope: Sales }
+  - { id: deal, canonical: Deal, uk: Угода, en: Deal, scope: Sales }
+  - { id: stage, canonical: Stage, uk: Етап, en: Stage, scope: cross-domain }
+  - { id: status, canonical: Status, uk: Статус, en: Status, scope: cross-domain }
+  - { id: next_action, canonical: Next Action, uk: Наступна дія, en: Next Action, scope: cross-domain }
+  - { id: approval, canonical: Approval, uk: Погодження, en: Approval, scope: cross-domain }
+  - { id: activity, canonical: Activity, uk: Активність, en: Activity, scope: cross-domain }
+  - { id: task, canonical: Task, uk: Задача, en: Task, scope: cross-domain }
+  - { id: property, canonical: Property, uk: Об’єкт нерухомості, en: Property, scope: Property }
+  - { id: listing, canonical: Listing, uk: Оголошення, en: Listing, scope: Property }
+  - { id: publication, canonical: Publication, uk: Публікація, en: Publication, scope: Property }
+  - { id: portfolio, canonical: Portfolio, uk: Портфель, en: Portfolio, scope: Capital Markets }
+  - { id: position, canonical: Position, uk: Позиція, en: Position, scope: Capital Markets }
+  - { id: risk, canonical: Risk, uk: Ризик, en: Risk, scope: Capital Markets }
+  - { id: execution, canonical: Execution, uk: Виконання, en: Execution, scope: Capital Markets }
+  - { id: evidence, canonical: Evidence, uk: Доказ, en: Evidence, scope: cross-domain }
