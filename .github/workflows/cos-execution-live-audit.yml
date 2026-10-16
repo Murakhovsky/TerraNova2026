@@ -24,7 +24,101 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  preflight:
+    name: AWS dev infrastructure inventory (read-only; not Golden 50)
+    # A push cannot prove a feature SHA is deployed: dev is deployed from main.
+    # This job gathers facts independently of tenant credentials/acceptance.
+    if: github.event_name == 'push'
+    environment: AWS TN2026
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate protected access
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            test -n "$(printenv "$key" || true)" || { echo "::error::Missing $key"; exit 1; }
+          done
+          [[ "$DEV_PATH" =~ ^/[A-Za-z0-9_./-]+$ ]] && [[ "$DEV_PATH" != *..* ]] ||
+            { echo "::error::Unsafe DEV_PATH"; exit 1; }
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] ||
+            { echo "::error::Invalid DEV_PORT"; exit 1; }
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/federation_preflight_key"
+          chmod 600 "$HOME/.ssh/federation_preflight_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          chmod 600 "$HOME/.ssh/known_hosts"
+      - name: Inspect deployed routes, resources and Docker without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_ROUTES_SHA="$(git show origin/main:symfony/config/routes.yaml | sha256sum | cut -d' ' -f1)"
+          FEATURE_ROUTES_SHA="$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)"
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/federation_preflight_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" "$MAIN_ROUTES_SHA" "$FEATURE_ROUTES_SHA" <<'REMOTE'
+          set -Eeuo pipefail
+          ROOT="$1"
+          MAIN_ROUTES_SHA="$2"
+          FEATURE_ROUTES_SHA="$3"
+          echo '=== Federation AWS dev read-only preflight ==='
+          if [ ! -d "$ROOT" ]; then
+            echo 'status: BLOCKED - deployment root missing'
+            exit 1
+          fi
+          echo "disk: $(df -h "$ROOT" | tail -n 1 | awk '{print $4 " available"}')"
+          if command -v free >/dev/null 2>&1; then
+            echo "memory: $(free -m | awk '/^Mem:/ {print $7 " MiB available"}')"
+          fi
+          if [ -d "$ROOT/.git" ]; then
+            echo 'git_metadata: present (not a deploy SHA attestation)'
+          else
+            echo 'git_metadata: absent (expected with rsync --exclude=.git)'
+          fi
+          if [ ! -f "$ROOT/symfony/config/routes.yaml" ]; then
+            echo 'status: BLOCKED - deployed routes unavailable'
+            exit 1
+          fi
+          DEPLOYED_ROUTES_SHA="$(sha256sum "$ROOT/symfony/config/routes.yaml" | cut -d' ' -f1)"
+          if [ "$DEPLOYED_ROUTES_SHA" = "$MAIN_ROUTES_SHA" ]; then
+            echo 'deployed_route_tree: current main route content'
+          elif [ "$DEPLOYED_ROUTES_SHA" = "$FEATURE_ROUTES_SHA" ]; then
+            echo 'deployed_route_tree: Federation feature route content'
+          else
+            echo 'deployed_route_tree: other revision (full deployed SHA unverified)'
+          fi
+          if grep -Fq 'path: /workspace/goals' "$ROOT/symfony/config/routes.yaml"; then
+            echo 'goals_route_in_deployed_source: yes'
+          else
+            echo 'goals_route_in_deployed_source: no'
+          fi
+          D=''
+          if docker info >/dev/null 2>&1; then D='docker'
+          elif sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'; fi
+          if [ -z "$D" ]; then
+            echo 'status: BLOCKED - Docker inspection unavailable'
+            exit 1
+          fi
+          echo 'docker_containers:'
+          $D ps --format '{{.Names}} | {{.Status}}' | grep '^cos-' || true
+          echo 'sha_attestation: NOT_PROVEN (rsync deployment does not publish full SHA)'
+          echo 'staging_isolation: NOT_PROVEN (no isolated tenant, DB or compose project attested)'
+          echo 'golden50: NOT_RUN'
+          echo '=== Read-only inventory completed; no release authorization ==='
+          REMOTE
+
   inspect:
+    if: github.event_name == 'workflow_dispatch'
     name: Protected tenant-wide technical authority audit
     # Protected environment resolves tenant input/approval at runtime.
     # Missing tenant/permissions must produce an explicit failed proof, not a silent skip.
