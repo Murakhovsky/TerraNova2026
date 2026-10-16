@@ -23,7 +23,10 @@ $check($contract['approval_policy']==='required' && $contract['idempotency']==='
 $handler=$read('app/Domains/Property/Automation/Action/PropertyBulkCreateHandler.php');
 $check(str_contains($handler,'IdempotentExternalActionHandlerInterface')
     &&str_contains($handler,"ActionStatus::Running")
-    &&str_contains($handler,"'USER'"),'Bulk handler bypasses approved Kernel Action.');
+    &&str_contains($handler,"'USER'")
+    &&str_contains($handler,"'APPROVAL_REQUIRED'")
+    &&str_contains($handler,"/^wf:[a-f0-9]{64}$/D")
+    &&str_contains($handler,"ActionStatus::Running"),'Bulk handler bypasses approved canonical Workflow Action.');
 $service=$read('symfony/src/Persistence/Property/PropertyBulkIntakeService.php');
 $check(str_contains($read('symfony/src/Persistence/Property/PropertyBulkPlanProposalService.php'),'$this->goals->proposePlan(')
     &&str_contains($service,'$this->writes->create(')

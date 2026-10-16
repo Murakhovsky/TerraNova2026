@@ -26,10 +26,18 @@ final readonly class PropertyBulkCreateHandler implements IdempotentExternalActi
         if ($action->status!==ActionStatus::Running
             || $action->sourceType!=='USER' || !ctype_digit($action->sourceId)
             || (int)$action->sourceId<1
+            || $action->executionMode!=='APPROVAL_REQUIRED'
+            || $action->riskLevel!=='HIGH'
+            // A manually submitted Action, even if independently approved,
+            // must not skip the approved Federation Plan and Workflow claim.
+            || !is_string($action->idempotencyKey)
+            || !preg_match('/^wf:[a-f0-9]{64}$/D',$action->idempotencyKey)
             || $action->targetType!=='property_bulk_batch'
             || !is_string($action->targetId)
             || !preg_match('/^bulk-[a-f0-9]{24}$/D',$action->targetId)
-            || !is_string($action->parameters['batch_digest']??null)) {
+            || count($action->parameters)!==1
+            || !is_string($action->parameters['batch_digest']??null)
+            || !preg_match('/^[a-f0-9]{64}$/D',$action->parameters['batch_digest'])) {
             return ExecutionResult::failure('Property bulk needs a running approved USER Action and immutable batch.');
         }
         try {
