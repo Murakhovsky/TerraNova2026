@@ -23,7 +23,7 @@ final readonly class DoctrineKernelExecutionRecoveryInspector
     /** @return array<string,mixed> */
     public function inspectTenant(string $organizationId,int $limit=100,?string $runId=null):array
     {
-        if(trim($organizationId)==='' || strlen($organizationId)>40) {
+        if(trim($organizationId)==='' || strlen($organizationId)>190) {
             throw new \DomainException('Recovery inspection requires a bounded tenant.');
         }
         if($runId!==null && (trim($runId)==='' || strlen($runId)>190)) {
