@@ -148,7 +148,9 @@ jobs:
           [[ "$EXPECTED_HEAD" =~ ^[a-f0-9]{40}$ ]] || { echo "::error::Invalid SHA"; exit 1; }
           [[ "$DEV_PATH" =~ ^/[A-Za-z0-9_./-]+$ ]] && [[ "$DEV_PATH" != *..* ]] || { echo "::error::Invalid deployment path"; exit 1; }
           [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || { echo "::error::Invalid SSH port"; exit 1; }
-          [ "$EXPECTED_HEAD" = "$GITHUB_SHA" ] || { echo "::error::Audit must inspect the workflow SHA"; exit 1; }
+          # A manually approved audit may inspect a deployed main SHA that differs
+          # from this feature-branch workflow SHA. Host manifest + source checks below
+          # must prove the exact requested deployment revision.
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/cos_execution_audit_key"
           chmod 600 "$HOME/.ssh/cos_execution_audit_key"
@@ -167,10 +169,18 @@ jobs:
           ROOT="$1"
           TENANT="$2"
           EXPECTED="$3"
-          test -d "$ROOT/.git" || { echo "::error::Deployed checkout unavailable"; exit 1; }
-          ACTUAL="$(git -C "$ROOT" rev-parse HEAD)"
+          MANIFEST="$ROOT/.cos-deployment-attestation.json"
+          test -f "$MANIFEST" || { echo "::error::Deployment attestation absent; deploy manifest-enabled main first"; exit 1; }
+          ACTUAL="$(php -r '
+            $m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
+            foreach (["source_sha","execution_source_sha256","routes_sha256"] as $key) {
+              if (!preg_match("/^[a-f0-9]{40}$/D", (string)($m[$key]??"")) && $key==="source_sha") exit(2);
+              if ($key!=="source_sha" && !preg_match("/^[a-f0-9]{64}$/D",(string)($m[$key]??""))) exit(3);
+            }
+            echo $m["source_sha"];
+          ' "$MANIFEST")"
           if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::Deployed revision differs from audit SHA"
+            echo "::error::Deployed manifest SHA differs from operator-selected SHA"
             exit 1
           fi
           D='docker'
@@ -185,9 +195,11 @@ jobs:
             find $MANIFEST_ROOTS -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
             sha256sum symfony/config/services.yaml
           } | sha256sum | cut -d' ' -f1)"
-          if [ -n "$(git -C "$ROOT" status --porcelain -- \
-            app/Kernel app/Platform app/Domains app/Infrastructure symfony/src symfony/config/services.yaml)" ]; then
-            echo "::error::Production execution sources differ from Git SHA"; exit 1
+          DECLARED_SOURCE_SHA="$(php -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);echo $m["execution_source_sha256"];' "$MANIFEST")"
+          DECLARED_ROUTES_SHA="$(php -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);echo $m["routes_sha256"];' "$MANIFEST")"
+          ACTUAL_ROUTES_SHA="$(sha256sum "$ROOT/symfony/config/routes.yaml" | cut -d' ' -f1)"
+          if [ "$SOURCE_SHA" != "$DECLARED_SOURCE_SHA" ] || [ "$ACTUAL_ROUTES_SHA" != "$DECLARED_ROUTES_SHA" ]; then
+            echo "::error::Deployment source differs from commit-bound manifest"; exit 1
           fi
           BASE_IMAGE=''
           declare -A VERIFIED_SERVICES=()

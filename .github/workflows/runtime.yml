@@ -890,6 +890,18 @@ jobs:
           printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/dev_deploy_key
           chmod 600 ~/.ssh/dev_deploy_key
           ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
+      - name: Create verifiable deployment source attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          CODE_HASH="$( {
+            find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
+            sha256sum symfony/config/services.yaml
+          } | sha256sum | cut -d' ' -f1 )"
+          ROUTES_HASH="$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)"
+          printf '{"source_sha":"%s","execution_source_sha256":"%s","routes_sha256":"%s"}\n' \
+            "$GITHUB_SHA" "$CODE_HASH" "$ROUTES_HASH" > .cos-deployment-attestation.json
+          echo "Prepared commit-bound deployment attestation for $GITHUB_SHA"
       - name: Sync repository
         run: |
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- '$DEV_PATH'"
