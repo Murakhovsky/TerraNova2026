@@ -6,7 +6,7 @@ policy:
   new_primitive_requires_guardian_review: true
   prefer_existing_component: true
 
-items: []
+items:
 
   - id: DSG-001
     need: "Golden Growth dashboard functional, visual, responsive and accessibility quality evidence"
