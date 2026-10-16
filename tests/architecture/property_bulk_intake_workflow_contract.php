@@ -25,9 +25,11 @@ $check(str_contains($handler,'IdempotentExternalActionHandlerInterface')
     &&str_contains($handler,"ActionStatus::Running")
     &&str_contains($handler,"'USER'"),'Bulk handler bypasses approved Kernel Action.');
 $service=$read('symfony/src/Persistence/Property/PropertyBulkIntakeService.php');
-$check(str_contains($service,'$this->goals->proposePlan(')
+$check(str_contains($read('symfony/src/Persistence/Property/PropertyBulkPlanProposalService.php'),'$this->goals->proposePlan(')
     &&str_contains($service,'$this->writes->create(')
     &&str_contains($service,'$this->properties->getPropertyPresentation(')
+    &&!str_contains($service,'FederationGoalStore')
+    &&!str_contains($service,'GoalSpecification')
     &&!str_contains($service,'cos_workflow_runs')
     &&!str_contains($service,'cos_workflow_steps'),
     'Bulk service must reuse canonical Goal/Property and never own technical Workflow.');

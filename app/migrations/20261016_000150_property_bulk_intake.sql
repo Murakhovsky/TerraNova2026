@@ -29,3 +29,16 @@ CREATE TABLE IF NOT EXISTS cos_property_bulk_items (
     CONSTRAINT fk_property_bulk_batch FOREIGN KEY(organization_id,batch_id)
         REFERENCES cos_property_bulk_batches(organization_id,batch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Unique active reservation for each normalized tenant Property identity.
+-- A conflicting Plan cannot be proposed, even if duplicate search raced.
+CREATE TABLE IF NOT EXISTS cos_property_bulk_identity_claims (
+    organization_id VARCHAR(190) NOT NULL,
+    fingerprint CHAR(64) NOT NULL,
+    batch_id VARCHAR(64) NOT NULL,
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (organization_id,fingerprint),
+    KEY idx_property_bulk_claim_owner (organization_id,batch_id),
+    CONSTRAINT fk_property_bulk_claim_owner FOREIGN KEY(organization_id,batch_id)
+        REFERENCES cos_property_bulk_batches(organization_id,batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

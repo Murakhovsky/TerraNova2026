@@ -33,7 +33,9 @@ final readonly class CanonicalAutomationIntentStore
             || !is_array($payload['items']??null)
             || !array_is_list($payload['items'])
             || count($payload['items'])<1 || count($payload['items'])>10
-            || array_keys($payload)!==['capability_id','items']) {
+            || count($payload)!==2
+            || !array_key_exists('capability_id',$payload)
+            || !array_key_exists('items',$payload)) {
             throw new DomainException('Automation intent is not an approved, bounded Property batch proposal.');
         }
         $items=[];

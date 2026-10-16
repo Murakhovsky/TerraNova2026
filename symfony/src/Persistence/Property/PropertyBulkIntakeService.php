@@ -4,14 +4,12 @@ declare(strict_types=1);
 namespace App\Persistence\Property;
 
 use App\Application\Property\Service\PropertyWriteService;
-use App\Persistence\Federation\FederationGoalStore;
 use DateTimeImmutable;
 use Doctrine\DBAL\Connection;
 use DomainException;
 use Domains\Property\Contract\PropertyReferencePort;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
-use Platform\Orchestration\Goal\GoalSpecification;
 
 /**
  * Business intake only. The ONLY write to Property native records is through
@@ -27,7 +25,6 @@ final readonly class PropertyBulkIntakeService
         private Connection $db,
         private PropertyReferencePort $properties,
         private PropertyWriteService $writes,
-        private FederationGoalStore $goals,
     ) {}
 
     /** @param list<array<string,mixed>> $source @return array<string,mixed> */
@@ -95,48 +92,20 @@ final readonly class PropertyBulkIntakeService
             ],$rows)];
     }
 
-    /** Human-reviewed immutable input -> canonical Federation Plan proposal.
-     * Does not approve either Plan or Action and does not start a Workflow.
-     * @return array<string,mixed>
-     */
-    public function propose(TenantContext $actor,string $id,string $reviewedDigest):array
+    /** @return list<array{index:int,input:array<string,mixed>}> */
+    public function reviewForPlan(TenantContext $actor,string $id,string $digest):array
     {
         $this->authorize($actor);
         $org=$actor->organizationId()->value();
-        return $this->db->transactional(function()use($actor,$org,$id,$reviewedDigest):array {
-            $this->db->fetchOne('SELECT batch_id FROM cos_property_bulk_batches
-                WHERE organization_id=:org AND batch_id=:id FOR UPDATE',['org'=>$org,'id'=>$id]);
-            $batch=$this->batch($org,$id);
-            if (!hash_equals((string)$batch['digest'],$reviewedDigest)
-                || $batch['owner_id']!==$actor->userId()->value()
-                || $batch['state']!=='staged') {
-                throw new DomainException('Batch is stale, already planned or owned by another user.');
-            }
-            $items=$this->items($org,$id);
-            foreach($items as $item) $this->assertNoNativeDuplicate($org,$item['input']);
-            $goalId='goal-'.substr(hash('sha256',$org."\0".$id),0,24);
-            $planId='plan-'.substr(hash('sha256',$org."\0".$id),0,24);
-            $goal=new GoalSpecification(
-                $goalId,$org,$actor->userId()->value(),
-                'Verify '.count($items).' Property Assets from approved batch '.$id,
-                [['id'=>'property.bulk_assets_verified','operator'=>'at_least','expected'=>count($items)]],
-                [self::CAPABILITY],1,null,null,'',[],['independent_plan','independent_action'],
-                'always',
-            );
-            $this->goals->createGoal($actor,$goal);
-            $this->goals->proposePlan($actor,$planId,$goalId,[
-                ['id'=>'bulk-create','capability_id'=>self::CAPABILITY,'capability_version'=>'1.0.0',
-                 'input'=>['target_type'=>'property_bulk_batch','target_id'=>$id,
-                           'parameters'=>['batch_digest'=>$reviewedDigest]]],
-            ]);
-            $this->db->executeStatement('UPDATE cos_property_bulk_batches SET state=:state,
-                goal_id=:goal,plan_id=:plan,updated_at=UTC_TIMESTAMP(6)
-                WHERE organization_id=:org AND batch_id=:id AND state=:expected',[
-                'state'=>'planned','goal'=>$goalId,'plan'=>$planId,
-                'org'=>$org,'id'=>$id,'expected'=>'staged']);
-            return ['batch_id'=>$id,'state'=>'planned','goal_id'=>$goalId,'plan_id'=>$planId,
-                'requires'=>'independent_plan_and_action_approvals'];
-        });
+        $batch=$this->batch($org,$id);
+        if ($batch['state']!=='staged'
+            || $batch['owner_id']!==$actor->userId()->value()
+            || !hash_equals((string)$batch['digest'],$digest)) {
+            throw new DomainException('Property batch is stale or not owned by this manager.');
+        }
+        $items=$this->items($org,$id);
+        foreach($items as $item) $this->assertNoNativeDuplicate($org,$item['input']);
+        return $items;
     }
 
     /** Domain-owned Action business handler. No direct HTTP/AI/cron caller. */
@@ -274,7 +243,7 @@ final readonly class PropertyBulkIntakeService
     }
 
     /** @param array<string,mixed> $input */
-    private static function fingerprint(array $input):string
+    public static function fingerprint(array $input):string
     {
         $parts=array_map(static fn(string $value):string=>mb_strtolower(
             preg_replace('/\s+/u',' ',trim($value))??trim($value)

@@ -156,3 +156,14 @@ Platform Workflow**, не маючи повноважень запускати �
 продовження затвердженого Run від сервісного облікового запису
 потребує окремої керованої делегації й чинної Identity/Policy,
 якої ця версія не видає. Це навмисне обмеження безпеки.
+
+### Конкурентний захист від дублікатів
+
+Під час propose Plan кожний normalized Property fingerprint отримує
+унікальний tenant-scoped claim у `cos_property_bulk_identity_claims`.
+Дві паралельні транзакції не можуть успішно зарезервувати той самий
+fingerprint. До approved Action виконавець повторно порівнює
+параметри кожного item із незмінним SHA-256 batch digest і перевіряє
+ownership claim. Claim зберігається після успіху; автоматично
+звільняти його після ambiguous partial write заборонено. Це не
+замінює загальну dedupe-policy для Property, записаних поза Bulk.

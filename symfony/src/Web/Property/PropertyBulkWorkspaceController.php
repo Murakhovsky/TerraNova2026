@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Web\Property;
 
 use App\Persistence\Property\PropertyBulkIntakeService;
+use App\Persistence\Property\PropertyBulkPlanProposalService;
 use App\Security\SessionCsrfValidator;
 use DomainException;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -21,6 +22,7 @@ final readonly class PropertyBulkWorkspaceController
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
         private PropertyBulkIntakeService $intake,
+        private PropertyBulkPlanProposalService $plans,
         private Environment $twig,
     ) {}
 
@@ -71,7 +73,7 @@ final readonly class PropertyBulkWorkspaceController
         if ($actor===null || !$actor->isManager()) return new Response('Forbidden',403);
         if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token',400);
         try {
-            $this->intake->propose($actor,$batchId,(string)$request->request->get('digest',''));
+            $this->plans->propose($actor,$batchId,(string)$request->request->get('digest',''));
             return new RedirectResponse('/workspace/property/bulk?batch='.rawurlencode($batchId).'&notice=planned',303);
         } catch (DomainException|\InvalidArgumentException $e) {
             return new Response('Plan не сформовано: '.htmlspecialchars($e->getMessage(),ENT_QUOTES,'UTF-8'),422);

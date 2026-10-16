@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Http\Api\V1\Controller;
 
 use App\Persistence\Property\PropertyBulkIntakeService;
+use App\Persistence\Property\PropertyBulkPlanProposalService;
 use App\Security\SessionCsrfValidator;
 use DomainException;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
@@ -19,6 +20,7 @@ final readonly class PropertyBulkIntakeController
         private TenantContextProviderInterface $tenants,
         private SessionCsrfValidator $csrf,
         private PropertyBulkIntakeService $intake,
+        private PropertyBulkPlanProposalService $plans,
     ) {}
 
     public function stage(Request $request):JsonResponse
@@ -49,7 +51,7 @@ final readonly class PropertyBulkIntakeController
         if (!is_array($json) || !is_string($json['digest']??null)) {
             return self::reply(['error'=>'review_digest_required'],422);
         }
-        try { return self::reply($this->intake->propose($this->actor(),$batchId,$json['digest']),201); }
+        try { return self::reply($this->plans->propose($this->actor(),$batchId,$json['digest']),201); }
         catch (DomainException|\InvalidArgumentException $e) {
             return self::reply(['error'=>'plan_blocked','reason'=>$e->getMessage()],422);
         } catch(Throwable $e) { error_log('cos.property.bulk.propose '.$e->getMessage());
