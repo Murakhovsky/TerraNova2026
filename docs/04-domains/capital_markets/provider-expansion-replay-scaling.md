@@ -24,7 +24,7 @@ Reconciliation використовує тільки однаковий canonica
 
 Уже наявний tn_capital_market_raw_events зберігає необроблену структуровану RawMarketEvent payload та transport metadata. Доповнення tn_capital_market_raw_provenance записує SHA256 payload, metadata та цілісного envelope **в одній транзакції** зі створенням raw-події. Події з минулих релізів без такого доказу мають статус NO_PROVENANCE, а не автоматично підтверджуються заднім числом.
 
-Read-only cursor audit перевіряє ці підписи повторним обчисленням. Ніяких секретів Vault, HTTP-заголовків авторизації чи вмісту payload у звичайному звіті.
+Read-only cursor audit перевіряє ці підписи повторним обчисленням. Некоректний JSON чи розбіжність `source_id` у provenance позначають окрему подію як `TAMPERED`, не приховуючи решту курсора. Ніяких секретів Vault, HTTP-заголовків авторизації чи вмісту payload у звичайному звіті.
 
     php symfony/bin/console cos:capital-markets:market-data:evidence provenance ORG ACTOR --source=SOURCE --cursor=0 --limit=100
 

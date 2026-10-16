@@ -94,6 +94,7 @@ final readonly class MysqlRawMarketProvenance
             'SELECT r.id,r.raw_event_id,r.source_id,r.external_instrument,r.event_type,
                     r.received_at,r.provider_timestamp,r.venue_id,r.sequence_value,r.data_mode,
                     r.raw_payload_json,r.transport_metadata_json,
+                    p.source_id AS attested_source_id,
                     p.payload_sha256,p.metadata_sha256,p.envelope_sha256
              FROM tn_capital_market_raw_events r
              LEFT JOIN tn_capital_market_raw_provenance p
@@ -108,21 +109,33 @@ final readonly class MysqlRawMarketProvenance
         $verified=0;$missing=0;$tampered=0;$items=[];$cursor=$afterId;
         foreach($q->fetchAll(PDO::FETCH_ASSOC) as $r){
             $cursor=(int)$r['id'];
-            $payload=json_decode((string)$r['raw_payload_json'],true,64,JSON_THROW_ON_ERROR);
-            $meta=json_decode((string)$r['transport_metadata_json'],true,64,JSON_THROW_ON_ERROR);
-            if(!is_array($payload)||!is_array($meta))throw new DomainException('Corrupt audited raw JSON.');
-            $ph=self::jsonHash($payload);$mh=self::jsonHash($meta);
-            $digest=self::envelope($org,$source,(string)$r['raw_event_id'],
-                (string)$r['external_instrument'],(string)$r['event_type'],
-                (string)$r['received_at'],$r['sequence_value'],
-                (string)$r['data_mode'],$ph,$mh,$r['venue_id'],
-                $r['provider_timestamp']);
-            $state=$r['envelope_sha256']===null?'NO_PROVENANCE':(
-                hash_equals((string)$r['payload_sha256'],$ph)
-                &&hash_equals((string)$r['metadata_sha256'],$mh)
-                &&hash_equals((string)$r['envelope_sha256'],$digest)
-                ?'VERIFIED':'TAMPERED'
-            );
+            // Malformed historical JSON must count as TAMPERED, not abort
+            // the entire cursor and hide subsequent readable evidence.
+            $digest=null;
+            try{
+                $payload=json_decode((string)$r['raw_payload_json'],true,64,JSON_THROW_ON_ERROR);
+                $meta=json_decode((string)$r['transport_metadata_json'],true,64,JSON_THROW_ON_ERROR);
+                if(!is_array($payload)||!is_array($meta)
+                    ||($payload!==[]&&array_is_list($payload))
+                    ||($meta!==[]&&array_is_list($meta))){
+                    throw new DomainException('Corrupt audited raw JSON structure.');
+                }
+                $ph=self::jsonHash($payload);$mh=self::jsonHash($meta);
+                $digest=self::envelope($org,$source,(string)$r['raw_event_id'],
+                    (string)$r['external_instrument'],(string)$r['event_type'],
+                    (string)$r['received_at'],$r['sequence_value'],
+                    (string)$r['data_mode'],$ph,$mh,$r['venue_id'],
+                    $r['provider_timestamp']);
+                $state=$r['envelope_sha256']===null?'NO_PROVENANCE':(
+                    $r['attested_source_id']!==$source
+                    ||!hash_equals((string)$r['payload_sha256'],$ph)
+                    ||!hash_equals((string)$r['metadata_sha256'],$mh)
+                    ||!hash_equals((string)$r['envelope_sha256'],$digest)
+                    ?'TAMPERED':'VERIFIED'
+                );
+            }catch(\JsonException|DomainException){
+                $state='TAMPERED';
+            }
             if($state==='VERIFIED')$verified++;
             elseif($state==='NO_PROVENANCE')$missing++;
             else $tampered++;

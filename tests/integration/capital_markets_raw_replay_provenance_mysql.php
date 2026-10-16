@@ -205,6 +205,29 @@ try{
         'Raw history tampering was not detected.');
     $assert($provenance->verifyEvent($org,$raw),
         'Original caller DTO integrity should remain valid independent of mutated stored value.');
+    $pdo->prepare("UPDATE tn_capital_market_raw_events
+       SET raw_payload_json='{not valid JSON'
+       WHERE organization_id=? AND raw_event_id=?")
+       ->execute([$org,$raw->eventId]);
+    $corrupted=$provenance->verify($org,$src,0,20);
+    $assert($corrupted['status']==='TAMPERED'
+        &&$corrupted['tampered']===1
+        &&$corrupted['checked']===2
+        &&$corrupted['next_cursor']>$cursor,
+        'Malformed JSON aborted provenance cursor instead of quarantining one row.');
+    $pdo->prepare(
+        "UPDATE tn_capital_market_raw_events SET raw_payload_json=?
+         WHERE organization_id=? AND raw_event_id=?")
+         ->execute([json_encode($raw->rawPayload,JSON_THROW_ON_ERROR),$org,$raw->eventId]);
+    $pdo->prepare(
+        "UPDATE tn_capital_market_raw_provenance SET source_id='source:forged'
+         WHERE organization_id=? AND raw_event_id=?")->execute([$org,$raw->eventId]);
+    $forged=$provenance->verify($org,$src,0,20);
+    $assert($forged['status']==='TAMPERED'&&$forged['tampered']===1,
+        'Provenance row source identity tampering was ignored.');
+    $assert(!$provenance->verifyEvent($org,$raw),
+        'Original DTO must reject forged attestation source.');
+
     echo "Capital Markets MySQL raw provenance, cursor, tenancy, immutable reconciliation receipts and tamper detection passed.\n";
 }finally{
     if($pdo->inTransaction())$pdo->rollBack();
