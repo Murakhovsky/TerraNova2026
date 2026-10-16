@@ -59,3 +59,7 @@ Compose-профілі cm-derivatives-lifecycle та cm-derivatives-stream ви�
 CI перевіряє ACK, snapshot, partial delta, timestamp rollback, точність decimals, ізоляцію інструмента, контрактні переходи й MySQL trust. L2 recovery suite окремо перевіряє venue-specific відновлення та контроль помилок. Готовність до production можлива лише після справжніх підписок, прав на дані, реального live soak, розривів мережі, повторного ACK та підтвердженого recovery.
 
 Поточний деривативний streaming pilot працює з Bybit Linear. Інші біржові derivative feeds потребують окремого підключення й acceptance; їх не можна помилково вважати покритими цим пакетом. Merge відкладений до завершення COS Federation.
+
+### Межа ізольованого legacy L2 QA
+
+У production L2-публікація допускається лише з `COS_CM_L2_FENCED_ENABLED=1` та канонічним source lease. Старий direct-ingestion шлях заблокований при `APP_ENV=prod` або `COS_CM_POOL_PRODUCTION_ARMED=1`. Він доступний тільки для ізольованої не-production VPS перевірки з явним `COS_CM_L2_LEGACY_VPS_QA_ENABLED=1`, але жоден результат цього шляху не є production acceptance evidence. Прапорці за замовчуванням вимкнені.

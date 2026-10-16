@@ -142,6 +142,14 @@ final class CapitalMarketsL2StreamCommand extends Command
                 new L2StreamSupervisor($policy), $policy, $metrics,
             ));
             $fenced=getenv('COS_CM_L2_FENCED_ENABLED')==='1';
+            // Legacy direct ingestion remains available only for explicit
+            // isolated non-production VPS diagnostics. It is never a production
+            // market-data writer and is not eligible for pool acceptance.
+            if(!$fenced && (getenv('COS_CM_L2_LEGACY_VPS_QA_ENABLED')!=='1'
+                || getenv('APP_ENV')==='prod'
+                || getenv('COS_CM_POOL_PRODUCTION_ARMED')==='1')){
+                throw new DomainException('Production L2 requires the canonical source-fenced writer. Legacy QA must be explicitly isolated.');
+            }
             if($fenced){
                 $matching=0;
                 foreach($this->subscriptionIntents->forSource(

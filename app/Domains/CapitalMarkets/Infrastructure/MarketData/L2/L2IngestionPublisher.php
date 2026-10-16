@@ -28,6 +28,10 @@ final readonly class L2IngestionPublisher
         private ?\Closure $fencedWriter = null,
     ) {
         if ($eventType !== 'l2.verified.snapshot') throw new \DomainException('Unsupported verified L2 event type.');
+        if ($fencedWriter === null && (getenv('APP_ENV')==='prod'
+            || getenv('COS_CM_POOL_PRODUCTION_ARMED')==='1')) {
+            throw new \DomainException('A production L2 publisher must have a source-fenced writer.');
+        }
     }
 
     public function publish(MarketOrderBook $book): MarketDataIngestionResult

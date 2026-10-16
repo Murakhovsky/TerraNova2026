@@ -112,6 +112,7 @@ generated: true
 | `capital_markets` | `app/migrations/20261015_000148_capital_markets_replay_scaling.sql` | `tn_capital_market_raw_provenance` |
 | `capital_markets` | `app/migrations/20261015_000148_capital_markets_replay_scaling.sql` | `tn_capital_market_subscriptions` |
 | `capital_markets` | `app/migrations/20261015_000148_capital_markets_replay_scaling.sql` | `tn_capital_market_venue_reconciliation` |
+| `capital_markets` | `app/migrations/20261016_000149_capital_markets_pool_evidence_scope.sql` | `tn_capital_market_pool_external_evidence` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_measurements` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_rediagnostic_schedules` |
 | `diagnostic` | `app/migrations/20260914_000049_diagnostic_runtime_v060.sql` | `diagnostic_reports` |

@@ -18,7 +18,10 @@ if(!str_contains($cmd,'MarketSubscriptionRepositoryInterface')
 }
 if(!str_contains($cmd,'COS_CM_L2_FENCED_ENABLED')
     ||!str_contains($cmd,'L2SourceFencedSession')
-    ||!str_contains($pub,'$fencedWriter')){
+    ||!str_contains($pub,'$fencedWriter')
+    ||!str_contains($cmd,'COS_CM_L2_LEGACY_VPS_QA_ENABLED')
+    ||!str_contains($cmd,"getenv('APP_ENV')==='prod'")
+    ||!str_contains($pub,'A production L2 publisher must have a source-fenced writer.')){
     throw new RuntimeException('L2 worker bypasses optional common source-fenced writer.');
 }
 foreach(['BinanceL2RecoveryCoordinator.php','BybitL2RecoveryCoordinator.php',
