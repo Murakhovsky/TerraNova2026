@@ -125,13 +125,16 @@ final readonly class DoctrineKernelExecutionRecoveryInspector
                 $unprovenEnrollment=true;
             }
         }
-        $complete=!$truncated && count($items)>0 && $total===count($items)
-            && !$unprovenEnrollment && !$invalidPermit;
+        // Cohort coverage is distinct from receipt sufficiency. A targeted
+        // one-Run recovery audit can enumerate its full cohort while its
+        // unsettled claim still requires manual reconciliation.
+        $complete=!$truncated && count($items)>0 && $total===count($items);
+        $proofIncomplete=$runId===null && $unprovenEnrollment;
         return [
             'source'=>'kernel_canonical_execution_recovery_v1','organization_id'=>$organizationId,
             'status'=>$invalidPermit||$counts['drift']>0||$counts['manual_required']>0
                 ? 'manual_reconciliation_required':
-                (!$complete?'incomplete':'technical_read_only_consistent'),
+                (!$complete || $proofIncomplete?'incomplete':'technical_read_only_consistent'),
             'coverage_complete'=>$complete,
             'canonical_run_total'=>$total,
             'evaluated_rows'=>count($items),
