@@ -4,11 +4,11 @@ const UI = {
     uk: {
         staleProcess:'процес неактивний', stalledProcess:'процес зупинено', completedProcess:'процес завершено',
         stopPrefix:'оновлення зупинено · ', heartbeatPrefix:'сигнал: ', noNewEvents:'без нових подій · перевірено щойно',
-        newEvent:'нова подія · щойно', updateError:this.ui().updateError, checkedNow:'перевірено щойно',
+        newEvent:'нова подія · щойно', updateError:'помилка оновлення · повторюю', checkedNow:'перевірено щойно',
         checkedSecondsAgo:'перевірено {n} с тому', heartbeatNA:'heartbeat немає', noData:'немає даних', justNow:'щойно',
         secondsAgo:'{n} с тому', minutesAgo:'{n} хв тому', hoursAgo:'{n} г{minutes} тому', daysAgo:'{n} д{hours} тому',
-        noActiveOperations:this.ui().noActiveOperations, lastPrefix:'останнє: ', event:'подія',
-        noExecutionEvents:this.ui().noExecutionEvents, seconds:'с', minutes:'хв', hours:'г', days:'д',
+        noActiveOperations:'Немає активних операцій', lastPrefix:'останнє: ', event:'подія',
+        noExecutionEvents:'Подій виконання поки немає.', seconds:'с', minutes:'хв', hours:'г', days:'д',
         status:{RUNNING:'ВИКОНУЄТЬСЯ',HEALTHY:'НОРМА',STALE:'НЕАКТИВНИЙ',STALLED:'ЗУПИНЕНО',WAITING:'ОЧІКУЄ',TERMINAL:'ЗАВЕРШЕНО',COMPLETED:'ЗАВЕРШЕНО',CANCELLED:'СКАСОВАНО',FAILED:'ПОМИЛКА',ERROR:'ПОМИЛКА',STARTED:'РОЗПОЧАТО',APPROVED:'СХВАЛЕНО',PASS:'ПРОЙДЕНО',PASSED:'ПРОЙДЕНО',SUCCESS:'УСПІШНО',TIMED_OUT:'ЧАС ВИЙШОВ',NOT_REACHED:'ЩЕ НЕ РОЗПОЧАТО',ANALYSIS:'АНАЛІЗ',QA_PLANNING:'ПЛАН ПЕРЕВІРКИ',ARCHITECTURE_PENDING:'АРХІТЕКТУРА',DEVELOPMENT_RUNNING:'РОЗРОБКА',REVIEW_PENDING:'РЕВ’Ю',QA_PENDING:'QA',READY_FOR_HUMAN_APPROVAL:'ОЧІКУЄ ПІДТВЕРДЖЕННЯ',HUMAN_DECISION_REQUIRED:'ПОТРІБНЕ РІШЕННЯ',BLOCKED:'ЗАБЛОКОВАНО',ESCALATED:'ЕСКАЛОВАНО',DONE:'ГОТОВО',QUEUED:'У ЧЕРЗІ',NEW:'НОВЕ',UNKNOWN:'НЕВІДОМО'},
         role:{ENGINEERING_MANAGER:'Менеджер / координатор',PRODUCT_REQUIREMENTS:'Продукт / вимоги',QA_PLANNER:'Планувальник QA',PRINCIPAL_ARCHITECT:'Головний архітектор',ARCHITECT:'Архітектор',DEVELOPER:'Розробник',REVIEWER:'Рев’юер',QA_EXECUTOR:'Виконавець QA',INTEGRATION_RELEASE:'Інтеграція / реліз',SECURITY_SPECIALIST:'Фахівець із безпеки',DATABASE_MIGRATION_SPECIALIST:'Фахівець із міграцій БД',PERFORMANCE_SPECIALIST:'Фахівець із продуктивності',DEVOPS_SPECIALIST:'Фахівець DevOps',DOCUMENTATION_SPECIALIST:'Фахівець із документації',API_SPECIALIST:'Фахівець з API',QA:'QA (застарілий)',AGENT:'Агент'},
         eventType:{REPOSITORY:'РЕПОЗИТОРІЙ',WATCHDOG:'КОНТРОЛЬ',RUNTIME:'СИСТЕМА',AGENT:'АГЕНТ',TOOL:'ІНСТРУМЕНТ',WORKFLOW:'ПРОЦЕС',LLM:'LLM',EVENT:'ПОДІЯ'}

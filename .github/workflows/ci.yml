@@ -85,6 +85,7 @@ jobs:
           php tests/unit/capital_markets_pool_issuer_e4.php
           php tests/architecture/capital_markets_pool_production_contract.php
           php tests/architecture/capital_markets_integrated_authority_contract.php
+          php tests/architecture/locale_static_module_execution_contract.php
           php tests/unit/capital_markets_instrument_pool_schedule_targets.php
           php tests/architecture/capital_markets_instrument_pool_scheduler_contract.php
           php tests/architecture/capital_markets_instrument_pool_approval_contract.php
