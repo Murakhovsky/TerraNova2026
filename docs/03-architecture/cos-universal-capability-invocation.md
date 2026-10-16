@@ -1,51 +1,62 @@
 ---
-title: COS Canonical Capability Library
+title: Канонічна бібліотека можливостей COS
+description: Єдиний каталог команд і запитів із контрольованим доступом для користувачів та автоматизацій.
 status: pilot
 updated: 2026-10-16
 ---
 
-# One catalog, many callers, existing Domain execution
+# Канонічна бібліотека команд COS
 
-The existing \`CanonicalCapabilityCatalog\` is the metadata authority, populated
-by module \`capability_contracts\`. The Gateway is a projection/admission boundary,
-not a new CommandBus, SQL writer or Action executor.
+Основне джерело метаданих — наявний \`CanonicalCapabilityCatalog\`, що читає
+\`capability_contracts\` із маніфестів доменів. Новий шлюз є лише шаром
+перевірки й маршрутизації. Він не створює окремого \`CommandBus\`,
+виконавця \`Action\` або сховища \`Workflow\`.
 
-Read: \`GET /api/v1/capabilities\`, \`GET /api/v1/capabilities/{id}\`.
-UI: \`/workspace/capabilities\`, authenticated tenant manager only.
+## Каталог і рівні готовності
 
-Statuses:
-- \`unavailable\`: declaration only, inactive module, missing permission or binding;
-- \`read_only\`: Domain-owned bound QueryBus adapter;
-- \`direct_human\`: low-risk INTERNAL Domain CommandBus with CSRF and idempotency;
-- \`workflow_approval_required\`: canonical Action with a real handler, *not*
-  dispatchable by the direct Gateway.
+Машинні маршрути: \`GET /api/v1/capabilities\` та
+\`GET /api/v1/capabilities/{id}\`. Робочий інтерфейс менеджера:
+\`/workspace/capabilities\`.
 
-Pilot bindings: \`query:property.asset.search\` and
-\`command:property.asset.create\`. Both are registered on Property's module
-manifest and delegate to the existing \`SearchPropertiesQuery\` /
-\`CreatePropertyCommand\`. The latter uses canonical Property transaction,
-idempotency receipts and audit. It never publishes a Listing.
+Статуси мають точне значення:
 
-Human interactive API:
-\`POST /api/v1/capabilities/property.asset.create/invoke\` with authenticated
-manager session, valid session CSRF, header \`X-Idempotency-Key\` and a JSON
-object with \`type_code\` and \`city\`. Server obtains tenant, actor and
-correlation. Forbidden IDs in payload are rejected. Same idempotency key and
-payload route to the existing Domain receipt.
+- \`unavailable\`: опис без перевіреного виконання, неактивний модуль або брак дозволу;
+- \`read_only\`: зареєстрований запит до наявного Domain \`QueryBus\`;
+- \`direct_human\`: внутрішня транзакційна команда для авторизованого користувача;
+- \`workflow_approval_required\`: реальний \`Action\` потребує погодженого
+  \`Platform Workflow\` і не може виконуватися напряму через шлюз.
 
-**No AI or CRON mutation authority is granted by this package.** Autonomous
-work must obtain a separately approved Plan through Platform Workflow,
-Kernel Action / Policy / Approval and authoritative receipts. Caller origin
-is fixed by the HTTP adapter, not the JSON; normal session security applies.
-A compromised session remains a compromised session, not a machine-attestation
-mechanism.
+## Перший інтегрований сценарій Property
 
-## Remaining acceptance
+Зареєстровано \`query:property.asset.search\` і
+\`command:property.asset.create\`. Обидві можливості належать
+\`Property\` та використовують існуючі \`SearchPropertiesQuery\` і
+\`CreatePropertyCommand\`. Створення об'єкта проходить через
+канонічну транзакцію Property, наявний механізм ідемпотентності
+та журнал аудиту. Автоматична публікація Listing відсутня.
 
-This is a safe implementation pilot, not full P0.1–P0.7 acceptance.
-Still needed: comprehensive command/adapter inventory for each Domain, formal
-input/output schema runtime validation, machine/service identity, AI/CRON
-transport governance, a live Workflow adapter for arbitrary registered Actions,
-UI confirmation and import workflow, native outcome verification, MySQL
-negative/concurrency/failure E2E and controlled production rollout.
-No new SQL migrations or automatic live cutover.
+Інтерактивний API:
+
+\`POST /api/v1/capabilities/property.asset.create/invoke\`
+
+Необхідна автентифікована сесія менеджера, чинний CSRF-токен,
+заголовок \`X-Idempotency-Key\` і JSON-об'єкт із \`type_code\` та \`city\`.
+Tenant, виконавець і correlation визначаються сервером. Клієнту
+заборонено підміняти ці ідентичності в параметрах. Повторна команда
+проходить через існуючі квитанції Property.
+
+## Безпека та межі реалізації
+
+Ця зміна **не надає AI або CRON права змінювати бізнес-дані**.
+Автоматизовані операції потребують окремого погодженого плану,
+\`Platform Workflow\` та перевірених \`Kernel Action / Policy / Approval\`.
+Джерело виклику призначає HTTP-адаптер, а не JSON. Захист сесій
+залишається відповідальністю наявної системи автентифікації.
+
+Це перший робочий зріз, а не завершення всього пакета P0.
+Надалі потрібні: перевірка контрактів усіх доменів, повноцінна
+валідація вхідних і вихідних схем, сервісні ідентичності для AI/CRON,
+підключення довільних команд до погоджених Workflow, UX масового
+імпорту, незалежні бізнес-докази, інтеграційні MySQL-тести та
+контрольований production rollout. Цей пакет не виконує міграцій SQL
+і не активує автоматичне виконання.
