@@ -39,7 +39,11 @@ final readonly class RawMarketReplaySimulator
         $sourceId=MarketSourceId::fromString($source);
         $desc=$this->sources->get($org,$sourceId);
         if($desc===null)throw new DomainException('Replay source is not registered.');
-        $events=$this->history->range($org,$sourceId,$from,$to,$limit);
+        // Request one extra row: a limited page must never be reported as
+        // full-range parity when more raw messages remain outside the page.
+        $events=$this->history->range($org,$sourceId,$from,$to,$limit+1);
+        $truncated=count($events)>$limit;
+        if($truncated)$events=array_slice($events,0,$limit);
         $out=[];$invalid=0;
         foreach($events as $raw){
             if(!$this->proof->verifyEvent($org,$raw)){
@@ -78,9 +82,13 @@ final readonly class RawMarketReplaySimulator
                 $out[]=['raw_event_id'=>$raw->eventId,'status'=>'REPLAY_QUARANTINED'];
             }
         }
-        return ['status'=>$invalid>0?'REPLAY_INCOMPLETE':'REPLAY_VERIFIED',
+        return ['status'=>$out===[]?'NO_EVIDENCE':(
+                $invalid>0?'REPLAY_INCOMPLETE':(
+                    $truncated?'REPLAY_PARTIAL':'REPLAY_VERIFIED')),
             'organization_id'=>$org,'source_id'=>$source,'events'=>$out,
             'decoded'=>count($out)-$invalid,'quarantined'=>$invalid,
+            'window_complete'=>!$truncated,'has_evidence'=>$out!==[],
+            'next_page_required'=>$truncated,
             'simulation_only'=>true,'no_market_data_ingestion'=>true,
             'no_execution_or_opportunity_side_effects'=>true];
     }

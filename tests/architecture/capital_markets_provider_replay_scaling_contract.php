@@ -42,7 +42,11 @@ if(!str_contains($raw,'$this->provenance->record(')
     ||!str_contains($audit,'hash_equals(')
     ||!str_contains($audit,'READ_ONLY_NO_LIVE_PUBLICATION')
     ||!str_contains($replay,'MarketDataMode::Replay')
-    ||!str_contains($replay,'no_execution_or_opportunity_side_effects')){
+    ||!str_contains($replay,'no_execution_or_opportunity_side_effects')
+    ||!str_contains($replay,'REPLAY_PARTIAL')
+    ||!str_contains($replay,'NO_EVIDENCE')
+    ||!str_contains($read('app/Domains/CapitalMarkets/Domain/MarketData/RawMarketEvent.php'),'assertSafeTransportMetadata')){
+
     throw new RuntimeException('Raw market provenance not coupled atomically or REPLAY not isolated.');
 }
 if(!str_contains($policy,"'for_execution'=>false")

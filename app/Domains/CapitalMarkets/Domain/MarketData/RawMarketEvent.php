@@ -44,6 +44,48 @@ final readonly class RawMarketEvent extends ValueObject
         }
         self::assertJsonObject($this->rawPayload,self::MAX_RAW_PAYLOAD_BYTES,'Raw market payload');
         self::assertJsonObject($this->transportMetadata,self::MAX_TRANSPORT_METADATA_BYTES,'Raw market transport metadata');
+        self::assertSafeTransportMetadata($this->transportMetadata);
+    }
+
+    /**
+     * Prevent accidental persistence of authentication material in the raw
+     * market audit lane. Payload values remain provider market-data evidence,
+     * but transport metadata must never carry credential headers or URL tokens.
+     * Nested metadata is checked recursively; no secret value is logged.
+     *
+     * @param array<string,mixed> $metadata
+     */
+    private static function assertSafeTransportMetadata(array $metadata):void
+    {
+        $forbidden=[
+            'authorization'=>true,'proxyauthorization'=>true,'cookie'=>true,
+            'setcookie'=>true,'apikey'=>true,'xapikey'=>true,
+            'xmbxapikey'=>true,'accesskey'=>true,'accesstoken'=>true,
+            'refreshtoken'=>true,'bearertoken'=>true,'clientsecret'=>true,
+            'secretkey'=>true,'privatekey'=>true,'password'=>true,
+            'passwd'=>true,'credential'=>true,'credentials'=>true,
+        ];
+        $visit=static function(mixed $value)use(&$visit,$forbidden):void {
+            if(is_array($value)){
+                foreach($value as $name=>$part){
+                    if(is_string($name)){
+                        $normalized=strtolower(preg_replace('/[^a-z0-9]/i','',$name));
+                        if(isset($forbidden[$normalized])){
+                            throw new InvalidArgumentException('Raw transport metadata contains a credential field.');
+                        }
+                    }
+                    $visit($part);
+                }
+                return;
+            }
+            if(is_string($value) && preg_match(
+                '/[?&](?:access_token|api_key|apikey|authorization|client_secret|password|secret)=/i',
+                $value
+            )===1){
+                throw new InvalidArgumentException('Raw transport URL contains a credential query parameter.');
+            }
+        };
+        $visit($metadata);
     }
 
     /** @param array<string,mixed> $value */

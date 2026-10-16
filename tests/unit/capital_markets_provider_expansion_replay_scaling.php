@@ -143,6 +143,27 @@ $replay=new Domains\CapitalMarkets\Domain\MarketData\RawMarketEvent(
 $assert($decoder->decode($source,$replay)->mode===MarketDataMode::Replay,
     'OKX spot decoder escaped REPLAY mode.');
 $assert($http->calls[0][4]===['www.okx.com'],'OKX market-data SSRF allowlist changed.');
+foreach([
+    ['authorization'=>'Bearer REDACTED'],
+    ['headers'=>['X-MBX-APIKEY'=>'REDACTED']],
+    ['nested'=>[['credentials'=>['value'=>'REDACTED']]]],
+    ['request_url'=>'https://host.example/market?api_key=REDACTED'],
+] as $credentialMeta){
+    $blocked=false;
+    try{
+        new Domains\CapitalMarkets\Domain\MarketData\RawMarketEvent(
+            'unit:secret:'.bin2hex(random_bytes(5)),
+            $raw->sourceId,$raw->venueId,$raw->externalInstrument,$raw->eventType,
+            $raw->providerTimestamp,$raw->receivedAt,$raw->sequence,$raw->rawPayload,
+            $credentialMeta,$raw->mode,
+        );
+    }catch(InvalidArgumentException){$blocked=true;}
+    $assert($blocked,'Secret-bearing transport metadata escaped raw history admission.');
+}
+$assert(Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance::jsonHash(
+    ['provider'=>'OKX','market_status'=>'OPEN']
+)!=='','Non-sensitive provider metadata incorrectly blocked.');
+
 $assert($adapter->resolveInstrument('ci',$source,
     new MarketDataInstrumentTarget($instrument,$mapping,'BTCUSDT'))===null,
     'OKX accepted a non-canonical spot venue symbol.');

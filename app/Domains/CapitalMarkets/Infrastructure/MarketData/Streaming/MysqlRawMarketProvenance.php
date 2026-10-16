@@ -133,7 +133,8 @@ final readonly class MysqlRawMarketProvenance
                 'replay_mode'=>'READ_ONLY_NO_LIVE_PUBLICATION',
             ];
         }
-        return ['status'=>$tampered>0?'TAMPERED':($missing>0?'INCOMPLETE':'VERIFIED'),
+        return ['status'=>$items===[]?'NO_EVIDENCE':(
+                $tampered>0?'TAMPERED':($missing>0?'INCOMPLETE':'VERIFIED')),
             'source_id'=>$source,'checked'=>count($items),'verified'=>$verified,
             'missing'=>$missing,'tampered'=>$tampered,'next_cursor'=>$cursor,
             'events'=>$items,'side_effects'=>false];

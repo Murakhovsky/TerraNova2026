@@ -157,6 +157,27 @@ try{
         &&$range['decoded']===1
         &&$range['events'][0]['canonical_integrity']==='CANONICAL_MATCH',
         'Full read-only replay did not preserve original canonical fingerprint.');
+    $empty=$replayer->run($org,$src,
+        $received->sub(new DateInterval('P4D')),
+        $received->sub(new DateInterval('P3D')),20);
+    $assert($empty['status']==='NO_EVIDENCE'
+        &&$empty['has_evidence']===false&&$empty['decoded']===0,
+        'Empty raw history falsely passed complete replay parity.');
+    $extra=new RawMarketEvent('raw:ci:extra:'.bin2hex(random_bytes(8)),
+        MarketSourceId::fromString($src),null,'BTC-USDT',
+        'okx.spot.ticker.bbo',$received,
+        $received->add(new DateInterval('PT1S')),'77',
+        $raw->rawPayload,$raw->transportMetadata,MarketDataMode::Live);
+    $assert($raws->append($org,$extra),'Second raw receipt could not be persisted.');
+    $partial=$replayer->run($org,$src,
+        $received->sub(new DateInterval('PT1S')),
+        $received->add(new DateInterval('PT2S')),1);
+    $assert($partial['status']==='REPLAY_PARTIAL'
+        &&$partial['next_page_required']===true
+        &&$partial['window_complete']===false
+        &&count($partial['events'])===1,
+        'Replay limit silently certified an incomplete time window.');
+
     $after=$pdo->query("SELECT COUNT(*) FROM tn_capital_market_canonical_events
        WHERE organization_id=".$pdo->quote($org))->fetchColumn();
     $assert($before===$after,'Read-only replay mutated canonical live stream.');

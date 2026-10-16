@@ -96,7 +96,10 @@ final class CapitalMarketsStreamingEvidenceCommand extends Command
                 }
             }
             $out->writeln(json_encode($report,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES));
-            return ($report['status']??'')==='TAMPERED'?Command::FAILURE:Command::SUCCESS;
+            $failureStatuses=['TAMPERED','INCOMPLETE','NO_EVIDENCE',
+                'REPLAY_INCOMPLETE','REPLAY_PARTIAL'];
+            return in_array($report['status']??'', $failureStatuses,true)
+                ?Command::FAILURE:Command::SUCCESS;
         }catch(Throwable $e){
             $out->writeln(json_encode(['status'=>'REJECTED','type'=>get_class($e)],JSON_THROW_ON_ERROR));
             return Command::FAILURE;
