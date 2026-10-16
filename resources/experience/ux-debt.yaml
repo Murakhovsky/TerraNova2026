@@ -33,3 +33,19 @@ items:
     scope: Capital Markets
     problem: "Capital Markets functionality has expanded faster than its visual/responsive Experience quality."
     exit: "Capital Markets active P0/P1 surfaces complete governed visual, responsive and accessibility delivery."
+
+  - id: UX-005
+    severity: MAJOR
+    status: OPEN
+    category: contract_quality
+    scope: registry
+    problem: "Route-specific goals alone do not establish actionable primary controls, real error/empty/permission states, or verifiable outcomes (preserved from #366 UXD-001)."
+    exit: "Validate active P0/P1 user actions and state transitions against the implemented pages; do not auto-promote V1_READY."
+
+  - id: UX-006
+    severity: MAJOR
+    status: OPEN
+    category: evidence_provenance
+    scope: registry
+    problem: "Automated Golden Eight evidence is not consistently reconciled into page contracts with run, SHA and artifact provenance (preserved from #366 UXD-003)."
+    exit: "Bind QA evidence to commit, run and artifact identifiers while keeping human acceptance a separate decision."

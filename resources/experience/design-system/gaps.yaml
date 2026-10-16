@@ -7,3 +7,19 @@ policy:
   prefer_existing_component: true
 
 items: []
+
+  - id: DSG-001
+    need: "Golden Growth dashboard functional, visual, responsive and accessibility quality evidence"
+    reason: "A repeatable human review remains necessary before Golden acceptance (from #366)."
+    requested_by: [growth.overview]
+    decision: PENDING
+    owner: growth_product
+    acceptance: "Review exact-commit evidence and record an explicit human decision."
+
+  - id: DSG-002
+    need: "Golden Eight repeatable human-review checklist"
+    reason: "Task success, visual hierarchy, responsive behavior, keyboard navigation and recoverable states need attributable approval (from #366)."
+    requested_by: [core.executive.dashboard, sales.dashboard, sales.today, sales.leads.collection, sales.deal.workspace, sales.pipeline, growth.overview, property.map]
+    decision: PENDING
+    owner: experience_design
+    acceptance: "Use golden-review-checklist.yaml with human signer, evidence and exact SHA; no synthetic V1_READY."

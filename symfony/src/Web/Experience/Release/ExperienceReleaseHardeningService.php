@@ -34,16 +34,12 @@ final readonly class ExperienceReleaseHardeningService
         $routes = $this->routes->productionHtmlRoutes();
         $exemptions = $this->exemptions->all();
 
+        // Canonical release-candidate set excludes retired or exempt contracts.
+        $retired = [PageExperienceStatus::Deprecated, PageExperienceStatus::Superseded, PageExperienceStatus::Exempt];
+        $releaseCandidates = array_values(array_filter($contracts, static fn ($page): bool => !in_array($page->status, $retired, true)));
         $p0 = [];
         $p1 = [];
-        foreach ($contracts as $page) {
-            if (in_array($page->status, [
-                PageExperienceStatus::Deprecated,
-                PageExperienceStatus::Superseded,
-                PageExperienceStatus::Exempt,
-            ], true)) {
-                continue;
-            }
+        foreach ($releaseCandidates as $page) {
             if ($page->priority === 'P0') $p0[] = $page;
             if ($page->priority === 'P1') $p1[] = $page;
         }
@@ -74,6 +70,7 @@ final readonly class ExperienceReleaseHardeningService
 
         $gates = [
             'registry_coverage' => ['actual' => $coverage, 'required' => 100, 'pass' => $coverage === 100],
+            'release_candidate_scope' => ['active' => count($releaseCandidates), 'excluded_retired' => count($contracts) - count($releaseCandidates), 'pass' => true],
             'design_system' => ['pass' => $design->isGreen(), 'deprecated_components' => $design->deprecated],
             'deprecated_component_cleanup' => ['pass' => $design->deprecated === 0, 'actual' => $design->deprecated, 'required' => 0],
             'stale_route_cleanup' => [

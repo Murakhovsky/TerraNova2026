@@ -17,6 +17,8 @@ foreach ([
     'registry_coverage',
     'golden_decision_ledger',
     'golden_human_approval',
+    'release_candidate_scope',
+    'excluded_retired',
     'p0_v1_ready',
     'p1_production_acceptable',
     'p0_p1_accessibility_qa',
