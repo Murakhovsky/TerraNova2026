@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Federation Plan Approval Action Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "goal_id",
+    "plan_id",
+    "approval_id",
+    "state"
+  ],
+  "properties": {
+    "goal_id": {
+      "type": "string"
+    },
+    "plan_id": {
+      "type": "string"
+    },
+    "approval_id": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "const": "approved"
+    }
+  }
+}

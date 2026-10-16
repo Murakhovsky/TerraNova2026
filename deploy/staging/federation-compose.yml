@@ -1,0 +1,124 @@
+name: cos-federation-staging
+
+# Dedicated DB/Redis/volumes. No production bind mounts, agents, or workers.
+# Never launch without deploy/staging/guard.sh; this file does not affect main.
+x-staging-app-env: &staging-app-env
+  APP_ENV: prod
+  APP_DEBUG: "0"
+  APP_SECRET: ${COS_FED_STAGING_APP_SECRET:?dedicated staging secret required}
+  COS_ORGANIZATION_ID: federation-staging
+  COS_AGENT_LLM_MODE: fixture
+  LLM_PROVIDER: fixture
+  LLM_MODEL: staging-fixture
+  LLM_TOKEN: ""
+  LLM_ENDPOINT: ""
+  COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED: "0"
+  COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED: "0"
+  COS_ENGINEERING_RUNTIME_WATCHDOG_ENABLED: "0"
+  COS_SALES_AUTOMATION_SCHEDULER_ENABLED: "0"
+  COS_GROWTH_AUTONOMY_SCHEDULER_ENABLED: "0"
+  COS_GROWTH_MARKET_SCHEDULER_ENABLED: "0"
+  COS_GROWTH_CONTENT_SCHEDULER_ENABLED: "0"
+  COS_GROWTH_SEQUENCE_SCHEDULER_ENABLED: "0"
+  COS_CM_POOL_SUBSCRIPTIONS_SCHEDULER_ENABLED: "0"
+  FOS_L2_ENABLED: "0"
+  TELEGRAM_BOT_TOKEN: ""
+  TELEGRAM_BOT_NAME: ""
+  N8N_OUTBOUND_URL: ""
+  N8N_OUTBOUND_SECRET: ""
+  DATABASE_URL: "mysql://fed_staging:${COS_FED_STAGING_DB_PASSWORD:?dedicated staging password required}@mysql:3306/fed_staging?serverVersion=8.4.0&charset=utf8mb4"
+  REDIS_URL: redis://redis:6379
+  MESSENGER_TRANSPORT_DSN: redis://redis:6379/staging_async
+  MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/staging_failed
+  MESSENGER_ENGINEERING_TRANSPORT_DSN: redis://redis:6379/staging_engineering
+  MESSENGER_ENGINEERING_IMMEDIATE_TRANSPORT_DSN: redis://redis:6379/staging_engineering_immediate
+  MESSENGER_CONSUMER_NAME: staging-http
+  SPATIAL_JWT_SECRET: ${COS_FED_STAGING_SPATIAL_SECRET:?dedicated staging JWT secret required}
+  MERCURE_JWT_SECRET: ${COS_FED_STAGING_MERCURE_SECRET:?dedicated staging Mercure key required}
+  MERCURE_URL: http://mercure/.well-known/mercure
+  MERCURE_PUBLIC_URL: http://127.0.0.1:18081/.well-known/mercure
+  APP_URL: http://127.0.0.1:18081
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: fed_staging
+      MYSQL_USER: fed_staging
+      MYSQL_PASSWORD: ${COS_FED_STAGING_DB_PASSWORD:?required}
+      MYSQL_ROOT_PASSWORD: ${COS_FED_STAGING_ROOT_PASSWORD:?required}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    volumes: [fed_staging_mysql:/var/lib/mysql]
+    networks: [staging_internal]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [fed_staging_redis:/data]
+    networks: [staging_internal]
+    mem_limit: 96m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mercure:
+    image: dunglas/mercure:v0.24.2
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: ${COS_FED_STAGING_MERCURE_SECRET:?required}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${COS_FED_STAGING_MERCURE_SECRET:?required}
+    networks: [staging_internal]
+    mem_limit: 128m
+
+  php:
+    image: cos-fed-staging-php:${COS_FED_STAGING_SHA:?pinned feature SHA required}
+    build:
+      context: ../..
+      dockerfile: docker/symfony/php/Dockerfile
+    environment:
+      <<: *staging-app-env
+    command: ["php-fpm"]
+    depends_on:
+      mysql: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    networks: [staging_internal]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: docker/symfony/nginx/Dockerfile
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "127.0.0.1:18081:80"
+    depends_on:
+      php: {condition: service_healthy}
+    networks: [staging_internal]
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -T 5 -O /dev/null http://127.0.0.1/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fed_staging_mysql:
+  fed_staging_redis:
+
+networks:
+  staging_internal:
+    internal: true

@@ -54,6 +54,12 @@ final readonly class CrossDomainArchitectureGraphProvider implements GraphProvid
                 $metadata = [
                     'contract' => $contract->contract,
                     'kind' => $contract->kind,
+                    'version' => $contract->version,
+                    'supported_version_range' => $contract->supportedVersionRange,
+                    'input_schema' => $contract->inputSchema,
+                    'output_schema' => $contract->outputSchema,
+                    'tenant_semantics' => $contract->tenantSemantics,
+                    'compatibility_tests' => $contract->compatibilityTests,
                     'purpose' => $contract->purpose,
                     'consumer_domain' => $consumer,
                     'provider_domain' => $provider,

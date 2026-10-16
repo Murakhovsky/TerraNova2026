@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Approved Documents Signature Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "type": "string",
+      "const": "document"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signer_id"
+      ],
+      "properties": {
+        "signer_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        }
+      }
+    }
+  }
+}

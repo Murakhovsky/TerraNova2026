@@ -21,6 +21,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         private EntityManagerInterface $entityManager,
         private EngineeringWorkflowStoreInterface $workflows,
         private EngineeringExecutionEventStoreInterface $events,
+        private ?EngineeringCanonicalTechnicalExecutionGateway $canonical = null,
     ) {}
 
     public function start(string $workflowId, EngineeringAgentTask $task, string $traceId): string
@@ -63,6 +64,9 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
                 taskId: null,
             ));
             $this->entityManager->flush();
+            // Same DB transaction as the AgentRun. Canonical claim is the
+            // technical execution gate for explicitly approved pilot features.
+            $this->canonical?->begin($runId,$workflowId,$task,$runTraceId);
 
             $this->events->append(
                 $task->featureId,
@@ -104,7 +108,8 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
         if (!$record instanceof AgentRunRecord) throw new RuntimeException('Engineering AgentRun not found: '.$engineeringRunId);
 
         $usage = $result->usage;
-        $record->complete(
+        $this->entityManager->getConnection()->transactional(function () use ($record, $result, $usage, $engineeringRunId): void {
+            $record->complete(
             status: strtoupper($result->status),
             output: array_merge($result->structuredOutput, [
                 '_kernel_run_id' => $result->runId,
@@ -119,7 +124,9 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
             errorMessage: $result->error,
             technicalRetry: $result->technicalRetries,
         );
-        $this->entityManager->flush();
+            $this->entityManager->flush();
+            $this->canonical?->complete($engineeringRunId);
+        });
         $this->events->append(
             $record->featureId(),
             $record->workflowExecutionId(),
@@ -154,8 +161,12 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
     {
         $record = $this->entityManager->find(AgentRunRecord::class, $engineeringRunId);
         if (!$record instanceof AgentRunRecord) throw new RuntimeException('Engineering AgentRun not found: '.$engineeringRunId);
-        $record->fail($errorType, $errorMessage, $technicalRetry);
-        $this->entityManager->flush();
+        $this->entityManager->getConnection()->transactional(function () use ($record, $errorType, $errorMessage, $technicalRetry, $engineeringRunId): void {
+            $record->fail($errorType, $errorMessage, $technicalRetry);
+            $this->entityManager->flush();
+            // Unknown external side effects are never silently marked safe.
+            $this->canonical?->quarantine($engineeringRunId);
+        });
         $this->events->append(
             $record->featureId(),
             $record->workflowExecutionId(),
@@ -244,6 +255,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
                 $effectiveFinishedAt,
                 $record->technicalRetry(),
             );
+            $this->canonical?->quarantine($record->id());
 
             $this->events->append(
                 $record->featureId(),
@@ -304,6 +316,7 @@ final readonly class DoctrineEngineeringAgentRunStore implements EngineeringAgen
                 : 'Workflow stalled after loss of AgentRun heartbeat.';
 
             $record->recoverStale($message, $heartbeatAt, $record->technicalRetry());
+            $this->canonical?->quarantine($record->id());
             $this->events->append(
                 $record->featureId(),
                 $record->workflowExecutionId(),

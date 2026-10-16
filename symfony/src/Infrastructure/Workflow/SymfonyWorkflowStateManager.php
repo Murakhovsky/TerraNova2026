@@ -50,12 +50,15 @@ final class SymfonyWorkflowStateManager implements WorkflowStateManagerInterface
             [WorkflowStatus::CREATED, WorkflowStatus::RUNNING],
             [WorkflowStatus::CREATED, WorkflowStatus::CANCELLED],
             [WorkflowStatus::RUNNING, WorkflowStatus::WAITING],
+            [WorkflowStatus::RUNNING, WorkflowStatus::AMBIGUOUS],
             [WorkflowStatus::RUNNING, WorkflowStatus::COMPLETED],
             [WorkflowStatus::RUNNING, WorkflowStatus::FAILED],
             [WorkflowStatus::RUNNING, WorkflowStatus::CANCELLED],
             [WorkflowStatus::WAITING, WorkflowStatus::RUNNING],
             [WorkflowStatus::WAITING, WorkflowStatus::FAILED],
             [WorkflowStatus::WAITING, WorkflowStatus::CANCELLED],
+            [WorkflowStatus::AMBIGUOUS, WorkflowStatus::WAITING],
+            [WorkflowStatus::AMBIGUOUS, WorkflowStatus::CANCELLED],
         ];
     }
 

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Federation Growth discovery receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "universe_id",
+    "status",
+    "collected_count",
+    "account_count",
+    "opportunity_count",
+    "goal_outcome_verified"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "universe_id": {
+      "type": "string"
+    },
+    "status": {
+      "const": "completed"
+    },
+    "collected_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "account_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "opportunity_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "goal_outcome_verified": {
+      "const": false
+    }
+  }
+}

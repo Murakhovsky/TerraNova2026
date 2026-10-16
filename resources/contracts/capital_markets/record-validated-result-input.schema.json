@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Approved Research Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "const": "research_result",
+      "type": "string"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 190
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experiment_id",
+        "financial_metrics",
+        "risk_metrics",
+        "execution_metrics",
+        "data_quality",
+        "limitations",
+        "review_evidence"
+      ],
+      "properties": {
+        "experiment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 190
+        },
+        "financial_metrics": {
+          "type": "object"
+        },
+        "risk_metrics": {
+          "type": "object"
+        },
+        "execution_metrics": {
+          "type": "object"
+        },
+        "data_quality": {
+          "type": "object"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "review_evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "decision",
+            "reviewed_by",
+            "review_reference"
+          ],
+          "properties": {
+            "decision": {
+              "const": "VALIDATED",
+              "type": "string"
+            },
+            "reviewed_by": {
+              "type": "string",
+              "minLength": 1
+            },
+            "review_reference": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

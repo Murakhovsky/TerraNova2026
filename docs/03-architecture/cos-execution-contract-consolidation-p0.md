@@ -1,0 +1,263 @@
+---
+title: P0 — Контракти та консолідація механізмів виконання COS
+description: Нормативні інтерфейси, DTO, інваріанти, реєстр дублювання, карта міграції та parity-тести для Kernel, Federation і Engineering.
+status: proposed
+updated: 2026-10-15
+kind: architecture
+---
+
+# P0: контракти та консолідація виконання COS
+
+**Package ID:** COS-FED-EXEC-CONTRACT-CONSOLIDATION-P0. **Блокує:** розробку або cutover нового durable Workflow.  
+**Обсяг:** Kernel Workflow + Federation Execution + Engineering AI Developer Team Workflow.  
+**Принцип:** централізовані технічні контракти і governance, незалежні власники бізнес-процесів. Не розробляти додатковий Federation Engine.  
+**Залежить від:** [ADR-0015](../11-decisions/ADR-0015-cos-federation-architecture.md), [загальної специфікації](./cos-federated-architecture-implementation-spec.md) та [тристороннього аудиту](./federation-execution-consolidation-audit.md).  
+**Статус:** нормативний **проєкт контрактів**. Інтерфейси нижче описують майбутній API і **ще не є готовим PHP-кодом**. Машинозчитувані реєстри нижче містять тільки початкові приклади consumers, не повний call graph.
+
+## 1. Мета і вихідні матеріали
+
+Узгодити семантичну та технічну модель до написання нового durable runner, забезпечити одне джерело істини на рівні execution і не втратити safety controls. Поточна реалізація Kernel Workflow має in-memory стан та умовні переходи, Federation має tenant-scoped persisted Run/Step, DAC/claims і receipts, Engineering має окреме ORM-сховище та власні бізнес-стадії.
+
+Чотири обов'язкові результати:
+1. **Contract Specification:** конкретні функції, DTO, статуси, errors та інваріанти.
+2. **Duplication Registry:** машинозчитуваний реєстр [JSON](../../resources/architecture/cos-execution-duplication-registry.json), доповнений verified runtime references.
+3. **State Migration Map:** [окрема специфікація](./cos-execution-state-migration-map.md) з old→new mapping, cutover safety та rollback.
+4. **Parity Tests:** [машинозчитувані сценарії](../../resources/architecture/cos-execution-parity-cases.json), baseline tests і майбутні executable adapters для нового runtime.
+
+**Не входить у цей пакет:** production dispatch, нові workflow SQL-таблиці, перенесення діючих Runs, видалення класів/таблиць, увімкнення external mutations, автоматичний merge. Це наступні implementation packs.
+
+## 2. Контракти та межі їх володіння
+
+Нижче конкретизовано **логічні** контракти. Розташування рекомендується `Platform\Workflow\Contract` для orchestration/persistence, `Kernel\Action\Contract` для side-effect admission, `Platform\Goal\Contract` для outcome. Наявний `Kernel\Workflow\Contract\WorkflowEngineInterface` не вилучати без deprecation adapter.
+
+```php
+<?php
+// Proposal, NOT committed PHP API.
+namespace Platform\Workflow\Contract;
+
+interface WorkflowExecutionStoreInterface
+{
+    public function create(WorkflowRunDraft $draft): WorkflowRunSnapshot;
+    public function get(string $organizationId, string $runId): ?WorkflowRunSnapshot;
+    /** @return list<WorkflowStepSnapshot> */
+    public function steps(string $organizationId, string $runId): array;
+    public function compareAndTransition(WorkflowTransitionCommand $command): WorkflowRunSnapshot;
+    public function claim(WorkflowStepClaimCommand $command): WorkflowStepSnapshot;
+    public function checkpoint(WorkflowCheckpointCommand $command): WorkflowStepSnapshot;
+}
+
+interface WorkflowStepSchedulerInterface
+{
+    /** Pure deterministic selection: no I/O, no dispatch. */
+    public function select(WorkflowDefinitionSnapshot $definition, WorkflowRunSnapshot $run, array $steps): WorkflowStepDecision;
+}
+
+interface WorkflowExecutionCoordinatorInterface
+{
+    public function start(StartWorkflowCommand $command): WorkflowRunSnapshot;
+    public function advance(AdvanceWorkflowCommand $command): WorkflowRunSnapshot;
+    public function resume(ResumeWorkflowCommand $command): WorkflowRunSnapshot;
+    public function cancel(CancelWorkflowCommand $command): WorkflowRunSnapshot;
+}
+
+interface WorkflowActionBindingInterface
+{
+    public function resolve(WorkflowActionIntent $intent): AuthorizedActionBinding;
+    /** Must use canonical Policy/Approval/ActionService. */
+    public function submit(AuthorizedActionBinding $binding): WorkflowActionReference;
+}
+
+interface WorkflowReceiptVerifierInterface
+{
+    public function attest(WorkflowReceiptRequest $request): WorkflowReceiptAttestation;
+}
+
+interface WorkflowRecoveryInterface
+{
+    /** No side effects. */
+    public function inspect(WorkflowRunIdentity $identity): WorkflowRecoveryAssessment;
+    /** Only trusted reconciliation, never blind external replay. */
+    public function reconcile(ReconcileWorkflowCommand $command): WorkflowRecoveryAssessment;
+}
+```
+
+Назви є чернеткою API; **не створювати окремий компонент, якщо існуючий Kernel/Platform contract уже надає еквівалентну семантику**. Вимагати ADR або compatibility decision для зміни чинних інтерфейсів.
+
+### 2.1. DTO та їхні обов'язкові поля
+
+| DTO | Поля | Вимоги |
+| --- | --- | --- |
+| `WorkflowRunIdentity` | `organizationId`, `runId` | nonempty, tenant bound, immutable |
+| `WorkflowRunDraft` | identity, `definitionId`, `definitionVersion`, `inputDigest`, `ownerActorId`, `correlationId`, `causationId`, `sourcePlanRef?`, `approvalRef?` | frozen source/definition, no user-supplied grants |
+| `WorkflowRunSnapshot` | identity, `status`, `revision`, `definitionVersion`, `planDigest?`, `currentStepId?`, `createdAt`, `updatedAt` | immutable read projection; revision >= 1 |
+| `WorkflowStepSnapshot` | run identity, `stepId`, `state`, `capabilityId`, `capabilityVersion`, `sideEffectLevel`, `dependencies`, `attempts`, `idempotencyKey`, `resultRef?`, `checkpoint?`, `revision` | step identity + immutable binding; preserve legacy idempotency |
+| `WorkflowDefinitionSnapshot` | `id`, `version`, `nodes`, `edges`, `inputSchemaRef`, `digest` | version pinning and validated DAG |
+| `WorkflowTransitionCommand` | identity, expected revision/state, next state, trusted actor, reason, causation | optimistic concurrency; fail closed |
+| `WorkflowStepClaimCommand` | identity, step ID, expected state/revision, worker identity, lease, claim token | exactly one authoritative claim, token fenced |
+| `WorkflowCheckpointCommand` | identity, step ID, expected revision/claim token, outcome status, verified receipt, timestamp | atomic receipt/state update |
+| `WorkflowStepDecision` | `kind` (ready/wait/complete/blocked/ambiguous), optional step ID, completed predecessor IDs, reason | deterministic; no I/O |
+| `WorkflowActionIntent` | identity, step ID, input digest, capability/version, approved plan reference | no raw arbitrary handler resolution |
+| `AuthorizedActionBinding` | owner module, handler binding, policy/approval evidence, idempotency key, input reference | non-forgeable server-side evaluation |
+| `WorkflowReceiptAttestation` | provider reference, action ID, proof type, attempt evidence, verified flag, verification timestamp, source digest | `completed` flag alone insufficient |
+| `WorkflowRecoveryAssessment` | identity, status, blocked reason, safe choices, trusted receipts, operator decision required | read-only inspection |
+| `ResumeWorkflowCommand` | identity, expected revision, signal/decision reference, verified actor/capability, correlation | arbitrary resume payload is NOT authorization |
+| `ReconcileWorkflowCommand` | identity, expected revision, actor + scope, authoritative receipt references, reason | idempotent, audited |
+
+**Типи:** identifiers та digests як validated `string`; timestamps як UTC immutable timestamps; status як типізовані enum/VO; serialized JSON only through versioned DTO serializer. Secrets and policy grants are never trusted from a browser payload.
+
+### 2.2. Семантична модель станів
+
+**Run:**
+- `CREATED` → `RUNNING` / `CANCELLED`;
+- `RUNNING` → `WAITING` / `AMBIGUOUS` / `COMPLETED` / `FAILED` / `CANCELLED`;
+- `WAITING` → `RUNNING` / `FAILED` / `CANCELLED`;
+- `AMBIGUOUS` → `WAITING` або інший явно дозволений стан **тільки після trusted reconciliation**;
+- terminal `COMPLETED`, `FAILED`, `CANCELLED` незмінні. Визначити policy переходу до RUNNING після reconciliation на етапі contract finalization, заборонити автоматичне перезапускання.
+
+**Step:** `PENDING` → `CLAIMED` → (`WAITING`, `AMBIGUOUS`, `COMPLETED`, `FAILED`); `WAITING` → `CLAIMED` тільки після authorized resume; terminal immutable. Технічний стан `READY` можна обчислювати, не обов'язково зберігати. P0: максимум одна зовнішня claim на Run; паралельність — окремий pack.
+
+**Engineering:** `EngineeringWorkflowState` (`ANALYSIS`, `ARCHITECTURE_PENDING`, `QA_FAILED`, `READY_FOR_HUMAN_APPROVAL` тощо) залишається окремою **семантикою бізнес-процесу**. Не створювати фіктивний Step для кожної історичної transition.
+
+### 2.3. Класифікація помилок
+
+| Клас помилки | Код | Обробка |
+| --- | --- | --- |
+| Tenant/capability/policy denied | `EXEC_AUTH_DENIED` | Permanent, audit, no dispatch |
+| Immutable definition/plan changed | `EXEC_SNAPSHOT_DRIFT` | Fail-closed, manual replanning |
+| Concurrent or stale revision | `EXEC_CONCURRENCY_CONFLICT` | Safe reread; **not** side-effect replay |
+| Invalid graph/step prerequisites | `EXEC_DEPENDENCY_INVALID` | Reject before claim/dispatch |
+| Verified prior effect absent/forged | `EXEC_RECEIPT_UNTRUSTED` | Block completion/next step |
+| Unknown external outcome | `EXEC_OUTCOME_AMBIGUOUS` | Manual reconciliation, no blind retry |
+| Transient infrastructure failure prior to effect | `EXEC_RETRYABLE_PRE_EFFECT` | Queue backoff under checked budget |
+| Incompatible legacy row | `EXEC_LEGACY_MAPPING_UNSAFE` | Quarantine, no mapping assumption |
+
+Спільний Error DTO містить code, immutable run/step/tenant references, classification, safe retry flag, diagnostic reference, correlation. Не змінювати вже наявну `ExecutionFailureKind` без мапи сумісності.
+
+## 3. Інваріанти контрактного пакета
+
+1. **Один technical writer:** persistent Run/Step змінюється лише через спільний Store/Coordinator.
+2. **Side effect тільки через canonical action:** Policy/Approval rechecked in worker; Domain handler ownership checked live.
+3. **Атомарність на локальній транзакції:** CAS/claim/checkpoint/outbox разом там, де це одна DB; зовнішній API не можна вважати частиною DB transaction.
+4. **Безпечний retry:** delivery at-least-once, effect exactly-once НЕ гарантується без remote idempotency/proof; unknown зовнішній стан блокує replay.
+5. **Похідний статус ≠ доказ:** completed Step без canonical Action receipt не дозволяє dependent side effect і finalization.
+6. **Два різні результати:** `Workflow COMPLETED` та `Goal ACHIEVED` різні факти.
+7. **Незмінні входи:** hashes/version of Plan/Graph/Action params; idempotency key/stored action key unchanged during migration.
+8. **Engineering бізнес-гейти:** незалежний Review/QA, final merge approval, budget, no self-approval зберегти.
+9. **Одна tenant boundary:** every query/command/claim/receipt checks organization.
+10. **No dual dispatch:** shadow reads дозволені; shadow write або виконання другого Action заборонені.
+
+## 4. Реєстр дублювання та відповідальності
+
+Машинозчитуваний документ: [реєстр дублювань](../../resources/architecture/cos-execution-duplication-registry.json). Реєстр початково містить конкретні перевірені класи і **одного перевіреного прикладного споживача**, не стверджує повне покриття call graph. Для кожного пункту зафіксовані `implementation`, `known_consumer`, `target_owner`, `decision`, `guardrail`, `baseline_test`, `migration_status`, `runtime_consumers_verified`. Порожня runtime verification повинна блокувати RETIRE, а не автоматично дозволяти видалення.
+
+**KEEP**: спеціалізована бізнес-семантика Engineering, Goal/Plan/Outcome, trusted evidences.  
+**ADAPT**: Engineering stage orchestration, policy guard, наявна інфраструктура locks.  
+**CONSOLIDATE**: загальне просування Run/Step, DAG/cursor, generic recovery, completion.  
+**MIGRATE**: джерело технічного стану з Federation/Engineering у canonical durable persistence після parity.  
+**RETIRE**: тільки після consumer cutover і rollback; не означає видалення зараз.  
+**UNKNOWN**: доказів недостатньо, жодного destructive cleanup.
+
+Не нав'язувати універсальний scheduler Engineering business state machine: його `EngineeringWorkflowDefinition` описує, **що робити**, а спільний runtime має визначати, **як безпечно виконувати**.
+
+## 5. Міграція станів
+
+Обов'язковий [State Migration Map](./cos-execution-state-migration-map.md) визначає source fields, ключі/унікальності, mappings, алгоритм phased cutover, Engineering transitional adapter та unsafe cases. У P0 map НЕ є migration SQL.
+
+Обов'язково зберегти:
+- `cos_federation_runs.organization_id + plan_id` unique і зв'язок legacy Run до Goal/Plan.
+- `cos_federation_steps.idempotency_key` SHA256 для `org\0run\0step`, зовнішній Action `fed:` + hash; **не переобчислювати зі зміненого Run ID**.
+- `cos_engineering_workflows.id`, `feature_id`, optimistic `version`, resume state і transition history.
+- Engineering AgentRun logical attempt, task and repository/GitHub side-effect receipts; без цього resume автоматизувати не можна.
+
+## 6. Parity Tests: дві незалежні фази
+
+Джерело сценаріїв: [Parity Test Registry](../../resources/architecture/cos-execution-parity-cases.json).
+
+**Фаза 0, зараз:** перевірити що сценарій зареєстрований, baseline test anchor існує, AS-IS інваріанти не втрачені; провести на поточному коді окремі baseline unit/architecture/MySQL tests. `baseline_anchor` не дорівнює повному доказу зазначеного test case.
+
+**Фаза 1, лише після canonical runtime:** запустити ті самі golden fixtures через старий (read-only/shadow) і новий executors, порівняти decisions/states/receipts/tenant/side-effect counts. Для side effects запускати тільки controlled fakes або дозволений staging, **ніколи два production dispatchers**. `target_status` лишається `NOT_IMPLEMENTED`, доки реальний новий runtime не існує.
+
+Приклади блокувальних тестів: cycle/injected DAG, CAS race, forged approval, stale Policy, duplicate Action receipt, crash before/after external effect, ambiguous remote result, tenant isolation, Engineered QA/rework loop, human merge, Golden50 native evidence, old↔new link compatibility й rollback.
+
+**Тест `tests/architecture/cos_execution_consolidation_pack.php`** лише перевіряє формат і source anchors цього контрактного пакета. Його green output **не означає green runtime parity**.
+
+## 6.1. Реалізований інкремент P0: спільний DAG selector
+
+У поточній гілці реалізовано `Platform\\Workflow\\Service\\WorkflowStepScheduler`, `WorkflowDependencyGraph`, `WorkflowStepSchedulerInterface`, DTO `WorkflowDefinitionSnapshot`, `WorkflowStepSnapshot`, `WorkflowStepDecision` і `WorkflowStepSelectionState`. `FederationStepCursor` і `FederationStepDependencyGraph` стали compatibility adapters та використовують **той самий** pure algorithm. Action, Approval, Claim, Receipt, CAS і Worker gates не переписані; це не новий execution engine. Додатково `ExecutionRunPolicy` делегує спільній технічній `DurableWorkflowTransitionPolicy`, збережено існуючі дозволені та заборонені переходи для Federation.
+
+Новий unit contract `tests/unit/workflow_shared_dag_contract.php` перевіряє прямий canonical selector та той самий Federation cursor, invalid DAG, injected steps, mixed read-only, ambiguity, exclusion of parallel claims і відсутність side effects. Старий `tests/unit/federation_step_cursor.php` залишається обов'язковим regression gate.
+
+Реальні PHP-контракти для майбутнього persistent Run/Step: `WorkflowExecutionStoreInterface`, `WorkflowExecutionCoordinatorInterface`, `WorkflowReceiptVerifierInterface`, `WorkflowRecoveryInterface`. Додано immutable DTO у `Platform\\Workflow\\Model` та статуси `AMBIGUOUS` / `CLAIMED` до чинних Kernel enum. **Це лише contracts і vocabulary, не реалізація сховища або активна заміна dispatcher.** Дозвіл на операцію в DTO не видається: перевірка Policy/Approval/Action залишається в canonical execution boundary.
+
+**Durable MySQL foundation:** адитивна міграція `Version20261015011500` створює `cos_workflow_runs` і `cos_workflow_steps` окремо від Federation/Engineering. `DoctrineWorkflowExecutionStore` реалізує atomic create, scoped snapshots, CAS Run transitions, serialized DAG step claim, claim tokens/leases/checkpoint та repeated receipt attestation для finalization. Відмовний canonical Claim Admission і Receipt Verifier wired у Symfony за замовчуванням: зовнішні ефекти **не активовано**. `tests/integration/workflow_durable_store_mysql.php` запускається в Docker CI з фактичною MySQL. Це фундамент без queue/dispatch/recovery/cutover.
+
+**Recovery inspection:** новий `DoctrineWorkflowRecoveryInspector` реалізує `WorkflowRecoveryInterface` тільки для tenant-scoped read-only аналізу. Перевіряє очікувану Run revision, активні та expired claims, uncertainty зовнішнього результату й повторно перевіряє completed receipts; `reconcile()` наразі жорстко забороняє зміни. MySQL integration покриває stale revision, foreign tenant, claimed read-only/external, forged receipt і terminal status. Автоматичне requeue/replay, завершення чи відновлення не активовані.
+
+**Shadow parity:** `WorkflowShadowParityComparator` порівнює read-only Federation legacy Run/Step із canonical snapshot, включно з tenant, version, Plan digest, Step binding, attempts, idempotency key та незалежно attested receipt references; без доказів результат `PARTIAL`, при невідповідності `DRIFT`, без канонічного Run `NO_TARGET`. Для Engineering технічний стан/trace/link порівнюється окремо, а stage/AgentRun/QA/human transitions **завжди залишаються PARTIAL** до доказової міграції. Жодного shadow writer чи dispatch не існує.
+
+**Read-only canonical Action receipt proof:** `DoctrineWorkflowActionReceiptVerifier` перевіряє існуючий Action із `wf:<stored-step-idempotency>`, pinned Step input/action binding, source/tenant/correlation, один COMPLETED attempt, latest `APPROVAL_REQUIRED` Policy і незалежне не прострочене `APPROVED` рішення. Перевірка Plan винесена у `WorkflowPlanApprovalEvidenceInterface`; **production default — `FailClosedWorkflowPlanApprovalEvidence`**, і основний `WorkflowReceiptVerifierInterface` залишається пов'язаний з `FailClosedWorkflowReceiptVerifier`. Без active module/handler, approved Plan adapter і окремого Action admission **не вмикати** цей proof як production-finalizer. Наявність receipt у БД не дає права виконувати Action.
+
+**Federation approval adapter:** `FederationWorkflowPlanApprovalEvidence` повторно використовує існуючий `FederationPlanApprovalEvidenceReader` та перевіряє tenant, owner, актуальну Goal specification, raw Plan JSON hash, approval Action і однаковість approved Plan steps з canonical technical definition. Це read-only bridge до спільного `WorkflowPlanApprovalEvidenceInterface`, а не новий Approval engine. Symfony default для універсального Plan port **залишається fail-closed**, тому Engineering/невідомі бізнес-плани не отримують неявного дозволу.
+
+**Кандидат канонічного Action claim admission:** `DoctrineWorkflowActionClaimAdmission` робить read-only перевірку pinned Run/Step/Plan, `CanonicalCapabilityCatalog`, `ActiveModuleResolver`, єдиного QUEUED Action з `wf:` idempotency key, нульових попередніх attempts, latest Policy і незалежного людського Approval. **Цей кандидат не є штатним DI alias і не відправляє Action**. До production cutover потрібен окремий останній worker-side gate, який повторює Policy/Approval/Plan без TOCTOU.
+
+**Worker re-admission і safe recovery:** `ModuleActionExecutionGate` тепер визначає `wf:` Action та викликає окремий `WorkflowActionWorkerAdmissionInterface` безпосередньо перед Domain handler. Symfony production використовує `FailClosedWorkflowActionWorkerAdmission`: до завершення parity жоден Workflow-owned Action не виконається. `MysqlActionRepository::requeueStale()` більше **не** перестворює спроби для `fed:` і `wf:`: такі RUNNING ефекти потребують ручного звіряння. Це не змінює звичайний retry для інших Action. Новий кандидат read-only admission (тільки для першого зовнішнього кроку, до доказової підтримки predecessor receipts) і MySQL тести окремі від production alias.
+
+**P0 worker predecessor receipts:** `DoctrineWorkflowActionWorkerAdmission` тепер на кожному зовнішньому Step обов'язково викликає `WorkflowPredecessorReceiptVerifier`. Спільний DAG scheduler перевіряє граф і відсутність незавершених залежностей; worker повторно атестує **всі** завершені кроки (не тільки безпосередніх батьків): immutable binding, expected idempotency SHA-256, кількість спроб, receipt ref. Для `external` використовується **той самий** незалежний `DoctrineWorkflowActionReceiptVerifier::attestForWorker`, що перевіряє persisted canonical Action, exactly-one COMPLETED attempt, latest Policy, незалежний Approval та затверджений Plan без видачі штучного TenantContext. Для `none` потрібен доменний `WorkflowNonActionReceiptEvidenceInterface`, за замовчуванням `FailClosedWorkflowNonActionReceiptEvidence`. Завершений запис або довільний `result_reference` не є доказом. Worker залишається за production fail-closed alias до повного cutover.
+
+**Domain-owned non-Action receipts (P0):** `WorkflowNonActionReceiptRegistry` із закритим реєстром `WorkflowNonActionEvidenceAdapterInterface` перевіряє точний `read:<kind>`, `owner_domain`, `run_id`, `input_digest` та активність Domain. Конкретні адаптери: `DocumentSignatureNonActionEvidence` (реальний `cos_document_signatures` + `cos_documents`, signed status, signature reference, signer і час після старту Run) та `CapitalResearchNonActionEvidence` (реальний `tn_capital_market_research_results`, VALIDATED status, незмінні поля/record JSON, відбиток, час створення після Run). Це **доказ існування конкретного локального бізнес-факту, не криптографічна перевірка підпису та не доказ зовнішньої мутації самим Workflow**. Невідомі kind, чужі tenant, відсутні джерела, скасовані документи, невірний digest і вимкнені Domain залишаються fail-closed. Production `WorkflowActionWorkerAdmissionInterface` і `WorkflowPlanApprovalEvidenceInterface` поки fail-closed, тож ніякого live execution/cutover немає.
+
+**Domain Evidence Adapters Sales / Growth / Engineering:** `SalesWonDealNonActionEvidence` читає `sales.deal.won` у tenant-scoped `cos_events` (aggregate/час і normalized payload hash). `GrowthInboundResponseNonActionEvidence` читає tenant-owned `tn_growth_engagement_responses` із provenance до вже завершеного canonical Workflow Action. `EngineeringArtifactNonActionEvidence` перевіряє чинний `cos_engineering_artifacts`, tenant через `cos_engineering_features`, завершений AgentRun і той самий hash, що Engineering ArtifactStore. Built-in `platform.engineering` не є опціональним tenant Domain; scope перевіряється обов'язково через Feature ownership. Така атестація **не** доводить Engineering QA/Review/Release approval. Невідомі kind/tenant/підмінені records залишаються fail-closed. Production worker alias лишається fail-closed.
+
+**Property verified identity:** `PropertyIdentityResolutionNonActionEvidence` валідує конкретне рішення `tn_property_identity_resolutions` разом із незалежним `tn_property_identity_review_audit`, актуальним `tn_property_assets`, reviewer, tenant scope, часовим інтервалом canonical Run/Step і fingerprint. Сам факт наявності об'єкта/попередній fuzzy match не є достовірним доказом. Спроба перевірити pending або підмінений review завершується забороною.
+
+**SQL-backed Shadow parity & Engineering technical cutover (P0):**
+- CLI only: `php symfony/bin/console cos:workflow:shadow-audit federation ORG LEGACY_RUN_ID` or `... engineering-agent ORG AGENT_RUN_UUID` or `... engineering-workflow ORG ENGINEERING_WORKFLOW_UUID`. `DoctrineWorkflowShadowParityReader` independently queries legacy Federation Runs/Steps, Engineering Feature/Workflow/AgentRun, canonical Runs/Steps and explicit Engineering claim links. Reports `match/partial/drift/no_target` with differences; a failed receipt, human approval or missing link is never promoted to MATCH. The `engineering-workflow` cohort report deliberately never elevates business parity above PARTIAL while human/QA/Release authority remains with legacy Engineering. No HTTP endpoint, no writes by audit.
+- Engineering technical unit is one **AgentRun** (not a whole mutable Engineering feature pipeline). `EngineeringCanonicalTechnicalExecutionGateway` issues exactly one persisted canonical `engineering.agent_execution` Step with tenant-scoped identity, pinned role/task, immutable fingerprint, lease, attempt=1, fencing token and CAS. `DoctrineEngineeringAgentRunStore` calls it inside original SQL AgentRun start/completion transaction; actual LLM/GitHub/domain stages still use their existing role policies, independence and human gates.
+- Rollout is **off by default**. Operator may explicitly insert a row `cos_engineering_technical_rollouts (organization_id, feature_id, mode='canonical', approved_by, approved_at)` after business approval. Only **new** AgentRuns of such Feature acquire a canonical technical claim. Existing historical AgentRuns are never backfilled/replayed. Link map `cos_engineering_technical_links` is immutable provenance and blocks a second AgentRun while an earlier claim is active/ambiguous.
+- Completing an AgentRun attests **already persisted** legacy output against same tenant/Feature/idempotency, writes a SHA-256 result receipt and closes the technical run using CAS. Failure/stale recovery marks possible external effect `ambiguous` and forbids blind retries. Explicit operator reconciliation is still necessary to safely resolve abandoned claims. An Engineering artifact/AgentRun completed state is **not** Reviewer/QA/Release approval.
+- This is opt-in **technical AgentRun execution migration**, not a silent fleet-wide Engineering business-workflow cutover. Federation remains on its current writer. Full production-wide ownership migration, trusted user-facing repair/reconciliation and business-stage/QA/merge parity are separate acceptance gates.
+
+**Engineering pre-provider admission + read-only fleet parity:** `EngineeringCanonicalTechnicalExecutionAdmission` реалізує application contract `EngineeringTechnicalExecutionAdmissionInterface`; production `EngineeringAgentRunner` перевіряє **кожну** зовнішню provider invocation (включно з повтором за output validation) проти tenant-owned RUNNING AgentRun, існуючого business Workflow, live rollout permit, canonical claim token/lease й `DoctrineWorkflowShadowParityReader::engineeringAgent` (тільки MATCH). Для `off` дозволено лише чинний legacy AgentRun **без** canonical link; `canonical` потребує явного operator approval та pinned claim. Втрата lease, змінений trace, знятий rollout permit, невірна schema / input та completed/ambiguous стан блокують наступне LLM execution. `DoctrineWorkflowShadowParityReader::engineeringFleet` виконує production-schema read-only скан allowlisted Features: rollouts, поточні business workflows і AgentRun технічну parity (MATCH/PARTIAL/DRIFT/NO_TARGET); `cos:workflow:shadow-audit engineering-fleet TENANT` повертає звіт без записів. Fleet-аудит охоплює всю історію Business Workflows на кожній allowlisted Feature (до 100 записів). Він окремо показує `workflow_counts`, сумарні `technical_counts` AgentRun, `coverage_complete` і `history_truncated`. Наявність unmigrated історії або перевищення ліміту примусово дає `NO_TARGET` (не MATCH). **PARTIAL на рівні бізнес-процесу ніколи не є автоматичним схваленням cutover.** CLI для `engineering-fleet` завжди повертає non-zero exit code, навіть за технічно узгодженої parity: автоматичне відкриття Release або Human gate за цим JSON заборонено. Human, Reviewer, QA та Release авторитет залишається у домені Engineering. Немає глобального cutover.
+
+**Engineering Feature-level cross-workflow fencing:** `EngineeringCanonicalTechnicalExecutionGateway::begin` блокує запуск будь-якого нового AgentRun у межах tenant+Feature, якщо існує будь-який `claimed` або `ambiguous` canonical claim, навіть коли Engineering створив новий бізнес Workflow ID. Це запобігає повторному зовнішньому ефекту через нову сесію після crash. Індекс `idx_eng_canonical_feature_state` використовується для scoped locking. Окремий реальний MySQL acceptance створює другий Workflow тієї самої Feature і вимагає відмови.
+
+**Поза межами поточного інкременту:** durable storage, typed Run/Step persistence, shared recovery/receipt implementation, migration Engineering, verified production cutover. Вони залишаються відкритими P0 задачами.
+
+## 7. Порядок виконання та критерій закриття P0
+
+| Gate | Артефакт | Умова завершення |
+| --- | --- | --- |
+| P0-0 | Contract spec reviewed | interfaces/DTO/errors/semantics погоджені; жоден unsafe assumption не залишився невирішеним |
+| P0-1 | Registry exhaustive | перевірені реальні production consumers, DI, queues, CLI/supervisor, SQL writers у трьох контурах; `runtime_consumers_verified=true` або explicit waiver |
+| P0-2 | State map signed | reversible algorithm, idempotency/CAS, immutable provenance, Engineering staged mapping, rollback points |
+| P0-3 | Baseline locked | old tests green на поточному HEAD, нові scenarios мапляться на fixtures; negative tests визначені |
+| P0-4 | Architecture review | Manager → Architect → Developer/QA plan → Security/Reviewer → Manager acceptance; ownership confirmed |
+
+**Тільки після P0-0..4 дозволено починати створення durable Workflow executor.** Full target parity буде gate окремого implementation pack перед production cutover. Не ставити parity `PASS` на етапі написання специфікації.
+
+## 8. Обов'язковий checklist для кожного майбутнього PR
+
+- Назвати source writer, canonical writer, migration adapter, consumers, відповідні ID parity scenarios.
+- Довести відсутність double dispatch, bypass Approval та можливості повторити невизначений external effect.
+- Зафіксувати regression Kernel Workflow, Federation, Engineering, tenant і legacy read projections.
+- Переконатися, що загальний Workflow не знає Growth/Sales/Documents/Engineering stage semantics.
+- Коміти групувати за цілісним пакетом, не створювати коміт на кожний файл. Merge лише після green CI + реального runtime evidence.
+
+
+## Безпечне відновлення виконань із невизначеним результатом
+
+Shared `WorkflowRecoveryInterface` now routes to `DoctrineWorkflowRecoveryManager`. It exposes a three-stage **explicit** recovery workflow rather than an automatic replay:
+
+1. `request(new WorkflowRecoveryPetition(command, requestId, stepId, expectedStepRevision, resolution, reason, receiptReference))` with a tenant manager, durable Run/Step revision and an honest human rationale.
+2. `approve(new WorkflowRunCommand(identity, DIFFERENT_MANAGER, runRevision, correlation), requestId)` validates fresh revisions, tenant membership and distinct human approval.
+3. `reconcile(new WorkflowRunCommand(identity, authorizedManager, runRevision, correlation, requestId))` transactionally rechecks the approved decision, immutable definition, independent source receipts and attempts, applies a **single Run/Step CAS**, and appends an immutable audit event.
+
+Allowed resolutions: `quarantine` (unknown, no replay), `verified_complete` (only independently persisted canonical Action COMPLETED receipt or registered Domain read-model evidence, all predecessors reverified), `reset_read_only` (expired read-only lease only, with **zero** canonical `wf:` Actions; all previous receipts validated) and `cancel_uncertain` (explicit two-manager risk acceptance, never asserts remote success or retries). Requester and approver **must differ**. The Run can move `ambiguous → waiting` only when no other ambiguous/running steps remain; normal `waiting → running` requires an explicit authenticated Run transition. Late worker claims are invalidated with the original claim token + revision CAS, and external Actions themselves are never requeued or rewritten. Manual operator must reconcile any still-in-flight external provider effect.
+
+`expiredClaims(command, limit)` offers a tenant-scoped bounded recovery worklist. Tables `cos_workflow_recovery_decisions` and append-only `cos_workflow_recovery_events` preserve approvals, state, actor IDs and transitions. No scheduler or automatic external dispatch is added. Global Worker Admission and general WorkflowReceiptVerifierInterface stay fail closed; the isolated recovery verifier uses *Federation's already validated Plan approval* for canonical Action receipt verification.
+
+
+Для оператора доступний tenant-scoped CSRF-захищений API: `GET /api/v1/workflows/recovery/worklist`, `GET /api/v1/workflows/{runId}/recovery`, `GET /api/v1/workflows/{runId}/recovery/requests`, `POST /api/v1/workflows/{runId}/recovery/request`, `POST /api/v1/workflows/{runId}/recovery/approve` і `POST /api/v1/workflows/{runId}/recovery/apply`. POST-запити вимагають CSRF та менеджерський tenant-контекст із сесії. Після карантину невизначений Step залишається у списку оператора; status Action зчитується, але ніколи не змінюється механізмом recovery. `cancel_uncertain` блокується, доки інші кроки того самого Run активні або теж невизначені.
+
+Recovery inspection використовує окрему перевірку receipts: `external` через canonical Action + Federation Plan, `none` через зареєстрований Domain Evidence Adapter. Повернення стану `terminal_receipts_verified` можливе лише після перевірки всіх завершених кроків і цілісності pinned DAG. Глобальний execution verifier при цьому залишається `FailClosed`.

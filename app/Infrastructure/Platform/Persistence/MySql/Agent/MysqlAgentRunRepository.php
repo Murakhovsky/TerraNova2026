@@ -34,7 +34,11 @@ final readonly class MysqlAgentRunRepository implements AgentRunRepositoryInterf
             'schema_version' => $agent->schemaVersion,
             'subject_type' => $invocation->subjectType,
             'subject_id' => $invocation->subjectId,
-            'context_reference' => json_encode($invocation->contextReferences, JSON_THROW_ON_ERROR),
+            'context_reference' => json_encode(
+                $invocation->canonicalSourceJobId===null ? $invocation->contextReferences
+                    : [...$invocation->contextReferences,
+                        '__kernel_source_job_id'=>$invocation->canonicalSourceJobId],
+                JSON_THROW_ON_ERROR),
             'input_snapshot' => json_encode($context, JSON_THROW_ON_ERROR),
             'input_expires_at' => (new \DateTimeImmutable())->modify('+' . max(1, $this->retentionDays) . ' days')->format('Y-m-d H:i:s.u'),
             'correlation_id' => $invocation->correlationId,

@@ -266,7 +266,9 @@ const markdownFiles = walk(docsRoot);
 
 for (const file of markdownFiles) {
   const relative = relativeToDocs(file);
-  if (/^03-architecture\/.+(?:wave\d+|v0\.\d+|cutover|closure|migration-tracker|retirement|adoption)/i.test(relative)) {
+  // Historical document markers must be filename tokens, not substrings of
+  // live feature names such as progressive-disclosure.
+  if (/^03-architecture\/.*(?:\/|[-_.])(?:wave\d+|v0\.\d+|cutover|closure|migration-tracker|retirement|adoption)(?=[-_.]|$)/i.test(relative)) {
     errors.push(`${relative}: historical migration/version document must live outside active docs`);
   }
 }

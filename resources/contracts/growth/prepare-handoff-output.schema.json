@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Prepared Growth handoff evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_id",
+    "status",
+    "target_domain",
+    "goal_outcome_verified"
+  ],
+  "properties": {
+    "candidate_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "const": "ready_for_handoff"
+    },
+    "target_domain": {
+      "type": "string",
+      "const": "sales"
+    },
+    "goal_outcome_verified": {
+      "type": "boolean",
+      "const": false
+    }
+  }
+}

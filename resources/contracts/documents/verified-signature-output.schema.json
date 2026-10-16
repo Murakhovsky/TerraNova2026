@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verified signed document recording receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "signature_id",
+    "status",
+    "attestation_verified",
+    "proof_id"
+  ],
+  "properties": {
+    "signature_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "const": "signed"
+    },
+    "attestation_verified": {
+      "type": "boolean",
+      "const": true
+    },
+    "proof_id": {
+      "type": "string"
+    }
+  }
+}

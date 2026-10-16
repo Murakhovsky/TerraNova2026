@@ -33,4 +33,21 @@ if ($violations) {
     exit(1);
 }
 
-echo "Table ownership passed: every Domain MySQL adapter writes only its owned tables.\n";
+// One owner for federation compatibility and canonical execution tables.
+// An earlier inventory incorrectly assigned Goal/Experience rows to CapitalMarkets.
+foreach ([
+    'cos_federation_goals', 'cos_federation_goal_specs', 'cos_federation_plans',
+    'cos_federation_runs', 'cos_federation_steps', 'cos_federation_evaluations',
+    'cos_experience_profiles', 'cos_workspace_experience_states',
+    'cos_workflow_runs', 'cos_workflow_steps',
+    'cos_workflow_recovery_decisions', 'cos_workflow_recovery_events',
+] as $table) {
+    if (TableOwnership::ownerOf($table) !== 'Platform') {
+        throw new RuntimeException('Canonical Platform owner mismatch: ' . $table);
+    }
+}
+if (TableOwnership::ownerOf('tn_capital_market_instruments') !== 'CapitalMarkets') {
+    throw new RuntimeException('CapitalMarkets business table ownership has drifted.');
+}
+
+echo "Table ownership passed: Domain SQL ownership and federated Platform Run/Goal/Experience boundaries.\n";

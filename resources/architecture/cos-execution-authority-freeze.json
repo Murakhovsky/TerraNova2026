@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "baseline_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+  "status": "ACTIVE_FREEZE__CANONICAL_CUTOVER_NOT_COMPLETE",
+  "coverage": "Static direct SQL/DBAL writer freeze in app/, symfony/src/, bin/ plus explicit entrypoint/port source-contract checks; no exhaustive runtime call graph or live tenant proof.",
+  "canonical_authority": "Platform Workflow Execution",
+  "allowed_writers": {
+    "cos_federation_runs": [
+      "symfony/src/Persistence/Federation/FederationGoalStore.php",
+      "symfony/src/Persistence/Federation/FederationRunFinalizer.php"
+    ],
+    "cos_federation_steps": [
+      "symfony/src/Persistence/Federation/FederationGoalStore.php",
+      "symfony/src/Persistence/Federation/FederationExternalActionSubmission.php"
+    ],
+    "cos_workflow_runs": [
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php"
+    ],
+    "cos_workflow_steps": [
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php"
+    ]
+  },
+  "legacy_exception": {
+    "status": "FROZEN_NO_NEW_WRITERS",
+    "sources": [
+      "cos_federation_runs",
+      "cos_federation_steps"
+    ],
+    "sunset_gate": "verified migration and shadow parity of every tenant/run/step/Action receipt, in-flight drain and single-writer fence"
+  },
+  "engineering_exception": {
+    "status": "PLATFORM_STORE_DELEGATION__LAST_HEAD_MYSQL_PASS__FLEET_ACCEPTANCE_PENDING",
+    "path": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionGateway.php",
+    "sunset_gate": "verify existing engineering shadow MySQL suite and fleet-wide rollout before claiming completed cutover",
+    "last_verified_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+    "last_verified_runtime": "https://github.com/Murakhovsky/TerraNova2026/actions/runs/38750264374"
+  },
+  "grandfathered_legacy_executors": [
+    "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
+    "symfony/src/Persistence/Federation/FederationReadOnlyWorkflowRunner.php"
+  ],
+  "governance_rule": "FED-INV-04",
+  "nonproduction_fixture_exclusions": [
+    "symfony/src/Command/FederationPersistenceSmokeCommand.php"
+  ],
+  "federation_canonical_route": {
+    "status": "NEW_RUNS_CANONICAL__LEGACY_HISTORY_READ_ONLY__TENANT_ROLLOUT_REQUIRED",
+    "entrypoint": "symfony/src/Web/Federation/FederationRunController.php",
+    "bridge": "symfony/src/Persistence/Federation/FederationCanonicalWorkflowBridge.php",
+    "shared_writer": "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+    "mysql_regression": "tests/integration/federation_canonical_goal_e2e_mysql.php",
+    "last_verified_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+    "release_gate": "live tenant exhaustiveness, migration integrity, Golden 50 and independent operator acceptance outstanding"
+  }
+}

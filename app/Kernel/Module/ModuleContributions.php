@@ -15,6 +15,7 @@ final readonly class ModuleContributions
      * @param list<string> $configurationProvisionerServices
      * @param array<string, list<string>> $extensionServices
      * @param list<CrossDomainContract> $crossDomainContracts
+     * @param list<CapabilityContract> $capabilityContracts
      */
     public function __construct(
         public ?string $runtimeModuleService = null,
@@ -25,6 +26,7 @@ final readonly class ModuleContributions
         public array $configurationProvisionerServices = [],
         public array $extensionServices = [],
         public array $crossDomainContracts = [],
+        public array $capabilityContracts = [],
     ) {
         if ($this->runtimeModuleService !== null) {
             self::assertServiceId($this->runtimeModuleService);
@@ -70,6 +72,17 @@ final readonly class ModuleContributions
             }
         }
 
+        $capabilityIds = [];
+        foreach ($this->capabilityContracts as $capability) {
+            if (!$capability instanceof CapabilityContract) {
+                throw new InvalidArgumentException('Executable capabilities must be CapabilityContract instances.');
+            }
+            if (isset($capabilityIds[$capability->id])) {
+                throw new InvalidArgumentException('Duplicate executable capability declaration: ' . $capability->id);
+            }
+            $capabilityIds[$capability->id] = true;
+        }
+
         $contractKeys = [];
         foreach ($this->crossDomainContracts as $contract) {
             if (!$contract instanceof CrossDomainContract) {
@@ -97,6 +110,7 @@ final readonly class ModuleContributions
             self::stringList($definition['configuration_provisioner_services'] ?? []),
             self::extensionMap($definition['extension_services'] ?? []),
             self::crossDomainContracts($definition['cross_domain_contracts'] ?? []),
+            self::capabilityContracts($definition['capability_contracts'] ?? []),
         );
     }
 
@@ -184,6 +198,22 @@ final readonly class ModuleContributions
             $contracts[] = CrossDomainContract::fromArray($definition);
         }
         return $contracts;
+    }
+
+    /** @param mixed $value @return list<CapabilityContract> */
+    private static function capabilityContracts(mixed $value): array
+    {
+        if (!is_array($value) || !array_is_list($value)) {
+            throw new InvalidArgumentException('Executable capability contracts must be a list.');
+        }
+        $result = [];
+        foreach ($value as $definition) {
+            if (!is_array($definition)) {
+                throw new InvalidArgumentException('Executable capability contract must be an object-like array.');
+            }
+            $result[] = CapabilityContract::fromArray($definition);
+        }
+        return $result;
     }
 
     /** @param list<string> $values */

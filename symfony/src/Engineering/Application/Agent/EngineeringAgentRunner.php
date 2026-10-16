@@ -20,6 +20,7 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         private EngineeringAgentDefinitionFactory $definitions = new EngineeringAgentDefinitionFactory(),
         private EngineeringAgentOutputValidator $validator = new EngineeringAgentOutputValidator(),
         private int $maxTechnicalRetries = 2,
+        private ?EngineeringTechnicalExecutionAdmissionInterface $technicalAdmission = null,
     ) {
     }
 
@@ -37,6 +38,8 @@ final readonly class EngineeringAgentRunner implements EngineeringAgentRunnerInt
         $runCorrelationId = $this->runCorrelationId($correlationId, $task->id);
 
         for ($technicalRetry = 0; $technicalRetry <= $this->maxTechnicalRetries; ++$technicalRetry) {
+            // Re-check persisted CAS claim and human opt-in before EVERY provider call.
+            $this->technicalAdmission?->assertReady($task, $organizationId, $runCorrelationId);
             $result = $this->executeOnce($task, $organizationId, $runCorrelationId, $technicalRetry, $validationFeedback);
 
             if ($result->status !== AgentRunStatus::COMPLETED->value) {

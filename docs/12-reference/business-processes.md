@@ -22,6 +22,7 @@ generated: true
 | Trusted Market State → Tokenized Equity Paper Result | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-tokenized-equity-paper-cycle.md) |
 | Лабораторія досліджень і стратегій Capital Markets | `capital_markets` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/capital-markets-research-strategy-lab.md) |
 | Diagnostic Session → Recommendation | `diagnostic` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | [Відкрити workflow](../02-workflows/diagnostic-session-to-recommendation.md) |
+| Federation Goal Plan Approval | `federation` | `as-is` | `documented` | 1 | 0 | 1/1 | 1/1 | 0/1 | 0/0 | 0/0 | [Відкрити workflow](../02-workflows/federation-goal-plan-approval.md) |
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
@@ -44,6 +45,7 @@ generated: true
 | Trusted Market State → Tokenized Equity Paper Result | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Лабораторія досліджень і стратегій Capital Markets | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
 | Diagnostic Session → Recommendation | 7/7 | 0/7 | 7/7 | 0/7 | 7/7 | 7/7 | 0/7 | 7/7 | 0/7 |
+| Federation Goal Plan Approval | 1/1 | 1/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/1 | 0/0 | 0/0 |
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
@@ -177,6 +179,30 @@ generated: true
 | Record findings and recommendation | deterministic evaluation engine | `diagnostic` | gap: `missing-domain-capability` | `state` | так | use_case `RecordDiagnosticResult` [source] |
 | Complete coherent session | diagnostic operator / interviewer | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `CompleteDiagnosticSession` [source] |
 | Review / accept recommendation | reviewer / decision maker | `diagnostic` | gap: `missing-domain-capability` | `decision` | так | use_case `AcceptDiagnosticRecommendation` [source] |
+
+## Federation Goal Plan Approval
+
+- **Process ID:** `federation.goal-plan-approval`
+- **Schema:** `v4`
+- **Domain:** `federation`
+- **Бізнес-стан:** `as-is`
+- **Покриття capabilities:** 1/1 кроків
+- **Cross-domain кроки:** 0/1
+- **Derived verification:** `documented`
+- **Тригер:** A tenant manager proposes an immutable Goal Plan and a separate human approver confirms the canonical Action
+- **Workflow:** [Federation Goal Plan Approval](../02-workflows/federation-goal-plan-approval.md)
+
+**Результати**
+
+- Canonical approval Action is tied to an exact immutable Goal Plan snapshot
+- Plan transitions from proposed to approved only after Policy and independent human Approval
+- Automatic execution remains disabled until an explicit approved Workflow starts
+
+**Відповідальність, capabilities і runtime evidence**
+
+| Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
+| --- | --- | --- | --- | --- | --- | --- |
+| Verify human Action approval and activate immutable Plan | Federation approval Action handler | `federation` | `federation.plan.approval` | `operation` | ні | — |
 
 ## Signal → Qualified Opportunity Handoff
 

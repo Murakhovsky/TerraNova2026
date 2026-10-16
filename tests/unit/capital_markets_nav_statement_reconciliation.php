@@ -12,13 +12,16 @@ $paper=[
     ['venue_id'=>'venue-1','asset_key'=>'USD','available_amount'=>'100.25','reserved_amount'=>'9.75'],
     ['venue_id'=>'venue-2','asset_key'=>'USD','available_amount'=>'50','reserved_amount'=>'0'],
 ];
+// Tied source statements must share one explicit accounting instant.
+$fixtureEffectiveAt=(new DateTimeImmutable('now',new DateTimeZone('UTC')))
+    ->format('Y-m-d\\TH:i:s\\Z');
 $observation=static fn(string $kind,string $id,string $value,?string $venue=null,string $currency='USD'):array => [
     'kind'=>$kind,'evidence_id'=>$id,'amount'=>$value,'venue_id'=>$venue,
     'liability_account_id'=>$kind==='LIABILITY_BALANCE'?'loan-account-1':null,
     'currency'=>$currency,'status'=>'PENDING_RECONCILIATION','reconciled'=>false,
     'source_key_sha256'=>hash('sha256','source:'.$id),
     'source_document_sha256'=>hash('sha256','file:'.$id),
-    'effective_at'=>(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format('Y-m-d\\TH:i:s\\Z'),
+    'effective_at'=>$fixtureEffectiveAt,
 ];
 $source=[
     $observation('VENUE_BALANCE','venue-1-proof','110','venue-1'),

@@ -45,7 +45,10 @@ $mysqlSource = (string) file_get_contents(
 foreach ([
     "ORDER BY attempt DESC LIMIT 1 FOR UPDATE",
     "attempt = :attempt AND worker_id = :worker_id AND status = 'RUNNING'",
-    "WHERE status = 'RUNNING' AND started_at < :cutoff ORDER BY started_at FOR UPDATE",
+    "WHERE status = 'RUNNING' AND started_at < :cutoff ",
+    "idempotency_key NOT LIKE 'fed:%'",
+    "idempotency_key NOT LIKE 'wf:%'",
+    "ORDER BY started_at FOR UPDATE",
     "SET status = 'FAILED', error = 'Worker lease expired', finished_at = NOW(6)",
 ] as $ownershipInvariant) {
     if (!str_contains($mysqlSource, $ownershipInvariant)) {

@@ -1,0 +1,41 @@
+---
+title: "COS Federation Foundation — baseline"
+description: "Аудит архітектури COS, повторне використання компонентів і перелік відкритих завдань."
+status: active
+updated: 2026-10-08
+kind: architecture
+---
+
+# Поточний стан, матриця повторного використання та прогалини
+
+Baseline inspected: main e110e36b1dfee8ed69a207b61eb2ee3c60b3084d.
+
+| Area | Existing to reuse | Open gap |
+| --- | --- | --- |
+| Module ownership | ModuleDiscovery, ModuleCatalog, ModuleCapabilityRegistry | Runtime handler/tool binding evidence and vocabulary drift |
+| Cross-domain | CrossDomainContract, dependency audit | Consumer-driven compatibility schemas and test matrix |
+| Architecture | CrossDomainArchitectureGraphProvider | Evidence-grade graph, impact and targeted tests |
+| Data | TableOwnership, PDO/Doctrine | Dynamic SQL, cross-domain write/read coverage |
+| Execution | Workflow/Action/Agent, Messenger | Envelope, durable retries, recovery and trace |
+| Goals | Domain capabilities and process runtime | Goal/plan/run/outcome persistence and cross-domain golden slice |
+| Experience | WorkspaceCompositionResolver, UIActionResolver | Adaptive disclosure, three modes, tenant state, UA/EN, mobile |
+| Engineering | Architecture tests and bash bin/verify | PHPStan/AST checks, Impact Gate and production E2E |
+
+## Міграційні рішення
+
+Keep module.php canonical; descriptive capability identities never become executable authority. Add typed capability_contracts as an optional contribution. Introduce CrossDomainContract V2 metadata with non-breaking constructor defaults, migrating each consumer independently. Do not create a new frontend runtime, workflow engine, agent runtime or parallel authorization store.
+
+## Незавершені завдання пріоритету P0
+
+1. Reconcile registered DI handlers, tools, permissions and module identities with actual evidence.
+2. Consumer-driven schema compatibility and dependency-aware Impact Gate.
+3. Authenticated execution envelope, async propagation, idempotency and worker recovery tests.
+4. GoalSpecification, ExecutionPlan/Run, OutcomeEvaluator, artifacts and multi-domain scenario.
+5. **Package A:** versioned `ExperienceContext`, `ExperienceProfile`, `ExperienceState`, declarative `ExperienceSemantic` and persisted tenant-scoped preferences. **Package B:** Result/Process/Expert UX and contextual adaptive disclosure.
+6. Golden paths, failure injection, browser, security, performance, rollout and rollback evidence.
+
+**Status:** Initial foundation only; full P0 Definition of Done remains open.
+
+## Послідовна межа P0
+
+Початкові пункти про Result/Process/Expert із цього baseline тепер належать **Package B**. Package A включає лише мінімальні контракти Experience та незалежно перевірений Goal → Run → Outcome. [Foundation Package A](./cos-federation-goal-execution-foundation.md) → [Progressive Disclosure Package B](./cos-progressive-disclosure-adaptive-experience.md). Для виходу з A потрібний один реальний багатодоменний golden path, а не UX-готовність усіх Domains.

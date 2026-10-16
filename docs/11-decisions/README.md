@@ -23,6 +23,8 @@ kind: index
 | [ADR-0011](ADR-0011-web-platform-v1-freeze.md) | Web Platform v1 contract surface заморожена після Sales cutover; фундаментальні зміни потребують ADR |
 | [ADR-0012](ADR-0012-wave13-visual-migration.md) | Wave 13 додає Page Archetypes, reusable Patterns і visual governance поверх замороженої Web Platform v1 |
 | [ADR-0013](ADR-0013-datagrid-filter-contract.md) | DataGridFilter v1 отримує additive text-filter contract для production Collections |
+| [ADR-0014](ADR-0014-documentation-verification-v2.md) | Документаційні перевірки V2 |
+| [ADR-0015](ADR-0015-cos-federation-architecture.md) | Федеративна архітектура, ownership, контракти й authority boundaries |
 
 ## Ієрархія джерел істини
 

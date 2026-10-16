@@ -8,6 +8,7 @@ enum WorkflowStatus: string
     case CREATED = 'created';
     case RUNNING = 'running';
     case WAITING = 'waiting';
+    case AMBIGUOUS = 'ambiguous';
     case COMPLETED = 'completed';
     case FAILED = 'failed';
     case CANCELLED = 'cancelled';

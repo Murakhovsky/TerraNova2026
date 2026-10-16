@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 130 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 137 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -54,6 +54,7 @@ generated: true
 | `capital_markets` | `capital_markets.research.agent.use` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.experiment.run` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.manage` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
+| `capital_markets` | `capital_markets.research.result.record` | ні | так | `manifest-only` | — | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.research.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.risk.manage_policy` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `capital_markets` | `capital_markets.risk.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
@@ -69,6 +70,10 @@ generated: true
 | `diagnostic` | `diagnostic.state.rebuild` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.traceability` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `documents` | `documents.proposal.prepare` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
+| `documents` | `documents.signature.request` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
+| `documents` | `documents.signature.sign` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
+| `federation` | `federation.plan.approval` | ні | так | `manifest-only` | — | `app/Domains/Federation/module.php` |
 | `growth` | `growth.account.brief` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.discover` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.enrich` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
@@ -197,7 +202,9 @@ generated: true
 | `sales` | `sales.admin.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.approval.any_team` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.approval.decide` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
+| `sales` | `sales.create_task` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.deal.assign` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
+| `sales` | `sales.deal.won.observation` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.director.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.workspace.use` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `service` | `service.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |

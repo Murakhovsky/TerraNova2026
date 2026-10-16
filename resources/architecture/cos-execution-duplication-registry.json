@@ -1,0 +1,429 @@
+{
+  "schema_version": "1.0.0",
+  "package_id": "COS-FED-EXEC-CONTRACT-CONSOLIDATION-P0",
+  "evidence_ref": "372947c9c02577880332d6f1bad9993c465991fd",
+  "evidence_scope": "Static source/entrypoint inspection and named MySQL Runtime CI steps at d52eec68; not exhaustive consumer call graph, live tenant, Golden 50 or production operator proof.",
+  "status": "incremental_implementation__fleet_acceptance_pending",
+  "owner": "Platform Architecture / Engineering",
+  "allowed_decisions": [
+    "KEEP",
+    "ADAPT",
+    "CONSOLIDATE",
+    "MIGRATE",
+    "RETIRE",
+    "UNKNOWN"
+  ],
+  "entries": [
+    {
+      "id": "EX-001",
+      "concern": "Run lifecycle / persisted state",
+      "implementation": {
+        "symbol": "Kernel\\Workflow\\Service\\WorkflowEngine",
+        "path": "app/Kernel/Workflow/Service/WorkflowEngine.php"
+      },
+      "known_consumer": {
+        "symbol": "Kernel\\Workflow\\Model\\WorkflowExecution",
+        "path": "app/Kernel/Workflow/Model/WorkflowExecution.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow Execution",
+      "decision": "MIGRATE",
+      "guardrail": "Kernel in-memory lifecycle to durable run snapshots; public WorkflowEngineInterface compatibility",
+      "baseline_test": "tests/unit/kernel_workflow_engine.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-002",
+      "concern": "Federation Run persistence / CAS",
+      "implementation": {
+        "symbol": "App\\Persistence\\Federation\\FederationGoalStore",
+        "path": "symfony/src/Persistence/Federation/FederationGoalStore.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederationSequentialOrchestrator",
+        "path": "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow Execution",
+      "decision": "MIGRATE",
+      "guardrail": "split store; preserve goals/plans/evaluations, tenant CAS and one run per plan",
+      "baseline_test": "tests/architecture/federation_execution_authorization.php",
+      "migration_status": "IN_PROGRESS",
+      "runtime_consumers_verified": false,
+      "implementation_note": "New Federation Run controller delegates to canonical Goal-to-Workflow bridge and Platform WorkflowExecutionStoreInterface; historical legacy technical rows are blocked from new Action dispatch. This is bounded new-run cutover, not fleet-wide verified migration.",
+      "implementation_evidence": {
+        "commit_sha": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+        "source_port": "app/Platform/Workflow/Contract/WorkflowExecutionStoreInterface.php",
+        "technical_writer": "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+        "domain_evidence": "symfony/src/Persistence/Federation/FederationCanonicalWorkflowBridge.php",
+        "mysql_regression": "tests/integration/federation_canonical_goal_e2e_mysql.php",
+        "acceptance": "CI_MYSQL_PASS__FLEET_ACCEPTANCE_PENDING",
+        "ci_verified_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+        "ci_run_id": 38750264374,
+        "ci_runtime_job": "runtime",
+        "scope": "opt-in new canonical Federation Run/Step only; historical federation run/step retained as read-only evidence and no production tenant cutover",
+        "source_entrypoint": "symfony/src/Web/Federation/FederationRunController.php"
+      }
+    },
+    {
+      "id": "EX-003",
+      "concern": "Engineering persisted workflow",
+      "implementation": {
+        "symbol": "App\\Engineering\\Infrastructure\\Persistence\\Doctrine\\DoctrineEngineeringWorkflowStore",
+        "path": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringWorkflowStore.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Application\\Service\\EngineeringOrchestrator",
+        "path": "symfony/src/Engineering/Application/Service/EngineeringOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Engineering application adapter + Platform Workflow execution",
+      "decision": "ADAPT",
+      "guardrail": "preserve stages, ORM optimistic version, human decisions, transition/audit history",
+      "baseline_test": "tests/architecture/engineering_workflow_version_contract.php",
+      "migration_status": "IN_PROGRESS",
+      "runtime_consumers_verified": false,
+      "implementation_evidence": {
+        "commit_sha": "4432c6aee6cd2ec397aa17bba83bf7080bfc18fb",
+        "source_port": "app/Platform/Workflow/Contract/WorkflowTechnicalExternalStoreInterface.php",
+        "technical_writer": "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
+        "domain_evidence": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/EngineeringCanonicalTechnicalExecutionEvidence.php",
+        "mysql_regression": "tests/integration/workflow_engineering_technical_shadow_mysql.php",
+        "acceptance": "CI_MYSQL_PASS__FLEET_ACCEPTANCE_PENDING",
+        "scope": "canonical Engineering AgentRun path only; Engineering business workflow remains Domain owned",
+        "ci_verified_head": "d52eec68af964eb7f20e2e6ac7181b42ff61b531",
+        "ci_run_id": 38750264374,
+        "ci_runtime_job": "runtime",
+        "source_entrypoint": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringAgentRunStore.php"
+      },
+      "implementation_note": "Allowlisted Engineering AgentRun delegates guarded technical Run/Step begin/complete/quarantine to shared Platform Store in the same SQL transaction. Runtime real MySQL integration passed at d52eec68; fleet, tenant rollout and Engineering human/business gates remain unaccepted."
+    },
+    {
+      "id": "EX-004",
+      "concern": "Kernel conditional step routing",
+      "implementation": {
+        "symbol": "Kernel\\Workflow\\Service\\WorkflowEngine",
+        "path": "app/Kernel/Workflow/Service/WorkflowEngine.php"
+      },
+      "known_consumer": {
+        "symbol": "Kernel\\Workflow\\Model\\WorkflowDefinition",
+        "path": "app/Kernel/Workflow/Model/WorkflowDefinition.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow scheduler",
+      "decision": "CONSOLIDATE",
+      "guardrail": "retain conditional transitions; introduce dependency-ready decisions without hidden second cursor",
+      "baseline_test": "tests/unit/kernel_workflow_engine.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false,
+      "implementation_note": "Technical pure DAG step selection now delegates to Platform\\Workflow\\Service\\WorkflowStepScheduler through FederationStepCursor; compare baseline parity tests before expanding runtime."
+    },
+    {
+      "id": "EX-005",
+      "concern": "Federation DAG sequencing",
+      "implementation": {
+        "symbol": "Platform\\Orchestration\\Goal\\FederationStepCursor",
+        "path": "app/Platform/Orchestration/Goal/FederationStepCursor.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederationSequentialOrchestrator",
+        "path": "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow scheduler",
+      "decision": "CONSOLIDATE",
+      "guardrail": "preserve deterministic approved-order and one active external step until concurrency policy exists",
+      "baseline_test": "tests/unit/federation_step_cursor.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false,
+      "implementation_note": "Technical pure DAG step selection now delegates to Platform\\Workflow\\Service\\WorkflowStepScheduler through FederationStepCursor; compare baseline parity tests before expanding runtime."
+    },
+    {
+      "id": "EX-006",
+      "concern": "Engineering business stage graph",
+      "implementation": {
+        "symbol": "App\\Engineering\\Domain\\Workflow\\EngineeringWorkflowDefinition",
+        "path": "symfony/src/Engineering/Domain/Workflow/EngineeringWorkflowDefinition.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Application\\Workflow\\EngineeringWorkflowCoordinator",
+        "path": "symfony/src/Engineering/Application/Workflow/EngineeringWorkflowCoordinator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Engineering process definition",
+      "decision": "KEEP",
+      "guardrail": "stages and conditional human resume are domain-specific; only execution infrastructure shared",
+      "baseline_test": "tests/unit/engineering_workflow_state_machine.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-007",
+      "concern": "Federation Action preflight/approval proof",
+      "implementation": {
+        "symbol": "App\\Persistence\\Federation\\FederationPlanApprovalEvidenceReader",
+        "path": "symfony/src/Persistence/Federation/FederationPlanApprovalEvidenceReader.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederationSequentialOrchestrator",
+        "path": "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform action plan admission extension",
+      "decision": "ADAPT",
+      "guardrail": "retain signed immutable plan hash, independent human approval, latest Policy and worker recheck",
+      "baseline_test": "tests/architecture/federation_execution_authorization.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-008",
+      "concern": "Federation external Action submission",
+      "implementation": {
+        "symbol": "App\\Persistence\\Federation\\FederationExternalActionSubmission",
+        "path": "symfony/src/Persistence/Federation/FederationExternalActionSubmission.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederationSequentialOrchestrator",
+        "path": "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Kernel Action via Platform Workflow binding",
+      "decision": "ADAPT",
+      "guardrail": "do not build new Action executor; preserve idempotency and manual receipt path",
+      "baseline_test": "tests/architecture/federation_execution_authorization.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-009",
+      "concern": "Federation completion / receipts",
+      "implementation": {
+        "symbol": "App\\Persistence\\Federation\\FederationRunFinalizer",
+        "path": "symfony/src/Persistence/Federation/FederationRunFinalizer.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederationSequentialOrchestrator",
+        "path": "symfony/src/Persistence/Federation/FederationSequentialOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow verified completion gate",
+      "decision": "CONSOLIDATE",
+      "guardrail": "terminal only after canonical receipts; Action complete does not imply Goal success",
+      "baseline_test": "tests/architecture/federation_execution_authorization.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-010",
+      "concern": "Federation recovery/ambiguity",
+      "implementation": {
+        "symbol": "App\\Persistence\\Federation\\FederationRunRecoveryService",
+        "path": "symfony/src/Persistence/Federation/FederationRunRecoveryService.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederationExternalActionReceiptReconciler",
+        "path": "symfony/src/Persistence/Federation/FederationExternalActionReceiptReconciler.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow recovery contract",
+      "decision": "CONSOLIDATE",
+      "guardrail": "no automatic external replay with unknown remote outcome; read-only inspect separated from correction",
+      "baseline_test": "tests/unit/federation_goal_recovery.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-011",
+      "concern": "Engineering lock/concurrency",
+      "implementation": {
+        "symbol": "App\\Engineering\\Infrastructure\\Lock\\MySqlEngineeringWorkflowLock",
+        "path": "symfony/src/Engineering/Infrastructure/Lock/MySqlEngineeringWorkflowLock.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Application\\Service\\EngineeringOrchestrator",
+        "path": "symfony/src/Engineering/Application/Service/EngineeringOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Shared concurrency primitive + Engineering scoped lock key",
+      "decision": "ADAPT",
+      "guardrail": "already uses MySqlAdvisoryLock; never add second generic locking service",
+      "baseline_test": "tests/architecture/engineering_lock_boundary.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-012",
+      "concern": "Engineering auto progression",
+      "implementation": {
+        "symbol": "App\\Engineering\\Application\\Service\\EngineeringAutonomousProgressionService",
+        "path": "symfony/src/Engineering/Application/Service/EngineeringAutonomousProgressionService.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Application\\Service\\EngineeringOrchestrator",
+        "path": "symfony/src/Engineering/Application/Service/EngineeringOrchestrator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Engineering stage policy + shared workflow dispatcher",
+      "decision": "ADAPT",
+      "guardrail": "retain role assignment, budgets, specialties and staged review/QA",
+      "baseline_test": "tests/architecture/engineering_autonomous_progression.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-013",
+      "concern": "Engineering stale agent recovery",
+      "implementation": {
+        "symbol": "App\\Engineering\\Application\\Service\\EngineeringContinueService",
+        "path": "symfony/src/Engineering/Application/Service/EngineeringContinueService.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Application\\Service\\EngineeringAutonomousProgressionService",
+        "path": "symfony/src/Engineering/Application/Service/EngineeringAutonomousProgressionService.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform recovery primitives + Engineering policy",
+      "decision": "ADAPT",
+      "guardrail": "stale AgentRun is not evidence remote GitHub mutation did not happen",
+      "baseline_test": "tests/architecture/engineering_continue_contract.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-014",
+      "concern": "Engineering human transition policy",
+      "implementation": {
+        "symbol": "App\\Engineering\\Domain\\Workflow\\EngineeringWorkflowEngine",
+        "path": "symfony/src/Engineering/Domain/Workflow/EngineeringWorkflowEngine.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Application\\Workflow\\EngineeringWorkflowCoordinator",
+        "path": "symfony/src/Engineering/Application/Workflow/EngineeringWorkflowCoordinator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Engineering business state/guard",
+      "decision": "KEEP",
+      "guardrail": "never merge QA/Review/Architect/merge approval stages into generic status enum",
+      "baseline_test": "tests/unit/engineering_workflow_state_machine.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-015",
+      "concern": "Engineering technical retries vs correction loops",
+      "implementation": {
+        "symbol": "App\\Engineering\\Domain\\Workflow\\EngineeringRetryPolicy",
+        "path": "symfony/src/Engineering/Domain/Workflow/EngineeringRetryPolicy.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Application\\Workflow\\EngineeringWorkflowCoordinator",
+        "path": "symfony/src/Engineering/Application/Workflow/EngineeringWorkflowCoordinator.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Engineering business retry policy + Kernel failure classifier",
+      "decision": "KEEP",
+      "guardrail": "do not equate human rework cycles with worker retries",
+      "baseline_test": "tests/unit/engineering_retry_policy.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-016",
+      "concern": "Federation worker admission interface leaks product name into Kernel",
+      "implementation": {
+        "symbol": "Kernel\\Action\\Contract\\FederatedActionAdmissionInterface",
+        "path": "app/Kernel/Action/Contract/FederatedActionAdmissionInterface.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederatedActionAdmission",
+        "path": "symfony/src/Persistence/Federation/FederatedActionAdmission.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Kernel Action generic provenance admission extension",
+      "decision": "CONSOLIDATE",
+      "guardrail": "generalize names only after DI and authorization parity; never weaken fail closed",
+      "baseline_test": "tests/architecture/federation_execution_authorization.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-017",
+      "concern": "Federation inert checkpoint runner",
+      "implementation": {
+        "symbol": "App\\Persistence\\Federation\\FederationReadOnlyWorkflowRunner",
+        "path": "symfony/src/Persistence/Federation/FederationReadOnlyWorkflowRunner.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederationWorkflowPreflight",
+        "path": "symfony/src/Persistence/Federation/FederationWorkflowPreflight.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow test/read-only scenario",
+      "decision": "RETIRE",
+      "guardrail": "only after real cross-domain Workflow execution path replaces this limited runner",
+      "baseline_test": "tests/unit/kernel_workflow_engine.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-018",
+      "concern": "Goal and plan business persistence",
+      "implementation": {
+        "symbol": "App\\Persistence\\Federation\\FederationGoalStore",
+        "path": "symfony/src/Persistence/Federation/FederationGoalStore.php"
+      },
+      "known_consumer": {
+        "symbol": "Platform\\Orchestration\\Goal\\GoalSpecification",
+        "path": "app/Platform/Orchestration/Goal/GoalSpecification.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Goal Management application persistence",
+      "decision": "KEEP",
+      "guardrail": "split from technical run rows; Goal criteria and outcomes remain business concepts",
+      "baseline_test": "tests/unit/federation_goal_outcome.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-019",
+      "concern": "Engineering transitions and agent evidence",
+      "implementation": {
+        "symbol": "App\\Engineering\\Infrastructure\\Persistence\\Doctrine\\DoctrineEngineeringWorkflowStore",
+        "path": "symfony/src/Engineering/Infrastructure/Persistence/Doctrine/DoctrineEngineeringWorkflowStore.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Engineering\\Domain\\Workflow\\WorkflowTransition",
+        "path": "symfony/src/Engineering/Domain/Workflow/WorkflowTransition.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Engineering history projection + shared correlation envelope",
+      "decision": "KEEP",
+      "guardrail": "do not discard transition sequence, trace, human/agent IDs",
+      "baseline_test": "tests/architecture/engineering_transition_audit_order_contract.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    },
+    {
+      "id": "EX-020",
+      "concern": "Federation Action predecessor admission",
+      "implementation": {
+        "symbol": "Platform\\Orchestration\\Goal\\FederationActionSequenceGate",
+        "path": "app/Platform/Orchestration/Goal/FederationActionSequenceGate.php"
+      },
+      "known_consumer": {
+        "symbol": "App\\Persistence\\Federation\\FederatedActionAdmission",
+        "path": "symfony/src/Persistence/Federation/FederatedActionAdmission.php",
+        "coverage": "inspected_example_not_exhaustive"
+      },
+      "target_owner": "Platform Workflow dependency admission",
+      "decision": "CONSOLIDATE",
+      "guardrail": "re-attest predecessor canonical receipts under worker authorization gate",
+      "baseline_test": "tests/unit/federation_step_cursor.php",
+      "migration_status": "NOT_STARTED",
+      "runtime_consumers_verified": false
+    }
+  ],
+  "contract_iteration": "2026-10-15 @ d52eec68: bounded canonical Federation new-run + feature-allowlisted Engineering AgentRun verified by same-HEAD real MySQL Runtime; complete consumer audit, production fleet and business-stage cutover not accepted."
+}

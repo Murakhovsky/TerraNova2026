@@ -6,6 +6,9 @@ namespace Kernel\Workflow\Model;
 enum StepStatus: string
 {
     case PENDING = 'pending';
+    case CLAIMED = 'claimed';
+    case AMBIGUOUS = 'ambiguous';
+    case CANCELLED = 'cancelled';
     case RUNNING = 'running';
     case WAITING = 'waiting';
     case COMPLETED = 'completed';

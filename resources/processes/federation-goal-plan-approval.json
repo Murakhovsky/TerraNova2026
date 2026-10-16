@@ -1,0 +1,33 @@
+{
+  "schema_version": 4,
+  "id": "federation.goal-plan-approval",
+  "title": "Federation Goal Plan Approval",
+  "domain": "federation",
+  "state": "as-is",
+  "workflow": "02-workflows/federation-goal-plan-approval.md",
+  "trigger": "A tenant manager proposes an immutable Goal Plan and a separate human approver confirms the canonical Action",
+  "outcomes": [
+    "Canonical approval Action is tied to an exact immutable Goal Plan snapshot",
+    "Plan transitions from proposed to approved only after Policy and independent human Approval",
+    "Automatic execution remains disabled until an explicit approved Workflow starts"
+  ],
+  "actors": [
+    "Goal owner / manager",
+    "Policy and Approval services",
+    "independent human approver",
+    "Federation approval Action handler"
+  ],
+  "steps": [
+    {
+      "id": "activate_plan",
+      "label": "Verify human Action approval and activate immutable Plan",
+      "kind": "operation",
+      "owner": "Federation approval Action handler",
+      "domain": "federation",
+      "capability": "federation.plan.approval",
+      "critical": false,
+      "runtime": []
+    }
+  ],
+  "edges": []
+}

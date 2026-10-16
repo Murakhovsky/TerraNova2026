@@ -1,0 +1,310 @@
+name: COS Execution Live Tenant Audit
+
+# Operator-only: existing tenant, deployed SHA, read-only DB inspection.
+on:
+  push:
+    branches: [feature/cos-federation-foundation-phase1-20261008]
+    paths: ['.github/workflows/cos-execution-live-audit.yml']
+  workflow_dispatch:
+    inputs:
+      tenant_id:
+        description: 'Existing real tenant organization ID'
+        type: string
+        required: true
+      expected_sha:
+        description: 'Exact 40-character deployed SHA'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cos-execution-live-readonly
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: AWS dev infrastructure inventory (read-only; not Golden 50)
+    # A push cannot prove a feature SHA is deployed: dev is deployed from main.
+    # This job gathers facts independently of tenant credentials/acceptance.
+    if: github.event_name == 'push'
+    environment: AWS TN2026
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate protected access
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            test -n "$(printenv "$key" || true)" || { echo "::error::Missing $key"; exit 1; }
+          done
+          [[ "$DEV_PATH" =~ ^/[A-Za-z0-9_./-]+$ ]] && [[ "$DEV_PATH" != *..* ]] ||
+            { echo "::error::Unsafe DEV_PATH"; exit 1; }
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] ||
+            { echo "::error::Invalid DEV_PORT"; exit 1; }
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/federation_preflight_key"
+          chmod 600 "$HOME/.ssh/federation_preflight_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          chmod 600 "$HOME/.ssh/known_hosts"
+      - name: Inspect deployed routes, resources and Docker without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_ROUTES_SHA="$(git show origin/main:symfony/config/routes.yaml | sha256sum | cut -d' ' -f1)"
+          FEATURE_ROUTES_SHA="$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)"
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/federation_preflight_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" "$MAIN_ROUTES_SHA" "$FEATURE_ROUTES_SHA" <<'REMOTE'
+          set -Eeuo pipefail
+          ROOT="$1"
+          MAIN_ROUTES_SHA="$2"
+          FEATURE_ROUTES_SHA="$3"
+          echo '=== Federation AWS dev read-only preflight ==='
+          if [ ! -d "$ROOT" ]; then
+            echo 'status: BLOCKED - deployment root missing'
+            exit 1
+          fi
+          echo "disk: $(df -h "$ROOT" | tail -n 1 | awk '{print $4 " available"}')"
+          if command -v free >/dev/null 2>&1; then
+            echo "memory: $(free -m | awk '/^Mem:/ {print $7 " MiB available"}')"
+          fi
+          if [ -d "$ROOT/.git" ]; then
+            echo 'git_metadata: present (not a deploy SHA attestation)'
+          else
+            echo 'git_metadata: absent (expected with rsync --exclude=.git)'
+          fi
+          if [ ! -f "$ROOT/symfony/config/routes.yaml" ]; then
+            echo 'status: BLOCKED - deployed routes unavailable'
+            exit 1
+          fi
+          DEPLOYED_ROUTES_SHA="$(sha256sum "$ROOT/symfony/config/routes.yaml" | cut -d' ' -f1)"
+          if [ "$DEPLOYED_ROUTES_SHA" = "$MAIN_ROUTES_SHA" ]; then
+            echo 'deployed_route_tree: current main route content'
+          elif [ "$DEPLOYED_ROUTES_SHA" = "$FEATURE_ROUTES_SHA" ]; then
+            echo 'deployed_route_tree: Federation feature route content'
+          else
+            echo 'deployed_route_tree: other revision (full deployed SHA unverified)'
+          fi
+          if grep -Fq 'path: /workspace/goals' "$ROOT/symfony/config/routes.yaml"; then
+            echo 'goals_route_in_deployed_source: yes'
+          else
+            echo 'goals_route_in_deployed_source: no'
+          fi
+          D=''
+          if docker info >/dev/null 2>&1; then D='docker'
+          elif sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'; fi
+          if [ -z "$D" ]; then
+            echo 'status: BLOCKED - Docker inspection unavailable'
+            exit 1
+          fi
+          echo 'docker_containers:'
+          $D ps --format '{{.Names}} | {{.Status}}' | grep '^cos-' || true
+          echo 'sha_attestation: NOT_PROVEN (rsync deployment does not publish full SHA)'
+          echo 'staging_isolation: NOT_PROVEN (no isolated tenant, DB or compose project attested)'
+          echo 'golden50: NOT_RUN'
+          echo '=== Read-only inventory completed; no release authorization ==='
+          REMOTE
+      - name: Classify active and legacy worker failures without exposing logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Pipe the audited feature script to Python's stdin; do not write
+          # files, update Docker, access production secrets or alter services.
+          # The report emits categories only, never raw worker logs.
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/federation_preflight_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            'if docker info >/dev/null 2>&1; then
+               python3 - --inspect-logs;
+             else
+               sudo -n python3 - --inspect-logs;
+             fi' < bin/ops/cos_docker_fleet_audit.py
+
+  inspect:
+    if: github.event_name == 'workflow_dispatch'
+    name: Protected tenant-wide technical authority audit
+    # Protected environment resolves tenant input/approval at runtime.
+    # Missing tenant/permissions must produce an explicit failed proof, not a silent skip.
+    environment: AWS TN2026
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      AUDIT_TENANT: ${{ github.event_name == 'workflow_dispatch' && inputs.tenant_id || vars.COS_EXECUTION_AUDIT_TENANT }}
+      EXPECTED_HEAD: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Guard real tenant, deployed SHA and SSH access
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH AUDIT_TENANT EXPECTED_HEAD; do
+            if [ -z "$(printenv "$key" || true)" ]; then
+              echo "::error::Missing required protected configuration: $key"
+              exit 1
+            fi
+          done
+          [[ "$AUDIT_TENANT" =~ ^[A-Za-z0-9][A-Za-z0-9_:-]{0,189}$ ]] || { echo "::error::Invalid tenant ID"; exit 1; }
+          [[ "$EXPECTED_HEAD" =~ ^[a-f0-9]{40}$ ]] || { echo "::error::Invalid SHA"; exit 1; }
+          [[ "$DEV_PATH" =~ ^/[A-Za-z0-9_./-]+$ ]] && [[ "$DEV_PATH" != *..* ]] || { echo "::error::Invalid deployment path"; exit 1; }
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || { echo "::error::Invalid SSH port"; exit 1; }
+          # A manually approved audit may inspect a deployed main SHA that differs
+          # from this feature-branch workflow SHA. Host manifest + source checks below
+          # must prove the exact requested deployment revision.
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/cos_execution_audit_key"
+          chmod 600 "$HOME/.ssh/cos_execution_audit_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Bind operator-selected release SHA to trusted main source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "$EXPECTED_HEAD^{commit}" || { echo "::error::Unknown expected commit"; exit 1; }
+          git merge-base --is-ancestor "$EXPECTED_HEAD" origin/main ||
+            { echo "::error::Expected SHA is not a commit on main"; exit 1; }
+          git checkout --quiet --detach "$EXPECTED_HEAD"
+          EXPECTED_CODE_SHA="$( {
+            find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
+            sha256sum symfony/config/services.yaml
+          } | sha256sum | cut -d' ' -f1 )"
+          EXPECTED_ROUTES_SHA="$(sha256sum symfony/config/routes.yaml | cut -d' ' -f1)"
+          echo "EXPECTED_CODE_SHA=$EXPECTED_CODE_SHA" >> "$GITHUB_ENV"
+          echo "EXPECTED_ROUTES_SHA=$EXPECTED_ROUTES_SHA" >> "$GITHUB_ENV"
+      - name: Verify active consumer images and inspect live tenant (no writes)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/cos_execution_audit_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" "$AUDIT_TENANT" "$EXPECTED_HEAD" "$EXPECTED_CODE_SHA" "$EXPECTED_ROUTES_SHA" <<'REMOTE'
+          set -Eeuo pipefail
+          umask 077
+          ROOT="$1"
+          TENANT="$2"
+          EXPECTED="$3"
+          TRUSTED_CODE_SHA="$4"
+          TRUSTED_ROUTES_SHA="$5"
+          MANIFEST="$ROOT/.cos-deployment-attestation.json"
+          test -f "$MANIFEST" || { echo "::error::Deployment attestation absent; deploy manifest-enabled main first"; exit 1; }
+          ACTUAL="$(php -r '
+            $m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
+            foreach (["source_sha","execution_source_sha256","routes_sha256"] as $key) {
+              if (!preg_match("/^[a-f0-9]{40}$/D", (string)($m[$key]??"")) && $key==="source_sha") exit(2);
+              if ($key!=="source_sha" && !preg_match("/^[a-f0-9]{64}$/D",(string)($m[$key]??""))) exit(3);
+            }
+            echo $m["source_sha"];
+          ' "$MANIFEST")"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Deployed manifest SHA differs from operator-selected SHA"
+            exit 1
+          fi
+          D='docker'
+          if ! docker info >/dev/null 2>&1; then
+            if sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
+            else echo "::error::No Docker inspection access"; exit 1; fi
+          fi
+          # Proof of *all* repository execution consumers, not just one CLI.
+          # Full production PHP source trees + dependency injection bindings.
+          MANIFEST_ROOTS="app/Kernel app/Platform app/Domains app/Infrastructure symfony/src"
+          SOURCE_SHA="$(cd "$ROOT" && {
+            find $MANIFEST_ROOTS -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
+            sha256sum symfony/config/services.yaml
+          } | sha256sum | cut -d' ' -f1)"
+          DECLARED_SOURCE_SHA="$(php -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);echo $m["execution_source_sha256"];' "$MANIFEST")"
+          DECLARED_ROUTES_SHA="$(php -r '$m=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);echo $m["routes_sha256"];' "$MANIFEST")"
+          ACTUAL_ROUTES_SHA="$(sha256sum "$ROOT/symfony/config/routes.yaml" | cut -d' ' -f1)"
+          if [ "$SOURCE_SHA" != "$DECLARED_SOURCE_SHA" ] || [ "$ACTUAL_ROUTES_SHA" != "$DECLARED_ROUTES_SHA" ] ||
+             [ "$SOURCE_SHA" != "$TRUSTED_CODE_SHA" ] || [ "$ACTUAL_ROUTES_SHA" != "$TRUSTED_ROUTES_SHA" ]; then
+            echo "::error::Deployed source differs from expected GitHub main commit or release manifest"; exit 1
+          fi
+          BASE_IMAGE=''
+          declare -A VERIFIED_SERVICES=()
+          PHP_CONSUMERS=0
+          # Enumerate every active cos project container, including optional
+          # and newly added PHP consumer services, not a stale hardcoded subset.
+          while IFS= read -r NAME; do
+            case "$NAME" in cos-*) ;; *) continue;; esac
+            SERVICE="$($D inspect --format '{{index .Config.Labels "com.docker.compose.service"}}' "$NAME")"
+            TAG="$($D inspect --format '{{.Config.Image}}' "$NAME")"
+            if [ "$TAG" != 'cos-symfony-php:local' ]; then continue; fi
+            IMAGE="$($D inspect --format '{{.Image}}' "$NAME")"
+            CODE_SHA="$($D exec "$NAME" sh -c 'cd /var/www/html && {
+              find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name "*.php" -print | LC_ALL=C sort | xargs sha256sum
+              sha256sum symfony/config/services.yaml
+            } | sha256sum | cut -d" " -f1')"
+            if [ "$CODE_SHA" != "$SOURCE_SHA" ]; then
+              echo "::error::Execution consumer code mismatch: $SERVICE"; exit 1
+            fi
+            if [ -n "$BASE_IMAGE" ] && [ "$BASE_IMAGE" != "$IMAGE" ]; then
+              echo "::error::Mixed active execution images"; exit 1
+            fi
+            BASE_IMAGE="$IMAGE"
+            VERIFIED_SERVICES["$SERVICE"]=1
+            PHP_CONSUMERS=$((PHP_CONSUMERS+1))
+            echo "verified_consumer_service: $SERVICE"
+          done < <($D ps --filter 'label=com.docker.compose.project=cos' --format '{{.Names}}')
+          # The ten always-on PHP consumers from docker-compose must actually
+          # be live. Optional profile services are covered when active above.
+          for REQUIRED in php worker kernel-worker engineering-worker \
+            engineering-immediate-worker integration-worker telegram-worker \
+            scheduler spatial-worker; do
+            if [ -z "${VERIFIED_SERVICES[$REQUIRED]:-}" ]; then
+              echo "::error::Missing active production execution consumer: $REQUIRED"; exit 1
+            fi
+          done
+          [ "$PHP_CONSUMERS" -gt 0 ] || { echo "::error::No live PHP consumers"; exit 1; }
+          echo "verified_active_php_consumers: $PHP_CONSUMERS"
+          REPORT="$(mktemp /tmp/cos-execution-audit-XXXXXXXX)"
+          STDERR="$(mktemp /tmp/cos-execution-audit-err-XXXXXXXX)"
+          trap 'rm -f -- "$REPORT" "$STDERR"' EXIT
+          set +e
+          timeout --signal=TERM --kill-after=5s 90s $D exec -i cos-php-1 \
+            php bin/console cos:workflow:authority-inventory "$TENANT" \
+            > "$REPORT" 2> "$STDERR"
+          EXIT_CODE=$?
+          set -e
+          # Informational CLI intentionally exits 1 regardless of fleet result.
+          [ "$EXIT_CODE" -eq 1 ] || { echo "::error::Audit command failed unexpectedly"; exit 1; }
+          php -r '
+          $r=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
+          foreach (["federation","engineering","kernel"] as $part) {
+              if (!is_array($r[$part]??null)) exit(2);
+              echo $part, "_status: ", $r[$part]["status"]??"unknown", "\n";
+          }
+          if (($r["organization_id"]??null)!==$argv[2]
+              || ($r["contours_checked"]??null)!==["federation","engineering","kernel"]
+              || ($r["read_only"]??null)!==true
+              || ($r["cutover_authorized"]??null)!==false
+              || ($r["release_authorized"]??null)!==false) exit(3);
+          echo "combined_status: ",$r["status"]??"unknown","\n";
+          if (in_array($r["status"]??null,["drift","incomplete"],true)
+              || ($r["kernel"]["coverage_complete"]??false)!==true
+              || ($r["engineering"]["coverage_complete"]??false)!==true
+              || ($r["federation"]["inventory_coverage_complete"]??false)!==true)
+              exit(4);
+          ' "$REPORT" "$TENANT" || { echo "::error::Actual tenant execution evidence incomplete"; exit 1; }
+          echo "report_sha256: $(sha256sum "$REPORT" | cut -d' ' -f1)"
+          echo "deployed_sha: $ACTUAL"
+          echo "production_php_and_di_manifest_sha256: $SOURCE_SHA"
+          echo "execution_image: $BASE_IMAGE"
+          echo 'execution_authority_audit: technical evidence only; no cutover or release approval'
+          REMOTE

@@ -1,0 +1,23 @@
+# COS Federation: contracted draft Goal workspace; implementation quality must be accepted separately.
+pages:
+  - id: federation.goals.workspace
+    route: { name: cos_federation_goals_index, path: "/workspace/goals", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Core
+    capability: federation.goals.view
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Створити вимірювану бізнес-ціль та побачити її стан у режимах Результат, Процес і Експерт."
+      page_purpose: "Підготовка бізнес-цілей без запуску непогоджених дій."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: federation.goals.create
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }

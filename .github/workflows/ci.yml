@@ -10,6 +10,7 @@ on:
       - 'resources/experience/**'
       - 'tests/**'
       - 'bin/verify'
+      - 'bin/ci/**'
       - 'composer.json'
       - 'composer.lock'
       - '.github/workflows/ci.yml'
@@ -53,8 +54,12 @@ jobs:
       - name: PHP syntax
         run: |
           find app symfony/src tests/architecture tests/unit -type f -name '*.php' ! -path 'tests/history/*' -print0 | xargs -0 -n1 php -l
+      - name: Validate CI timing implementation
+        run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: Kernel Tool canonical retry contract
+        run: php tests/unit/workflow_kernel_tool_safe_retry.php
       - name: Capital Markets streaming core, reconnect and Binance protocol acceptance
         run: |
           php tests/unit/capital_markets_streaming_recovery_gate.php
