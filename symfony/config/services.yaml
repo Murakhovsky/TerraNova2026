@@ -3646,6 +3646,7 @@ services:
     tags: ['controller.service_arguments']
 
   Platform\Orchestration\Goal\FederationDiscoveryPlanFactory: ~
+  Platform\Orchestration\Goal\FederationSmallTaskPlanFactory: ~
   Platform\Orchestration\Goal\FederationCandidateFanoutPlanner: ~
   Platform\Orchestration\Goal\FederationGoalAggregateProjector: ~
   Platform\Orchestration\Goal\FederationDiscoverySourceMatcher: ~
