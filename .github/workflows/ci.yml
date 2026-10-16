@@ -64,6 +64,10 @@ jobs:
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries
         run: php tests/unit/canonical_capability_gateway.php
+      - name: Property Bulk Intake approval and execution contract
+        run: php tests/architecture/property_bulk_intake_workflow_contract.php
+      - name: Property Bulk Intake fail-closed normalization
+        run: php tests/unit/property_bulk_intake_normalization.php
       - name: Kernel Tool canonical retry contract
         run: php tests/unit/workflow_kernel_tool_safe_retry.php
       - name: Capital Markets streaming core, reconnect and Binance protocol acceptance

@@ -642,7 +642,9 @@ services:
 
   Domains\Property\Application\Service\PropertyIdentityWorkflowService: ~
 
-  Domains\Property\Bootstrap\PropertyDomainModule: ~
+  Domains\Property\Bootstrap\PropertyDomainModule:
+    arguments:
+      $bulkHandler: '@Domains\Property\Automation\Action\PropertyBulkCreateHandler'
 
   Domains\RealEstate\Rule\RealEstateRuleContextProvider: ~
 
@@ -3745,6 +3747,7 @@ services:
       $providers:
         - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
+        - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'
@@ -3796,6 +3799,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Sales\ClientCaseMutationController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertyBulkWorkspaceController:
     public: true
     tags: ['controller.service_arguments']
 

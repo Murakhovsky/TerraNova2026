@@ -1,3 +1,37 @@
+# Property bulk review: only canonical Federation Plan proposal, no bypass.
+cos_property_bulk_workspace:
+  path: /workspace/property/bulk
+  controller: App\Web\Property\PropertyBulkWorkspaceController::index
+  methods: [GET]
+
+cos_property_bulk_stage:
+  path: /workspace/property/bulk/stage
+  controller: App\Web\Property\PropertyBulkWorkspaceController::stage
+  methods: [POST]
+
+cos_property_bulk_propose:
+  path: /workspace/property/bulk/{batchId}/propose
+  controller: App\Web\Property\PropertyBulkWorkspaceController::propose
+  methods: [POST]
+  requirements: { batchId: 'bulk-[a-f0-9]{24}' }
+
+cos_property_bulk_api_stage:
+  path: /api/v1/property/bulk
+  controller: App\Http\Api\V1\Controller\PropertyBulkIntakeController::stage
+  methods: [POST]
+
+cos_property_bulk_api_show:
+  path: /api/v1/property/bulk/{batchId}
+  controller: App\Http\Api\V1\Controller\PropertyBulkIntakeController::show
+  methods: [GET]
+  requirements: { batchId: 'bulk-[a-f0-9]{24}' }
+
+cos_property_bulk_api_propose:
+  path: /api/v1/property/bulk/{batchId}/propose
+  controller: App\Http\Api\V1\Controller\PropertyBulkIntakeController::propose
+  methods: [POST]
+  requirements: { batchId: 'bulk-[a-f0-9]{24}' }
+
 # Canonical Domain capability discovery and explicitly gated human invocation.
 cos_capabilities_index:
   path: /api/v1/capabilities

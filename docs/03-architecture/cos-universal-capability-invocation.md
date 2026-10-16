@@ -91,3 +91,35 @@ Tenant, виконавець і correlation визначаються серве�
 
 Увага: це створення Property Asset, а не Inventory або Listing.
 Із цієї форми не виконуються bulk-імпорт, CRM, публікація чи AI/CRON.
+
+## Масовий імпорт Property: P0
+
+Інтерфейс: `/workspace/property/bulk`.
+API з автентифікованою сесією і CSRF:
+`POST /api/v1/property/bulk` для staging масиву `items` (1–10),
+`GET /api/v1/property/bulk/{batchId}` для незмінного перегляду,
+`POST /api/v1/property/bulk/{batchId}/propose` з `{"digest":"..."}`
+для створення Goal і Plan. Після цього людина в Goals запускає
+штатний процес незалежного погодження Plan, створення Run і погодження
+кожного Action. Жодне з цих API не запускає Workflow напряму.
+
+`property.bulk.create` реалізовано як Domain-owned Kernel Action, де
+`execution_binding=action:property.bulk.create`,
+`approval_policy=required`, `idempotency=required`, `retry.max=1`.
+Тільки канонічна черга Action може виконувати власний Property handler.
+Він використовує вже існуючий `PropertyWriteService`, а
+не напряму вставляє записи у native таблиці Property.
+Невизначена часткова операція блокує автоматичний retry та потребує
+операторського узгодження receipts. Staging таблиці не містять
+жодних технічних `Workflow Run/Step`.
+
+Перевірка дублікатів консервативна: повторні адреси в самому пакеті
+відхиляються, а existing native Property перевіряється через tenant-scoped
+Property search/read. Неоднозначне зіставлення або переповнення вибірки
+блокує обробку. Це **не** повний геокодер або fuzzy entity resolution;
+некоректно записані адреси повинні проходити ручний review.
+
+Показник `property.bulk_assets_verified` обчислюється окремим
+Domain-backed Run evidence provider: перевірений Action receipt,
+immutable approved Plan, завершений Run і фактично існуючі native
+Property Assets. Статус Workflow сам по собі не є бізнес-результатом.

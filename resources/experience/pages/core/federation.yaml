@@ -43,3 +43,25 @@ pages:
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.bulk.workspace
+    route: { name: cos_property_bulk_workspace, path: "/workspace/property/bulk", methods: [GET] }
+    surface: workspace
+    domain: Property
+    capability: property.bulk.create
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Підготувати до десяти об'єктів Property до незалежного погодження перед внесенням до каталогу."
+      page_purpose: "Ручна перевірка незмінного пакета, формування Goal/Plan і перегляд native результатів."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: property.bulk.plan.propose
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
