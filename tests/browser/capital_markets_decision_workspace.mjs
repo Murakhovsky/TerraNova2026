@@ -34,12 +34,24 @@ try {
   // Explicitly select English for historical English-content Decision Workspace assertions.
   // The locale switch itself is exercised through the real authenticated CSRF endpoint.
   await assertOk(await login.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' }), 'locale preflight');
-  const csrf = await login.locator('form.cos-shell__locale-form input[name="_token"]').inputValue();
-  const localeResponse = await loginContext.request.post(absolute('/workspace/locale'), {
-    form: { _token: csrf, locale: 'en' },
-    maxRedirects: 0,
-  });
-  if (localeResponse.status() !== 303) throw new Error('English locale switch rejected: HTTP ' + localeResponse.status());
+  // Exercise the real locale form. Both Symfony's _token and COS's session csrf_token
+  // are required by the existing independent CSRF guards.
+  for (const name of ['_token', 'csrf_token']) {
+    if (!(await login.locator('form.cos-shell__locale-form input[name="' + name + '"]').inputValue())) {
+      throw new Error('Locale form missing required CSRF field: ' + name);
+    }
+  }
+  const responsePromise = login.waitForResponse(
+    response => response.url() === absolute('/workspace/locale')
+      && response.request().method() === 'POST',
+    { timeout: 25000 },
+  );
+  await login.locator('#cos-shell-locale').selectOption('en');
+  const localeResponse = await responsePromise;
+  if (localeResponse.status() !== 303) {
+    throw new Error('English locale switch rejected: HTTP ' + localeResponse.status()
+      + ' ' + (await localeResponse.text()).slice(0, 250));
+  }
   await assertOk(await login.reload({ waitUntil: 'domcontentloaded' }), 'English locale preflight');
   const lang = await login.locator('html').getAttribute('lang');
   if (lang !== 'en') throw new Error('Expected switched English workspace locale, got ' + lang);

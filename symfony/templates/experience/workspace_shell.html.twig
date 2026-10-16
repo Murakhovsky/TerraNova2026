@@ -108,6 +108,7 @@
 
                 <form class="cos-shell__locale-form" method="post" action="{{ path('cos_web_locale_switch') }}" data-action="change->workspace-shell#submitLocale">
                     <input type="hidden" name="_token" value="{{ csrf_token('cos_locale_switch') }}">
+                    <input type="hidden" name="csrf_token" value="{{ app.request.session.get('cos_csrf_token') }}">
                     <label class="cos-visually-hidden" for="cos-shell-locale">{{ 'shell.language'|trans }}</label>
                     <select id="cos-shell-locale" class="cos-shell__locale-select" name="locale" aria-label="{{ 'shell.language'|trans }}">
                         <option value="uk"{% if app.request.locale == 'uk' %} selected{% endif %}>Українська</option>
