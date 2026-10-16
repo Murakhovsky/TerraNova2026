@@ -86,6 +86,9 @@ jobs:
           php tests/architecture/capital_markets_pool_production_contract.php
           php tests/architecture/capital_markets_integrated_authority_contract.php
           php tests/architecture/locale_static_module_execution_contract.php
+          php tests/unit/engineering_domain_context_compression.php
+          php tests/unit/capital_markets_tokenized_equity_backtest.php
+          php tests/architecture/legacy_p1_canonical_consolidation.php
           php tests/architecture/engineering_agent_run_order.php
           php tests/architecture/experience_v1_canonical_ux_registry.php
           php tests/unit/capital_markets_instrument_pool_schedule_targets.php
