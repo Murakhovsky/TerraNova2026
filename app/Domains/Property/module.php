@@ -69,6 +69,8 @@ return [
                 'retry_policy'=>['max_attempts'=>1],
                 'failure_contract'=>'Existing Property mutation receipt and transactional audit govern retry.',
                 'lifecycle'=>'experimental',
+                'tests'=>['tests/architecture/cos_canonical_capability_library_contract.php'],
+                'documentation'=>'docs/03-architecture/cos-universal-capability-invocation.md',
             ],
             [
                 'id'=>'property.asset.search',
@@ -81,6 +83,8 @@ return [
                 'side_effect_level'=>'none',
                 'permission'=>'cos.tenant.manage',
                 'lifecycle'=>'experimental',
+                'tests'=>['tests/architecture/cos_canonical_capability_library_contract.php'],
+                'documentation'=>'docs/03-architecture/cos-universal-capability-invocation.md',
             ],
         ],
         'capabilities' => [
