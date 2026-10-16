@@ -522,8 +522,10 @@ turbo-frame[aria-busy="true"] .cos-command__list {
   .cos-shell__menu {
     display: grid;
     place-items: center;
-    width: var(--cos-control-height);
-    min-height: var(--cos-control-height);
+    flex: 0 0 var(--cos-touch-target-min);
+    width: var(--cos-touch-target-min);
+    min-width: var(--cos-touch-target-min);
+    min-height: var(--cos-touch-target-min);
     padding: 0;
     color: var(--cos-color-text);
     background: var(--cos-color-surface);
