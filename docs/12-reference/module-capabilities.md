@@ -309,6 +309,8 @@ Manifest capabilities не задекларовані.
 
 - `property.analytics`;
 - `property.api.v1`;
+- `property.asset.create`;
+- `property.asset.search`;
 - `property.business.cutover`;
 - `property.catalog`;
 - `property.history`;
