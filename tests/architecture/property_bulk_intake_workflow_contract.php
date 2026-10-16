@@ -53,4 +53,8 @@ foreach(['bulk-create-input.schema.json','bulk-create-output.schema.json'] as $s
     $json=json_decode($read('resources/contracts/property/'.$schema),true,512,JSON_THROW_ON_ERROR);
     $check(($json['type']??'')==='object','Malformed Property Action schema.');
 }
+$output=json_decode($read('resources/contracts/property/bulk-create-output.schema.json'),true,512,JSON_THROW_ON_ERROR);
+$check(($output['properties']['asset_ids']['minItems']??0)===1
+    &&($output['properties']['asset_ids']['maxItems']??0)===10,
+    'Output cardinality must match accepted 1-10 Property assets.');
 echo "Property bulk approved Workflow contract PASS.\n";

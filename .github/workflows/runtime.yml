@@ -97,6 +97,10 @@ jobs:
         run: |
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Property Bulk real MySQL duplicate and tenant fencing
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/property_bulk_mysql_fencing.php
       - name: Federation single-writer architecture gate
         run: |
           php tests/architecture/federation_canonical_goal_cutover.php
