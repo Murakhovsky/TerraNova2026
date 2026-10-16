@@ -13,6 +13,7 @@ use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\StreamingSessionCoordinator;
 use Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner;
+use Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore;
 use Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner;
 use Domains\CapitalMarkets\Domain\MarketData\MarketDataMode;
 use Domains\CapitalMarkets\Domain\Instrument\InstrumentFamily;
@@ -27,6 +28,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Security\MarketSourceCreden
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MassiveStocksMultiNbboProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -51,9 +53,11 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
         private readonly MarketSubscriptionRepositoryInterface $subscriptions,
         private readonly MarketInstrumentResolverInterface $resolver,
         private readonly MarketSourceCredentialResolver $credentials,
+        private readonly MultiSymbolStreamingCore $multiSymbolCore,
         private readonly StreamingInstrumentTrustInvalidatorInterface $instrumentTrust,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){
         parent::__construct();
     }
@@ -103,6 +107,15 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                 ?'MASSIVE_STOCKS_WS_Q_LIVE':'MASSIVE_STOCKS_WS_Q_DELAYED';
             if($source->licenseProfile!==$requiredProfile){
                 throw new \DomainException('Massive stock WS entitlement must be explicitly attested.');
+            }
+            // Unified preflight: exact mapping, per-source capacity and one fenced lease.
+            $streamPlan=$this->multiSymbolCore->plan($org,[$sourceName]);
+            $initialTopologyDigest=hash('sha256',json_encode(
+                $streamPlan['sources'][0],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES
+            ));
+            $lastTopologyReview=0;
+            if(($streamPlan['totals']['SOURCES']??0)!==1){
+                throw new \DomainException('Multi-symbol streaming capacity admission rejected.');
             }
             $subscribed=$this->subscriptions->forSource($org,$sourceId,true);
             if(count($subscribed)<2||count($subscribed)>25){
@@ -161,6 +174,10 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                         }
                         if($event['kind']==='ack'){
                             $session->subscribed($epoch,$event['key']);
+                            $id=$instrumentIdsBySymbol[$event['symbol']]??null;
+                            if(!is_string($id))throw new \DomainException('Massive ACK unmapped.');
+                            $this->verification->acknowledged($org,$sourceName,$shard,$workerId,
+                                $token,$epoch,'MASSIVE_STOCKS',$id);
                             continue;
                         }
                         if($event['kind']==='unsubscribed'){
@@ -203,7 +220,12 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                         if(!in_array($stored->status,['ACCEPTED','DUPLICATE'],true)){
                             throw new \DomainException('Massive reference NBBO ingestion rejected.');
                         }
-                        if($stored->status==='ACCEPTED')$accepted++;
+                        if($stored->status==='ACCEPTED'){
+                            $this->verification->acceptedQuote(
+                                $org,$sourceName,$shard,$workerId,$token,$epoch,$stored
+                            );
+                            $accepted++;
+                        }
                     }
                 },
                 2097152,
@@ -226,8 +248,23 @@ final class CapitalMarketsMassiveStocksBatchStreamingCommand extends Command
                 function(int $epoch)use(
                     $session,$clock,$transport,$protocol,&$lastPing,
                     $org,$sourceName,$shard,$workerId,&$token,$instrumentIdsBySymbol,
+                    $initialTopologyDigest,&$lastTopologyReview,
                 ):void{
                     $now=$clock();
+                    // Runtime revocation fence: a stale process may not keep
+                    // streaming removed, re-mapped or disabled subscriptions.
+                    // A changed topology fails the runner, invalidates source
+                    // trust and lets the bounded supervisor restart it.
+                    if($now-$lastTopologyReview>=30000){
+                        $latest=$this->multiSymbolCore->plan($org,[$sourceName]);
+                        $fingerprint=hash('sha256',json_encode(
+                            $latest['sources'][0],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES
+                        ));
+                        if(!hash_equals($initialTopologyDigest,$fingerprint)){
+                            throw new \DomainException('STREAM_TOPOLOGY_CHANGED');
+                        }
+                        $lastTopologyReview=$now;
+                    }
                     if($now-$lastPing>=25000){
                         $transport->sendPing($epoch);
                         $lastPing=$now;

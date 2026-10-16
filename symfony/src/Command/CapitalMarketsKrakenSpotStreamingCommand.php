@@ -23,6 +23,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMa
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\KrakenSpotTickerProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Domains\CapitalMarkets\Infrastructure\MarketData\VenueMarketStatusResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -51,6 +52,7 @@ final class CapitalMarketsKrakenSpotStreamingCommand extends Command
         private readonly VenueMarketStatusResolver $marketStatus,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){
         parent::__construct();
     }
@@ -113,13 +115,14 @@ final class CapitalMarketsKrakenSpotStreamingCommand extends Command
             $leaseToken=0;
             $accepted=0;
             $expectMarketMessages=true;
+            $verifiedInstrumentId=$subscriptions[0]->instrumentId->value();
             $transport=new NativeWebSocketTransport(
                 'wss://ws.kraken.com/v2',
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $epoch) use (
                     $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,
                     $target,&$leaseToken,&$accepted,&$expectMarketMessages,
-                ):void{
+                    $verifiedInstrumentId):void{
                     $received=new DateTimeImmutable('now',new DateTimeZone('UTC'));
                     $status=$this->marketStatus->resolve($target->venueInstrument,$received);
                     $expectMarketMessages=$status!==MarketStatus::Closed;
@@ -130,6 +133,10 @@ final class CapitalMarketsKrakenSpotStreamingCommand extends Command
                     }
                     if($parsed['kind']==='ack'){
                         $session->subscribed($epoch,$protocol->key());
+                        $this->verification->acknowledged(
+                            $org,$sourceName,$shard,$workerId,$leaseToken,$epoch,
+                            'KRAKEN_SPOT',$verifiedInstrumentId
+                        );
                         return;
                     }
                     if($parsed['kind']==='reset'){
@@ -151,7 +158,12 @@ final class CapitalMarketsKrakenSpotStreamingCommand extends Command
                     if(!in_array($stored->status,['ACCEPTED','DUPLICATE'],true)){
                         throw new \DomainException('Kraken canonical ingestion rejected quote.');
                     }
-                    if($stored->status==='ACCEPTED')$accepted++;
+                    if($stored->status==='ACCEPTED'){
+                            $this->verification->acceptedQuote(
+                                $org,$sourceName,$shard,$workerId,$leaseToken,$epoch,$stored
+                            );
+                            $accepted++;
+                        }
                 },
                 2097152,
                 function(string $kind,int $epoch)use($session,$clock):void{

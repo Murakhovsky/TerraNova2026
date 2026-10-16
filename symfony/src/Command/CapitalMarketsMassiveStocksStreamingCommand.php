@@ -25,6 +25,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Security\MarketSourceCreden
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MassiveStocksQuoteProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -51,6 +52,7 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
         private readonly MarketSourceCredentialResolver $credentials,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){
         parent::__construct();
     }
@@ -128,6 +130,7 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
             $accepted=0;
             $transport=null;
             $lastPing=$clock();
+            $verifiedInstrumentId=$subscribed[0]->instrumentId->value();
             $transport=new NativeWebSocketTransport(
                 $mode===MarketDataMode::Live
                     ?'wss://socket.massive.com/stocks'
@@ -136,7 +139,7 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
                 function(string $payload,int $epoch) use(
                     $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,
                     &$transport,&$token,&$accepted,
-                ):void{
+                    $verifiedInstrumentId):void{
                     $received=new DateTimeImmutable('now',new DateTimeZone('UTC'));
                     foreach($protocol->decodeBatch($payload,$received) as $event){
                         if($event['kind']==='connected')continue;
@@ -146,6 +149,10 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
                         }
                         if($event['kind']==='ack'){
                             $session->subscribed($epoch,$protocol->key());
+                        $this->verification->acknowledged(
+                            $org,$sourceName,$shard,$workerId,$token,$epoch,
+                            'MASSIVE_STOCKS',$verifiedInstrumentId
+                        );
                             continue;
                         }
                         if($event['kind']==='heartbeat'){
@@ -175,7 +182,12 @@ final class CapitalMarketsMassiveStocksStreamingCommand extends Command
                         if(!in_array($stored->status,['ACCEPTED','DUPLICATE'],true)){
                             throw new \DomainException('Massive reference NBBO ingestion rejected.');
                         }
-                        if($stored->status==='ACCEPTED')$accepted++;
+                        if($stored->status==='ACCEPTED'){
+                            $this->verification->acceptedQuote(
+                                $org,$sourceName,$shard,$workerId,$token,$epoch,$stored
+                            );
+                            $accepted++;
+                        }
                     }
                 },
                 2097152,

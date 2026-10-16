@@ -35,6 +35,10 @@ final readonly class BybitPerpetualMarketDataDecoder implements MarketDataDecode
             'bybit.linear.ticker.bbo'=>$this->bbo($event,$timestamp,$status),
             'bybit.linear.ws.topbook.bbo'=>$this->wsTopBook($event,$timestamp,$status),
             'bybit.linear.ticker.volume'=>$this->scalar($event,$timestamp,$status,MarketEventType::Volume,'volume24h'),
+            'bybit.linear.ws.derivative.mark_price'=>$this->wsScalar($event,$timestamp,$status,MarketEventType::MarkPrice),
+            'bybit.linear.ws.derivative.index_price'=>$this->wsScalar($event,$timestamp,$status,MarketEventType::IndexPrice),
+            'bybit.linear.ws.derivative.open_interest'=>$this->wsScalar($event,$timestamp,$status,MarketEventType::OpenInterest),
+            'bybit.linear.ws.derivative.funding'=>$this->wsFunding($event,$timestamp,$status),
             'bybit.linear.ticker.mark_price'=>$this->scalar($event,$timestamp,$status,MarketEventType::MarkPrice,'markPrice'),
             'bybit.linear.ticker.index_price'=>$this->scalar($event,$timestamp,$status,MarketEventType::IndexPrice,'indexPrice'),
             'bybit.linear.ticker.open_interest'=>$this->scalar($event,$timestamp,$status,MarketEventType::OpenInterest,'openInterest'),
@@ -79,6 +83,31 @@ final readonly class BybitPerpetualMarketDataDecoder implements MarketDataDecode
     {
         $row=$this->tickerRow($event);
         return $this->decoded($type,$event,$timestamp,$status,['value'=>$row[$field]]);
+    }
+
+    private function wsScalar(RawMarketEvent $event,DateTimeImmutable $time,
+        MarketStatus $status,MarketEventType $type):DecodedMarketEvent
+    {
+        $v=$event->rawPayload['value']??null;
+        if(!is_string($v)||preg_match('/^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/D',$v)!==1){
+            throw new InvalidArgumentException('Invalid derivative WS scalar.');
+        }
+        return $this->decoded($type,$event,$time,$status,['value'=>$v]);
+    }
+
+    private function wsFunding(RawMarketEvent $event,DateTimeImmutable $time,
+        MarketStatus $status):DecodedMarketEvent
+    {
+        $v=$event->rawPayload;
+        foreach(['value','next_settlement_at','funding_interval_seconds','rate_type','status'] as $key){
+            if(!array_key_exists($key,$v))throw new InvalidArgumentException('Incomplete WS funding evidence.');
+        }
+        if(!is_int($v['funding_interval_seconds'])||$v['funding_interval_seconds']<60
+            ||!is_string($v['next_settlement_at'])||!ctype_digit($v['next_settlement_at'])
+            ||$v['rate_type']!=='NORMALIZED_LONGS_PAY_SHORTS'||$v['status']!=='CURRENT'){
+            throw new InvalidArgumentException('Invalid derivative funding time/normalization.');
+        }
+        return $this->decoded(MarketEventType::FundingRate,$event,$time,$status,$v);
     }
 
     private function funding(RawMarketEvent $event,DateTimeImmutable $timestamp,MarketStatus $status):DecodedMarketEvent

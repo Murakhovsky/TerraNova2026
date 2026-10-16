@@ -78,6 +78,17 @@ try{
     }
     $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
 
+    $trustAdd=$pdo->prepare(
+        "INSERT INTO tn_capital_market_instrument_stream_trust
+         (organization_id,source_id,instrument_id,channel,shard_key,
+          fencing_token,status,last_sequence,last_event_at,last_quality_score,recovery_required)
+         VALUES (:org,:source,:instrument,'BBO',:shard,3,'TRUSTED','101',
+                 UTC_TIMESTAMP(6),90,0)");
+    foreach($instruments as $instrument){
+        $trustAdd->execute(['org'=>$org,'source'=>$source,
+            'instrument'=>$instrument,'shard'=>$shard]);
+    }
+
     $invalidator=new StreamingTrustInvalidator($pdo);
     $changed=$invalidator->invalidateInstrument(
         $org,$source,$shard,$worker,$token,$instruments[0],'MASSIVE_SYMBOL_STALE',
@@ -133,11 +144,93 @@ try{
         &&$healthRow['last_error']===null,
         'Per-instrument invalidation must not degrade shared transport health.');
 
-    echo "Capital Markets per-instrument trust isolation MySQL integration passed.\n";
+    $selectTrust=$pdo->prepare(
+        'SELECT status,recovery_required,last_quality_score FROM
+         tn_capital_market_instrument_stream_trust
+         WHERE organization_id=:org AND source_id=:source AND instrument_id=:instrument');
+    $selectTrust->execute(['org'=>$org,'source'=>$source,'instrument'=>$instruments[0]]);
+    $badTrust=$selectTrust->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($badTrust)&&$badTrust['status']==='UNTRUSTED'
+        &&(int)$badTrust['recovery_required']===1,
+        'Per-symbol revocation did not fence persistent recovery.');
+    $selectTrust->execute(['org'=>$org,'source'=>$source,'instrument'=>$instruments[1]]);
+    $goodTrust=$selectTrust->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($goodTrust)&&$goodTrust['status']==='TRUSTED',
+        'Sibling persisted stream trust was poisoned by another ticker.');
+
+    $pdo->prepare('UPDATE tn_capital_market_instrument_stream_trust
+        SET last_event_at=DATE_SUB(UTC_TIMESTAMP(6),INTERVAL 10 MINUTE)
+        WHERE organization_id=:org AND instrument_id=:instrument')
+        ->execute(['org'=>$org,'instrument'=>$instruments[1]]);
+    $sweeper=new \Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlPerInstrumentStreamTrust(
+        $pdo,new \Domains\CapitalMarkets\Application\Service\PerInstrumentStreamTrustMachine()
+    );
+    $sweep=$sweeper->sweepStale($org,$source,120,50);
+    $assert($sweep['expired']===1,'Stale sibling was not independently expired.');
+    $selectTrust->execute(['org'=>$org,'source'=>$source,'instrument'=>$instruments[1]]);
+    $stale=$selectTrust->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($stale)&&$stale['status']==='STALE'
+        &&(int)$stale['recovery_required']===1,'Stale instrument recovered without new evidence.');
+    $assert($sweeper->sweepStale($org,$source,120,50)['expired']===0,
+        'Repeated stale sweep was not idempotent.');
+    $healthRead->execute(['org'=>$org,'source'=>$source]);
+    $healthAfter=$healthRead->fetch(PDO::FETCH_ASSOC);
+    $assert(is_array($healthAfter)&&$healthAfter['connection_state']==='ACTIVE',
+        'Per-symbol freshness degraded the shared source transport.');
+
+    // Actual application result shape: the source-fenced gateway runs this
+    // policy in the same transaction as canonical event + quality persistence.
+    $time=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+    $observation=new class implements \Domains\CapitalMarkets\Domain\MarketData\MarketObservation{
+        public function eventType():\Domains\CapitalMarkets\Domain\MarketData\MarketEventType {
+            return \Domains\CapitalMarkets\Domain\MarketData\MarketEventType::Bbo;
+        }
+        public function toArray():array{return ['bid'=>'10.0','ask'=>'10.1'];}
+    };
+    $quality=new \Domains\CapitalMarkets\Domain\MarketData\MarketDataQualityAssessment(
+        \Domains\CapitalMarkets\Domain\MarketData\MarketTrustStatus::Trusted,99,[],1,1,1
+    );
+    $makeResult=static function(string $sequence) use ($source,$instruments,$time,$observation,$quality){
+        $event=new \Domains\CapitalMarkets\Domain\MarketData\CanonicalMarketEvent(
+            'ci-canonical-'.bin2hex(random_bytes(8)),
+            \Domains\CapitalMarkets\Domain\MarketData\MarketSourceId::fromString($source),
+            null,\Domains\CapitalMarkets\Domain\Instrument\InstrumentId::fromString($instruments[0]),
+            new \Domains\CapitalMarkets\Domain\MarketData\MarketTimestamps($time,$time,$time),
+            $sequence,$observation,[],1,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketDataMode::Live,
+            \Domains\CapitalMarkets\Domain\MarketData\MarketStatus::Open
+        );
+        return new \Domains\CapitalMarkets\Application\DTO\MarketDataIngestionResult(
+            'ACCEPTED',true,true,true,$event,$quality,null
+        );
+    };
+    $pdo->beginTransaction();
+    try{
+        $trusted=$sweeper->observe($org,$source,$shard,$token,$makeResult('200'));
+        $assert($trusted==='TRUSTED','Fresh complete symbol BBO failed independent recovery.');
+        $blocked=$sweeper->observe($org,$source,$shard,$token,$makeResult('199'));
+        $assert($blocked==='UNTRUSTED','Regressing symbol sequence escaped persisted trust.');
+        $read=$pdo->prepare(
+            'SELECT status,recovery_required,last_sequence,last_rejected_at FROM tn_capital_market_instrument_stream_trust
+             WHERE organization_id=? AND source_id=? AND instrument_id=? AND channel=?');
+        $read->execute([$org,$source,$instruments[0],'BBO']);
+        $symbol=$read->fetch(PDO::FETCH_ASSOC);
+        $assert(is_array($symbol)&&$symbol['status']==='UNTRUSTED'
+            &&(int)$symbol['recovery_required']===1&&$symbol['last_sequence']==='200'
+            &&$symbol['last_rejected_at']!==null,
+            'Sequence regression rewound trusted per-symbol baseline.');
+        $read->execute([$org,$source,$instruments[1],'BBO']);
+        $sibling=$read->fetch(PDO::FETCH_ASSOC);
+        $assert(is_array($sibling)&&$sibling['status']==='STALE',
+            'Sequence regression changed another symbol trust row.');
+        $pdo->commit();
+    }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();throw $error;}
+
+    echo "Capital Markets per-instrument trust isolation, recovery fencing and stale sweep MySQL passed.\n";
 }finally{
     if($pdo->inTransaction())$pdo->rollBack();
     $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
-    foreach(['tn_capital_market_states','tn_capital_market_reference_states','tn_capital_market_source_health',
+    foreach(['tn_capital_market_instrument_stream_trust','tn_capital_market_states','tn_capital_market_reference_states','tn_capital_market_source_health',
         'tn_capital_market_stream_worker_leases'] as $table){
         $delete=$pdo->prepare('DELETE FROM '.$table.' WHERE organization_id=:org');
         $delete->execute(['org'=>$org]);

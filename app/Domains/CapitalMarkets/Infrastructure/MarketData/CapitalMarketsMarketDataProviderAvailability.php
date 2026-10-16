@@ -12,6 +12,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Bybit\BybitSpotMark
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpotMarketDataAdapter;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Massive\MassiveStocksReferenceAdapter;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxPerpetualMarketDataAdapter;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Okx\OkxSpotMarketDataAdapter;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Kraken\KrakenSpotMarketDataAdapter;
 
 final readonly class CapitalMarketsMarketDataProviderAvailability implements MarketDataProviderAvailabilityInterface
@@ -24,7 +25,8 @@ final readonly class CapitalMarketsMarketDataProviderAvailability implements Mar
         $providerFlag=match($source->adapterType){
             BybitSpotMarketDataAdapter::ADAPTER_TYPE,
             BybitPerpetualMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataBybit,
-            OkxPerpetualMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataOkx,
+            OkxPerpetualMarketDataAdapter::ADAPTER_TYPE,
+            OkxSpotMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataOkx,
             KrakenSpotMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataKraken,
             BinanceSpotMarketDataAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataBinance,
             MassiveStocksReferenceAdapter::ADAPTER_TYPE=>CapitalMarketsFeatureFlag::MarketDataMassive,

@@ -182,6 +182,17 @@ jobs:
       - name: Capital Markets Capital Risk and Decision Workspace acceptance
         run: |
           php tests/unit/capital_markets_cross_venue_discovery.php
+          php tests/unit/capital_markets_per_instrument_stream_trust.php
+          php tests/unit/capital_markets_multi_symbol_300_planner.php
+          php tests/architecture/capital_markets_multisymbol_per_instrument_contract.php
+          php tests/unit/capital_markets_provider_expansion_replay_scaling.php
+          php tests/architecture/capital_markets_provider_replay_scaling_contract.php
+          php tests/unit/capital_markets_bybit_derivative_ws.php
+          php tests/architecture/capital_markets_l2_derivatives_p1_contract.php
+          php tests/unit/capital_markets_stream_provider_ops_alerts.php
+          php tests/architecture/capital_markets_live_provider_ops_contract.php
+          php tests/unit/capital_markets_pool_production_soak.php
+          php tests/architecture/capital_markets_pool_production_contract.php
           php tests/unit/capital_markets_cross_venue_quotes.php
           php tests/integration/capital_markets_cross_venue_operator.php
           php tests/unit/realtime_hub_origin.php
@@ -297,6 +308,17 @@ jobs:
         run: docker compose config --quiet
       - name: Validate optional Capital Markets streaming lease monitor
         run: docker compose --profile cm-stream-sweeper config --quiet
+      - name: Validate source-fenced BBO fleet Compose profile
+        run: docker compose --profile cm-stream-fleet config --quiet
+      - name: Validate opt-in derivatives REST and WebSocket profiles
+        run: |
+          docker compose --profile cm-derivatives-lifecycle --profile cm-derivatives-stream config --quiet
+      - name: Validate source-scoped stream incident monitor profile
+        run: docker compose --profile cm-stream-ops-monitor config --quiet
+      - name: Validate per-instrument stale sweep Compose profile
+        run: docker compose --profile cm-instrument-trust-sweeper config --quiet
+      - name: Validate guarded Capital Markets pool watchdog profile
+        run: docker compose --profile cm-pool-watchdog config --quiet
       # Load cache-backed production images into the runner's Docker engine.
       # Subsequent "docker compose up" uses these exact local tags without
       # an implicit rebuild. Each service has its own mutable GHA cache scope.
@@ -356,6 +378,24 @@ jobs:
             -e COS_CM_POOL_APPROVAL_TEST=1 \
             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
             php php /tmp/cm-pool-approval.php
+      - name: P1 Provider expansion and read-only raw replay provenance MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_raw_replay_provenance_mysql.php php:/tmp/cm-replay-provenance.php
+          docker compose exec -T \
+            -e COS_CM_REPLAY_AUDIT_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-replay-provenance.php
+      - name: P1 derivatives lifecycle and freshness MySQL
+        run: |
+          docker compose cp tests/integration/capital_markets_derivatives_stream_mysql.php php:/tmp/cm-derivatives.php
+          docker compose exec -T             -e COS_CM_DERIVATIVES_TEST=1             -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php             php php /tmp/cm-derivatives.php
+      - name: Capital Markets guarded production pool MySQL acceptance
+        run: |
+          docker compose cp tests/integration/capital_markets_pool_production_mysql.php php:/tmp/cm-pool-production.php
+          docker compose exec -T \
+            -e COS_CM_POOL_PRODUCTION_TEST=1 \
+            -e COS_TEST_AUTOLOAD=/var/www/html/symfony/vendor/autoload.php \
+            php php /tmp/cm-pool-production.php
       - name: Capital Markets Instrument Pool snapshot MySQL
         run: |
           docker compose cp tests/integration/capital_markets_instrument_pool_snapshot_mysql.php php:/tmp/cm-pool-snapshot.php

@@ -127,6 +127,42 @@ final readonly class StreamingTrustInvalidator implements
                 }
             }
 
+            // Revoke durable per-symbol recovery too: stale recovered streams
+            // cannot be admitted from an older lease/epoch after quarantine.
+            $trust=$this->pdo->prepare(
+                'UPDATE tn_capital_market_instrument_stream_trust
+                 SET status=\'UNTRUSTED\',recovery_required=1,
+                     reason=:reason,last_quality_score=0,
+                     last_rejected_at=UTC_TIMESTAMP(6),updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND source_id=:source'.
+                 ($instrumentId===null?'':' AND instrument_id=:instrument')
+            );
+            $trust->execute(array_merge([
+                'reason'=>$flag,'org'=>$organizationId,'source'=>$sourceId,
+            ],$scopeParams));
+
+            // Never accept ACK or quote receipts from an invalidated socket or ticker.
+            $receiptScope=$instrumentId===null?'':' AND instrument_id=:instrument';
+            $receipt=$this->pdo->prepare(
+                "UPDATE tn_capital_market_provider_stream_receipts
+                 SET status='REVOKED',last_error_code=:reason,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND source_id=:source".$receiptScope
+            );
+            $receipt->execute(array_merge([
+                'org'=>$organizationId,'source'=>$sourceId,'reason'=>$reason,
+            ],$scopeParams));
+
+            // Derivative capabilities are independently quarantined on
+            // disconnection, lease expiry and source-level trust revocation.
+            $derivatives=$this->pdo->prepare(
+                "UPDATE tn_capital_market_derivative_stream_trust
+                 SET status='UNTRUSTED',quality_score=0,updated_at=UTC_TIMESTAMP(6)
+                 WHERE organization_id=:org AND source_id=:source".$receiptScope
+            );
+            $derivatives->execute(array_merge([
+                'org'=>$organizationId,'source'=>$sourceId,
+            ],$scopeParams));
+
             // A single ticker problem is not a transport outage.
             if($instrumentId===null){
                 $health=$this->pdo->prepare(
