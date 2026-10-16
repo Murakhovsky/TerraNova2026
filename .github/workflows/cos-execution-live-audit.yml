@@ -1,0 +1,144 @@
+name: COS Execution Live Tenant Audit
+
+# Operator-only: existing tenant, deployed SHA, read-only DB inspection.
+on:
+  push:
+    branches: [feature/cos-federation-foundation-phase1-20261008]
+    paths: ['.github/workflows/cos-execution-live-audit.yml']
+  workflow_dispatch:
+    inputs:
+      tenant_id:
+        description: 'Existing real tenant organization ID'
+        type: string
+        required: true
+      expected_sha:
+        description: 'Exact 40-character deployed SHA'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cos-execution-live-readonly
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Protected tenant-wide technical authority audit
+    if: github.event_name == 'workflow_dispatch' || vars.COS_EXECUTION_AUDIT_TENANT != ''
+    environment: AWS TN2026
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      AUDIT_TENANT: ${{ github.event_name == 'workflow_dispatch' && inputs.tenant_id || vars.COS_EXECUTION_AUDIT_TENANT }}
+      EXPECTED_HEAD: ${{ github.event_name == 'workflow_dispatch' && inputs.expected_sha || github.sha }}
+    steps:
+      - name: Guard real tenant, deployed SHA and SSH access
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH AUDIT_TENANT EXPECTED_HEAD; do
+            if [ -z "$(printenv "$key" || true)" ]; then
+              echo "::error::Missing required protected configuration: $key"
+              exit 1
+            fi
+          done
+          [[ "$AUDIT_TENANT" =~ ^[A-Za-z0-9][A-Za-z0-9_:-]{0,189}$ ]] || { echo "::error::Invalid tenant ID"; exit 1; }
+          [[ "$EXPECTED_HEAD" =~ ^[a-f0-9]{40}$ ]] || { echo "::error::Invalid SHA"; exit 1; }
+          [[ "$DEV_PATH" =~ ^/[A-Za-z0-9_./-]+$ ]] && [[ "$DEV_PATH" != *..* ]] || { echo "::error::Invalid deployment path"; exit 1; }
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || { echo "::error::Invalid SSH port"; exit 1; }
+          [ "$EXPECTED_HEAD" = "$GITHUB_SHA" ] || { echo "::error::Audit must inspect the workflow SHA"; exit 1; }
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/cos_execution_audit_key"
+          chmod 600 "$HOME/.ssh/cos_execution_audit_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Verify active consumer images and inspect live tenant (no writes)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/cos_execution_audit_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" "$AUDIT_TENANT" "$EXPECTED_HEAD" <<'REMOTE'
+          set -Eeuo pipefail
+          umask 077
+          ROOT="$1"
+          TENANT="$2"
+          EXPECTED="$3"
+          test -d "$ROOT/.git" || { echo "::error::Deployed checkout unavailable"; exit 1; }
+          ACTUAL="$(git -C "$ROOT" rev-parse HEAD)"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Deployed revision differs from audit SHA"
+            exit 1
+          fi
+          D='docker'
+          if ! docker info >/dev/null 2>&1; then
+            if sudo -n docker info >/dev/null 2>&1; then D='sudo -n docker'
+            else echo "::error::No Docker inspection access"; exit 1; fi
+          fi
+          SOURCE="symfony/src/Command/WorkflowAuthorityInventoryCommand.php"
+          test -f "$ROOT/$SOURCE" || { echo "::error::Missing deployed audit CLI"; exit 1; }
+          SOURCE_SHA="$(sha256sum "$ROOT/$SOURCE" | cut -d' ' -f1)"
+          BASE_IMAGE=''
+          for SERVICE in php worker kernel-worker engineering-worker engineering-immediate-worker; do
+            FOUND=0
+            while IFS= read -r NAME; do
+              case "$NAME" in cos-*) ;; *) continue;; esac
+              FOUND=1
+              IMAGE="$($D inspect --format '{{.Image}}' "$NAME")"
+              CODE_SHA="$($D exec "$NAME" sha256sum "/var/www/html/$SOURCE" | cut -d' ' -f1)"
+              if [ "$CODE_SHA" != "$SOURCE_SHA" ]; then
+                echo "::error::Execution consumer code mismatch: $SERVICE"; exit 1
+              fi
+              if [ -n "$BASE_IMAGE" ] && [ "$BASE_IMAGE" != "$IMAGE" ]; then
+                echo "::error::Mixed execution worker images"; exit 1
+              fi
+              BASE_IMAGE="$IMAGE"
+            done < <($D ps --filter "label=com.docker.compose.project=cos" \
+              --filter "label=com.docker.compose.service=$SERVICE" --format '{{.Names}}')
+            if [ "$FOUND" -ne 1 ]; then
+              echo "::error::Missing running consumer service: $SERVICE"; exit 1
+            fi
+            echo "verified_consumer_service: $SERVICE"
+          done
+          REPORT="$(mktemp /tmp/cos-execution-audit-XXXXXXXX)"
+          STDERR="$(mktemp /tmp/cos-execution-audit-err-XXXXXXXX)"
+          trap 'rm -f -- "$REPORT" "$STDERR"' EXIT
+          set +e
+          timeout --signal=TERM --kill-after=5s 90s $D exec -i cos-php-1 \
+            php bin/console cos:workflow:authority-inventory "$TENANT" \
+            > "$REPORT" 2> "$STDERR"
+          EXIT_CODE=$?
+          set -e
+          # Informational CLI intentionally exits 1 regardless of fleet result.
+          [ "$EXIT_CODE" -eq 1 ] || { echo "::error::Audit command failed unexpectedly"; exit 1; }
+          php -r '
+          $r=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
+          foreach (["federation","engineering","kernel"] as $part) {
+              if (!is_array($r[$part]??null)) exit(2);
+              echo $part, "_status: ", $r[$part]["status"]??"unknown", "\n";
+          }
+          if (($r["organization_id"]??null)!==$argv[2]
+              || ($r["contours_checked"]??null)!==["federation","engineering","kernel"]
+              || ($r["read_only"]??null)!==true
+              || ($r["cutover_authorized"]??null)!==false
+              || ($r["release_authorized"]??null)!==false) exit(3);
+          echo "combined_status: ",$r["status"]??"unknown","\n";
+          if (in_array($r["status"]??null,["drift","incomplete"],true)
+              || ($r["kernel"]["coverage_complete"]??false)!==true
+              || ($r["engineering"]["coverage_complete"]??false)!==true
+              || ($r["federation"]["inventory_coverage_complete"]??false)!==true)
+              exit(4);
+          ' "$REPORT" "$TENANT" || { echo "::error::Actual tenant execution evidence incomplete"; exit 1; }
+          echo "report_sha256: $(sha256sum "$REPORT" | cut -d' ' -f1)"
+          echo "deployed_sha: $ACTUAL"
+          echo "execution_image: $BASE_IMAGE"
+          echo 'execution_authority_audit: technical evidence only; no cutover or release approval'
+          REMOTE
