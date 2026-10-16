@@ -23,7 +23,7 @@ foreach ([
     'DECLARED_SOURCE_SHA',
     'DECLARED_ROUTES_SHA',
     'ACTUAL_ROUTES_SHA',
-    'Deployment source differs from expected GitHub main commit or release manifest',
+    'Deployed source differs from expected GitHub main commit or release manifest',
 ] as $part) {
     if (!str_contains($code,$part)) throw new RuntimeException('Release attestation guard missing '.$part);
 }
