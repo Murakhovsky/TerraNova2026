@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
-[[ "\${1:-}" == "--inspect" || "\${1:-}" == "--start" ]] || {
+[[ "${1:-}" == "--inspect" || "${1:-}" == "--start" ]] || {
   echo "Usage: bash deploy/staging/guard.sh --inspect|--start" >&2; exit 64;
 }
 MODE="$1"
@@ -35,17 +35,17 @@ fi
   exit 0
 }
 # Explicit written operator authorization, never implicitly triggered by CI.
-[[ "\${COS_FED_STAGING_OPERATOR_APPROVAL:-}" == "APPROVE_ISOLATED_FEDERATION_STAGING" ]] || {
+[[ "${COS_FED_STAGING_OPERATOR_APPROVAL:-}" == "APPROVE_ISOLATED_FEDERATION_STAGING" ]] || {
   echo "BLOCKED: explicit staging operator approval required" >&2; exit 2;
 }
-[[ "\${COS_FED_STAGING_SHA:-}" =~ ^[a-f0-9]{40}$ ]] || {
+[[ "${COS_FED_STAGING_SHA:-}" =~ ^[a-f0-9]{40}$ ]] || {
   echo "BLOCKED: pin a 40-character feature SHA" >&2; exit 2;
 }
-[[ "\${COS_FED_STAGING_DB_PASSWORD:-}" != "" &&
-   "\${COS_FED_STAGING_ROOT_PASSWORD:-}" != "" &&
-   "\${COS_FED_STAGING_APP_SECRET:-}" != "" &&
-   "\${COS_FED_STAGING_SPATIAL_SECRET:-}" != "" &&
-   "\${COS_FED_STAGING_MERCURE_SECRET:-}" != "" ]] || {
+[[ "${COS_FED_STAGING_DB_PASSWORD:-}" != "" &&
+   "${COS_FED_STAGING_ROOT_PASSWORD:-}" != "" &&
+   "${COS_FED_STAGING_APP_SECRET:-}" != "" &&
+   "${COS_FED_STAGING_SPATIAL_SECRET:-}" != "" &&
+   "${COS_FED_STAGING_MERCURE_SECRET:-}" != "" ]] || {
   echo "BLOCKED: dedicated staging secrets required" >&2; exit 2;
 }
 # Prevent incorrect checkout/image tag, production or mutable SHA substitution.

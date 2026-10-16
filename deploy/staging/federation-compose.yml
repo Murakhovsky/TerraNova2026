@@ -5,7 +5,7 @@ name: cos-federation-staging
 x-staging-app-env: &staging-app-env
   APP_ENV: prod
   APP_DEBUG: "0"
-  APP_SECRET: \${COS_FED_STAGING_APP_SECRET:?dedicated staging secret required}
+  APP_SECRET: ${COS_FED_STAGING_APP_SECRET:?dedicated staging secret required}
   COS_ORGANIZATION_ID: federation-staging
   COS_AGENT_LLM_MODE: fixture
   LLM_PROVIDER: fixture
@@ -26,15 +26,15 @@ x-staging-app-env: &staging-app-env
   TELEGRAM_BOT_NAME: ""
   N8N_OUTBOUND_URL: ""
   N8N_OUTBOUND_SECRET: ""
-  DATABASE_URL: "mysql://fed_staging:\${COS_FED_STAGING_DB_PASSWORD:?dedicated staging password required}@mysql:3306/fed_staging?serverVersion=8.4.0&charset=utf8mb4"
+  DATABASE_URL: "mysql://fed_staging:${COS_FED_STAGING_DB_PASSWORD:?dedicated staging password required}@mysql:3306/fed_staging?serverVersion=8.4.0&charset=utf8mb4"
   REDIS_URL: redis://redis:6379
   MESSENGER_TRANSPORT_DSN: redis://redis:6379/staging_async
   MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/staging_failed
   MESSENGER_ENGINEERING_TRANSPORT_DSN: redis://redis:6379/staging_engineering
   MESSENGER_ENGINEERING_IMMEDIATE_TRANSPORT_DSN: redis://redis:6379/staging_engineering_immediate
   MESSENGER_CONSUMER_NAME: staging-http
-  SPATIAL_JWT_SECRET: \${COS_FED_STAGING_SPATIAL_SECRET:?dedicated staging JWT secret required}
-  MERCURE_JWT_SECRET: \${COS_FED_STAGING_MERCURE_SECRET:?dedicated staging Mercure key required}
+  SPATIAL_JWT_SECRET: ${COS_FED_STAGING_SPATIAL_SECRET:?dedicated staging JWT secret required}
+  MERCURE_JWT_SECRET: ${COS_FED_STAGING_MERCURE_SECRET:?dedicated staging Mercure key required}
   MERCURE_URL: http://mercure/.well-known/mercure
   MERCURE_PUBLIC_URL: http://127.0.0.1:18081/.well-known/mercure
   APP_URL: http://127.0.0.1:18081
@@ -45,8 +45,8 @@ services:
     environment:
       MYSQL_DATABASE: fed_staging
       MYSQL_USER: fed_staging
-      MYSQL_PASSWORD: \${COS_FED_STAGING_DB_PASSWORD:?required}
-      MYSQL_ROOT_PASSWORD: \${COS_FED_STAGING_ROOT_PASSWORD:?required}
+      MYSQL_PASSWORD: ${COS_FED_STAGING_DB_PASSWORD:?required}
+      MYSQL_ROOT_PASSWORD: ${COS_FED_STAGING_ROOT_PASSWORD:?required}
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
     volumes: [fed_staging_mysql:/var/lib/mysql]
     networks: [staging_internal]
@@ -73,13 +73,13 @@ services:
     image: dunglas/mercure:v0.24.2
     environment:
       SERVER_NAME: ":80"
-      MERCURE_PUBLISHER_JWT_KEY: \${COS_FED_STAGING_MERCURE_SECRET:?required}
-      MERCURE_SUBSCRIBER_JWT_KEY: \${COS_FED_STAGING_MERCURE_SECRET:?required}
+      MERCURE_PUBLISHER_JWT_KEY: ${COS_FED_STAGING_MERCURE_SECRET:?required}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${COS_FED_STAGING_MERCURE_SECRET:?required}
     networks: [staging_internal]
     mem_limit: 128m
 
   php:
-    image: cos-fed-staging-php:\${COS_FED_STAGING_SHA:?pinned feature SHA required}
+    image: cos-fed-staging-php:${COS_FED_STAGING_SHA:?pinned feature SHA required}
     build:
       context: ../..
       dockerfile: docker/symfony/php/Dockerfile

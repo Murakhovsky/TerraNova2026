@@ -17,10 +17,10 @@ ERROR_PATTERNS = [
 
 def call_docker(args):
     proc = subprocess.run(["docker", *args], stdout=subprocess.PIPE,
-                          stderr=subprocess.DEVNULL, text=True, timeout=25, check=False)
+                          stderr=subprocess.PIPE, text=True, timeout=25, check=False)
     if proc.returncode:
         raise RuntimeError("Docker inspection unavailable (no changes performed)")
-    return proc.stdout
+    return proc.stdout + (proc.stderr if args and args[0] == "logs" else "")
 
 def container_items(records):
     items = []
