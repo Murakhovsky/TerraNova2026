@@ -25,10 +25,21 @@ foreach ([
     'horizontal overflow',
     'screenshot',
     'data-cos-archetype',
+    'evidence_provenance',
+    'source_commit_sha',
+    'tested_checkout_sha',
+    'workflow_run_id',
+    'workflow_run_attempt',
+    'observed_at',
+    'evidence_files',
 ] as $marker) {
     if (!str_contains($source, $marker)) {
         throw new RuntimeException('Golden Eight browser QA missing marker: ' . $marker);
     }
+}
+
+if (str_contains($source, 'targets.flatMap')) {
+    throw new RuntimeException('Golden Eight evidence manifest must list only artifacts that were written.');
 }
 
 echo "Golden Eight browser QA contract OK\n";
