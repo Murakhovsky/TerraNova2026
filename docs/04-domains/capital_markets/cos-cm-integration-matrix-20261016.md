@@ -1,8 +1,14 @@
-# COS CM Federation integration: source ownership and acceptance
+---
+title: Інтеграція COS Capital Markets
+description: Узгодження пулу інструментів, потокових котирувань, глибини ринку та перевірок готовності після Федерації COS.
+status: draft
+---
+
+# Інтеграція COS Capital Markets із федеративною архітектурою: відповідальність та приймання
 
 Status: **DRAFT / NO MERGE / NO DEPLOY**. Canonical base `main@a75c81d79ca2741a07081299672045ae16bbbafc` after #346 Federation and #370 Instrument Pool.
 
-## Pinned inputs and overlap decisions
+## Зафіксовані джерела та рішення щодо перетинів
 
 | Input | Pinned SHA | Actual treatment |
 | --- | --- | --- |
@@ -13,7 +19,7 @@ Status: **DRAFT / NO MERGE / NO DEPLOY**. Canonical base `main@a75c81d79ca2741a0
 
 Five deliberate code/content reconciliations were `.github/workflows/ci.yml`, `.github/workflows/runtime.yml`, `app/Domains/CapitalMarkets/module.php`, `docs/12-reference/module-capabilities.md`, `symfony/config/services.yaml`. Preserve Federation service wiring, Runtime and all migrations. The generated database reference was separately reconciled after adding the scope migration.
 
-## Canonical authority map
+## Єдина карта відповідальності
 
 | Operation | Sole authority / store |
 | --- | --- |
@@ -25,13 +31,13 @@ Five deliberate code/content reconciliations were `.github/workflows/ci.yml`, `.
 | Issuer E4 | Latest independently reviewed issuer document digest AND ACTIVE, effective canonical relationship with six E4 claims |
 | Replay / monitoring / incidents | Read-only evidence or separate diagnostics; no trading, no second Action |
 
-## Migrations and rollout
+## Міграції та порядок введення в дію
 
 Keep module-owned unique ordered SQL files `20261015_000144` (single evidence/controller), `000145` (instrument trust), `000146` (provider ops), `000147` (derivatives), `000148` (replay), `20261016_000149` (additive evidence kind CHECK only). No readiness duplicate `000144`, `tn_capital_market_production_attestations`, or duplicate CLI.
 
 Streaming defaults to OFF. `COS_CM_POOL_PRODUCTION_ARMED=0`; production L2 requires `COS_CM_L2_FENCED_ENABLED=1`. Isolated direct-write QA requires separate flag and is rejected in production. Neither code merge nor CI activates tenants, providers, trades, or new workers.
 
-## Acceptance ledger
+## Контрольний перелік приймання
 
 - [x] Reconcile original branch file SHA and overlap matrix against post-Federation main.
 - [x] Keep one owned pool and streaming writer, single production controller, no migration collision.
