@@ -91,31 +91,47 @@ jobs:
             find $MANIFEST_ROOTS -type f -name '*.php' -print | LC_ALL=C sort | xargs sha256sum
             sha256sum symfony/config/services.yaml
           } | sha256sum | cut -d' ' -f1)"
+          if [ -n "$(git -C "$ROOT" status --porcelain -- \
+            app/Kernel app/Platform app/Domains app/Infrastructure symfony/src symfony/config/services.yaml)" ]; then
+            echo "::error::Production execution sources differ from Git SHA"; exit 1
+          fi
           BASE_IMAGE=''
-          for SERVICE in php worker kernel-worker engineering-worker engineering-immediate-worker; do
-            FOUND=0
-            while IFS= read -r NAME; do
-              case "$NAME" in cos-*) ;; *) continue;; esac
-              FOUND=1
-              IMAGE="$($D inspect --format '{{.Image}}' "$NAME")"
-              CODE_SHA="$($D exec "$NAME" sh -c 'cd /var/www/html && {
-                find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name "*.php" -print | LC_ALL=C sort | xargs sha256sum
-                sha256sum symfony/config/services.yaml
-              } | sha256sum | cut -d" " -f1')"
-              if [ "$CODE_SHA" != "$SOURCE_SHA" ]; then
-                echo "::error::Execution consumer code mismatch: $SERVICE"; exit 1
-              fi
-              if [ -n "$BASE_IMAGE" ] && [ "$BASE_IMAGE" != "$IMAGE" ]; then
-                echo "::error::Mixed execution worker images"; exit 1
-              fi
-              BASE_IMAGE="$IMAGE"
-            done < <($D ps --filter "label=com.docker.compose.project=cos" \
-              --filter "label=com.docker.compose.service=$SERVICE" --format '{{.Names}}')
-            if [ "$FOUND" -ne 1 ]; then
-              echo "::error::Missing running consumer service: $SERVICE"; exit 1
+          declare -A VERIFIED_SERVICES=()
+          PHP_CONSUMERS=0
+          # Enumerate every active cos project container, including optional
+          # and newly added PHP consumer services, not a stale hardcoded subset.
+          while IFS= read -r NAME; do
+            case "$NAME" in cos-*) ;; *) continue;; esac
+            SERVICE="$($D inspect --format '{{index .Config.Labels "com.docker.compose.service"}}' "$NAME")"
+            TAG="$($D inspect --format '{{.Config.Image}}' "$NAME")"
+            if [ "$TAG" != 'cos-symfony-php:local' ]; then continue; fi
+            IMAGE="$($D inspect --format '{{.Image}}' "$NAME")"
+            CODE_SHA="$($D exec "$NAME" sh -c 'cd /var/www/html && {
+              find app/Kernel app/Platform app/Domains app/Infrastructure symfony/src -type f -name "*.php" -print | LC_ALL=C sort | xargs sha256sum
+              sha256sum symfony/config/services.yaml
+            } | sha256sum | cut -d" " -f1')"
+            if [ "$CODE_SHA" != "$SOURCE_SHA" ]; then
+              echo "::error::Execution consumer code mismatch: $SERVICE"; exit 1
             fi
+            if [ -n "$BASE_IMAGE" ] && [ "$BASE_IMAGE" != "$IMAGE" ]; then
+              echo "::error::Mixed active execution images"; exit 1
+            fi
+            BASE_IMAGE="$IMAGE"
+            VERIFIED_SERVICES["$SERVICE"]=1
+            PHP_CONSUMERS=$((PHP_CONSUMERS+1))
             echo "verified_consumer_service: $SERVICE"
+          done < <($D ps --filter 'label=com.docker.compose.project=cos' --format '{{.Names}}')
+          # The ten always-on PHP consumers from docker-compose must actually
+          # be live. Optional profile services are covered when active above.
+          for REQUIRED in php worker kernel-worker engineering-worker \
+            engineering-immediate-worker integration-worker telegram-worker \
+            scheduler spatial-worker; do
+            if [ -z "${VERIFIED_SERVICES[$REQUIRED]:-}" ]; then
+              echo "::error::Missing active production execution consumer: $REQUIRED"; exit 1
+            fi
           done
+          [ "$PHP_CONSUMERS" -gt 0 ] || { echo "::error::No live PHP consumers"; exit 1; }
+          echo "verified_active_php_consumers: $PHP_CONSUMERS"
           REPORT="$(mktemp /tmp/cos-execution-audit-XXXXXXXX)"
           STDERR="$(mktemp /tmp/cos-execution-audit-err-XXXXXXXX)"
           trap 'rm -f -- "$REPORT" "$STDERR"' EXIT
