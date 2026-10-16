@@ -72,7 +72,7 @@
         {% endblock %}
         {% block end %}
             <label class="cos-field cos-architecture__search">
-                <span>Search</span>
+                <span>{{ 'Search'|trans }}</span>
                 <input
                     class="cos-input"
                     type="search"
@@ -101,14 +101,14 @@
                     data-architecture-explorer-target="depth"
                     data-action="change->architecture-explorer#depthChanged"
                 >
-                    <option value="all">All</option>
+                    <option value="all">{{ 'All'|trans }}</option>
                     <option value="1">1 hop</option>
                     <option value="2" selected>2 hops</option>
                     <option value="3">3 hops</option>
                 </select>
             </label>
             <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="architecture-explorer#fit">Fit</button>
-            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="architecture-explorer#reset">Reset</button>
+            <button class="cos-button cos-button--ghost cos-button--sm" type="button" data-action="architecture-explorer#reset">{{ 'Reset'|trans }}</button>
         {% endblock %}
     </twig:CosToolbar>
 
@@ -141,7 +141,7 @@
 
     <section class="cos-architecture__shell">
         <aside class="cos-architecture__sidebar" aria-label="Node type filters">
-            <p class="cos-card__eyebrow">Filters</p>
+            <p class="cos-card__eyebrow">{{ 'Filters'|trans }}</p>
             <h2 class="cos-card__title">Node types</h2>
             <div class="cos-architecture__types" data-architecture-explorer-target="types"></div>
             <p class="cos-card__copy">Projection semantics залишаються server-side. Локальні type/search filters лише звужують готовий Graph.</p>

@@ -28,10 +28,10 @@
             <input class="cos-input" type="number" min="1" max="366" name="forecast_days" value="{{ director.filters.forecast_days }}">
         </label>
         <label class="cos-field">
-            <span>Pipeline</span>
+            <span>{{ 'Pipeline'|trans }}</span>
             <input class="cos-input" name="pipeline_id" value="{{ director.filters.pipeline_id }}" placeholder="all">
         </label>
-        <button class="cos-button cos-button--primary" type="submit">Apply</button>
+        <button class="cos-button cos-button--primary" type="submit">{{ 'Apply'|trans }}</button>
     </twig:CosFilterBar>
 
     {% if director.error %}

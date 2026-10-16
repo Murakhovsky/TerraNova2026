@@ -31,6 +31,30 @@ try {
     login.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
     login.locator('button[type="submit"]').click(),
   ]);
+  // Explicitly select English for historical English-content Decision Workspace assertions.
+  // The locale switch itself is exercised through the real authenticated CSRF endpoint.
+  await assertOk(await login.goto(absolute('/capital-markets'), { waitUntil: 'domcontentloaded' }), 'locale preflight');
+  // Exercise the real locale form. Both Symfony's _token and COS's session csrf_token
+  // are required by the existing independent CSRF guards.
+  for (const name of ['_token', 'csrf_token']) {
+    if (!(await login.locator('form.cos-shell__locale-form input[name="' + name + '"]').inputValue())) {
+      throw new Error('Locale form missing required CSRF field: ' + name);
+    }
+  }
+  const responsePromise = login.waitForResponse(
+    response => response.url() === absolute('/workspace/locale')
+      && response.request().method() === 'POST',
+    { timeout: 25000 },
+  );
+  await login.locator('#cos-shell-locale').selectOption('en');
+  const localeResponse = await responsePromise;
+  if (localeResponse.status() !== 303) {
+    throw new Error('English locale switch rejected: HTTP ' + localeResponse.status()
+      + ' ' + (await localeResponse.text()).slice(0, 250));
+  }
+  await assertOk(await login.reload({ waitUntil: 'domcontentloaded' }), 'English locale preflight');
+  const lang = await login.locator('html').getAttribute('lang');
+  if (lang !== 'en') throw new Error('Expected switched English workspace locale, got ' + lang);
   const storageState = await loginContext.storageState();
   await loginContext.close();
 
@@ -79,11 +103,13 @@ try {
         throw new Error(profile.name + ': ' + path + ' must not expose Live execution.');
       }
 
-      const primaryLinks = page.locator('nav[aria-label="Capital Markets primary workspace navigation"] a');
+      const primaryLinks = page.locator('nav[data-cm-primary-navigation] a');
       if (await primaryLinks.count() < 12) {
         throw new Error(profile.name + ': ' + path + ' primary Decision Workspace navigation is incomplete.');
       }
-      const navHeight = await page.locator('nav[aria-label="Capital Markets primary workspace navigation"]')
+      const localizedNavLabel = await page.locator('nav[data-cm-primary-navigation]').getAttribute('aria-label');
+      if (!localizedNavLabel?.trim()) throw new Error(profile.name + ': ' + path + ' navigation needs accessible label.');
+      const navHeight = await page.locator('nav[data-cm-primary-navigation]')
         .evaluate((node) => node.getBoundingClientRect().height);
       if (navHeight > 100) {
         throw new Error(profile.name + ': ' + path + ' primary navigation wrapped into a tall button wall (' + navHeight + 'px).');

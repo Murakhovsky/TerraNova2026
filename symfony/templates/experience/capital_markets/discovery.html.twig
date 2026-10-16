@@ -1,12 +1,12 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}Cross-Venue Discovery · Capital Markets{% endblock %}
+{% block title %}Cross-Venue Discovery · {{ 'Capital Markets'|trans }}{% endblock %}
 
 {% block workspace_content %}
 <div class="cos-page__stack cos-capital-markets">
   <header class="cos-growth-header">
     <div>
-      <small>Capital Markets · Market Intelligence</small>
+      <small>{{ 'Capital Markets'|trans }} · Market Intelligence</small>
       <h1>Пошук інструментів на різних біржах</h1>
       <p>Історичний каталог bStocks → перевірка актуального лістингу на Binance, Bybit і Kraken.</p>
     </div>
@@ -31,7 +31,7 @@
       </form>
       <p><small>Три публічні каталоги. Планове сканування також підтримується; ручний повтор не частіше ніж раз на 90 секунд для організації.</small></p>
     {% else %}
-      <p>Для запуску перевірки потрібен дозвіл Market Data Manage.</p>
+      <p>Для запуску перевірки потрібен дозвіл {{ 'Market Data'|trans }} Manage.</p>
     {% endif %}
   </div>
 
@@ -263,7 +263,7 @@
       </div>
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Underlying</th><th>Інструмент</th><th>Venue</th><th>Котирування</th><th>Bid</th><th>Ask</th><th>Bid Qty</th><th>Ask Qty</th><th>Статус</th></tr></thead>
+          <thead><tr><th>Underlying</th><th>Інструмент</th><th>Venue</th><th>Котирування</th><th>Bid</th><th>Ask</th><th>Bid Qty</th><th>Ask Qty</th><th>{{ 'Статус'|trans }}</th></tr></thead>
           <tbody>
           {% for row in quoteSnapshot.rows %}
             {% for venue in row.venues %}
@@ -312,7 +312,7 @@
       <p>Статус «LISTED» означає лише наявність символу в публічному каталозі. Ідентичність токенів, його забезпечення, конвертація валют і можливість виконання угоди <strong>не перевірені</strong>.</p>
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Underlying</th><th>Binance bStock</th><th>Плече</th><th>Binance</th><th>Bybit</th><th>Kraken</th><th>Стан</th></tr></thead>
+          <thead><tr><th>Underlying</th><th>Binance bStock</th><th>Плече</th><th>Binance</th><th>Bybit</th><th>Kraken</th><th>{{ 'Стан'|trans }}</th></tr></thead>
           <tbody>
             {% for row in snapshot.rows %}
               <tr>
@@ -334,8 +334,8 @@
     </section>
     <section class="cos-panel">
       <h2>Що далі?</h2>
-      <p>Підтверджені символи вручну співвідносяться з реєстром COS. Після перевірки ідентичності, типу інструмента та біржових правил налаштовуються Market Data subscriptions і збираються Bid/Ask. Лише тоді їх можна передавати до Opportunity Engine.</p>
-      <a href="/capital-markets/market-data">Перейти до налаштування Market Data →</a>
+      <p>Підтверджені символи вручну співвідносяться з реєстром COS. Після перевірки ідентичності, типу інструмента та біржових правил налаштовуються {{ 'Market Data'|trans }} subscriptions і збираються Bid/Ask. Лише тоді їх можна передавати до Opportunity Engine.</p>
+      <a href="/capital-markets/market-data">Перейти до налаштування {{ 'Market Data'|trans }} →</a>
     </section>
   {% endif %}
 </div>

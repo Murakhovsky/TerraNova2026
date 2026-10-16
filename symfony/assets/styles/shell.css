@@ -522,8 +522,10 @@ turbo-frame[aria-busy="true"] .cos-command__list {
   .cos-shell__menu {
     display: grid;
     place-items: center;
-    width: var(--cos-control-height);
-    min-height: var(--cos-control-height);
+    flex: 0 0 var(--cos-touch-target-min);
+    width: var(--cos-touch-target-min);
+    min-width: var(--cos-touch-target-min);
+    min-height: var(--cos-touch-target-min);
     padding: 0;
     color: var(--cos-color-text);
     background: var(--cos-color-surface);
@@ -596,5 +598,47 @@ turbo-frame[aria-busy="true"] .cos-command__list {
 @media (prefers-reduced-motion: reduce) {
   .cos-shell__sidebar {
     transition: none;
+  }
+}
+
+
+/* Locale switcher: compact, persistent control in the global workspace shell. */
+.cos-shell__locale-form {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.cos-shell__locale-select {
+  max-width: 8.5rem;
+  min-height: 2.5rem;
+  padding: 0 var(--cos-space-3);
+  color: var(--cos-color-shell-text);
+  background: var(--cos-color-shell);
+  border: 1px solid var(--cos-color-shell-border);
+  border-radius: var(--cos-radius-sm);
+  font: inherit;
+  font-size: var(--cos-font-xs);
+  font-weight: 650;
+}
+
+.cos-shell__locale-select:focus-visible {
+  outline: 2px solid var(--cos-color-primary-strong);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1050px) {
+  .cos-shell__locale-select {
+    max-width: 5.25rem;
+  }
+}
+
+@media (max-width: 650px) {
+  /* Keep the menu's touch target inside its grid track at phone widths.
+     Abbreviated option labels remain accessible via the full aria-label. */
+  .cos-shell__locale-select {
+    width: 3.75rem;
+    max-width: 3.75rem;
+    padding-inline: 0.25rem;
   }
 }

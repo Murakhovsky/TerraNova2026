@@ -33,8 +33,8 @@
                     <p class="cos-card__eyebrow">Organization structure</p>
                     <h2 class="cos-card__title">Create team</h2>
                     <form class="cos-pattern-stack" data-create-team data-action="submit->sales-admin-teams#create">
-                        <label class="cos-field"><span>Name</span><input class="cos-input" name="name" required maxlength="160"></label>
-                        <label class="cos-field"><span>Code</span><input class="cos-input" name="code" required maxlength="80" pattern="[A-Za-z0-9_]+"></label>
+                        <label class="cos-field"><span>{{ 'Name'|trans }}</span><input class="cos-input" name="name" required maxlength="160"></label>
+                        <label class="cos-field"><span>{{ 'Code'|trans }}</span><input class="cos-input" name="code" required maxlength="80" pattern="[A-Za-z0-9_]+"></label>
                         <label class="cos-field"><span>Assignment mode</span><select class="cos-select" name="assignment_mode">{% for mode in catalog.assignment_modes ?? ['MANUAL'] %}<option value="{{ mode }}">{{ mode }}</option>{% endfor %}</select></label>
                         <button class="cos-button cos-button--primary" type="submit">Create team</button>
                     </form>
@@ -42,7 +42,7 @@
                 <article class="cos-card">
                     <p class="cos-card__eyebrow">Authority boundary</p>
                     <h2 class="cos-card__title">Explicit permissions</h2>
-                    <p class="cos-card__copy"><code>sales.deal.assign</code>, <code>sales.approval.decide</code> та <code>sales.approval.any_team</code> лишаються explicit capability contracts.</p>
+                    <p class="cos-card__copy"><code>sales.deal.assign</code>code, <code>sales.approval.decide</code>code та <code>sales.approval.any_team</code>code лишаються explicit capability contracts.</p>
                 </article>
             </div>
 
@@ -72,9 +72,9 @@
                             <h3 class="cos-card__title">{{ user.full_name ?? 'User' }}</h3>
                             <p class="cos-card__copy">Organization role: {{ user.organization_role ?? '' }}</p>
                             <form class="cos-pattern-stack" data-membership-form data-action="submit->sales-admin-teams#membership">
-                                <label class="cos-field"><span>Team</span><select class="cos-select" name="team_id" required><option value="">Select team</option>{% for team in admin.data.teams ?? [] %}{% if (team.status ?? '') != 'ARCHIVED' %}<option value="{{ team.id }}">{{ team.name }} ({{ team.code }})</option>{% endif %}{% endfor %}</select></label>
-                                <label class="cos-field"><span>Role</span><select class="cos-select" name="role"><option>MEMBER</option><option>LEAD</option></select></label>
-                                <label class="cos-field"><span>Status</span><select class="cos-select" name="status"><option>ACTIVE</option><option>INACTIVE</option></select></label>
+                                <label class="cos-field"><span>{{ 'Team'|trans }}</span><select class="cos-select" name="team_id" required><option value="">Select team</option>{% for team in admin.data.teams ?? [] %}{% if (team.status ?? '') != 'ARCHIVED' %}<option value="{{ team.id }}">{{ team.name }} ({{ team.code }})</option>{% endif %}{% endfor %}</select></label>
+                                <label class="cos-field"><span>{{ 'Role'|trans }}</span><select class="cos-select" name="role"><option>MEMBER</option><option>LEAD</option></select></label>
+                                <label class="cos-field"><span>{{ 'Status'|trans }}</span><select class="cos-select" name="status"><option>ACTIVE</option><option>INACTIVE</option></select></label>
                                 <label class="cos-choice"><input type="checkbox" name="assignment_enabled" value="1" checked><span>Assignable</span></label>
                                 <label class="cos-choice"><input type="checkbox" name="approval_enabled" value="1"><span>May approve for team</span></label>
                                 <label class="cos-field"><span>Assignment weight</span><input class="cos-input" type="number" name="assignment_weight" min="1" max="100" value="1"></label>

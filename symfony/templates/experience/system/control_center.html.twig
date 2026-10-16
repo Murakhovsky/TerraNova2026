@@ -1,6 +1,6 @@
 {% extends 'experience/workspace_shell.html.twig' %}
 
-{% block title %}COS Control Center | COS{% endblock %}
+{% block title %}COS {{ 'Control Center'|trans }} | COS{% endblock %}
 
 {% block workspace_content %}
 <section
@@ -12,7 +12,7 @@
 >
     <twig:CosPageHeader
         eyebrow="Company Operating System"
-        title="Control Center"
+        title="{{ 'Control Center'|trans }}"
         subtitle="Спостережуваний ланцюг рішень: від бізнес-події до результату й аудиту."
     >
         <twig:CosButton label="Architecture" href="/cos/architecture" variant="ghost" />
@@ -28,14 +28,14 @@
     </twig:CosToolbar>
 
     {% if control.actionStatus %}
-        <twig:CosAlert title="Operation status" copy="{{ control.actionStatus }}" tone="positive" />
+        <twig:CosAlert title="{{ 'Operation status'|trans }}" copy="{{ control.actionStatus }}" tone="positive" />
     {% endif %}
 
     {% if control.error %}
-        <twig:CosAlert title="COS Control Center недоступний" copy="{{ control.error }}" tone="danger" />
+        <twig:CosAlert title="COS {{ 'Control Center'|trans }} недоступний" copy="{{ control.error }}" tone="danger" />
     {% endif %}
 
-    <section class="cos-kpi-strip" aria-label="COS runtime summary">
+    <section class="cos-kpi-strip" aria-label="{{ 'COS runtime summary'|trans }}">
         {% for kpi in control.kpis %}
             <article class="cos-card">
                 <twig:CosMetric
@@ -58,7 +58,7 @@
             </header>
 
             {% if section.items is empty %}
-                <twig:CosEmptyState title="Даних ще немає" copy="Runtime records з’являться тут після першої відповідної події." />
+                <twig:CosEmptyState title="Даних {{ 'ще немає'|trans }}" copy="Runtime records з’являться тут після першої відповідної події." />
             {% else %}
                 <div class="cos-entity-list" role="list">
                     {% for item in section.items %}
@@ -87,10 +87,10 @@
                                     <form action="{{ item.executeUrl }}" method="post">
                                         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                         <input type="hidden" name="return_url" value="cos/control-center">
-                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">Execute</button>
+                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">{{ 'Execute'|trans }}</button>
                                     </form>
                                     {% if item.approvalHref ?? null %}
-                                        <a class="cos-button cos-button--ghost cos-button--sm" href="{{ item.approvalHref }}">Approval</a>
+                                        <a class="cos-button cos-button--ghost cos-button--sm" href="{{ item.approvalHref }}">{{ 'Approval'|trans }}</a>
                                     {% endif %}
                                 </twig:CosActionBar>
                             {% elseif item.approveUrl ?? null %}
@@ -98,16 +98,16 @@
                                     <form action="{{ item.approveUrl }}" method="post">
                                         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                         <input type="hidden" name="return_url" value="cos/control-center">
-                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">Approve</button>
+                                        <button class="cos-button cos-button--primary cos-button--sm" type="submit">{{ 'Approve'|trans }}</button>
                                     </form>
                                     <form action="{{ item.rejectUrl }}" method="post">
                                         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                                         <input type="hidden" name="return_url" value="cos/control-center">
-                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit">Reject</button>
+                                        <button class="cos-button cos-button--ghost cos-button--sm" type="submit">{{ 'Reject'|trans }}</button>
                                     </form>
                                 </twig:CosActionBar>
                             {% elseif item.approvalHref ?? null %}
-                                <a class="cos-button cos-button--ghost cos-button--sm" href="{{ item.approvalHref }}">Open approval</a>
+                                <a class="cos-button cos-button--ghost cos-button--sm" href="{{ item.approvalHref }}">{{ 'Open approval'|trans }}</a>
                             {% endif %}
                         </article>
                     {% endfor %}

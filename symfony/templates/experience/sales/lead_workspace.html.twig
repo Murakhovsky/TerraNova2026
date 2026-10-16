@@ -25,7 +25,7 @@
         />
 
         <section class="cos-card cos-primitive-stack">
-            <p class="cos-card__eyebrow">Operations</p>
+            <p class="cos-card__eyebrow">{{ 'Operations'|trans }}</p>
             <h2>Lead actions</h2>
             <twig:CosActionBar label="Lead operations">
                 {% if (lead.status ?? 'new') == 'new' %}
@@ -42,7 +42,7 @@
             </twig:CosActionBar>
 
             <label class="cos-field">
-                <span>Owner</span>
+                <span>{{ 'Owner'|trans }}</span>
                 <select class="cos-select" data-sales-lead-owner data-action="change->sales-lead#owner">
                     <option value="">Оберіть</option>
                     {% for owner in owners %}
@@ -59,8 +59,8 @@
                 <h2>Контактні дані</h2>
                 <dl class="cos-entity-summary">
                     <div><dt>Phone</dt><dd>{{ lead.phone ?? '—' }}</dd></div>
-                    <div><dt>Email</dt><dd>{{ lead.email ?? '—' }}</dd></div>
-                    <div><dt>Source</dt><dd>{{ lead.source ?? 'Direct' }}</dd></div>
+                    <div><dt>{{ 'Email'|trans }}</dt><dd>{{ lead.email ?? '—' }}</dd></div>
+                    <div><dt>{{ 'Source'|trans }}</dt><dd>{{ lead.source ?? 'Direct' }}</dd></div>
                 </dl>
             </section>
 
@@ -77,7 +77,7 @@
         </div>
 
         <section class="cos-card">
-            <p class="cos-card__eyebrow">Context</p>
+            <p class="cos-card__eyebrow">{{ 'Context'|trans }}</p>
             <h2>Повідомлення ліда</h2>
             <p class="cos-card__copy">{{ lead.message ?? 'Немає додаткового повідомлення.' }}</p>
         </section>
