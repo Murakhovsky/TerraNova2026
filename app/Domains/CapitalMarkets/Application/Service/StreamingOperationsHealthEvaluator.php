@@ -70,6 +70,67 @@ final readonly class StreamingOperationsHealthEvaluator
                 }
             }
         }
+        // A valid socket and an active subscription are not confirmation
+        // of real provider ACK plus trusted LIVE quotes.
+        $activeSources=[];
+        foreach(($snapshot['leases']??[]) as $lease){
+            if($lease['lease_state']==='ACTIVE')$activeSources[$lease['source_id']]=true;
+        }
+        foreach(($snapshot['provider_by_source']??[]) as $source=>$proof){
+            if(!is_string($source)||!is_array($proof))throw new DomainException('Malformed provider status.');
+            $requested=$proof['requested_bbo']??null;
+            $confirmed=$proof['confirmed_live']??null;
+            $revoked=$proof['revoked']??null;
+            if(!is_int($requested)||!is_int($confirmed)||!is_int($revoked)
+                ||$requested<0||$confirmed<0||$revoked<0){
+                throw new DomainException('Invalid provider ACK verification counters.');
+            }
+            if($requested>0 && $confirmed<$requested){
+                $alerts[]=[
+                    'severity'=>'CRITICAL',
+                    'code'=>isset($activeSources[$source])
+                        ?'STREAM_PROVIDER_LIVE_NOT_VERIFIED':'STREAM_WORKER_NOT_ACTIVE',
+                    'source_id'=>$source,
+                    'count'=>$requested-$confirmed,
+                    'operator_action'=>'VERIFY_ACK_LIVE_RECEIPTS_LEASE_AND_RECONNECT',
+                ];
+                $tally['CRITICAL']++;
+            }
+            if($revoked>0){
+                $alerts[]=[
+                    'severity'=>'WARNING','code'=>'STREAM_SUBSCRIPTIONS_REVOKED',
+                    'source_id'=>$source,'count'=>$revoked,
+                    'operator_action'=>'CHECK_PROVIDER_RESET_OR_SOURCE_FENCING',
+                ];
+                $tally['WARNING']++;
+            }
+        }
+        foreach(($snapshot['source_health']??[]) as $source=>$metrics){
+            if(!is_string($source)||!is_array($metrics)){
+                throw new DomainException('Invalid streaming source health metric.');
+            }
+            if(in_array($metrics['rate_limit_state']??null,['THROTTLED','EXHAUSTED'],true)){
+                $alerts[]=[
+                    'severity'=>'CRITICAL','code'=>'STREAM_PROVIDER_RATE_LIMIT',
+                    'source_id'=>$source,'count'=>1,
+                    'operator_action'=>'REDUCE_SUBSCRIPTIONS_OR_VALIDATE_VENDOR_QUOTA',
+                ];$tally['CRITICAL']++;
+            }
+            if(($metrics['clock_reliable']??true)!==true){
+                $alerts[]=[
+                    'severity'=>'CRITICAL','code'=>'STREAM_SOURCE_CLOCK_UNRELIABLE',
+                    'source_id'=>$source,'count'=>1,
+                    'operator_action'=>'RECOVER_CLOCK_SYNC_BEFORE_TRUST',
+                ];$tally['CRITICAL']++;
+            }
+            if(is_int($metrics['queue_lag']??null)&&$metrics['queue_lag']>100){
+                $alerts[]=[
+                    'severity'=>'WARNING','code'=>'STREAM_QUEUE_LAG',
+                    'source_id'=>$source,'count'=>$metrics['queue_lag'],
+                    'operator_action'=>'INSPECT_INGESTION_BACKPRESSURE',
+                ];$tally['WARNING']++;
+            }
+        }
         $hasEvidence=($snapshot['leases']??[])!==[]
             ||($snapshot['quality_by_source']??[])!==[];
         return [

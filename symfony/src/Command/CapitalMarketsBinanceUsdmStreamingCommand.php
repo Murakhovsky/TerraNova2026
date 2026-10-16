@@ -23,6 +23,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpot
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\BinanceUsdmBboProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -47,6 +48,7 @@ final class CapitalMarketsBinanceUsdmStreamingCommand extends Command
         private readonly BinanceSpotPayloadParser $parser,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){
         parent::__construct();
     }
@@ -111,15 +113,20 @@ final class CapitalMarketsBinanceUsdmStreamingCommand extends Command
             $shard='binance-usdm-single-bbo';
             $leaseToken=0;
             $accepted=0;
+            $verifiedInstrumentId=$sub->instrumentId->value();
             $transport=new NativeWebSocketTransport(
                 'wss://fstream.binance.com/public/stream',
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $epoch)use(
                     $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,&$leaseToken,&$accepted,
-                ):void{
+                    $verifiedInstrumentId):void{
                     $decoded=$protocol->decode($payload,new DateTimeImmutable('now',new DateTimeZone('UTC')));
                     if($decoded['kind']==='ack'){
                         $session->subscribed($epoch,$protocol->key());
+                        $this->verification->acknowledged(
+                            $org,$sourceName,$shard,$workerId,$leaseToken,$epoch,
+                            'BINANCE_USDM',$verifiedInstrumentId
+                        );
                         return;
                     }
                     $session->message($epoch,$clock());
@@ -138,7 +145,12 @@ final class CapitalMarketsBinanceUsdmStreamingCommand extends Command
                     if(!in_array($result->status,['ACCEPTED','DUPLICATE'],true)){
                         throw new \DomainException('Binance canonical ingestion rejected the stream observation.');
                     }
-                    $accepted++;
+                    if($result->status==='ACCEPTED'){
+                        $this->verification->acceptedQuote(
+                            $org,$sourceName,$shard,$workerId,$leaseToken,$epoch,$result
+                        );
+                        $accepted++;
+                    }
                 },
                 2097152,
                 function(string $kind,int $epoch)use($session,$clock):void{

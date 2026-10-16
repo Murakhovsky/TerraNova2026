@@ -13,6 +13,7 @@ use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureFlag;
 use Domains\CapitalMarkets\Application\Feature\CapitalMarketsFeatureGate;
 use Domains\CapitalMarkets\Application\Service\StreamingSessionCoordinator;
 use Domains\CapitalMarkets\Application\Service\StreamingSubscriptionPlanner;
+use Domains\CapitalMarkets\Application\Service\MultiSymbolStreamingCore;
 use Domains\CapitalMarkets\Application\Service\StreamingWorkerRunner;
 use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
 use Domains\CapitalMarkets\Domain\MarketData\MarketSourceId;
@@ -24,6 +25,7 @@ use Domains\CapitalMarkets\Infrastructure\MarketData\Adapter\Binance\BinanceSpot
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\BinanceSpotMultiBboProtocol;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\NativeWebSocketTransport;
 use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlStreamingProviderVerification;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -46,9 +48,11 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
         private readonly MarketSubscriptionRepositoryInterface $subscriptions,
         private readonly MarketInstrumentResolverInterface $resolver,
         private readonly BinanceSpotPayloadParser $parser,
+        private readonly MultiSymbolStreamingCore $multiSymbolCore,
         private readonly StreamingInstrumentTrustInvalidatorInterface $instrumentTrust,
         private readonly StreamingWorkerRunner $runner,
         private readonly StreamingFencedIngestionGateway $ingestion,
+        private readonly MysqlStreamingProviderVerification $verification,
     ){parent::__construct();}
 
     protected function configure():void
@@ -83,6 +87,15 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
                 ||$source->adapterType!==BinanceSpotMarketDataAdapter::ADAPTER_TYPE
                 ||$source->venueId===null){
                 throw new \DomainException('Enabled Binance Spot trading source with venue mapping required.');
+            }
+            // Unified preflight: exact mapping, per-source capacity and one fenced lease.
+            $streamPlan=$this->multiSymbolCore->plan($org,[$sourceName]);
+            $initialTopologyDigest=hash('sha256',json_encode(
+                $streamPlan['sources'][0],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES
+            ));
+            $lastTopologyReview=0;
+            if(($streamPlan['totals']['SOURCES']??0)!==1){
+                throw new \DomainException('Multi-symbol streaming capacity admission rejected.');
             }
             $active=$this->subscriptions->forSource($org,$sourceId,true);
             if(count($active)<2||count($active)>100){
@@ -130,20 +143,38 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
                 \Closure::fromCallable([$protocol,'subscribeFrames']),
                 function(string $payload,int $epoch)use(
                     $protocol,$session,$clock,$org,$sourceName,$shard,$workerId,
-                    $instrumentIdsBySymbol,&$leaseToken,&$accepted,&$transport,
+                    $instrumentIdsBySymbol,$keyToSymbol,&$leaseToken,&$accepted,&$transport,
                 ):void{
                     $event=$protocol->decode(
                         $payload,new DateTimeImmutable('now',new DateTimeZone('UTC')),
                     );
                     if($event['kind']==='ack'){
-                        foreach($event['keys'] as $key)$session->subscribed($epoch,$key);
+                        foreach($event['keys'] as $key){
+                            $session->subscribed($epoch,$key);
+                            $symbol=$keyToSymbol[$key]??null;
+                            $instrumentId=is_string($symbol)?($instrumentIdsBySymbol[$symbol]??null):null;
+                            if(!is_string($instrumentId)){
+                                throw new \DomainException('ACK has no approved instrument mapping.');
+                            }
+                            $this->verification->acknowledged(
+                                $org,$sourceName,$shard,$workerId,$leaseToken,
+                                $epoch,'BINANCE_SPOT',$instrumentId
+                            );
+                        }
                         return;
                     }
                     if($event['kind']==='unsubscribed'){
                         $transport->sendText($protocol->resubscribeFrame($event['symbol']),$epoch);
                         return;
                     }
-                    if($event['kind']==='resubscribed'||$event['kind']==='quarantined')return;
+                    if($event['kind']==='resubscribed'){
+                        $id=$instrumentIdsBySymbol[$event['symbol']]??null;
+                        if(!is_string($id))throw new \DomainException('Resubscribe lacks canonical mapping.');
+                        $this->verification->acknowledged($org,$sourceName,$shard,$workerId,
+                            $leaseToken,$epoch,'BINANCE_SPOT',$id);
+                        return;
+                    }
+                    if($event['kind']==='quarantined')return;
                     if($event['kind']==='heartbeat'){
                         $session->message($epoch,$clock());
                         return;
@@ -176,7 +207,12 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
                     if(!in_array($stored->status,['ACCEPTED','DUPLICATE'],true)){
                         throw new \DomainException('Binance batch fenced ingestion rejected quote.');
                     }
-                    if($stored->status==='ACCEPTED')$accepted++;
+                    if($stored->status==='ACCEPTED'){
+                        $this->verification->acceptedQuote(
+                            $org,$sourceName,$shard,$workerId,$leaseToken,$epoch,$stored
+                        );
+                        $accepted++;
+                    }
                 },
                 2097152,
                 function(string $kind,int $epoch)use($session,$clock):void{
@@ -199,8 +235,23 @@ final class CapitalMarketsBinanceSpotBatchStreamingCommand extends Command
                 function(int $epoch)use(
                     $session,$clock,$transport,$protocol,&$lastPing,$org,$sourceName,
                     $shard,$workerId,&$leaseToken,$instrumentIdsBySymbol,
+                    $initialTopologyDigest,&$lastTopologyReview,
                 ):void{
                     $now=$clock();
+                    // Runtime revocation fence: a stale process may not keep
+                    // streaming removed, re-mapped or disabled subscriptions.
+                    // A changed topology fails the runner, invalidates source
+                    // trust and lets the bounded supervisor restart it.
+                    if($now-$lastTopologyReview>=30000){
+                        $latest=$this->multiSymbolCore->plan($org,[$sourceName]);
+                        $fingerprint=hash('sha256',json_encode(
+                            $latest['sources'][0],JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES
+                        ));
+                        if(!hash_equals($initialTopologyDigest,$fingerprint)){
+                            throw new \DomainException('STREAM_TOPOLOGY_CHANGED');
+                        }
+                        $lastTopologyReview=$now;
+                    }
                     if($now-$lastPing>=25000){
                         $transport->sendPing($epoch);
                         $lastPing=$now;

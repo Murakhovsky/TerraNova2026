@@ -62,6 +62,12 @@ return [
             'app/migrations/20261012_000135_capital_markets_stream_worker_leases.sql',
             'app/migrations/20261015_000141_capital_markets_instrument_pool_snapshots.sql',
             'app/migrations/20261015_000142_capital_markets_instrument_pool_approval.sql',
+            'app/migrations/20261015_000144_capital_markets_pool_production.sql',
+            'app/migrations/20261015_000145_capital_markets_instrument_stream_trust.sql',
+            'app/migrations/20261015_000146_capital_markets_provider_ops.sql',
+            'app/migrations/20261015_000147_capital_markets_derivatives_stream.sql',
+            'app/migrations/20261015_000148_capital_markets_replay_scaling.sql',
+            'app/migrations/20261016_000149_capital_markets_pool_evidence_scope.sql',
         ],
         'capabilities'=>[
             'capital_markets.research.result.record',

@@ -11,13 +11,17 @@ use Domains\CapitalMarkets\Domain\MarketData\RawMarketEvent;
 use Domains\CapitalMarkets\Domain\Venue\VenueId;
 use PDO;
 use PDOException;
+use Throwable;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\MysqlRawMarketProvenance;
 
 final readonly class MysqlRawMarketEventRepository implements RawMarketEventRepositoryInterface
 {
-    public function __construct(private PDO $connection){}
+    public function __construct(private PDO $connection,private ?MysqlRawMarketProvenance $provenance=null){}
 
     public function append(string $organizationId,RawMarketEvent $event):bool
     {
+        $started=!$this->connection->inTransaction();
+        if($started)$this->connection->beginTransaction();
         try{
             $statement=$this->connection->prepare(
                 'INSERT INTO tn_capital_market_raw_events
@@ -36,9 +40,12 @@ final readonly class MysqlRawMarketEventRepository implements RawMarketEventRepo
                 'transport_metadata_json'=>json_encode((object)$event->transportMetadata,JSON_THROW_ON_ERROR),
                 'data_mode'=>$event->mode->value,
             ]);
+            if($this->provenance!==null)$this->provenance->record($organizationId,$event);
+            if($started)$this->connection->commit();
             return true;
-        }catch(PDOException $error){
-            if(($error->errorInfo[1]??null)===1062)return false;
+        }catch(Throwable $error){
+            if($started&&$this->connection->inTransaction())$this->connection->rollBack();
+            if($error instanceof PDOException&&($error->errorInfo[1]??null)===1062)return false;
             throw $error;
         }
     }

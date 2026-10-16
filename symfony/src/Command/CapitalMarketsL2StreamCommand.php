@@ -5,6 +5,12 @@ namespace App\Command;
 
 use DomainException;
 use Domains\CapitalMarkets\Application\Contract\MarketDataIngestionInterface;
+use Domains\CapitalMarkets\Application\Contract\StreamingWorkerLeaseInterface;
+use Domains\CapitalMarkets\Application\Contract\MarketSubscriptionRepositoryInterface;
+use Domains\CapitalMarkets\Domain\MarketData\MarketEventType;
+use Domains\CapitalMarkets\Application\Contract\StreamingTrustInvalidatorInterface;
+use Domains\CapitalMarkets\Infrastructure\MarketData\Streaming\StreamingFencedIngestionGateway;
+use Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2SourceFencedSession;
 use Domains\CapitalMarkets\Application\Contract\MarketSourceRepositoryInterface;
 use Domains\CapitalMarkets\Application\Contract\MarketInstrumentResolverInterface;
 use Domains\CapitalMarkets\Domain\Contract\VenueRepository;
@@ -26,6 +32,10 @@ final class CapitalMarketsL2StreamCommand extends Command
 {
     public function __construct(
         private readonly MarketDataIngestionInterface $ingestion,
+        private readonly StreamingWorkerLeaseInterface $workerLeases,
+        private readonly MarketSubscriptionRepositoryInterface $subscriptionIntents,
+        private readonly StreamingTrustInvalidatorInterface $trustInvalidator,
+        private readonly StreamingFencedIngestionGateway $fencedGateway,
         private readonly MarketSourceRepositoryInterface $sources,
         private readonly L2LiveWorkerFactory $factory,
         private readonly L2AlertDelivery $alertDelivery,
@@ -131,9 +141,43 @@ final class CapitalMarketsL2StreamCommand extends Command
             $managed = new L2ManagedWorker(new L2ManagedStreamRunner(
                 new L2StreamSupervisor($policy), $policy, $metrics,
             ));
+            $fenced=getenv('COS_CM_L2_FENCED_ENABLED')==='1';
+            // Legacy direct ingestion remains available only for explicit
+            // isolated non-production VPS diagnostics. It is never a production
+            // market-data writer and is not eligible for pool acceptance.
+            if(!$fenced && (getenv('COS_CM_L2_LEGACY_VPS_QA_ENABLED')!=='1'
+                || getenv('APP_ENV')==='prod'
+                || getenv('COS_CM_POOL_PRODUCTION_ARMED')==='1')){
+                throw new DomainException('Production L2 requires the canonical source-fenced writer. Legacy QA must be explicitly isolated.');
+            }
+            if($fenced){
+                $matching=0;
+                foreach($this->subscriptionIntents->forSource(
+                    $required['organization'],$sourceId,true
+                ) as $intent){
+                    if($intent->instrumentId->equals($mapped->instrument->id)
+                        &&$intent->dataType===MarketEventType::OrderBookSnapshot
+                        &&$intent->venueId?->equals($descriptor->venueId)===true){
+                        $matching++;
+                    }
+                }
+                if($matching!==1){
+                    throw new DomainException('Exactly one approved canonical L2 subscription required for fenced source.');
+                }
+            }
+            $leaseSession=$fenced?new L2SourceFencedSession(
+                $this->workerLeases,$this->trustInvalidator,$this->fencedGateway,
+                $required['organization'],$required['source'],
+            ):null;
+            // Only the source-fenced mode is eligible for FOS production pool
+            // acceptance; the legacy direct path remains for isolated VPS QA.
+            $writer=$leaseSession===null?null:
+                static fn(\Domains\CapitalMarkets\Domain\MarketData\RawMarketEvent $raw)=>
+                    $leaseSession->publish($raw);
             $publish = new L2VerifiedIngestionCallback(new L2IngestionPublisher(
                 $this->ingestion, $required['organization'], $sourceId, $descriptor->venueId,
                 $config->subscription->symbol,
+                'l2.verified.snapshot',$writer,
             ));
             $lastAcceptedNs = null;
             $verifiedPublisher = $publish;
@@ -159,7 +203,10 @@ final class CapitalMarketsL2StreamCommand extends Command
                     ).'</error>');
                 },
             ) : null;
-            $onTransition = static function (string $transition, array $context) use ($alerts, $config): void {
+            $onTransition = static function (string $transition, array $context) use ($alerts, $config, $leaseSession): void {
+                if(in_array($transition,['DEGRADED','STALE','EXHAUSTED'],true)){
+                    $leaseSession?->disconnect('L2_RECOVERY_REQUIRED');
+                }
                 if ($alerts === null) return;
                 $reason = (string) ($context['reason'] ?? 'UNKNOWN');
                 if ($transition === 'DEGRADED') {
@@ -173,11 +220,17 @@ final class CapitalMarketsL2StreamCommand extends Command
             };
             try {
                 $count = $managed->run(
-                fn(int $epoch) => $this->factory->create($config->subscription, $base, $quote, $config->staleAfterSeconds),
+                function(int $epoch)use($leaseSession,$config,$base,$quote){
+                    $leaseSession?->start($epoch);
+                    return $this->factory->create(
+                        $config->subscription,$base,$quote,$config->staleAfterSeconds
+                    );
+                },
                     $publish, $config->messageBudget, null, $signal->shouldStop(...),
                     $onTransition,
                 );
             } finally {
+                $leaseSession?->disconnect('L2_STOPPED');
                 $alerts?->flush();
             }
             $output->writeln(json_encode(['status'=>'STOPPED','published'=>$count,
