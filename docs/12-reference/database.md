@@ -257,8 +257,8 @@ generated: true
 | `property` | `app/migrations/20260915_000059_property_v0120_runtime_cutover.sql` | `tn_property_residential_specs` |
 | `property` | `app/migrations/20260928_000117_property_v100_hardening.sql` | `tn_property_public_read_model` |
 | `property` | `app/migrations/20261016_000150_property_bulk_intake.sql` | `cos_property_bulk_batches` |
-| `property` | `app/migrations/20261016_000150_property_bulk_intake.sql` | `cos_property_bulk_items` |
 | `property` | `app/migrations/20261016_000150_property_bulk_intake.sql` | `cos_property_bulk_identity_claims` |
+| `property` | `app/migrations/20261016_000150_property_bulk_intake.sql` | `cos_property_bulk_items` |
 | `property` | `app/migrations/20261016_000151_capability_automation_intents.sql` | `cos_capability_automation_intents` |
 | `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_cases` |
 | `real_estate` | `app/migrations/20260918_000062_real_estate_wave9_cutover.sql` | `tn_real_estate_offers` |
