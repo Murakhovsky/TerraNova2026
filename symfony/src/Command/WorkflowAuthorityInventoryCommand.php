@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
  * No session impersonation, action dispatch, migration or release control.
  */
 #[AsCommand(name:'cos:workflow:authority-inventory',
-    description:'Inspect tenant-wide Federation and Engineering execution provenance without promoting cutover.')]
+    description:'Inspect tenant-wide Kernel, Federation and Engineering provenance (diagnostic only).')]
 final class WorkflowAuthorityInventoryCommand extends Command
 {
     public function __construct(

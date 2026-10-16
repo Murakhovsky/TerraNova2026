@@ -117,27 +117,30 @@ final readonly class DoctrineWorkflowShadowParityReader
             throw new DomainException('Engineering shadow fleet requires a tenant.');
         }
         $limit=max(1,min(100,$limit));
+        // Start from *every* tenant Feature, not just opted-in rollouts.
+        // Otherwise a still-active legacy Engineering Workflow vanishes from
+        // the fleet report and falsely suggests full consumer coverage.
         $features=$this->db->fetchAllAssociative(
-            'SELECT o.feature_id,o.mode,o.approved_by,o.approved_at,
+            'SELECT f.id AS feature_id,o.mode,o.approved_by,o.approved_at,
                     f.status AS feature_status
-             FROM cos_engineering_technical_rollouts o
-             JOIN cos_engineering_features f ON f.id=o.feature_id
-               AND f.organization_id=o.organization_id
-             WHERE o.organization_id=:org
-             ORDER BY o.feature_id LIMIT '.$limit,
+             FROM cos_engineering_features f
+             LEFT JOIN cos_engineering_technical_rollouts o
+               ON o.organization_id=f.organization_id AND o.feature_id=f.id
+             WHERE f.organization_id=:org
+             ORDER BY f.id LIMIT '.$limit,
             ['org'=>$organizationId],
         );
         $total=(int)$this->db->fetchOne(
-            'SELECT COUNT(*) FROM cos_engineering_technical_rollouts o
-             JOIN cos_engineering_features f ON f.id=o.feature_id
-                AND f.organization_id=o.organization_id
-             WHERE o.organization_id=:org',
+            'SELECT COUNT(*) FROM cos_engineering_features
+             WHERE organization_id=:org',
             ['org'=>$organizationId],
         );
         $counts=['match'=>0,'partial'=>0,'drift'=>0,'no_target'=>0];
         $reports=[];
+        $unrolledFeatures=0;
         $historyTruncated=false;
         foreach($features as $feature) {
+            if($feature['mode']===null) ++$unrolledFeatures;
             // Analyze all known technical workflows, not only the latest
             // successful one. A previously unreconciled/legacy execution
             // MUST remain visible to the migration decision.
@@ -168,7 +171,8 @@ final readonly class DoctrineWorkflowShadowParityReader
                 else ++$technical['drift'];
             }
             $status=$technical['drift']>0?'drift':
-                ($technical['no_target']>0 || $ids===[] || $truncated?'no_target':'partial');
+                ($technical['no_target']>0 || $ids===[] || $truncated
+                    || $feature['mode']===null?'no_target':'partial');
             // Removing a permit while a technical claim exists must be
             // surfaced as drift rather than silently returning MATCH.
             $hasLinked=($technical['partial']+$technical['match']+$technical['drift'])>0;
@@ -192,13 +196,17 @@ final readonly class DoctrineWorkflowShadowParityReader
                 'cutover_authorized'=>false,
             ];
         }
-        $incomplete=$historyTruncated || $total>count($features);
+        $incomplete=$historyTruncated || $total>count($features)
+            || $unrolledFeatures>0;
         $status=$counts['drift']>0?'drift':
             ($incomplete || $counts['no_target']>0 || $reports===[]?'no_target':'partial');
         return [
             'source'=>'engineering_fleet','organization_id'=>$organizationId,
             'status'=>$status,'counts'=>$counts,'features'=>$reports,
-            'total_rollout_features'=>$total,'evaluated_features'=>count($features),
+            'total_tenant_features'=>$total,
+            'total_rollout_features'=>$total-$unrolledFeatures,
+            'legacy_unrolled_features'=>$unrolledFeatures,
+            'evaluated_features'=>count($features),
             'history_truncated'=>$historyTruncated,'coverage_complete'=>!$incomplete,
             'read_only'=>true,'cutover_authorized'=>false,
             'business_gate_authority'=>'legacy_engineering',

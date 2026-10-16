@@ -33,6 +33,28 @@ final readonly class DoctrineKernelExecutionRecoveryInspector
         $runFilter=$runId!==null?' AND r.run_id=:target':'';
         $parameters=['org'=>$organizationId];
         if($runId!==null)$parameters['target']=$runId;
+        $total=(int)$this->db->fetchOne(
+            'SELECT COUNT(*) FROM cos_workflow_runs r
+             WHERE r.organization_id=:org
+               AND r.definition_id IN ("kernel.agent_execution","kernel.tool_execution")'
+            .$runFilter,
+            $parameters,
+        );
+        $rollouts=$this->db->fetchAllAssociative(
+            'SELECT runtime_kind,mode,approved_by,approved_at
+             FROM cos_kernel_execution_rollouts WHERE organization_id=:org',
+            ['org'=>$organizationId],
+        );
+        $enrolled=[];$invalidPermit=false;
+        foreach($rollouts as $row) {
+            $kind=(string)$row['runtime_kind'];
+            $mode=(string)$row['mode'];
+            $enrolled[$kind]=$mode;
+            if($mode==='canonical' &&
+                (trim((string)$row['approved_by'])==='' || $row['approved_at']===null)) {
+                $invalidPermit=true;
+            }
+        }
         $rows=$this->db->fetchAllAssociative(
             'SELECT r.run_id,r.definition_id,r.definition_json,r.definition_digest,
                     r.input_digest,r.correlation_id,r.state AS run_state,r.revision AS run_revision,
@@ -51,6 +73,7 @@ final readonly class DoctrineKernelExecutionRecoveryInspector
         $truncated=count($rows)>$limit;
         $rows=array_slice($rows,0,$limit);
         $items=[];$counts=['verified'=>0,'in_flight'=>0,'manual_required'=>0,'drift'=>0];
+        $verifiedKinds=['agent'=>0,'tool'=>0];
         foreach($rows as $r) {
             $kind=$r['definition_id']==='kernel.agent_execution'?'agent':'tool';
             $identity=new WorkflowRunIdentity($organizationId,(string)$r['run_id']);
@@ -89,18 +112,33 @@ final readonly class DoctrineKernelExecutionRecoveryInspector
                 $disposition='drift';$reason='native_receipt_or_graph_untrusted';
             }
             ++$counts[$disposition];
+            if($disposition==='verified') ++$verifiedKinds[$kind];
             $items[]=['run_id'=>$r['run_id'],'kind'=>$kind,
                 'run_state'=>$r['run_state'],'step_state'=>$r['step_state'],
                 'run_revision'=>(int)$r['run_revision'],
                 'step_revision'=>$r['step_revision']===null?null:(int)$r['step_revision'],
                 'disposition'=>$disposition,'reason'=>$reason];
         }
+        $unprovenEnrollment=false;
+        foreach($enrolled as $kind=>$mode) {
+            if($mode==='canonical' && ($verifiedKinds[$kind]??0)===0) {
+                $unprovenEnrollment=true;
+            }
+        }
+        $complete=!$truncated && count($items)>0 && $total===count($items)
+            && !$unprovenEnrollment && !$invalidPermit;
         return [
             'source'=>'kernel_canonical_execution_recovery_v1','organization_id'=>$organizationId,
-            'status'=>$truncated?'incomplete':(
-                $counts['drift']>0||$counts['manual_required']>0?'manual_reconciliation_required':
-                'technical_read_only_consistent'),
-            'coverage_complete'=>!$truncated,
+            'status'=>$invalidPermit||$counts['drift']>0||$counts['manual_required']>0
+                ? 'manual_reconciliation_required':
+                (!$complete?'incomplete':'technical_read_only_consistent'),
+            'coverage_complete'=>$complete,
+            'canonical_run_total'=>$total,
+            'evaluated_rows'=>count($items),
+            'rollout_modes'=>$enrolled,
+            'verified_kinds'=>$verifiedKinds,
+            'unproven_canonical_enrollment'=>$unprovenEnrollment,
+            'invalid_rollout_permit'=>$invalidPermit,
             'counts'=>$counts,'runs'=>$items,
             'read_only'=>true,'automatic_replay_authorized'=>false,
             'business_outcome_verified'=>false,'release_authorized'=>false,

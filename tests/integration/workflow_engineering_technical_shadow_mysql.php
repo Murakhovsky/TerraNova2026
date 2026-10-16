@@ -124,6 +124,38 @@ try {
     if($reader->engineeringAgent($org,$agent)->status->value!=='match') {
         throw new RuntimeException('Active claimed Engineering AgentRun did not match canonical technical Run.');
     }
+    // All tenant Engineering Features must enter inventory, including ones
+    // without any pilot enrollment, not only preselected rollout rows.
+    $legacyOnlyFeature=EngineeringId::generate();
+    $legacyOnlyWorkflow=EngineeringId::generate();
+    $db->executeStatement(
+      'INSERT INTO cos_engineering_features
+       (id,organization_id,title,type,status,priority,request_payload,created_at,updated_at)
+       VALUES (:id,:org,"Legacy-only unrolled","FEATURE","QUEUED","P1","{}",UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))',
+       ['id'=>$legacyOnlyFeature,'org'=>$org],
+    );
+    $db->executeStatement(
+        'INSERT INTO cos_engineering_workflows
+         (id,feature_id,workflow_type,current_state,status,started_at,
+          last_activity_at,version,trace_id,lock_key)
+         VALUES (:id,:feature,"ENGINEERING","ANALYSIS","RUNNING",
+                 UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),1,:trace,:lock)',
+        ['id'=>$legacyOnlyWorkflow,'feature'=>$legacyOnlyFeature,
+         'trace'=>'unrolled-'.$tag,'lock'=>'engineering:feature:'.$legacyOnlyFeature.':legacy'],
+    );
+    $unrolled=$reader->engineeringFleet($org);
+    if(($unrolled['legacy_unrolled_features']??0)!==1
+       || ($unrolled['total_tenant_features']??0)!==2
+       || ($unrolled['coverage_complete']??true)!==false
+       || ($unrolled['status']??null)!=='no_target'
+       || count($unrolled['features']??[])!==2) {
+       throw new RuntimeException('Legacy-only Engineering Feature escaped tenant-wide execution consumer inventory.');
+    }
+    $db->executeStatement('DELETE FROM cos_engineering_workflows WHERE id=:id',
+        ['id'=>$legacyOnlyWorkflow]);
+    $db->executeStatement('DELETE FROM cos_engineering_features WHERE id=:id',
+        ['id'=>$legacyOnlyFeature]);
+
     $fleet=$reader->engineeringFleet($org);
     if($fleet['status']!=='partial' || ($fleet['counts']['partial']??0)!==1
        || count($fleet['features'])!==1 || $fleet['cutover_authorized']!==false) {

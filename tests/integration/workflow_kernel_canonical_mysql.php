@@ -414,6 +414,22 @@ try {
     && ($afterReconcile['counts']['manual_required']??0)===1,
     'Independent receipts did not survive two-person recovery.');
 
+ // An audit of an enrolled but unused runtime is not evidence of consumer parity.
+ $emptyTenant=(new DoctrineKernelExecutionRecoveryInspector($db,$evidence))
+    ->inspectTenant('no-kernel-runs-'.$token,100);
+ $expect(($emptyTenant['canonical_run_total']??-1)===0
+    && $emptyTenant['coverage_complete']===false
+    && $emptyTenant['status']==='incomplete',
+    'Empty Kernel runtime cohort was falsely certified.');
+
+ // Pagination must fail closed: no first-page result may certify complete coverage.
+ $short=(new DoctrineKernelExecutionRecoveryInspector($db,$evidence))
+    ->inspectTenant($org,1);
+ $expect($short['coverage_complete']===false
+    && $short['status']==='incomplete'
+    && $short['canonical_run_total']>count($short['runs']),
+    'Truncated Kernel consumer fleet incorrectly certified.');
+
  $expect((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs
     WHERE organization_id=:org',['org'=>$org])===0,
     'General Kernel technical executor wrote forbidden legacy Federation Run');
