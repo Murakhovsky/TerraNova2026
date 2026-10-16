@@ -116,6 +116,20 @@ jobs:
           echo 'golden50: NOT_RUN'
           echo '=== Read-only inventory completed; no release authorization ==='
           REMOTE
+      - name: Classify active and legacy worker failures without exposing logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Pipe the audited feature script to Python's stdin; do not write
+          # files, update Docker, access production secrets or alter services.
+          # The report emits categories only, never raw worker logs.
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/federation_preflight_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            'if docker info >/dev/null 2>&1; then
+               python3 - --inspect-logs;
+             else
+               sudo -n python3 - --inspect-logs;
+             fi' < bin/ops/cos_docker_fleet_audit.py
 
   inspect:
     if: github.event_name == 'workflow_dispatch'
