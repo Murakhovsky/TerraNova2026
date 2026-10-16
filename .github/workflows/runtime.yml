@@ -259,6 +259,38 @@ jobs:
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci
       - run: npm run build
+      - name: Federation staging Compose isolation contract (no containers)
+        env:
+          COS_FED_STAGING_APP_SECRET: ci-staging-only-app-secret
+          COS_FED_STAGING_DB_PASSWORD: ci-staging-only-db-password
+          COS_FED_STAGING_ROOT_PASSWORD: ci-staging-only-root-password
+          COS_FED_STAGING_SPATIAL_SECRET: ci-staging-only-spatial-secret
+          COS_FED_STAGING_MERCURE_SECRET: ci-staging-only-mercure-secret
+          COS_FED_STAGING_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -f deploy/staging/federation-compose.yml config --quiet
+          docker compose -f deploy/staging/federation-compose.yml config --format json > /tmp/cos-fed-staging-validated.json
+          python3 - <<'PY'
+          import json
+          with open('/tmp/cos-fed-staging-validated.json', encoding='utf8') as f:
+              config=json.load(f)
+          assert config['name']=='cos-federation-staging'
+          assert set(config['services'])=={'mysql','redis','mercure','php','nginx'}
+          assert config['networks']['staging_internal'].get('internal') is True
+          for name, service in config['services'].items():
+              assert set(service['networks'])=={'staging_internal'}, name
+              assert 'privileged' not in service or service['privileged'] is False
+              assert 'network_mode' not in service
+          ports=config['services']['nginx'].get('ports',[])
+          assert len(ports)==1 and ports[0]['host_ip']=='127.0.0.1'
+          assert int(ports[0]['published'])==18081
+          for name in ('mysql','redis','php','mercure'):
+              assert not config['services'][name].get('ports'), name
+          assert all('cos_' not in name for name in config.get('volumes',{}))
+          print('Federation staging Compose configuration PASS (no runtime/DB changes)')
+          PY
       - name: Current verification
         run: bash bin/verify fast
       - name: Compose validation
