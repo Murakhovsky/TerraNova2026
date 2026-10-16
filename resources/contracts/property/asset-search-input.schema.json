@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyAssetSearchInputV1",
+  "type": "object",
+  "properties": {
+    "q": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "per_page": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "transaction_type": {
+      "type": "string"
+    },
+    "type_code": {
+      "type": "string"
+    },
+    "price_max": {
+      "type": "number",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

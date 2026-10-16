@@ -58,6 +58,18 @@ jobs:
         run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: Canonical Capability Library contract
+        run: php tests/architecture/cos_canonical_capability_library_contract.php
+      - name: Canonical Property capability input validation
+        run: php tests/unit/canonical_capability_property_input_validation.php
+      - name: Canonical Capability Gateway invocation boundaries
+        run: php tests/unit/canonical_capability_gateway.php
+      - name: Property Bulk Intake approval and execution contract
+        run: php tests/architecture/property_bulk_intake_workflow_contract.php
+      - name: Property Bulk Intake fail-closed normalization
+        run: php tests/unit/property_bulk_intake_normalization.php
+      - name: AI and CRON intent signature and review admission
+        run: php tests/unit/cos_automation_intent_security.php
       - name: Kernel Tool canonical retry contract
         run: php tests/unit/workflow_kernel_tool_safe_retry.php
       - name: Capital Markets streaming core, reconnect and Binance protocol acceptance

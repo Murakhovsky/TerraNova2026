@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyAssetGetInputV1",
+  "type": "object",
+  "required": [
+    "reference"
+  ],
+  "properties": {
+    "reference": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyAssetCreateOutputV1",
+  "type": "object",
+  "required": [
+    "asset"
+  ],
+  "properties": {
+    "asset": {
+      "type": "object"
+    },
+    "legacy_property_id": {}
+  },
+  "additionalProperties": true
+}

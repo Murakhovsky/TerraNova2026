@@ -21,3 +21,69 @@ pages:
     responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: core.capabilities.library
+    route: { name: cos_capabilities_workspace, path: "/workspace/capabilities", methods: [GET] }
+    surface: workspace
+    domain: Core
+    capability: core.capabilities.view
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Переглянути наявні команди та відрізнити безпечні операції від тих, що потребують Workflow."
+      page_purpose: "Канонічна бібліотека Domain capabilities без автоматичного запуску операцій."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: core.capabilities.inspect
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: property.bulk.workspace
+    route: { name: cos_property_bulk_workspace, path: "/workspace/property/bulk", methods: [GET] }
+    surface: workspace
+    domain: Property
+    capability: property.bulk.create
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Підготувати до десяти об'єктів Property до незалежного погодження перед внесенням до каталогу."
+      page_purpose: "Ручна перевірка незмінного пакета, формування Goal/Plan і перегляд native результатів."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: property.bulk.plan.propose
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: core.automation.intents
+    route: { name: cos_automation_intents_workspace, path: "/workspace/capabilities/intents", methods: [GET] }
+    surface: workspace
+    domain: Core
+    capability: core.capabilities.view
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Переглянути, перевірити і прийняти пропозицію AI/CRON без машинних дозволів на виконання."
+      page_purpose: "Людське погодження переходу машинного intent до незмінного Property staging."
+    archetype: portal
+    patterns:
+      required: [PageHeader]
+      optional: []
+    primary_action: property.bulk.intent.adopt
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }

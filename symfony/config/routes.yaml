@@ -1,3 +1,82 @@
+# HMAC-authenticated machine proposals only, no Action dispatch.
+cos_automation_intents_submit:
+  path: /api/v1/capability-intents/property-bulk
+  controller: App\Http\Api\V1\Controller\CanonicalAutomationIntentController::submit
+  methods: [POST]
+
+cos_automation_intents_workspace:
+  path: /workspace/capabilities/intents
+  controller: App\Web\Capability\AutomationIntentReviewController::index
+  methods: [GET]
+
+cos_automation_intents_adopt:
+  path: /workspace/capabilities/intents/{intentId}/adopt
+  controller: App\Web\Capability\AutomationIntentReviewController::adopt
+  methods: [POST]
+  requirements: { intentId: 'intent-[a-f0-9]{24}' }
+
+# Property bulk review: only canonical Federation Plan proposal, no bypass.
+cos_property_bulk_workspace:
+  path: /workspace/property/bulk
+  controller: App\Web\Property\PropertyBulkWorkspaceController::index
+  methods: [GET]
+
+cos_property_bulk_stage:
+  path: /workspace/property/bulk/stage
+  controller: App\Web\Property\PropertyBulkWorkspaceController::stage
+  methods: [POST]
+
+cos_property_bulk_propose:
+  path: /workspace/property/bulk/{batchId}/propose
+  controller: App\Web\Property\PropertyBulkWorkspaceController::propose
+  methods: [POST]
+  requirements: { batchId: 'bulk-[a-f0-9]{24}' }
+
+cos_property_bulk_api_stage:
+  path: /api/v1/property/bulk
+  controller: App\Http\Api\V1\Controller\PropertyBulkIntakeController::stage
+  methods: [POST]
+
+cos_property_bulk_api_show:
+  path: /api/v1/property/bulk/{batchId}
+  controller: App\Http\Api\V1\Controller\PropertyBulkIntakeController::show
+  methods: [GET]
+  requirements: { batchId: 'bulk-[a-f0-9]{24}' }
+
+cos_property_bulk_api_propose:
+  path: /api/v1/property/bulk/{batchId}/propose
+  controller: App\Http\Api\V1\Controller\PropertyBulkIntakeController::propose
+  methods: [POST]
+  requirements: { batchId: 'bulk-[a-f0-9]{24}' }
+
+# Canonical Domain capability discovery and explicitly gated human invocation.
+cos_capabilities_index:
+  path: /api/v1/capabilities
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::index
+  methods: [GET]
+
+cos_capabilities_invoke:
+  path: /api/v1/capabilities/{id}/invoke
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::invoke
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_capabilities_show:
+  path: /api/v1/capabilities/{id}
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::show
+  methods: [GET]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_capabilities_workspace:
+  path: /workspace/capabilities
+  controller: App\Web\Capability\CapabilityLibraryController::index
+  methods: [GET]
+
+cos_capabilities_property_create:
+  path: /workspace/capabilities/property/create
+  controller: App\Web\Capability\CapabilityLibraryController::createProperty
+  methods: [POST]
+
 
 # COS Federation Goal/Outcome draft workspace.
 # Read-only, Domain-attested Goal-wide progress (no auto approval or execution).
