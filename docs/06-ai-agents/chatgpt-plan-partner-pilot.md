@@ -1,6 +1,9 @@
 ---
 title: Пілотна інтеграція ChatGPT до COS
 description: Безпечне тестове підключення підписки ChatGPT через схвалену OpenAI авторизацію OAuth, з обмеженнями доступу та перевірками.
+status: draft
+updated: 2026-10-17
+kind: architecture
 ---
 
 # Тестове підключення підписки ChatGPT до COS
