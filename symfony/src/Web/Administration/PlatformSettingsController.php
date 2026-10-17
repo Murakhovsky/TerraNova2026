@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Web\Administration;
 
 use App\Security\SessionCsrfValidator;
+use Infrastructure\Llm\ChatGptPlanOAuth;
 use App\Web\Experience\Archetype\PageArchetype;
 use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
@@ -31,6 +32,7 @@ final readonly class PlatformSettingsController
         private PlatformSettingsReaderInterface $settings,
         private PlatformSettingsWriterInterface $writer,
         private LlmModelCatalogInterface $modelCatalog,
+        private ChatGptPlanOAuth $chatgptOAuth,
         private string $fallbackProvider = 'http',
         private string $fallbackModel = '',
         private string $fallbackToken = '',
@@ -91,6 +93,10 @@ final readonly class PlatformSettingsController
             'qa_model' => (string) $this->settings->value($organizationId, 'engineering', 'qa.model', $this->fallbackQaModel),
             'api_key_configured' => is_string($secret) && trim($secret) !== '',
             'api_key_suffix' => is_string($secret) && strlen($secret) >= 4 ? substr($secret, -4) : '',
+            'chatgpt_plan_enabled' => $this->chatgptOAuth->configured(),
+            'chatgpt_plan_connected' => is_string($this->settings->secret(
+                $organizationId, 'chatgpt_plan', 'credentials.'.(string) $tenant->userId()->value()
+            )),
             'model_catalog' => array_values($this->modelCatalog->models()),
             'pricing_catalog_version' => $this->modelCatalog->version(),
             'status_message' => trim((string) $request->query->get('status_message', '')),
