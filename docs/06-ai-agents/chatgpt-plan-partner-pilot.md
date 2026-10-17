@@ -1,28 +1,42 @@
-# COS ChatGPT Plan Integration (Partner pilot)
+---
+title: Пілотна інтеграція ChatGPT до COS
+description: Безпечне тестове підключення підписки ChatGPT через схвалену OpenAI авторизацію OAuth, з обмеженнями доступу та перевірками.
+---
 
-Status: feature-gated, not enabled. Real end-to-end acceptance is pending OpenAI approval.
+# Тестове підключення підписки ChatGPT до COS
 
-**Eligibility:** COS is a remotely hosted commercial website, not a locally hosted open-source OAuth client. The OSS dynamic-registration flow does not grant COS permission to use ChatGPT plan credits. Apply for approval at https://openai.com/form/sign-in-with-chatgpt-interest/ and follow https://developers.openai.com/siwc/website.
+**Статус:** інтеграція за функціональним прапорцем, за замовчуванням вимкнена. Наскрізне тестування з реальним акаунтом неможливе до отримання дозволу OpenAI.
 
-## Deployment settings
+## Умови доступу
 
-* COS_SIWC_ENABLED=0 (set to 1 only after approval).
-* COS_SIWC_CLIENT_ID: approved OpenAI OAuth client ID.
-* COS_SIWC_CLIENT_SECRET: confidential client secret, if OpenAI registers the client for client_secret_post; otherwise blank.
-* COS_SIWC_REDIRECT_URI=https://company-os.shop/admin/settings/llm/chatgpt/callback (must match OpenAI registration exactly).
+COS є комерційним вебзастосунком на віддаленому сервері. Механізм динамічної реєстрації для локальних застосунків з відкритим кодом не дає COS права використовувати ліміти підписки ChatGPT. Потрібне окреме схвалення OpenAI:
 
-## Current supported flow
+- [Заявка на партнерське підключення](https://openai.com/form/sign-in-with-chatgpt-interest/)
+- [Документація для вебзастосунків](https://developers.openai.com/siwc/website)
 
-1. Sign in to COS using COS authentication and open /admin/settings/llm.
-2. Authenticated tenant admin starts account linking with a CSRF-protected POST.
-3. Server stores state, PKCE verifier, nonce, actor, tenant and ten-minute expiry in the COS session.
-4. OAuth callback consumes transaction once, validates state and tenant/user, exchanges code, verifies ID-token RSA signature and issuer/audience/expiry/nonce, and checks chatgpt.tokens.use.direct scope.
-5. Access and refresh tokens are stored as existing encrypted Platform Settings secrets, separated by organization and user ID.
-6. Explicit admin smoke call uses Responses API with stream=true, store=false, JSON schema and response.completed SSE event; access token refresh stays scoped to this user.
-7. Disconnect deletes the local secret. User may revoke provider access in ChatGPT settings.
+## Налаштування середовища
 
-This is personal model testing, **not** a login replacement or automatic provider selection. It does not expose ChatGPT conversation history or OpenAI API keys. Agent/CRON/Workflow remain on their existing provider; personal plan scopes must not be used as a tenant-wide credential. The provider is registered in the central LLM registry but refuses non-interactive use cases.
+- `COS_SIWC_ENABLED=0` — початковий безпечний стан. Значення `1` допустиме після отримання дозволу OpenAI.
+- `COS_SIWC_CLIENT_ID` — зареєстрований і схвалений ідентифікатор клієнта OAuth.
+- `COS_SIWC_CLIENT_SECRET` — секрет конфіденційного клієнта, якщо це передбачено дозволеною схемою; інакше порожній рядок.
+- `COS_SIWC_REDIRECT_URI=https://company-os.shop/admin/settings/llm/chatgpt/callback` — зворотна адреса, що має точно збігатися із зареєстрованою.
 
-## Acceptance limitations
+Не вносити секрети до репозиторію. Підтримуваний спосіб обміну токенами потрібно звірити з параметрами схваленого OpenAI клієнта.
 
-The integration cannot be claimed live until a partner-approved OAuth client, real ChatGPT consent, refresh rotation, plan-eligible model, multi-instance session callback and production token secrecy are verified. After initial smoke tests, future production work must add atomic credential-refresh locking and separate per-user authorization for interactive LLM actions. Plan usage is subject to subscription limits, not an unlimited free API.
+## Авторизація та обмежене тестування
+
+1. Адміністратор входить до COS звичайним способом та відкриває `/admin/settings/llm`.
+2. Натискає кнопку підключення ChatGPT. Сервер перевіряє CSRF та формує одноразові `state`, `nonce` і перевірку `PKCE S256`.
+3. Дані транзакції, користувач, організація та десятиихвилинний строк зберігаються в поточній сесії COS.
+4. Повернення з OAuth використовує транзакцію лише один раз, перевіряє відповідність користувача та організації, підпис `ID token` через `JWKS`, строк дії й дозвіл `chatgpt.tokens.use.direct`.
+5. Токени доступу й оновлення записуються через зашифровані секрети чинних налаштувань платформи окремо для користувача та організації.
+6. Ручний тест адміністратора відправляє запит до `Responses API` з `stream=true`, `store=false`, обмеженою схемою відповіді та перевіркою завершального `response.completed`.
+7. Відключення видаляє локальний секрет. Скасування дозволу на стороні OpenAI відбувається окремо в налаштуваннях ChatGPT.
+
+Ця інтеграція **не замінює вхід до COS**. Вона також не відкриває історії розмов ChatGPT і не дає API-ключів користувача. Фонові агенти, CRON та Platform Workflow зберігають наявний LLM-провайдер. Окрема користувацька підписка не стає загальним ресурсом організації.
+
+## Критерії приймання та невирішені обмеження
+
+Потрібно підтвердити реальну авторизацію схваленого клієнта, згоду користувача, підтримувану модель, роботу потокової відповіді, оновлення та відкликання токенів, ізоляцію організацій і стабільність зворотного виклику між кількома екземплярами вебзастосунку.
+
+До ширшого впровадження необхідні атомарне блокування паралельного оновлення токенів, окремий користувацький дозвіл на інтерактивні інструменти й коректний фінансовий облік використання підписки. Ліміти ChatGPT Plus не означають необмежений безкоштовний API.
