@@ -1,4 +1,8 @@
 parameters:
+  env(COS_SIWC_ENABLED): '0'
+  env(COS_SIWC_CLIENT_ID): ''
+  env(COS_SIWC_CLIENT_SECRET): ''
+  env(COS_SIWC_REDIRECT_URI): ''
   env(N8N_WEBHOOK_SECRET): ''
   env(COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY): '0'
   env(COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY): '0'
@@ -1431,6 +1435,15 @@ services:
       $model: '%env(LLM_MODEL)%'
       $provider: '%env(LLM_PROVIDER)%'
 
+  Infrastructure\Llm\ChatGptPlanOAuth:
+    arguments:
+      $enabled: '%env(bool:COS_SIWC_ENABLED)%'
+      $clientId: '%env(COS_SIWC_CLIENT_ID)%'
+      $clientSecret: '%env(COS_SIWC_CLIENT_SECRET)%'
+      $redirectUri: '%env(COS_SIWC_REDIRECT_URI)%'
+
+  Infrastructure\Llm\ChatGptPlanStructuredLlmClient: ~
+
   Infrastructure\Llm\OpenAiResponsesStructuredLlmClient:
     arguments:
       $token: '%env(LLM_TOKEN)%'
@@ -1447,6 +1460,7 @@ services:
         http: '@Infrastructure\Llm\HttpStructuredLlmClient'
         fixture: '@Infrastructure\Llm\HttpStructuredLlmClient'
         openai: '@Infrastructure\Llm\OpenAiResponsesStructuredLlmClient'
+        chatgpt_plan: '@Infrastructure\Llm\ChatGptPlanStructuredLlmClient'
 
   wave4.llm.primary_route:
     class: Kernel\Llm\LlmRoute
@@ -3621,6 +3635,10 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Administration\AdministrationUsersController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Administration\ChatGptPlanConnectionController:
     public: true
     tags: ['controller.service_arguments']
 

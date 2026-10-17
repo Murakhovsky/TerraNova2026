@@ -152,5 +152,34 @@
             <button class="cos-button cos-button--primary" type="submit">Зберегти налаштування</button>
         </twig:CosStickyActions>
     </form>
+
+    <section class="cos-card" aria-label="ChatGPT plan test connection">
+        <h2>ChatGPT Plus: тестове підключення</h2>
+        <p>Для віддаленого сайту COS потрібен дозвіл OpenAI. Підключення прив'язане до поточного COS-користувача; це не заміна входу в COS.</p>
+        {% if not settings.chatgpt_plan_enabled %}
+            <p>OAuth наразі вимкнено. Після схвалення OpenAI налаштуйте COS_SIWC_* та встановіть COS_SIWC_ENABLED=1.</p>
+            <a href="https://openai.com/form/sign-in-with-chatgpt-interest/" target="_blank" rel="noopener noreferrer">Подати заявку OpenAI</a>
+        {% elseif not settings.chatgpt_plan_connected %}
+            <form method="post" action="/admin/settings/llm/chatgpt/connect">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <button type="submit" class="cos-button cos-button--primary">Continue with ChatGPT</button>
+            </form>
+        {% else %}
+            <p>Ваш ChatGPT підключено. Доступний лише тест моделі, без виконання COS Actions.</p>
+            <form method="post" action="/admin/settings/llm/chatgpt/test">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <label class="cos-field"><span>Доступна модель ChatGPT</span>
+                    <input class="cos-input" name="model" value="gpt-6" maxlength="64" required></label>
+                <label class="cos-field"><span>Тестовий запит</span>
+                    <input class="cos-input" name="prompt" value="Відповідай коротко: COS працює" maxlength="500" required></label>
+                <button type="submit" class="cos-button cos-button--primary">Тестувати GPT</button>
+            </form>
+            <form method="post" action="/admin/settings/llm/chatgpt/disconnect">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <button type="submit" class="cos-button cos-button--ghost">Відключити ChatGPT</button>
+            </form>
+        {% endif %}
+        <p>OpenAI API, Goals та Platform Workflow працюють як раніше. Агенти й CRON не отримують доступу до вашої підписки.</p>
+    </section>
 </section>
 {% endblock %}
