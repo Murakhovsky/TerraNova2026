@@ -113,7 +113,7 @@ final readonly class ChatGptPlanConnectionController
                 ['type'=>'object','properties'=>['answer'=>['type'=>'string']],
                  'required'=>['answer'],'additionalProperties'=>false],
             );
-            return $this->redirect('ChatGPT: '.mb_substr((string)($result->output['answer'] ?? 'OK'),0,140));
+            return $this->redirect('ChatGPT: тест успішний, отримано структуровану відповідь від моделі.');
         } catch (Throwable $error) {
             error_log('cos.siwc.test_failed '.get_class($error));
             return $this->redirect('Тест не пройшов. Перевірте OAuth, scope і модель.');
