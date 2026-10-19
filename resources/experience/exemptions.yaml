@@ -1,4 +1,8 @@
 exemptions:
+  - route: cos_chatgpt_plan_callback
+    path: "/admin/settings/llm/chatgpt/callback"
+    reason: redirect_action
+    description: "OAuth code callback only validates consent and redirects to LLM Settings; it does not render an HTML page."
   - route: cos_web_auth_logout
     path: "/auth/logout"
     reason: redirect_action
