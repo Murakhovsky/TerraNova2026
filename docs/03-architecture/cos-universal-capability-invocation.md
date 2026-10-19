@@ -181,7 +181,7 @@ Excel можна експортувати як CSV UTF-8. Перший рядо�
 Нативний формат XLSX поки не приймається: файл слід експортувати
 як CSV UTF-8. Це виключає небезпечний неаудитований Excel-парсер.
 
-### MySQL domain acceptance, 10 native Assets
+### Перевірка десяти нативних об'єктів у MySQL
 
 `tests/integration/property_bulk_native_ten_assets_mysql.php`, виконується
 в ізольованому GitHub Actions MySQL 8.4 під
