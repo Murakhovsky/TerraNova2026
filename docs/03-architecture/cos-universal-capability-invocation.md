@@ -196,9 +196,17 @@ Excel можна експортувати як CSV UTF-8. Перший рядо�
 У цьому тесті лише події/Audit приймають ізольовані test-local sinks.
 Стан Plan для Domain-операції імітується: це **не** справжній
 end-to-end тест створення Plan, незалежних Approval і Platform
-Workflow. Цю частину перевіряє загальний Federation MySQL E2E на
-своєму бізнес-домені. Повний спільний acceptance саме десяти
-Property через Approval все ще окремий production gate.
+Workflow. Цю частину додатково перевіряє `tests/integration/federation_property_bulk_approved_e2e_mysql.php`:
+створення справжнього Goal/Plan; перевірка незалежного Plan Approval
+з тестовою persisted evidence; запуск одного `Platform Workflow`;
+запит і незалежне погодження `Kernel Action` через реальний Approval
+repository; один worker; десять `tn_property_assets`; контрольований
+receipt checkpoint, завершення Run та незалежна Goal Evaluation.
+Негативні перевірки охоплюють передчасний worker, повторний start,
+повторний Action та підміну одного native receipt після успіху.
+Перший Plan Approval у тесті створюється як спеціальний SQL-fixture,
+а не через UI: повноцінний браузерний acceptance із двома людьми
+та production deploy залишаються окремими контрольними воротами.
 
 ### Перевірка походження результату Property
 
