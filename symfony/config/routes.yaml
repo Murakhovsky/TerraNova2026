@@ -2440,6 +2440,27 @@ cos_web_platform_settings_llm:
   controller: App\Web\Administration\PlatformSettingsController::llm
   methods: [GET, HEAD]
 
+# Account linking only: CSRF + authenticated COS admin, no autonomous AI.
+cos_chatgpt_plan_connect:
+  path: /admin/settings/llm/chatgpt/connect
+  controller: App\Web\Administration\ChatGptPlanConnectionController::connect
+  methods: [POST]
+
+cos_chatgpt_plan_callback:
+  path: /admin/settings/llm/chatgpt/callback
+  controller: App\Web\Administration\ChatGptPlanConnectionController::callback
+  methods: [GET]
+
+cos_chatgpt_plan_disconnect:
+  path: /admin/settings/llm/chatgpt/disconnect
+  controller: App\Web\Administration\ChatGptPlanConnectionController::disconnect
+  methods: [POST]
+
+cos_chatgpt_plan_test:
+  path: /admin/settings/llm/chatgpt/test
+  controller: App\Web\Administration\ChatGptPlanConnectionController::test
+  methods: [POST]
+
 cos_web_platform_settings_llm_save:
   path: /admin/settings/llm
   controller: App\Web\Administration\PlatformSettingsController::saveLlm

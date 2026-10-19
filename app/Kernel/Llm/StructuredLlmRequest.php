@@ -18,6 +18,7 @@ final readonly class StructuredLlmRequest
         public ?string $organizationId = null,
         public ?string $useCase = null,
         public ?string $correlationId = null,
+        public ?string $actorId = null,
     ) {
         if (trim($this->systemPrompt) === '' || trim($this->userPrompt) === '' || $this->responseSchema === []) {
             throw new InvalidArgumentException('Structured LLM request requires prompts and a response schema.');
@@ -33,6 +34,9 @@ final readonly class StructuredLlmRequest
         }
         if ($this->useCase !== null && !preg_match('/^[a-z][a-z0-9_.:-]*$/', $this->useCase)) {
             throw new InvalidArgumentException(sprintf('Invalid structured LLM use case: %s.', $this->useCase));
+        }
+        if ($this->actorId !== null && trim($this->actorId) === '') {
+            throw new InvalidArgumentException('Structured LLM actor id cannot be empty.');
         }
         if ($this->correlationId !== null && trim($this->correlationId) === '') {
             throw new InvalidArgumentException('Structured LLM correlation id cannot be empty.');
@@ -52,6 +56,7 @@ final readonly class StructuredLlmRequest
             $this->organizationId,
             $this->useCase,
             $this->correlationId,
+            $this->actorId,
         );
     }
 }
