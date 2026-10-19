@@ -6,6 +6,7 @@ namespace App\Persistence\Capability;
 use App\Application\Capability\AutomationIntentSignatureVerifier;
 use App\Persistence\Property\PropertyBulkIntakeService;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use DomainException;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
@@ -49,12 +50,33 @@ final readonly class CanonicalAutomationIntentStore
         // that runs at human adoption and again at approved Action execution.
         $digest=hash('sha256',json_encode($items,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
         $id='intent-'.bin2hex(random_bytes(12));
-        $this->db->insert('cos_capability_automation_intents',[
-            'organization_id'=>$org,'intent_id'=>$id,'origin'=>$origin,
-            'nonce'=>$nonce,'request_digest'=>$digest,
-            'payload_json'=>json_encode($items,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
-            'state'=>'pending_review','created_at'=>gmdate('Y-m-d H:i:s'),
-        ]);
+        try {
+            $this->db->insert('cos_capability_automation_intents',[
+                'organization_id'=>$org,'intent_id'=>$id,'origin'=>$origin,
+                'nonce'=>$nonce,'request_digest'=>$digest,
+                'payload_json'=>json_encode($items,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),
+                'state'=>'pending_review','created_at'=>gmdate('Y-m-d H:i:s'),
+            ]);
+        } catch(UniqueConstraintViolationException) {
+            // A same-nonce network retry must resolve to exactly one intent.
+            // A changed signed payload with a previously used nonce is refused.
+            $previous=$this->db->fetchAssociative(
+                'SELECT intent_id,request_digest,state,payload_json
+                 FROM cos_capability_automation_intents
+                 WHERE organization_id=:org AND origin=:origin AND nonce=:nonce',
+                ['org'=>$org,'origin'=>$origin,'nonce'=>$nonce],
+            );
+            if(!$previous || !hash_equals((string)$previous['request_digest'],$digest)) {
+                throw new DomainException('Reused automation nonce has conflicting payload.');
+            }
+            $persisted=json_decode((string)$previous['payload_json'],true,32,JSON_THROW_ON_ERROR);
+            if($persisted!==$items) {
+                throw new DomainException('Reused automation nonce has conflicting native content.');
+            }
+            return ['intent_id'=>$previous['intent_id'],'state'=>$previous['state'],
+                'origin'=>$origin,'digest'=>$digest,'count'=>count($items),
+                'execution_authority'=>'none','replayed'=>true];
+        }
         return ['intent_id'=>$id,'state'=>'pending_review','origin'=>$origin,
             'digest'=>$digest,'count'=>count($items),'execution_authority'=>'none'];
     }

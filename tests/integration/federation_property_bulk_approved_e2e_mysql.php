@@ -227,6 +227,9 @@ try {
     $nonce=bin2hex(random_bytes(16));
     $sig=hash_hmac('sha256',implode("\n",['cron',$ts,$nonce,$raw]),str_repeat('c',40));
     $machine=$intents->submit('cron',$ts,$nonce,$sig,$raw);
+    $duplicate=$intents->submit('cron',$ts,$nonce,$sig,$raw);
+    $assert(($duplicate['replayed']??false) && $duplicate['intent_id']===$machine['intent_id'],
+        'Duplicate signed CRON request created a second intent.');
     $assert(($machine['state']??null)==='pending_review','CRON impersonated approved Action.');
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_plans
         WHERE organization_id=:org',['org'=>$org])===0,'Machine created a Plan without human review.');
