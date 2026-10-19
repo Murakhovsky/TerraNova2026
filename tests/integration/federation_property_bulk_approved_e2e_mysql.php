@@ -21,6 +21,7 @@ spl_autoload_register(static function(string $name):void {
 });
 
 use App\Application\Property\Service\PropertyWriteService;
+use App\Application\Capability\AutomationIntentSignatureVerifier;
 use App\Infrastructure\Persistence\MySql\MysqlPropertyLocationReference;
 use App\Infrastructure\Persistence\Property\PdoPropertyMutationReceipt;
 use App\Persistence\Federation\FederationCanonicalWorkflowBridge;
@@ -29,6 +30,7 @@ use App\Persistence\Federation\FederationGoalStore;
 use App\Persistence\Federation\FederationPlanApprovalEvidenceReader;
 use App\Persistence\Federation\FederationTrustedOutcomeEvidenceResolver;
 use App\Persistence\Property\PropertyBulkIntakeService;
+use App\Persistence\Capability\CanonicalAutomationIntentStore;
 use App\Persistence\Property\PropertyBulkPlanProposalService;
 use App\Persistence\Property\PropertyBulkRunOutcomeProvider;
 use App\Persistence\Workflow\DoctrineWorkflowActionClaimAdmission;
@@ -214,7 +216,24 @@ try {
             'region'=>'Львівська','address'=>'Goal test '.$token.' street '.($i+1),
             'area_total'=>75.0+$i,'rooms'=>2];
     }
-    $batch=$intake->stage($actor,$batchRows);
+    // Real CRON HMAC boundary submits a non-executable intent. The
+    // manager explicitly adopts it before any native Property mutation.
+    $signatures=new AutomationIntentSignatureVerifier(str_repeat('a',40),
+        str_repeat('c',40),$org);
+    $intents=new CanonicalAutomationIntentStore($db,$signatures,$intake);
+    $raw=json_encode(['capability_id'=>'property.bulk.create','items'=>$batchRows],
+        JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
+    $ts=(string)time();
+    $nonce=bin2hex(random_bytes(16));
+    $sig=hash_hmac('sha256',implode("\n",['cron',$ts,$nonce,$raw]),str_repeat('c',40));
+    $machine=$intents->submit('cron',$ts,$nonce,$sig,$raw);
+    $assert(($machine['state']??null)==='pending_review','CRON impersonated approved Action.');
+    $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_plans
+        WHERE organization_id=:org',['org'=>$org])===0,'Machine created a Plan without human review.');
+    $adopted=$intents->adopt($actor,$machine['intent_id'],$machine['digest']);
+    $assert($adopted['state']==='adopted','Human CRON intent adoption did not persist.');
+    $batch=$intake->preview($actor,$adopted['batch_id']);
+    $assert($batch['count']===10,'Signed CRON import lost Property rows.');
     $plan=$planner->propose($actor,$batch['batch_id'],$batch['digest']);
     $assert(($plan['state']??null)==='planned','Real Goal/Plan proposal not persisted.');
     $goalId=$plan['goal_id'];
