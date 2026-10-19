@@ -68,24 +68,53 @@ final readonly class PropertyBulkRunOutcomeProvider implements RunScopedGoalOutc
             throw new FederationOutcomeSourceNotReady('Batch has no immutable verified native result.');
         }
         $items=$this->db->fetchAllAssociative(
-            'SELECT native_asset_id,status,payload_json FROM cos_property_bulk_items
+            'SELECT item_index,fingerprint,native_asset_id,status,receipt_key,payload_json FROM cos_property_bulk_items
              WHERE organization_id=:org AND batch_id=:batch ORDER BY item_index',[
                 'org'=>$org,'batch'=>$batchId,
             ]);
         if (count($items)<1||count($items)>10) throw new DomainException('Invalid bulk native evidence cardinality.');
         $evidence=[];
-        foreach($items as $item) {
+        $sealed=[];
+        foreach($items as $offset=>$item) {
+            $index=(int)$item['item_index'];
+            if($index!==$offset) throw new DomainException('Non-contiguous Property batch receipt indices.');
+            $source=json_decode((string)$item['payload_json'],true,32,JSON_THROW_ON_ERROR);
+            if(!is_array($source)||array_is_list($source)) {
+                throw new DomainException('Invalid immutable Property evidence source.');
+            }
+            $source=PropertyBulkIntakeService::canonicalize($source);
+            $fingerprint=PropertyBulkIntakeService::fingerprint($source);
+            if(!hash_equals($fingerprint,(string)$item['fingerprint'])) {
+                throw new DomainException('Property evidence fingerprint drift.');
+            }
+            $claim=$this->db->fetchOne(
+                'SELECT batch_id FROM cos_property_bulk_identity_claims
+                 WHERE organization_id=:org AND fingerprint=:fp',
+                ['org'=>$org,'fp'=>$fingerprint],
+            );
+            if($claim!==$batchId) throw new DomainException('Property evidence identity claim drift.');
+            $receipt='cos-property-bulk:'.$batchId.':'.$index;
+            if(($item['receipt_key']??null)!==$receipt) {
+                throw new DomainException('Native Property receipt no longer matches the pinned item.');
+            }
+            $sealed[]=['index'=>$index,'fingerprint'=>$fingerprint,'input'=>$source];
             $assetId=$item['native_asset_id']??null;
             if ($item['status']!=='verified'||!is_string($assetId)||$assetId==='') {
                 throw new FederationOutcomeSourceNotReady('Partial batch is not a successful Goal outcome.');
             }
-            $source=json_decode((string)$item['payload_json'],true,32,JSON_THROW_ON_ERROR);
             $native=$this->properties->getPropertyReference($org,$assetId);
             if (!is_array($native) || ($native['asset_id']??null)!==$assetId
-                || ($native['type_code']??null)!==($source['type_code']??null)) {
+                || ($native['type_code']??null)!==($source['type_code']??null)
+                || mb_strtolower(trim((string)($native['formatted_address']??'')))
+                    !== mb_strtolower(trim((string)$source['address']))) {
                 throw new DomainException('Native Property record does not confirm batch evidence.');
             }
             $evidence[]='property:asset:'.$assetId;
+        }
+        $sealedDigest=hash('sha256',json_encode(
+            $sealed,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
+        if(!hash_equals((string)$batch['digest'],$sealedDigest)) {
+            throw new DomainException('Property native outcome no longer matches the approved batch.');
         }
         if (count(array_unique($evidence))!==count($items)) {
             throw new DomainException('Duplicate Asset references cannot satisfy a Goal.');

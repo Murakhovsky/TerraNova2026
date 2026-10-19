@@ -199,3 +199,12 @@ end-to-end тест створення Plan, незалежних Approval і Pl
 Workflow. Цю частину перевіряє загальний Federation MySQL E2E на
 своєму бізнес-домені. Повний спільний acceptance саме десяти
 Property через Approval все ще окремий production gate.
+
+### Перевірка походження результату Property
+
+`PropertyBulkRunOutcomeProvider` повторно звіряє незмінний SHA-256
+пакета, fingerprint кожного рядка, прив'язаний tenant identity claim,
+native receipt key, фактичну адресу, тип і наявність десяти незалежних
+Property Assets. Підміна `payload_json`, статусу або
+`native_asset_id` в staging не може сама по собі виконати Goal.
+Потрібне також незалежне підтвердження Action/Run у Platform Workflow.

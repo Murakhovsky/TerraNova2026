@@ -42,6 +42,9 @@ $check(str_contains($read('symfony/src/Persistence/Property/PropertyBulkPlanProp
 $provider=$read('symfony/src/Persistence/Property/PropertyBulkRunOutcomeProvider.php');
 $check(str_contains($provider,'attestForAudit(')
     &&str_contains($provider,'getPropertyReference(')
+    &&str_contains($provider,'cos_property_bulk_identity_claims')
+    &&str_contains($provider,'Property native outcome no longer matches the approved batch.')
+    &&str_contains($provider,'receipt_key')
     &&str_contains($provider,'run_linked_action'),
     'Outcome provider must verify canonical receipt and independent Domain records.');
 $module=$read('app/Domains/Property/Bootstrap/PropertyDomainModule.php');
