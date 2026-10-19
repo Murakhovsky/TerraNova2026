@@ -53,4 +53,17 @@ foreach (['data-llm-model-catalog','gpt-6-astra','gpt-6.1-sol','gpt-6-luna','mod
     }
 }
 
+// Both canonical shell and legacy-compatible navigation must expose the admin
+// settings routes; the shared SettingsController continues to enforce isAdmin().
+$shellNav = $read('symfony/src/Web/Experience/Extension/ProviderBackedShellNavigation.php');
+$workspaceNav = $read('symfony/src/Web/Navigation/NavigationBuilder.php');
+foreach (['/admin/settings', '/admin/settings/llm'] as $path) {
+    if (!str_contains($shellNav, $path)) throw new RuntimeException('Shell navigation missing '.$path);
+    if (!str_contains($workspaceNav, ltrim($path, '/'))) throw new RuntimeException('Workspace navigation missing '.$path);
+}
+foreach (['Continue with ChatGPT', 'chatgpt-plan-unavailable', 'disabled aria-describedby'] as $marker) {
+    if (!str_contains($settingsLlm, $marker)) throw new RuntimeException('Disabled ChatGPT UI missing '.$marker);
+}
+if (!str_contains($settingsController, 'if (!$tenant->isAdmin())'))
+    throw new RuntimeException('LLM settings must be restricted to tenant admins.');
 echo "Platform Settings architecture contract passed.\n";

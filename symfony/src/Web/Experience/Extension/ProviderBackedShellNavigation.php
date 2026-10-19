@@ -50,6 +50,21 @@ final readonly class ProviderBackedShellNavigation
         }
 
         if ($context->role === 'admin') {
+            // A discoverable admin-only entry point. The LLM panel already enforces isAdmin().
+            $contributions[] = new NavigationContribution(
+                'settings',
+                'Settings',
+                '/admin/settings',
+                priority: 40,
+                parentKey: 'administration',
+            );
+            $contributions[] = new NavigationContribution(
+                'llm-settings',
+                'AI & LLM',
+                '/admin/settings/llm',
+                priority: 50,
+                parentKey: 'administration',
+            );
             $contributions[] = new NavigationContribution(
                 'users',
                 'Users',

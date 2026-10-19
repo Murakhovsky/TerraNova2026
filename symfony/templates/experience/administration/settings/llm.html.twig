@@ -157,8 +157,9 @@
         <h2>ChatGPT Plus: тестове підключення</h2>
         <p>Для віддаленого сайту COS потрібен дозвіл OpenAI. Підключення прив'язане до поточного COS-користувача; це не заміна входу в COS.</p>
         {% if not settings.chatgpt_plan_enabled %}
-            <p>OAuth наразі вимкнено. Після схвалення OpenAI налаштуйте COS_SIWC_* та встановіть COS_SIWC_ENABLED=1.</p>
-            <a href="https://openai.com/form/sign-in-with-chatgpt-interest/" target="_blank" rel="noopener noreferrer">Подати заявку OpenAI</a>
+            <p id="chatgpt-plan-unavailable">Підключення ChatGPT поки недоступне. Для комерційного сайту COS потрібно схвалення OpenAI та налаштований OAuth-клієнт.</p>
+            <button type="button" class="cos-button cos-button--primary" disabled aria-describedby="chatgpt-plan-unavailable">Continue with ChatGPT</button>
+            <p><a href="https://openai.com/form/sign-in-with-chatgpt-interest/" target="_blank" rel="noopener noreferrer">Подати заявку на доступ OpenAI</a></p>
         {% elseif not settings.chatgpt_plan_connected %}
             <form method="post" action="/admin/settings/llm/chatgpt/connect">
                 <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
