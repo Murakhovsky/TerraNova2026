@@ -180,3 +180,22 @@ Excel можна експортувати як CSV UTF-8. Перший рядо�
 у Property: він передає дані у той самий `PropertyBulkIntakeService::stage`.
 Нативний формат XLSX поки не приймається: файл слід експортувати
 як CSV UTF-8. Це виключає небезпечний неаудитований Excel-парсер.
+
+### MySQL domain acceptance, 10 native Assets
+
+`tests/integration/property_bulk_native_ten_assets_mysql.php`, виконується
+в ізольованому GitHub Actions MySQL 8.4 під
+`COS_TEST_PROPERTY_BULK_NATIVE=1`. Тест:
+1. створює tenant-scoped staging із десяти об'єктів;
+2. змінює staged JSON та вимагає відмови через digest/fingerprint;
+3. формує ten identity claims, імітує вже перевірений стан Plan;
+4. виконує **справжній PropertyWriteService** і читає десять
+   `tn_property_assets` через PropertyReferencePort;
+5. перевіряє ідемпотентне повторне звіряння та відмову при підміні digest.
+
+У цьому тесті лише події/Audit приймають ізольовані test-local sinks.
+Стан Plan для Domain-операції імітується: це **не** справжній
+end-to-end тест створення Plan, незалежних Approval і Platform
+Workflow. Цю частину перевіряє загальний Federation MySQL E2E на
+своєму бізнес-домені. Повний спільний acceptance саме десяти
+Property через Approval все ще окремий production gate.

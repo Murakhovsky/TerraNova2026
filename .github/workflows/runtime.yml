@@ -101,6 +101,11 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/property_bulk_mysql_fencing.php
+      - name: Property Bulk 10 native Assets MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PROPERTY_BULK_NATIVE: '1'
+        run: php tests/integration/property_bulk_native_ten_assets_mysql.php
       - name: Federation single-writer architecture gate
         run: |
           php tests/architecture/federation_canonical_goal_cutover.php
