@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyAssetUpdateOutputV1",
+  "type": "object",
+  "required": [
+    "asset"
+  ],
+  "properties": {
+    "asset": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

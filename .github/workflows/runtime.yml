@@ -97,6 +97,20 @@ jobs:
         run: |
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Property Bulk real MySQL duplicate and tenant fencing
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/property_bulk_mysql_fencing.php
+      - name: Property Bulk 10 native Assets MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PROPERTY_BULK_NATIVE: '1'
+        run: php tests/integration/property_bulk_native_ten_assets_mysql.php
+      - name: Property Bulk 10 approved Goal full MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PROPERTY_BULK_APPROVED: '1'
+        run: php tests/integration/federation_property_bulk_approved_e2e_mysql.php
       - name: Federation single-writer architecture gate
         run: |
           php tests/architecture/federation_canonical_goal_cutover.php

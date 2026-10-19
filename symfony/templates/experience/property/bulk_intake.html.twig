@@ -1,0 +1,63 @@
+{% extends 'experience/portal_shell.html.twig' %}
+{% block title %}Імпорт Property Assets | COS{% endblock %}
+{% block portal_content %}
+<section class="cos-page__stack" data-cos-property-bulk>
+  <header class="cos-card">
+    <p class="cos-card__eyebrow">Property / Федеративний імпорт</p>
+    <h1 class="cos-card__title">Імпорт до 10 об'єктів</h1>
+    <p class="cos-card__copy">Завантаження → перевірка дублікатів → погодження Plan → Platform Workflow → Property → незалежна перевірка. Публікація оголошень не виконується.</p>
+    <a class="cos-button cos-button--ghost" href="/workspace/goals">Мої цілі</a>
+  </header>
+
+  {% if not batch %}
+    <section class="cos-card">
+      <h2 class="cos-card__title">1. Підготувати дані</h2>
+      <p class="cos-card__copy">Завантажте CSV із Excel або вставте JSON. Для перевірки дублікатів потрібні тип, місто й точна адреса.</p>
+      <form method="post" enctype="multipart/form-data" action="{{ path('cos_property_bulk_csv_stage') }}" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label class="cos-field"><span>CSV UTF-8 (до 10 рядків, до 64 КіБ)</span>
+          <input class="cos-input" type="file" name="file" accept=".csv,text/csv" required>
+        </label>
+        <p class="cos-card__copy">Назви колонок: <code>type_code,city,address,area_total</code>. Підтримуються роздільники кома, крапка з комою або табуляція.</p>
+        <button type="submit" class="cos-button cos-button--primary">Перевірити CSV-пакет</button>
+      </form>
+      <h3>Або JSON</h3>
+      <form method="post" action="{{ path('cos_property_bulk_stage') }}" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label class="cos-field">
+          <span>Об'єкти у форматі JSON</span>
+          <textarea name="items_json" class="cos-input" rows="12" maxlength="65536" required>[{"type_code":"house","city":"Львів","address":"Приклад, 10","area_total":120},{"type_code":"apartment","city":"Львів","address":"Приклад, 12","area_total":55}]</textarea>
+        </label>
+        <button type="submit" class="cos-button cos-button--primary">Перевірити і підготувати пакет</button>
+      </form>
+    </section>
+  {% else %}
+    <section class="cos-card">
+      <p class="cos-card__eyebrow">{{ batch.state }}</p>
+      <h2 class="cos-card__title">2. Перевірка пакета {{ batch.batch_id }}</h2>
+      <p class="cos-card__copy">Об'єктів: {{ batch.count }}. Знімок: <code>{{ batch.digest }}</code>.</p>
+      {% for item in batch.items %}
+        <div class="cos-card">
+          <strong>#{{ item.index + 1 }} · {{ item.input.type_code }} · {{ item.input.city }}</strong>
+          <p class="cos-card__copy">{{ item.input.address }} · {{ item.status }} {% if item.native_asset_id %} · {{ item.native_asset_id }}{% endif %}</p>
+        </div>
+      {% endfor %}
+      {% if batch.state == 'staged' %}
+        <form method="post" action="{{ path('cos_property_bulk_propose', {'batchId':batch.batch_id}) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+          <input type="hidden" name="digest" value="{{ batch.digest }}">
+          <button type="submit" class="cos-button cos-button--primary">Створити план для незалежного погодження</button>
+        </form>
+      {% endif %}
+      {% if batch.goal_id and batch.plan_id %}
+        <p class="cos-card__copy">Goal: <code>{{ batch.goal_id }}</code> · Plan: <code>{{ batch.plan_id }}</code>.</p>
+        <p class="cos-card__copy">Наступний крок: запитати незалежне погодження Plan у Goals, потім погодження Action та запуск через Platform Workflow. Сама підготовка пакета нічого не виконує.</p>
+        <a class="cos-button cos-button--primary" href="/workspace/goals">Погодити й виконати в Goals</a>
+      {% endif %}
+      {% if batch.state == 'verified' %}
+        <div class="cos-alert cos-alert--success">Native Property записи перевірені. Для фінального Goal Outcome виконайте незалежну оцінку після завершення Run.</div>
+      {% endif %}
+    </section>
+  {% endif %}
+</section>
+{% endblock %}

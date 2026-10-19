@@ -1,0 +1,43 @@
+{% extends 'experience/portal_shell.html.twig' %}
+{% block title %}Пропозиції AI/CRON | COS{% endblock %}
+{% block portal_content %}
+<section class="cos-page__stack" data-cos-automation-review>
+  <header class="cos-card">
+    <h1 class="cos-card__title">Запити від AI та CRON</h1>
+    <p class="cos-card__copy">Це лише підготовлені запити. Машина не отримує прав на створення Property, погодження чи запуск Workflow.</p>
+    <a class="cos-button cos-button--ghost" href="/workspace/property/bulk">Імпорт Property</a>
+  </header>
+  <section class="cos-card">
+    <h2 class="cos-card__title">Очікують перевірки</h2>
+    {% for item in intents %}
+      <div class="cos-card">
+        <strong>{{ item.origin }} · {{ item.intent_id }}</strong>
+        <p class="cos-card__copy">Отримано: {{ item.created_at }}</p>
+        <a class="cos-button cos-button--ghost" href="{{ path('cos_automation_intents_workspace', {'intent':item.intent_id}) }}">Перевірити дані</a>
+      </div>
+    {% else %}
+      <p class="cos-card__copy">Нових запитів немає.</p>
+    {% endfor %}
+  </section>
+  {% if current %}
+    <section class="cos-card">
+      <h2 class="cos-card__title">Перевірка {{ current.intent_id }}</h2>
+      <p class="cos-card__copy">Джерело: {{ current.origin }} · Стан: {{ current.state }}.</p>
+      {% for property in current.items %}
+        <div class="cos-card">
+          <strong>{{ property.type_code }} · {{ property.city }}</strong>
+          <p class="cos-card__copy">{{ property.address }} · {{ property.area_total|default('площа не задана') }} м²</p>
+        </div>
+      {% endfor %}
+      {% if current.state == 'pending_review' %}
+        <form method="post" action="{{ path('cos_automation_intents_adopt', {'intentId':current.intent_id}) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+          <input type="hidden" name="digest" value="{{ current.digest }}">
+          <button type="submit" class="cos-button cos-button--primary">Прийняти в Property staging</button>
+        </form>
+        <p class="cos-card__copy">Прийняття НЕ погоджує Plan та НЕ запускає Action. Потрібні окремі погодження у Goals.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+</section>
+{% endblock %}

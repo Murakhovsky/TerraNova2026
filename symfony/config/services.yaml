@@ -1,4 +1,7 @@
 parameters:
+  env(COS_AI_CAPABILITY_INTENT_SECRET): ''
+  env(COS_CRON_CAPABILITY_INTENT_SECRET): ''
+  env(COS_AUTOMATION_TENANT_ORGANIZATION): ''
   env(COS_SIWC_ENABLED): '0'
   env(COS_SIWC_CLIENT_ID): ''
   env(COS_SIWC_CLIENT_SECRET): ''
@@ -90,6 +93,9 @@ services:
     autoconfigure: true
 
   _instanceof:
+    App\Application\Capability\Contract\CapabilityInvocationAdapterInterface:
+      tags:
+        - { name: 'cos.capability.invoker' }
     Kernel\Application\Command\CommandHandlerInterface:
       tags:
         - { name: 'messenger.message_handler', bus: 'command.bus' }
@@ -120,6 +126,16 @@ services:
 
   App\:
     resource: '../src/'
+
+  App\Application\Capability\AutomationIntentSignatureVerifier:
+    arguments:
+      $aiSecret: '%env(COS_AI_CAPABILITY_INTENT_SECRET)%'
+      $cronSecret: '%env(COS_CRON_CAPABILITY_INTENT_SECRET)%'
+      $organizationId: '%env(COS_AUTOMATION_TENANT_ORGANIZATION)%'
+
+  App\Application\Capability\CanonicalCapabilityGateway:
+    arguments:
+      $adapters: !tagged_iterator cos.capability.invoker
 
   App\Command\CapitalMarketsInstrumentStreamTrustCommand:
     arguments:
@@ -639,7 +655,10 @@ services:
 
   Domains\Property\Application\Service\PropertyIdentityWorkflowService: ~
 
-  Domains\Property\Bootstrap\PropertyDomainModule: ~
+  Domains\Property\Automation\Action\PropertyBulkCreateHandler: ~
+  Domains\Property\Bootstrap\PropertyDomainModule:
+    arguments:
+      $bulkHandler: '@Domains\Property\Automation\Action\PropertyBulkCreateHandler'
 
   Domains\RealEstate\Rule\RealEstateRuleContextProvider: ~
 
@@ -1459,8 +1478,8 @@ services:
         primary: '@Infrastructure\Llm\HttpStructuredLlmClient'
         http: '@Infrastructure\Llm\HttpStructuredLlmClient'
         fixture: '@Infrastructure\Llm\HttpStructuredLlmClient'
-        openai: '@Infrastructure\Llm\OpenAiResponsesStructuredLlmClient'
         chatgpt_plan: '@Infrastructure\Llm\ChatGptPlanStructuredLlmClient'
+        openai: '@Infrastructure\Llm\OpenAiResponsesStructuredLlmClient'
 
   wave4.llm.primary_route:
     class: Kernel\Llm\LlmRoute
@@ -3756,6 +3775,7 @@ services:
       $providers:
         - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
+        - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'
@@ -3807,6 +3827,14 @@ services:
     tags: ['controller.service_arguments']
 
   App\Web\Sales\ClientCaseMutationController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Capability\AutomationIntentReviewController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Property\PropertyBulkWorkspaceController:
     public: true
     tags: ['controller.service_arguments']
 
