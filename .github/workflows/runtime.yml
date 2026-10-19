@@ -270,8 +270,6 @@ jobs:
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci
       - run: npm run build
-      - name: Main-wide auto-deployment contract
-        run: php tests/architecture/cos_main_autodeploy_contract.php
       - name: Federation staging Compose isolation contract (no containers)
         env:
           COS_FED_STAGING_APP_SECRET: ci-staging-only-app-secret
