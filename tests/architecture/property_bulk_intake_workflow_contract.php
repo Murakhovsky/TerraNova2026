@@ -33,6 +33,9 @@ $check(str_contains($read('symfony/src/Persistence/Property/PropertyBulkPlanProp
     &&str_contains($service,'$this->properties->getPropertyPresentation(')
     &&!str_contains($service,'FederationGoalStore')
     &&!str_contains($service,'GoalSpecification')
+    &&str_contains($service,'Immutable Property batch digest mismatch.')
+    &&str_contains($service,'cos_property_bulk_identity_claims')
+    &&str_contains($service,'receipt_key IS NULL OR receipt_key=:receipt')
     &&!str_contains($service,'cos_workflow_runs')
     &&!str_contains($service,'cos_workflow_steps'),
     'Bulk service must reuse canonical Goal/Property and never own technical Workflow.');

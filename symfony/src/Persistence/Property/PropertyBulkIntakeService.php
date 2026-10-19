@@ -136,6 +136,18 @@ final readonly class PropertyBulkIntakeService
             }
         });
         $items=$this->items($organizationId,$batchId);
+        // Approval of a batch implies an immutable claim for every Property identity.
+        // An unclaimed or differently claimed row MUST NOT reach the Property writer.
+        foreach($items as $item) {
+            $claim=$this->db->fetchOne(
+                'SELECT batch_id FROM cos_property_bulk_identity_claims
+                 WHERE organization_id=:org AND fingerprint=:fp',
+                ['org'=>$organizationId,'fp'=>self::fingerprint($item['input'])],
+            );
+            if ($claim!==$batchId) {
+                throw new DomainException('Bulk identity reservation missing or owned by another Plan.');
+            }
+        }
         $verified=[];
         foreach($items as $item) {
             $input=$item['input'];
@@ -161,14 +173,18 @@ final readonly class PropertyBulkIntakeService
                 || ($property['type_code']??null)!==$input['type_code']) {
                 throw new DomainException('Native Property result remains unverified; manual reconciliation required.');
             }
-            $this->db->executeStatement(
+            $affected=$this->db->executeStatement(
                 'UPDATE cos_property_bulk_items SET status=:state,native_asset_id=:asset,
                  receipt_key=:receipt,updated_at=UTC_TIMESTAMP(6)
                  WHERE organization_id=:org AND batch_id=:batch AND item_index=:idx
-                   AND (native_asset_id IS NULL OR native_asset_id=:same)',[
+                   AND (native_asset_id IS NULL OR native_asset_id=:same)
+                   AND (receipt_key IS NULL OR receipt_key=:receipt)',[
                  'state'=>'verified','asset'=>$assetId,'receipt'=>$key,
                  'org'=>$organizationId,'batch'=>$batchId,'idx'=>$item['index'],'same'=>$assetId,
             ]);
+            if ($affected!==1) {
+                throw new DomainException('A native Property receipt conflicts with approved batch item.');
+            }
             $verified[]=$assetId;
         }
         if (count($verified)!==count($items) || count($verified)>self::MAX_ITEMS) {
@@ -197,14 +213,37 @@ final readonly class PropertyBulkIntakeService
     /** @return list<array{index:int,input:array<string,mixed>}> */
     private function items(string $org,string $id):array
     {
+        $batch=$this->batch($org,$id);
         $rows=$this->db->fetchAllAssociative(
-            'SELECT item_index,payload_json FROM cos_property_bulk_items
+            'SELECT item_index,fingerprint,payload_json FROM cos_property_bulk_items
              WHERE organization_id=:org AND batch_id=:id ORDER BY item_index',
             ['org'=>$org,'id'=>$id],
         );
-        if (count($rows)<1||count($rows)>self::MAX_ITEMS) throw new DomainException('Invalid batch size.');
-        return array_map(static fn(array $r):array=>['index'=>(int)$r['item_index'],
-            'input'=>json_decode((string)$r['payload_json'],true,32,JSON_THROW_ON_ERROR)],$rows);
+        if(count($rows)<1||count($rows)>self::MAX_ITEMS) {
+            throw new DomainException('Invalid batch size.');
+        }
+        $sealed=[];
+        foreach($rows as $offset=>$row) {
+            $input=json_decode((string)$row['payload_json'],true,32,JSON_THROW_ON_ERROR);
+            if(!is_array($input)||array_is_list($input)) {
+                throw new DomainException('Invalid persisted Property item object.');
+            }
+            // MySQL JSON may reorder keys; canonicalization recovers staging order.
+            $normalized=self::canonicalize($input);
+            $fingerprint=self::fingerprint($normalized);
+            $index=(int)$row['item_index'];
+            if($index!==$offset || !hash_equals($fingerprint,(string)$row['fingerprint'])) {
+                throw new DomainException('Property batch row index or fingerprint was altered.');
+            }
+            $sealed[]=['index'=>$index,'fingerprint'=>$fingerprint,'input'=>$normalized];
+        }
+        $digest=hash('sha256',json_encode($sealed,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
+        if(!hash_equals((string)$batch['digest'],$digest)) {
+            throw new DomainException('Immutable Property batch digest mismatch.');
+        }
+        return array_map(static fn(array $row):array=>[
+            'index'=>$row['index'],'input'=>$row['input'],
+        ],$sealed);
     }
 
     /** @param array<string,mixed> $row @return array<string,mixed> */
