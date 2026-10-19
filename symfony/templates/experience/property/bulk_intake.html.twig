@@ -12,7 +12,16 @@
   {% if not batch %}
     <section class="cos-card">
       <h2 class="cos-card__title">1. Підготувати дані</h2>
-      <p class="cos-card__copy">Вставте JSON-масив з 1–10 об'єктами. Для перевірки дублікатів потрібні тип, місто й точна адреса.</p>
+      <p class="cos-card__copy">Завантажте CSV із Excel або вставте JSON. Для перевірки дублікатів потрібні тип, місто й точна адреса.</p>
+      <form method="post" enctype="multipart/form-data" action="{{ path('cos_property_bulk_csv_stage') }}" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label class="cos-field"><span>CSV UTF-8 (до 10 рядків, до 64 КіБ)</span>
+          <input class="cos-input" type="file" name="file" accept=".csv,text/csv" required>
+        </label>
+        <p class="cos-card__copy">Назви колонок: <code>type_code,city,address,area_total</code>. Підтримуються роздільники кома, крапка з комою або табуляція.</p>
+        <button type="submit" class="cos-button cos-button--primary">Перевірити CSV-пакет</button>
+      </form>
+      <h3>Або JSON</h3>
       <form method="post" action="{{ path('cos_property_bulk_stage') }}" class="cos-page__stack">
         <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
         <label class="cos-field">

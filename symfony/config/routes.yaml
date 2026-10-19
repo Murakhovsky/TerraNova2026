@@ -26,6 +26,11 @@ cos_property_bulk_stage:
   controller: App\Web\Property\PropertyBulkWorkspaceController::stage
   methods: [POST]
 
+cos_property_bulk_csv_stage:
+  path: /workspace/property/bulk/upload
+  controller: App\Web\Property\PropertyBulkWorkspaceController::stageCsv
+  methods: [POST]
+
 cos_property_bulk_propose:
   path: /workspace/property/bulk/{batchId}/propose
   controller: App\Web\Property\PropertyBulkWorkspaceController::propose

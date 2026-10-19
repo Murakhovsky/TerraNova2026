@@ -66,6 +66,8 @@ jobs:
         run: php tests/unit/canonical_capability_gateway.php
       - name: Property Bulk Intake approval and execution contract
         run: php tests/architecture/property_bulk_intake_workflow_contract.php
+      - name: Property Bulk CSV import validation
+        run: php tests/unit/property_bulk_csv_reader.php
       - name: Property Bulk Intake fail-closed normalization
         run: php tests/unit/property_bulk_intake_normalization.php
       - name: AI and CRON intent signature and review admission

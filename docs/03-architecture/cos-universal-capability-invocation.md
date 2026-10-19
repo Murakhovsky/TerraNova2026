@@ -167,3 +167,16 @@ fingerprint. До approved Action виконавець повторно порі
 ownership claim. Claim зберігається після успіху; автоматично
 звільняти його після ambiguous partial write заборонено. Це не
 замінює загальну dedupe-policy для Property, записаних поза Bulk.
+
+### CSV для користувача
+
+`/workspace/property/bulk` приймає UTF-8 CSV (до 64 КіБ, 1–10 рядків)
+через `POST /workspace/property/bulk/upload` із session-CSRF.
+Excel можна експортувати як CSV UTF-8. Перший рядок:
+`type_code,city,address,area_total` (перші три обов’язкові,
+площа необов’язкова). Підтримуються Excel CSV `;`, `,` і табуляція.
+Неочікувані колонки, формули, від'ємні числа, більше десяти
+рядків та не-UTF-8 відхиляються. Парсер **не** здійснює запис
+у Property: він передає дані у той самий `PropertyBulkIntakeService::stage`.
+Нативний формат XLSX поки не приймається: файл слід експортувати
+як CSV UTF-8. Це виключає небезпечний неаудитований Excel-парсер.

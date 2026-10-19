@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Web\Property;
 
+use App\Application\Property\PropertyBulkCsvReader;
 use App\Persistence\Property\PropertyBulkIntakeService;
 use App\Persistence\Property\PropertyBulkPlanProposalService;
 use App\Security\SessionCsrfValidator;
@@ -23,6 +24,7 @@ final readonly class PropertyBulkWorkspaceController
         private SessionCsrfValidator $csrf,
         private PropertyBulkIntakeService $intake,
         private PropertyBulkPlanProposalService $plans,
+        private PropertyBulkCsvReader $csv,
         private Environment $twig,
     ) {}
 
@@ -64,6 +66,30 @@ final readonly class PropertyBulkWorkspaceController
         } catch (Throwable $e) {
             error_log('cos.property.bulk.ui.stage '.$e->getMessage());
             return new Response('Сервіс імпорту недоступний.',500);
+        }
+    }
+
+    public function stageCsv(Request $request):Response
+    {
+        $actor=$this->tenants->current();
+        if ($actor===null || !$actor->isManager()) return new Response('Forbidden',403);
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token',400);
+        $file=$request->files->get('file');
+        if (!$file instanceof \Symfony\Component\HttpFoundation\File\UploadedFile
+            || !$file->isValid() || $file->getSize()===false || $file->getSize()>65536) {
+            return new Response('Потрібен коректний CSV-файл до 64 КіБ.',422);
+        }
+        try {
+            $bytes=file_get_contents($file->getPathname());
+            if(!is_string($bytes)) throw new DomainException('CSV file cannot be read.');
+            $items=$this->csv->parse($file->getClientOriginalName(),$bytes);
+            $batch=$this->intake->stage($actor,$items);
+            return new RedirectResponse('/workspace/property/bulk?batch='.$batch['batch_id'],303);
+        } catch (DomainException|\InvalidArgumentException $e) {
+            return new Response('CSV імпорт заблоковано: '.htmlspecialchars($e->getMessage(),ENT_QUOTES,'UTF-8'),422);
+        } catch (Throwable $e) {
+            error_log('cos.property.bulk.csv '.$e->getMessage());
+            return new Response('CSV імпорт недоступний.',500);
         }
     }
 
