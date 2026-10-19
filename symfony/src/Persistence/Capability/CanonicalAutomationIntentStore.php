@@ -70,7 +70,17 @@ final readonly class CanonicalAutomationIntentStore
                 throw new DomainException('Reused automation nonce has conflicting payload.');
             }
             $persisted=json_decode((string)$previous['payload_json'],true,32,JSON_THROW_ON_ERROR);
-            if($persisted!==$items) {
+            if(!is_array($persisted)||!array_is_list($persisted)) {
+                throw new DomainException('Reused automation nonce has invalid persisted content.');
+            }
+            $canonicalPersisted=[];
+            foreach($persisted as $item) {
+                if(!is_array($item)||array_is_list($item)) {
+                    throw new DomainException('Reused automation nonce has an invalid Property item.');
+                }
+                $canonicalPersisted[]=PropertyBulkIntakeService::canonicalize($item);
+            }
+            if($canonicalPersisted!==$items) {
                 throw new DomainException('Reused automation nonce has conflicting native content.');
             }
             return ['intent_id'=>$previous['intent_id'],'state'=>$previous['state'],
