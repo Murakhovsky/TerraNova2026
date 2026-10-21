@@ -22,6 +22,8 @@ final readonly class NavigationBuilder
         $administrationChildren = [];
         if ($role === 'admin') {
             $administrationChildren[] = ['key' => 'users', 'path' => 'admin/users', 'label' => 'Users', 'order' => 10];
+            $administrationChildren[] = ['key' => 'settings', 'path' => 'admin/settings', 'label' => 'Settings', 'order' => 40];
+            $administrationChildren[] = ['key' => 'llm-settings', 'path' => 'admin/settings/llm', 'label' => 'AI & LLM', 'order' => 50];
         }
         $administrationChildren[] = ['key' => 'content', 'path' => 'admin/content', 'label' => 'Content', 'order' => 20];
 
@@ -119,7 +121,7 @@ final readonly class NavigationBuilder
             'objects', 'listing', 'locations', 'submissions', 'spatial', 'catalog', 'properties' => 'properties',
             'cos', 'architecture', 'diagnostics', 'actions', 'approvals', 'agents', 'rules', 'events', 'audit' => 'cos',
             'analytics' => 'analytics',
-            'administration', 'content', 'users', 'settings', 'integrations' => 'administration',
+            'administration', 'content', 'users', 'settings', 'llm-settings', 'integrations' => 'administration',
             default => $active,
         };
     }
