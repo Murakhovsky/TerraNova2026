@@ -102,7 +102,7 @@ x-app-environment: &app-environment
 
 services:
   nginx:
-    image: ${COS_NGINX_IMAGE:-cos-nginx:local}
+    image: ${COS_NGINX_IMAGE:-cos-nginx:latest}
     build:
       context: .
       dockerfile: docker/symfony/nginx/Dockerfile
