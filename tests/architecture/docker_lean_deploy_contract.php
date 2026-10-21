@@ -2,6 +2,12 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
+$syntaxOutput = [];
+$syntaxCode = 0;
+exec('bash -n '.escapeshellarg($root.'/deploy/dev.sh').' 2>&1', $syntaxOutput, $syntaxCode);
+if ($syntaxCode !== 0) {
+    throw new RuntimeException('Lean deploy shell syntax invalid: '.implode("\n", $syntaxOutput));
+}
 $compose = (string) file_get_contents($root.'/docker-compose.yml');
 $deploy = (string) file_get_contents($root.'/deploy/dev.sh');
 $workflow = (string) file_get_contents($root.'/.github/workflows/runtime.yml');
