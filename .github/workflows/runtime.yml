@@ -953,12 +953,67 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-  deploy-dev:
-    name: Deploy main to AWS dev
+  publish-runtime-images:
+    name: Publish immutable COS images to GHCR
     needs: [runtime, federation-mysql, capital-markets-unit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build bundled frontend for immutable images
+        run: npm ci && npm run build
+      - uses: docker/setup-buildx-action@v3
+      - name: Authenticate scoped GitHub package token
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish PHP image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/symfony/php/Dockerfile
+          push: true
+          tags: ghcr.io/murakhovsky/terranova2026-php:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/Murakhovsky/TerraNova2026
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=cos-runtime-php-v1
+          cache-to: type=gha,scope=cos-runtime-php-v1,mode=max,ignore-error=true
+      - name: Publish Nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/symfony/nginx/Dockerfile
+          push: true
+          tags: ghcr.io/murakhovsky/terranova2026-nginx:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/Murakhovsky/TerraNova2026
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=cos-runtime-nginx-v1
+          cache-to: type=gha,scope=cos-runtime-nginx-v1,mode=max,ignore-error=true
+      - name: Verify published image tags exist
+        run: |
+          docker buildx imagetools inspect "ghcr.io/murakhovsky/terranova2026-php:$GITHUB_SHA" >/dev/null
+          docker buildx imagetools inspect "ghcr.io/murakhovsky/terranova2026-nginx:$GITHUB_SHA" >/dev/null
+
+  deploy-dev:
+    name: Deploy main to AWS dev
+    needs: [runtime, federation-mysql, capital-markets-unit, publish-runtime-images]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     environment: AWS TN2026
+    permissions:
+      contents: read
+      packages: read
     concurrency:
       group: cos-dev-deploy
       cancel-in-progress: false
@@ -970,6 +1025,8 @@ jobs:
       DEV_PATH: ${{ vars.DEV_PATH }}
       COMPANY_OS_DOMAIN: company-os.shop
       COMPANY_OS_HEALTHCHECK_URL: https://company-os.shop/health/dependencies
+      COS_PHP_IMAGE: ghcr.io/murakhovsky/terranova2026-php:${{ github.sha }}
+      COS_NGINX_IMAGE: ghcr.io/murakhovsky/terranova2026-nginx:${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -996,6 +1053,11 @@ jobs:
           printf '{"source_sha":"%s","execution_source_sha256":"%s","routes_sha256":"%s"}\n' \
             "$GITHUB_SHA" "$CODE_HASH" "$ROUTES_HASH" > .cos-deployment-attestation.json
           echo "Prepared commit-bound deployment attestation for $GITHUB_SHA"
+      - name: Require existing COS secrets and data initialization
+        run: |
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "test -s '$DEV_PATH/.env' || test -s '$DEV_PATH/.env.docker'" \
+            || { echo "::error::COS .env is missing on the VPS. Restore/initialize it before deploying."; exit 1; }
       - name: Sync repository
         run: |
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" "mkdir -p -- '$DEV_PATH'"
@@ -1005,9 +1067,24 @@ jobs:
             --exclude='public/uploads/' --exclude='public/docs/' \
             -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
             ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
-      - name: Deploy
+      - name: Temporary GHCR authentication on VPS
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "sudo -n docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
+      - name: Pull and deploy minimal COS containers
         run: |
           ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
-            "cd '$DEV_PATH' && bash deploy/dev.sh && bash deploy/configure-company-os-http.sh '$COMPANY_OS_DOMAIN' 127.0.0.1:8081 && bash deploy/configure-dev-tls.sh '$COMPANY_OS_DOMAIN' 127.0.0.1:8081"
+            "cd '$DEV_PATH' && COS_DEPLOY_MODE=registry COS_DEPLOY_TIER=core COS_PHP_IMAGE='$COS_PHP_IMAGE' COS_NGINX_IMAGE='$COS_NGINX_IMAGE' bash deploy/dev.sh && bash deploy/configure-company-os-http.sh '$COMPANY_OS_DOMAIN' 127.0.0.1:8081 && bash deploy/configure-dev-tls.sh '$COMPANY_OS_DOMAIN' 127.0.0.1:8081"
+      - name: Logout from GHCR on VPS
+        if: always()
+        run: |
+          if [[ -s ~/.ssh/dev_deploy_key ]]; then
+            ssh -o ConnectTimeout=10 -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+              "sudo -n docker logout ghcr.io >/dev/null 2>&1 || true" || true
+          fi
       - name: External health
         run: curl --fail --show-error --silent --location --retry 3 --retry-delay 2 --retry-connrefused "$COMPANY_OS_HEALTHCHECK_URL" > /dev/null
