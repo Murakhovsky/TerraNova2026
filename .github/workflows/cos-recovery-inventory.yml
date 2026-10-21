@@ -1,0 +1,63 @@
+name: COS MySQL Recovery Inventory (read-only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cos-recovery-inventory.yml'
+      - 'deploy/inspect-cos-recovery.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    name: Inventory replacement COS host and AWS snapshots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            [[ -n "${!n:-}" ]] || { echo "::error::Missing $n"; exit 1; }
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/recovery_key
+          chmod 600 ~/.ssh/recovery_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Inspect actual COS database and backups read-only
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            -i ~/.ssh/recovery_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" < deploy/inspect-cos-recovery.sh
+      - name: Find Lightsail snapshots when AWS API credentials are configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" ]]; then
+            echo "AWS API credentials unavailable to Environment. Lightsail snapshots must be checked in AWS console."
+            exit 0
+          fi
+          aws sts get-caller-identity --output json >/dev/null
+          for region in eu-central-1 eu-west-1 eu-west-2; do
+            echo "Region: $region"
+            aws lightsail get-instance-snapshots --region "$region" --query 'instanceSnapshots[].[name,createdAt,state]' --output table || true
+            aws lightsail get-disk-snapshots --region "$region" --query 'diskSnapshots[].[name,createdAt,state]' --output table || true
+            aws lightsail get-disks --region "$region" --query 'disks[].[name,sizeInGb,state]' --output table || true
+          done

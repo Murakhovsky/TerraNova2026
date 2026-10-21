@@ -102,7 +102,6 @@ x-app-environment: &app-environment
 
 services:
   nginx:
-    image: ${COS_NGINX_IMAGE:-cos-nginx:latest}
     build:
       context: .
       dockerfile: docker/symfony/nginx/Dockerfile
@@ -125,7 +124,7 @@ services:
     networks: [frontend]
 
   php:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     build:
       context: .
       dockerfile: docker/symfony/php/Dockerfile
@@ -152,7 +151,7 @@ services:
     networks: [frontend, backend]
 
   worker:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -167,7 +166,7 @@ services:
     networks: [backend]
 
   engineering-worker:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -185,7 +184,7 @@ services:
     networks: [frontend, backend]
 
   engineering-immediate-worker:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -203,7 +202,7 @@ services:
     networks: [frontend, backend]
 
   kernel-worker:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -220,7 +219,7 @@ services:
   # OFF by default. Explicit profile only; never enables market streaming.
   cm-stream-sweeper:
     profiles: [cm-stream-sweeper]
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -237,7 +236,7 @@ services:
   # Does not create feeds, grant credentials, or enable live trading.
   cm-pool-watchdog:
     profiles: [cm-pool-watchdog]
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -270,7 +269,7 @@ services:
   # OFF by default: explicit per-tenant, pre-approved source fleet only.
   cm-stream-fleet:
     profiles: [cm-stream-fleet]
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: on-failure:3
     init: true
     stop_grace_period: 45s
@@ -303,7 +302,7 @@ services:
 
   cm-instrument-trust-sweeper:
     profiles: [cm-instrument-trust-sweeper]
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -339,7 +338,7 @@ services:
   # Uses only Platform Notification -> durable outbox. No raw provider data in alerts.
   cm-stream-ops-monitor:
     profiles: [cm-stream-ops-monitor]
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -377,7 +376,7 @@ services:
   # P1 Bybit contract status is checked by authoritative REST; no trades.
   cm-derivatives-lifecycle:
     profiles: [cm-derivatives-lifecycle]
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     init: true
     restart: unless-stopped
     stop_grace_period: 30s
@@ -415,7 +414,7 @@ services:
   # Opt-in one-source / one-contract WS worker; source lease rejects duplicates.
   cm-derivatives-stream:
     profiles: [cm-derivatives-stream]
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     init: true
     restart: unless-stopped
     stop_grace_period: 45s
@@ -440,7 +439,7 @@ services:
     networks: [frontend, backend]
 
   spatial-worker:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -460,7 +459,7 @@ services:
   # Compose provides process restart, stop signalling and internet egress.
   # Run: docker compose --profile l2 up -d l2-stream
   l2-stream:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     build:
       context: .
       dockerfile: docker/symfony/php/Dockerfile
@@ -493,7 +492,7 @@ services:
     networks: [frontend, backend]
 
   integration-worker:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -508,7 +507,7 @@ services:
     networks: [backend]
 
   telegram-worker:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
@@ -523,7 +522,7 @@ services:
     networks: [backend]
 
   scheduler:
-    image: ${COS_PHP_IMAGE:-cos-symfony-php:local}
+    image: cos-symfony-php:local
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
