@@ -1,0 +1,62 @@
+name: COS Fresh Database Bootstrap (single-use)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cos-fresh-database-bootstrap.yml'
+      - 'deploy/bootstrap-cos-fresh-mysql.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Initialize NEW COS MySQL and deploy core runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment: AWS TN2026
+    concurrency:
+      group: cos-dev-deploy
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            [[ -n "${!n:-}" ]] || { echo "::error::Missing $n"; exit 1; }
+          done
+          [[ "$DEV_PATH" == /opt/cos ]] || { echo "::error::Unexpected host path"; exit 2; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/cos_boot_key
+          chmod 600 ~/.ssh/cos_boot_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Synchronize reviewed deployment code without overwriting secrets or files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -az --delete \
+            --exclude='.git/' --exclude='.env' --exclude='.env.docker' \
+            --exclude='.cos-fresh-db-bootstrap-in-progress' \
+            --exclude='.cos-fresh-db-bootstrap-completed' \
+            --exclude='vendor/' --exclude='node_modules/' --exclude='tmp/' \
+            --exclude='public/uploads/' --exclude='public/docs/' \
+            -e "ssh -i ~/.ssh/cos_boot_key -p $DEV_PORT" \
+            ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
+      - name: Initialize NEW schema and minimal COS runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            -i ~/.ssh/cos_boot_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" < deploy/bootstrap-cos-fresh-mysql.sh

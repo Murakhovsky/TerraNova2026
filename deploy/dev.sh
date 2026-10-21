@@ -27,6 +27,12 @@ else
   exit 23
 fi
 
+# Concurrent main deployments must not interfere with first-run database migrations.
+if [[ -f .cos-fresh-db-bootstrap-in-progress && "${COS_NEW_DB_BOOTSTRAP:-0}" != "1" ]]; then
+  echo "Fresh database bootstrap is not complete; refusing concurrent deployment." >&2
+  exit 55
+fi
+
 COMPOSE=("${DOCKER[@]}" compose --env-file "$ENV_FILE")
 
 generate_secret() {
