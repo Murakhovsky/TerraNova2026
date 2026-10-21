@@ -1,0 +1,51 @@
+name: COS Node and OpenCode CLI Bootstrap (one-off)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cos-node-opencode-once.yml'
+      - 'deploy/install-cos-node-opencode.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Install Node 24 LTS and OpenCode CLI on COS host
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: AWS TN2026
+    concurrency:
+      group: cos-node-opencode-bootstrap
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH credentials safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            if [[ -z "$(printenv "$name" || true)" ]]; then echo "::error::Missing $name"; exit 1; fi
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]+$ ]] || { echo "::error::Invalid DEV_PORT"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/node_opencode_key
+          chmod 600 ~/.ssh/node_opencode_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Install signed Node.js and OpenCode
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i ~/.ssh/node_opencode_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s < deploy/install-cos-node-opencode.sh
+      - name: Report
+        run: echo "Node/npm and OpenCode CLI installed; ChatGPT login and COS deployment remain separate operations."
