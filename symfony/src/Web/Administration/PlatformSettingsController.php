@@ -97,7 +97,7 @@ final readonly class PlatformSettingsController
             'api_key_configured' => is_string($secret) && trim($secret) !== '',
             'api_key_suffix' => is_string($secret) && strlen($secret) >= 4 ? substr($secret, -4) : '',
             'chatgpt_plan_enabled' => $this->chatgptOAuth->configured(),
-            'opencode_enabled' => $this->opencode->configured(),
+            'opencode_enabled' => $this->opencode->authorizedFor($organizationId, (string) $tenant->userId()->value()),
             'opencode_result' => $opencodeResult,
             'opencode_error' => $opencodeError,
             'chatgpt_plan_connected' => is_string($this->settings->secret(
@@ -136,8 +136,8 @@ final readonly class PlatformSettingsController
         if (!$this->csrf->isValid($request)) {
             return new Response('Invalid CSRF token.', Response::HTTP_FORBIDDEN);
         }
-        if (!$this->opencode->configured()) {
-            return $this->llm($request, null, 'OpenCode не активовано на сервері COS.');
+        if (!$this->opencode->authorizedFor($tenant->organizationId()->value(), (string) $tenant->userId()->value())) {
+            return $this->llm($request, null, 'OpenCode не налаштовано для вашого COS-акаунта.');
         }
 
         $session = $request->getSession();

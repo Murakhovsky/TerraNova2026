@@ -15,7 +15,7 @@ if($wrongHost->configured())throw new RuntimeException('SSRF host guard failed.'
 $noSecret=new OpenCodeStructuredLlmClient(true,'http://127.0.0.1:4096','opencode','');
 if($noSecret->configured())throw new RuntimeException('Missing basic auth accepted.');
 $calls=0;
-$client=new OpenCodeStructuredLlmClient(true,'http://127.0.0.1:4096','opencode','secret','127.0.0.1',30,
+$client=new OpenCodeStructuredLlmClient(true,'http://127.0.0.1:4096','opencode','secret','127.0.0.1',30,'tenant-a','admin-1',
  static function(string $url,string $user,string $password,string $body,int $timeout)use(&$calls):array{
    ++$calls;
    $req=json_decode($body,true,512,JSON_THROW_ON_ERROR);
@@ -28,12 +28,12 @@ $client=new OpenCodeStructuredLlmClient(true,'http://127.0.0.1:4096','opencode',
 $response=$client->complete($make(model:'openai/gpt-test'));
 if($response->output['answer']!=='COS OK'||$response->provider!=='opencode'||$response->costAmount!==null||$calls!==1)
  throw new RuntimeException('OpenCode adapter success mapping failed.');
-foreach ([$make('agent.engineering'),$make('opencode.test',null),$make('opencode.test','admin-1',null)] as $invalid) {
+foreach ([$make('agent.engineering'),$make('opencode.test',null),$make('opencode.test','admin-1',null),$make('opencode.test','intruder'),$make('opencode.test','admin-1','tenant-b')] as $invalid) {
  try{$client->complete($invalid);throw new RuntimeException('Unprivileged OpenCode usage allowed.');}
  catch(LlmProviderException $e){if($e->retryable)throw $e;}
 }
 if($calls!==1)throw new RuntimeException('Blocked request reached OpenCode.');
-$bad=new OpenCodeStructuredLlmClient(true,'http://127.0.0.1:4096','opencode','secret','127.0.0.1',30,
+$bad=new OpenCodeStructuredLlmClient(true,'http://127.0.0.1:4096','opencode','secret','127.0.0.1',30,'tenant-a','admin-1',
  static fn():array=>[200,'{"data":{"text":"{\"unexpected\":true}"}}']);
 try{$bad->complete($make());throw new RuntimeException('Missing schema requirement accepted.');}
 catch(LlmProviderException $e){if($e->retryable)throw $e;}

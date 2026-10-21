@@ -11,6 +11,8 @@ parameters:
   env(COS_OPENCODE_ALLOWED_HOST): '127.0.0.1'
   env(COS_OPENCODE_SERVER_USERNAME): 'opencode'
   env(COS_OPENCODE_SERVER_PASSWORD): ''
+  env(COS_OPENCODE_ALLOWED_ORGANIZATION_ID): ''
+  env(COS_OPENCODE_ALLOWED_ACTOR_ID): ''
   env(N8N_WEBHOOK_SECRET): ''
   env(COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY): '0'
   env(COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY): '0'
@@ -1475,6 +1477,8 @@ services:
       $allowedHost: '%env(COS_OPENCODE_ALLOWED_HOST)%'
       $username: '%env(COS_OPENCODE_SERVER_USERNAME)%'
       $password: '%env(COS_OPENCODE_SERVER_PASSWORD)%'
+      $allowedOrganizationId: '%env(COS_OPENCODE_ALLOWED_ORGANIZATION_ID)%'
+      $allowedActorId: '%env(COS_OPENCODE_ALLOWED_ACTOR_ID)%'
 
   Infrastructure\Llm\OpenAiResponsesStructuredLlmClient:
     arguments:

@@ -23,6 +23,8 @@ final readonly class OpenCodeStructuredLlmClient implements StructuredLlmClientI
         private string $password = '',
         private string $allowedHost = '127.0.0.1',
         private int $timeoutSeconds = 90,
+        private string $allowedOrganizationId = '',
+        private string $allowedActorId = '',
         private ?Closure $transport = null,
     ) {}
 
@@ -41,14 +43,23 @@ final readonly class OpenCodeStructuredLlmClient implements StructuredLlmClientI
             && !isset($url['path']) && !isset($url['query']) && !isset($url['fragment']);
     }
 
+    public function authorizedFor(string $organizationId, string $actorId): bool
+    {
+        return $this->configured()
+            && $this->allowedOrganizationId !== ''
+            && $this->allowedActorId !== ''
+            && hash_equals($this->allowedOrganizationId, $organizationId)
+            && hash_equals($this->allowedActorId, $actorId);
+    }
+
     public function complete(StructuredLlmRequest $request): StructuredLlmResponse
     {
         if ($request->useCase !== 'opencode.test'
             || $request->actorId === null || $request->organizationId === null) {
             throw new LlmProviderException('opencode', false, 'OpenCode is limited to an authenticated tenant admin manual test.');
         }
-        if (!$this->configured()) {
-            throw new LlmProviderException('opencode', false, 'OpenCode bridge is not enabled or configured.');
+        if (!$this->authorizedFor($request->organizationId, $request->actorId)) {
+            throw new LlmProviderException('opencode', false, 'OpenCode is not enabled for this tenant administrator.');
         }
 
         try {

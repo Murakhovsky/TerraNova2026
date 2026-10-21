@@ -26,6 +26,8 @@ kind: architecture
    - `COS_OPENCODE_ALLOWED_HOST=127.0.0.1` або приватний sidecar host
    - `COS_OPENCODE_SERVER_USERNAME=opencode`
    - `COS_OPENCODE_SERVER_PASSWORD=<не комітити; той самий секрет, що на сервері OpenCode>`
+   - `COS_OPENCODE_ALLOWED_ORGANIZATION_ID=<ID твого tenant у COS>`
+   - `COS_OPENCODE_ALLOWED_ACTOR_ID=<ID твого користувача в COS>`
 6. Відкрити `/admin/settings/llm` → «OpenCode: тест через ChatGPT-підписку» → «Тестувати OpenCode».
 
 Авторизацію OpenCode в COS не копіюємо. Її зберігає OpenCode під локальним обліковим записом. Не монтувати директорію з credential-файлом в основний COS контейнер.
