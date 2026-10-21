@@ -12,7 +12,16 @@ fi
 if docker info >/dev/null 2>&1; then
   DOCKER=(docker)
 elif command -v sudo >/dev/null 2>&1 && sudo -n docker info >/dev/null 2>&1; then
-  DOCKER=(sudo -n docker)
+  # sudo resets untrusted environment variables by default. Restore ONLY
+  # validated image overrides for the root-owned Docker Compose process.
+  DOCKER=(sudo -n env)
+  if [[ -n "${COS_PHP_IMAGE:-}" ]]; then
+    DOCKER+=("COS_PHP_IMAGE=$COS_PHP_IMAGE")
+  fi
+  if [[ -n "${COS_NGINX_IMAGE:-}" ]]; then
+    DOCKER+=("COS_NGINX_IMAGE=$COS_NGINX_IMAGE")
+  fi
+  DOCKER+=(docker)
 else
   echo "Deploy user cannot access Docker." >&2
   exit 21
@@ -121,6 +130,13 @@ esac
 
 "${COMPOSE[@]}" config --quiet
 if [[ "$COS_DEPLOY_MODE" == registry ]]; then
+  # Ensure sudo did not silently revert Compose image substitutions to local tags.
+  if ! "${COMPOSE[@]}" config --images | grep -Fxq -- "$COS_PHP_IMAGE"; then
+    echo "Registry PHP image was not resolved by Docker Compose." >&2; exit 56
+  fi
+  if ! "${COMPOSE[@]}" config --images | grep -Fxq -- "$COS_NGINX_IMAGE"; then
+    echo "Registry Nginx image was not resolved by Docker Compose." >&2; exit 56
+  fi
   echo "Pulling immutable COS images, not building on this VPS."
   "${COMPOSE[@]}" pull php nginx
 else
