@@ -45,13 +45,22 @@ if command -v pgrep >/dev/null 2>&1 && pgrep -u "$(id -u)" -x opencode >/dev/nul
   echo "OpenCode is currently running for the SSH user. Exit OpenCode TUI and rerun this workflow." >&2
   exit 17
 fi
-sudo -n env npm_config_update_notifier=false npm uninstall --global opencode-ai @opencode/cli
-sudo -n env npm_config_update_notifier=false npm install --global --no-audit --no-fund \
-  --allow-scripts=@opencode/cli @opencode/cli
+# Accept both '2.1.2' and current CLI output 'opencode v2.1.2'.
+# If an earlier attempt installed V2 but validation failed, do not reinstall it.
+version_is_v2() {
+  [[ "$1" =~ (^|[[:space:]])v?2\.[0-9]+\.[0-9]+($|[[:space:]]) ]]
+}
+if command -v opencode >/dev/null 2>&1 && version_is_v2 "$(opencode --version)"; then
+  echo "OpenCode V2 is already installed; skipping npm replacement."
+else
+  sudo -n env npm_config_update_notifier=false npm uninstall --global opencode-ai @opencode/cli
+  sudo -n env npm_config_update_notifier=false npm install --global --no-audit --no-fund \
+    --allow-scripts=@opencode/cli @opencode/cli
+fi
 
 command -v opencode >/dev/null || { echo "OpenCode binary missing" >&2; exit 7; }
 OPENCODE_VERSION="$(opencode --version)"
-if [[ "$OPENCODE_VERSION" != 2.* ]]; then
+if ! version_is_v2 "$OPENCODE_VERSION"; then
   echo "Expected OpenCode V2, detected '$OPENCODE_VERSION'" >&2; exit 8
 fi
 echo "VERIFY opencode=$OPENCODE_VERSION"
