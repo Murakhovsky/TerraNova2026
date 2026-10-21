@@ -74,6 +74,7 @@ for img in "$COS_PHP_IMAGE" "$COS_NGINX_IMAGE" mysql:8.4 redis:7.4-alpine dungla
   sudo -n docker image inspect "$img" >/dev/null || { echo "Image not prestaged: $img" >&2; exit 11; }
 done
 
+# Resume previously initialized secrets after fixing sudo GHCR image forwarding.
 echo "MIGRATING_NEW_COS_DATABASE"
 bash deploy/dev.sh
 echo "COS_DOCKER_HEALTH_OK"
