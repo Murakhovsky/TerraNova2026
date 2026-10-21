@@ -13,7 +13,7 @@ foreach (['cos_web_platform_settings_opencode_test','/admin/settings/llm/opencod
  if(!str_contains($routes,$s))throw new RuntimeException('OpenCode route missing '.$s);
 foreach (['isValid($request)',"useCase: 'opencode.test'",'cos.opencode.last_test','organizationId: $tenant->organizationId()->value()'] as $s)
  if(!str_contains($ctrl,$s))throw new RuntimeException('OpenCode manual access control missing '.$s);
-foreach (['/api/experimental/generate',"request->useCase !== 'opencode.test'",'allowedHost','CURLOPT_FOLLOWLOCATION','data\'][\'text'] as $s)
+foreach (['/api/experimental/generate', "request->useCase !== 'opencode.test'", 'allowedHost', 'CURLOPT_FOLLOWLOCATION', "['data']['text']"] as $s)
  if(!str_contains($client,$s))throw new RuntimeException('OpenCode transport boundary missing '.$s);
 foreach (['opencode_enabled','Тестувати OpenCode','opencode_result','opencode_error'] as $s)
  if(!str_contains($view,$s))throw new RuntimeException('OpenCode UX missing '.$s);
