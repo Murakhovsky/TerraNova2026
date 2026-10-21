@@ -2,7 +2,7 @@ name: COS VPS Ubuntu Bootstrap (one-off)
 on:
   push:
     branches:
-      - ops/cos-vps-bootstrap-20261021
+      - main
     paths:
       - 'deploy/bootstrap-cos-ubuntu.sh'
       - '.github/workflows/cos-vps-bootstrap-once.yml'
