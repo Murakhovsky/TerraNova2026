@@ -1,8 +1,22 @@
+# Ignore development/test content that no production Dockerfile COPY needs
 .git
+.github
 .idea
 .env
 .env.*
 *.pem
-node_modules
-tmp
-vendor
+**/node_modules
+**/vendor
+**/var/cache
+**/var/log
+**/var/sessions
+/tmp
+/tests
+/docs
+/archive
+/output
+/frontend
+/deploy
+/public/uploads
+/public/docs
+/symfony/public/uploads
