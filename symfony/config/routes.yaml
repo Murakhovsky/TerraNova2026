@@ -2461,6 +2461,12 @@ cos_chatgpt_plan_test:
   controller: App\Web\Administration\ChatGptPlanConnectionController::test
   methods: [POST]
 
+# Admin-only OpenCode V2 stateless test. Not an alternative login or autonomous agent.
+cos_web_platform_settings_opencode_test:
+  path: /admin/settings/llm/opencode/test
+  controller: App\Web\Administration\PlatformSettingsController::testOpenCode
+  methods: [POST]
+
 cos_web_platform_settings_llm_save:
   path: /admin/settings/llm
   controller: App\Web\Administration\PlatformSettingsController::saveLlm

@@ -153,6 +153,31 @@
         </twig:CosStickyActions>
     </form>
 
+    <section class="cos-card cos-pattern-stack" aria-label="OpenCode integration test">
+        <h2>OpenCode: тест через ChatGPT-підписку</h2>
+        <p>Особистий режим адміністратора. COS викликає локальний OpenCode V2 Server через статичний Generate API. Не надає доступ до COS Actions, Shell або файлів.</p>
+        {% if not settings.opencode_enabled %}
+            <p id="opencode-test-unavailable">З'єднання ще не налаштовано на сервері COS: потрібні COS_OPENCODE_ENABLED, COS_OPENCODE_ENDPOINT і пароль OpenCode Server.</p>
+        {% endif %}
+        <form class="cos-pattern-stack" method="post" action="/admin/settings/llm/opencode/test">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <label class="cos-field"><span>Модель OpenCode (необов'язково)</span>
+                <input class="cos-input" name="model" maxlength="128" placeholder="За замовчуванням OpenCode або provider/model"></label>
+            <label class="cos-field"><span>Тестовий запит</span>
+                <input class="cos-input" name="prompt" maxlength="500" value="Привіт! Чи працює OpenCode у COS?" required></label>
+            <button type="submit" class="cos-button cos-button--primary" {% if not settings.opencode_enabled %}disabled aria-describedby="opencode-test-unavailable"{% endif %}>Тестувати OpenCode</button>
+        </form>
+        {% if settings.opencode_error %}
+            <twig:CosAlert title="OpenCode: помилка" copy="{{ settings.opencode_error }}" tone="warning" />
+        {% endif %}
+        {% if settings.opencode_result is not null %}
+            <div class="cos-card" aria-label="OpenCode test result">
+                <strong>Відповідь моделі</strong>
+                <p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ settings.opencode_result }}</p>
+            </div>
+        {% endif %}
+    </section>
+
     <section class="cos-card" aria-label="ChatGPT plan test connection">
         <h2>ChatGPT Plus: тестове підключення</h2>
         <p>Для віддаленого сайту COS потрібен дозвіл OpenAI. Підключення прив'язане до поточного COS-користувача; це не заміна входу в COS.</p>
