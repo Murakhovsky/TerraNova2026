@@ -1065,6 +1065,8 @@ jobs:
             --exclude='.git/' --exclude='.env' --exclude='.env.docker' \
             --exclude='vendor/' --exclude='node_modules/' --exclude='tmp/' \
             --exclude='public/uploads/' --exclude='public/docs/' \
+            --exclude='.cos-fresh-db-bootstrap-in-progress' \
+            --exclude='.cos-fresh-db-bootstrap-completed' \
             -e "ssh -i ~/.ssh/dev_deploy_key -p $DEV_PORT" \
             ./ "$DEV_USER@$DEV_HOST:$DEV_PATH/"
       - name: Temporary GHCR authentication on VPS
