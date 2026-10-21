@@ -1,0 +1,54 @@
+name: COS VPS Ubuntu Bootstrap (one-off)
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'deploy/bootstrap-cos-ubuntu.sh'
+      - '.github/workflows/cos-vps-bootstrap-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Prepare Ubuntu Docker Host
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: AWS TN2026
+    concurrency:
+      group: cos-vps-bootstrap
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure SSH without disclosing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for var in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            if [[ -z "${!var:-}" ]]; then echo "::error::Missing $var"; exit 1; fi
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]+$ ]] || { echo "::error::Invalid SSH port"; exit 1; }
+          [[ "$DEV_PATH" =~ ^/[A-Za-z0-9_./-]+$ ]] || { echo "::error::Invalid DEV_PATH"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/cos_bootstrap_key
+          chmod 600 ~/.ssh/cos_bootstrap_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Prepare clean Ubuntu host via AWS TN2026 SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i ~/.ssh/cos_bootstrap_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$DEV_PATH" < deploy/bootstrap-cos-ubuntu.sh
+      - name: Complete
+        run: echo 'Prepared server; COS application and MySQL not deployed.'
