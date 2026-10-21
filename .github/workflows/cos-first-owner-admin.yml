@@ -1,0 +1,59 @@
+name: COS First Owner Admin (one-off)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cos-first-owner-admin.yml'
+      - 'deploy/cos-bootstrap-owner-admin.php'
+      - 'deploy/provision-cos-first-admin.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    name: Create first COS organization administrator
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    environment: AWS TN2026
+    concurrency:
+      group: cos-dev-deploy
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate and configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            [[ -n "${!n:-}" ]] || { echo "::error::Missing $n"; exit 1; }
+          done
+          [[ "$DEV_PATH" == /opt/cos ]] || exit 2
+          php -l deploy/cos-bootstrap-owner-admin.php
+          bash -n deploy/provision-cos-first-admin.sh
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/cos_owner_admin_key
+          chmod 600 ~/.ssh/cos_owner_admin_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts
+      - name: Transfer one-time bootstrapping scripts without deleting server state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -az -e "ssh -i ~/.ssh/cos_owner_admin_key -p $DEV_PORT" \
+            deploy/cos-bootstrap-owner-admin.php deploy/provision-cos-first-admin.sh \
+            "$DEV_USER@$DEV_HOST:$DEV_PATH/deploy/"
+      - name: Provision COS administrator without disclosing password
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            -i ~/.ssh/cos_owner_admin_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "bash '$DEV_PATH/deploy/provision-cos-first-admin.sh'"
