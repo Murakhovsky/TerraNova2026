@@ -35,11 +35,27 @@ fi
 command -v npm >/dev/null || { echo "npm missing after Node installation" >&2; exit 6; }
 echo "VERIFY node=$(node --version) npm=$(npm --version)"
 
-echo "STEP 2: Install OpenCode CLI v1 without credentials or server."
-# OpenCode v1's package is opencode-ai; v2's is @opencode/cli.
-sudo -n env npm_config_update_notifier=false npm install --global --no-audit --no-fund opencode-ai
+echo "STEP 2: Migrate the GLOBAL OpenCode executable from V1 to V2."
+# V1 opencode-ai and V2 @opencode/cli both install an 'opencode' binary.
+# Only npm's global installations are changed. User-owned OpenCode
+# credentials, conversations and ~/.config/opencode are NEVER touched.
+# npm 11 blocks postinstall scripts unless the package is explicitly allowed.
+# V2 needs its own postinstall script to select the native executable.
+if command -v pgrep >/dev/null 2>&1 && pgrep -u "$(id -u)" -x opencode >/dev/null 2>&1; then
+  echo "OpenCode is currently running for the SSH user. Exit OpenCode TUI and rerun this workflow." >&2
+  exit 17
+fi
+sudo -n env npm_config_update_notifier=false npm uninstall --global opencode-ai @opencode/cli
+sudo -n env npm_config_update_notifier=false npm install --global --no-audit --no-fund \
+  --allow-scripts=@opencode/cli @opencode/cli
+
 command -v opencode >/dev/null || { echo "OpenCode binary missing" >&2; exit 7; }
-echo "VERIFY opencode=$(opencode --version)"
+OPENCODE_VERSION="$(opencode --version)"
+if [[ "$OPENCODE_VERSION" != 2.* ]]; then
+  echo "Expected OpenCode V2, detected '$OPENCODE_VERSION'" >&2; exit 8
+fi
+echo "VERIFY opencode=$OPENCODE_VERSION"
 echo "VERIFY location=$(command -v opencode)"
-echo "VERIFY no OpenCode server was started."
+echo "VERIFY version=V2, CLI only; no OpenCode server started."
+echo "VERIFY ChatGPT credentials and user configuration remain untouched."
 echo "NODE_OPENCODE_BOOTSTRAP_SUCCESS"
