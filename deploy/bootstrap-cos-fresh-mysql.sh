@@ -92,6 +92,7 @@ for img in "$COS_PHP_IMAGE" "$COS_NGINX_IMAGE" mysql:8.4 redis:7.4-alpine dungla
 done
 
 # Resume previously initialized secrets after fixing sudo GHCR image forwarding.
+# Safe retry after fixing SIGPIPE in registry image validation.
 echo "MIGRATING_NEW_COS_DATABASE"
 bash deploy/dev.sh
 echo "COS_DOCKER_HEALTH_OK"
