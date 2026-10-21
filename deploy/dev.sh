@@ -44,6 +44,11 @@ ensure_secret() {
   if [[ -n "$current" ]]; then
     return
   fi
+  # Never silently replace encryption/runtime keys on a restored production host.
+  if [[ "${COS_DEPLOY_MODE:-build}" == registry ]]; then
+    echo "Missing required $key in existing runtime env; refusing to regenerate production credentials." >&2
+    exit 54
+  fi
 
   local value
   value="$(generate_secret)"
