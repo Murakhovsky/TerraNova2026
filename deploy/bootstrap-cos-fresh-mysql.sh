@@ -65,6 +65,7 @@ else
   echo 'RESUME_EXISTING_NEW_DATABASE_BOOTSTRAP'
 fi
 
+export COS_NEW_DB_BOOTSTRAP=1
 export COS_DEPLOY_MODE=registry COS_DEPLOY_TIER=core
 export COS_PHP_IMAGE=ghcr.io/murakhovsky/terranova2026-php:ee326a0d205e5a9d39e2017e11690d02aa541a52
 export COS_NGINX_IMAGE=ghcr.io/murakhovsky/terranova2026-nginx:ee326a0d205e5a9d39e2017e11690d02aa541a52
