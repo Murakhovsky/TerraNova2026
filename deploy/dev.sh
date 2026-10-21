@@ -130,12 +130,18 @@ esac
 
 "${COMPOSE[@]}" config --quiet
 if [[ "$COS_DEPLOY_MODE" == registry ]]; then
-  # Ensure sudo did not silently revert Compose image substitutions to local tags.
-  if ! "${COMPOSE[@]}" config --images | grep -Fxq -- "$COS_PHP_IMAGE"; then
-    echo "Registry PHP image was not resolved by Docker Compose." >&2; exit 56
+  # Capture the entire output first. A grep -q pipeline under pipefail can
+  # report SIGPIPE instead of a match when Compose lists many worker images.
+  RESOLVED_IMAGES="$("${COMPOSE[@]}" config --images)"
+  if ! grep -Fxq -- "$COS_PHP_IMAGE" <<< "$RESOLVED_IMAGES"; then
+    echo "Registry PHP image was not resolved by Docker Compose." >&2
+    printf 'Image list: %s\n' "$RESOLVED_IMAGES" >&2
+    exit 56
   fi
-  if ! "${COMPOSE[@]}" config --images | grep -Fxq -- "$COS_NGINX_IMAGE"; then
-    echo "Registry Nginx image was not resolved by Docker Compose." >&2; exit 56
+  if ! grep -Fxq -- "$COS_NGINX_IMAGE" <<< "$RESOLVED_IMAGES"; then
+    echo "Registry Nginx image was not resolved by Docker Compose." >&2
+    printf 'Image list: %s\n' "$RESOLVED_IMAGES" >&2
+    exit 56
   fi
   echo "Pulling immutable COS images, not building on this VPS."
   "${COMPOSE[@]}" pull php nginx
