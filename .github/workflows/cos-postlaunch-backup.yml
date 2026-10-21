@@ -1,0 +1,54 @@
+name: COS Postlaunch Acceptance and Backup
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/cos-mysql-backup.sh'
+      - 'deploy/setup-cos-postlaunch-backup.sh'
+      - '.github/workflows/cos-postlaunch-backup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    name: Verify deployed database and configure local backups
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: AWS TN2026
+    concurrency:
+      group: cos-dev-deploy
+      cancel-in-progress: false
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      DEV_PATH: ${{ vars.DEV_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY DEV_PATH; do
+            [[ -n "${!n:-}" ]] || { echo "::error::Missing $n"; exit 1; }
+          done
+          [[ "$DEV_PATH" == /opt/cos ]] || exit 2
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/cos_key
+          chmod 600 ~/.ssh/cos_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts
+      - name: Validate scripts and transfer without deleting existing state
+        run: |
+          set -euo pipefail
+          bash -n deploy/cos-mysql-backup.sh deploy/setup-cos-postlaunch-backup.sh
+          rsync -az -e "ssh -i ~/.ssh/cos_key -p $DEV_PORT" \
+            deploy/cos-mysql-backup.sh deploy/setup-cos-postlaunch-backup.sh \
+            "$DEV_USER@$DEV_HOST:$DEV_PATH/deploy/"
+      - name: Check schema and admin; install backup timer; take first SQL backup
+        run: |
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -i ~/.ssh/cos_key -p "$DEV_PORT" \
+            "$DEV_USER@$DEV_HOST" "bash '$DEV_PATH/deploy/setup-cos-postlaunch-backup.sh'"
