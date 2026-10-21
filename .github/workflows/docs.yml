@@ -157,6 +157,11 @@ jobs:
           ssh-keyscan -p "$DEV_PORT" -H "$DEV_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Require initialized COS on destination host
+        run: |
+          ssh -i ~/.ssh/dev_deploy_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "test -s '$DEV_PATH/.env' || test -s '$DEV_PATH/.env.docker'" \
+            || { echo "::error::COS runtime not initialized yet; refusing docs/tls deployment."; exit 1; }
       - name: Publish documentation outside application runtime
         run: |
           REMOTE_STAGE="/tmp/cos-docs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
