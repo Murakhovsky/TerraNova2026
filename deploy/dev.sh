@@ -84,6 +84,7 @@ if [[ -z "$engineering_repo" || -z "$engineering_token" ]]; then
   echo "Principal Architect / Developer / Reviewer stages that require authoritative GitHub access will stop as STALLED." >&2
 fi
 
+# SHA-pinned GHCR images for VPS; the legacy local build mode remains available.
 COS_DEPLOY_MODE="${COS_DEPLOY_MODE:-build}"
 COS_DEPLOY_TIER="${COS_DEPLOY_TIER:-full}"
 case "$COS_DEPLOY_MODE" in
@@ -189,44 +190,12 @@ fi
 
 # Replace application and worker containers, but deliberately leave nginx alive.
 if [[ "$COS_DEPLOY_TIER" == core ]]; then
+  # Minimal website, queue, persistence and realtime. Specialist workers are disabled.
   RUNTIME_SERVICES=(php worker)
   DEFERRED_SERVICES=(engineering-worker engineering-immediate-worker kernel-worker spatial-worker integration-worker telegram-worker scheduler)
   "${COMPOSE[@]}" stop --timeout 30 "${DEFERRED_SERVICES[@]}"
 else
-  mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)
-
-if ! wait_for_healthy_service php 30; then
-  echo "Symfony PHP failed readiness during rolling deployment." >&2
-  "${COMPOSE[@]}" logs --no-color --tail=200 php >&2 || true
-  exit 34
-fi
-
-if [[ "$NGINX_HOT_RELOAD" -ne 1 ]]; then
-  echo "No running canonical nginx found; starting a fresh HTTP runtime."
-  "${COMPOSE[@]}" up -d --no-build --no-deps nginx
-fi
-
-for attempt in $(seq 1 30); do
-  if curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
-    break
-  fi
-  sleep 2
-done
-
-if ! curl --fail --silent --show-error http://127.0.0.1:8081/health/dependencies >/tmp/cos-health.json; then
-  cat /tmp/cos-health.json >&2 2>/dev/null || true
-  "${COMPOSE[@]}" logs --no-color --tail=250 nginx php mercure mysql redis >&2 || true
-  exit 31
-fi
-
-if ! "${DOCKER[@]}" exec cos-php-1 php bin/console cos:architecture:smoke; then
-  echo "Architecture Graph runtime smoke failed." >&2
-  exit 30
-fi
-
-"${COMPOSE[@]}" ps
-printf 'COS Symfony rolling deployment completed successfully.\n'
-)
+  mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)$')
 fi
 if (( ${#RUNTIME_SERVICES[@]} > 0 )); then
   "${COMPOSE[@]}" up -d --no-build --no-deps --remove-orphans "${RUNTIME_SERVICES[@]}"
@@ -240,7 +209,7 @@ fi
 
 if [[ "$NGINX_HOT_RELOAD" -ne 1 ]]; then
   echo "No running canonical nginx found; starting a fresh HTTP runtime."
-  "${COMPOSE[@]}" up -d --no-deps nginx
+  "${COMPOSE[@]}" up -d --no-build --no-deps nginx
 fi
 
 for attempt in $(seq 1 30); do
