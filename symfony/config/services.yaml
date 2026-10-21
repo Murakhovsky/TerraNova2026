@@ -6,6 +6,13 @@ parameters:
   env(COS_SIWC_CLIENT_ID): ''
   env(COS_SIWC_CLIENT_SECRET): ''
   env(COS_SIWC_REDIRECT_URI): ''
+  env(COS_OPENCODE_ENABLED): '0'
+  env(COS_OPENCODE_ENDPOINT): 'http://127.0.0.1:4096'
+  env(COS_OPENCODE_ALLOWED_HOST): '127.0.0.1'
+  env(COS_OPENCODE_SERVER_USERNAME): 'opencode'
+  env(COS_OPENCODE_SERVER_PASSWORD): ''
+  env(COS_OPENCODE_ALLOWED_ORGANIZATION_ID): ''
+  env(COS_OPENCODE_ALLOWED_ACTOR_ID): ''
   env(N8N_WEBHOOK_SECRET): ''
   env(COS_FEDERATION_RESEARCH_ORIGIN_WRITER_READY): '0'
   env(COS_FEDERATION_DOCUMENTS_ORIGIN_WRITER_READY): '0'
@@ -1463,6 +1470,16 @@ services:
 
   Infrastructure\Llm\ChatGptPlanStructuredLlmClient: ~
 
+  Infrastructure\Llm\OpenCodeStructuredLlmClient:
+    arguments:
+      $enabled: '%env(bool:COS_OPENCODE_ENABLED)%'
+      $endpoint: '%env(COS_OPENCODE_ENDPOINT)%'
+      $allowedHost: '%env(COS_OPENCODE_ALLOWED_HOST)%'
+      $username: '%env(COS_OPENCODE_SERVER_USERNAME)%'
+      $password: '%env(COS_OPENCODE_SERVER_PASSWORD)%'
+      $allowedOrganizationId: '%env(COS_OPENCODE_ALLOWED_ORGANIZATION_ID)%'
+      $allowedActorId: '%env(COS_OPENCODE_ALLOWED_ACTOR_ID)%'
+
   Infrastructure\Llm\OpenAiResponsesStructuredLlmClient:
     arguments:
       $token: '%env(LLM_TOKEN)%'
@@ -1479,6 +1496,7 @@ services:
         http: '@Infrastructure\Llm\HttpStructuredLlmClient'
         fixture: '@Infrastructure\Llm\HttpStructuredLlmClient'
         chatgpt_plan: '@Infrastructure\Llm\ChatGptPlanStructuredLlmClient'
+        opencode: '@Infrastructure\Llm\OpenCodeStructuredLlmClient'
         openai: '@Infrastructure\Llm\OpenAiResponsesStructuredLlmClient'
 
   wave4.llm.primary_route:

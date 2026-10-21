@@ -5,6 +5,8 @@ namespace App\Web\Administration;
 
 use App\Security\SessionCsrfValidator;
 use Infrastructure\Llm\ChatGptPlanOAuth;
+use Infrastructure\Llm\OpenCodeStructuredLlmClient;
+use Kernel\Llm\StructuredLlmRequest;
 use App\Web\Experience\Archetype\PageArchetype;
 use App\Web\Experience\Archetype\PagePresentationFactory;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
@@ -33,6 +35,7 @@ final readonly class PlatformSettingsController
         private PlatformSettingsWriterInterface $writer,
         private LlmModelCatalogInterface $modelCatalog,
         private ChatGptPlanOAuth $chatgptOAuth,
+        private OpenCodeStructuredLlmClient $opencode,
         private string $fallbackProvider = 'http',
         private string $fallbackModel = '',
         private string $fallbackToken = '',
@@ -74,7 +77,7 @@ final readonly class PlatformSettingsController
         );
     }
 
-    public function llm(Request $request): Response
+    public function llm(Request $request, ?string $opencodeResult = null, ?string $opencodeError = null): Response
     {
         $tenant = $this->admin();
         if ($tenant instanceof Response) return $tenant;
@@ -94,6 +97,9 @@ final readonly class PlatformSettingsController
             'api_key_configured' => is_string($secret) && trim($secret) !== '',
             'api_key_suffix' => is_string($secret) && strlen($secret) >= 4 ? substr($secret, -4) : '',
             'chatgpt_plan_enabled' => $this->chatgptOAuth->configured(),
+            'opencode_enabled' => $this->opencode->authorizedFor($organizationId, (string) $tenant->userId()->value()),
+            'opencode_result' => $opencodeResult,
+            'opencode_error' => $opencodeError,
             'chatgpt_plan_connected' => is_string($this->settings->secret(
                 $organizationId, 'chatgpt_plan', 'credentials.'.(string) $tenant->userId()->value()
             )),
@@ -121,6 +127,60 @@ final readonly class PlatformSettingsController
             Response::HTTP_OK,
             $this->headers(),
         );
+    }
+
+    public function testOpenCode(Request $request): Response
+    {
+        $tenant = $this->admin();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) {
+            return new Response('Invalid CSRF token.', Response::HTTP_FORBIDDEN);
+        }
+        if (!$this->opencode->authorizedFor($tenant->organizationId()->value(), (string) $tenant->userId()->value())) {
+            return $this->llm($request, null, 'OpenCode не налаштовано для вашого COS-акаунта.');
+        }
+
+        $session = $request->getSession();
+        $now = time();
+        if ($now - (int) $session->get('cos.opencode.last_test', 0) < 15) {
+            return $this->llm($request, null, 'Повторний тест можливий через 15 секунд.');
+        }
+        $prompt = trim((string) $request->request->get('prompt', ''));
+        $model = trim((string) $request->request->get('model', ''));
+        if ($prompt === '' || mb_strlen($prompt) > 500 || mb_strlen($model) > 128) {
+            return $this->llm($request, null, 'Введіть запит до 500 символів і коректну модель.');
+        }
+        if ($model !== '' && !preg_match('/^[a-z0-9_.:-]+\/[a-zA-Z0-9_.:-]+$/', $model)) {
+            return $this->llm($request, null, 'Модель повинна мати формат provider/model або бути порожньою.');
+        }
+
+        $session->set('cos.opencode.last_test', $now);
+        try {
+            $response = $this->opencode->complete(new StructuredLlmRequest(
+                systemPrompt: 'Ти тестовий текстовий асистент COS. Відповідай коротко українською.',
+                userPrompt: $prompt,
+                context: [],
+                responseSchema: [
+                    'type' => 'object',
+                    'properties' => ['answer' => ['type' => 'string']],
+                    'required' => ['answer'],
+                    'additionalProperties' => false,
+                ],
+                model: $model !== '' ? $model : null,
+                organizationId: $tenant->organizationId()->value(),
+                useCase: 'opencode.test',
+                correlationId: bin2hex(random_bytes(16)),
+                actorId: (string) $tenant->userId()->value(),
+            ));
+            $answer = $response->output['answer'] ?? null;
+            if (!is_string($answer) || trim($answer) === '') {
+                return $this->llm($request, null, 'OpenCode повернув неочікуваний формат відповіді.');
+            }
+            return $this->llm($request, mb_substr($answer, 0, 2000));
+        } catch (Throwable $error) {
+            error_log('platform.settings.opencode.test_failed '.get_class($error).' '.$error->getMessage());
+            return $this->llm($request, null, 'OpenCode недоступний або повернув помилку. Перевірте локальний сервер, пароль і модель.');
+        }
     }
 
     public function saveLlm(Request $request): Response

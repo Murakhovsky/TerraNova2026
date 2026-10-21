@@ -17,7 +17,7 @@ foreach ([$root.'/deploy/bootstrap-cos-fresh-mysql.sh', $root.'/deploy/dev.sh'] 
 foreach ([
     'COS_NEW_DB_BOOTSTRAP=1',
     'COS_DEPLOY_MODE=registry COS_DEPLOY_TIER=core',
-    'Pre-existing environment detected',
+    'Pre-existing or completed COS deployment detected',
     'Containers or volumes exist',
     'MYSQL_ROOT_PASSWORD',
     'COS_SECRET_MASTER_KEY',
