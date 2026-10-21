@@ -44,11 +44,6 @@ ensure_secret() {
   if [[ -n "$current" ]]; then
     return
   fi
-  # Never silently replace encryption/runtime keys on a restored production host.
-  if [[ "${COS_DEPLOY_MODE:-build}" == registry ]]; then
-    echo "Missing required $key in existing runtime env; refusing to regenerate production credentials." >&2
-    exit 54
-  fi
 
   local value
   value="$(generate_secret)"
@@ -89,37 +84,8 @@ if [[ -z "$engineering_repo" || -z "$engineering_token" ]]; then
   echo "Principal Architect / Developer / Reviewer stages that require authoritative GitHub access will stop as STALLED." >&2
 fi
 
-# SHA-pinned GHCR images for VPS; the legacy local build mode remains available.
-COS_DEPLOY_MODE="${COS_DEPLOY_MODE:-build}"
-COS_DEPLOY_TIER="${COS_DEPLOY_TIER:-full}"
-case "$COS_DEPLOY_MODE" in
-  build) ;;
-  registry)
-    if [[ ! "${COS_PHP_IMAGE:-}" =~ ^ghcr[.]io/murakhovsky/terranova2026-php:([0-9a-f]{40})$ ]]; then
-      echo "COS_PHP_IMAGE must be a commit-SHA-pinned GHCR reference." >&2; exit 52
-    fi
-    PHP_IMAGE_SHA="${BASH_REMATCH[1]}"
-    if [[ ! "${COS_NGINX_IMAGE:-}" =~ ^ghcr[.]io/murakhovsky/terranova2026-nginx:([0-9a-f]{40})$ ]]; then
-      echo "COS_NGINX_IMAGE must be a commit-SHA-pinned GHCR reference." >&2; exit 52
-    fi
-    if [[ "$PHP_IMAGE_SHA" != "${BASH_REMATCH[1]}" ]]; then
-      echo "PHP and Nginx image SHAs must match." >&2; exit 52
-    fi
-    ;;
-  *) echo "Unsupported COS_DEPLOY_MODE: $COS_DEPLOY_MODE" >&2; exit 53 ;;
-esac
-case "$COS_DEPLOY_TIER" in
-  core|full) ;;
-  *) echo "Unsupported COS_DEPLOY_TIER: $COS_DEPLOY_TIER" >&2; exit 53 ;;
-esac
-
 "${COMPOSE[@]}" config --quiet
-if [[ "$COS_DEPLOY_MODE" == registry ]]; then
-  echo "Pulling immutable COS images, not building on this VPS."
-  "${COMPOSE[@]}" pull php nginx
-else
-  "${COMPOSE[@]}" build --pull php nginx
-fi
+"${COMPOSE[@]}" build --pull php nginx
 
 # Port 8081 belongs exclusively to the canonical COS HTTP runtime.
 COS_HTTP_PORT="${COS_HTTP_PORT:-8081}"
@@ -194,16 +160,9 @@ else
 fi
 
 # Replace application and worker containers, but deliberately leave nginx alive.
-if [[ "$COS_DEPLOY_TIER" == core ]]; then
-  # Minimal website, queue, persistence and realtime. Specialist workers are disabled.
-  RUNTIME_SERVICES=(php worker)
-  DEFERRED_SERVICES=(engineering-worker engineering-immediate-worker kernel-worker spatial-worker integration-worker telegram-worker scheduler)
-  "${COMPOSE[@]}" stop --timeout 30 "${DEFERRED_SERVICES[@]}"
-else
-  mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)$')
-fi
+mapfile -t RUNTIME_SERVICES < <("${COMPOSE[@]}" config --services | grep -Ev '^(mysql|redis|mercure|nginx)$')
 if (( ${#RUNTIME_SERVICES[@]} > 0 )); then
-  "${COMPOSE[@]}" up -d --no-build --no-deps --remove-orphans "${RUNTIME_SERVICES[@]}"
+  "${COMPOSE[@]}" up -d --no-deps --remove-orphans "${RUNTIME_SERVICES[@]}"
 fi
 
 if ! wait_for_healthy_service php 30; then
@@ -214,7 +173,7 @@ fi
 
 if [[ "$NGINX_HOT_RELOAD" -ne 1 ]]; then
   echo "No running canonical nginx found; starting a fresh HTTP runtime."
-  "${COMPOSE[@]}" up -d --no-build --no-deps nginx
+  "${COMPOSE[@]}" up -d --no-deps nginx
 fi
 
 for attempt in $(seq 1 30); do
