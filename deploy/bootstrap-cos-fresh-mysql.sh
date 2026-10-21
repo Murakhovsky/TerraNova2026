@@ -12,8 +12,25 @@ fi
 sudo -n docker info >/dev/null || { echo "Docker daemon inaccessible"; exit 4; }
 
 MARKER=".cos-fresh-db-bootstrap-in-progress"
-if [[ -e .env || ( -e .env.docker && ! -f "$MARKER" ) ]]; then
-  echo "Pre-existing environment detected. Refusing to overwrite possible production secrets." >&2; exit 5
+if [[ -e .env || -f .cos-fresh-db-bootstrap-completed ]]; then
+  echo "Pre-existing or completed COS deployment detected. Refusing reinitialization." >&2; exit 5
+fi
+# Prior runtime rsync --delete dropped our private in-progress marker but kept
+# the newly generated .env.docker. A one-time safe resume is allowed ONLY if
+# it matches this bootstrap's fresh disabled-worker configuration AND Docker
+# is still entirely empty. Never change the existing secrets.
+if [[ -s .env.docker && ! -f "$MARKER" ]]; then
+  if [[ -n "$(sudo -n docker ps -aq)" || -n "$(sudo -n docker volume ls -q)" ]]; then
+    echo "Cannot resume unmarked env when database resources exist." >&2; exit 12
+  fi
+  for key in MYSQL_PASSWORD MYSQL_ROOT_PASSWORD SYMFONY_APP_SECRET COS_SECRET_MASTER_KEY SPATIAL_JWT_SECRET MERCURE_JWT_SECRET; do
+    grep -Eq "^$key=.{20,}$" .env.docker || { echo "Existing env does not match new COS credentials layout." >&2; exit 13; }
+  done
+  grep -Fxq 'COS_SALES_AUTOMATION_SCHEDULER_ENABLED=0' .env.docker || exit 14
+  grep -Fxq 'FOS_L2_ENABLED=0' .env.docker || exit 14
+  : > "$MARKER"
+  chmod 600 "$MARKER"
+  echo 'RECOVERED_FIRST_BOOT_MARKER (existing secrets preserved)'
 fi
 if [[ ! -f "$MARKER" ]]; then
   # Only allow first run when the host has no prior Docker data.
