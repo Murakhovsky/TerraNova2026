@@ -1,0 +1,73 @@
+name: COS Recovery Image Prestage (one-off)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cos-recovery-image-prestage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  prestage:
+    name: Pre-pull verified COS images on new Lightsail without initializing DB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+      IMAGE_SHA: ee326a0d205e5a9d39e2017e11690d02aa541a52
+    steps:
+      - name: SSH setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            [[ -n "${!n:-}" ]] || { echo "::error::Missing $n"; exit 1; }
+          done
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEV_SSH_KEY" > ~/.ssh/recovery_image_key
+          chmod 600 ~/.ssh/recovery_image_key
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > ~/.ssh/known_hosts 2>/dev/null
+          test -s ~/.ssh/known_hosts
+      - name: Authenticate GHCR using temporary Actions token
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -i ~/.ssh/recovery_image_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            "sudo -n docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin"
+      - name: Download published images without creating volumes or starting services
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -i ~/.ssh/recovery_image_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            bash -s -- "$IMAGE_SHA" <<'REMOTE'
+          set -Eeuo pipefail
+          sha="$1"
+          case "$sha" in *[!0-9a-f]*|'') echo 'Invalid SHA'; exit 2 ;; esac
+          test "${#sha}" -eq 40
+          sudo -n docker pull "ghcr.io/murakhovsky/terranova2026-php:$sha"
+          sudo -n docker pull "ghcr.io/murakhovsky/terranova2026-nginx:$sha"
+          sudo -n docker pull "mysql:8.4"
+          sudo -n docker pull "redis:7.4-alpine"
+          sudo -n docker pull "dunglas/mercure:v0.24.2"
+          echo 'IMAGE_PRESTAGE_SUCCESS (no containers or DB created)'
+          sudo -n docker image ls --format '{{.Repository}}:{{.Tag}} | {{.Size}}'
+          sudo -n docker system df
+          REMOTE
+      - name: Revoke stored Docker login on host
+        if: always()
+        run: |
+          if [[ -s ~/.ssh/recovery_image_key ]]; then
+            ssh -T -o ConnectTimeout=10 -i ~/.ssh/recovery_image_key -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+              'sudo -n docker logout ghcr.io >/dev/null 2>&1 || true' || true
+          fi
