@@ -213,6 +213,7 @@ final readonly class MysqlActionRepository implements ActionRepositoryInterface
             $select = $this->connection->prepare(
                 "SELECT id, organization_id FROM cos_actions "
                 . "WHERE status = 'RUNNING' AND started_at < :cutoff "
+                . "AND type <> 'kernel.tool.invoke' "
                 . "AND (idempotency_key IS NULL OR "
                 . "(idempotency_key NOT LIKE 'fed:%' AND idempotency_key NOT LIKE 'wf:%')) "
                 . "ORDER BY started_at FOR UPDATE"

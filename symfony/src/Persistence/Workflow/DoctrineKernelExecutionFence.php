@@ -71,10 +71,12 @@ final readonly class DoctrineKernelExecutionFence implements KernelCanonicalExec
             ['org'=>$id->organizationId,'run'=>$id->runId]);
         $steps=$row?json_decode((string)$row['definition_json'],true,512,JSON_THROW_ON_ERROR):null;
         $job=$this->db->fetchAssociative(
-            'SELECT status,attempts,locked_by,correlation_id FROM cos_jobs
+            'SELECT status,attempts,locked_by,locked_at,timeout_seconds,correlation_id FROM cos_jobs
              WHERE organization_id=:org AND id=:job',
             ['org'=>$id->organizationId,'job'=>$source]);
         if(!$job || $job['status']!=='RUNNING' || (int)$job['attempts']!==1
+            || $job['locked_at']===null
+            || strtotime((string)$job['locked_at'].' UTC') + (int)$job['timeout_seconds'] <= time()
             || ($row['claimed_by']??null)!==$job['locked_by'] || $job['correlation_id']!==$invocation->correlationId
             || !$row || $row['run_state']!=='running' || $row['step_state']!=='claimed'
             || $row['correlation_id']!==$invocation->correlationId

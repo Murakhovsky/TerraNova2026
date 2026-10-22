@@ -34,6 +34,13 @@ final readonly class ActionExecutionJobHandler implements JobHandlerInterface
         if ($outcome === null) {
             $existing = $this->actions->find($job->organizationId, $actionId);
             if ($existing?->status === ActionStatus::Completed) return;
+            // An uncertain Tool Action must be reconciled by the canonical
+            // operator flow. Failed/Running is NOT permission to dispatch twice.
+            if ($existing?->type === 'kernel.tool.invoke') {
+                throw ExecutionFailureException::permanent(
+                    'Canonical Tool Action outcome is uncertain; independent receipt recovery required.'
+                );
+            }
             if ($existing?->status === ActionStatus::Failed) {
                 $this->actions->queue($job->organizationId, $actionId);
                 $outcome = $this->actions->executeOutcome($job->organizationId, $actionId, $workerId);
