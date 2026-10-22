@@ -13,6 +13,7 @@ use App\Web\Experience\Golden\GoldenDecisionRegistry;
 use App\Web\Experience\Golden\GoldenStructureAuditService;
 use App\Web\Experience\Golden\GoldenHumanReviewPacketBuilder;
 use App\Web\Experience\Governance\ProductUxGovernanceService;
+use App\Web\Experience\Governance\GoldenQaEvidenceRegistry;
 use App\Web\Experience\Migration\WorkspaceMigrationPlanner;
 use App\Web\Experience\External\ExternalExperiencePlanner;
 use App\Web\Experience\External\ExternalReferenceAuditService;
@@ -47,6 +48,7 @@ final readonly class ExperienceDashboardController
         private ExternalReferenceAuditService $externalReferences,
         private ExperienceReleaseHardeningService $releaseHardening,
         private ProductUxGovernanceService $productUx,
+        private GoldenQaEvidenceRegistry $qaEvidence,
         private TenantContextProviderInterface $tenants,
         private WorkspaceShellFactory $shells,
     ) {
@@ -135,6 +137,8 @@ final readonly class ExperienceDashboardController
             ? (int) round(((count($contracts) + count($exemptions)) / count($routes)) * 100)
             : 100;
 
+        $qaEvidence = $this->qaEvidence->report();
+
         return new Response(
             $this->twig->render('experience/dev/experience_dashboard.html.twig', [
                 'shell' => $shell,
@@ -167,6 +171,7 @@ final readonly class ExperienceDashboardController
                     'externalReferences' => $this->externalReferences->audit()->toArray(),
                     'release' => $this->releaseHardening->report()->toArray(),
                     'productUx' => $this->productUx->report()->toArray(),
+                    'qaEvidence' => $qaEvidence,
                     'pages' => array_values(array_map(
                         static fn ($contract): array => [
                             'id' => $contract->id->value,
@@ -177,6 +182,7 @@ final readonly class ExperienceDashboardController
                             'status' => $contract->status->value,
                             'archetype' => $contract->archetype,
                             'quality' => $contract->quality->toArray(),
+                            'automatedEvidence' => $qaEvidence['pages'][$contract->id->value] ?? null,
                         ],
                         $contracts,
                     )),
