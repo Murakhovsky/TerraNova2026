@@ -40,6 +40,7 @@
         <twig:CosMetric label="Stable / frozen" value="{{ experience.designSystem.stable }}" />
         <twig:CosMetric label="Golden ready" value="{{ experience.golden.ready }}/{{ experience.golden.required }}" />
         <twig:CosMetric label="Golden structure" value="{{ experience.goldenStructure.passed }}/{{ experience.goldenStructure.total }}" />
+        <twig:CosMetric label="CI QA evidence" value="{{ experience.qaEvidence.pages|length }}/8" />
         <twig:CosMetric label="Personas" value="{{ experience.productUx.personas }}" />
         <twig:CosMetric label="Journeys" value="{{ experience.productUx.journeys }}" />
         <twig:CosMetric label="Generic contracts" value="{{ experience.productUx.generic_contract_copy_count }}" />
@@ -115,6 +116,7 @@
                     <strong>{{ experience.golden.massMigrationBlocked ? 'BLOCKED' : 'UNBLOCKED' }}</strong>.
                     Structural audit: {{ experience.goldenStructure.passed }}/{{ experience.goldenStructure.total }}.
                     Golden readiness requires V1_READY, reference-quality scores and human acceptance.
+                    CI QA is historical, tied to its run and source commit, not a live deployment certification.
                 </p>
             </div>
         </div>
@@ -128,6 +130,7 @@
                         <th scope="col">Status</th>
                         <th scope="col">Min quality</th>
                         <th scope="col">Human</th>
+                        <th scope="col">CI QA evidence</th>
                         <th scope="col">Golden</th>
                     </tr>
                 </thead>
@@ -140,6 +143,12 @@
                         <td>{{ item.status }}</td>
                         <td>{{ min(item.quality) }}</td>
                         <td>{{ item.humanAccepted ? 'yes' : 'no' }}</td>
+                        <td>
+                            {% set ci = experience.qaEvidence.pages[item.id]|default(null) %}
+                            {% if ci %}
+                                <a href="{{ experience.qaEvidence.artifact_url }}" rel="noopener noreferrer">{{ ci.automated_status }} ({{ experience.qaEvidence.source_commit_sha|slice(0, 8) }})</a>
+                            {% else %}NOT IMPORTED{% endif %}
+                        </td>
                         <td><span class="cos-badge">{{ item.ready ? 'READY' : 'NOT READY' }}</span></td>
                     </tr>
                 {% endfor %}
@@ -306,6 +315,7 @@
                         <th scope="col">Priority</th>
                         <th scope="col">Archetype</th>
                         <th scope="col">Status</th>
+                        <th scope="col">CI evidence</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -317,6 +327,7 @@
                         <td>{{ item.priority }}</td>
                         <td>{{ item.archetype }}</td>
                         <td><span class="cos-badge">{{ item.status }}</span></td>
+                        <td>{{ item.automatedEvidence ? "PASS (historical)" : "NOT IMPORTED" }}</td>
                     </tr>
                 {% endfor %}
                 </tbody>
