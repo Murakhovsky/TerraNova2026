@@ -84,7 +84,7 @@ try {
     $summary['evidence_provenance']['source_commit_sha'] = 'unknown';
     file_put_contents($source.'/summary.json', json_encode($summary));
     try {
-        $registry->ingest($source);
+        $registry->ingest($source, $expected);
         throw new RuntimeException('Missing SHA provenance was incorrectly accepted.');
     } catch (RuntimeException $e) {
         if (str_contains($e->getMessage(), 'incorrectly accepted')) throw $e;
