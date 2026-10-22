@@ -31,7 +31,23 @@ final class ExperienceQaIngestCommand extends Command
         if ($source === '') {
             throw new \InvalidArgumentException('Pass --source=/path/to/golden-eight CI artifact.');
         }
-        $report = $this->evidence->ingest($source);
+        // CI identity must arrive from the runner, not the imported artifact.
+        // Offline/operator artifacts are intentionally not trusted as CI PASS.
+        $trusted = [
+            'source_commit_sha' => getenv('COS_GOLDEN_CI_SOURCE_SHA') ?: '',
+            'tested_checkout_sha' => getenv('GITHUB_SHA') ?: '',
+            'workflow_run_id' => getenv('GITHUB_RUN_ID') ?: '',
+            'workflow_run_attempt' => getenv('GITHUB_RUN_ATTEMPT') ?: '',
+        ];
+        if (getenv('GITHUB_ACTIONS') !== 'true'
+            || getenv('GITHUB_REPOSITORY') !== 'Murakhovsky/TerraNova2026'
+            || !preg_match('/^[a-f0-9]{40}$/i', $trusted['source_commit_sha'])
+            || !preg_match('/^[a-f0-9]{40}$/i', $trusted['tested_checkout_sha'])
+            || !preg_match('/^[1-9][0-9]*$/', $trusted['workflow_run_id'])
+            || !preg_match('/^[1-9][0-9]*$/', $trusted['workflow_run_attempt'])) {
+            throw new \RuntimeException('Golden QA PASS import requires independently provided GitHub Actions run identity.');
+        }
+        $report = $this->evidence->ingest($source, $trusted);
         if ($input->getOption('json')) {
             $output->writeln(json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
         } else {
