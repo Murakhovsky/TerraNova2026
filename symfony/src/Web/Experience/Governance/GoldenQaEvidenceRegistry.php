@@ -30,7 +30,7 @@ final readonly class GoldenQaEvidenceRegistry
     ) {}
 
     /** @return array<string,mixed> */
-    public function ingest(string $sourceDirectory): array
+    public function ingest(string $sourceDirectory, array $expectedProvenance): array
     {
         $sourceDirectory = rtrim($sourceDirectory, '/');
         $summaryFile = $sourceDirectory.'/summary.json';
@@ -56,6 +56,20 @@ final readonly class GoldenQaEvidenceRegistry
         }
         if (($provenance['environment'] ?? null) !== 'github-actions') {
             throw new RuntimeException('Local evidence is not publishable as verified CI evidence.');
+        }
+
+        // The artifact is untrusted input. Match it against independently supplied CI identity.
+        // A self-declared github-actions string or syntactically valid SHA is not proof.
+        $expected = [
+            'source_commit_sha' => $expectedProvenance['source_commit_sha'] ?? null,
+            'tested_checkout_sha' => $expectedProvenance['tested_checkout_sha'] ?? null,
+            'workflow_run_id' => $expectedProvenance['workflow_run_id'] ?? null,
+            'workflow_run_attempt' => $expectedProvenance['workflow_run_attempt'] ?? null,
+        ];
+        foreach ($expected as $field => $value) {
+            if (!is_string($value) || $value === '' || !hash_equals($value, (string) ($provenance[$field] ?? ''))) {
+                throw new RuntimeException('Golden Eight artifact identity differs from trusted CI context: '.$field);
+            }
         }
 
         $files = $summary['evidence_files'] ?? null;
