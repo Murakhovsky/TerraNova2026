@@ -320,6 +320,10 @@ jobs:
           PY
       - name: Current verification
         run: bash bin/verify fast
+      - name: Experience UX debt and QA provenance regression
+        run: |
+          php tests/architecture/experience_v1_ux_debt_evidence.php
+          php tests/architecture/experience_v1_qa_ingest_behavior.php
       - name: Compose validation
         run: docker compose config --quiet
       - name: Validate optional Capital Markets streaming lease monitor
