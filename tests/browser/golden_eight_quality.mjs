@@ -47,7 +47,7 @@ const outputDir = resolve(process.env.GOLDEN_EIGHT_OUTPUT_DIR || 'tmp/golden-eig
 await mkdir(outputDir, { recursive: true });
 
 const profiles = [
-  { name: 'desktop', viewport: { width: 1440, height: 1000 }, isMobile: false },
+  { name: 'desktop', viewport: { width: 1440, height: 900 }, isMobile: false },
   { name: 'mobile', viewport: { width: 390, height: 844 }, isMobile: true },
 ];
 
