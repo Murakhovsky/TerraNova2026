@@ -24,13 +24,13 @@ Priority distribution across all 128 Page Contracts inspected on main before thi
 
 - Golden Eight browser QA still writes the original screenshots, Axe JSON reports and summary.
 - The CI job imports these via `cos:experience:qa:ingest --source=/tmp/cos-golden-eight --json`.
-- Ingest rejects failed summaries, missing/duplicate viewport evidence, invalid PNGs, accessibility violations, and absent source SHA/run/timestamp.
+- Ingest rejects failed summaries, missing/duplicate viewport evidence, invalid PNGs, accessibility violations, and missing or mismatched source SHA, checkout SHA, run ID and attempt. The expected identity is injected from the GitHub Actions runner independently of the artifact.
 - The atomic QA projection contains per-page desktop/mobile evidence references, source and checkout SHAs, workflow run/attempt, timestamp and artifact URL.
 - CI uploads `page-contract-qa.json` together with the original browser artifacts. The PHP runtime retains imported projections on a dedicated persistent volume.
 - The Experience dashboard displays historical CI QA beside each Page Contract and Golden page. It does **not** claim that a historical run matches the current deployment.
-- A production operator can import downloaded artifacts using the same command. CI import does not automatically publish its ephemeral artifact into production.
+- Untrusted offline/operator artifact imports are not allowed to publish CI PASS. CI import does not automatically publish its ephemeral artifact into production. Production synchronization requires a separate authenticated artifact verification and deployment path; until then, production may show NOT_IMPORTED.
 - No import changes `human_acceptance`, Golden decisions, quality scores, or `V1_READY`.
 
 ## Verification and remaining acceptance
 
-Run the Runtime GitHub workflow, including the Golden Eight browser QA and evidence reconciliation step. Inspect `page-contract-qa.json` in the `golden-eight-evidence` artifact and the Experience dashboard after importing a production artifact. Run `cos:experience:contracts:audit --json` and resolve each listed gap against actual controls and user outcomes. Golden Eight visual/human acceptance remains manual and release remains BLOCKED until its own gates pass.
+Run the Runtime GitHub workflow, including the Golden Eight browser QA and evidence reconciliation step. Inspect `page-contract-qa.json` in the `golden-eight-evidence` artifact. The production dashboard only displays a projection if one has been safely imported through a verified deployment mechanism. Run `cos:experience:contracts:audit --json` and resolve each listed gap against actual controls and user outcomes. Golden Eight visual/human acceptance remains manual and release remains BLOCKED until its own gates pass.
