@@ -14,6 +14,7 @@ use App\Web\Experience\Golden\GoldenStructureAuditService;
 use App\Web\Experience\Golden\GoldenHumanReviewPacketBuilder;
 use App\Web\Experience\Governance\ProductUxGovernanceService;
 use App\Web\Experience\Governance\GoldenQaEvidenceRegistry;
+use App\Web\Experience\Governance\PageContractOutcomeAuditService;
 use App\Web\Experience\Migration\WorkspaceMigrationPlanner;
 use App\Web\Experience\External\ExternalExperiencePlanner;
 use App\Web\Experience\External\ExternalReferenceAuditService;
@@ -49,6 +50,7 @@ final readonly class ExperienceDashboardController
         private ExperienceReleaseHardeningService $releaseHardening,
         private ProductUxGovernanceService $productUx,
         private GoldenQaEvidenceRegistry $qaEvidence,
+        private PageContractOutcomeAuditService $contractOutcomes,
         private TenantContextProviderInterface $tenants,
         private WorkspaceShellFactory $shells,
     ) {
@@ -172,6 +174,7 @@ final readonly class ExperienceDashboardController
                     'release' => $this->releaseHardening->report()->toArray(),
                     'productUx' => $this->productUx->report()->toArray(),
                     'qaEvidence' => $qaEvidence,
+                    'contractOutcomes' => $this->contractOutcomes->report(),
                     'pages' => array_values(array_map(
                         static fn ($contract): array => [
                             'id' => $contract->id->value,
