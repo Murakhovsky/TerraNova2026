@@ -54,6 +54,10 @@ foreach (['Reconcile Golden Eight QA', 'cos:experience:qa:ingest', 'page-contrac
         throw new RuntimeException('Golden QA CI reconciliation missing: '.$marker);
     }
 }
+$compiler = (string) file_get_contents($root.'/symfony/src/Web/Experience/Registry/PageContractCompiler.php');
+if (!str_contains($compiler, "'qa_evidence'") || !str_contains($compiler, "'qa_evidence_provenance'")) {
+    throw new RuntimeException('Compiled Page Contracts must link automated QA evidence and provenance.');
+}
 $dashboard = (string) file_get_contents($root.'/symfony/src/Web/Experience/Dev/ExperienceDashboardController.php');
 foreach (['qaEvidence', 'contractOutcomes'] as $marker) {
     if (!str_contains($dashboard, $marker)) {
