@@ -45,16 +45,34 @@ file_put_contents($source.'/summary.json', json_encode($summary));
 $registry = new GoldenQaEvidenceRegistry($root.'/persist/golden-eight.json');
 
 try {
-    $result = $registry->ingest($source);
+    $expected = [
+        'source_commit_sha' => str_repeat('a', 40),
+        'tested_checkout_sha' => str_repeat('b', 40),
+        'workflow_run_id' => '123456',
+        'workflow_run_attempt' => '1',
+    ];
+    $result = $registry->ingest($source, $expected);
     if (count($result['pages']) !== 8 || $result['human_acceptance'] !== false
         || $registry->forPage('sales.today')['workflow_run_id'] !== '123456') {
         throw new RuntimeException('Golden Eight QA projection failed to reconcile.');
     }
 
+    // Even a syntactically valid, forged run must be rejected.
+    $forged = $summary;
+    $forged['evidence_provenance']['workflow_run_id'] = '987654';
+    file_put_contents($source.'/summary.json', json_encode($forged));
+    try {
+        $registry->ingest($source, $expected);
+        throw new RuntimeException('Forged CI run was incorrectly accepted.');
+    } catch (RuntimeException $e) {
+        if (str_contains($e->getMessage(), 'incorrectly accepted')) throw $e;
+    }
+    file_put_contents($source.'/summary.json', json_encode($summary));
+
     // Rejected evidence must never replace the last verified projection.
     file_put_contents($source.'/mobile-sales-today.axe.json', json_encode(['violations' => [['id' => 'critical']]]));
     try {
-        $registry->ingest($source);
+        $registry->ingest($source, $expected);
         throw new RuntimeException('Accessibility regression was incorrectly accepted.');
     } catch (RuntimeException $e) {
         if (str_contains($e->getMessage(), 'incorrectly accepted')) throw $e;
