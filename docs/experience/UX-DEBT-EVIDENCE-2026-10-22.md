@@ -10,7 +10,7 @@ This change builds on **main**, not the closed/unmerged #366 branch.
 | UXD-002: priority inflation | UX-002 | CLOSED on main; no arbitrary reclassification |
 | UXD-003: CI QA evidence synchronization | UX-006 | OPEN until CI reconciliation is verified and operational evidence imported |
 
-Priority distribution in the 98 Page Contracts inspected on main before this change: P0=23, P1=29, P2=42, P3=4 (P0/P1 = 52/98). The policy requires reviewable business evidence for future priority changes; no changes to route priorities are made here.
+Priority distribution across all 128 Page Contracts inspected on main before this change: 124 active (excluding four retired/exempt); active P0=48, P1=34, P2=42, P3=0 (P0/P1 = 82/124, about 66%). The policy requires reviewable business evidence for future priority changes; no changes to route priorities are made here.
 
 ## UX-005: actionable outcome audit
 
