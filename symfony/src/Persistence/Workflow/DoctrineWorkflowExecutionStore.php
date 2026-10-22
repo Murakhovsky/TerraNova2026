@@ -11,6 +11,7 @@ use Kernel\Workflow\Model\StepStatus;
 use Kernel\Workflow\Model\WorkflowStatus;
 use LogicException;
 use Platform\Workflow\Contract\WorkflowExecutionStoreInterface;
+use Platform\Workflow\Contract\WorkflowApprovedRecoveryWriterInterface;
 use Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface;
 use Platform\Workflow\Model\WorkflowEvidenceSignal;
 use Platform\Workflow\Contract\WorkflowTechnicalExternalStoreInterface;
@@ -22,6 +23,7 @@ use Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
 use Platform\Workflow\Model\WorkflowReceiptRequest;
 use Platform\Workflow\Model\WorkflowRunDraft;
+use Platform\Workflow\Model\WorkflowRunCommand;
 use Platform\Workflow\Model\WorkflowRunIdentity;
 use Platform\Workflow\Model\WorkflowRunSnapshot;
 use Platform\Workflow\Model\WorkflowRunTransition;
@@ -38,7 +40,7 @@ use Platform\Workflow\Service\WorkflowStepScheduler;
  * No Action dispatch, Agent execution, automatic recovery or dual writes.
  * A run row serializes every transition/claim/checkpoint for its tenant.
  */
-final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface, WorkflowTechnicalExternalStoreInterface, WorkflowEvidenceSignalStoreInterface, WorkflowKernelExecutionStoreInterface
+final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecutionStoreInterface, WorkflowTechnicalExternalStoreInterface, WorkflowEvidenceSignalStoreInterface, WorkflowKernelExecutionStoreInterface, WorkflowApprovedRecoveryWriterInterface
 {
     public function __construct(
         private Connection $db,
@@ -375,6 +377,122 @@ final readonly class DoctrineWorkflowExecutionStore implements WorkflowExecution
         });
     }
 
+
+    /**
+     * Single technical writer for canonical two-manager Workflow recovery.
+     * The recovery manager must already have independently verified any
+     * receipt and own the encompassing transaction. This method revalidates
+     * durable approval and CAS before writing Run/Step together.
+     */
+    public function applyApprovedRecovery(
+        WorkflowRunCommand $command,
+        string $requestId,
+        string $stepId,
+        string $nextStepState,
+        string $nextRunState,
+        ?string $receiptReference
+    ):void {
+        self::authorized($command->actor,$command->identity);
+        if (!$this->db->isTransactionActive()) {
+            throw new DomainException('Recovery technical transitions need the operator transaction.');
+        }
+        if (!preg_match('/^[a-f0-9]{32}$/D',$requestId) || $stepId==='') {
+            throw new DomainException('Recovery requires pinned decision and Step identifiers.');
+        }
+        $id=$command->identity;
+        $run=$this->lockedRun($id);
+        $request=$this->db->fetchAssociative(
+            'SELECT * FROM cos_workflow_recovery_decisions
+             WHERE organization_id=:org AND request_id=:request FOR UPDATE',
+            ['org'=>$id->organizationId,'request'=>$requestId],
+        );
+        $step=$this->db->fetchAssociative(
+            'SELECT * FROM cos_workflow_steps
+             WHERE organization_id=:org AND run_id=:run AND step_id=:step FOR UPDATE',
+            ['org'=>$id->organizationId,'run'=>$id->runId,'step'=>$stepId],
+        );
+        if (!$step || !$request || $request['status']!=='APPROVED'
+            || $request['run_id']!==$id->runId || $request['step_id']!==$stepId
+            || !is_string($request['approved_by'])
+            || trim($request['approved_by'])==='' || $request['approved_by']===$request['requested_by']
+            || (int)$run['revision']!==$command->expectedRevision
+            || (int)$request['run_revision']!==$command->expectedRevision
+            || (int)$request['step_revision']!==(int)$step['revision']
+            || !in_array($run['state'],['running','waiting','ambiguous'],true)
+            || !in_array($step['state'],['claimed','ambiguous','waiting'],true)
+            || ($step['state']==='claimed'
+                && ($step['claim_expires_at']===null
+                    || strtotime((string)$step['claim_expires_at'].' UTC')>time()))
+        ) {
+            throw new DomainException('Approved recovery no longer has independent tenant CAS authority.');
+        }
+        if (in_array($run['definition_id'],['kernel.agent_execution','kernel.tool_execution'],true)) {
+            throw new DomainException('Kernel technical recovery has its separate native receipt gate.');
+        }
+        $expectedStep=match($request['resolution']) {
+            'quarantine'=>'ambiguous',
+            'verified_complete'=>'completed',
+            'reset_read_only'=>'pending',
+            'cancel_uncertain'=>'cancelled',
+            default=>throw new DomainException('Unknown recovery resolution.'),
+        };
+        if ($nextStepState!==$expectedStep || $request['receipt_reference']!==$receiptReference
+            || ($nextStepState==='completed' && (!is_string($receiptReference) || $receiptReference===''))
+            || ($nextStepState!=='completed' && $receiptReference!==null)) {
+            throw new DomainException('Recovery technical request does not match its signed decision.');
+        }
+        if ($nextStepState==='pending' && ($step['side_effect_level']!=='none'
+            || $step['result_reference']!==null)) {
+            throw new DomainException('A side-effect or evidenced Step cannot be reset.');
+        }
+        if ($nextStepState==='completed' && $step['result_reference']!==null
+            && $step['result_reference']!==$receiptReference) {
+            throw new DomainException('Recovery cannot replace previous independent evidence.');
+        }
+
+        $rows=$this->db->fetchAllAssociative(
+            'SELECT step_id,state FROM cos_workflow_steps
+             WHERE organization_id=:org AND run_id=:run',
+            ['org'=>$id->organizationId,'run'=>$id->runId],
+        );
+        $othersActive=false;$blocking=false;
+        foreach($rows as $current) {
+            $next=$current['step_id']===$stepId?$nextStepState:$current['state'];
+            if($current['step_id']!==$stepId && in_array($next,['claimed','ambiguous'],true)) {
+                $othersActive=true;
+            }
+            if(in_array($next,['claimed','ambiguous','failed'],true))$blocking=true;
+        }
+        if ($request['resolution']==='cancel_uncertain' && $othersActive) {
+            throw new DomainException('Other uncertain Steps still prevent cancellation.');
+        }
+        $computedRun=match($request['resolution']) {
+            'quarantine'=>'ambiguous',
+            'cancel_uncertain'=>'cancelled',
+            default=>($run['state']==='ambiguous' && !$blocking)?'waiting':$run['state'],
+        };
+        if($nextRunState!==$computedRun) {
+            throw new DomainException('Recovery Run transition cannot be chosen by its caller.');
+        }
+        $changed=$this->db->executeStatement(
+            'UPDATE cos_workflow_steps SET state=:next,revision=revision+1,
+                result_reference=:receipt,claim_token=NULL,claimed_by=NULL,
+                claim_expires_at=NULL,updated_at=UTC_TIMESTAMP(6)
+             WHERE organization_id=:org AND run_id=:run AND step_id=:step
+               AND revision=:revision AND state=:old',
+            ['next'=>$nextStepState,'receipt'=>$receiptReference,
+             'org'=>$id->organizationId,'run'=>$id->runId,'step'=>$stepId,
+             'revision'=>(int)$step['revision'],'old'=>$step['state']],
+        );
+        if($changed!==1)throw new LogicException('Recovery Step CAS conflict.');
+        $changed=$this->db->executeStatement(
+            'UPDATE cos_workflow_runs SET state=:next,revision=revision+1,updated_at=UTC_TIMESTAMP(6)
+             WHERE organization_id=:org AND run_id=:run AND revision=:revision AND state=:old',
+            ['next'=>$nextRunState,'org'=>$id->organizationId,'run'=>$id->runId,
+             'revision'=>$command->expectedRevision,'old'=>$run['state']],
+        );
+        if($changed!==1)throw new LogicException('Recovery Run CAS conflict.');
+    }
 
     /**
      * Generic Kernel Agent/Tool claim. Only this Platform Store owns technical

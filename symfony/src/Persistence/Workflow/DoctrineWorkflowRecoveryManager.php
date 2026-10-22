@@ -10,6 +10,7 @@ use LogicException;
 use Platform\Workflow\Contract\WorkflowNonActionReceiptEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
 use Platform\Workflow\Contract\WorkflowRecoveryInterface;
+use Platform\Workflow\Contract\WorkflowApprovedRecoveryWriterInterface;
 use Platform\Workflow\Model\WorkflowReceiptRequest;
 use Platform\Workflow\Model\WorkflowRecoveryAssessment;
 use Platform\Workflow\Model\WorkflowRecoveryDisposition;
@@ -34,6 +35,7 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
         private DoctrineWorkflowRecoveryInspector $inspector,
         private WorkflowReceiptVerifierInterface $receipts,
         private WorkflowNonActionReceiptEvidenceInterface $nonActions,
+        private WorkflowApprovedRecoveryWriterInterface $writer,
     ) {}
 
     public function inspect(WorkflowRunCommand $command): WorkflowRecoveryAssessment
@@ -238,38 +240,29 @@ final readonly class DoctrineWorkflowRecoveryManager implements WorkflowRecovery
             }
 
             $keys=['org'=>$identity->organizationId,'run'=>$identity->runId,'step'=>$step['step_id']];
-            $changed=$this->db->executeStatement(
-                'UPDATE cos_workflow_steps SET state=:next,revision=revision+1,
-                    result_reference=:receipt,claim_token=NULL,claimed_by=NULL,
-                    claim_expires_at=NULL,updated_at=NOW(6)
-                 WHERE organization_id=:org AND run_id=:run AND step_id=:step
-                   AND revision=:revision AND state=:old',
-                ['next'=>$nextStep,'receipt'=>$resolution===WorkflowRecoveryResolution::VERIFIED_COMPLETE
-                    ? $request['receipt_reference'] : null,
-                    ...$keys,'revision'=>(int)$step['revision'],'old'=>$step['state']],
-            );
-            if($changed!==1) throw new LogicException('Workflow recovery Step CAS conflict.');
-
+            // Compute the target without mutating technical state. The only
+            // Run/Step SQL writer remains DoctrineWorkflowExecutionStore.
             $others=$this->db->fetchAllAssociative(
                 'SELECT step_id,state FROM cos_workflow_steps
                  WHERE organization_id=:org AND run_id=:run',
                 ['org'=>$keys['org'],'run'=>$keys['run']],
             );
             $blocking=array_filter($others,static fn(array $s):bool=>
-                in_array($s['state'],['claimed','ambiguous','failed'],true));
+                in_array($s['step_id']===$step['step_id']?$nextStep:$s['state'],
+                    ['claimed','ambiguous','failed'],true));
             $nextRun=match($resolution) {
                 WorkflowRecoveryResolution::QUARANTINE=>'ambiguous',
                 WorkflowRecoveryResolution::CANCEL_UNCERTAIN=>'cancelled',
                 default=>($run['state']==='ambiguous' && $blocking===[])
                     ? 'waiting' : $run['state'],
             };
-            $changed=$this->db->executeStatement(
-                'UPDATE cos_workflow_runs SET state=:next,revision=revision+1,updated_at=NOW(6)
-                 WHERE organization_id=:org AND run_id=:run AND revision=:revision AND state=:old',
-                ['next'=>$nextRun,'org'=>$keys['org'],'run'=>$keys['run'],
-                    'revision'=>(int)$run['revision'],'old'=>$run['state']],
+            // Includes revalidation of the approved decision, tenant context,
+            // original Step and Run revisions, and both compare-and-set writes.
+            $this->writer->applyApprovedRecovery(
+                $command,$requestId,$step['step_id'],$nextStep,$nextRun,
+                $resolution===WorkflowRecoveryResolution::VERIFIED_COMPLETE
+                    ? $request['receipt_reference']:null,
             );
-            if($changed!==1)throw new LogicException('Workflow recovery Run CAS conflict.');
 
             $changed=$this->db->executeStatement(
                 'UPDATE cos_workflow_recovery_decisions SET status="APPLIED",applied_at=NOW(6)

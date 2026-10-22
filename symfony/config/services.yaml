@@ -330,6 +330,8 @@ services:
       $receipts: '@App\Persistence\Workflow\WorkflowReceiptAttestationRouter'
   Platform\Workflow\Contract\WorkflowExecutionStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
+  Platform\Workflow\Contract\WorkflowApprovedRecoveryWriterInterface:
+    alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
   Platform\Workflow\Contract\WorkflowEvidenceSignalStoreInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowExecutionStore
   # Plan verifier stays fail-closed. Real Action receipt verifier is not promoted.
@@ -389,6 +391,7 @@ services:
   App\Persistence\Workflow\DoctrineWorkflowRecoveryManager:
     arguments:
       $receipts: '@App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier'
+      $writer: '@Platform\Workflow\Contract\WorkflowApprovedRecoveryWriterInterface'
   Platform\Workflow\Contract\WorkflowRecoveryInterface:
     alias: App\Persistence\Workflow\DoctrineWorkflowRecoveryManager
   # Domain-owned read-only evidence registry. Unknown kinds/modules still fail closed.

@@ -14,6 +14,16 @@ kind: operations
 
 ## Єдине джерело технічного стану
 
+Після консолідації recovery технічні таблиці `cos_workflow_runs` і
+`cos_workflow_steps` мають **одного прямого SQL writer**:
+`DoctrineWorkflowExecutionStore`. `DoctrineWorkflowRecoveryManager`
+залишається власником рішень, двоосібної перевірки, незалежних receipts і
+операторського аудиту, але передає CAS-виконання в Platform Store в тій
+самій MySQL-транзакції. Контракт `WorkflowApprovedRecoveryWriterInterface`
+і real MySQL `workflow_safe_recovery_mysql.php` перевіряють цей перехід.
+Машинний freeze контракт забороняє повертати другий writer.
+
+
 Нові технічні Agent/Tool Run і Step змінюються тільки через `DoctrineWorkflowExecutionStore` та tenant-scoped canonical claims. Native `cos_agent_runs`, `cos_audit_log`, `cos_jobs`, `cos_actions` залишаються бізнесовими / черговими джерелами **незалежного доказу**, а не другим writer `cos_workflow_runs/steps`. Для старої Federation та Engineering діють задокументовані винятки й контрольований cutover.
 
 Залишкові дублікати ownership **не можна** вважати усунутими без production fleet tracing, порівняння history/shadow і підтвердження всіх consumers. Запуск `php bin/cos-execution-authority-report.php` дає статичний аудит; `php symfony/bin/console cos:workflow:authority-inventory TENANT` дає read-only зріз по трьох runtime контурах, свідомо без release authorization.

@@ -119,6 +119,7 @@ jobs:
           php tests/architecture/workflow_kernel_two_person_recovery.php
           php tests/architecture/workflow_kernel_agent_handoff_order.php
           php tests/architecture/workflow_kernel_queue_failover.php
+          php tests/architecture/workflow_recovery_single_writer.php
       - name: Federation execution authority inventory
         run: |
           set -euo pipefail
