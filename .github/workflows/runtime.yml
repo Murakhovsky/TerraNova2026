@@ -320,6 +320,10 @@ jobs:
           PY
       - name: Current verification
         run: bash bin/verify fast
+      - name: Experience UX debt and QA provenance regression
+        run: |
+          php tests/architecture/experience_v1_ux_debt_evidence.php
+          php tests/architecture/experience_v1_qa_ingest_behavior.php
       - name: Compose validation
         run: docker compose config --quiet
       - name: Validate optional Capital Markets streaming lease monitor
@@ -781,6 +785,8 @@ jobs:
           docker compose exec -T php php bin/console cos:experience:release --json --no-interaction > /tmp/experience-release.json
           grep -q '"status"' /tmp/experience-release.json
           grep -q '"BLOCKED"' /tmp/experience-release.json
+          docker compose exec -T php php bin/console cos:experience:contracts:audit --json --no-interaction > /tmp/experience-contract-outcomes.json
+          grep -q '"contract_gaps"' /tmp/experience-contract-outcomes.json
           docker compose exec -T php php bin/console cos:experience:assets --strict --no-interaction
           docker compose exec -T php php bin/console cos:experience:routes:debt --strict --no-interaction
       - name: Smoke vertical slices
@@ -907,6 +913,15 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" npm run test:golden-eight-quality
+
+      - name: Reconcile Golden Eight QA into canonical Page Contract evidence
+        env:
+          COS_GOLDEN_CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          docker compose exec -T php mkdir -p /tmp/cos-golden-eight
+          docker compose cp tmp/golden-eight/. php:/tmp/cos-golden-eight/
+          docker compose exec -T -e GITHUB_ACTIONS -e GITHUB_REPOSITORY -e GITHUB_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e COS_GOLDEN_CI_SOURCE_SHA php php bin/console cos:experience:qa:ingest --source=/tmp/cos-golden-eight --json --no-interaction
+          docker compose cp php:/var/www/html/symfony/var/experience/qa/golden-eight.json tmp/golden-eight/page-contract-qa.json
 
       - name: Upload Golden Eight evidence
         if: always()

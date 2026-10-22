@@ -11,6 +11,7 @@ pages:
     product:
       primary_goal: "Explore properties spatially without losing entity context."
       page_purpose: "Operational property map with governed filters and context."
+      success_condition: "The user can select a property on the map and open its contextual detail without losing spatial context."
     archetype: map_spatial
     patterns:
       required: [PageHeader, Toolbar, ContextPanel]

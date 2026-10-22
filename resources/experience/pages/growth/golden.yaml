@@ -11,6 +11,7 @@ pages:
     product:
       primary_goal: "Understand current Growth signals, opportunities and next actions."
       page_purpose: "Golden Growth domain dashboard reference for cross-channel prospect intelligence and execution."
+      success_condition: "The user can identify a priority Growth signal and navigate to the corresponding opportunity or next action."
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip]

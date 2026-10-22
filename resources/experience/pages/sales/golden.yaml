@@ -11,6 +11,7 @@ pages:
     product:
       primary_goal: "Understand Sales performance and attention areas."
       page_purpose: "Sales domain overview with KPIs and actionable operational context."
+      success_condition: "The user can inspect Sales KPIs and open the actionable Today queue."
     archetype: domain_dashboard
     patterns:
       required: [PageHeader, KpiStrip]
@@ -33,6 +34,7 @@ pages:
     product:
       primary_goal: "See the work that needs attention now."
       page_purpose: "Operational queue for today's Sales work."
+      success_condition: "The user can identify a pending Sales task and open its next governed action."
     archetype: operational_queue
     patterns:
       required: [PageHeader, EntityList]
@@ -55,6 +57,7 @@ pages:
     product:
       primary_goal: "Find leads that require attention and open the next useful action."
       page_purpose: "Searchable and filterable Sales lead collection."
+      success_condition: "The user can locate a lead and start the create-lead workflow or open an existing lead."
     archetype: collection
     patterns:
       required: [PageHeader, EntityList, FilterBar]
@@ -77,6 +80,7 @@ pages:
     product:
       primary_goal: "Operate the active Sales pipeline and move work toward outcomes."
       page_purpose: "Stage-aware operational pipeline."
+      success_condition: "The user can identify a deal by stage and open its next action without losing pipeline context."
     archetype: process_pipeline
     patterns:
       required: [PageHeader, Toolbar]
@@ -99,6 +103,7 @@ pages:
     product:
       primary_goal: "Move a deal toward the next meaningful outcome."
       page_purpose: "Canonical workspace for one Sales deal."
+      success_condition: "The user can inspect a deal and invoke its next permitted action from the deal workspace."
     archetype: entity_workspace
     patterns:
       required: [WorkspaceHeader, EntityHeader]
