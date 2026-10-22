@@ -176,6 +176,8 @@ COS розвивається як горизонтальна платформа 
 
 ### Пов'язані документи
 
+- [Стратегічна дорожня карта COS — етапи, acceptance gates та комерційні перевірки](./strategic-roadmap.md)
+- [Реєстр стратегічних рішень COS — рішення, альтернативи й тригери перегляду](./strategic-decision-register.md)
 - [Бачення та продуктові принципи COS](../01-product/vision-and-principles.md)
 - [Поточний стан продукту (AS-IS)](../01-product/current-scope.md)
 - [ADR-0015: федеративна архітектура](../11-decisions/ADR-0015-cos-federation-architecture.md)
