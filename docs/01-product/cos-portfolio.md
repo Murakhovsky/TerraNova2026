@@ -1,112 +1,108 @@
 ---
-title: COS Portfolio — єдиний реєстр напрямків і пріоритетів
-description: Портфель продукту, технічної готовності, незавершених PR та рішень Active / Maintenance / Frozen.
+title: COS Portfolio — поточна переоцінка
+description: Єдиний портфель напрямів COS з операційними ризиками, доказовою готовністю і пріоритетами.
 status: active
-updated: 2026-10-17
+updated: 2026-10-22
 kind: product
 ---
 
-# COS Portfolio — керування напрямками
+# COS Portfolio — актуальна переоцінка 22.10.2026
 
-**Baseline audit:** 2026-10-17. **Repository:** [Murakhovsky/TerraNova2026](https://github.com/Murakhovsky/TerraNova2026), default branch **main**.
-**Призначення:** один керований продуктовий портфель замість незалежних списків P0 у кожному домені.
-**Межа достовірності:** інвентаризація GitHub, module manifests, документації, metadata PR та доступних GitHub Actions за exact head SHA. **Це не живий production/staging audit**, не запуск міграцій і не сертифікація бізнесових результатів. Пункти без зовнішніх доказів позначені **NOT VERIFIED**, навіть якщо код злитий до main.
+**Мета:** єдина шкала рішень щодо інвестицій у COS; не плутати merged, CI PASS, deployed, enabled, production-ready і verified business outcome. Попередній зріз — 17.10.2026, збережено в історії цієї гілки.
 
-## 1. Управлінське рішення: ліміт одночасної роботи
+**Перевірено:** repo `Murakhovsky/TerraNova2026`, актуальний `main` до merge #407 (commit `9a9a832708b16c3ef0ba6f577a49938733617daf`), модульні manifests/generated reference, PR #353/#364/#367/#374/#388/#389/#390/#391/#392/#397/#401/#405/#406/#407, workflow results на HEAD окремих PR, operational docs. **Не перевірено з живим доступом:** стан VPS/запущених контейнерів, секретів, MySQL, реальних браузерних сесій, поточного deploy SHA, production health, історичних файлів/даних та незалежних двоакторних approvals. Це репозиторний аудит, не production-sign-off.
 
-- **ACTIVE 1: Platform execution acceptance**. Зосередити увагу на наскрізному канонічному ланцюгу Goal → Plan → незалежний Approval → Platform Workflow → Domain Action → незалежний receipt → Domain outcome → Goal progress. Без нового workflow engine, паралельного Action store або безумовних повторів невизначених зовнішніх ефектів.
-- **ACTIVE 2: Real Estate pilot**. Один комерційно вимірюваний use case: імпорт/внесення 10 об'єктів → перевірка дублікатів → погодження → native Property → перевірка стану → робота Sales/Real Estate з об'єктами. Насамперед PR #388.
-- **MAINTENANCE: Engineering / security / operations**. Виправлення інцидентів, verification, vulnerability/production safety, CI reliability; без окремої нової продуктової хвилі. Винятки щодо стабільності дозволені.
-- **GATED MAINTENANCE / R&D: Capital Markets / FOS**. Зберегти інтегрований baseline, не запускати production streaming, trading, нові пакети та великі експерименти, поки немає фінансування, operator evidence і зовнішніх acceptance conditions.
-- **FROZEN: Finance, Construction, Procurement, HR та інші нові домени**, доки вони не потрібні для активного бізнес-сценарію. Growth і Documents не розширювати окремо від актуального Golden path.
+## Висновок
 
-**WIP limit: максимум два активних потоки, лише один із них вимагає регулярних продуктових рішень.** Не відкривати новий P0 без демонстрації блокуючої залежності для цих потоків або конкретного production incident.
+**Архітектура і код суттєво випереджають комерційно та операційно прийнятий продукт.** Наступний пріоритет — не нові пакети. Потрібен захищений operating baseline, один незалежно підтверджений Goal-to-Result та один повторюваний Real Estate pilot.
 
-## 2. Стандартизовані статуси (не плутати)
+### Оціночна матриця (управлінська експертна оцінка, НЕ тестове покриття)
 
-| Вісь | Значення | Що це означає |
-| --- | --- | --- |
-| Investment mode | ACTIVE / MAINTENANCE / FROZEN | Чи витрачаємо зараз час на новий розвиток |
-| Implementation | SKELETON / IMPLEMENTED / INTEGRATED | Наскільки в коді існує потрібний шлях |
-| Verification | NOT VERIFIED / CI VERIFIED / STAGING E2E VERIFIED / PRODUCTION VERIFIED | Який клас фактичних доказів є |
-| Release | DRAFT / MERGED / DEPLOYED / ENABLED | Стан доставки; **MERGED не означає ENABLED** |
-| Business outcome | NOT VERIFIED / EVIDENCE VERIFIED | Чи перевірено незалежний бізнесовий результат |
+| Зріз | Орієнтир / 100 | Докази та обмеження |
+| --- | ---: | --- |
+| Архітектурна цілісність | 85 | Symfony canonical, modular monolith, Domain ownership, Workflow/Action/Approval, execution authority tests; залишились legacy compatibility та open supersession branches |
+| Функціональна реалізація | 75 | Property/Sales/Real Estate, Growth, Capital Markets, Federation, Documents мають значний код, але feature flags, isolated acceptance |
+| Автоматизована тестованість | 75 | CI + Runtime/Federation MySQL/L2, #388 full 10-Asset MySQL E2E, #407 PR-head workflows PASS; не є live-business acceptance |
+| UX/готовність до самостійного використання | 55 | Робочі workspaces, admin settings; відсутні доведені повні human pilot journeys, recovery UX |
+| Експлуатаційна готовність | 35 | Fresh MySQL на новому VPS, light/core 2 GiB tier, локальні backups і HTTPS за PR-описами; historical DB not recovered, offsite backup not configured, disabled specialized workers |
+| Автономність бізнес-процесів | 35 | Canonical plan/approval/action/receipt, guarded AI/CRON proposal; немає human-free service principal delegation і live unattended workflow acceptance |
+| Комерційна валідація COS | 15 | Немає в цьому аудиті незалежно зафіксованих активних платних COS-клієнтів, usage/ROI, pilot completion; відсутність доказу не означає відсутність клієнтів |
 
-Джерело істини: поточний код та тести → manifest/process definitions → generated reference → narrative documentation → цей **керівний** реєстр. Реєстр не підміняє technical acceptance або runtime configuration.
+Цифри — **приблизні аналітичні індекси** для порівняння пріоритетів, не лабораторно виміряні completion %. Сумарний «% COS» не обчислювати без зафіксованого продуктового scope.
 
-## 3. Портфель потоків (рішення станом на audit)
+## Що змінилося з 17.10
 
-| ID | Напрямок / межа | Mode | Спостережений baseline | Невирішене / критерій приймання | Наступний крок |
-| --- | --- | --- | --- | --- | --- |
-| COS-01 | Platform Workflow + Federation Goals + Actions | **ACTIVE** | #346 і #383 merged; є canonical Workflow bridge, Plan approval, saved Goal → bounded 1–3 Sales actions, outcome projections | Tenant real-data E2E, незалежне Approval і receipts, safe recovery, реальна ціль Golden 50 **NOT VERIFIED**; canonical rollout gated | Пройти один 1–3 Action scenario з реальними Deal та окремим approver |
-| COS-02 | Property Bulk / Capability Library / AI-CRON intents | **ACTIVE** | #388 Draft, інтеграція коду у PR; exact-head GitHub workflows CI/Runtime/Frontend/Docs/L2 smoke success | Не merged і не deployed; реальний 10-Asset browser+Action+MySQL E2E **NOT VERIFIED**; AI/CRON тільки review intents, не autonomous execution; CSV/XLSM немає | Прийняти #388 через staging tenant і контрольний список 10 об'єктів, не обходити approval |
-| COS-03 | Sales / CRM / Real Estate | **ACTIVE лише в межах COS-02** | Модулі Sales 1.0, Real Estate 1.0, Property 1.0; реалізовані CRM / matching / offer / viewing / reservation та property identity | Немає перевіреного саме цього наскрізного комерційного пілота із 10 реальними активами | Підтвердити native Property → Sales outcome і метрики часу / повторних записів |
-| COS-04 | Engineering, Agents, Tool execution, Operations | **MAINTENANCE** | Engineering canonical execution/recovery активно інтегрували раніше; #353 відкритий, CI/Runtime/Frontend successful at HEAD | Відсутність production-incident доказів, щоб вважати UI polling fix вирішенням усіх STALE випадків; перевірити актуальність PR перед merge | Окремий інцидентний triage #353 і точковий fix, без нової архітектури |
-| COS-05 | Capital Markets Market Data / Instrument Pool / Streaming | **GATED MAINTENANCE** | #370, #377 merged; частину #367/#374 уже forward-ported у main. Main містить canonical pool/lease/trust/streaming code | External vendor entitlements, 250 BBO + 50 L2, ≥24h real soak, failover, operator sign-off **NOT VERIFIED**. No live trading | Заморозити нову функціональність. Підготувати лише незалежну release/overlap матрицю |
-| COS-06 | Capital Markets runtime Agent Team | **FROZEN R&D** | #364 Draft; exact-head CI/Runtime/Frontend/Docs success; implemented checkpoint journal and manual resume | Немає operator E2E, security approvals, autonomous production running | Залишити Draft як R&D evidence; не інтегрувати без окремого ROI-рішення |
-| COS-07 | Growth / Golden 50 | **MAINTENANCE / pilot dependency** | Growth 0.50.0 має discovery → handoff → learning; disabled by default; є Golden 50 acceptance runbook | Немає незалежного доказу 50 native Growth candidates → 50 Sales Leads → 50 Documents, two-person approvals | Тестувати за потреби як acceptance COS-01, не створювати новий Growth roadmap |
-| COS-08 | Platform Documents / signature requests | **MAINTENANCE** | Platform Documents runtime, Documents module 0.1.0 для governed signature requests | Запит підпису не є підписаним документом; зовнішнє підтвердження не впроваджено | Використовувати лише в Golden/business flow, не розширювати самостійно |
-| COS-09 | Experience / Adaptive UX / Localization | **MAINTENANCE** | #379, #381 merged після консолідації governance і localization | Реальні UX результати, accessibility, tenant acceptance та документаційний drift потребують перевірки | Лише P0 UX дефекти активного пілота |
-| COS-10 | Service / Diagnostic | **MAINTENANCE** | Manifest Service 1.0.0, Diagnostic 1.0.0; executable runtime та business lifecycle в main | Немає окремого production E2E в межах цього audit | Не розширювати без блокування active path |
-| COS-11 | Finance / Construction / Procurement / HR | **FROZEN** | По 0.1.0 installable skeleton, без повного runtime/persistence | Немає бізнесового use case з вимірюваним ROI | Backlog; не оголошувати production-ready |
-| COS-12 | Tokenization / додаткові вертикалі | **FROZEN** | Не є частиною підтвердженого active acceptance у цьому audit | Бізнес-модель, права на активи, legal/compliance, клієнти і бюджет | Окреме рішення лише за доведеного попиту |
+1. [#388](https://github.com/Murakhovsky/TerraNova2026/pull/388) **merged 19.10**. Є canonical Capability Library; Property Bulk JSON/UTF-8 CSV до 10 записів; HMAC AI/CRON review intents; immutable batch; native Property writer через approved Workflow Action; persisted Goal outcome. Автоматизований full 10-Asset MySQL E2E проходив, але незалежний browser + дві реальні люди + deployed-tenant acceptance не доведені. XLSX/XLSM не підтримано.
+2. [#390](https://github.com/Murakhovsky/TerraNova2026/pull/390) та [#392](https://github.com/Murakhovsky/TerraNova2026/pull/392) merged: у UI є gated ChatGPT commercial-partner OAuth. Без партнерського клієнта та credentials **Continue with ChatGPT disabled**. Не давати загального доступу до підписки замість API.
+3. [#393–#406](https://github.com/Murakhovsky/TerraNova2026/pulls?q=is%3Apr+is%3Aclosed) — великий ops цикл AWS replacement host / GHCR / fresh MySQL / admin bootstrap / local backup. Ключове: #401 зафіксував **нову**, а не restored історичну базу. #405 задекларував локальні backup і відсутність offsite. #406 — створення першого admin, без розголошення секрету. PR-текст ≠ незалежно підтверджений production state.
+4. [#407](https://github.com/Murakhovsky/TerraNova2026/pull/407) **merged 21.10**: OpenCode V2 admin-only test bridge через canonical LLM Registry. Enabled flag OFF за замовчуванням; no agent/tool/shell/file access; немає live API/configuration acceptance. Exact-head CI/Runtime/Frontend/Docs/L2 workflow success.
+5. [#391](https://github.com/Murakhovsky/TerraNova2026/pull/391) (автодеплой після всіх main push) **досі OPEN**; `.github/workflows/runtime.yml` в main зберігає `push.paths`. Отже, суцільне автодеплоювання всіх змін не доведено.
+6. [#389](https://github.com/Murakhovsky/TerraNova2026/pull/389) — цей Portfolio **досі OPEN** і не існує в main; цей перегляд оновлює його без втручання у production.
 
-Примітка: кодовий baseline із [generated module-capabilities](../12-reference/module-capabilities.md); статуси і стан release уточнюються з PR та фактичних workflows. Зелений GitHub Action без tenant E2E **не прирівнюється до production readiness**.
+## Режими інвестицій: WIP ≤ 2
 
-## 4. Незавершені GitHub PR — реєстр із рішенням
-
-| PR | Перевірений стан 2026-10-17 | Докази | Рішення | Умова виходу |
+| ID | Напрямок | Mode 22.10 | Що вже є / наступний результат | Що блокує статус READY |
 | --- | --- | --- | --- | --- |
-| [#388](https://github.com/Murakhovsky/TerraNova2026/pull/388) | OPEN, Draft; mergeable | HEAD 26f5b1ae; CI, Runtime, Frontend, Documentation, L2 Recovery Smoke success | **ACTIVE P0: acceptance, після цього окреме рішення merge** | Staging 10-Asset, duplicate check, approval, independent receipts, tenant checks, migration fresh/upgrade, operator sign-off |
-| [#353](https://github.com/Murakhovsky/TerraNova2026/pull/353) | OPEN, non-Draft; mergeability false | HEAD c2b342bb; CI, Runtime, Frontend success | **MAINTENANCE: rebase/compare перед рішенням** | Довести, що UI polling fix не дублюється у main; reproduce/read-only browser regression |
-| [#374](https://github.com/Murakhovsky/TerraNova2026/pull/374) | OPEN, Draft; mergeability false | HEAD 27810c90; у доступному запиті немає PR-triggered runs для цього HEAD | **HOLD / overlap audit** | Зіставити залишковий delta проти інтегрованого #377, не робити сліпий merge; external production gates окремо |
-| [#367](https://github.com/Murakhovsky/TerraNova2026/pull/367) | OPEN, Draft; mergeability false | HEAD 25884fb7; CI, Runtime, Docs, Frontend, L2 Smoke, L2 Reconnect success | **HOLD / overlap audit** | Матриця #377 повідомляє 95/98 paths already identical at prior audit; встановити чи лишилося унікальне, потім закривати з provenance |
-| [#364](https://github.com/Murakhovsky/TerraNova2026/pull/364) | OPEN, Draft; mergeability false | HEAD fc64c366; CI, Runtime, Frontend, Docs success | **FROZEN R&D** | Operator acceptance, real external LLM/tenant data, guarded resume, clear ROI before promotion |
+| COS-OPS | Security, data, deploy, recovery, workers | **ACTIVE P0: recovery gate** | Піднятий core runtime / GHCR workflow; local backup mechanism | Audit фактичного live SHA/MySQL/backup restore, offsite backup, historical data decision, безпечна активація потрібних workers |
+| COS-RE | Property / Sales / Real Estate + Goal pilot | **ACTIVE P0: one business vertical** | #388 merged; native real MySQL 10-object tests, canonical Workflow / Action / outcome provider | Live controlled 10-Asset operator journey, independent human approvals, tenant/evidence/replay checks, реальний CRM/Sales use case |
+| COS-FED | Kernel + Federation / Goals / Workflow | **ACTIVE тільки як блокуюча залежність COS-RE** | #346/#383/#388 canonical path; explicit policy, store, receipt, projections | Немає окремого незалежного real-user pilot; Golden 50 з реальними Growth Candidates/Leads/Documents не підтверджено |
+| COS-ENG | Engineering agents, tool execution, ops UI | **MAINTENANCE** | Durable runtime, existing tests; #353 open | Core tier disables specialized worker; #353 лише live UI polling, не лікує worker; release acceptance потрібне окремо |
+| COS-LLM | AI providers, ChatGPT OAuth, OpenCode | **MAINTENANCE / manual experimentation** | #390/#392/#407 merged; admin LLM settings | SIWC needs partner access; OpenCode V2 manual admin-only API, default off, no production usage ledger |
+| COS-GROWTH | Growth + CRM demand discovery | **MAINTENANCE** | Growth 0.50.0, Sales handoff pathways, default disabled | Real tenant flow, approvals, 50 unique real candidates and business results |
+| COS-DOC | Documents | **MAINTENANCE** | Platform upload/version/template and gated signature requests | No independent real document legal-signature proof; 50 prepared proposals unverified |
+| COS-UX | Experience V1 / localized UI | **MAINTENANCE** | #379/#381 merged | Production customer UX acceptance, accessibility and onboarding |
+| COS-CM | Instrument Pool + Market Data + FOS | **GATED R&D** | #370/#377 in main, source-fenced L2/BBO, portfolio/risk/research | Licensing, real entitlements, live ≥24h soak, independently trusted 250 BBO/50 L2, resource-heavy specialized workers OFF |
+| COS-CM-A | Capital Markets agent lifecycle | **FROZEN R&D** | #364 Draft with checkpointed recovery | Operator UI, approved paper-only execution, live quality/LLM/chaos evidence, economics |
+| COS-SVC | Service / Diagnostic | **MAINTENANCE** | Runnable V1 modules | No business pilot evidence in this audit |
+| COS-FUTURE | Finance, HR, Procurement, Construction, Tokenization | **FROZEN** | First four are installable 0.1.0 skeletons | Concrete paying user, owner, budget, regulatory review where relevant |
 
-**Важливо:** #377 уже merged, хоча його історичний текст PR описує DRAFT / NO MERGE як стан на момент створення. Стан GitHub є джерелом правди для merge; однак немає доказу live-market certification. Також #383 merged, але його PR-текст не стверджував local Runtime/MySQL PASS та staging acceptance. Не називати ці сценарії production-complete.
+**WIP rule:** COS-OPS і COS-RE — єдині дві поточні активні роботи. COS-FED отримує зміни тільки для розблокування Real Estate scenario. Жодного нового «P0» в CM/FOS, tokenization або для експериментального LLM.
 
-## 5. Відкриті Issues
+## GitHub queue станом на перевірку
 
-| Issue | Mode | Рішення |
+| PR / issue | State | Рішення |
 | --- | --- | --- |
-| [#360](https://github.com/Murakhovsky/TerraNova2026/issues/360) Production Streaming | GATED MAINTENANCE | Залишити як acceptance umbrella без нової реалізації, поки немає ресурсів і real provider proof; синхронізувати із #377/#374 |
-| [#386](https://github.com/Murakhovsky/TerraNova2026/issues/386) H1/H2 scheduled scans | FROZEN | Unique registry залишився невиконаним після закриття #318; не повертати паралельний scanner/Workflow. Реактивація лише після пріоритетного рішення |
+| [#389](https://github.com/Murakhovsky/TerraNova2026/pull/389) Portfolio | OPEN | Оновити і закріпити управлінський source-of-truth після documentation checks |
+| [#391](https://github.com/Murakhovsky/TerraNova2026/pull/391) full main auto-deploy | OPEN | Перевірити з поточним low-memory GHCR deployment, після цього прийняти/відхилити; не руйнувати environment gates |
+| [#353](https://github.com/Murakhovsky/TerraNova2026/pull/353) Engineering polling | OPEN | Переоцінити на current main, застосувати тільки якщо актуально |
+| [#367](https://github.com/Murakhovsky/TerraNova2026/pull/367) L2 recovery | OPEN DRAFT | Diff із #377, no duplicate merge; provenance і закриття, якщо fully superseded |
+| [#374](https://github.com/Murakhovsky/TerraNova2026/pull/374) production pool | OPEN DRAFT | Diff із #377, залишкові інваріанти; external acceptance не знімати |
+| [#364](https://github.com/Murakhovsky/TerraNova2026/pull/364) CM agents | OPEN DRAFT | Hold R&D |
+| [#360](https://github.com/Murakhovsky/TerraNova2026/issues/360) Production Streaming | OPEN | Acceptance umbrella; development hold |
+| [#386](https://github.com/Murakhovsky/TerraNova2026/issues/386) H1/H2 scan registry | OPEN | Frozen parity gap; no competing scheduler |
 
-## 6. Реальна готовність: три незалежні перевірки
+На 17.10 було 5 open PR, згодом #388 merged, #389 і #391 залишилися; на 22.10 **6 open PR і 2 Issues**.
 
-1. **Code & CI:** PR, HEAD SHA, набір необхідних checks, тестовий датасет, конкретні міграції та рев'ю.
-2. **Staging operational acceptance:** потрібний tenant, модульний READY (version/schema/dependencies), feature flags, два реальні різні актори для Approval, worker/outbox, CLI/API, браузер, перевірка через native read, failure/recovery.
-3. **Production/business acceptance:** deployed SHA + applied schema + enabled tenant, безпечний rollback, достовірні external receipts, перевірений реальний результат. Для Capital Markets ще окремо ліцензії, issuer rights, live soak та нульова дозвільна влада live orders за замовчуванням.
+## P0: критичні операційні докази, перш ніж покладатися на COS
 
-Audit **не запускав** full verify, MySQL migrations, staging browser, реальний 10-item бізнес-кейс, production observability чи операторську перевірку. Класифікація "CI VERIFIED" базується на переглянутих GitHub Actions відповідних commit SHA, не на локальному повторі тестів.
+1. **Read-only live audit:** deployed SHA/HTTPS, Docker/core state, health, MySQL schema/table count, live user/admin record, Redis/Messenger backlog, disabled feature flags, available memory/disk; без жодних credentials у звітах.
+2. **Data preservation:** письмово розділити newly initialized DB та unrecovered historical data/master key/uploads; перевірити, чи можливе безпечне відновлення зі старих snapshots. Не називати «recovered» створення порожньої нової БД.
+3. **Backups:** verified restore drill із локального `mysqldump` у окрему БД; налаштувати зашифрований offsite backup із retention; не публікувати encryption master keys у GitHub/Actions.
+4. **Release control:** отримати фактичний статус #391 і повний `main → GHCR exact SHA → deploy core → smoke`. Всі worker/resource changes gated; full mode на 2 GB не активувати сліпо.
+5. **Admin security:** перевірити первинний login та MFA/credential rotation там, де підтримується; ніколи не друкувати one-time пароль/файли.
 
-## 7. Обмежений порядок робіт (найближчий цикл)
+## P0: комерційний vertical slice після operating baseline
 
-| Seq | Result-oriented work item | Depends on | Acceptance | Priority |
-| --- | --- | --- | --- | --- |
-| 1 | Завершити small Goal → canonical Workflow → 1–3 Sales Actions → verified outcome | #346 + #383 в main, active tenant, approval policy | Реальні Deal IDs, різні manager/approver, незалежний Action receipt, outcome, retry-denial, no dual write | P0 |
-| 2 | Довести #388 до E2E 10-Asset в Property | COS-01, staging tenant, migrations | 10 ізольованих records; NEW/MERGE/REVIEW cases; human approval; exact count in native Property; no duplicate writes; safe replay | P0 |
-| 3 | Перевірити комерційну користь у Real Estate | 1–2 | Як мінімум один бізнес-користувач, зафіксовані час внесення, дублікати, зусилля оператора, follow-up/CRM actions | P0 |
-| 4 | Опрацювати #353 як обмежений maintenance fix | Reproduce on current main | Browser regression, відсутність dub/frozen polling, не міняє actual workflow authority | P1 safety |
-| 5 | Звірити #367/#374 і #364 з main, зберегти унікальне | #377, git diff/patch | Per-path provenance; no duplicate schema/provider writer; security/release gates untouched | P1 hygiene |
-| 6 | Привести product current-scope/domain-map до фактичних manifest і latest main | 1–2 визначили acceptance | Немає суперечностей "злито / працює / увімкнено / прийнято" | P1 docs |
+**Definition of Done:** 10 справжніх об'єктів (або чітко відокремлені staging originals) імпортуються через UI/CSV/AI-CRON review, кожна тотожність дедуплікується, Plan і Action отримують **незалежні реальні approvals**, `Platform Workflow` виконує рівно одну бізнесову мутацію на ключ, 10 native Property records підтверджені read model і незалежним Goal outcome, негативні retries/error/reconciliation не створюють дубль. Далі принаймні один реальний Sales/Real Estate процес використовує внесені активи; фіксуємо elapsed time, ручні дії, quality, failures і бізнесовий outcome.
 
-**Не додавати задачі лише тому, що вони цікаві, а їхні тести зелені.** Нові ідеї записуються в Backlog, доки не звільниться один із двох ACTIVE slots.
+Автоматизований [#388](https://github.com/Murakhovsky/TerraNova2026/pull/388) E2E покриває MySQL, але використовує fixture для першого Plan approval. Це **не** замінює операторську двоакторну перевірку. Основний P0 тут — execution/verification, а не нова архітектура.
 
-## 8. Що вважати закриттям циклу
+## Golden 50 і FOS
 
-- У портфелі у кожного напряму є один mode, один next decision, один owner/authority, один доказовий gate.
-- Є лише два ACTIVE потоки і одна спільна пріоритизація, а не десятки доменних P0.
-- Усі 5 відкритих PR та 2 Issues мають явно визначений статус і рішення (розробка, приймання, hold або frozen).
-- COS-01 і COS-02 перейшли із "код/CI" у **staging E2E verified** із реальними persisted receipts; до цього не позначати "Done".
-- Dashboard/report має відрізняти **deployed/ready/enabled** від **verified business outcome**.
-- Перегляд Portfolio раз на тиждень: перегляд evidence + фінансового ефекту + рішення ACTIVE/HOLD/FROZEN. Будь-який "critical P0" повинен називати блоковану active Goal, не просто severity.
+- **Golden 50:** залишити як release proof для ширшої cross-domain федерації. Без реальних native 50 Growth Candidates + 50 Sales Leads + 50 Documents + 50 незалежно атестованих результатів не ставити acceptance PASS. Не перетворювати його на блокер кожної малої 1–3 step Goal або першого Property pilot.
+- **FOS:** не запускати continuous WS/Fleet/Live providers чи real trades на поточному core tier. #377 already merged; #367/#374 можуть мати пересічні зміни. Vendor contracts, entitlements, verified live 24h data/lease/failover і фінансові ризики — **окремий** проєктний бюджет і середовище. Відсутність доказу реальної економічної edge означає, що unit/paper P&L не створює production profitability claim.
 
-## 9. Документальний drift і відповідальність
+## Зміна концепції розвитку
 
-- [docs/01-product/current-scope.md](./current-scope.md) останній раз позначений 2026-10-06 і не відображає всіх нових інтеграцій 2026-10-16.
-- [docs/03-architecture/domain-map.md](../03-architecture/domain-map.md) позначений 2026-09-24 і має застарілі версії деяких модулів, порівняно з [generated capabilities](../12-reference/module-capabilities.md).
-- **Owner стратегічних ACTIVE/FROZEN рішень:** власник COS. **Technical evidence:** Engineering/QA workflows і Domain owners. **Release authority:** окремі операторські approvals/guards; документ не дає дозволу на деплой або фінансові операції.
-- Джерела для engineering: [Federation canonical execution](../03-architecture/federation-goal-canonical-execution.md), [Golden 50 acceptance](../02-workflows/federation-golden-50-operator-acceptance.md), [Capital Markets integration matrix](../04-domains/capital_markets/cos-cm-integration-matrix-20261016.md), [module readiness](../10-operations/module-readiness.md).
+COS зараз найбільше потрібен **короткий доказ корисності у власному бізнесі нерухомості**, а не інший універсальний модуль. Перший пілот: «Додай 10 об'єктів → перевір → погодь → створи native records → виконай Sales follow-up → покажи результат». Готовий код достатній для переходу до операційного приймання після recovery gates; ресурс обмежує worker automation. За 14–30 днів успіх оцінювати **не PR count**, а безпечним recovery, real user journey, кількістю verified actions, часом операторської роботи та кількістю комерційно придатних об'єктів.
 
-**Оновлюйте цей Portfolio при зміні режиму/пріоритету.** Більш дрібні task lists можуть існувати в Issues/Goals, але не мають власної незалежної "стратегічної" шкали P0.
+## Відповідальність і зміни
+
+- **COS owner:** рішення ACTIVE/FROZEN, бюджет, target use case та бізнесовий sign-off.
+- **Domain/Engineering:** перевірка code/quality/security, технічні receipts, no-shadow-writers.
+- **Operations:** immutable deploy SHA, database backup, offsite, rollback, worker resource telemetry; release approvals.
+- **Pilot operator:** справжня двоакторна approval, Property/Sales business evidence, UX issues, ROI.
+
+Джерела: [main current scope](./current-scope.md) (деякі розділи застарілі, dated 2026-10-06), [generated capabilities](../12-reference/module-capabilities.md), [Docker lean deployment](../10-operations/docker-lean-deployment.md), [Golden 50 acceptance](../02-workflows/federation-golden-50-operator-acceptance.md), [Federation trusted outcomes](../03-architecture/federation-trusted-goal-outcomes.md), [OpenCode manual testing](../06-ai-agents/opencode-personal-testing.md).
+
+**Цей документ — керівний портфель, а не дозвіл на автоматичний merge, schema changes, production activation, trading чи персональне використання підписки як API.**
