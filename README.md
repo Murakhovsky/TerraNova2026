@@ -48,7 +48,8 @@ Historical Wave/version tests are retained under `tests/history/` as migration e
 
 Canonical documentation lives in `docs/`.
 
-- Current product state: [docs/01-product/current-scope.md](docs/01-product/current-scope.md)
+- Strategic direction (TO-BE): [COS Strategic Charter v0.1](docs/00-start/strategic-charter.md)
+- Current product state (AS-IS): [docs/01-product/current-scope.md](docs/01-product/current-scope.md)
 - System architecture: [docs/03-architecture/system-map.md](docs/03-architecture/system-map.md)
 - Kernel: [docs/03-architecture/kernel-overview.md](docs/03-architecture/kernel-overview.md)
 - Domain map: [docs/03-architecture/domain-map.md](docs/03-architecture/domain-map.md)
