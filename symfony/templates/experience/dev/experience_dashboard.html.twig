@@ -64,6 +64,7 @@
             <twig:CosMetric label="Open UX debt" value="{{ experience.productUx.open_ux_debt }}" />
             <twig:CosMetric label="Design gaps" value="{{ experience.productUx.open_design_system_gaps }}" />
             <twig:CosMetric label="Generic contracts" value="{{ experience.productUx.generic_contract_copy_count }}" />
+            <twig:CosMetric label="P0/P1 outcomes" value="{{ experience.contractOutcomes.counts.complete_contracts }}/{{ experience.contractOutcomes.counts.active_p0_p1 }}" />
         </div>
         {% if experience.productUx.priority_inflated %}
             <twig:CosAlert
