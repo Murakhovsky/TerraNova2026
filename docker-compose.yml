@@ -148,6 +148,7 @@ services:
     command: ["sh", "-c", "rm -rf public/assets/* && php bin/console asset-map:compile && exec php-fpm"]
     volumes:
       - symfony_sessions:/var/www/html/symfony/var/sessions
+      - experience_qa_evidence:/var/www/html/symfony/var/experience/qa
       - symfony_assets:/var/www/html/symfony/public/assets
       - spatial_uploads:/var/www/html/public/uploads/spatial
     depends_on:
@@ -602,6 +603,7 @@ volumes:
   mysql_data:
   redis_data:
   symfony_sessions:
+  experience_qa_evidence:
   symfony_assets:
   spatial_uploads:
   mercure_data:
