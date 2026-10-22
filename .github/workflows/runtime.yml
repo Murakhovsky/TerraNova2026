@@ -118,6 +118,8 @@ jobs:
           php tests/architecture/workflow_kernel_single_authority.php
           php tests/architecture/workflow_kernel_two_person_recovery.php
           php tests/architecture/workflow_kernel_agent_handoff_order.php
+          php tests/architecture/workflow_kernel_queue_failover.php
+          php tests/architecture/workflow_recovery_single_writer.php
       - name: Federation execution authority inventory
         run: |
           set -euo pipefail
@@ -152,6 +154,7 @@ jobs:
           php tests/integration/federation_non_action_goal_mysql.php
           php tests/integration/workflow_wait_signal_mysql.php
           php tests/integration/workflow_kernel_canonical_mysql.php
+          php tests/integration/workflow_kernel_queue_failover_mysql.php
       - name: Publish per-step timings
         if: always()
         continue-on-error: true

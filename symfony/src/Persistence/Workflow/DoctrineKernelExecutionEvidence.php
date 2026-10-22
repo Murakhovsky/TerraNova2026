@@ -23,11 +23,13 @@ final readonly class DoctrineKernelExecutionEvidence implements WorkflowKernelEx
     ):void {
         if ($kind==='agent') {
             $job=$this->db->fetchAssociative(
-                'SELECT type,status,attempts,locked_by,correlation_id,payload
+                'SELECT type,status,attempts,locked_by,locked_at,timeout_seconds,correlation_id,payload
                  FROM cos_jobs WHERE organization_id=:org AND id=:job FOR UPDATE',
                 ['org'=>$identity->organizationId,'job'=>$sourceId]);
             if(!$job || $job['type']!=='AGENT_RUN' || $job['status']!=='RUNNING'
                 || (int)$job['attempts']!==1 || $job['locked_by']!==$worker
+                || $job['locked_at']===null
+                || strtotime((string)$job['locked_at'].' UTC') + (int)$job['timeout_seconds'] <= time()
                 || $job['correlation_id']!==$correlation) {
                 throw new DomainException('Kernel Agent lacks a first, tenant-owned queue claim.');
             }

@@ -14,12 +14,10 @@
       "symfony/src/Persistence/Federation/FederationExternalActionSubmission.php"
     ],
     "cos_workflow_runs": [
-      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
-      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php"
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php"
     ],
     "cos_workflow_steps": [
-      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php",
-      "symfony/src/Persistence/Workflow/DoctrineWorkflowRecoveryManager.php"
+      "symfony/src/Persistence/Workflow/DoctrineWorkflowExecutionStore.php"
     ]
   },
   "legacy_exception": {

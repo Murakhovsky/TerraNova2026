@@ -80,10 +80,6 @@ $nonAction=new class implements WorkflowNonActionReceiptEvidenceInterface {
         }
     }
 };
-$managerService=new DoctrineWorkflowRecoveryManager(
-    $db,new DoctrineWorkflowRecoveryInspector($db,$actionProof),
-    $actionProof,$nonAction,
-);
 $deny=static function(callable $fn,string $why):void {
     try{$fn();}catch(DomainException|LogicException|InvalidArgumentException){return;}
     throw new RuntimeException('Unsafe recovery was accepted: '.$why);
@@ -95,6 +91,10 @@ $fixtureClaim=new class implements WorkflowStepClaimAdmissionInterface {
     }
 };
 $store=new DoctrineWorkflowExecutionStore($db,new FailClosedWorkflowReceiptVerifier(),$fixtureClaim);
+$managerService=new DoctrineWorkflowRecoveryManager(
+    $db,new DoctrineWorkflowRecoveryInspector($db,$actionProof),
+    $actionProof,$nonAction,$store,
+);
 $externalStep=['id'=>'send','capability_id'=>'test.publish','capability_version'=>'1.0.0',
     'side_effect_level'=>'external','depends_on'=>[],
     'execution_binding'=>'action:test.publish',

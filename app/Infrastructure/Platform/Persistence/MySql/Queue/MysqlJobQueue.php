@@ -18,6 +18,39 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 {
     private const CLAIM_RACE_RETRIES = 8;
 
+    /**
+     * Never let generic queue recovery replay a previously claimed canonical
+     * Agent or an Action that could run a Tool with a remote side effect.
+     * Pinned canonical Runs remain protected even after rollout is disabled.
+     */
+    private const CANONICAL_OWNED_JOB_SQL = <<<'SQL'
+(
+    (jobs.type = 'AGENT_RUN' AND (
+        EXISTS (
+            SELECT 1 FROM cos_kernel_execution_rollouts rollout
+            WHERE rollout.organization_id = jobs.organization_id
+              AND rollout.runtime_kind = 'agent' AND rollout.mode = 'canonical'
+        )
+        OR EXISTS (
+            SELECT 1 FROM cos_workflow_runs workflow
+            WHERE workflow.organization_id = jobs.organization_id
+              AND workflow.run_id = CONCAT('ka:', SUBSTRING(SHA2(
+                  CONCAT(jobs.organization_id, CHAR(0), 'agent', CHAR(0), jobs.id), 256
+              ), 1, 32))
+              AND workflow.definition_id = 'kernel.agent_execution'
+        )
+    ))
+    OR (jobs.type = 'ACTION_EXECUTION' AND EXISTS (
+        SELECT 1 FROM cos_actions action_record
+        WHERE action_record.organization_id = jobs.organization_id
+          AND action_record.id = JSON_UNQUOTE(JSON_EXTRACT(
+              IF(JSON_VALID(jobs.payload), jobs.payload, '{}'), '$.action_id'
+          ))
+          AND action_record.type = 'kernel.tool.invoke'
+    ))
+)
+SQL;
+
     public function __construct(
         private PDO $connection,
         private TransactionManagerInterface $transactions,
@@ -196,9 +229,12 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
             $delay = min(3600, 10 * (2 ** max(0, $job->attempts - 1)));
             $status = $dead ? 'DEAD' : 'FAILED';
             $statement = $this->connection->prepare(
-                'UPDATE cos_jobs SET status = :status, available_at = DATE_ADD(NOW(6), INTERVAL :delay SECOND), '
-                . 'locked_at = NULL, locked_by = NULL, last_error = :error '
-                . 'WHERE id = :id AND status = \'RUNNING\' AND locked_by = :worker'
+                "UPDATE cos_jobs jobs SET jobs.status = CASE WHEN "
+                . self::CANONICAL_OWNED_JOB_SQL
+                . " THEN 'DEAD' ELSE :status END, "
+                . 'jobs.available_at = DATE_ADD(NOW(6), INTERVAL :delay SECOND), '
+                . 'jobs.locked_at = NULL, jobs.locked_by = NULL, jobs.last_error = :error '
+                . "WHERE jobs.id = :id AND jobs.status = 'RUNNING' AND jobs.locked_by = :worker"
             );
             $statement->execute([
                 'status' => $status,
@@ -209,7 +245,13 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
             ]);
             if ($statement->rowCount() === 1) {
                 $this->releaseTenantLease($job);
-                $this->publishChanged($job->organizationId, $job->id, $status, $job->correlationId);
+                $check = $this->connection->prepare(
+                    'SELECT status FROM cos_jobs WHERE organization_id = :org AND id = :id'
+                );
+                $check->execute(['org' => $job->organizationId, 'id' => $job->id]);
+                $this->publishChanged(
+                    $job->organizationId, $job->id, (string) $check->fetchColumn(), $job->correlationId
+                );
             }
         });
     }
@@ -218,34 +260,42 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
     {
         return $this->transactions->transactional(function (): int {
             $affected = $this->connection->query(
-                "SELECT organization_id,id,correlation_id,attempts,max_attempts FROM cos_jobs "
-                . "WHERE status = 'RUNNING' AND locked_at < DATE_SUB(NOW(6), INTERVAL timeout_seconds SECOND) "
+                "SELECT jobs.organization_id,jobs.id,jobs.correlation_id "
+                . "FROM cos_jobs jobs WHERE jobs.status = 'RUNNING' "
+                . "AND jobs.locked_at < DATE_SUB(NOW(6), INTERVAL jobs.timeout_seconds SECOND) "
                 . 'FOR UPDATE'
             )->fetchAll(PDO::FETCH_ASSOC);
 
             $statement = $this->connection->prepare(
-                "UPDATE cos_jobs SET status = CASE WHEN attempts >= max_attempts THEN 'DEAD' ELSE 'FAILED' END, "
-                . "available_at = NOW(6), locked_at = NULL, locked_by = NULL, last_error = 'Worker lease timed out' "
-                . "WHERE status = 'RUNNING' AND locked_at < DATE_SUB(NOW(6), INTERVAL timeout_seconds SECOND)"
+                "UPDATE cos_jobs jobs SET jobs.status = CASE "
+                . "WHEN " . self::CANONICAL_OWNED_JOB_SQL . " THEN 'DEAD' "
+                . "WHEN jobs.attempts >= jobs.max_attempts THEN 'DEAD' ELSE 'FAILED' END, "
+                . "jobs.available_at = NOW(6), jobs.locked_at = NULL, "
+                . "jobs.locked_by = NULL, jobs.last_error = 'Worker lease timed out' "
+                . "WHERE jobs.status = 'RUNNING' "
+                . "AND jobs.locked_at < DATE_SUB(NOW(6), INTERVAL jobs.timeout_seconds SECOND)"
             );
             $statement->execute();
             $recovered = $statement->rowCount();
 
-            $cleanup = $this->connection->prepare(
+            $this->connection->prepare(
                 'DELETE FROM cos_tenant_execution_leases WHERE expires_at <= NOW(6)'
-            );
-            $cleanup->execute();
+            )->execute();
 
+            $check = $this->connection->prepare(
+                'SELECT status FROM cos_jobs WHERE organization_id = :org AND id = :id'
+            );
             foreach ($affected as $row) {
-                $status = (int) $row['attempts'] >= (int) $row['max_attempts'] ? 'DEAD' : 'FAILED';
+                $check->execute(['org' => $row['organization_id'], 'id' => $row['id']]);
+                $status = (string) $check->fetchColumn();
+                if (!in_array($status, ['FAILED', 'DEAD'], true)) {
+                    continue;
+                }
                 $this->publishChanged(
-                    (string) $row['organization_id'],
-                    (string) $row['id'],
-                    $status,
-                    (string) $row['correlation_id'],
+                    (string) $row['organization_id'], (string) $row['id'],
+                    $status, (string) $row['correlation_id']
                 );
             }
-
             return $recovered;
         });
     }
@@ -253,28 +303,28 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
     public function replayDead(?string $organizationId = null, ?string $jobId = null): int
     {
         return $this->transactions->transactional(function () use ($organizationId, $jobId): int {
-            $where = ["status = 'DEAD'"];
+            $where = ["jobs.status = 'DEAD'", 'NOT ' . self::CANONICAL_OWNED_JOB_SQL];
             $params = [];
             if ($organizationId !== null) {
-                $where[] = 'organization_id = :organization_id';
+                $where[] = 'jobs.organization_id = :organization_id';
                 $params['organization_id'] = $organizationId;
             }
             if ($jobId !== null) {
-                $where[] = 'id = :job_id';
+                $where[] = 'jobs.id = :job_id';
                 $params['job_id'] = $jobId;
             }
 
             $selector = $this->connection->prepare(
-                'SELECT organization_id,id,correlation_id FROM cos_jobs WHERE '
-                . implode(' AND ', $where)
-                . ' FOR UPDATE'
+                'SELECT jobs.organization_id,jobs.id,jobs.correlation_id '
+                . 'FROM cos_jobs jobs WHERE ' . implode(' AND ', $where) . ' FOR UPDATE'
             );
             $selector->execute($params);
             $affected = $selector->fetchAll(PDO::FETCH_ASSOC);
 
             $statement = $this->connection->prepare(
-                "UPDATE cos_jobs SET status = 'PENDING', attempts = 0, available_at = NOW(6), "
-                . 'locked_at = NULL, locked_by = NULL, completed_at = NULL, last_error = NULL WHERE '
+                "UPDATE cos_jobs jobs SET jobs.status = 'PENDING', jobs.attempts = 0, "
+                . 'jobs.available_at = NOW(6), jobs.locked_at = NULL, '
+                . 'jobs.locked_by = NULL, jobs.completed_at = NULL, jobs.last_error = NULL WHERE '
                 . implode(' AND ', $where)
             );
             $statement->execute($params);
@@ -282,13 +332,10 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 
             foreach ($affected as $row) {
                 $this->publishChanged(
-                    (string) $row['organization_id'],
-                    (string) $row['id'],
-                    'PENDING',
-                    (string) $row['correlation_id'],
+                    (string) $row['organization_id'], (string) $row['id'],
+                    'PENDING', (string) $row['correlation_id']
                 );
             }
-
             return $replayed;
         });
     }
@@ -315,6 +362,7 @@ final readonly class MysqlJobQueue implements RetryAwareJobQueueInterface
 
         return "SELECT jobs.* FROM cos_jobs jobs "
             . "WHERE jobs.status IN ('PENDING', 'FAILED') AND jobs.available_at <= NOW(6) "
+            . "AND (jobs.attempts = 0 OR NOT " . self::CANONICAL_OWNED_JOB_SQL . ") "
             . "AND {$activeLeaseCount} < {$limit} "
             . "ORDER BY {$activeLeaseCount} ASC, jobs.available_at ASC, jobs.created_at ASC "
             . 'LIMIT 1 FOR UPDATE SKIP LOCKED';
