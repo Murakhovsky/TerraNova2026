@@ -76,6 +76,10 @@ $reject=static function(callable $fn) use($check):void {
 
 $check($gateway->describe($manager,'property.asset.create')['status']==='direct_human','Missing live human binding.');
 $check($gateway->describe($manager,'property.asset.get')['status']==='read_only','Missing read-only binding.');
+$check($gateway->describe($manager,'property.asset.get')['binding_witness']==='DOMAIN_ADAPTER_REGISTERED',
+    'Canonical runtime adapter witness missing.');
+$check($gateway->describe($manager,'property.asset.search')['binding_witness']==='UNVERIFIED',
+    'Unbound query must never be marked as runtime verified.');
 $check($gateway->describe($manager,'property.asset.search')['status']==='unavailable','Unbound query must be unavailable.');
 $preflight=$gateway->validateInput($manager,'property.asset.create',
     ['type_code'=>'house','city'=>'Львів']);
