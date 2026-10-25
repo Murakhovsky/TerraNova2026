@@ -6,9 +6,16 @@
 <section class="cos-page__stack" data-cos-federation-goals data-experience-mode="{{ mode }}">
     <header class="cos-card">
         <p class="cos-card__eyebrow">COS / Goal to Outcome</p>
-        <h1 class="cos-card__title">Ваші бізнес-цілі</h1>
+        <h1 class="cos-card__title">Goal Control Center</h1>
         <p class="cos-card__copy">Спочатку визначаємо вимірюваний результат. Виконання між доменами вмикається окремо після перевірки плану та необхідних погоджень.</p>
-        <a class="cos-button cos-button--ghost" href="/cabinet">До кабінету</a>
+        <div class="cos-pattern-inline" aria-label="Навігація робочого простору">
+            <a class="cos-button cos-button--primary" href="#golden50-control">Golden 50</a>
+            <a class="cos-button cos-button--ghost" href="#goal-list-title">Мої цілі та плани</a>
+            <a class="cos-button cos-button--ghost" href="#federation-run-title">Виконання та докази</a>
+            <a class="cos-button cos-button--ghost" href="/workspace/capabilities">Бібліотека команд</a>
+            <a class="cos-button cos-button--ghost" href="/workspace/capabilities/intents">Пропозиції AI / CRON</a>
+            <a class="cos-button cos-button--ghost" href="/cabinet">До кабінету</a>
+        </div>
     </header>
 
     <nav class="cos-card" aria-label="Режим перегляду COS">
@@ -65,6 +72,75 @@
         <div class="cos-alert" role="alert">Перевірте опис цілі, код показника та числове значення.</div>
     {% endif %}
 
+    {# Golden 50 is a verified business outcome, never a count of queued or completed tasks. #}
+    {% set goldenGoals = [] %}
+    {% for item in goals %}
+        {% if item.criteria[0].id|default('') == 'federation.verified_proposals' and item.criteria[0].expected|default(0) == 50 %}
+            {% set goldenGoals = goldenGoals|merge([item]) %}
+        {% endif %}
+    {% endfor %}
+    <section class="cos-card cos-g50" id="golden50-control" aria-labelledby="golden50-title" data-golden50-control-center>
+        <p class="cos-card__eyebrow">COS / Golden 50 / операторський маршрут</p>
+        <div class="cos-g50__heading">
+            <div>
+                <h2 id="golden50-title" class="cos-card__title">50 перевірених бізнес-результатів</h2>
+                <p class="cos-card__copy">Від реальних Growth Candidates до Sales Leads і підготовлених Documents. Створені задачі та завершені Runs самі по собі не означають досягнення цілі.</p>
+            </div>
+            <div class="cos-g50__rollout" role="status">
+                <strong>Platform Workflow</strong>
+                <span>{{ canonicalRolloutEnabled ? 'Дозволено для цього tenant' : 'Запуск для tenant вимкнений' }}</span>
+            </div>
+        </div>
+        <div class="cos-g50__metrics" aria-label="Поточний стан Golden 50">
+            <div class="cos-g50__metric"><strong>{{ goldenGoals|length }}</strong><span>збережених Golden 50 Goals</span></div>
+            <div class="cos-g50__metric"><strong>50</strong><span>цільових native Candidates / Leads / Documents</span></div>
+            <div class="cos-g50__metric"><strong>Окремо</strong><span>перевіряється бізнес-результат після Run</span></div>
+        </div>
+        <p class="cos-g50__caution" role="note">Цифра 50 тут є <strong>цільовим порогом</strong>, а не підтвердженим результатом. Сторінка поки не має окремого live read-model для загального прогресу 50/50/50. Фактичні докази дивіться в агрегаті відповідної Goal.</p>
+
+        <div class="cos-g50__launch">
+            <div>
+                <h3>Почати із бізнес-результату</h3>
+                <p class="cos-card__copy">Без машинних кодів показників і випадкових доменів. Шаблон створить Goal з точним критерієм Golden 50, але нічого не виконає без погодження.</p>
+            </div>
+            <form method="post" action="{{ path('cos_federation_goals_create') }}" class="cos-page__stack" data-golden50-create>
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="criterion" value="federation.verified_proposals">
+                <input type="hidden" name="target" value="50">
+                <label class="cos-field"><span>Якого результату досягаємо?</span>
+                    <textarea class="cos-input" name="desired_result" rows="2" maxlength="1200" required>Підготувати 50 перевірених пропозицій: 50 Growth Candidates → 50 Sales Leads → 50 пов'язаних Documents</textarea>
+                </label>
+                <button type="submit" class="cos-button cos-button--primary">Створити Golden 50 Goal</button>
+            </form>
+        </div>
+
+        {% if goldenGoals is not empty %}
+            <div class="cos-g50__existing">
+                <h3>Уже створені Golden 50 Goals</h3>
+                {% for item in goldenGoals %}
+                    <div class="cos-g50__existing-row">
+                        <a href="#goal-{{ item.id }}">{{ item.desired_result }}</a>
+                        <span>{{ plansByGoal[item.id]|default([])|length }} планів · {{ runsByGoal[item.id]|default([])|length }} запусків</span>
+                        <a href="{{ path('cos_federation_goal_aggregate', {goalId:item.id}) }}" rel="nofollow">Докази / aggregate JSON</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <h3 id="golden50-route">Маршрут оператора: від Goal до доказового результату</h3>
+        <ol class="cos-g50__stages">
+            <li><strong>1. Goal</strong><span>Створити або обрати ціль із порогом 50.</span><a href="#goal-list-title">Перейти до Goals</a></li>
+            <li><strong>2. Growth Discovery</strong><span>Обрати реальний Sales-targeted Growth Universe, створити Discovery Plan.</span><a href="#goal-list-title">Побудувати план</a></li>
+            <li><strong>3. Human approval і Run</strong><span>Отримати незалежне погодження Plan та Action, завершити source Run з перевіреним receipt.</span><a href="#federation-run-title">Виконання</a></li>
+            <li><strong>4. Fan-out 50</strong><span>Preview і створення 50 child Plans із native Candidates. На цьому етапі поки використовується захищений API, не окрема форма UI.</span><span class="cos-g50__stage-state">API / оператор</span></li>
+            <li><strong>5. Виконати 50 Plans</strong><span>Для кожного: незалежне погодження Plan та 4 Actions; без подвійного dispatch і сліпого retry.</span><a href="#federation-run-title">Перевірити Runs</a></li>
+            <li><strong>6. Звірити 50/50/50</strong><span>Тільки native Growth, Sales, Documents і provenance. Не підміняти результат кількістю завершених Steps.</span><span class="cos-g50__stage-state">Goal aggregate API</span></li>
+            <li><strong>7. Goal evaluation</strong><span>Незалежна перевірка й збереження business outcome після повного evidence. Для aggregate Golden 50 використовується окремий API.</span><span class="cos-g50__stage-state">Human + API</span></li>
+        </ol>
+    </section>
+
+    <details class="cos-card" data-goal-advanced-create>
+        <summary class="cos-g50__advanced-summary">Інша ціль / ручне налаштування метрики (експертний режим)</summary>
     <section class="cos-card" aria-labelledby="goal-new-title">
         <p class="cos-card__eyebrow">Нова ціль</p>
         <h2 id="goal-new-title" class="cos-card__title">Якого результату потрібно досягти?</h2>
@@ -101,12 +177,13 @@
         </form>
         <p class="cos-card__copy">Збереження не запускає агентів і не створює зовнішніх операцій.</p>
     </section>
+    </details>
 
     <section class="cos-page__section" aria-labelledby="goal-list-title">
         <h2 id="goal-list-title">Поточні цілі</h2>
         <div class="cos-page__stack">
         {% for goal in goals %}
-            <article class="cos-card" data-goal-id="{{ goal.id }}">
+            <article class="cos-card" id="goal-{{ goal.id }}" data-goal-id="{{ goal.id }}">
                 <p class="cos-card__eyebrow">{{ goal.state == 'draft' ? 'Чернетка' : goal.state }}</p>
                 <h3 class="cos-card__title">{{ goal.desired_result }}</h3>
                 <p class="cos-card__copy">
