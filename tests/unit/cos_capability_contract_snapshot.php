@@ -67,6 +67,10 @@ try {
     $reject(static fn() => $catalog->resolvePinned(
         'property.asset.create', '1.0.0', $before['contract_digest'], $tmp,
     ));
+    // Do not discover an unsupported output schema only after a native write.
+    $schema['oneOf'] = [['type'=>'object']];
+    file_put_contents($output, json_encode($schema, JSON_THROW_ON_ERROR));
+    $reject(static fn() => CapabilityContractFingerprint::snapshot($create, $tmp));
 } finally {
     @unlink($folder . '/asset-create-input.schema.json');
     @unlink($folder . '/asset-create-output.schema.json');
