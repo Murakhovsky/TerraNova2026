@@ -43,7 +43,15 @@ final readonly class CanonicalCapabilityController {
                 trim((string)$request->headers->get('X-Idempotency-Key','')),$correlation,
             );
             return $this->reply(['ok'=>true,'capability_id'=>$id,'data'=>$result]);
-        } catch (DomainException|InvalidArgumentException $e) {
+        } catch (DomainException $e) {
+            if (str_contains($e->getMessage(), 'Capability output unverified')) {
+                return $this->reply([
+                    'error'=>'output_unverified',
+                    'reason'=>'Domain result could not be verified; reconcile native state before retry.',
+                ],409);
+            }
+            return $this->reply(['error'=>'invocation_blocked','reason'=>$e->getMessage()],422);
+        } catch (InvalidArgumentException $e) {
             return $this->reply(['error'=>'invocation_blocked','reason'=>$e->getMessage()],422);
         } catch (Throwable $e) {
             error_log('cos.capability.invocation_failed '.$e->getMessage());
