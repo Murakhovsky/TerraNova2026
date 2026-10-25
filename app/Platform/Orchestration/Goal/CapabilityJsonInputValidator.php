@@ -15,7 +15,27 @@ final readonly class CapabilityJsonInputValidator
 {
     public function validate(CapabilityContract $contract, mixed $input): void
     {
-        $path = $contract->inputSchema;
+        $this->validateSchema($contract->inputSchema, $input, 'input');
+    }
+
+    /** Validate a returned payload against the declared output contract.
+     * A failed mutation output is an uncertain result, not retry permission.
+     */
+    public function validateOutput(CapabilityContract $contract, mixed $output): void
+    {
+        try {
+            $this->validateSchema($contract->outputSchema, $output, 'output');
+        } catch (DomainException $exception) {
+            throw new DomainException(
+                'Capability output unverified; reconcile native state before retry. '
+                . $exception->getMessage(),
+                previous: $exception,
+            );
+        }
+    }
+
+    private function validateSchema(string $path, mixed $input, string $direction): void
+    {
         if (!preg_match('#^resources/contracts/[a-z0-9_/-]+\.schema\.json$#', $path)
             || str_contains($path, '..')) {
             throw new DomainException('Capability JSON schema path is not a trusted local contract.');
@@ -32,8 +52,9 @@ final readonly class CapabilityJsonInputValidator
             throw new DomainException('Capability input schema must be a JSON object.');
         }
         $bytes = strlen(json_encode($input, JSON_THROW_ON_ERROR));
-        if ($bytes > 16384) {
-            throw new DomainException('Capability input exceeds maximum approved payload size.');
+        $limit = $direction === 'input' ? 16384 : 262144;
+        if ($bytes > $limit) {
+            throw new DomainException('Capability ' . $direction . ' exceeds maximum approved payload size.');
         }
         $this->check($schema, $input, '$', 0);
     }
