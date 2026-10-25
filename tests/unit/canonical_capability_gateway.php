@@ -77,6 +77,15 @@ $reject=static function(callable $fn) use($check):void {
 $check($gateway->describe($manager,'property.asset.create')['status']==='direct_human','Missing live human binding.');
 $check($gateway->describe($manager,'property.asset.get')['status']==='read_only','Missing read-only binding.');
 $check($gateway->describe($manager,'property.asset.search')['status']==='unavailable','Unbound query must be unavailable.');
+$preflight=$gateway->validateInput($manager,'property.asset.create',
+    ['type_code'=>'house','city'=>'Львів']);
+$check($preflight['valid']===true && $preflight['executed']===false
+    && $preflight['authorization_granted']===false
+    && strlen($preflight['contract_digest'])===64
+    && $writes->calls===0,'Pure preflight invoked a mutation or lost its contract pin.');
+$reject(static fn()=> $gateway->validateInput($manager,'property.asset.create',
+    ['city'=>'missing-required-type']));
+$check($writes->calls===0,'Invalid preflight reached native write.');
 $answer=$gateway->invoke($manager,'property.asset.create',
     ['type_code'=>'house','city'=>'Львів'],'human_ui','fixed-key','trace-123');
 $check($answer===['asset'=>['asset_id'=>'PROP-0123456789ABCDEF0123'],'tenant'=>'cos-test-tenant','key'=>'fixed-key','city'=>'Львів'] && $writes->calls===1,
