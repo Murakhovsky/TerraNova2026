@@ -192,6 +192,21 @@ final readonly class FederationGoalStore
         $plans=[];
         foreach($rows as $p) {
             $json=self::decode((string)$p['plan_json']);
+            // This is a presence-only UI projection, NOT authoritative
+            // attestation. Execution rechecks each live contract at start/claim.
+            $rawSteps=is_array($json['steps']??null) ? $json['steps'] : [];
+            $withPins=0;
+            foreach($rawSteps as $rawStep) {
+                if (!is_array($rawStep)) continue;
+                if (isset($rawStep['contract_digest'],$rawStep['input_digest'])
+                    && is_string($rawStep['contract_digest'])
+                    && is_string($rawStep['input_digest'])
+                    && preg_match('/^[a-f0-9]{64}$/D',$rawStep['contract_digest'])
+                    && preg_match('/^[a-f0-9]{64}$/D',$rawStep['input_digest'])) ++$withPins;
+            }
+            $p['contract_pin_state']=$rawSteps!==[] && $withPins===count($rawSteps)
+                ? 'PINS_PRESENT_NOT_ATTESTED'
+                : ($withPins===0 ? 'LEGACY_NO_PINS' : 'INCOMPLETE_PINS_BLOCKED');
             $p['steps']=array_map(static fn(array $step):array => [
                 'id'=>(string)($step['id']??''),
                 'capability'=>(string)($step['capability_id']??''),
