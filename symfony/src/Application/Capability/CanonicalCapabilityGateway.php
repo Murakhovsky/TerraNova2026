@@ -54,6 +54,37 @@ final class CanonicalCapabilityGateway {
         return $this->entry($actor,$id,$owner,$this->catalog->describe($id),$this->bindings->available($actor));
     }
 
+    /**
+     * Deterministic preflight for UI/AI plan proposals. It NEVER dispatches.
+     * This is not a Policy/Approval grant or a worker-time authorization.
+     * @param array<string,mixed> $input
+     * @return array<string,mixed>
+     */
+    public function validateInput(TenantContext $actor, string $id, array $input): array
+    {
+        $info = $this->describe($actor, $id);
+        if ($info['status'] === 'unavailable') {
+            throw new DomainException('Capability not available: ' . $info['reason']);
+        }
+        $contract = $this->catalog->describe($id);
+        if (!$contract instanceof CapabilityContract) {
+            throw new DomainException('Missing typed capability contract.');
+        }
+        $snapshot = $this->catalog->snapshot($id);
+        (new CapabilityJsonInputValidator())->validate($contract, $input);
+        return [
+            'valid' => true,
+            'capability_id' => $id,
+            'capability_version' => $contract->version,
+            'contract_digest' => $snapshot['contract_digest'],
+            'execution_mode' => $info['status'],
+            'approval_policy' => $contract->approvalPolicy,
+            'side_effect_level' => $contract->sideEffectLevel,
+            'executed' => false,
+            'authorization_granted' => false,
+        ];
+    }
+
     /** @param array<string,mixed> $input */
     public function invoke(TenantContext $actor,string $id,array $input,string $origin,string $key,string $correlationId):mixed {
         $info=$this->describe($actor,$id);
