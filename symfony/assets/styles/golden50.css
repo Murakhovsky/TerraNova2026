@@ -1,0 +1,26 @@
+/* Golden 50 operator cockpit. Presentation only: no execution authority in the browser. */
+.cos-g50 { scroll-margin-top: var(--cos-space-8); }
+.cos-g50__heading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:var(--cos-space-5); }
+.cos-g50__heading > div:first-child { flex: 1 1 26rem; min-width: 0; }
+.cos-g50__rollout { display:grid; gap:var(--cos-space-1); border:1px solid var(--cos-color-border); border-radius:var(--cos-radius-md); background:var(--cos-color-surface-subtle); padding:var(--cos-space-3); font-size:.875rem; }
+.cos-g50__rollout span { color:var(--cos-color-text-muted); }
+.cos-g50__metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--cos-space-3); }
+.cos-g50__metric { display:grid; gap:var(--cos-space-1); background:var(--cos-color-surface-raised); border:1px solid var(--cos-color-border); border-radius:var(--cos-radius-md); padding:var(--cos-space-4); }
+.cos-g50__metric strong { font-size:clamp(1.2rem,2.2vw,1.65rem); line-height:1.15; }
+.cos-g50__metric span { color:var(--cos-color-text-muted); font-size:.85rem; }
+.cos-g50__caution { padding:var(--cos-space-3) var(--cos-space-4); border-inline-start:3px solid var(--cos-color-warning); background:var(--cos-color-warning-soft); border-radius:var(--cos-radius-sm); color:var(--cos-color-text-soft); }
+.cos-g50__launch { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.3fr); gap:var(--cos-space-5); padding:var(--cos-space-5); border-radius:var(--cos-radius-lg); background:var(--cos-color-primary-soft); border:1px solid var(--cos-color-primary-border); }
+.cos-g50__launch h3,.cos-g50__existing h3,.cos-g50 > h3 { margin-top:0; }
+.cos-g50__existing { display:grid; gap:var(--cos-space-3); }
+.cos-g50__existing-row { display:flex; flex-wrap:wrap; gap:var(--cos-space-3); align-items:center; justify-content:space-between; border-bottom:1px solid var(--cos-color-border); padding-bottom:var(--cos-space-2); }
+.cos-g50__existing-row > span { font-size:.85rem; color:var(--cos-color-text-muted); }
+.cos-g50__stages { list-style:none; counter-reset:cosg50; display:grid; gap:var(--cos-space-2); padding:0; margin:0; }
+.cos-g50__stages li { display:grid; grid-template-columns:minmax(9.5rem,.35fr) minmax(0,1fr) auto; align-items:center; gap:var(--cos-space-3); padding:var(--cos-space-3) var(--cos-space-4); border:1px solid var(--cos-color-border); border-radius:var(--cos-radius-md); background:var(--cos-color-surface); }
+.cos-g50__stages li strong { color:var(--cos-color-text); }
+.cos-g50__stages li > span:nth-child(2) { font-size:.9rem; color:var(--cos-color-text-soft); }
+.cos-g50__stages a { white-space:nowrap; }
+.cos-g50__stage-state { font-size:.8rem; color:var(--cos-color-text-muted); white-space:nowrap; }
+.cos-g50__advanced-summary { cursor:pointer; font-weight:650; padding:var(--cos-space-2); }
+.cos-g50__advanced-summary:focus-visible { outline:2px solid var(--cos-color-primary); outline-offset:2px; }
+@media (max-width: 900px) { .cos-g50__launch { grid-template-columns:1fr; } .cos-g50__stages li { grid-template-columns:1fr; align-items:start; } }
+@media (max-width: 650px) { .cos-g50__metrics { grid-template-columns:1fr; } .cos-g50__launch { padding:var(--cos-space-3); } }
