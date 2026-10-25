@@ -196,8 +196,11 @@ final readonly class FederationGoalStore
             // attestation. Execution rechecks each live contract at start/claim.
             $rawSteps=is_array($json['steps']??null) ? $json['steps'] : [];
             $withPins=0;
+            $withAnyPin=0;
             foreach($rawSteps as $rawStep) {
                 if (!is_array($rawStep)) continue;
+                if (array_key_exists('contract_digest',$rawStep)
+                    || array_key_exists('input_digest',$rawStep)) ++$withAnyPin;
                 if (isset($rawStep['contract_digest'],$rawStep['input_digest'])
                     && is_string($rawStep['contract_digest'])
                     && is_string($rawStep['input_digest'])
@@ -206,7 +209,7 @@ final readonly class FederationGoalStore
             }
             $p['contract_pin_state']=$rawSteps!==[] && $withPins===count($rawSteps)
                 ? 'PINS_PRESENT_NOT_ATTESTED'
-                : ($withPins===0 ? 'LEGACY_NO_PINS' : 'INCOMPLETE_PINS_BLOCKED');
+                : ($rawSteps!==[] && $withAnyPin===0 ? 'LEGACY_NO_PINS' : 'INCOMPLETE_PINS_BLOCKED');
             $p['steps']=array_map(static fn(array $step):array => [
                 'id'=>(string)($step['id']??''),
                 'capability'=>(string)($step['capability_id']??''),
