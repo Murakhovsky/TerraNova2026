@@ -125,6 +125,24 @@ final class CanonicalCapabilityGateway {
                 $status='direct_human';$reason='Authenticated human Domain CommandBus only.';
             } else $reason='No safe live binding.';
         }
-        return ['id'=>$id,'owner_domain'=>$owner,'status'=>$status,'reason'=>$reason,'contract'=>$contract?->toArray()];
+        $snapshot = null;
+        $definitionReadiness = $contract === null ? 'DECLARATIVE_ONLY' : 'SCHEMA_INVALID';
+        if ($contract !== null) {
+            try {
+                $snapshot = $this->catalog->snapshot($id);
+                $definitionReadiness = 'SCHEMA_VALID';
+            } catch (DomainException) {
+                // A missing or malformed schema is not an executable function.
+                $status = 'unavailable';
+                $reason = 'Capability contract schema missing or invalid.';
+            }
+        }
+        return [
+            'id'=>$id,'owner_domain'=>$owner,'status'=>$status,'reason'=>$reason,
+            'contract'=>$contract?->toArray(),'definition_readiness'=>$definitionReadiness,
+            'definition_snapshot'=>$snapshot,
+            // Runtime authorization is evaluated separately from a static digest.
+            'invocation_authorized'=>in_array($status,['direct_human','read_only'],true),
+        ];
     }
 }
