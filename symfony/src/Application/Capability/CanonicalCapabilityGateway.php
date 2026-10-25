@@ -82,6 +82,9 @@ final class CanonicalCapabilityGateway {
             || $correlationId===''||strlen($correlationId)>191) throw new DomainException('Untrusted source or trace.');
         // Same fail-closed local schema validator used by Federation approved Plans.
         // Validation occurs before any Domain side effect or idempotency claim.
+        // Both schemas must exist before ANY side effect occurs.
+        // Definition snapshots never authorize execution by themselves.
+        $this->catalog->snapshot($id);
         $validator = new CapabilityJsonInputValidator();
         $validator->validate($contract,$input);
         $result = $adapter->invoke($actor,$input,$key,$correlationId);
