@@ -1,42 +1,43 @@
 ---
-title: Goal Capability fingerprint — bounded P0 rollout notes
-description: Behavior and acceptance boundaries for pinned Capability contracts in canonical Goal plans.
+title: Незмінні контракти Capability у Goal Plan — контрольований запуск
+description: Операторські правила перевірки контрактів, сумісності історичних планів і допуску Workflow.
 status: implementation-draft
 updated: 2026-10-25
 kind: operations
 ---
 
-# Goal Capability pins: bounded rollout and evidence
+# Незмінні контракти Capability у Goal Runtime
 
-## Scope
+## Призначення та межі реалізації
 
-This increment extends the existing **Domain-owned Module Capability Contract** and **canonical Platform Workflow** only. New `FederationGoalStore::proposePlan` calls `GoalPlanValidator::validate(..., true)`, which places `contract_digest` and `input_digest` in each normalized immutable Step. The Plan JSON is then included in existing approval and Workflow digests.
+Поточний інкремент розширює наявні **Domain-owned Module Capability Contracts** і **Platform Workflow**. Нові плани через `FederationGoalStore::proposePlan` викликають `GoalPlanValidator::validate(..., true)`. До кожного нормалізованого кроку додаються `contract_digest` та `input_digest`. Ці значення входять до незмінного JSON плану, який перевіряється чинним механізмом погодження й хешування.
 
-No new Action dispatcher, database writer, scheduler, EventBus, AI authority or recovery process is introduced.
+Новий Action executor, SQL writer, Scheduler, EventBus, машинний дозвіл або альтернативний Recovery Engine **не створено**.
 
-### Behavior matrix
+## Матриця поведінки
 
-| Input/Plan state | Result |
+| Стан | Правило системи |
 | --- | --- |
-| New proposed Goal Plan | Exact current-version contract fingerprint and canonical input hash pinned |
-| Contract/schema updated before human Plan approval | Original approved Plan cannot be silently repointed |
-| Approved pinned Plan, digest/owner/input changed before canonical start | Start denied before creating Run |
-| Drift after Run start, before selection of next Step | `manual_reconciliation_required` without new Action |
-| Candidate external claim / Action worker admission | Fail-closed pinned fingerprint check in candidate admissions |
-| Existing legacy Plan without pins | No invented retrospective digests; existing version/binding/tenant/approval guards still apply |
-| Mixed/partial Plan fingerprint | Rejected by `GoalCapabilityPinGuard` |
-| Completed native Action with invalid output | Requires independent native reconciliation, never automatic replay |
-| Goal achieved | **Still requires independent Domain business outcome evidence** |
+| Новий запропонований Goal Plan | Фіксується digest контракту, JSON-схем входу/виходу та нормалізованого input |
+| Контракт змінився до погодження | Погоджений раніше Plan не перенаправляється на новий контракт автоматично |
+| Зміна digest перед запуском Run | Виконання блокується ще до створення технічного Run |
+| Зміна після запуску Run | Перед новим Step повертається `manual_reconciliation_required` без нового Action |
+| Погодження claim / worker | Підготовлені admission-компоненти перевіряють pinning незалежно від UI |
+| Старий погоджений Plan без digest | Не переписується; чинні перевірки версій, binding і Approval залишаються |
+| Частково заповнений Plan | `GoalCapabilityPinGuard` блокує виконання |
+| Action завершена, але output некоректний | Не робити blind retry; потрібна незалежна перевірка native результату |
+| Goal achieved | Потрібен окремий доказ бізнес-результату з відповідного Domain |
 
-## Important production boundary
+## Головне обмеження production
 
-`symfony/config/services.yaml` currently wires `Kernel\Action\Service\ModuleActionExecutionGate` to `App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission`. The candidate `DoctrineWorkflowActionWorkerAdmission` does **not** replace that production gate in this PR. No external Workflow Action worker activation is implied by the new pin checks or green unit tests.
+У `symfony/config/services.yaml` чинний `Kernel\Action\Service\ModuleActionExecutionGate` отримує `App\Persistence\Workflow\FailClosedWorkflowActionWorkerAdmission`. Підготовлений `DoctrineWorkflowActionWorkerAdmission` **не підміняє** цей захист у поточному PR. Наявність нових перевірок digest або позитивний unit test не активують зовнішній Action worker.
 
-Operator must not flip this DI alias until the separate source-to-worker approval parity, native receipts, recovery, MySQL fault injection, tenant rollout and two-person signoff acceptance package passes.
+Змінювати production DI binding заборонено до незалежного підтвердження всіх approval/worker/receipt шляхів, tenant-паритету, MySQL crash/failover тестів, відновлення та підпису двох уповноважених операторів.
 
-## Manual validation
+## Ручна перевірка
 
-From a fresh checkout with root Composer dependencies:
+На checkout з установленими root Composer dependencies:
+
 ~~~bash
 php tests/unit/cos_capability_contract_snapshot.php
 php tests/unit/cos_goal_capability_pinning.php
@@ -45,17 +46,17 @@ php tests/unit/canonical_capability_gateway.php
 php bin/cos-capability-census.php --strict
 ~~~
 
-`cos-capability-census.php` is **static definition-level evidence only**. It cannot prove DI registration, tenant role, worker readiness or native outcome.
+Команда `cos-capability-census.php` аналізує **тільки декларації та локальні JSON-схеми**. Вона не підтверджує живі DI handlers, права tenant, виконання Action або досягнення Goal.
 
-Operator UI `/workspace/goals` reports `PINS_PRESENT_NOT_ATTESTED`, `LEGACY_NO_PINS` and `INCOMPLETE_PINS_BLOCKED` as presence diagnostics. A displayed pin is not an approved or executable plan by itself.
+Інтерфейс `/workspace/goals` показує `PINS_PRESENT_NOT_ATTESTED`, `LEGACY_NO_PINS` чи `INCOMPLETE_PINS_BLOCKED` як операторську діагностику. Сам факт наявності digest **не дорівнює** перевіреному контракту або дозволу на виконання.
 
-## Remaining gates
+## Незавершені контрольні етапи
 
-1. Version-addressed immutable historical contract archive and explicit compatible old handler registration. Missing version/digest must stay blocked.
-2. Live registered binding inventory across all Domains and tenant policies, checked on deploy SHA.
-3. Worker-time Action approval/receipt/failure/recovery parity with production DI explicitly fail-closed until authorized cutover.
-4. Output-schema/native-result validation for **governed** Actions (direct Gateway currently has output validation).
-5. AI/CRON/Event-to-proposed-Plan adapters, no new authority.
-6. Complete Golden 50 with 50 native Candidates, 50 Sales Leads, 50 Documents, 200 approved child Actions and independent Goal evaluation on one accepted SHA.
+1. Незмінний архів історичних версій контрактів і явне підключення сумісних старих handlers. Невідому версію або digest блокувати.
+2. Live-інвентаризація реєстрації bindings усіх Domains, політик tenant і перевірка на конкретному deploy SHA.
+3. Допуск Action worker лише після повної перевірки approval, receipt, recovery та зовнішніх ефектів; production залишається fail-closed.
+4. Валідація вихідних JSON-схем та незалежних native доказів для **керованих** Actions (поточний Gateway перевіряє лише свої прямі Query/Command).
+5. Підключення AI/CRON/Event до запропонованих Plans без надання нового права виконання.
+6. Наскрізний Golden 50: 50 native Candidates, 50 Leads, 50 Documents, 200 погоджених дочірніх Actions та незалежна збережена оцінка Goal.
 
-This page describes implementation boundaries, not production acceptance.
+Документ описує технічні межі реалізації, **а не підтверджений production acceptance**.
