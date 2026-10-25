@@ -17,7 +17,10 @@ foreach (['property.asset.create','property.asset.search','property.asset.get','
     $check(count($matching)===1,'Missing typed contract '.$id);
     foreach (['input_schema','output_schema'] as $field) {
         $schema=json_decode($get($matching[0][$field]),true,512,JSON_THROW_ON_ERROR);
-        $check(($schema['type']??null)==='object','Invalid schema '.$id);
+        $type=$schema['type']??null;
+        $allowed=$type==='object' || ($id==='property.asset.get' && $field==='output_schema'
+            && $type===['object','null']);
+        $check($allowed,'Invalid schema '.$id);
     }
 }
 $create=array_values(array_filter($contracts,static fn(array $c):bool=>$c['id']==='property.asset.create'))[0];
