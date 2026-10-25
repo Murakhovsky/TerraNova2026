@@ -35,6 +35,12 @@ final class CapabilityContractFingerprint
         ];
     }
 
+    /** Payload-only digest, canonical across associative key order. */
+    public static function inputDigest(mixed $input): string
+    {
+        return hash('sha256', self::canonical($input));
+    }
+
     /** @return array<string,mixed> */
     private static function schema(string $root, string $relative): array
     {
