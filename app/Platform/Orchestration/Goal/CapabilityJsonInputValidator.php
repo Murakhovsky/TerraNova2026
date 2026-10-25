@@ -65,6 +65,11 @@ final readonly class CapabilityJsonInputValidator
         if ($depth > 10) {
             throw new DomainException('Capability schema exceeds safe maximum depth.');
         }
+        // JSON Schema's nested {} is an intentional unconstrained property
+        // (e.g. Property's nullable legacy reference). Root still needs a type.
+        if ($depth > 0 && $schema === []) {
+            return;
+        }
         $supported = ['$schema', 'title', 'description', 'type', 'properties', 'required',
             'additionalProperties', 'items', 'minLength', 'maxLength', 'minimum',
             'maximum', 'pattern', 'const', 'enum', 'format', 'minItems', 'maxItems'];
