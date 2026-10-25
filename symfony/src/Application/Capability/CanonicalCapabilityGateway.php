@@ -168,8 +168,18 @@ final class CanonicalCapabilityGateway {
                 $reason = 'Capability contract schema missing or invalid.';
             }
         }
+        // Handler-registration witness only. It does not certify an
+        // individual worker, tenant permission, policy or business outcome.
+        $bindingWitness = 'UNVERIFIED';
+        if ($contract !== null && $status === 'workflow_approval_required') {
+            $bindingWitness = 'ACTION_HANDLER_REGISTERED';
+        } elseif ($contract !== null && in_array($status,['direct_human','read_only'],true)) {
+            $bindingWitness = 'DOMAIN_ADAPTER_REGISTERED';
+        }
         return [
             'id'=>$id,'owner_domain'=>$owner,'status'=>$status,'reason'=>$reason,
+            'binding_witness'=>$bindingWitness,
+            'binding_witness_scope'=>'CURRENT_REQUEST_CONTAINER_ONLY',
             'contract'=>$contract?->toArray(),'definition_readiness'=>$definitionReadiness,
             'definition_snapshot'=>$snapshot,
             // Runtime authorization is evaluated separately from a static digest.
