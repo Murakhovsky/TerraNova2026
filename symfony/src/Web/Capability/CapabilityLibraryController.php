@@ -99,7 +99,14 @@ final readonly class CapabilityLibraryController
             return new RedirectResponse(
                 '/workspace/capabilities?reference='.rawurlencode($assetId),303
             );
-        } catch (DomainException|\InvalidArgumentException) {
+        } catch (DomainException $error) {
+            // Output mismatch is uncertain AFTER the native mutation.
+            // Never advise issuing a fresh idempotency key to "try again".
+            if (str_contains($error->getMessage(), 'Capability output unverified')) {
+                return new RedirectResponse('/workspace/capabilities?notice=unverified',303);
+            }
+            return new RedirectResponse('/workspace/capabilities?notice=invalid',303);
+        } catch (\InvalidArgumentException) {
             return new RedirectResponse('/workspace/capabilities?notice=invalid',303);
         } catch (Throwable $error) {
             error_log('cos.capability.ui.property.create_failed '.$error->getMessage());
