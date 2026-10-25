@@ -100,7 +100,7 @@ final class CapabilityContractFingerprint
             throw new DomainException('Unsupported capability schema format.');
         }
         if (array_key_exists('properties', $schema)) {
-            if (!is_array($schema['properties']) || array_is_list($schema['properties'])) {
+            if (!is_array($schema['properties']) || ($schema['properties'] !== [] && array_is_list($schema['properties']))) {
                 throw new DomainException('Capability properties schema must be an object.');
             }
             foreach ($schema['properties'] as $name => $child) {
