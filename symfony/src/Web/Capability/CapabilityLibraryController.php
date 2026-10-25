@@ -30,6 +30,16 @@ final readonly class CapabilityLibraryController
         if ($actor === null) return new RedirectResponse('/auth/login');
         try {
             $inventory = $this->capabilities->inventory($actor);
+            $query = mb_strtolower(mb_substr(trim((string)$request->query->get('q', '')),0,80));
+            $status = trim((string)$request->query->get('status', ''));
+            $allowed = ['','read_only','direct_human','workflow_approval_required','unavailable'];
+            if (!in_array($status,$allowed,true)) $status = '';
+            $inventory = array_values(array_filter($inventory,static function(array $item) use($query,$status):bool {
+                if ($status !== '' && ($item['status'] ?? null) !== $status) return false;
+                if ($query === '') return true;
+                return str_contains(mb_strtolower((string)($item['id'] ?? '')),$query)
+                    || str_contains(mb_strtolower((string)($item['owner_domain'] ?? '')),$query);
+            }));
         } catch (DomainException) {
             return new Response('Forbidden', 403);
         }
@@ -53,6 +63,8 @@ final readonly class CapabilityLibraryController
         return new Response(
             $this->twig->render('experience/capability/library.html.twig', [
                 'capabilities' => $inventory,
+                'searchQuery' => $query,
+                'searchStatus' => $status,
                 'csrfToken' => $this->csrf->token($request),
                 'idempotencyKey' => bin2hex(random_bytes(16)),
                 'verifiedPropertyId' => $verified,
