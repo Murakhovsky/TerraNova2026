@@ -294,7 +294,9 @@ final readonly class FederationGoalStore
         // Declared identity is not enough: require a live canonical owning
         // Action handler, tenant-enabled module and authenticated permission.
         $available = $this->bindings->available($actor);
-        $validated = $this->validator->validate($goal, $steps, $available);
+        // New durable Plans pin exact capability schemas before approval. Legacy
+        // approved Plan JSON is never rewritten in place.
+        $validated = $this->validator->validate($goal, $steps, $available, true);
         if (!$validated['valid']) {
             throw new DomainException('Goal plan is not valid: ' . implode(',', $validated['errors']));
         }
