@@ -246,7 +246,12 @@ try {
     }
     // A pinned Goal plan has an additional mandatory output-schema gate.
     // This fixture does not claim native Sales task creation or Goal success.
-    $project=dirname(__DIR__,2);
+    // Runtime executes this fixture both in-place on the CI host and as a
+    // single copied /tmp PHP file inside the container. Discover the mounted
+    // repository from the authoritative autoload path, never from __DIR__.
+    $autoload=(string)(getenv('COS_TEST_AUTOLOAD')
+        ?: dirname(__DIR__,2).'/symfony/vendor/autoload.php');
+    $project=dirname($autoload,3);
     $catalog=new CanonicalCapabilityCatalog(new ModuleCatalog(
         (new ModuleDiscovery($project.'/app/Domains'))->discover()
     ));
