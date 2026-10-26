@@ -66,6 +66,11 @@ cos_capabilities_validate:
   methods: [POST]
   requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
 
+cos_capabilities_bindings:
+  path: /api/v1/capabilities/bindings
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::bindings
+  methods: [GET]
+
 cos_capabilities_invoke:
   path: /api/v1/capabilities/{id}/invoke
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::invoke
