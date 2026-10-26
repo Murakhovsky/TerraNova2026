@@ -81,6 +81,14 @@ $check($gateway->describe($manager,'property.asset.get')['binding_witness']==='D
 $check($gateway->describe($manager,'property.asset.search')['binding_witness']==='UNVERIFIED',
     'Unbound query must never be marked as runtime verified.');
 $check($gateway->describe($manager,'property.asset.search')['status']==='unavailable','Unbound query must be unavailable.');
+$audit=$gateway->bindingAudit($manager);
+$check($audit['certified']===false && $audit['worker_deployment_verified']===false
+    && $audit['scope']==='CURRENT_REQUEST_CONTAINER_AND_TENANT',
+    'Runtime binding witness must never imply production certification.');
+$check($audit['counts']['declared']>=3
+    && $audit['counts']['current_container_binding_witnessed']>=2,
+    'Bound/unbound current runtime audit counts missing.');
+
 $preflight=$gateway->validateInput($manager,'property.asset.create',
     ['type_code'=>'house','city'=>'Львів']);
 $check($preflight['valid']===true && $preflight['executed']===false
