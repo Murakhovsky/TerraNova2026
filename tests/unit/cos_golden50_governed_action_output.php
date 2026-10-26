@@ -43,6 +43,20 @@ $bad=$valid;
 $bad['goal_outcome_verified']=true;
 $reject(static fn()=> $validate->validateOutput($qualify,$bad),
     'Action handler may not self-attest a Goal outcome.');
+$documentsInput=[
+    'target_type'=>'growth_candidate','target_id'=>'GC-1',
+    'parameters'=>['template_id'=>'tpl-1','variables'=>['candidate_id'=>'GC-1']],
+];
+$documentContract=$catalog->describe('documents.proposal.prepare');
+$validate->validate($documentContract,$documentsInput);
+$badInput=$documentsInput;
+$badInput['parameters']['variables']['candidate_id']=42;
+$reject(static fn()=> $validate->validate($documentContract,$badInput),
+    'Numeric untyped Document variable bypassed dynamic map schema.');
+$badInput=$documentsInput;
+$badInput['parameters']['variables']['candidate_id']=str_repeat('x',4001);
+$reject(static fn()=> $validate->validate($documentContract,$badInput),
+    'Oversized Document variable bypassed maxLength.');
 $document=$catalog->describe('documents.proposal.prepare');
 $prepared=[
     'document_id'=>'doc-1','relation_id'=>'rel-1','sales_lead_id'=>'5',
