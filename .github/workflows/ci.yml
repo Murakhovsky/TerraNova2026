@@ -66,6 +66,10 @@ jobs:
         run: php tests/unit/cos_goal_capability_pinning.php
       - name: Goal Capability immutable execution authority
         run: php tests/architecture/cos_goal_capability_pin_authority.php
+      - name: Golden 50 governed Action output contracts
+        run: php tests/unit/cos_golden50_governed_action_output.php
+      - name: Capability receipt and Goal preflight safety contracts
+        run: php tests/architecture/cos_capability_receipt_preflight_contract.php
       - name: Capability manifest/schema census (not a runtime binding audit)
         run: php bin/cos-capability-census.php > /tmp/cos-capability-census.json
       - name: Canonical Property capability input validation
