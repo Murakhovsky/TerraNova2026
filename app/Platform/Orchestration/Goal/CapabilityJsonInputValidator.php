@@ -79,10 +79,12 @@ final readonly class CapabilityJsonInputValidator
             }
         }
         $types = $schema['type'] ?? null;
-        if (!is_string($types) && !is_array($types)) {
-            throw new DomainException('Capability input schema requires an explicit type.');
+        $assertionOnly = $depth > 0 && $types === null
+            && (array_key_exists('const', $schema) || array_key_exists('enum', $schema));
+        if (!$assertionOnly && !is_string($types) && !is_array($types)) {
+            throw new DomainException('Capability schema requires an explicit type or nested enum/const.');
         }
-        $types = is_array($types) ? $types : [$types];
+        $types = $assertionOnly ? [] : (is_array($types) ? $types : [$types]);
         $matches = static fn (string $type): bool => match ($type) {
             'object' => is_array($value) && ($value === [] || !array_is_list($value)),
             'array' => is_array($value) && array_is_list($value),
@@ -93,7 +95,8 @@ final readonly class CapabilityJsonInputValidator
             'null' => $value === null,
             default => false,
         };
-        if ($types === [] || !array_reduce($types, static fn (bool $valid, string $type): bool => $valid || $matches($type), false)) {
+        if (!$assertionOnly
+            && ($types === [] || !array_reduce($types, static fn (bool $valid, string $type): bool => $valid || $matches($type), false))) {
             throw new DomainException('Wrong capability input type at ' . $path);
         }
         if (array_key_exists('const', $schema) && $value !== $schema['const']) {
