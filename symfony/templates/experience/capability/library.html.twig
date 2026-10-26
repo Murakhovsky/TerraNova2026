@@ -10,6 +10,22 @@
     <a class="cos-button cos-button--ghost" href="/workspace/property/bulk">Імпорт до 10 об'єктів</a>
     <a class="cos-button cos-button--ghost" href="/workspace/capabilities/intents">Пропозиції AI/CRON</a>
   </header>
+  <section class="cos-card" aria-label="Пошук доступних бізнес-функцій">
+    <h2 class="cos-card__title">Знайти команду COS</h2>
+    <form method="get" action="/workspace/capabilities" class="cos-section-grid" role="search">
+      <label class="cos-field"><span>Назва функції або Domain</span>
+        <input class="cos-input" type="search" name="q" value="{{ searchQuery|default('') }}" maxlength="80" placeholder="Наприклад: property.asset"></label>
+      <label class="cos-field"><span>Режим виклику</span>
+        <select class="cos-input" name="status">
+          {% for value, title in {'':'Усі', 'read_only':'Тільки читання', 'direct_human':'Дозволено людині', 'workflow_approval_required':'Потребує Workflow', 'unavailable':'Недоступно'} %}
+            <option value="{{ value }}" {{ searchStatus|default('') == value ? 'selected' : '' }}>{{ title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="cos-button cos-button--primary" type="submit">Пошук функцій</button>
+    </form>
+    <p class="cos-card__copy">Готовність контракту, наявність handler і право на виконання — різні перевірки. Каталог не видає дозволів.</p>
+  </section>
   {% if verifiedPropertyId %}
     <div class="cos-alert cos-alert--success" role="status">
       Property Asset <code>{{ verifiedPropertyId }}</code> знайдено повторним читанням із Domain.
@@ -54,6 +70,12 @@
       <p class="cos-card__eyebrow">{{ capability.owner_domain }} · {{ capability.status }}</p>
       <h2 class="cos-card__title">{{ capability.id }}</h2>
       <p class="cos-card__copy">{{ capability.reason }}</p>
+      <p class="cos-card__copy">Контракт: <strong>{{ capability.definition_readiness|default('UNKNOWN') }}</strong>
+        {% if capability.definition_snapshot %}
+          · Версія {{ capability.definition_snapshot.version }}
+          · Fingerprint <code>{{ capability.definition_snapshot.contract_digest|slice(0, 16) }}…</code>
+        {% endif %}
+      </p>
       {% if capability.contract %}
         <p class="cos-card__copy">Тип: {{ capability.contract.kind }} · Версія: {{ capability.contract.version }} · Ризик: {{ capability.contract.side_effect_level }} · Погодження: {{ capability.contract.approval_policy }}</p>
         <p class="cos-card__copy"><code>{{ capability.contract.input_schema }}</code> → <code>{{ capability.contract.output_schema }}</code></p>
