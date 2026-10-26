@@ -55,6 +55,45 @@ final class CanonicalCapabilityGateway {
     }
 
     /**
+     * Current request-container binding census for a specific tenant manager.
+     * No CI attestation, worker cutover, certification or new execution rights.
+     * @return array<string,mixed>
+     */
+    public function bindingAudit(TenantContext $actor): array
+    {
+        $rows = $this->inventory($actor);
+        $counts = [
+            'declared' => count($rows),
+            'typed_schema_valid' => 0,
+            'current_container_binding_witnessed' => 0,
+            'workflow_approval_required' => 0,
+            'unavailable' => 0,
+        ];
+        foreach ($rows as $row) {
+            if (($row['definition_readiness'] ?? null) === 'SCHEMA_VALID') {
+                ++$counts['typed_schema_valid'];
+            }
+            if (($row['binding_witness'] ?? 'UNVERIFIED') !== 'UNVERIFIED') {
+                ++$counts['current_container_binding_witnessed'];
+            }
+            if (($row['status'] ?? null) === 'workflow_approval_required') {
+                ++$counts['workflow_approval_required'];
+            }
+            if (($row['status'] ?? null) === 'unavailable') {
+                ++$counts['unavailable'];
+            }
+        }
+        return [
+            'scope' => 'CURRENT_REQUEST_CONTAINER_AND_TENANT',
+            'certified' => false,
+            'worker_deployment_verified' => false,
+            'native_business_evidence_verified' => false,
+            'counts' => $counts,
+            'capabilities' => $rows,
+        ];
+    }
+
+    /**
      * Deterministic preflight for UI/AI plan proposals. It NEVER dispatches.
      * This is not a Policy/Approval grant or a worker-time authorization.
      * @param array<string,mixed> $input
