@@ -144,8 +144,16 @@ final readonly class CapabilityJsonInputValidator
             }
             foreach ($value as $field => $child) {
                 if (!array_key_exists($field, $properties)) {
-                    if (($schema['additionalProperties'] ?? true) === false) {
+                    $extra = $schema['additionalProperties'] ?? true;
+                    if ($extra === false) {
                         throw new DomainException('Unexpected capability field: ' . $path . '.' . $field);
+                    }
+                    if (is_array($extra)) {
+                        // Maps of dynamic fields still constrain each value;
+                        // never treat an additionalProperties schema as "true".
+                        $this->check($extra, $child, $path . '.' . $field, $depth + 1);
+                    } elseif ($extra !== true) {
+                        throw new DomainException('Unsupported additionalProperties declaration.');
                     }
                     continue;
                 }
