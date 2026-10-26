@@ -12,6 +12,11 @@ use App\Persistence\Workflow\DoctrineWorkflowExecutionStore;
 use App\Persistence\Workflow\FailClosedWorkflowPlanApprovalEvidence;
 use App\Persistence\Workflow\FailClosedWorkflowReceiptVerifier;
 use Doctrine\DBAL\DriverManager;
+use Kernel\Module\CanonicalCapabilityCatalog;
+use Kernel\Module\CapabilityContractFingerprint;
+use Kernel\Module\ModuleCatalog;
+use Kernel\Module\ModuleDiscovery;
+use Platform\Workflow\Service\WorkflowDefinitionFingerprint;
 use Kernel\Identity\Model\OrganizationRole;
 use Kernel\Shared\Domain\OrganizationId;
 use Kernel\Shared\Domain\UserId;
@@ -239,6 +244,94 @@ try {
     if(!$verifier->attest($proofRequest)->verified) {
         throw new RuntimeException('Canonical Action receipt did not recover after restored trusted evidence.');
     }
+    // A pinned Goal plan has an additional mandatory output-schema gate.
+    // This fixture does not claim native Sales task creation or Goal success.
+    $project=dirname(__DIR__,2);
+    $catalog=new CanonicalCapabilityCatalog(new ModuleCatalog(
+        (new ModuleDiscovery($project.'/app/Domains'))->discover()
+    ));
+    $typed=$catalog->describe('sales.create_task');
+    if($typed===null) throw new RuntimeException('Sales Action contract absent.');
+    $input=[
+        'target_type'=>'deal',
+        'target_id'=>'deal-ci',
+        'parameters'=>['title'=>'Review verified Sales lead','due_in_minutes'=>60],
+    ];
+    $pin=$catalog->snapshot('sales.create_task',$project);
+    $graph=[[
+        'id'=>'publish', 'depends_on'=>[],
+        'capability_id'=>'sales.create_task',
+        'capability_version'=>$typed->version,
+        'contract_digest'=>$pin['contract_digest'],
+        'input_digest'=>CapabilityContractFingerprint::inputDigest($input),
+        'owner_domain'=>$typed->ownerDomain,
+        'execution_binding'=>$typed->executionBinding,
+        'side_effect_level'=>$typed->sideEffectLevel,
+        'approval_policy'=>$typed->approvalPolicy,
+        'idempotency'=>$typed->idempotency,
+        'input'=>$input,
+    ]];
+    $connection->executeStatement(
+        'UPDATE cos_workflow_runs SET definition_json=:json,definition_digest=:digest
+         WHERE organization_id=:org AND run_id=:run',
+        [...$keys,'json'=>json_encode($graph,JSON_THROW_ON_ERROR),
+            'digest'=>WorkflowDefinitionFingerprint::digest($graph)],
+    );
+    $connection->executeStatement(
+        'UPDATE cos_workflow_steps SET capability_id=:cap,capability_version=:version
+         WHERE organization_id=:org AND run_id=:run AND step_id="publish"',
+        [...$keys,'cap'=>$typed->id,'version'=>$typed->version],
+    );
+    $connection->executeStatement(
+        'UPDATE cos_actions SET type="sales.create_task",target_type="deal",target_id="deal-ci",
+         parameters=:parameters WHERE organization_id=:org AND id=:action',
+        ['org'=>$org,'action'=>$actionId,
+         'parameters'=>json_encode($input['parameters'],JSON_THROW_ON_ERROR)],
+    );
+    $connection->executeStatement(
+        'UPDATE cos_action_attempts SET result=:result
+         WHERE organization_id=:org AND action_id=:action',
+        ['org'=>$org,'action'=>$actionId,'result'=>json_encode(['external_id'=>'42'],JSON_THROW_ON_ERROR)],
+    );
+    $strict=new DoctrineWorkflowActionReceiptVerifier($connection,$planEvidence,$catalog);
+    if(!$strict->attest($proofRequest)->verified) {
+        throw new RuntimeException('Schema-valid persisted governed Action output was rejected.');
+    }
+    $connection->executeStatement(
+        'UPDATE cos_action_attempts SET result=:result WHERE organization_id=:org AND action_id=:action',
+        ['org'=>$org,'action'=>$actionId,
+         'result'=>json_encode(['external_id'=>['forged'=>'wrong']],JSON_THROW_ON_ERROR)],
+    );
+    $expectDenied(static fn()=>$strict->attest($proofRequest),'governed Action wrong output type');
+    $connection->executeStatement(
+        'UPDATE cos_action_attempts SET result=NULL WHERE organization_id=:org AND action_id=:action',
+        ['org'=>$org,'action'=>$actionId],
+    );
+    $expectDenied(static fn()=>$strict->attest($proofRequest),'governed Action missing persisted result');
+    $connection->executeStatement(
+        'UPDATE cos_action_attempts SET result=:result WHERE organization_id=:org AND action_id=:action',
+        ['org'=>$org,'action'=>$actionId,'result'=>json_encode(['external_id'=>'42'],JSON_THROW_ON_ERROR)],
+    );
+    $changed=$graph;
+    $changed[0]['contract_digest']=str_repeat('0',64);
+    $connection->executeStatement(
+        'UPDATE cos_workflow_runs SET definition_json=:json,definition_digest=:digest
+         WHERE organization_id=:org AND run_id=:run',
+        [...$keys,'json'=>json_encode($changed,JSON_THROW_ON_ERROR),
+         'digest'=>WorkflowDefinitionFingerprint::digest($changed)],
+    );
+    $expectDenied(static fn()=>$strict->attest($proofRequest),'governed Action approved contract digest drift');
+    $connection->executeStatement(
+        'UPDATE cos_workflow_runs SET definition_json=:json,definition_digest=:digest
+         WHERE organization_id=:org AND run_id=:run',
+        [...$keys,'json'=>json_encode($graph,JSON_THROW_ON_ERROR),
+         'digest'=>WorkflowDefinitionFingerprint::digest($graph)],
+    );
+    if(!$strict->attest($proofRequest)->verified) {
+        throw new RuntimeException('Pinned output receipt did not recover after trusted data restoration.');
+    }
+    echo "Pinned canonical Action output schema MySQL: persisted valid, invalid, missing, drift, recovered PASS.\n";
+
     echo "Workflow canonical Action receipt MySQL passed: approved Plan port, immutable input, Action key, independent human approval, Policy and exactly-one attempt.\n";
 } finally {
     $connection->executeStatement('DELETE FROM cos_approvals WHERE organization_id=:org',['org'=>$org]);
