@@ -141,8 +141,13 @@ final class CapabilityContractFingerprint
                 }
             }
         }
-        if (isset($schema['additionalProperties']) && !is_bool($schema['additionalProperties'])) {
-            throw new DomainException('Unsupported additionalProperties contract.');
+        if (array_key_exists('additionalProperties', $schema)) {
+            $extras = $schema['additionalProperties'];
+            if (is_array($extras) && ($extras === [] || !array_is_list($extras))) {
+                self::assertSupportedSchema($extras, $depth + 1);
+            } elseif (!is_bool($extras)) {
+                throw new DomainException('Unsupported additionalProperties contract.');
+            }
         }
     }
 
