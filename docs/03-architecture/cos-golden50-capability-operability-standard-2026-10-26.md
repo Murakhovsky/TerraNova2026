@@ -6,7 +6,7 @@ kind: architecture
 updated: 2026-10-26
 ---
 
-# COS-G50-CAPABILITY-OPERABILITY-1.0
+# Стандарт працездатності COS Golden 50
 
 **Статус:** нормативне ТЗ і план acceptance, НЕ production-сертифікат. **Авторитет виконання:** лише чинні Domain Command/Query buses, Kernel Action/Policy/Approval та canonical Platform Workflow. **Заборонено:** другий executor, обхід людських погоджень, synthetic business outcomes, неконтрольований retry.
 
@@ -99,7 +99,7 @@ Property має наявні Asset/Inventory/Listing/Publication/Intake/Identity
 
 У протоколі ОБОВ'ЯЗКОВІ цілі чисельники і знаменники, список виключень, причина кожного BLOCKED. Не змішувати smoke/unit success із operator-certified readiness. Сертифікат не може бути PASS при P0 FAIL/BLOCKED, невідомому denominator або відсутній independent sign-off.
 
-## 6. Release gates
+## 6. Контрольні ворота випуску
 
 | Gate | Умова переходу | Доказ |
 | --- | --- | --- |
