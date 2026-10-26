@@ -22,6 +22,10 @@ final readonly class CanonicalCapabilityController {
         try { return $this->reply(['capabilities'=>$this->capabilities->inventory($this->actor())]); }
         catch (DomainException $e) { return $this->reply(['error'=>'capability_forbidden'],403); }
     }
+    public function bindings():JsonResponse {
+        try { return $this->reply($this->capabilities->bindingAudit($this->actor())); }
+        catch (DomainException $e) { return $this->reply(['error'=>'capability_forbidden'],403); }
+    }
     public function show(string $id):JsonResponse {
         try { return $this->reply($this->capabilities->describe($this->actor(),$id)); }
         catch (DomainException $e) { return $this->reply(['error'=>'capability_unavailable'],403); }
