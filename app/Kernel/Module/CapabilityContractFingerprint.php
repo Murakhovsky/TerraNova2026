@@ -90,17 +90,26 @@ final class CapabilityContractFingerprint
             }
         }
         $types = $schema['type'] ?? null;
+        // JSON Schema permits assertion-only property schemas, for example
+        // {"const": false} or {"enum": ["qualified", "monitor"]}.
+        // These are common in native Growth/Documents Action receipts.
+        $assertionOnly = $depth > 0 && $types === null
+            && (array_key_exists('const', $schema) || array_key_exists('enum', $schema));
         if (is_string($types)) {
             $types = [$types];
         }
-        if (!is_array($types) || !array_is_list($types) || $types === []) {
-            throw new DomainException('Capability schema requires an explicit type.');
+        if (!$assertionOnly && (!is_array($types) || !array_is_list($types) || $types === [])) {
+            throw new DomainException('Capability schema requires an explicit type or nested enum/const.');
         }
-        foreach ($types as $type) {
+        foreach ($assertionOnly ? [] : $types as $type) {
             if (!is_string($type)
                 || !in_array($type, ['object','array','string','integer','number','boolean','null'], true)) {
                 throw new DomainException('Unsupported capability schema value type.');
             }
+        }
+        if (array_key_exists('enum', $schema)
+            && (!is_array($schema['enum']) || $schema['enum'] === [])) {
+            throw new DomainException('Capability enum schema requires nonempty choices.');
         }
         if (isset($schema['format']) && $schema['format'] !== 'date-time') {
             throw new DomainException('Unsupported capability schema format.');
