@@ -8,6 +8,9 @@ use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use DomainException;
 use Kernel\Tenant\Model\TenantPermissions;
+use Kernel\Module\CanonicalCapabilityCatalog;
+use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
+use Platform\Orchestration\Goal\GoalCapabilityPinGuard;
 use Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface;
 use Platform\Workflow\Contract\WorkflowReceiptVerifierInterface;
 use Platform\Workflow\Model\WorkflowReceiptAttestation;
@@ -27,6 +30,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
     public function __construct(
         private Connection $db,
         private WorkflowPlanApprovalEvidenceInterface $plans,
+        private ?CanonicalCapabilityCatalog $capabilities = null,
     ) {}
 
     public function attest(WorkflowReceiptRequest $request): WorkflowReceiptAttestation
@@ -135,6 +139,23 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             WorkflowDefinitionFingerprint::digest($definition))) {
             throw new DomainException('Immutable Workflow definition digest does not match persisted graph.');
         }
+        // New approved Plans pin the concrete version AND schema digests.
+        // Legacy Plan fixtures remain behind their earlier authority gates;
+        // partially pinned Plans must NEVER be treated as legacy.
+        $pinnedOutputs = false;
+        foreach ($definition as $candidate) {
+            if (!is_array($candidate)) throw new DomainException('Malformed Workflow receipt graph Step.');
+            if (array_key_exists('contract_digest', $candidate)
+                || array_key_exists('input_digest', $candidate)) {
+                $pinnedOutputs = true;
+            }
+        }
+        if ($pinnedOutputs) {
+            if ($this->capabilities === null) {
+                throw new DomainException('Pinned receipt requires an authoritative Capability Catalog.');
+            }
+            (new GoalCapabilityPinGuard($this->capabilities))->assertPlan($definition);
+        }
         $step = null;
         foreach ($definition as $candidate) {
             if (($candidate['id'] ?? null) === $stepId) {
@@ -176,7 +197,7 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             throw new DomainException('Canonical Action parameters changed from the approved Workflow Step.');
         }
         $attempts = $this->db->fetchAllAssociative(
-            'SELECT attempt, status, finished_at FROM cos_action_attempts
+            'SELECT attempt, status, finished_at, result FROM cos_action_attempts
              WHERE organization_id=:org AND action_id=:id',
             ['org' => $keys['org'], 'id' => $matched[1]],
         );
@@ -207,6 +228,29 @@ final readonly class DoctrineWorkflowActionReceiptVerifier implements WorkflowRe
             || ($approvals[0]['expires_at'] !== null
                 && strtotime((string) $approvals[0]['expires_at'] . ' UTC') <= time())) {
             throw new DomainException('Canonical Action lacks independent valid human Approval.');
+        }
+        if ($pinnedOutputs) {
+            // A completed Action only has a typed technical result if it was
+            // actually persisted in its unique first attempt. Never fabricate
+            // an empty result or infer business success from status=COMPLETED.
+            $persisted = $attempts[0]['result'] ?? null;
+            if (!is_string($persisted) || trim($persisted) === '' || strlen($persisted) > 262144) {
+                throw new DomainException('Pinned Action receipt lacks bounded persisted output.');
+            }
+            try {
+                $output = json_decode($persisted, true, 32, JSON_THROW_ON_ERROR);
+                $contract = $this->capabilities->resolvePinned(
+                    (string)$step['capability_id'],
+                    (string)$step['capability_version'],
+                    (string)$step['contract_digest']
+                );
+                (new CapabilityJsonInputValidator())->validateOutput($contract, $output);
+            } catch (\JsonException|DomainException $exception) {
+                throw new DomainException(
+                    'Pinned Action output unverified; reconcile native Domain state, never blindly retry.',
+                    previous: $exception,
+                );
+            }
         }
         return new WorkflowReceiptAttestation(
             $identity, $stepId, true, 'canonical-action',
