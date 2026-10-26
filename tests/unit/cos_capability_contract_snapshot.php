@@ -41,6 +41,14 @@ $validator->validateOutput($create, [
     'legacy_property_id'=>null,
 ]);
 $validator->validateOutput($get, null); // Native query may legitimately return not-found.
+$qualify=$catalog->describe('growth.candidate.qualify');
+if ($qualify === null) {
+    // Catalog initialized only with Property in this fixture: the real
+    // multi-Domain Golden 50 check runs in a separate full manifest test.
+} else {
+    throw new RuntimeException('Property-only fixture unexpectedly contains Growth.');
+}
+
 $reject(static fn() => $validator->validateOutput($create, ['reference'=>'missing-asset']));
 $reject(static fn() => $validator->validateOutput($create, [['asset'=>['asset_id'=>'PROP-X']]]));
 
