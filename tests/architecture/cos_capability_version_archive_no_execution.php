@@ -25,7 +25,7 @@ $check(str_contains($fingerprint,'function verifyFrozen(')
     && str_contains($fingerprint,'input_schema_digest')
     && str_contains($fingerprint,'output_schema_digest'),
     'Version snapshot must freeze and verify both schema contents.');
-$check(str_contains($cli,"fopen($"."path,'x')") && str_contains($cli,"in_array('--write'")
+$check(str_contains($cli,"fopen(".'$path' . ",'x')") && str_contains($cli,"in_array('--write'")
     && str_contains($cli,"in_array('--check'"),
     'Archiver must be operator-only and write-once without overwrite.');
 $check(str_contains($routes,'/api/v1/capabilities/{id}/versions/{version}/snapshots/{digest}')
