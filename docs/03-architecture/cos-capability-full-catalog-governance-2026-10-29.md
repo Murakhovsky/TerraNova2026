@@ -77,7 +77,7 @@ Canonical Capability Library є **єдиним джерелом контракт
 6. Для `descriptive` capabilities визначити явне правило: informational / non-executable, а не автоматично приписувати фальшивий Command contract.
 7. Після вичерпання законно інформаційних legacy описів погодити окрему політику щодо `--require-all-typed` або чіткий `descriptive` scope для цих декларацій. Не змінювати значення існуючих ID приховано.
 
-## Test / acceptance
+## Перевірки та приймання
 
 - `tests/unit/cos_capability_full_domain_coverage.php`: звіт відтворюваний, всі declarations враховані, статичний аудит не прикидається сертифікацією, typed fingerprint детермінований, legacy ID не виконується, два owner з однаковим binding позначаються помилкою обидва.
 - CI fast: compiler/census + Contract/Goal/Golden50 regressions.
