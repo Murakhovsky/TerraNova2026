@@ -7,6 +7,7 @@ use App\Persistence\Federation\FederationCapabilityBindingResolver;
 use DomainException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
+use Kernel\Module\CapabilityCatalogCoverageAudit;
 use Kernel\Module\CapabilityContract;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
@@ -52,6 +53,25 @@ final class CanonicalCapabilityGateway {
         $owner=$this->catalog->ownerOf($id);
         if ($owner===null||$owner==='federation') throw new DomainException('Unknown or internal capability.');
         return $this->entry($actor,$id,$owner,$this->catalog->describe($id),$this->bindings->available($actor));
+    }
+
+    /**
+     * Whole-domain definition quality audit. This is source-level governance,
+     * not a live worker/tenant certification or execution authority.
+     * @return array<string,mixed>
+     */
+    public function coverage(TenantContext $actor): array
+    {
+        $this->assertManager($actor);
+        $report=(new CapabilityCatalogCoverageAudit($this->catalog))->report();
+        // Never expose the internal plan-approval Capability through the
+        // user-facing catalog or machine discovery endpoint.
+        $report['capabilities']=array_values(array_filter($report['capabilities'],
+            static fn(array $r):bool => $r['owner_domain'] !== 'federation'
+        ));
+        $report['internal_capabilities_excluded']=true;
+        $report['tenant_authorization_evaluated']=false;
+        return $report;
     }
 
     /**
