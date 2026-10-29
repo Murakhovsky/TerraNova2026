@@ -29,7 +29,7 @@ return [
             'app/migrations/20260914_000049_diagnostic_runtime_v060.sql',
             'app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql',
         ],
-                // Explicitly scoped legacy identities, not invocable Canonical contracts.
+        // Explicitly scoped legacy identities, not invocable Canonical contracts.
         'capability_profiles' => [
             'diagnostic.methodology.compile' => 'contract_candidate',
             'diagnostic.semantic.v1' => 'feature_surface',
@@ -37,7 +37,7 @@ return [
             'diagnostic.traceability' => 'feature_surface',
             'diagnostic.v1' => 'feature_surface',
         ],
-'capabilities' => [
+        'capabilities' => [
             'diagnostic.methodology.compile',
             'diagnostic.state.rebuild',
             'diagnostic.traceability',
