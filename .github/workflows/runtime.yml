@@ -726,6 +726,11 @@ jobs:
       - name: Container and routes
         run: |
           docker compose exec -T php php bin/console lint:container
+          # Inspect actual booted Symfony DI: no Action dispatch, no tenant grant.
+          docker compose exec -T php php bin/console cos:capability:runtime:witness --no-interaction > /tmp/cos-capability-runtime-witness.json
+          grep -q '"worker_admission_mode":"WORKER_DISABLED_FAIL_CLOSED"' /tmp/cos-capability-runtime-witness.json
+          grep -q '"worker_execution_certified":false' /tmp/cos-capability-runtime-witness.json
+          grep -q '"scope":"CURRENT_SYMFONY_CONTAINER_ONLY"' /tmp/cos-capability-runtime-witness.json
           docker compose --profile l2 config --quiet
           # Exercise the exact Compose-managed worker image/CLI without starting a live feed.
           docker compose --profile l2 run --rm --no-deps l2-stream \
