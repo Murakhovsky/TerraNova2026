@@ -18,15 +18,17 @@
     <div class="cos-section-grid" data-capability-coverage>
       <p><strong>{{ coverage.counts.declared }}</strong> оголошених функцій</p>
       <p><strong>{{ coverage.counts.typed }}</strong> типізованих контрактів</p>
-      <p><strong>{{ coverage.counts.declarative_only }}</strong> потребують контракту</p>
+      <p><strong>{{ coverage.counts.feature_surface }}</strong> інформаційних / UI-можливостей</p>
+      <p><strong>{{ coverage.counts.contract_candidates }}</strong> очікують typed contract</p>
+      <p><strong>{{ coverage.counts.unclassified_legacy }}</strong> без класифікації</p>
       <p><strong>{{ coverage.counts.invalid_contract }}</strong> структурних помилок</p>
       <p><strong>{{ coverage.counts.governance_warnings }}</strong> зауважень до доказів</p>
     </div>
     <p class="cos-card__copy">Цифри охоплюють усі Domain manifests, зокрема внутрішні службові. У списку нижче службові команди приховані. Аналіз визначень не підтверджує живий worker, дозволи tenant чи бізнес-результат.</p>
-    {% if coverage.counts.declarative_only > 0 or coverage.counts.invalid_contract > 0 %}
-      <p class="cos-card__copy" role="status"><strong>Міграція триває:</strong> усі оголошені функції ще не мають повністю стандартних контрактів. Не прирівнюйте декларації до виконуваних команд.</p>
+    {% if coverage.counts.contract_candidates > 0 or coverage.counts.unclassified_legacy > 0 or coverage.counts.invalid_contract > 0 %}
+      <p class="cos-card__copy" role="status"><strong>Міграція триває:</strong> кандидати на окремі операції очікують типізованих контрактів та native handlers. Інформаційні можливості не є командами й не повинні отримувати фальшиві executor bindings.</p>
     {% else %}
-      <p class="cos-card__copy">Усі визначення типізовані. Сертифікація runtime і native evidence перевіряється окремо.</p>
+      <p class="cos-card__copy">Усі декларації класифіковані: виконувані контракти та інформаційні можливості розмежовано. Сертифікація runtime і native evidence перевіряється окремо.</p>
     {% endif %}
   </section>
   <section class="cos-card" aria-label="Пошук доступних бізнес-функцій">
@@ -117,6 +119,7 @@
       {% set audit = coverageById[capability.id]|default(null) %}
       {% if audit %}
         <p class="cos-card__copy">Стан визначення: <strong>{{ audit.definition_status }}</strong>
+          {% if audit.legacy_profile|default(null) %}· Класифікація: <code>{{ audit.legacy_profile }}</code>{% endif %}
           · Handler/worker: <strong>{{ capability.binding_witness|default('UNVERIFIED') }}</strong>
           · Доступ: <strong>{{ capability.status }}</strong>
         </p>
