@@ -29,11 +29,23 @@ Canonical Capability Library є **єдиним джерелом контракт
 
 Звіт не змінює налаштування Domains та **не створює новий реєстр у БД**.
 
+### Класифікація legacy-декларацій
+
+У контрактах Domain з'явилося поле `contributions.capability_profiles`: мапа точного legacy ID на один із двох статусів. `feature_surface` описує можливість, сторінку, доступ або технічну складову, яка **не** має власного стандартного handler і не може бути універсально викликана. `contract_candidate` описує потенційну самостійну бізнес-операцію, для якої потрібні повний `CapabilityContract`, local schemas, native adapter/action owner, permission, idempotency, тести та evidence. Обидва типи залишаються **невиконуваними** в Canonical Gateway до фактичної інтеграції.
+
+Станом на початок цього інкременту шість основних Domain manifests містили 172 ідентичності: 16 typed, 67 descriptive feature surfaces та 89 contract candidates. Це **класифікація декларацій**, а не 89 доведених відсутніх реалізацій. Кожен Domain owner має перевірити семантику своїх кандидатів під час міграції.
+
+Метадані декларуються лише у вихідному `module.php`. `ModuleContributions` відхиляє ID, якого немає в цьому Domain; невідомі статуси й спроби reclassify typed executable як legacy. Невідомі надалі IDs будуть видні як `UNCLASSIFIED_LEGACY_CAPABILITY`.
+
+CLI: `--require-classified` є CI-gate на повну класифікацію і відсутність структурних помилок. `--require-executables-ready` залишається суворим майбутнім release gate та завершується помилкою, доки є кандидати без контрактів. `--require-all-typed` залишається надсуворою сумісною перевіркою, непридатною для інформаційних маркерів.
+
 ### 2. Стандарт станів
 
 | Code | Значення | Дозвіл виконання |
 | --- | --- | --- |
-| `DECLARATIVE_ONLY` | ID є в manifest, але немає typed contract | Немає |
+| `DECLARATIVE_ONLY` | ID є в manifest, але немає typed contract чи явної semantic classification | Немає |
+| `FEATURE_SURFACE_NON_EXECUTABLE` | Інформаційна/навігаційна можливість, не самостійна canonical команда | Немає |
+| `CONTRACT_CANDIDATE_BLOCKED` | Операція-кандидат, для якої немає повного typed contract | Немає |
 | `SCHEMA_VALID_BINDING_UNVERIFIED` | Typed contract і локальні схеми пройшли перевірку | Не встановлений цим звітом |
 | `CONTRACT_INVALID` | Invalid schema, dependency чи дубль виконуваного binding | Немає |
 
@@ -57,6 +69,7 @@ Canonical Capability Library є **єдиним джерелом контракт
 
 - CLI: `php bin/cos-capability-census.php` повертає версійований JSON.
 - CI структурна перевірка: `php bin/cos-capability-census.php --strict`, exit 1 за invalid typed contracts.
+- CI семантична перевірка: `php bin/cos-capability-census.php --strict --require-classified` для кожного Domain manifest.
 - CI перевірка повної міграції: `--require-all-typed`, exit 2, якщо лишилися declarative-only; **не активувати як release gate, поки legacy не мігрований**.
 - API: `GET /api/v1/capabilities/coverage` для tenant manager; внутрішні Federation approval capabilities не включаються в перелік ID, але загальні лічильники охоплюють всі визначення.
 - API: `GET /api/v1/capabilities/bindings` дає інший, tenant-aware current-container status. Ніяких записів і нових дозволів.
