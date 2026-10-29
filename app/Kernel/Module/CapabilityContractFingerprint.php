@@ -20,6 +20,73 @@ final class CapabilityContractFingerprint
         $root = $projectRoot ?? dirname(__DIR__, 3);
         $input = self::schema($root, $contract->inputSchema);
         $output = self::schema($root, $contract->outputSchema);
+        return self::snapshotData($contract, $input, $output);
+    }
+
+    /**
+     * Deterministic release artifact with frozen schema CONTENT, not mutable
+     * file references alone. Content does not authorize historical execution.
+     * @return array<string,mixed>
+     */
+    public static function freeze(CapabilityContract $contract, ?string $projectRoot = null): array
+    {
+        $root = $projectRoot ?? dirname(__DIR__, 3);
+        $input = self::schema($root, $contract->inputSchema);
+        $output = self::schema($root, $contract->outputSchema);
+        return [
+            'format' => 'cos-capability-release-snapshot-v1',
+            'snapshot' => self::snapshotData($contract, $input, $output),
+            'contract' => $contract->toArray(),
+            'input_schema' => $input,
+            'output_schema' => $output,
+        ];
+    }
+
+    /**
+     * Recompute EVERY field from the archived bytes. A manifest update or
+     * tampered archive cannot silently rewrite a pinned approved Plan digest.
+     * @param array<string,mixed> $frozen
+     * @return array{capability_id:string,version:string,contract_digest:string,input_schema_digest:string,output_schema_digest:string}
+     */
+    public static function verifyFrozen(array $frozen): array
+    {
+        if (($frozen['format'] ?? null) !== 'cos-capability-release-snapshot-v1'
+            || !is_array($frozen['contract'] ?? null)
+            || !is_array($frozen['input_schema'] ?? null)
+            || !is_array($frozen['output_schema'] ?? null)
+            || !is_array($frozen['snapshot'] ?? null)) {
+            throw new DomainException('Malformed immutable Capability release archive.');
+        }
+        try {
+            $contract = CapabilityContract::fromArray($frozen['contract']);
+        } catch (\InvalidArgumentException $e) {
+            throw new DomainException('Invalid archived Capability contract.', previous: $e);
+        }
+        $input=$frozen['input_schema'];
+        $output=$frozen['output_schema'];
+        if (array_is_list($input) || array_is_list($output)
+            || !array_key_exists('type',$input) || !array_key_exists('type',$output)) {
+            throw new DomainException('Archived input/output require typed JSON schema objects.');
+        }
+        self::assertSupportedSchema($input);
+        self::assertSupportedSchema($output);
+        $computed=self::snapshotData($contract, $input, $output);
+        foreach ($computed as $key => $value) {
+            $stored=$frozen['snapshot'][$key] ?? null;
+            if (!is_string($stored) || !hash_equals($value, $stored)) {
+                throw new DomainException('Archived Capability schema or metadata digest mismatch.');
+            }
+        }
+        return $computed;
+    }
+
+    /**
+     * @param array<string,mixed> $input
+     * @param array<string,mixed> $output
+     * @return array{capability_id:string,version:string,contract_digest:string,input_schema_digest:string,output_schema_digest:string}
+     */
+    private static function snapshotData(CapabilityContract $contract, array $input, array $output): array
+    {
         $payload = [
             'profile' => 'cos-capability-contract-snapshot-v1',
             'contract' => $contract->toArray(),
