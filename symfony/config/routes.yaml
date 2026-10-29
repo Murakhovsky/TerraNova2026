@@ -71,6 +71,11 @@ cos_goal_capability_plan_preflight:
   controller: App\Http\Api\V1\Controller\CanonicalGoalPlanPreflightController::validate
   methods: [POST]
 
+cos_capabilities_coverage:
+  path: /api/v1/capabilities/coverage
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::coverage
+  methods: [GET]
+
 cos_capabilities_bindings:
   path: /api/v1/capabilities/bindings
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::bindings
