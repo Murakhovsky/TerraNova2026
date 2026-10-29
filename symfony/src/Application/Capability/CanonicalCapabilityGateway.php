@@ -10,6 +10,8 @@ use Kernel\Module\CanonicalCapabilityCatalog;
 use Kernel\Module\CapabilityCatalogCoverageAudit;
 use Kernel\Module\CapabilityContract;
 use Kernel\Module\CapabilityVersionArchive;
+use Kernel\Module\DomainModuleRegistry;
+use Kernel\Action\Service\ModuleActionExecutionGate;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
@@ -25,6 +27,8 @@ final class CanonicalCapabilityGateway {
         private readonly ActiveModuleResolver $modules,
         private readonly FederationCapabilityBindingResolver $bindings,
         iterable $adapters,
+        private readonly ?DomainModuleRegistry $domains = null,
+        private readonly ?ModuleActionExecutionGate $executionGate = null,
     ) {
         foreach ($adapters as $adapter) {
             if (!$adapter instanceof CapabilityInvocationAdapterInterface) throw new LogicException('Invalid capability adapter.');
@@ -93,6 +97,9 @@ final class CanonicalCapabilityGateway {
             'contract_digest'=>$info['definition_snapshot']['contract_digest']??null,
             'binding_witness'=>$info['binding_witness'],
             'binding_scope'=>$info['binding_witness_scope'],
+            'binding_witness_issue'=>$info['binding_witness_issue'],
+            'worker_admission_mode'=>$info['workflow_worker_admission_mode'],
+            'worker_execution_certified'=>false,
             'tenant_execution_mode'=>$info['status'],
             'reason'=>$info['reason'],
             'certified'=>false,
@@ -176,6 +183,9 @@ final class CanonicalCapabilityGateway {
             'certified' => false,
             'worker_deployment_verified' => false,
             'native_business_evidence_verified' => false,
+            'worker_execution_certified' => false,
+            'workflow_worker_admission_mode' => $this->executionGate?->workflowAdmissionMode()
+                ?? 'WORKER_GATE_UNAVAILABLE',
             'counts' => $counts,
             'capabilities' => $rows,
         ];
@@ -295,18 +305,49 @@ final class CanonicalCapabilityGateway {
                 $reason = 'Capability contract schema missing or invalid.';
             }
         }
-        // Handler-registration witness only. It does not certify an
-        // individual worker, tenant permission, policy or business outcome.
+        // A runtime witness is determined from actual registered instances,
+        // never inferred from a status string or a manifest declaration.
         $bindingWitness = 'UNVERIFIED';
-        if ($contract !== null && $status === 'workflow_approval_required') {
-            $bindingWitness = 'ACTION_HANDLER_REGISTERED';
-        } elseif ($contract !== null && in_array($status,['direct_human','read_only'],true)) {
-            $bindingWitness = 'DOMAIN_ADAPTER_REGISTERED';
+        $bindingIssue = 'NO_TYPED_CONTRACT';
+        if ($contract !== null) {
+            $binding = $contract->executionBinding;
+            if (str_starts_with($binding, 'action:')) {
+                $type = substr($binding, 7);
+                $handlers = $this->domains?->actionHandlerMap() ?? [];
+                if ($this->domains === null) {
+                    $bindingIssue = 'DOMAIN_RUNTIME_REGISTRY_UNAVAILABLE';
+                } elseif ($type !== ''
+                    && $this->domains->ownerOfAction($type) === $contract->ownerDomain
+                    && isset($handlers[$type]) && $handlers[$type]->supports($type)) {
+                    $bindingWitness = 'ACTION_HANDLER_REGISTERED';
+                    $bindingIssue = 'NONE';
+                } else {
+                    $bindingIssue = 'DOMAIN_ACTION_HANDLER_MISSING_OR_OWNER_MISMATCH';
+                }
+            } elseif (str_starts_with($binding, 'query:')
+                || str_starts_with($binding, 'command:')) {
+                if (isset($this->adapters[$binding])) {
+                    $bindingWitness = 'DOMAIN_ADAPTER_REGISTERED';
+                    $bindingIssue = 'NONE';
+                } else {
+                    $bindingIssue = 'DOMAIN_ADAPTER_MISSING';
+                }
+            } elseif (str_starts_with($binding, 'read:')) {
+                // The Workflow read witness is separately reconciled by the
+                // Domain evidence verifier. Never pretend this is a QueryBus.
+                $bindingIssue = 'WORKFLOW_READ_VERIFIER_NOT_CERTIFIED';
+            } else {
+                $bindingIssue = 'UNKNOWN_EXECUTION_BINDING';
+            }
         }
         return [
             'id'=>$id,'owner_domain'=>$owner,'status'=>$status,'reason'=>$reason,
             'binding_witness'=>$bindingWitness,
+            'binding_witness_issue'=>$bindingIssue,
             'binding_witness_scope'=>'CURRENT_REQUEST_CONTAINER_ONLY',
+            'workflow_worker_admission_mode'=>$this->executionGate?->workflowAdmissionMode()
+                ?? 'WORKER_GATE_UNAVAILABLE',
+            'worker_execution_certified'=>false,
             'contract'=>$contract?->toArray(),'definition_readiness'=>$definitionReadiness,
             'definition_snapshot'=>$snapshot,
             // Runtime authorization is evaluated separately from a static digest.
