@@ -32,6 +32,9 @@ final readonly class CapabilityCatalogCoverageAudit
             'typed' => 0,
             'schema_valid' => 0,
             'declarative_only' => 0,
+            'feature_surface' => 0,
+            'contract_candidates' => 0,
+            'unclassified_legacy' => 0,
             'invalid_contract' => 0,
             'governance_warnings' => 0,
         ];
@@ -53,7 +56,21 @@ final readonly class CapabilityCatalogCoverageAudit
             ];
             if ($contract === null) {
                 ++$counts['declarative_only'];
-                $row['issues'][] = ['code' => 'MISSING_TYPED_CONTRACT', 'severity' => 'migration'];
+                $profile = $this->catalog->legacyProfileOf($id);
+                $row['legacy_profile'] = $profile;
+                if ($profile === 'feature_surface') {
+                    ++$counts['feature_surface'];
+                    $row['definition_status'] = 'FEATURE_SURFACE_NON_EXECUTABLE';
+                    // A descriptive feature/permission marker is not
+                    // a standalone executable contract and is never callable.
+                } elseif ($profile === 'contract_candidate') {
+                    ++$counts['contract_candidates'];
+                    $row['definition_status'] = 'CONTRACT_CANDIDATE_BLOCKED';
+                    $row['issues'][] = ['code' => 'MISSING_TYPED_CONTRACT', 'severity' => 'migration'];
+                } else {
+                    ++$counts['unclassified_legacy'];
+                    $row['issues'][] = ['code' => 'UNCLASSIFIED_LEGACY_CAPABILITY', 'severity' => 'migration'];
+                }
                 $rows[] = $row;
                 continue;
             }
@@ -192,9 +209,14 @@ final readonly class CapabilityCatalogCoverageAudit
             'schema_version' => 'cos-capability-coverage-v1',
             'authority' => 'Domain module.php -> CanonicalCapabilityCatalog',
             'scope' => 'STATIC_DEFINITION_ONLY',
-            'completeness' => $counts['declarative_only'] === 0 && $counts['invalid_contract'] === 0
-                ? 'TYPED_DEFINITIONS_COMPLETE_NOT_CERTIFIED'
+            'completeness' => $counts['contract_candidates'] === 0
+                    && $counts['unclassified_legacy'] === 0
+                    && $counts['invalid_contract'] === 0
+                ? 'SEMANTIC_DEFINITIONS_COMPLETE_NOT_CERTIFIED'
                 : 'MIGRATION_REQUIRED',
+            'semantic_classification' => $counts['unclassified_legacy'] === 0
+                ? 'ALL_DECLARATIONS_CLASSIFIED'
+                : 'CLASSIFICATION_REQUIRED',
             'certified' => false,
             'runtime_bindings_checked' => false,
             'tenant_permissions_checked' => false,
