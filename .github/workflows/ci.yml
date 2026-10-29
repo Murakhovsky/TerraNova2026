@@ -93,6 +93,10 @@ jobs:
             /tmp/cos-capability-freeze-verified.json
           if-no-files-found: ignore
           retention-days: 14
+      - name: Runtime handler registry versus worker admission witness
+        run: php tests/unit/cos_capability_runtime_binding_witness.php
+      - name: Runtime binding evidence execution authority guard
+        run: php tests/architecture/cos_capability_runtime_witness_authority.php
       - name: Complete Capability Library definition coverage and binding collisions
         run: php tests/unit/cos_capability_full_domain_coverage.php
       - name: Capability manifest/schema census and fully classified legacy inventory
