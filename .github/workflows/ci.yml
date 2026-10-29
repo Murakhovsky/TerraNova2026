@@ -72,6 +72,8 @@ jobs:
         run: php tests/architecture/cos_capability_receipt_preflight_contract.php
       - name: Capability Library operator interface and read-only contract API
         run: php tests/architecture/cos_capability_catalog_experience.php
+      - name: Capability history must remain read-only to Goal execution
+        run: php tests/architecture/cos_capability_version_archive_no_execution.php
       - name: Immutable Capability contract release archive regression
         run: php tests/unit/cos_capability_immutable_archive.php
       - name: Validate release freeze report without writing to the checkout
