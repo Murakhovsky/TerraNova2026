@@ -50,6 +50,8 @@ php symfony/bin/console cos:capability:runtime:witness --require-action-bindings
 
 У цьому режимі **відсутній handler спричиняє ненульовий exit code**, але сам звіт ніколи не позначає `worker_execution_certified=true`. Для `query:`, `command:` та `read:` CLI чесно повертає `NOT_EVALUATED_IN_THIS_COMMAND`; їхня реєстрація перевіряється через `/api/v1/capabilities/bindings` або окремі Domain evidence adapters.
 
+У Runtime GitHub Actions ця команда також запускається **в реальному Docker Compose PHP контейнері** після `lint:container`, із перевіркою `WORKER_DISABLED_FAIL_CLOSED` та збереженням JSON як `cos-capability-runtime-instance-witness`. Цей артефакт підтверджує лише CI-інстанс, не production replicas.
+
 Оператор повинен зберегти звіт **з кожного** вебконтейнера і worker-репліки разом із незалежно перевіреним release SHA, deployment identity, runtime config і результатами permission/Approval/Receipt тестів. CLI не визначає SHA автоматично та не стверджує, що інші replicas мають той самий образ.
 
 ## Наступний production acceptance
