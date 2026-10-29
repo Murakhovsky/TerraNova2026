@@ -133,7 +133,22 @@ return [
                 'documentation' => 'docs/03-architecture/federation-goal-canonical-execution.md',
             ],
         ],
-        'capabilities' => [
+                // Source-owned transitional semantic profile. These are NOT callable
+        // CapabilityContracts; candidate entries require typed contracts and
+        // native handler admission before any UI/AI/API invocation.
+        'capability_profiles' => [
+            'sales.admin.agents.manage' => 'feature_surface',
+            'sales.admin.audit.view' => 'feature_surface',
+            'sales.admin.integrations.manage' => 'feature_surface',
+            'sales.admin.pipeline.manage' => 'feature_surface',
+            'sales.admin.policies.manage' => 'feature_surface',
+            'sales.admin.rules.manage' => 'feature_surface',
+            'sales.admin.teams.manage' => 'feature_surface',
+            'sales.admin.view' => 'feature_surface',
+            'sales.director.view' => 'feature_surface',
+            'sales.workspace.use' => 'feature_surface',
+        ],
+'capabilities' => [
             'sales.create_task',
             'sales.deal.won.observation',
             'sales.workspace.use',
