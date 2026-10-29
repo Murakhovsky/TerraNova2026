@@ -30,12 +30,25 @@ final readonly class CapabilityLibraryController
         if ($actor === null) return new RedirectResponse('/auth/login');
         try {
             $inventory = $this->capabilities->inventory($actor);
+            $coverage = $this->capabilities->coverage($actor);
+            $coverageById = [];
+            foreach ($coverage['capabilities'] as $row) {
+                $coverageById[$row['id']] = $row;
+            }
+            $domains = array_values(array_unique(array_column($inventory, 'owner_domain')));
+            sort($domains, SORT_STRING);
+            $selectedDomain = trim((string)$request->query->get('domain', ''));
+            if (!in_array($selectedDomain, ['', ...$domains], true)) $selectedDomain = '';
+            $selectedKind = trim((string)$request->query->get('kind', ''));
+            if (!in_array($selectedKind, ['', 'query','command','job','workflow','agent_tool'], true)) $selectedKind = '';
             $query = mb_strtolower(mb_substr(trim((string)$request->query->get('q', '')),0,80));
             $status = trim((string)$request->query->get('status', ''));
             $allowed = ['','read_only','direct_human','workflow_approval_required','unavailable'];
             if (!in_array($status,$allowed,true)) $status = '';
-            $inventory = array_values(array_filter($inventory,static function(array $item) use($query,$status):bool {
+            $inventory = array_values(array_filter($inventory,static function(array $item) use($query,$status,$selectedDomain,$selectedKind):bool {
                 if ($status !== '' && ($item['status'] ?? null) !== $status) return false;
+                if ($selectedDomain !== '' && ($item['owner_domain'] ?? '') !== $selectedDomain) return false;
+                if ($selectedKind !== '' && ($item['contract']['kind'] ?? '') !== $selectedKind) return false;
                 if ($query === '') return true;
                 return str_contains(mb_strtolower((string)($item['id'] ?? '')),$query)
                     || str_contains(mb_strtolower((string)($item['owner_domain'] ?? '')),$query);
@@ -63,6 +76,11 @@ final readonly class CapabilityLibraryController
         return new Response(
             $this->twig->render('experience/capability/library.html.twig', [
                 'capabilities' => $inventory,
+                'coverage' => $coverage,
+                'coverageById' => $coverageById,
+                'domains' => $domains,
+                'selectedDomain' => $selectedDomain,
+                'selectedKind' => $selectedKind,
                 'searchQuery' => $query,
                 'searchStatus' => $status,
                 'csrfToken' => $this->csrf->token($request),
