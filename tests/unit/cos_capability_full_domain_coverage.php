@@ -77,6 +77,32 @@ $shadow['contributions']=[
         'owner_domain'=>'shadow',
     ]],
 ];
+// Domain manifest is the exclusive source of semantic classification.
+// Invalid IDs, unsupported profiles or reclassifying a typed Action must
+// be rejected before any Catalog or runtime is constructed.
+$profileBase=$propertyManifest;
+$profileBase['contributions']['capability_profiles']=[
+    'property.asset.create'=>'feature_surface',
+];
+try {
+    ModuleDefinition::fromArray($profileBase);
+    throw new RuntimeException('Typed Action reclassified as non-executable.');
+} catch (InvalidArgumentException) {}
+$profileBase['contributions']['capability_profiles']=[
+    'property.unknown.fake'=>'feature_surface',
+];
+try {
+    ModuleDefinition::fromArray($profileBase);
+    throw new RuntimeException('Unowned legacy ID profile accepted.');
+} catch (InvalidArgumentException) {}
+$profileBase['contributions']['capability_profiles']=[
+    'property.asset.create'=>'auto_execute',
+];
+try {
+    ModuleDefinition::fromArray($profileBase);
+    throw new RuntimeException('Unsupported feature profile accepted.');
+} catch (InvalidArgumentException) {}
+
 $collisionCatalog=new CanonicalCapabilityCatalog(new ModuleCatalog([
     ModuleDefinition::fromArray($propertyManifest),
     ModuleDefinition::fromArray($shadow),
