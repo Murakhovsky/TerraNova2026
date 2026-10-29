@@ -33,7 +33,7 @@ Canonical Capability Library є **єдиним джерелом контракт
 
 У контрактах Domain з'явилося поле `contributions.capability_profiles`: мапа точного legacy ID на один із двох статусів. `feature_surface` описує можливість, сторінку, доступ або технічну складову, яка **не** має власного стандартного handler і не може бути універсально викликана. `contract_candidate` описує потенційну самостійну бізнес-операцію, для якої потрібні повний `CapabilityContract`, local schemas, native adapter/action owner, permission, idempotency, тести та evidence. Обидва типи залишаються **невиконуваними** в Canonical Gateway до фактичної інтеграції.
 
-Станом на початок цього інкременту шість основних Domain manifests містили 172 ідентичності: 16 typed, 67 descriptive feature surfaces та 89 contract candidates. Це **класифікація декларацій**, а не 89 доведених відсутніх реалізацій. Кожен Domain owner має перевірити семантику своїх кандидатів під час міграції.
+Аудит охоплює **всі 13 Domain manifests**. Наразі 190 ідентичностей: **16 typed contracts, 75 інформаційних feature surfaces і 99 contract candidates**. Декларації HR, Finance, Procurement і Construction поки не додають Capability IDs. Це **класифікація декларацій**, а не 99 доведених відсутніх реалізацій: у Domain може існувати звичайний handler без canonical contract. Кожен Domain owner має підтвердити семантику кандидатів перед міграцією.
 
 Метадані декларуються лише у вихідному `module.php`. `ModuleContributions` відхиляє ID, якого немає в цьому Domain; невідомі статуси й спроби reclassify typed executable як legacy. Невідомі надалі IDs будуть видні як `UNCLASSIFIED_LEGACY_CAPABILITY`.
 
