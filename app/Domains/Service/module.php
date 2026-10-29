@@ -21,7 +21,7 @@ return [
             'app/migrations/20260919_000064_service_wave11_cutover.sql',
             'app/migrations/20260928_000119_service_v100_release.sql',
         ],
-                // Explicitly scoped legacy identities, not invocable Canonical contracts.
+        // Explicitly scoped legacy identities, not invocable Canonical contracts.
         'capability_profiles' => [
             'service.api.v1' => 'feature_surface',
             'service.assignment' => 'contract_candidate',
@@ -31,7 +31,7 @@ return [
             'service.sla' => 'feature_surface',
             'service.ticket' => 'feature_surface',
         ],
-'capabilities' => [
+        'capabilities' => [
             'service.request',
             'service.ticket',
             'service.assignment',
