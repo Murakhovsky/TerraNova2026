@@ -191,7 +191,7 @@ return [
                 'documentation' => 'docs/03-architecture/cos-federation-goal-execution-foundation.md',
             ],
         ],
-                // Source-owned transitional semantic profile. These are NOT callable
+        // Source-owned transitional semantic profile. These are NOT callable
         // CapabilityContracts; candidate entries require typed contracts and
         // native handler admission before any UI/AI/API invocation.
         'capability_profiles' => [
@@ -284,7 +284,7 @@ return [
             'growth.signal.polling_workspace' => 'contract_candidate',
             'growth.signal.scheduled_polling' => 'contract_candidate',
         ],
-'capabilities' => [
+        'capabilities' => [
             'growth.market.resumable_discovery',
             'growth.market.partial_retry',
             'growth.learning.conversation_binding',
