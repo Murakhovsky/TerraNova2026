@@ -362,6 +362,7 @@ services:
   App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+      $capabilities: '@Kernel\Module\CanonicalCapabilityCatalog'
   # Operator-only SQL-backed shadow audit; never authorizes a cutover.
   # Shared deterministic DAG scheduler for the canonical Goal adapter.
   Platform\Workflow\Service\WorkflowStepScheduler: ~
