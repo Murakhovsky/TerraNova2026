@@ -142,7 +142,32 @@ return [
                 'documentation'=>'docs/03-architecture/cos-universal-capability-invocation.md',
             ],
         ],
-        'capabilities' => [
+                // Source-owned transitional semantic profile. These are NOT callable
+        // CapabilityContracts; candidate entries require typed contracts and
+        // native handler admission before any UI/AI/API invocation.
+        'capability_profiles' => [
+            'property.analytics' => 'feature_surface',
+            'property.api.v1' => 'feature_surface',
+            'property.business.cutover' => 'feature_surface',
+            'property.catalog' => 'feature_surface',
+            'property.history' => 'feature_surface',
+            'property.intake' => 'feature_surface',
+            'property.intelligence' => 'feature_surface',
+            'property.inventory' => 'feature_surface',
+            'property.listing' => 'feature_surface',
+            'property.media' => 'feature_surface',
+            'property.network' => 'feature_surface',
+            'property.read' => 'feature_surface',
+            'property.read.canonical' => 'feature_surface',
+            'property.reference' => 'feature_surface',
+            'property.registry' => 'feature_surface',
+            'property.runtime.canonical' => 'feature_surface',
+            'property.v1' => 'feature_surface',
+            'property.write' => 'feature_surface',
+            'property.identity.review' => 'contract_candidate',
+            'property.publish' => 'contract_candidate',
+        ],
+'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
             'property.asset.create','property.asset.search','property.asset.get','property.asset.update','property.bulk.create',
             'property.inventory','property.listing','property.publish','property.history','property.reference','property.analytics',
