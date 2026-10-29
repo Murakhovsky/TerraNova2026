@@ -89,6 +89,23 @@ $check($audit['counts']['declared']>=3
     && $audit['counts']['current_container_binding_witnessed']>=2,
     'Bound/unbound current runtime audit counts missing.');
 
+$coverage=$gateway->coverage($manager);
+$check($coverage['certified']===false
+    && $coverage['runtime_bindings_checked']===false
+    && $coverage['counts']['typed']>=3,
+    'Definition coverage must not grant runtime authority.');
+$revision=$gateway->versionedContract($manager,'property.asset.create','1.0.0');
+$check($revision['version']==='1.0.0' && $revision['authorized_to_execute']===false
+    && strlen($revision['definition_snapshot']['contract_digest'])===64,
+    'Version-pinned contract discovery should return metadata only.');
+$reject(static fn()=> $gateway->versionedContract($manager,'property.asset.create','2.0.0'));
+$readiness=$gateway->readiness($manager,'property.asset.create');
+$check($readiness['tenant_execution_mode']==='direct_human'
+    && $readiness['certified']===false
+    && $readiness['grants_approval']===false,
+    'Runtime readiness may not silently grant certification or approval.');
+$reject(static fn()=> $gateway->readiness($viewer,'property.asset.create'));
+
 $preflight=$gateway->validateInput($manager,'property.asset.create',
     ['type_code'=>'house','city'=>'Львів']);
 $check($preflight['valid']===true && $preflight['executed']===false
