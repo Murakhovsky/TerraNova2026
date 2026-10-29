@@ -64,6 +64,20 @@ final readonly class CapabilityCatalogCoverageAudit
             $row['side_effect_level'] = $contract->sideEffectLevel;
             $row['approval_policy'] = $contract->approvalPolicy;
             $row['binding_kind'] = explode(':', $contract->executionBinding, 2)[0];
+            // The Contract must describe the EXISTING execution route, not
+            // merely name a plausible handler string.
+            $compatible = [
+                'query' => ['query', 'read'],
+                'command' => ['command', 'action'],
+                'job' => ['job'],
+                'workflow' => ['workflow'],
+                'agent_tool' => ['agent', 'tool'],
+            ];
+            if (!in_array($row['binding_kind'], $compatible[$contract->kind] ?? [], true)) {
+                $row['issues'][] = [
+                    'code' => 'BINDING_KIND_MISMATCH', 'severity' => 'error',
+                ];
+            }
             $row['dependencies'] = $contract->dependencies;
             $row['documentation'] = $contract->documentation;
             $row['tests'] = $contract->tests;
@@ -90,6 +104,12 @@ final readonly class CapabilityCatalogCoverageAudit
                 ];
             } else {
                 $bindings[$contract->executionBinding] = $id;
+            }
+            if ($this->hasDependencyCycle($id, [], [])) {
+                $row['issues'][] = [
+                    'code' => 'CYCLIC_CAPABILITY_DEPENDENCY',
+                    'severity' => 'error',
+                ];
             }
             foreach ($contract->dependencies as $dependency) {
                 if ($dependency === $id || $this->catalog->ownerOf($dependency) === null) {
@@ -184,6 +204,28 @@ final readonly class CapabilityCatalogCoverageAudit
             'domains' => $domains,
             'capabilities' => $rows,
         ];
+    }
+
+    /**
+     * Detect dependency loops via catalog-owned typed references.
+     * No external execution or dynamic graph evaluation occurs.
+     * @param array<string,bool> $visiting
+     * @param array<string,bool> $visited
+     */
+    private function hasDependencyCycle(string $id, array $visiting, array $visited): bool
+    {
+        if (isset($visiting[$id])) return true;
+        if (isset($visited[$id])) return false;
+        $contract = $this->catalog->describe($id);
+        if ($contract === null) return false;
+        $visiting[$id] = true;
+        foreach ($contract->dependencies as $dependency) {
+            if ($this->catalog->describe($dependency) !== null
+                && $this->hasDependencyCycle($dependency, $visiting, $visited)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static function trustedExistingFile(string $root, string $relative): bool
