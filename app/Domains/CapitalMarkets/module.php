@@ -69,7 +69,7 @@ return [
             'app/migrations/20261015_000148_capital_markets_replay_scaling.sql',
             'app/migrations/20261016_000149_capital_markets_pool_evidence_scope.sql',
         ],
-                // Source-owned transitional semantic profile. These are NOT callable
+        // Source-owned transitional semantic profile. These are NOT callable
         // CapabilityContracts; candidate entries require typed contracts and
         // native handler admission before any UI/AI/API invocation.
         'capability_profiles' => [
