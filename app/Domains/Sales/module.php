@@ -133,7 +133,7 @@ return [
                 'documentation' => 'docs/03-architecture/federation-goal-canonical-execution.md',
             ],
         ],
-                // Source-owned transitional semantic profile. These are NOT callable
+        // Source-owned transitional semantic profile. These are NOT callable
         // CapabilityContracts; candidate entries require typed contracts and
         // native handler admission before any UI/AI/API invocation.
         'capability_profiles' => [
@@ -148,7 +148,7 @@ return [
             'sales.director.view' => 'feature_surface',
             'sales.workspace.use' => 'feature_surface',
         ],
-'capabilities' => [
+        'capabilities' => [
             'sales.create_task',
             'sales.deal.won.observation',
             'sales.workspace.use',
