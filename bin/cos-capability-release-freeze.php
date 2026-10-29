@@ -27,6 +27,15 @@ foreach ($catalog->executables() as $id => $contract) {
         $pin=$frozen['snapshot'];
         $relative=CapabilityVersionArchive::relativePath($id,$contract->version,$pin['contract_digest']);
         $path=$root.'/'.$relative;
+        // A released id@version has exactly ONE digest. A schema or contract
+        // changed under the same version is a breaking release mistake.
+        // Do not materialize a second "valid" revision to mask that drift.
+        $existingVersion=glob(dirname($path).'/*.json') ?: [];
+        foreach ($existingVersion as $other) {
+            if (basename($other)!==basename($path)) {
+                throw new RuntimeException('id@version already frozen with different digest; bump version.');
+            }
+        }
         $data=json_encode($frozen,JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT
             |JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n";
         if (!is_file($path) && $write) {
