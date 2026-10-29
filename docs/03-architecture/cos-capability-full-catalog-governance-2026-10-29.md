@@ -60,6 +60,8 @@ Canonical Capability Library є **єдиним джерелом контракт
 - CI перевірка повної міграції: `--require-all-typed`, exit 2, якщо лишилися declarative-only; **не активувати як release gate, поки legacy не мігрований**.
 - API: `GET /api/v1/capabilities/coverage` для tenant manager; внутрішні Federation approval capabilities не включаються в перелік ID, але загальні лічильники охоплюють всі визначення.
 - API: `GET /api/v1/capabilities/bindings` дає інший, tenant-aware current-container status. Ніяких записів і нових дозволів.
+- API: `GET /api/v1/capabilities/{id}/versions/{version}` перевіряє точну **поточну** версію та повертає fingerprint і contract JSON; стара недоступна версія не перенаправляється на нову. Цей endpoint не є сховищем історичних snapshots.
+- API: `GET /api/v1/capabilities/{id}/readiness` повертає три різні ознаки: definition readiness, registration witness поточного runtime та tenant execution mode. Він **не** надає Approval чи права на execute.
 - UI: `/workspace/capabilities` показує статистику, фільтри, статуси, перелік проблем, handler witness, контрактні тести/документацію, посилання на JSON. Збережено реальний Property Asset quick-create через існуючий Gateway.
 - CI: `cos-capability-definition-coverage` зберігає артефакт JSON зі snapshot для code review; не публікує tenant secrets.
 
