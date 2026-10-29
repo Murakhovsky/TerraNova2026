@@ -27,6 +27,13 @@ $check($counts['typed']===$counts['schema_valid']+$counts['invalid_contract'],
     'Every typed contract must be accounted for in schema valid/invalid coverage.');
 $check($counts['declared']===$counts['typed']+$counts['declarative_only'],
     'Some declarations disappeared from the inventory.');
+$check($counts['declarative_only']===$counts['feature_surface']
+    +$counts['contract_candidates']+$counts['unclassified_legacy'],
+    'Legacy declarations have no exclusive standardized semantics.');
+$check($counts['feature_surface']>=1 && $counts['contract_candidates']>=1
+    && $counts['unclassified_legacy']===0
+    && $first['semantic_classification']==='ALL_DECLARATIONS_CLASSIFIED',
+    'All existing Domain legacy IDs should have explicit semantics.');
 $check($first['certified']===false && $first['tenant_permissions_checked']===false
     && $first['runtime_bindings_checked']===false
     && $first['worker_fleet_checked']===false,
@@ -46,14 +53,16 @@ foreach ($typed as $row) {
 $check(in_array('property.registry',$ids,true),'Declarative Property identity was dropped.');
 $property=array_values(array_filter($first['capabilities'],
     static fn(array $r):bool=>$r['id']==='property.registry'));
-$check(count($property)===1 && $property[0]['definition_status']==='DECLARATIVE_ONLY'
-    && $property[0]['issues'][0]['code']==='MISSING_TYPED_CONTRACT',
-    'Declarative-only property cannot be treated as an executable contract.');
+$check(count($property)===1 && $property[0]['definition_status']==='FEATURE_SURFACE_NON_EXECUTABLE'
+    && $property[0]['legacy_profile']==='feature_surface'
+    && $property[0]['typed']===false,
+    'Descriptive Property feature must never be considered executable.');
 
 // No alternate writer: duplicate owner of an execution binding must
 // invalidate BOTH typed contracts, even with different capability IDs.
 $propertyManifest=require $root.'/app/Domains/Property/module.php';
 $propertyManifest['contributions']['capabilities']=['property.asset.create'];
+unset($propertyManifest['contributions']['capability_profiles']);
 $propertyManifest['contributions']['capability_contracts']=
     array_values(array_filter($propertyManifest['contributions']['capability_contracts'],
         static fn(array $item):bool => $item['id']==='property.asset.create'));
