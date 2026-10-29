@@ -60,6 +60,50 @@ cos_capabilities_index:
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::index
   methods: [GET]
 
+cos_capabilities_validate:
+  path: /api/v1/capabilities/{id}/validate
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::validate
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_goal_capability_plan_preflight:
+  path: /api/v1/capability-plans/validate
+  controller: App\Http\Api\V1\Controller\CanonicalGoalPlanPreflightController::validate
+  methods: [POST]
+
+cos_capabilities_historical:
+  path: /api/v1/capabilities/{id}/versions/{version}/snapshots/{digest}
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::historical
+  methods: [GET]
+  requirements:
+    id: '[a-z][a-z0-9_.-]{2,127}'
+    version: '[0-9]+\.[0-9]+\.[0-9]+'
+    digest: '[a-f0-9]{64}'
+
+cos_capabilities_versioned:
+  path: /api/v1/capabilities/{id}/versions/{version}
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::versioned
+  methods: [GET]
+  requirements:
+    id: '[a-z][a-z0-9_.-]{2,127}'
+    version: '[0-9]+\.[0-9]+\.[0-9]+'
+
+cos_capabilities_readiness:
+  path: /api/v1/capabilities/{id}/readiness
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::readiness
+  methods: [GET]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_capabilities_coverage:
+  path: /api/v1/capabilities/coverage
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::coverage
+  methods: [GET]
+
+cos_capabilities_bindings:
+  path: /api/v1/capabilities/bindings
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::bindings
+  methods: [GET]
+
 cos_capabilities_invoke:
   path: /api/v1/capabilities/{id}/invoke
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::invoke
@@ -76,6 +120,18 @@ cos_capabilities_workspace:
   path: /workspace/capabilities
   controller: App\Web\Capability\CapabilityLibraryController::index
   methods: [GET]
+
+cos_capabilities_workspace_detail:
+  path: /workspace/capabilities/{id}
+  controller: App\Web\Capability\CapabilityLibraryController::show
+  methods: [GET]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_capabilities_workspace_validate:
+  path: /workspace/capabilities/{id}/validate
+  controller: App\Web\Capability\CapabilityLibraryController::validate
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
 
 cos_capabilities_property_create:
   path: /workspace/capabilities/property/create

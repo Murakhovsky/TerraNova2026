@@ -1,0 +1,74 @@
+{% extends 'experience/portal_shell.html.twig' %}
+{% block title %}Контракт Capability · COS{% endblock %}
+{% block portal_content %}
+<section class="cos-page__stack" data-cos-capability-detail>
+  <header class="cos-card">
+    <p class="cos-card__eyebrow">COS / Capability Library / {{ capability.owner_domain }}</p>
+    <h1 class="cos-card__title">{{ capability.id }}</h1>
+    <p class="cos-card__copy">{{ capability.reason }}</p>
+    <a class="cos-button cos-button--ghost" href="/workspace/capabilities">Назад до бібліотеки</a>
+  </header>
+  <section class="cos-card" aria-labelledby="contract-readiness">
+    <h2 class="cos-card__title" id="contract-readiness">Контракт і готовність</h2>
+    <p>Стан визначення: <strong>{{ finding.definition_status|default('UNKNOWN') }}</strong></p>
+    <p>Реєстрація handler: <strong>{{ capability.binding_witness|default('UNVERIFIED') }}</strong></p>
+    <p>Причина binding: <code>{{ capability.binding_witness_issue|default('UNVERIFIED') }}</code></p>
+    <p>Workflow worker gate: <code>{{ capability.workflow_worker_admission_mode|default('WORKER_GATE_UNAVAILABLE') }}</code></p>
+    <p class="cos-card__copy">Це свідчення лише поточного runtime. Worker execution certified: <strong>ні</strong>. Потрібні окремі approval, receipt, native evidence та operator sign-off.</p>
+    <p>Доступ tenant: <strong>{{ capability.status }}</strong></p>
+    {% if capability.definition_snapshot %}
+      <p>Версія: <code>{{ capability.definition_snapshot.version }}</code>
+        · Digest: <code>{{ capability.definition_snapshot.contract_digest }}</code></p>
+    {% endif %}
+    <p class="cos-card__copy">Декларація не є дозволом, а позитивна перевірка input не запускає операції.</p>
+    {% if capability.contract %}
+      <p class="cos-card__copy">Тип: {{ capability.contract.kind }}
+        · Side effect: {{ capability.contract.side_effect_level }}
+        · Approval: {{ capability.contract.approval_policy }}
+        · Ідемпотентність: {{ capability.contract.idempotency }}</p>
+      <p class="cos-card__copy">Вхід: <code>{{ capability.contract.input_schema }}</code></p>
+      <p class="cos-card__copy">Вихід: <code>{{ capability.contract.output_schema }}</code></p>
+      <p><a href="{{ path('cos_capabilities_versioned', {id: capability.id, version: capability.contract.version}) }}">Переглянути контракт конкретної версії JSON</a></p>
+      <p><a href="{{ path('cos_capabilities_readiness', {id: capability.id}) }}">Актуальна готовність JSON</a></p>
+    {% endif %}
+    {% if finding and finding.issues is not empty %}
+      <details>
+        <summary>Прогалини контракту ({{ finding.issues|length }})</summary>
+        <ul>
+          {% for issue in finding.issues %}
+            <li><code>{{ issue.code }}</code> · {{ issue.severity }}</li>
+          {% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+  </section>
+  {% if capability.contract %}
+    <section class="cos-card" aria-labelledby="capability-validate-input">
+      <h2 class="cos-card__title" id="capability-validate-input">Перевірити параметри без виконання</h2>
+      <p class="cos-card__copy">Введіть JSON-об'єкт, який відповідає input schema. Цей інтерфейс лише перевіряє контракт, права, модуль та можливість побудови запиту. Для реального виконання потрібен окремий дозволений сценарій.</p>
+      <form method="post" action="{{ path('cos_capabilities_workspace_validate', {id: capability.id}) }}" class="cos-page__stack">
+        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+        <label class="cos-field" for="cos-capability-input-json">Вхідні дані JSON</label>
+        <textarea class="cos-input" id="cos-capability-input-json" name="input_json" rows="9" maxlength="16384" spellcheck="false" required>{{ inputJson }}</textarea>
+        <button class="cos-button cos-button--primary" type="submit">Перевірити параметри</button>
+      </form>
+      {% if validationError %}
+        <p class="cos-alert" role="alert">{{ validationError }}</p>
+      {% elseif verified %}
+        <div class="cos-alert cos-alert--success" role="status">
+          <strong>Контракт перевірено, але нічого не запущено.</strong>
+          <p>Capability: <code>{{ verified.capability_id }}</code></p>
+          <p>Версія: <code>{{ verified.capability_version }}</code></p>
+          <p>Digest: <code>{{ verified.contract_digest }}</code></p>
+          <p>Режим: <code>{{ verified.execution_mode }}</code></p>
+          <p>Execution: <strong>ні</strong> · Approval: <strong>не надано</strong></p>
+        </div>
+      {% endif %}
+    </section>
+  {% else %}
+    <section class="cos-card">
+      <p class="cos-card__copy">Ця можливість має лише історичну декларацію. Відсутній типізований контракт, тому перевірка параметрів і виконання недоступні.</p>
+    </section>
+  {% endif %}
+</section>
+{% endblock %}
