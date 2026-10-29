@@ -33,7 +33,11 @@ $check($counts['declarative_only']===$counts['feature_surface']
 $check($counts['feature_surface']>=1 && $counts['contract_candidates']>=1
     && $counts['unclassified_legacy']===0
     && $first['semantic_classification']==='ALL_DECLARATIONS_CLASSIFIED',
-    'All existing Domain legacy IDs should have explicit semantics.');
+    'All existing Domain legacy IDs should have explicit semantics; counts='
+        .json_encode($counts,JSON_THROW_ON_ERROR)
+        .'; unmatched='.implode(',',array_column(array_filter($first['capabilities'],
+            static fn(array $row):bool=>($row['definition_status']??'')==='DECLARATIVE_ONLY'
+        ),'id')));
 $check($first['certified']===false && $first['tenant_permissions_checked']===false
     && $first['runtime_bindings_checked']===false
     && $first['worker_fleet_checked']===false,
