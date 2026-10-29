@@ -74,6 +74,14 @@ jobs:
         run: php tests/unit/cos_capability_full_domain_coverage.php
       - name: Capability manifest/schema census (not a runtime binding audit)
         run: php bin/cos-capability-census.php > /tmp/cos-capability-census.json
+      - name: Export canonical Capability coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-capability-definition-coverage
+          path: /tmp/cos-capability-census.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Canonical Property capability input validation
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries
