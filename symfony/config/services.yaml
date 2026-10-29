@@ -143,6 +143,8 @@ services:
   App\Application\Capability\CanonicalCapabilityGateway:
     arguments:
       $adapters: !tagged_iterator cos.capability.invoker
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $executionGate: '@Kernel\Action\Service\ModuleActionExecutionGate'
 
   App\Command\CapitalMarketsInstrumentStreamTrustCommand:
     arguments:
