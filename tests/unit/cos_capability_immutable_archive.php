@@ -32,6 +32,14 @@ $bad['output_schema']['description']='tampered without a version bump';
 $reject(static fn()=>CapabilityContractFingerprint::verifyFrozen($bad),
     'Tampered output schema accepted under original digest.');
 $bad=$frozen;
+$bad['contract']['invented_handler']='malicious_override';
+$reject(static fn()=>CapabilityContractFingerprint::verifyFrozen($bad),
+    'Unsigned extra contract metadata was accepted.');
+$bad=$frozen;
+$bad['runtime_enabled']=true;
+$reject(static fn()=>CapabilityContractFingerprint::verifyFrozen($bad),
+    'Unsigned extra release-envelope metadata was accepted.');
+$bad=$frozen;
 $bad['contract']['title_key']='retconned';
 $reject(static fn()=>CapabilityContractFingerprint::verifyFrozen($bad),
     'Tampered Contract metadata accepted under original digest.');
