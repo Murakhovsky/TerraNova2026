@@ -112,6 +112,18 @@ cos_capabilities_workspace:
   controller: App\Web\Capability\CapabilityLibraryController::index
   methods: [GET]
 
+cos_capabilities_workspace_detail:
+  path: /workspace/capabilities/{id}
+  controller: App\Web\Capability\CapabilityLibraryController::show
+  methods: [GET]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_capabilities_workspace_validate:
+  path: /workspace/capabilities/{id}/validate
+  controller: App\Web\Capability\CapabilityLibraryController::validate
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
 cos_capabilities_property_create:
   path: /workspace/capabilities/property/create
   controller: App\Web\Capability\CapabilityLibraryController::createProperty
