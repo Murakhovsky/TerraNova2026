@@ -120,8 +120,10 @@
       {% if audit %}
         <p class="cos-card__copy">Стан визначення: <strong>{{ audit.definition_status }}</strong>
           {% if audit.legacy_profile|default(null) %}· Класифікація: <code>{{ audit.legacy_profile }}</code>{% endif %}
-          · Handler/worker: <strong>{{ capability.binding_witness|default('UNVERIFIED') }}</strong>
+          · Handler: <strong>{{ capability.binding_witness|default('UNVERIFIED') }}</strong>
           · Доступ: <strong>{{ capability.status }}</strong>
+          · Причина binding: <code>{{ capability.binding_witness_issue|default('UNVERIFIED') }}</code>
+          · Worker: <code>{{ capability.workflow_worker_admission_mode|default('WORKER_GATE_UNAVAILABLE') }}</code>
         </p>
         {% if audit.issues is not empty %}
           <details class="cos-page__stack">
