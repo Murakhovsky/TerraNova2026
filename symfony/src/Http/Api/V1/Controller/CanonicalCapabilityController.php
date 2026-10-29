@@ -22,6 +22,14 @@ final readonly class CanonicalCapabilityController {
         try { return $this->reply(['capabilities'=>$this->capabilities->inventory($this->actor())]); }
         catch (DomainException $e) { return $this->reply(['error'=>'capability_forbidden'],403); }
     }
+    public function versioned(string $id,string $version):JsonResponse {
+        try { return $this->reply($this->capabilities->versionedContract($this->actor(),$id,$version)); }
+        catch (DomainException $e) { return $this->reply(['error'=>'capability_revision_unavailable'],404); }
+    }
+    public function readiness(string $id):JsonResponse {
+        try { return $this->reply($this->capabilities->readiness($this->actor(),$id)); }
+        catch (DomainException $e) { return $this->reply(['error'=>'capability_unavailable'],403); }
+    }
     public function coverage():JsonResponse {
         try { return $this->reply($this->capabilities->coverage($this->actor())); }
         catch (DomainException $e) { return $this->reply(['error'=>'capability_forbidden'],403); }
