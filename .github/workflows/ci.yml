@@ -70,6 +70,8 @@ jobs:
         run: php tests/unit/cos_golden50_governed_action_output.php
       - name: Capability receipt and Goal preflight safety contracts
         run: php tests/architecture/cos_capability_receipt_preflight_contract.php
+      - name: Capability Library operator interface and read-only contract API
+        run: php tests/architecture/cos_capability_catalog_experience.php
       - name: Complete Capability Library definition coverage and binding collisions
         run: php tests/unit/cos_capability_full_domain_coverage.php
       - name: Capability manifest/schema census (not a runtime binding audit)
