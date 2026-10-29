@@ -72,6 +72,10 @@ jobs:
         run: php tests/architecture/cos_capability_receipt_preflight_contract.php
       - name: Capability Library operator interface and read-only contract API
         run: php tests/architecture/cos_capability_catalog_experience.php
+      - name: Immutable Capability contract release archive regression
+        run: php tests/unit/cos_capability_immutable_archive.php
+      - name: Validate release freeze report without writing to the checkout
+        run: php bin/cos-capability-release-freeze.php > /tmp/cos-capability-release-freeze.json
       - name: Complete Capability Library definition coverage and binding collisions
         run: php tests/unit/cos_capability_full_domain_coverage.php
       - name: Capability manifest/schema census and fully classified legacy inventory
