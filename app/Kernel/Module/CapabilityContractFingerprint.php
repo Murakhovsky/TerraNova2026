@@ -57,10 +57,32 @@ final class CapabilityContractFingerprint
             || !is_array($frozen['snapshot'] ?? null)) {
             throw new DomainException('Malformed immutable Capability release archive.');
         }
+        $expectedFields=['format','snapshot','contract','input_schema','output_schema'];
+        $suppliedFields=array_keys($frozen);
+        sort($expectedFields,SORT_STRING);
+        sort($suppliedFields,SORT_STRING);
+        if ($suppliedFields !== $expectedFields) {
+            throw new DomainException('Unrecognized or missing frozen archive metadata.');
+        }
         try {
             $contract = CapabilityContract::fromArray($frozen['contract']);
         } catch (\InvalidArgumentException $e) {
             throw new DomainException('Invalid archived Capability contract.', previous: $e);
+        }
+        // fromArray intentionally ignores future optional fields, which
+        // must NOT bypass review in a previously pinned release snapshot.
+        if (self::normalize($frozen['contract']) !== self::normalize($contract->toArray())) {
+            throw new DomainException('Archived Capability contains unpinned contract fields.');
+        }
+        $snapshotFields=array_keys($frozen['snapshot']);
+        $expectedSnapshotFields=[
+            'capability_id','version','contract_digest',
+            'input_schema_digest','output_schema_digest',
+        ];
+        sort($snapshotFields,SORT_STRING);
+        sort($expectedSnapshotFields,SORT_STRING);
+        if ($snapshotFields !== $expectedSnapshotFields) {
+            throw new DomainException('Archived Capability fingerprint has unknown fields.');
         }
         $input=$frozen['input_schema'];
         $output=$frozen['output_schema'];
