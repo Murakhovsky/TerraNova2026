@@ -44,7 +44,7 @@ return [
             'app/migrations/20260918_000062_real_estate_wave9_cutover.sql',
             'app/migrations/20260928_000120_real_estate_v100_release.sql',
         ],
-                // Explicitly scoped legacy identities, not invocable Canonical contracts.
+        // Explicitly scoped legacy identities, not invocable Canonical contracts.
         'capability_profiles' => [
             'real_estate.api.v1' => 'feature_surface',
             'real_estate.brokerage' => 'feature_surface',
@@ -53,7 +53,7 @@ return [
             'real_estate.reservation' => 'contract_candidate',
             'real_estate.viewing' => 'contract_candidate',
         ],
-'capabilities' => [
+        'capabilities' => [
             'real_estate.brokerage',
             'real_estate.property_match',
             'real_estate.offer',
