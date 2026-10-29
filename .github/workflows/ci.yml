@@ -74,8 +74,8 @@ jobs:
         run: php tests/architecture/cos_capability_catalog_experience.php
       - name: Complete Capability Library definition coverage and binding collisions
         run: php tests/unit/cos_capability_full_domain_coverage.php
-      - name: Capability manifest/schema census (not a runtime binding audit)
-        run: php bin/cos-capability-census.php > /tmp/cos-capability-census.json
+      - name: Capability manifest/schema census and fully classified legacy inventory
+        run: php bin/cos-capability-census.php --strict --require-classified > /tmp/cos-capability-census.json
       - name: Export canonical Capability coverage evidence
         if: always()
         uses: actions/upload-artifact@v4
