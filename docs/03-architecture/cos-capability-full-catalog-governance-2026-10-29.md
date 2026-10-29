@@ -45,6 +45,8 @@ Canonical Capability Library є **єдиним джерелом контракт
 - `INVALID_SCHEMA`: невідповідність локальному підтримуваному JSON Schema профілю;
 - `DUPLICATE_EXECUTION_BINDING`: дві typed Capabilities претендують на однаковий handler; обидві позначаються invalid;
 - `UNKNOWN_OR_SELF_DEPENDENCY`: залежність посилається на невідому або саму себе;
+- `CYCLIC_CAPABILITY_DEPENDENCY`: у dependency graph є цикл, отже немає однозначного порядку виконання;
+- `BINDING_KIND_MISMATCH`: тип Query/Command/Job/Workflow/Agent Tool не відповідає declared binding family;
 - `DEPENDENCY_NOT_TYPED`: залежна Capability існує лише як декларація;
 - `DOCUMENTATION_OR_TESTS_NOT_DECLARED`: відсутнє джерело опису або автотест;
 - `MISSING_OR_UNTRUSTED_PROOF_FILE`: тест/документація відсутні чи не належать до дозволеного локального джерела.
