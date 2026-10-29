@@ -40,6 +40,18 @@ php tests/architecture/cos_capability_runtime_witness_authority.php
 
 Тести з фальшивим, але **реально зареєстрованим** Property Action handler перевіряють, що witness з'являється тільки при збігу ownership та `supports`. Окремо перевірено відсутність реєстру, відсутній QueryBus adapter, вимкнений tenant module та стан fail-closed worker gate. Жоден тест не викликає handler.
 
+## Операторський CLI для кожного runtime-контейнера
+
+`php symfony/bin/console cos:capability:runtime:witness` завантажує реальні DI-сервіси того самого Symfony runtime і повертає машинний JSON із кожним typed contract, digest, owner та наявністю Action handler. Жодного тестового Action не виконує. Для окремої фази приймання доступний суворий режим:
+
+~~~bash
+php symfony/bin/console cos:capability:runtime:witness --require-action-bindings
+~~~
+
+У цьому режимі **відсутній handler спричиняє ненульовий exit code**, але сам звіт ніколи не позначає `worker_execution_certified=true`. Для `query:`, `command:` та `read:` CLI чесно повертає `NOT_EVALUATED_IN_THIS_COMMAND`; їхня реєстрація перевіряється через `/api/v1/capabilities/bindings` або окремі Domain evidence adapters.
+
+Оператор повинен зберегти звіт **з кожного** вебконтейнера і worker-репліки разом із незалежно перевіреним release SHA, deployment identity, runtime config і результатами permission/Approval/Receipt тестів. CLI не визначає SHA автоматично та не стверджує, що інші replicas мають той самий образ.
+
 ## Наступний production acceptance
 
 Щоб підтвердити **всі** реальні workers, необхідна додаткова процедура оператора: deployment SHA, інвентар усіх replicas, ізольований smoke на кожній, перевірка реального Approval/Policy/Receipt із MySQL, fault injection, native idempotency, незалежні підписи. `WORKER_ADMISSION_REGISTERED_NOT_CERTIFIED` не є дозволом увімкнути worker. Значення `WORKER_DISABLED_FAIL_CLOSED` наразі очікуване, бо production gate свідомо блокує Workflow-owned execution.
