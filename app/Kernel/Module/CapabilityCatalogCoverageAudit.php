@@ -122,19 +122,32 @@ final readonly class CapabilityCatalogCoverageAudit
             }
             $rows[] = $row;
         }
-        // One binding may be claimed by more than one contract; BOTH records
-        // must show the collision, not just whichever happened to come last.
-        foreach ($rows as &$row) {
-            if (!isset($row['binding_kind'])) continue;
+        // Collisions invalidate EVERY claimant, including the first one.
+        $claimants = [];
+        foreach ($rows as $row) {
+            if (!$row['typed']) continue;
             $contract = $this->catalog->describe($row['id']);
-            if ($contract === null) continue;
-            foreach ($bindings as $binding => $firstOwner) {
-                if ($binding !== $contract->executionBinding || $firstOwner === $row['id']) continue;
-                $row['issues'][] = [
-                    'code' => 'DUPLICATE_EXECUTION_BINDING',
-                    'severity' => 'error',
-                    'related_capability' => $firstOwner,
-                ];
+            if ($contract !== null) $claimants[$contract->executionBinding][] = $row['id'];
+        }
+        foreach ($rows as &$row) {
+            if (!$row['typed']) continue;
+            $contract = $this->catalog->describe($row['id']);
+            if ($contract !== null && count($claimants[$contract->executionBinding] ?? []) > 1) {
+                // Replace any earlier duplicate issue with the full sorted peer set.
+                $row['issues'] = array_values(array_filter($row['issues'],
+                    static fn(array $i):bool => $i['code'] !== 'DUPLICATE_EXECUTION_BINDING'
+                ));
+                $peers = array_values(array_filter($claimants[$contract->executionBinding],
+                    static fn(string $candidate):bool => $candidate !== $row['id']
+                ));
+                sort($peers, SORT_STRING);
+                foreach ($peers as $peer) {
+                    $row['issues'][] = [
+                        'code' => 'DUPLICATE_EXECUTION_BINDING',
+                        'severity' => 'error',
+                        'related_capability' => $peer,
+                    ];
+                }
             }
             if (array_filter($row['issues'], static fn(array $i):bool => $i['severity'] === 'error')) {
                 $row['definition_status'] = 'CONTRACT_INVALID';
