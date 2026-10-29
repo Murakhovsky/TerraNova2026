@@ -9,6 +9,7 @@ use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
 use Kernel\Module\CapabilityCatalogCoverageAudit;
 use Kernel\Module\CapabilityContract;
+use Kernel\Module\CapabilityVersionArchive;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
@@ -97,6 +98,27 @@ final class CanonicalCapabilityGateway {
             'certified'=>false,
             'worker_deployment_verified'=>false,
             'native_business_outcome_verified'=>false,
+            'grants_approval'=>false,
+        ];
+    }
+
+    /**
+     * Historical metadata, never an adapter binding or a new execution grant.
+     * Caller must still pass owner/tenant authorization for catalog visibility.
+     * @return array<string,mixed>
+     */
+    public function archivedContract(TenantContext $actor,string $id,string $version,string $digest): array
+    {
+        $current = $this->describe($actor,$id);
+        $frozen=(new CapabilityVersionArchive(dirname(__DIR__,4)))->read($id,$version,$digest);
+        if (($frozen['contract']['owner_domain'] ?? null) !== $current['owner_domain']) {
+            throw new DomainException('Historical Capability owner differs from declared Domain.');
+        }
+        return [
+            'id'=>$id,'version'=>$version,'contract_digest'=>$digest,
+            'historical_snapshot'=>true,'frozen'=>$frozen,
+            'execution_authorized'=>false,'compatible_handler_verified'=>false,
+            'tenant_status'=>$current['status'],
             'grants_approval'=>false,
         ];
     }
