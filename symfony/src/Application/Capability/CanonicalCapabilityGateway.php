@@ -56,6 +56,52 @@ final class CanonicalCapabilityGateway {
     }
 
     /**
+     * A versioned read of the CURRENT trusted contract, not a historical
+     * archive and never a permission to invoke a handler. A missing version
+     * fails closed rather than silently returning whatever was deployed.
+     * @return array<string,mixed>
+     */
+    public function versionedContract(TenantContext $actor, string $id, string $version): array
+    {
+        $info=$this->describe($actor,$id);
+        $contract=$this->catalog->describe($id);
+        if (!$contract instanceof CapabilityContract || $contract->version !== $version) {
+            throw new DomainException('Requested Capability contract revision is unavailable.');
+        }
+        $snapshot=$this->catalog->snapshot($id);
+        $this->catalog->resolvePinned($id,$version,$snapshot['contract_digest']);
+        return [
+            'id'=>$id,
+            'version'=>$version,
+            'definition_snapshot'=>$snapshot,
+            'contract'=>$contract->toArray(),
+            'tenant_execution_mode'=>$info['status'],
+            'reason'=>$info['reason'],
+            'historical_archive_available'=>false,
+            'authorized_to_execute'=>false,
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    public function readiness(TenantContext $actor, string $id): array
+    {
+        $info=$this->describe($actor,$id);
+        return [
+            'id'=>$id, 'owner_domain'=>$info['owner_domain'],
+            'definition_readiness'=>$info['definition_readiness'],
+            'contract_digest'=>$info['definition_snapshot']['contract_digest']??null,
+            'binding_witness'=>$info['binding_witness'],
+            'binding_scope'=>$info['binding_witness_scope'],
+            'tenant_execution_mode'=>$info['status'],
+            'reason'=>$info['reason'],
+            'certified'=>false,
+            'worker_deployment_verified'=>false,
+            'native_business_outcome_verified'=>false,
+            'grants_approval'=>false,
+        ];
+    }
+
+    /**
      * Whole-domain definition quality audit. This is source-level governance,
      * not a live worker/tenant certification or execution authority.
      * @return array<string,mixed>
