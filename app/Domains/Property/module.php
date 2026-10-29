@@ -142,7 +142,7 @@ return [
                 'documentation'=>'docs/03-architecture/cos-universal-capability-invocation.md',
             ],
         ],
-                // Source-owned transitional semantic profile. These are NOT callable
+        // Source-owned transitional semantic profile. These are NOT callable
         // CapabilityContracts; candidate entries require typed contracts and
         // native handler admission before any UI/AI/API invocation.
         'capability_profiles' => [
@@ -167,7 +167,7 @@ return [
             'property.identity.review' => 'contract_candidate',
             'property.publish' => 'contract_candidate',
         ],
-'capabilities' => [
+        'capabilities' => [
             'property.registry','property.read','property.write','property.intake','property.media','property.catalog',
             'property.asset.create','property.asset.search','property.asset.get','property.asset.update','property.bulk.create',
             'property.inventory','property.listing','property.publish','property.history','property.reference','property.analytics',
