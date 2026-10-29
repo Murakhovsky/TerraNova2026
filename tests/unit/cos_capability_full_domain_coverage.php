@@ -33,9 +33,9 @@ $check($first['certified']===false && $first['tenant_permissions_checked']===fal
     'Static declarations cannot certify live execution.');
 $ids=array_column($first['capabilities'],'id');
 $check($ids===array_values(array_unique($ids)),'Duplicate capability identity surfaced in report.');
-$check($ids!==[] && $ids===$sorted=call_user_func(static function(array $items):array {
-    sort($items,SORT_STRING);return $items;
-},$ids),'Catalog audit must sort by stable identity.');
+$sorted=$ids;
+sort($sorted,SORT_STRING);
+$check($ids!==[] && $ids===$sorted,'Catalog audit must sort by stable identity.');
 $typed=array_values(array_filter($first['capabilities'],static fn(array $r):bool => $r['typed']));
 foreach ($typed as $row) {
     if ($row['definition_status']!=='CONTRACT_INVALID') {
