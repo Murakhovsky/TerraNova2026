@@ -78,6 +78,21 @@ jobs:
         run: php tests/unit/cos_capability_immutable_archive.php
       - name: Validate release freeze report without writing to the checkout
         run: php bin/cos-capability-release-freeze.php > /tmp/cos-capability-release-freeze.json
+      - name: Build and verify candidate frozen Capability snapshots (CI checkout only)
+        run: |
+          php bin/cos-capability-release-freeze.php --write > /tmp/cos-capability-freeze-review.json
+          php bin/cos-capability-release-freeze.php --check > /tmp/cos-capability-freeze-verified.json
+      - name: Publish UNRELEASED Capability snapshot candidates for code review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-capability-unreleased-frozen-candidates
+          path: |
+            resources/contracts/history
+            /tmp/cos-capability-freeze-review.json
+            /tmp/cos-capability-freeze-verified.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Complete Capability Library definition coverage and binding collisions
         run: php tests/unit/cos_capability_full_domain_coverage.php
       - name: Capability manifest/schema census and fully classified legacy inventory
