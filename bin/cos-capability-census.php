@@ -22,8 +22,21 @@ if (in_array('--strict',$argv,true)
     && ($report['counts']['invalid_contract'] > 0)) {
     exit(1);
 }
+if (in_array('--require-classified',$argv,true)
+    && ($report['counts']['unclassified_legacy'] > 0
+        || $report['counts']['invalid_contract'] > 0)) {
+    exit(2);
+}
+if (in_array('--require-executables-ready',$argv,true)
+    && ($report['counts']['contract_candidates'] > 0
+        || $report['counts']['unclassified_legacy'] > 0
+        || $report['counts']['invalid_contract'] > 0)) {
+    exit(3);
+}
+// Backward-compatible strongest possible gate. Informational feature-surface
+// markers are intentionally not typed as fake executable contracts.
 if (in_array('--require-all-typed',$argv,true)
     && ($report['counts']['declarative_only'] > 0
         || $report['counts']['invalid_contract'] > 0)) {
-    exit(2);
+    exit(4);
 }
