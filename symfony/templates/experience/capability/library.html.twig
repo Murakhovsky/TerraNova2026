@@ -155,6 +155,9 @@
           <p class="cos-card__copy">Планування: доступне лише після валідації <code>POST /api/v1/capability-plans/validate</code> та подальшого Policy/Approval. Перевірка плану не створює дій.</p>
         </details>
       {% endif %}
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_capabilities_workspace_detail', {id: capability.id}) }}">
+        {% if capability.contract %}Контракт і перевірка входу{% else %}Деталі декларації{% endif %}
+      </a>
       <a class="cos-button cos-button--ghost" href="/api/v1/capabilities/{{ capability.id }}">Переглянути JSON</a>
     </article>
   {% else %}
