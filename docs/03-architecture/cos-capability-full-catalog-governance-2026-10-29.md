@@ -63,6 +63,8 @@ Canonical Capability Library є **єдиним джерелом контракт
 - API: `GET /api/v1/capabilities/{id}/versions/{version}` перевіряє точну **поточну** версію та повертає fingerprint і contract JSON; стара недоступна версія не перенаправляється на нову. Цей endpoint не є сховищем історичних snapshots.
 - API: `GET /api/v1/capabilities/{id}/readiness` повертає три різні ознаки: definition readiness, registration witness поточного runtime та tenant execution mode. Він **не** надає Approval чи права на execute.
 - UI: `/workspace/capabilities` показує статистику, фільтри, статуси, перелік проблем, handler witness, контрактні тести/документацію, посилання на JSON. Збережено реальний Property Asset quick-create через існуючий Gateway.
+- UI: `GET /workspace/capabilities/{id}` дає контракт конкретної функції, а `POST /workspace/capabilities/{id}/validate` із CSRF перевіряє JSON-вхід через **той самий** `CanonicalCapabilityGateway::validateInput`. Під час перевірки не створюються Action, Plan або Run. Декларативним функціям без typed contract форма недоступна.
+- Архітектурний тест `tests/architecture/cos_capability_catalog_experience.php` перевіряє read-only UI/API boundary та заборону нового dispatch із цієї форми.
 - CI: `cos-capability-definition-coverage` зберігає артефакт JSON зі snapshot для code review; не публікує tenant secrets.
 
 ### 5. Обмеження виконання
