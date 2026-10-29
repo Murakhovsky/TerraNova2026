@@ -12,6 +12,9 @@
     <h2 class="cos-card__title" id="contract-readiness">Контракт і готовність</h2>
     <p>Стан визначення: <strong>{{ finding.definition_status|default('UNKNOWN') }}</strong></p>
     <p>Реєстрація handler: <strong>{{ capability.binding_witness|default('UNVERIFIED') }}</strong></p>
+    <p>Причина binding: <code>{{ capability.binding_witness_issue|default('UNVERIFIED') }}</code></p>
+    <p>Workflow worker gate: <code>{{ capability.workflow_worker_admission_mode|default('WORKER_GATE_UNAVAILABLE') }}</code></p>
+    <p class="cos-card__copy">Це свідчення лише поточного runtime. Worker execution certified: <strong>ні</strong>. Потрібні окремі approval, receipt, native evidence та operator sign-off.</p>
     <p>Доступ tenant: <strong>{{ capability.status }}</strong></p>
     {% if capability.definition_snapshot %}
       <p>Версія: <code>{{ capability.definition_snapshot.version }}</code>
