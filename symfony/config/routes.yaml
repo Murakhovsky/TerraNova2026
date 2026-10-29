@@ -71,6 +71,15 @@ cos_goal_capability_plan_preflight:
   controller: App\Http\Api\V1\Controller\CanonicalGoalPlanPreflightController::validate
   methods: [POST]
 
+cos_capabilities_historical:
+  path: /api/v1/capabilities/{id}/versions/{version}/snapshots/{digest}
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::historical
+  methods: [GET]
+  requirements:
+    id: '[a-z][a-z0-9_.-]{2,127}'
+    version: '[0-9]+\.[0-9]+\.[0-9]+'
+    digest: '[a-f0-9]{64}'
+
 cos_capabilities_versioned:
   path: /api/v1/capabilities/{id}/versions/{version}
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::versioned
