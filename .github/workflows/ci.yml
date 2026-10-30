@@ -66,6 +66,8 @@ jobs:
         run: php tests/unit/cos_goal_capability_pinning.php
       - name: Goal Capability immutable execution authority
         run: php tests/architecture/cos_goal_capability_pin_authority.php
+      - name: Capability integration merge must not auto-deploy AWS dev
+        run: php tests/architecture/cos_capability_safe_merge_release_guard.php
       - name: Capability manifest/schema census (not a runtime binding audit)
         run: php bin/cos-capability-census.php > /tmp/cos-capability-census.json
       - name: Canonical Property capability input validation
