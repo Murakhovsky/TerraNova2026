@@ -974,7 +974,9 @@ jobs:
   publish-runtime-images:
     name: Publish immutable COS images to GHCR
     needs: [runtime, federation-mysql, capital-markets-unit]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Capability integration merge commits are CI-only; no package publication or AWS dev deploy.
+    # Other main pushes retain the existing automatic release behavior.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[capability-no-deploy]')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -1026,7 +1028,9 @@ jobs:
   deploy-dev:
     name: Deploy main to AWS dev
     needs: [runtime, federation-mysql, capital-markets-unit, publish-runtime-images]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Capability integration merge commits are CI-only; no package publication or AWS dev deploy.
+    # Other main pushes retain the existing automatic release behavior.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[capability-no-deploy]')
     runs-on: ubuntu-24.04
     environment: AWS TN2026
     permissions:
