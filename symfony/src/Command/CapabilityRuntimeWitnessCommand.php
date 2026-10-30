@@ -35,10 +35,27 @@ final class CapabilityRuntimeWitnessCommand extends Command
     {
         $this->addOption('require-action-bindings', null, InputOption::VALUE_NONE,
             'Fail if any typed canonical Action handler is not registered in this container.');
+        $this->addOption('instance-id', null, InputOption::VALUE_REQUIRED,
+            'Operator-supplied exact runtime instance ID (not independently attested).');
+        $this->addOption('instance-role', null, InputOption::VALUE_REQUIRED,
+            'web|worker, operator-supplied role (not independently attested).');
+        $this->addOption('deployment-sha', null, InputOption::VALUE_REQUIRED,
+            'Operator-supplied exact deployment commit SHA (not independently attested).');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $instanceId=(string)($input->getOption('instance-id')??'');
+        $instanceRole=(string)($input->getOption('instance-role')??'');
+        $deploymentSha=(string)($input->getOption('deployment-sha')??'');
+        $supplied=$instanceId!=='' || $instanceRole!=='' || $deploymentSha!=='';
+        if ($supplied && (
+            preg_match('/^[a-zA-Z0-9._-]{1,128}$/D',$instanceId)!==1
+            || !in_array($instanceRole,['web','worker'],true)
+            || preg_match('/^[a-f0-9]{40}$/D',$deploymentSha)!==1
+        )) {
+            throw new DomainException('Instance ID, web/worker role and deployment SHA must be supplied together.');
+        }
         $records = [];
         $issues = 0;
         $handlers = $this->domains->actionHandlerMap();
@@ -80,6 +97,10 @@ final class CapabilityRuntimeWitnessCommand extends Command
         $report = [
             'format' => 'cos-capability-runtime-instance-witness-v1',
             'scope' => 'CURRENT_SYMFONY_CONTAINER_ONLY',
+            'instance_id' => $supplied ? $instanceId : 'UNATTESTED',
+            'instance_role' => $supplied ? $instanceRole : 'UNATTESTED',
+            'deployment_sha' => $supplied ? $deploymentSha : 'UNATTESTED',
+            'instance_provenance_verified' => false,
             'worker_admission_mode' => $mode,
             'worker_execution_certified' => false,
             'tenant_policies_checked' => false,
