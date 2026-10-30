@@ -143,6 +143,8 @@ services:
   App\Application\Capability\CanonicalCapabilityGateway:
     arguments:
       $adapters: !tagged_iterator cos.capability.invoker
+      $domains: '@Kernel\Module\DomainModuleRegistry'
+      $executionGate: '@Kernel\Action\Service\ModuleActionExecutionGate'
 
   App\Command\CapitalMarketsInstrumentStreamTrustCommand:
     arguments:
@@ -362,6 +364,7 @@ services:
   App\Persistence\Workflow\DoctrineWorkflowActionReceiptVerifier:
     arguments:
       $plans: '@App\Persistence\Workflow\FederationWorkflowPlanApprovalEvidence'
+      $capabilities: '@Kernel\Module\CanonicalCapabilityCatalog'
   # Operator-only SQL-backed shadow audit; never authorizes a cutover.
   # Shared deterministic DAG scheduler for the canonical Goal adapter.
   Platform\Workflow\Service\WorkflowStepScheduler: ~

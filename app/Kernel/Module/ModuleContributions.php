@@ -16,6 +16,7 @@ final readonly class ModuleContributions
      * @param array<string, list<string>> $extensionServices
      * @param list<CrossDomainContract> $crossDomainContracts
      * @param list<CapabilityContract> $capabilityContracts
+     * @param array<string,string> $capabilityProfiles explicit legacy ID => feature_surface|contract_candidate
      */
     public function __construct(
         public ?string $runtimeModuleService = null,
@@ -27,6 +28,7 @@ final readonly class ModuleContributions
         public array $extensionServices = [],
         public array $crossDomainContracts = [],
         public array $capabilityContracts = [],
+        public array $capabilityProfiles = [],
     ) {
         if ($this->runtimeModuleService !== null) {
             self::assertServiceId($this->runtimeModuleService);
@@ -83,6 +85,20 @@ final readonly class ModuleContributions
             $capabilityIds[$capability->id] = true;
         }
 
+        // Transitional classification does NOT declare a callable handler.
+        // Exact known IDs only, without wildcards or implicit auto-upgrade.
+        foreach ($this->capabilityProfiles as $id => $profile) {
+            if (!is_string($id) || !in_array($id, $this->capabilities, true)) {
+                throw new InvalidArgumentException('Legacy profile refers to unknown capability identity.');
+            }
+            if (!in_array($profile, ['feature_surface', 'contract_candidate'], true)) {
+                throw new InvalidArgumentException('Unsupported legacy capability profile.');
+            }
+            if (isset($capabilityIds[$id])) {
+                throw new InvalidArgumentException('Executable typed contract cannot be reclassified as legacy.');
+            }
+        }
+
         $contractKeys = [];
         foreach ($this->crossDomainContracts as $contract) {
             if (!$contract instanceof CrossDomainContract) {
@@ -111,6 +127,7 @@ final readonly class ModuleContributions
             self::extensionMap($definition['extension_services'] ?? []),
             self::crossDomainContracts($definition['cross_domain_contracts'] ?? []),
             self::capabilityContracts($definition['capability_contracts'] ?? []),
+            self::capabilityProfileMap($definition['capability_profiles'] ?? []),
         );
     }
 
@@ -214,6 +231,21 @@ final readonly class ModuleContributions
             $result[] = CapabilityContract::fromArray($definition);
         }
         return $result;
+    }
+
+    /** @param mixed $profiles @return array<string,string> */
+    private static function capabilityProfileMap(mixed $profiles): array
+    {
+        if (!is_array($profiles) || array_is_list($profiles) && $profiles !== []) {
+            throw new InvalidArgumentException('Capability profiles must be a map keyed by exact ID.');
+        }
+        foreach ($profiles as $id => $profile) {
+            if (!is_string($id) || !is_string($profile)) {
+                throw new InvalidArgumentException('Capability profile keys and values must be strings.');
+            }
+        }
+        ksort($profiles, SORT_STRING);
+        return $profiles;
     }
 
     /** @param list<string> $values */
