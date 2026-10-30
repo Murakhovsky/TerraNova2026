@@ -78,6 +78,9 @@ final readonly class CapabilityFleetConsistencyGate
                 || ($witness['worker_execution_certified'] ?? null)!==false) {
                 $errors[]='WORKFLOW_GATE_NOT_FAIL_CLOSED:'.$id;
             }
+            if (($witness['instance_provenance_verified'] ?? null)!==false) {
+                $errors[]='UNSUPPORTED_PROVENANCE_CLAIM:'.$id;
+            }
             if (($witness['tenant_policies_checked'] ?? null)!==false
                 || ($witness['approval_receipts_checked'] ?? null)!==false
                 || ($witness['native_business_outcomes_checked'] ?? null)!==false) {
