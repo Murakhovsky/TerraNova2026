@@ -9,6 +9,7 @@ use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
 use Kernel\Tenant\Model\TenantPermissions;
 use Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface;
+use Platform\Orchestration\Goal\GoalCapabilityPinGuard;
 use Platform\Workflow\Contract\WorkflowStepClaimAdmissionInterface;
 use Platform\Workflow\Model\WorkflowRunIdentity;
 use Platform\Workflow\Model\WorkflowStepClaim;
@@ -78,6 +79,9 @@ final readonly class DoctrineWorkflowActionClaimAdmission implements WorkflowSte
                 WorkflowDefinitionFingerprint::digest($definition))) {
             throw new DomainException('Workflow immutable execution graph was modified.');
         }
+        // Current and any future enabled Action claim path must independently
+        // re-attest exact pinned contract/schema and input before claim.
+        (new GoalCapabilityPinGuard($this->catalog))->assertPlan($definition);
         $approvedStep = null;
         foreach ($definition as $candidate) {
             if (($candidate['id'] ?? null) !== $claim->stepId) continue;

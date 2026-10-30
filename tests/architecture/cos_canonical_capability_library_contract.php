@@ -17,7 +17,10 @@ foreach (['property.asset.create','property.asset.search','property.asset.get','
     $check(count($matching)===1,'Missing typed contract '.$id);
     foreach (['input_schema','output_schema'] as $field) {
         $schema=json_decode($get($matching[0][$field]),true,512,JSON_THROW_ON_ERROR);
-        $check(($schema['type']??null)==='object','Invalid schema '.$id);
+        $type=$schema['type']??null;
+        $allowed=$type==='object' || ($id==='property.asset.get' && $field==='output_schema'
+            && $type===['object','null']);
+        $check($allowed,'Invalid schema '.$id);
     }
 }
 $create=array_values(array_filter($contracts,static fn(array $c):bool=>$c['id']==='property.asset.create'))[0];
@@ -41,6 +44,17 @@ $check(str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetCre
     &&str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetSearchAdapter.php'),'new SearchPropertiesQuery('),
     'Adapters bypass existing buses.');
 $check(str_contains($gateway,'new CapabilityJsonInputValidator()'), 'Gateway must validate local typed schemas before dispatch.');
+
+$check(str_contains($gateway,'function validateInput(')
+    && str_contains($gateway,"'executed' => false")
+    && str_contains($gateway,'validateOutput('), 'Missing contract-only preflight or typed output guard.');
+$controllerSource=$get('symfony/src/Http/Api/V1/Controller/CanonicalCapabilityController.php');
+$routes=$get('symfony/config/routes.yaml');
+$check(str_contains($routes,'/api/v1/capabilities/{id}/validate')
+    && str_contains($controllerSource,'function validate(')
+    && str_contains($controllerSource,'$this->capabilities->validateInput('),
+    'Capability dry-run validation endpoint missing.');
+
 $check(str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetGetAdapter.php'),'new GetPropertyQuery(')
     && str_contains($get('symfony/src/Infrastructure/Capability/PropertyAssetUpdateAdapter.php'),'new UpdatePropertyCommand('),
     'Additional Property capabilities must delegate to existing buses.');
