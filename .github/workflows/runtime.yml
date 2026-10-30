@@ -727,7 +727,9 @@ jobs:
         run: |
           docker compose exec -T php php bin/console lint:container
           # Inspect actual booted Symfony DI: no Action dispatch, no tenant grant.
-          docker compose exec -T php php bin/console cos:capability:runtime:witness --no-interaction > /tmp/cos-capability-runtime-witness.json
+          docker compose exec -T php php bin/console cos:capability:runtime:witness --no-interaction \
+            --instance-id=ci-php-01 --instance-role=web --deployment-sha="$GITHUB_SHA" \
+            > /tmp/cos-capability-runtime-witness.json
           grep -q '"worker_admission_mode":"WORKER_DISABLED_FAIL_CLOSED"' /tmp/cos-capability-runtime-witness.json
           grep -q '"worker_execution_certified":false' /tmp/cos-capability-runtime-witness.json
           grep -q '"scope":"CURRENT_SYMFONY_CONTAINER_ONLY"' /tmp/cos-capability-runtime-witness.json
