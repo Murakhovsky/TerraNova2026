@@ -93,6 +93,8 @@ jobs:
             /tmp/cos-capability-freeze-verified.json
           if-no-files-found: ignore
           retention-days: 14
+      - name: Capability release fleet consistency and falsified evidence regression
+        run: php tests/unit/cos_capability_fleet_consistency.php
       - name: Runtime handler registry versus worker admission witness
         run: php tests/unit/cos_capability_runtime_binding_witness.php
       - name: Runtime binding evidence execution authority guard
