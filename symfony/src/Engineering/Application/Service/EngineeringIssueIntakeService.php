@@ -50,7 +50,13 @@ final readonly class EngineeringIssueIntakeService
             metadata: [
                 'github_issue_url' => $issue['url'],
                 'github_labels' => $issue['labels'],
+                'autopilot_mode' => $autopilotAllowedPaths !== [],
+                'autopilot_allowed_paths' => array_values($autopilotAllowedPaths),
             ],
+            constraints: $autopilotAllowedPaths !== [] ? [
+                'Do not change any repository path outside autopilot_allowed_paths.',
+                'Human approval is required before merge or deployment.',
+            ] : [],
         ), $organizationId, 'github-issue');
 
         $this->repository->addIssueLabels($issueNumber, ['cos:engineering']);
