@@ -11,6 +11,7 @@ use App\Application\Growth\Command\RunGrowthAutonomousContentCommand;
 use App\Application\Growth\Command\RunGrowthOutreachSequencesCommand;
 use App\Application\Growth\Command\RunGrowthMarketDiscoveryCommand;
 use App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand;
+use App\Application\Engineering\Command\RunEngineeringAutopilotCommand;
 use App\Application\Engineering\Command\ContinueEngineeringDomainsCommand;
 use App\Application\Engineering\Command\WatchEngineeringRuntimeCommand;
 use App\Application\CapitalMarkets\Command\CapturePaperNavSnapshot;
