@@ -1699,6 +1699,10 @@ services:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
+  App\Application\Engineering\Command\RunEngineeringAutopilotCommandHandler:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
   App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommandHandler:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
