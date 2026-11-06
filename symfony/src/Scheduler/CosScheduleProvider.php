@@ -51,6 +51,8 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         private readonly bool $growthMarketDiscoveryEnabled = false,
         private readonly int $growthMarketDiscoveryIntervalMinutes = 60,
         private readonly int $growthMarketDiscoveryActorId = 0,
+        private readonly bool $engineeringAutopilotSchedulerEnabled = false,
+        private readonly int $engineeringAutopilotIntervalMinutes = 5,
         private readonly bool $engineeringAutonomyEnabled = false,
         private readonly int $engineeringAutonomyIntervalMinutes = 2,
         private readonly bool $engineeringDomainAutonomyEnabled = false,
