@@ -1687,6 +1687,10 @@ services:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 
+  App\Engineering\Application\Service\EngineeringDevelopmentAutopilot:
+    arguments:
+      $enabled: '%env(bool:COS_ENGINEERING_AUTOPILOT_ENABLED)%'
+
   App\Command\EngineeringAutopilotTickCommand:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
