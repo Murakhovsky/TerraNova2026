@@ -25,6 +25,7 @@ final readonly class EngineeringDevelopmentAutopilot
         private EngineeringOrchestrator $engineering,
         private EngineeringWorkflowLockInterface $lock,
         private EngineeringAutopilotAdmissionPolicy $policy = new EngineeringAutopilotAdmissionPolicy(),
+        private bool $enabled = false,
     ) {}
 
     /** @return array<string,mixed> */
