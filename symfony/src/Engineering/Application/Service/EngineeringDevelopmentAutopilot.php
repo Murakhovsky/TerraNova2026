@@ -96,7 +96,8 @@ final readonly class EngineeringDevelopmentAutopilot
                     // Intake persists first; if a crash occurs before queueing,
                     // a subsequent tick recovers the NEW feature instead of duplicating.
                     $imported = $this->intake->import($number, false, $organizationId,
-                        'autopilot:issue:'.$number.':'.EngineeringId::generate());
+                        'autopilot:issue:'.$number.':'.EngineeringId::generate(),
+                        $decision['paths']);
                     $featureId = (string) $imported['feature_id'];
                     $queued = $this->engineering->queue($featureId, $organizationId,
                         'autopilot:queue:'.$number.':'.EngineeringId::generate());
