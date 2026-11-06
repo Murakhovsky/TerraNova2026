@@ -291,6 +291,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     $pendingArchitectureDocumentation,
                     $developerChanges,
                 );
+                $this->assertAutopilotAllowedPaths($featureId, $changes);
                 $this->toolPolicy->assertRepositoryMutationAllowed(AgentRole::DEVELOPER, $changes);
                 $commitMessage = trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
                     ? (string) $run->structuredOutput['commit_message']
