@@ -227,6 +227,13 @@ final class CosScheduleProvider implements ScheduleProviderInterface
             );
         }
 
+        if ($this->engineeringAutopilotSchedulerEnabled) {
+            $messages[] = RecurringMessage::every(
+                $this->engineeringAutopilotIntervalMinutes.' minutes',
+                new RedispatchMessage(new RunEngineeringAutopilotCommand('scheduler'), 'engineering'),
+            );
+        }
+
         if($this->engineeringAutonomyEnabled){
             $messages[] = RecurringMessage::every(
                 $this->engineeringAutonomyIntervalMinutes.' minutes',
