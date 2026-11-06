@@ -111,6 +111,9 @@ final class CosScheduleProvider implements ScheduleProviderInterface
         if($this->growthMarketDiscoveryEnabled&&$this->growthMarketDiscoveryActorId<1){
             throw new InvalidArgumentException('Growth market discovery requires a positive system actor id.');
         }
+        if ($this->engineeringAutopilotIntervalMinutes < 1 || $this->engineeringAutopilotIntervalMinutes > 60) {
+            throw new InvalidArgumentException('Autopilot interval must be 1..60 minutes.');
+        }
         if($this->engineeringAutonomyIntervalMinutes<1||$this->engineeringAutonomyIntervalMinutes>60){
             throw new InvalidArgumentException('Engineering autonomy interval must be between 1 and 60 minutes.');
         }
