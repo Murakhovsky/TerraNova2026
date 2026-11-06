@@ -149,7 +149,7 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
     public function findByExternalIssueId(string $organizationId, int $issueNumber): ?string
     {
         if (trim($organizationId) === '' || $issueNumber <= 0) {
-            throw new \\InvalidArgumentException('Organization and positive GitHub issue number are required.');
+            throw new \InvalidArgumentException('Organization and positive GitHub issue number are required.');
         }
         $record = $this->entityManager->getRepository(EngineeringFeatureRecord::class)->findOneBy([
             'organizationId' => $organizationId,
