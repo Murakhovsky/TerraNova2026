@@ -23,4 +23,7 @@ public function applyManagerAnalysis(string $featureId, array $specification, ar
 
     /** @return list<array<string,mixed>> */
     public function recentForOrganization(string $organizationId, int $limit = 50): array;
+
+    /** Return the persisted feature ID for a previously imported GitHub issue. */
+    public function findByExternalIssueId(string $organizationId, int $issueNumber): ?string;
 }

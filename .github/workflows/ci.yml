@@ -56,6 +56,10 @@ jobs:
           find app symfony/src tests/architecture tests/unit -type f -name '*.php' ! -path 'tests/history/*' -print0 | xargs -0 -n1 php -l
       - name: Validate CI timing implementation
         run: python3 -m py_compile bin/ci/step_timings.py
+      - name: Development Autopilot issue admission and architecture contract
+        run: |
+          php tests/unit/engineering_autopilot_admission.php
+          php tests/architecture/engineering_development_autopilot_contract.php
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
       - name: Canonical Capability Library contract

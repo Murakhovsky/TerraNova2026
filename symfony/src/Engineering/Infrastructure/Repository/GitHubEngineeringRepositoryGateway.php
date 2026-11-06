@@ -304,6 +304,37 @@ final readonly class GitHubEngineeringRepositoryGateway implements EngineeringRe
         ];
     }
 
+    public function openIssuesByLabel(string $label, int $limit = 50): array
+    {
+        $this->assertAvailable();
+        if ($label !== 'cos:autopilot:ready') {
+            throw new RuntimeException('Autopilot queue accepts only its approved ready label.');
+        }
+        $limit = max(1, min(100, $limit));
+        $issues = $this->request('GET',
+            '/issues?state=open&labels='.rawurlencode($label).'&sort=created&direction=asc&per_page=100',
+            null, [200]);
+        $result = [];
+        foreach ($issues as $issue) {
+            if (!is_array($issue) || isset($issue['pull_request']) || ($issue['state'] ?? '') !== 'open') continue;
+            $labels = [];
+            foreach (is_array($issue['labels'] ?? null) ? $issue['labels'] : [] as $entry) {
+                if (is_array($entry) && is_string($entry['name'] ?? null)) $labels[] = $entry['name'];
+            }
+            $result[] = [
+                'number' => (int) ($issue['number'] ?? 0),
+                'title' => (string) ($issue['title'] ?? ''),
+                'body' => (string) ($issue['body'] ?? ''),
+                'state' => 'open',
+                'url' => (string) ($issue['html_url'] ?? ''),
+                'labels' => $labels,
+                'is_pull_request' => false,
+            ];
+            if (count($result) >= $limit) break;
+        }
+        return $result;
+    }
+
     public function commentIssue(int $issueNumber, string $body): void
     {
         $this->assertAvailable();

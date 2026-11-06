@@ -56,6 +56,9 @@ parameters:
   env(COS_GROWTH_COLLECTOR_SCHEDULER_SIGNAL_LIMIT): '100'
   env(COS_GROWTH_COLLECTOR_MAX_BACKOFF_MINUTES): '360'
   env(COS_GROWTH_COLLECTOR_INCIDENT_FAILURE_THRESHOLD): '3'
+  env(COS_ENGINEERING_AUTOPILOT_ENABLED): '0'
+  env(COS_ENGINEERING_AUTOPILOT_SCHEDULER_ENABLED): '0'
+  env(COS_ENGINEERING_AUTOPILOT_INTERVAL_MINUTES): '5'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED): '0'
   env(COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES): '2'
   env(COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED): '0'
@@ -464,6 +467,8 @@ services:
       $growthMarketDiscoveryEnabled: '%env(bool:COS_GROWTH_MARKET_SCHEDULER_ENABLED)%'
       $growthMarketDiscoveryIntervalMinutes: '%env(int:COS_GROWTH_MARKET_SCHEDULER_INTERVAL_MINUTES)%'
       $growthMarketDiscoveryActorId: '%env(int:COS_GROWTH_MARKET_SCHEDULER_ACTOR_ID)%'
+      $engineeringAutopilotSchedulerEnabled: '%env(bool:COS_ENGINEERING_AUTOPILOT_SCHEDULER_ENABLED)%'
+      $engineeringAutopilotIntervalMinutes: '%env(int:COS_ENGINEERING_AUTOPILOT_INTERVAL_MINUTES)%'
       $engineeringAutonomyEnabled: '%env(bool:COS_ENGINEERING_AUTONOMY_SCHEDULER_ENABLED)%'
       $engineeringAutonomyIntervalMinutes: '%env(int:COS_ENGINEERING_AUTONOMY_SCHEDULER_INTERVAL_MINUTES)%'
       $engineeringDomainAutonomyEnabled: '%env(bool:COS_ENGINEERING_DOMAIN_AUTONOMY_SCHEDULER_ENABLED)%'
@@ -1683,6 +1688,18 @@ services:
   App\Command\EngineeringFinalizeCommand: ~
 
   App\Command\EngineeringIssueCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Engineering\Application\Service\EngineeringDevelopmentAutopilot:
+    arguments:
+      $enabled: '%env(bool:COS_ENGINEERING_AUTOPILOT_ENABLED)%'
+
+  App\Command\EngineeringAutopilotTickCommand:
+    arguments:
+      $organizationId: '%env(COS_ORGANIZATION_ID)%'
+
+  App\Application\Engineering\Command\RunEngineeringAutopilotCommandHandler:
     arguments:
       $organizationId: '%env(COS_ORGANIZATION_ID)%'
 

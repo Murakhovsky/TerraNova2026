@@ -291,6 +291,7 @@ final readonly class EngineeringDeveloperStageExecutor
                     $pendingArchitectureDocumentation,
                     $developerChanges,
                 );
+                $this->assertAutopilotAllowedPaths($featureId, $changes);
                 $this->toolPolicy->assertRepositoryMutationAllowed(AgentRole::DEVELOPER, $changes);
                 $commitMessage = trim((string) ($run->structuredOutput['commit_message'] ?? '')) !== ''
                     ? (string) $run->structuredOutput['commit_message']
@@ -508,6 +509,33 @@ final readonly class EngineeringDeveloperStageExecutor
         }
 
         return null;
+    }
+
+    /** @param list<array<string,mixed>> $changes */
+    private function assertAutopilotAllowedPaths(string $featureId, array $changes): void
+    {
+        $request = $this->features->request($featureId);
+        if (($request->metadata['autopilot_mode'] ?? false) !== true) return;
+
+        $allowed = $this->normalizedPolicyPaths($request->metadata['autopilot_allowed_paths'] ?? []);
+        if ($allowed === []) {
+            throw new RuntimeException('Autopilot feature has no persisted allowed paths.');
+        }
+        foreach ($changes as $change) {
+            if (!is_array($change)) throw new RuntimeException('Malformed Autopilot change.');
+            $path = trim((string) ($change['path'] ?? ''));
+            if ($path === '' || str_contains($path, '..') || str_contains($path, '\\')
+                || str_starts_with($path, '/')) {
+                throw new RuntimeException('Invalid Autopilot mutation path.');
+            }
+            $matched = false;
+            foreach ($allowed as $prefix) {
+                if ($this->pathMatchesPolicy($path, $prefix)) { $matched = true; break; }
+            }
+            if (!$matched) {
+                throw new RuntimeException('Autopilot change is outside approved GitHub Issue paths: '.$path);
+            }
+        }
     }
 
     /** @param list<array<string,mixed>> $changes @param array<string,mixed>|null $domainContext */

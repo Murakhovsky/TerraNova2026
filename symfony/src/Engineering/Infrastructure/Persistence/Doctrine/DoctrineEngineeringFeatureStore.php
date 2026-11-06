@@ -146,6 +146,18 @@ final readonly class DoctrineEngineeringFeatureStore implements EngineeringFeatu
         ], $records);
     }
 
+    public function findByExternalIssueId(string $organizationId, int $issueNumber): ?string
+    {
+        if (trim($organizationId) === '' || $issueNumber <= 0) {
+            throw new \InvalidArgumentException('Organization and positive GitHub issue number are required.');
+        }
+        $record = $this->entityManager->getRepository(EngineeringFeatureRecord::class)->findOneBy([
+            'organizationId' => $organizationId,
+            'externalIssueId' => (string) $issueNumber,
+        ]);
+        return $record instanceof EngineeringFeatureRecord ? $record->id() : null;
+    }
+
     private function record(string $featureId): EngineeringFeatureRecord
     {
         $record = $this->entityManager->find(EngineeringFeatureRecord::class, $featureId);
