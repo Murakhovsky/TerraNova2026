@@ -32,6 +32,7 @@ final readonly class EngineeringDevelopmentAutopilot
     public function tick(string $organizationId, bool $execute = false, int $scanLimit = 50): array
     {
         if (trim($organizationId) === '') throw new RuntimeException('Autopilot requires a real organization.');
+        if ($execute && !$this->enabled) throw new RuntimeException('Autopilot is disarmed (COS_ENGINEERING_AUTOPILOT_ENABLED=0).');
         if (!$this->repository->available()) throw new RuntimeException('Autopilot GitHub gateway is unavailable.');
         $scanLimit = max(1, min(100, $scanLimit));
 
