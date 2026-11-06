@@ -1,13 +1,21 @@
-# COS Development Autopilot: P0 operating contract
+---
+title: "COS Development Autopilot: керований запуск P0"
+description: "Контракти, безпечне планування GitHub Issues, інтеграція інженерних агентів і приймання автономної розробки."
+status: proposed
+kind: developer
+updated: 2026-11-06
+---
+
+# COS Development Autopilot: керований запуск P0
 
 Status: implementation PR, NOT production-accepted.
 Owner: COS Engineering. Last revised: 2026-11-06.
 
-## Purpose
+## Призначення
 
 Convert a human-approved Master Roadmap into a bounded, auditable stream of Engineering feature workflows. The controller adds no new generic executor. It uses the existing EngineeringOrchestrator, feature/workflow persistence, agent role stages, Developer repository policy, GitHub gateway, QA and CI.
 
-## Authority and control
+## Повноваження та контроль
 
 - Master Roadmap and Issue acceptance criteria are owned by the human product/architecture owner.
 - GitHub Issue intake requires both labels: cos:autopilot:ready and cos:autopilot:low-risk.
@@ -21,7 +29,7 @@ Convert a human-approved Master Roadmap into a bounded, auditable stream of Engi
 - Only a human may merge a PR, accept risky changes, approve release, or deploy production. Autopilot never does these actions.
 - GitHub Issue body is untrusted input. It cannot change policies, architectural standards, credentials or authority.
 
-## Usage
+## Використання
 
 Run these commands from the existing Symfony runtime with its configured DB, GitHub credentials and tenant:
 
@@ -49,11 +57,11 @@ Keep the existing scheduler_cos consumer, engineering consumer, and Engineering 
 
 Ensure COS_ORGANIZATION_ID is a real tenant, COS_ENGINEERING_GITHUB_REPOSITORY points to the approved repo, and COS_ENGINEERING_GITHUB_TOKEN is a least-privilege short-lived credential. Never place tokens in Issues, agent prompts, CI logs or code.
 
-## Issue template
+## Шаблон GitHub Issue
 
 Use the GitHub issue template COS Autopilot Feature. Fill the outcome, immutable acceptance checklist, bounded repository paths, and explicit dependencies. An operator must review and manually apply both ready and low-risk labels. No label means no execution.
 
-## Failure and restart behavior
+## Збої та відновлення
 
 - Busy Engineering workflow -> BUSY, no new work.
 - Invalid/missing issue sections, risky labels, blocked dependency -> skipped and reported, no write.
@@ -63,7 +71,7 @@ Use the GitHub issue template COS Autopilot Feature. Fill the outcome, immutable
 - Path drift or agent-generated unauthorized file -> Developer commit fails before repository write.
 - Human intervention or production deployment remains a separate operator gate.
 
-## Master Roadmap and delivery gates
+## Дорожня карта та контрольні точки
 
 | Stage | Deliverable | Exit criteria |
 | --- | --- | --- |
@@ -76,7 +84,7 @@ Use the GitHub issue template COS Autopilot Feature. Fill the outcome, immutable
 | P1-B Governance | Budget ceilings, notifications, milestone summary, road map dashboard | Operator manages outcomes, not individual agent steps |
 | P1-C Change control | Risk tiers and human-controlled batch merge | Security/production never bypass human control |
 
-## P0 operator acceptance checklist
+## Приймання P0 оператором
 
 - [ ] PHP lint, unit policy test and architecture contract test succeed.
 - [ ] Existing core CI / static quality / Engineering regression suites are green.
@@ -90,6 +98,6 @@ Use the GitHub issue template COS Autopilot Feature. Fill the outcome, immutable
 - [ ] Scheduler and workers restart with durable state; no duplicate side effects.
 - [ ] Operator verifies role permissions, GitHub credential scope, cost/run budget, rollback and kill-switch behavior.
 
-## Known limits of P0
+## Обмеження P0
 
 Automatic work intake is strictly serial and can report BUSY when other Engineering workflows remain active. P0 has no automatic merge, production deployment, per-path parallelization or end-to-end production acceptance. Current claim/recovery is serialized through the COS DB advisory lock; if the manual Issue command is used concurrently from outside Autopilot, full cross-entrypoint uniqueness requires an explicit DB uniqueness constraint and migration before enabling broad multi-runner use.
