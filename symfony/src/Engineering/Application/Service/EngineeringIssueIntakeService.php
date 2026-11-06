@@ -20,6 +20,7 @@ final readonly class EngineeringIssueIntakeService
         bool $start,
         string $organizationId,
         string $correlationId,
+        array $autopilotAllowedPaths = [],
     ): array {
         if (!$this->repository->available()) {
             throw new RuntimeException('Engineering GitHub repository gateway is not configured.');
