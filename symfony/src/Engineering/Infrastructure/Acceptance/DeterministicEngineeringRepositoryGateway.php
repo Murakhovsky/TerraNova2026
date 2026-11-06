@@ -261,6 +261,14 @@ final class DeterministicEngineeringRepositoryGateway implements EngineeringRepo
         ];
     }
 
+    public function openIssuesByLabel(string $label, int $limit = 50): array
+    {
+        if ($label !== 'cos:autopilot:ready') {
+            throw new RuntimeException('Unsupported Autopilot queue label.');
+        }
+        return [];
+    }
+
     public function commentIssue(int $issueNumber, string $body): void
     {
         $this->mutate(function (array &$state) use ($issueNumber, $body): void {
