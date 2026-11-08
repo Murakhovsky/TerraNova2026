@@ -1,0 +1,78 @@
+name: COS Shopify API Smoke (read-only)
+
+on:
+  push:
+    branches: [infra/shopify-api-smoke-20261108]
+    paths:
+      - '.github/workflows/cos-shopify-api-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Verify Shopify credentials on COS VPS
+    if: github.ref == 'refs/heads/infra/shopify-api-smoke-20261108' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: AWS TN2026
+    env:
+      DEV_HOST: ${{ secrets.DEV_HOST }}
+      DEV_USER: ${{ secrets.DEV_USER }}
+      DEV_PORT: ${{ secrets.DEV_PORT }}
+      DEV_SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+    steps:
+      - name: Set up SSH
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for name in DEV_HOST DEV_USER DEV_PORT DEV_SSH_KEY; do
+            [[ -n "${!name:-}" ]] || { echo "::error::Missing $name"; exit 1; }
+          done
+          [[ "$DEV_PORT" =~ ^[0-9]{1,5}$ ]] || exit 1
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_SSH_KEY" > "$HOME/.ssh/cos_shopify_key"
+          chmod 600 "$HOME/.ssh/cos_shopify_key"
+          ssh-keyscan -T 10 -p "$DEV_PORT" -H "$DEV_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null
+          test -s "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Read-only OAuth and product query
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ssh -T -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/cos_shopify_key" -p "$DEV_PORT" "$DEV_USER@$DEV_HOST" \
+            sudo -n bash -s <<'REMOTE'
+          set -Eeuo pipefail
+          umask 077
+          CONFIG=/etc/cos/shopify.env
+          if [[ ! -f "$CONFIG" ]]; then
+            echo "SHOPIFY_CONFIG_MISSING: $CONFIG"; exit 11
+          fi
+          [[ "$(stat -c '%a' "$CONFIG")" == 600 ]] || { echo "SHOPIFY_CONFIG_PERMISSIONS_INVALID"; exit 12; }
+          set -a
+          source "$CONFIG"
+          set +a
+          [[ "${SHOPIFY_SHOP_DOMAIN:-}" == "e2rnbw-mr.myshopify.com" ]] || { echo "SHOPIFY_DOMAIN_INVALID"; exit 13; }
+          [[ -n "${SHOPIFY_CLIENT_ID:-}" && -n "${SHOPIFY_CLIENT_SECRET:-}" ]] || { echo "SHOPIFY_CREDENTIALS_MISSING"; exit 14; }
+          command -v python3 >/dev/null && command -v curl >/dev/null || { echo "SHOPIFY_PREREQUISITES_MISSING"; exit 15; }
+          echo "SHOPIFY_CONFIG_OK"
+          if ! AUTH_RESPONSE="$(printf 'grant_type=client_credentials&client_id=%s&client_secret=%s' "$SHOPIFY_CLIENT_ID" "$SHOPIFY_CLIENT_SECRET" | curl -fsS --max-time 20 -X POST -H 'Content-Type: application/x-www-form-urlencoded' --data-binary @- "https://e2rnbw-mr.myshopify.com/admin/oauth/access_token")"; then
+            echo "SHOPIFY_OAUTH_FAILED"; exit 16
+          fi
+          unset SHOPIFY_CLIENT_ID SHOPIFY_CLIENT_SECRET
+          if ! TOKEN="$(printf '%s' "$AUTH_RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("access_token",""))')"; then
+            echo "SHOPIFY_TOKEN_INVALID"; exit 17
+          fi
+          unset AUTH_RESPONSE
+          [[ -n "$TOKEN" ]] || { echo "SHOPIFY_EMPTY_TOKEN"; exit 18; }
+          echo "SHOPIFY_OAUTH_OK"
+          if ! RESULT="$(curl -fsS --max-time 20 -X POST -H 'Content-Type: application/json' -H "X-Shopify-Access-Token: $TOKEN" --data '{"query":"{ shop { name } products(first: 1) { nodes { id } } }"}' "https://e2rnbw-mr.myshopify.com/admin/api/2026-10/graphql.json")"; then
+            echo "SHOPIFY_GRAPHQL_HTTP_FAILED"; exit 19
+          fi
+          unset TOKEN
+          printf '%s' "$RESULT" | python3 -c 'import json,sys; x=json.load(sys.stdin); d=x.get("data") or {}; assert not x.get("errors") and d.get("shop") is not None and d.get("products") is not None, "GraphQL query did not return shop/products"; print("SHOPIFY_GRAPHQL_READ_PRODUCTS_OK"); print("PRODUCTS_SAMPLE_SIZE="+str(len(d["products"]["nodes"])))'
+          echo "SHOPIFY_SMOKE_SUCCESS"
+          REMOTE
