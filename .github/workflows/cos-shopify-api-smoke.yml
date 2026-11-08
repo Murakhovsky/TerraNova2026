@@ -73,6 +73,6 @@ jobs:
             echo "SHOPIFY_GRAPHQL_HTTP_FAILED"; exit 19
           fi
           unset TOKEN
-          printf '%s' "$RESULT" | python3 -c 'import json,sys; x=json.load(sys.stdin); d=x.get("data") or {}; assert not x.get("errors") and d.get("shop") is not None and d.get("products") is not None, "GraphQL query did not return shop/products"; print("SHOPIFY_GRAPHQL_READ_PRODUCTS_OK"); print("PRODUCTS_SAMPLE_SIZE="+str(len(d["products"]["nodes"])))'
+          printf '%s' "$RESULT" | python3 -c 'import json,sys; x=json.load(sys.stdin); d=x.get("data") or {}; errors=x.get("errors") or []; ok=(not errors and isinstance(d.get("shop"),dict) and isinstance(d.get("products"),dict)); print("GRAPHQL_ERROR_MESSAGES="+json.dumps([str(e.get("message",""))[:200] for e in errors][:3]) if errors else "GRAPHQL_ERROR_MESSAGES=none"); print("GRAPHQL_HAS_SHOP="+str(isinstance(d.get("shop"),dict))); print("GRAPHQL_HAS_PRODUCTS="+str(isinstance(d.get("products"),dict))); print("SHOPIFY_GRAPHQL_READ_PRODUCTS_OK" if ok else "SHOPIFY_GRAPHQL_READ_PRODUCTS_FAILED"); sys.exit(0 if ok else 20)'
           echo "SHOPIFY_SMOKE_SUCCESS"
           REMOTE
