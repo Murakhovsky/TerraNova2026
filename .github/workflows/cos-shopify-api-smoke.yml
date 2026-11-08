@@ -2,7 +2,7 @@ name: COS Shopify API Smoke (read-only)
 
 on:
   push:
-    branches: [infra/shopify-api-smoke-20261108]
+    branches: [main]
     paths:
       - '.github/workflows/cos-shopify-api-smoke.yml'
   workflow_dispatch:
@@ -13,7 +13,7 @@ permissions:
 jobs:
   smoke:
     name: Verify Shopify credentials on COS VPS
-    if: github.ref == 'refs/heads/infra/shopify-api-smoke-20261108' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     environment: AWS TN2026
