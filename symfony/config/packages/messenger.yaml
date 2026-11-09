@@ -67,6 +67,7 @@ framework:
           allow_no_senders: true
 
     routing:
+      'App\Application\Engineering\Command\RunEngineeringAutopilotCommand': engineering
       'App\Application\Engineering\Command\ContinueEngineeringWorkflowsCommand': engineering
       'App\Application\Engineering\Command\RunEngineeringFeatureCommand': engineering_immediate
       'App\Application\Engineering\Command\RunEngineeringSecurityRecoveryCommand': engineering_immediate
