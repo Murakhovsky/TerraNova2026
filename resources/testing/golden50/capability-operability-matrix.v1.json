@@ -1,0 +1,519 @@
+{
+  "standard": "COS-G50-CAPABILITY-OPERABILITY-1.0",
+  "schema_version": "1.0.0",
+  "baseline": {
+    "reviewed_main_commit": "a4498c4530ad1fcf24051cd32483146b4dd4f555",
+    "scope": "typed Domain capabilities; declarative operations inventoried separately",
+    "note": "This catalog is a test plan, not proof that any case passed."
+  },
+  "execution_mode": "template_applied_per_capability_and_initiator",
+  "allowed_results": [
+    "PASS",
+    "FAIL",
+    "BLOCKED",
+    "NOT_APPLICABLE_WITH_EVIDENCE"
+  ],
+  "release_rule": "No critical FAIL/BLOCKED; full scope and independent live acceptance required",
+  "cases": [
+    {
+      "id": "CO-01",
+      "group": "catalog",
+      "title": "Immutable inventory",
+      "procedure": "Enumerate typed and descriptive capabilities by owner, revision and release SHA",
+      "expected": "No unknown/executable-only bindings; descriptive entries are not marked executable",
+      "evidence": "catalog_snapshot",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-02",
+      "group": "catalog",
+      "title": "Ownership",
+      "procedure": "Every typed capability has one Domain owner and non-conflicting ID",
+      "expected": "Exactly one owner and no duplicate canonical identifier",
+      "evidence": "manifest_audit",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-03",
+      "group": "catalog",
+      "title": "Exposure classification",
+      "procedure": "Separate public, internal and deprecated/retired operations",
+      "expected": "Internal Plan Approval cannot appear as user-plannable work",
+      "evidence": "visibility_report",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-04",
+      "group": "catalog",
+      "title": "Uncontracted operations",
+      "procedure": "Map live Domain methods without typed contracts",
+      "expected": "Every uncontracted business operation is marked backlog/unavailable, not PASS",
+      "evidence": "domain_gap_register",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-05",
+      "group": "catalog",
+      "title": "Cohort freeze",
+      "procedure": "Pin active module, tenant, version and contract digest at run start",
+      "expected": "Denominator immutable for the evaluated test run",
+      "evidence": "cohort_manifest",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-06",
+      "group": "contract",
+      "title": "Input schema",
+      "procedure": "Validate valid, malformed, unknown and oversized inputs before dispatch",
+      "expected": "Invalid payload has zero domain side effects",
+      "evidence": "validation_receipt",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-07",
+      "group": "contract",
+      "title": "Output schema",
+      "procedure": "Validate direct result and Action result against pinned output definition",
+      "expected": "Mismatch is ERROR/RECONCILE; never silently report business success",
+      "evidence": "output_validation",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-08",
+      "group": "contract",
+      "title": "Version and digest",
+      "procedure": "Change schema/contract bytes after immutable Plan is proposed",
+      "expected": "Stale Plan refuses new execution without explicit migration",
+      "evidence": "pin_attestation",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-09",
+      "group": "contract",
+      "title": "Risk policy",
+      "procedure": "Verify kind, effect level, permission, approval and retry/timeouts",
+      "expected": "Mutations have correct policy and explicit idempotency/failure contract",
+      "evidence": "policy_contract",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-10",
+      "group": "contract",
+      "title": "Compatibility lifecycle",
+      "procedure": "Test stable, experimental, deprecated and retired revisions",
+      "expected": "Deprecated/retired capability is not newly executable; historical evidence remains readable",
+      "evidence": "lifecycle_report",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-11",
+      "group": "binding",
+      "title": "Actual handler",
+      "procedure": "Resolve adapter or Action handler from running container",
+      "expected": "No missing, conflicting, incorrect-owner or orphan handler accepted",
+      "evidence": "binding_witness",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-12",
+      "group": "binding",
+      "title": "Canonical dispatch",
+      "procedure": "Trace CommandBus, QueryBus or Kernel Action from one request",
+      "expected": "No second generic executor or direct database writer",
+      "evidence": "dispatch_trace",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-13",
+      "group": "binding",
+      "title": "Module availability",
+      "procedure": "Disable the owning Domain for a tenant",
+      "expected": "Capability becomes unavailable and cannot execute",
+      "evidence": "module_state",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-14",
+      "group": "binding",
+      "title": "Fleet parity",
+      "procedure": "Compare API, worker and scheduler contract digests/handler maps",
+      "expected": "Drift blocks execution rather than selecting a preferred handler",
+      "evidence": "fleet_attestation",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-15",
+      "group": "binding",
+      "title": "Readiness boundary",
+      "procedure": "Compare declaration, handler registration and tenant permission",
+      "expected": "Each is reported separately; none implies completed Outcome",
+      "evidence": "readiness_report",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-16",
+      "group": "initiator",
+      "title": "Human UI",
+      "procedure": "Execute valid manager operation via session, origin and CSRF",
+      "expected": "Correct operation uses canonical gateway/policy; native result verified",
+      "evidence": "ui_trace",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-17",
+      "group": "initiator",
+      "title": "Human API",
+      "procedure": "Execute same allowed operation via guarded authenticated API",
+      "expected": "Same contract, authorization and receipt semantics as UI",
+      "evidence": "api_trace",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-18",
+      "group": "initiator",
+      "title": "AI origin",
+      "procedure": "Attempt direct mutation and authorized intent-only route",
+      "expected": "Direct mutation rejected; intent pending review, not performed",
+      "evidence": "ai_intent_trace",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-19",
+      "group": "initiator",
+      "title": "CRON origin",
+      "procedure": "Attempt replayed signed automation intent",
+      "expected": "Scoped authenticated intent stored once, with no unauthorized Action start",
+      "evidence": "cron_intent_trace",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-20",
+      "group": "initiator",
+      "title": "Event origin",
+      "procedure": "Attempt unregistered and registered reactive triggers",
+      "expected": "Untrusted event denied; trusted event yields only policy-evaluated intent",
+      "evidence": "event_admission",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-21",
+      "group": "security",
+      "title": "Least privilege",
+      "procedure": "Attempt invocation with absent/mismatched permission",
+      "expected": "Fail-closed with no domain side effect",
+      "evidence": "policy_decision",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-22",
+      "group": "security",
+      "title": "Tenant isolation",
+      "procedure": "Read or write cross-tenant object using native ID",
+      "expected": "Tenant isolation enforced at gateway, handler and outcome readback",
+      "evidence": "isolation_evidence",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-23",
+      "group": "security",
+      "title": "Identity anti-spoof",
+      "procedure": "Submit tenant, actor, correlation or origin overrides in payload",
+      "expected": "Server-derived identity authoritative; forged fields rejected",
+      "evidence": "identity_decision",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-24",
+      "group": "security",
+      "title": "Human approval",
+      "procedure": "Attempt regulated Action before Plan and Action approval",
+      "expected": "No Action worker execution before independent approvals",
+      "evidence": "approval_chain",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-25",
+      "group": "security",
+      "title": "Self-approval",
+      "procedure": "Use plan author as approver or invalid/stale approval",
+      "expected": "No self-approval, implicit auto-approval or approval replay",
+      "evidence": "approval_negative",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-26",
+      "group": "workflow",
+      "title": "Pure preflight",
+      "procedure": "Validate a plan without mutating persisted state",
+      "expected": "No Plan/Run/Action is written by dry-run validation",
+      "evidence": "preflight_diff",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-27",
+      "group": "workflow",
+      "title": "Immutable plan",
+      "procedure": "Re-propose equivalent Plan and mutate pinned input afterwards",
+      "expected": "Same identity does not create duplicate; altered pinned input blocked",
+      "evidence": "plan_audit",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-28",
+      "group": "workflow",
+      "title": "Single writer",
+      "procedure": "Start and advance an authorized Workflow Run",
+      "expected": "One authority per Run/Step and one Domain action dispatch",
+      "evidence": "workflow_ledger",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-29",
+      "group": "workflow",
+      "title": "Step receipt",
+      "procedure": "Complete one approved Action through real worker",
+      "expected": "Pinned attempt and output receipt persist with correct provenance",
+      "evidence": "action_receipt",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-30",
+      "group": "workflow",
+      "title": "Independent checkpoint",
+      "procedure": "Complete technical Run without native business evidence",
+      "expected": "Goal does not become satisfied without Domain outcome verifier",
+      "evidence": "goal_evaluation",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-31",
+      "group": "reliability",
+      "title": "Exact repeat",
+      "procedure": "Repeat same request and idempotency key",
+      "expected": "Same durable receipt, exactly one business effect",
+      "evidence": "idempotency_audit",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-32",
+      "group": "reliability",
+      "title": "Key conflict",
+      "procedure": "Repeat same key with different normalized input",
+      "expected": "Conflict rejected without second mutation",
+      "evidence": "conflict_audit",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-33",
+      "group": "reliability",
+      "title": "Concurrency",
+      "procedure": "Race identical invocations or Action claims",
+      "expected": "At most one writer/claim and one effect",
+      "evidence": "race_trace",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-34",
+      "group": "reliability",
+      "title": "Crash boundary",
+      "procedure": "Inject failure after native write before receipt checkpoint",
+      "expected": "Recovery reconciles existing effect and never blindly replays",
+      "evidence": "fault_injection",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-35",
+      "group": "reliability",
+      "title": "Ambiguity recovery",
+      "procedure": "Simulate remote timeout or unknown external outcome",
+      "expected": "AMBIGUOUS quarantined for operator reconciliation",
+      "evidence": "recovery_case",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-36",
+      "group": "outcome",
+      "title": "Native readback",
+      "procedure": "Re-read created/updated object from owning Domain",
+      "expected": "Native state matches contract, tenant and pinned input",
+      "evidence": "domain_readback",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-37",
+      "group": "outcome",
+      "title": "Relationship proof",
+      "procedure": "Verify cross-domain entity references and cardinality",
+      "expected": "Every relation points to unique tenant-native ID",
+      "evidence": "relation_evidence",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-38",
+      "group": "outcome",
+      "title": "Complete evidence",
+      "procedure": "Verify Plan, Action, receipt, native result and evaluation chain",
+      "expected": "No success on Workflow status or synthetic fixture alone",
+      "evidence": "evidence_graph",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-39",
+      "group": "outcome",
+      "title": "Missing or revoked proof",
+      "procedure": "Remove/expire one required receipt or native relation",
+      "expected": "Positive Goal evaluation blocked or invalidated on reassessment",
+      "evidence": "negative_evaluation",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-40",
+      "group": "outcome",
+      "title": "Independent evaluation",
+      "procedure": "Run separate authorized Goal evaluator after completion",
+      "expected": "Immutable evaluation records criterion, evidence policy and result",
+      "evidence": "goal_evaluation_record",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-41",
+      "group": "events",
+      "title": "Transactional publish",
+      "procedure": "Emit Domain event through existing transaction/outbox boundary",
+      "expected": "Committed mutation has durable event or explicit documented alternative",
+      "evidence": "outbox_receipt",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-42",
+      "group": "events",
+      "title": "Event provenance",
+      "procedure": "Validate source, type, version, tenant and correlation",
+      "expected": "Forged, stale, incompatible or cross-tenant event rejected",
+      "evidence": "event_envelope",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-43",
+      "group": "events",
+      "title": "Subscription authorization",
+      "procedure": "Resolve event consumer and capability allowlist",
+      "expected": "Unlisted event cannot invoke a mutation or bypass approval",
+      "evidence": "subscription_policy",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-44",
+      "group": "events",
+      "title": "Consumer idempotency",
+      "procedure": "Deliver same event twice and out of order",
+      "expected": "Exactly one logical effect; late event cannot override newer state",
+      "evidence": "event_dedupe",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-45",
+      "group": "events",
+      "title": "Loop and dead letter",
+      "procedure": "Inject consumer failure or recursive trigger",
+      "expected": "Bounded retries, observable dead letter and no uncontrolled loop",
+      "evidence": "consumer_recovery",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-46",
+      "group": "release",
+      "title": "Isolation",
+      "procedure": "Run mutations only in approved non-production tenant with safe fixtures",
+      "expected": "No production external sends, financial actions or real customer side effects",
+      "evidence": "environment_proof",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-47",
+      "group": "release",
+      "title": "Deployment parity",
+      "procedure": "Pin same release SHA/schema/migrations across workers and API",
+      "expected": "Mismatched build or missing migration blocks acceptance",
+      "evidence": "deploy_manifest",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-48",
+      "group": "release",
+      "title": "Observability",
+      "procedure": "Correlate Goal, Plan, Run, Step, Action, native entity and event",
+      "expected": "Operator can explain each outcome and every rejection",
+      "evidence": "trace_export",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-49",
+      "group": "release",
+      "title": "Rollback",
+      "procedure": "Exercise feature-flag stop, safe recovery and forward-only evidence retention",
+      "expected": "No duplicate execution, data loss or silent side-effect replay",
+      "evidence": "rollback_log",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    },
+    {
+      "id": "CO-50",
+      "group": "release",
+      "title": "Operator sign-off",
+      "procedure": "Collect full test matrix plus two-human independent acceptance",
+      "expected": "Release only on exact final SHA, zero P0 blockers and signed evidence",
+      "evidence": "release_certificate",
+      "classification": "required_or_explicitly_not_applicable",
+      "status": "not_run"
+    }
+  ]
+}

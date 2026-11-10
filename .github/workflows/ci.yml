@@ -60,6 +60,8 @@ jobs:
         run: bash bin/verify fast
       - name: Canonical Capability Library contract
         run: php tests/architecture/cos_canonical_capability_library_contract.php
+      - name: Golden 50 Capability Operability static matrix guard
+        run: php tests/architecture/cos_golden50_capability_matrix_contract.php
       - name: Canonical Property capability input validation
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries
