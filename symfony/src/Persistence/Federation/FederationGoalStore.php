@@ -192,6 +192,24 @@ final readonly class FederationGoalStore
         $plans=[];
         foreach($rows as $p) {
             $json=self::decode((string)$p['plan_json']);
+            // This is a presence-only UI projection, NOT authoritative
+            // attestation. Execution rechecks each live contract at start/claim.
+            $rawSteps=is_array($json['steps']??null) ? $json['steps'] : [];
+            $withPins=0;
+            $withAnyPin=0;
+            foreach($rawSteps as $rawStep) {
+                if (!is_array($rawStep)) continue;
+                if (array_key_exists('contract_digest',$rawStep)
+                    || array_key_exists('input_digest',$rawStep)) ++$withAnyPin;
+                if (isset($rawStep['contract_digest'],$rawStep['input_digest'])
+                    && is_string($rawStep['contract_digest'])
+                    && is_string($rawStep['input_digest'])
+                    && preg_match('/^[a-f0-9]{64}$/D',$rawStep['contract_digest'])
+                    && preg_match('/^[a-f0-9]{64}$/D',$rawStep['input_digest'])) ++$withPins;
+            }
+            $p['contract_pin_state']=$rawSteps!==[] && $withPins===count($rawSteps)
+                ? 'PINS_PRESENT_NOT_ATTESTED'
+                : ($rawSteps!==[] && $withAnyPin===0 ? 'LEGACY_NO_PINS' : 'INCOMPLETE_PINS_BLOCKED');
             $p['steps']=array_map(static fn(array $step):array => [
                 'id'=>(string)($step['id']??''),
                 'capability'=>(string)($step['capability_id']??''),
@@ -294,7 +312,9 @@ final readonly class FederationGoalStore
         // Declared identity is not enough: require a live canonical owning
         // Action handler, tenant-enabled module and authenticated permission.
         $available = $this->bindings->available($actor);
-        $validated = $this->validator->validate($goal, $steps, $available);
+        // New durable Plans pin exact capability schemas before approval. Legacy
+        // approved Plan JSON is never rewritten in place.
+        $validated = $this->validator->validate($goal, $steps, $available, true);
         if (!$validated['valid']) {
             throw new DomainException('Goal plan is not valid: ' . implode(',', $validated['errors']));
         }

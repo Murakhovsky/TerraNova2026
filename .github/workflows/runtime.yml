@@ -726,6 +726,13 @@ jobs:
       - name: Container and routes
         run: |
           docker compose exec -T php php bin/console lint:container
+          # Inspect actual booted Symfony DI: no Action dispatch, no tenant grant.
+          docker compose exec -T php php bin/console cos:capability:runtime:witness --no-interaction \
+            --instance-id=ci-php-01 --instance-role=web --deployment-sha="$GITHUB_SHA" \
+            > /tmp/cos-capability-runtime-witness.json
+          grep -q '"worker_admission_mode":"WORKER_DISABLED_FAIL_CLOSED"' /tmp/cos-capability-runtime-witness.json
+          grep -q '"worker_execution_certified":false' /tmp/cos-capability-runtime-witness.json
+          grep -q '"scope":"CURRENT_SYMFONY_CONTAINER_ONLY"' /tmp/cos-capability-runtime-witness.json
           docker compose --profile l2 config --quiet
           # Exercise the exact Compose-managed worker image/CLI without starting a live feed.
           docker compose --profile l2 run --rm --no-deps l2-stream \
@@ -752,6 +759,14 @@ jobs:
           docker compose exec -T php php bin/console cos:experience:golden --no-interaction
           docker compose exec -T php php bin/console cos:experience:golden:decisions --no-interaction
           docker compose exec -T php php bin/console cos:experience:golden:structure --strict --no-interaction
+      - name: Publish ephemeral Symfony Capability binding witness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-capability-runtime-instance-witness
+          path: /tmp/cos-capability-runtime-witness.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Health
         run: |
           for i in $(seq 1 30); do

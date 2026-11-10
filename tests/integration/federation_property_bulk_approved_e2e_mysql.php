@@ -184,7 +184,7 @@ try {
     $bindings=new FederationCapabilityBindingResolver($capabilities,$domains,$modules);
     $planReader=new FederationPlanApprovalEvidenceReader($db);
     $planEvidence=new FederationWorkflowPlanApprovalEvidence($db,$planReader);
-    $receipts=new DoctrineWorkflowActionReceiptVerifier($db,$planEvidence);
+    $receipts=new DoctrineWorkflowActionReceiptVerifier($db,$planEvidence,$capabilities);
     $admission=new DoctrineWorkflowActionClaimAdmission($db,$planEvidence,$capabilities,$modules);
     $store=new DoctrineWorkflowExecutionStore($db,$receipts,$admission);
     $worker=new DoctrineWorkflowActionWorkerAdmission($db,$planEvidence,$capabilities,$modules,
