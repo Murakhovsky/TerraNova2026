@@ -48,6 +48,7 @@ Historical Wave/version tests are retained under `tests/history/` as migration e
 
 Canonical documentation lives in `docs/`.
 
+- **COS Portfolio (single management priority register):** [docs/01-product/cos-portfolio.md](docs/01-product/cos-portfolio.md)
 - Current product state: [docs/01-product/current-scope.md](docs/01-product/current-scope.md)
 - System architecture: [docs/03-architecture/system-map.md](docs/03-architecture/system-map.md)
 - Kernel: [docs/03-architecture/kernel-overview.md](docs/03-architecture/kernel-overview.md)
