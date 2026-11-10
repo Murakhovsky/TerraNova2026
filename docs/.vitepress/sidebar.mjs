@@ -28,6 +28,9 @@ const directoryLabels = new Map([
 ]);
 
 const preferredOrder = new Map([
+  ['strategic-charter.md', -40],
+  ['strategic-roadmap.md', -39],
+  ['strategic-decision-register.md', -38],
   ['what-is-cos.md', -30],
   ['mental-model.md', -20],
   ['reading-paths.md', -15],
