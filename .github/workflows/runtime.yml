@@ -917,6 +917,17 @@ jobs:
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" npm run test:golden-eight-quality
 
+      - name: Golden Eight tablet and small-mobile review capture
+        env:
+          GOLDEN_EIGHT_BASE_URL: http://127.0.0.1:8081
+          GOLDEN_EIGHT_EMAIL: sales-functional-acceptance@example.test
+          GOLDEN_EIGHT_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          GOLDEN_EIGHT_OUTPUT_DIR: tmp/golden-eight
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          CHROME_PATH="$CHROME_BIN" npm run test:golden-eight-review-capture
+
       - name: Reconcile Golden Eight QA into canonical Page Contract evidence
         env:
           COS_GOLDEN_CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
