@@ -15,7 +15,27 @@ final readonly class CapabilityJsonInputValidator
 {
     public function validate(CapabilityContract $contract, mixed $input): void
     {
-        $path = $contract->inputSchema;
+        $this->validateSchema($contract->inputSchema, $input, 'input');
+    }
+
+    /** Validate a returned payload against the declared output contract.
+     * A failed mutation output is an uncertain result, not retry permission.
+     */
+    public function validateOutput(CapabilityContract $contract, mixed $output): void
+    {
+        try {
+            $this->validateSchema($contract->outputSchema, $output, 'output');
+        } catch (DomainException $exception) {
+            throw new DomainException(
+                'Capability output unverified; reconcile native state before retry. '
+                . $exception->getMessage(),
+                previous: $exception,
+            );
+        }
+    }
+
+    private function validateSchema(string $path, mixed $input, string $direction): void
+    {
         if (!preg_match('#^resources/contracts/[a-z0-9_/-]+\.schema\.json$#', $path)
             || str_contains($path, '..')) {
             throw new DomainException('Capability JSON schema path is not a trusted local contract.');
@@ -32,8 +52,9 @@ final readonly class CapabilityJsonInputValidator
             throw new DomainException('Capability input schema must be a JSON object.');
         }
         $bytes = strlen(json_encode($input, JSON_THROW_ON_ERROR));
-        if ($bytes > 16384) {
-            throw new DomainException('Capability input exceeds maximum approved payload size.');
+        $limit = $direction === 'input' ? 16384 : 262144;
+        if ($bytes > $limit) {
+            throw new DomainException('Capability ' . $direction . ' exceeds maximum approved payload size.');
         }
         $this->check($schema, $input, '$', 0);
     }
@@ -44,6 +65,11 @@ final readonly class CapabilityJsonInputValidator
         if ($depth > 10) {
             throw new DomainException('Capability schema exceeds safe maximum depth.');
         }
+        // JSON Schema's nested {} is an intentional unconstrained property
+        // (e.g. Property's nullable legacy reference). Root still needs a type.
+        if ($depth > 0 && $schema === []) {
+            return;
+        }
         $supported = ['$schema', 'title', 'description', 'type', 'properties', 'required',
             'additionalProperties', 'items', 'minLength', 'maxLength', 'minimum',
             'maximum', 'pattern', 'const', 'enum', 'format', 'minItems', 'maxItems'];
@@ -53,10 +79,12 @@ final readonly class CapabilityJsonInputValidator
             }
         }
         $types = $schema['type'] ?? null;
-        if (!is_string($types) && !is_array($types)) {
-            throw new DomainException('Capability input schema requires an explicit type.');
+        $assertionOnly = $depth > 0 && $types === null
+            && (array_key_exists('const', $schema) || array_key_exists('enum', $schema));
+        if (!$assertionOnly && !is_string($types) && !is_array($types)) {
+            throw new DomainException('Capability schema requires an explicit type or nested enum/const.');
         }
-        $types = is_array($types) ? $types : [$types];
+        $types = $assertionOnly ? [] : (is_array($types) ? $types : [$types]);
         $matches = static fn (string $type): bool => match ($type) {
             'object' => is_array($value) && ($value === [] || !array_is_list($value)),
             'array' => is_array($value) && array_is_list($value),
@@ -67,7 +95,8 @@ final readonly class CapabilityJsonInputValidator
             'null' => $value === null,
             default => false,
         };
-        if ($types === [] || !array_reduce($types, static fn (bool $valid, string $type): bool => $valid || $matches($type), false)) {
+        if (!$assertionOnly
+            && ($types === [] || !array_reduce($types, static fn (bool $valid, string $type): bool => $valid || $matches($type), false))) {
             throw new DomainException('Wrong capability input type at ' . $path);
         }
         if (array_key_exists('const', $schema) && $value !== $schema['const']) {
@@ -115,8 +144,16 @@ final readonly class CapabilityJsonInputValidator
             }
             foreach ($value as $field => $child) {
                 if (!array_key_exists($field, $properties)) {
-                    if (($schema['additionalProperties'] ?? true) === false) {
+                    $extra = $schema['additionalProperties'] ?? true;
+                    if ($extra === false) {
                         throw new DomainException('Unexpected capability field: ' . $path . '.' . $field);
+                    }
+                    if (is_array($extra)) {
+                        // Maps of dynamic fields still constrain each value;
+                        // never treat an additionalProperties schema as "true".
+                        $this->check($extra, $child, $path . '.' . $field, $depth + 1);
+                    } elseif ($extra !== true) {
+                        throw new DomainException('Unsupported additionalProperties declaration.');
                     }
                     continue;
                 }

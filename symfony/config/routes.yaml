@@ -60,6 +60,22 @@ cos_capabilities_index:
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::index
   methods: [GET]
 
+cos_capabilities_validate:
+  path: /api/v1/capabilities/{id}/validate
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::validate
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
+cos_goal_capability_plan_preflight:
+  path: /api/v1/capability-plans/validate
+  controller: App\Http\Api\V1\Controller\CanonicalGoalPlanPreflightController::validate
+  methods: [POST]
+
+cos_capabilities_bindings:
+  path: /api/v1/capabilities/bindings
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::bindings
+  methods: [GET]
+
 cos_capabilities_invoke:
   path: /api/v1/capabilities/{id}/invoke
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::invoke
