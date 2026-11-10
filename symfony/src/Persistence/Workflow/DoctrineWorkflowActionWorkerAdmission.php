@@ -11,6 +11,7 @@ use Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\CanonicalCapabilityCatalog;
 use Platform\Workflow\Contract\WorkflowPlanApprovalEvidenceInterface;
+use Platform\Orchestration\Goal\GoalCapabilityPinGuard;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
 use Platform\Workflow\Model\WorkflowRunIdentity;
 use Platform\Workflow\Model\WorkflowStepSnapshot;
@@ -84,6 +85,9 @@ final readonly class DoctrineWorkflowActionWorkerAdmission implements WorkflowAc
             || !hash_equals((string) $row['definition_digest'], WorkflowDefinitionFingerprint::digest($graph))) {
             throw new DomainException('Workflow immutable graph has been modified.');
         }
+        // Last-moment schema/handler drift admission, independent of the
+        // Goal UI and original Plan proposal. No execution authority granted.
+        (new GoalCapabilityPinGuard($this->catalog))->assertPlan($graph);
         $steps = $this->db->fetchAllAssociative(
             'SELECT step_id,capability_id,capability_version,side_effect_level,state,
                     attempts,revision,idempotency_key,result_reference

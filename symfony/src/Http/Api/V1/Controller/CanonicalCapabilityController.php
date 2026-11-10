@@ -26,6 +26,23 @@ final readonly class CanonicalCapabilityController {
         try { return $this->reply($this->capabilities->describe($this->actor(),$id)); }
         catch (DomainException $e) { return $this->reply(['error'=>'capability_unavailable'],403); }
     }
+    public function validate(Request $request,string $id):JsonResponse {
+        if (!$this->csrf->isValid($request)) return $this->reply(['error'=>'invalid_csrf_token'],400);
+        $raw=(string)$request->getContent();
+        if (strlen($raw)>16384) return $this->reply(['error'=>'input_too_large'],413);
+        $root=json_decode($raw);
+        if (!$root instanceof \stdClass) return $this->reply(['error'=>'invalid_json_object'],422);
+        $input=json_decode($raw,true);
+        if (!is_array($input)) return $this->reply(['error'=>'invalid_json_object'],422);
+        try {
+            return $this->reply($this->capabilities->validateInput($this->actor(),$id,$input));
+        } catch (DomainException|InvalidArgumentException $e) {
+            return $this->reply(['error'=>'validation_blocked','reason'=>$e->getMessage()],422);
+        } catch (Throwable $e) {
+            error_log('cos.capability.validation_failed '.$e->getMessage());
+            return $this->reply(['error'=>'validation_unavailable'],500);
+        }
+    }
     public function invoke(Request $request,string $id):JsonResponse {
         if (!$this->csrf->isValid($request)) return $this->reply(['error'=>'invalid_csrf_token'],400);
         $raw=(string)$request->getContent();
@@ -43,7 +60,15 @@ final readonly class CanonicalCapabilityController {
                 trim((string)$request->headers->get('X-Idempotency-Key','')),$correlation,
             );
             return $this->reply(['ok'=>true,'capability_id'=>$id,'data'=>$result]);
-        } catch (DomainException|InvalidArgumentException $e) {
+        } catch (DomainException $e) {
+            if (str_contains($e->getMessage(), 'Capability output unverified')) {
+                return $this->reply([
+                    'error'=>'output_unverified',
+                    'reason'=>'Domain result could not be verified; reconcile native state before retry.',
+                ],409);
+            }
+            return $this->reply(['error'=>'invocation_blocked','reason'=>$e->getMessage()],422);
+        } catch (InvalidArgumentException $e) {
             return $this->reply(['error'=>'invocation_blocked','reason'=>$e->getMessage()],422);
         } catch (Throwable $e) {
             error_log('cos.capability.invocation_failed '.$e->getMessage());

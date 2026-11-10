@@ -54,6 +54,37 @@ final class CanonicalCapabilityGateway {
         return $this->entry($actor,$id,$owner,$this->catalog->describe($id),$this->bindings->available($actor));
     }
 
+    /**
+     * Deterministic preflight for UI/AI plan proposals. It NEVER dispatches.
+     * This is not a Policy/Approval grant or a worker-time authorization.
+     * @param array<string,mixed> $input
+     * @return array<string,mixed>
+     */
+    public function validateInput(TenantContext $actor, string $id, array $input): array
+    {
+        $info = $this->describe($actor, $id);
+        if ($info['status'] === 'unavailable') {
+            throw new DomainException('Capability not available: ' . $info['reason']);
+        }
+        $contract = $this->catalog->describe($id);
+        if (!$contract instanceof CapabilityContract) {
+            throw new DomainException('Missing typed capability contract.');
+        }
+        $snapshot = $this->catalog->snapshot($id);
+        (new CapabilityJsonInputValidator())->validate($contract, $input);
+        return [
+            'valid' => true,
+            'capability_id' => $id,
+            'capability_version' => $contract->version,
+            'contract_digest' => $snapshot['contract_digest'],
+            'execution_mode' => $info['status'],
+            'approval_policy' => $contract->approvalPolicy,
+            'side_effect_level' => $contract->sideEffectLevel,
+            'executed' => false,
+            'authorization_granted' => false,
+        ];
+    }
+
     /** @param array<string,mixed> $input */
     public function invoke(TenantContext $actor,string $id,array $input,string $origin,string $key,string $correlationId):mixed {
         $info=$this->describe($actor,$id);
@@ -82,8 +113,16 @@ final class CanonicalCapabilityGateway {
             || $correlationId===''||strlen($correlationId)>191) throw new DomainException('Untrusted source or trace.');
         // Same fail-closed local schema validator used by Federation approved Plans.
         // Validation occurs before any Domain side effect or idempotency claim.
-        (new CapabilityJsonInputValidator())->validate($contract,$input);
-        return $adapter->invoke($actor,$input,$key,$correlationId);
+        // Both schemas must exist before ANY side effect occurs.
+        // Definition snapshots never authorize execution by themselves.
+        $this->catalog->snapshot($id);
+        $validator = new CapabilityJsonInputValidator();
+        $validator->validate($contract,$input);
+        $result = $adapter->invoke($actor,$input,$key,$correlationId);
+        // The side effect may already have happened. A bad result must never
+        // become a "success" receipt or authorization to issue a new request.
+        $validator->validateOutput($contract,$result);
+        return $result;
     }
 
     private function assertManager(TenantContext $actor):void {
@@ -117,6 +156,34 @@ final class CanonicalCapabilityGateway {
                 $status='direct_human';$reason='Authenticated human Domain CommandBus only.';
             } else $reason='No safe live binding.';
         }
-        return ['id'=>$id,'owner_domain'=>$owner,'status'=>$status,'reason'=>$reason,'contract'=>$contract?->toArray()];
+        $snapshot = null;
+        $definitionReadiness = $contract === null ? 'DECLARATIVE_ONLY' : 'SCHEMA_INVALID';
+        if ($contract !== null) {
+            try {
+                $snapshot = $this->catalog->snapshot($id);
+                $definitionReadiness = 'SCHEMA_VALID';
+            } catch (DomainException) {
+                // A missing or malformed schema is not an executable function.
+                $status = 'unavailable';
+                $reason = 'Capability contract schema missing or invalid.';
+            }
+        }
+        // Handler-registration witness only. It does not certify an
+        // individual worker, tenant permission, policy or business outcome.
+        $bindingWitness = 'UNVERIFIED';
+        if ($contract !== null && $status === 'workflow_approval_required') {
+            $bindingWitness = 'ACTION_HANDLER_REGISTERED';
+        } elseif ($contract !== null && in_array($status,['direct_human','read_only'],true)) {
+            $bindingWitness = 'DOMAIN_ADAPTER_REGISTERED';
+        }
+        return [
+            'id'=>$id,'owner_domain'=>$owner,'status'=>$status,'reason'=>$reason,
+            'binding_witness'=>$bindingWitness,
+            'binding_witness_scope'=>'CURRENT_REQUEST_CONTAINER_ONLY',
+            'contract'=>$contract?->toArray(),'definition_readiness'=>$definitionReadiness,
+            'definition_snapshot'=>$snapshot,
+            // Runtime authorization is evaluated separately from a static digest.
+            'invocation_authorized'=>in_array($status,['direct_human','read_only'],true),
+        ];
     }
 }

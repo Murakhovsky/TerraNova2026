@@ -60,6 +60,12 @@ cos_capabilities_index:
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::index
   methods: [GET]
 
+cos_capabilities_validate:
+  path: /api/v1/capabilities/{id}/validate
+  controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::validate
+  methods: [POST]
+  requirements: { id: '[a-z][a-z0-9_.-]{2,127}' }
+
 cos_capabilities_invoke:
   path: /api/v1/capabilities/{id}/invoke
   controller: App\Http\Api\V1\Controller\CanonicalCapabilityController::invoke
