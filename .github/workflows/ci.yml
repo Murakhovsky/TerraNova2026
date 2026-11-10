@@ -60,6 +60,55 @@ jobs:
         run: bash bin/verify fast
       - name: Canonical Capability Library contract
         run: php tests/architecture/cos_canonical_capability_library_contract.php
+      - name: Capability contract pinning, schema output and drift regression
+        run: php tests/unit/cos_capability_contract_snapshot.php
+      - name: Goal Plan capability pinning and replay safety
+        run: php tests/unit/cos_goal_capability_pinning.php
+      - name: Goal Capability immutable execution authority
+        run: php tests/architecture/cos_goal_capability_pin_authority.php
+      - name: Golden 50 governed Action output contracts
+        run: php tests/unit/cos_golden50_governed_action_output.php
+      - name: Capability receipt and Goal preflight safety contracts
+        run: php tests/architecture/cos_capability_receipt_preflight_contract.php
+      - name: Capability Library operator interface and read-only contract API
+        run: php tests/architecture/cos_capability_catalog_experience.php
+      - name: Capability history must remain read-only to Goal execution
+        run: php tests/architecture/cos_capability_version_archive_no_execution.php
+      - name: Immutable Capability contract release archive regression
+        run: php tests/unit/cos_capability_immutable_archive.php
+      - name: Validate release freeze report without writing to the checkout
+        run: php bin/cos-capability-release-freeze.php > /tmp/cos-capability-release-freeze.json
+      - name: Build and verify candidate frozen Capability snapshots (CI checkout only)
+        run: |
+          php bin/cos-capability-release-freeze.php --write > /tmp/cos-capability-freeze-review.json
+          php bin/cos-capability-release-freeze.php --check > /tmp/cos-capability-freeze-verified.json
+      - name: Publish UNRELEASED Capability snapshot candidates for code review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-capability-unreleased-frozen-candidates
+          path: |
+            resources/contracts/history
+            /tmp/cos-capability-freeze-review.json
+            /tmp/cos-capability-freeze-verified.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Runtime handler registry versus worker admission witness
+        run: php tests/unit/cos_capability_runtime_binding_witness.php
+      - name: Runtime binding evidence execution authority guard
+        run: php tests/architecture/cos_capability_runtime_witness_authority.php
+      - name: Complete Capability Library definition coverage and binding collisions
+        run: php tests/unit/cos_capability_full_domain_coverage.php
+      - name: Capability manifest/schema census and fully classified legacy inventory
+        run: php bin/cos-capability-census.php --strict --require-classified > /tmp/cos-capability-census.json
+      - name: Export canonical Capability coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cos-capability-definition-coverage
+          path: /tmp/cos-capability-census.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Canonical Property capability input validation
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries

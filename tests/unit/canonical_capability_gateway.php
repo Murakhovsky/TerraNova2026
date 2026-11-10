@@ -46,7 +46,7 @@ $writes=new class implements CapabilityInvocationAdapterInterface {
     public function binding():string { return 'command:property.asset.create'; }
     public function invoke(TenantContext $actor,array $input,string $key,string $trace):mixed {
         $this->calls++;
-        return ['tenant'=>$actor->organizationId()->value(),'key'=>$key,'city'=>$input['city']];
+        return ['asset'=>['asset_id'=>'PROP-0123456789ABCDEF0123'],'tenant'=>$actor->organizationId()->value(),'key'=>$key,'city'=>$input['city']];
     }
 };
 $reads=new class implements CapabilityInvocationAdapterInterface {
@@ -76,10 +76,48 @@ $reject=static function(callable $fn) use($check):void {
 
 $check($gateway->describe($manager,'property.asset.create')['status']==='direct_human','Missing live human binding.');
 $check($gateway->describe($manager,'property.asset.get')['status']==='read_only','Missing read-only binding.');
+$check($gateway->describe($manager,'property.asset.get')['binding_witness']==='DOMAIN_ADAPTER_REGISTERED',
+    'Canonical runtime adapter witness missing.');
+$check($gateway->describe($manager,'property.asset.search')['binding_witness']==='UNVERIFIED',
+    'Unbound query must never be marked as runtime verified.');
 $check($gateway->describe($manager,'property.asset.search')['status']==='unavailable','Unbound query must be unavailable.');
+$audit=$gateway->bindingAudit($manager);
+$check($audit['certified']===false && $audit['worker_deployment_verified']===false
+    && $audit['scope']==='CURRENT_REQUEST_CONTAINER_AND_TENANT',
+    'Runtime binding witness must never imply production certification.');
+$check($audit['counts']['declared']>=3
+    && $audit['counts']['current_container_binding_witnessed']>=2,
+    'Bound/unbound current runtime audit counts missing.');
+
+$coverage=$gateway->coverage($manager);
+$check($coverage['certified']===false
+    && $coverage['runtime_bindings_checked']===false
+    && $coverage['counts']['typed']>=3,
+    'Definition coverage must not grant runtime authority.');
+$revision=$gateway->versionedContract($manager,'property.asset.create','1.0.0');
+$check($revision['version']==='1.0.0' && $revision['authorized_to_execute']===false
+    && strlen($revision['definition_snapshot']['contract_digest'])===64,
+    'Version-pinned contract discovery should return metadata only.');
+$reject(static fn()=> $gateway->versionedContract($manager,'property.asset.create','2.0.0'));
+$readiness=$gateway->readiness($manager,'property.asset.create');
+$check($readiness['tenant_execution_mode']==='direct_human'
+    && $readiness['certified']===false
+    && $readiness['grants_approval']===false,
+    'Runtime readiness may not silently grant certification or approval.');
+$reject(static fn()=> $gateway->readiness($viewer,'property.asset.create'));
+
+$preflight=$gateway->validateInput($manager,'property.asset.create',
+    ['type_code'=>'house','city'=>'Львів']);
+$check($preflight['valid']===true && $preflight['executed']===false
+    && $preflight['authorization_granted']===false
+    && strlen($preflight['contract_digest'])===64
+    && $writes->calls===0,'Pure preflight invoked a mutation or lost its contract pin.');
+$reject(static fn()=> $gateway->validateInput($manager,'property.asset.create',
+    ['city'=>'missing-required-type']));
+$check($writes->calls===0,'Invalid preflight reached native write.');
 $answer=$gateway->invoke($manager,'property.asset.create',
     ['type_code'=>'house','city'=>'Львів'],'human_ui','fixed-key','trace-123');
-$check($answer===['tenant'=>'cos-test-tenant','key'=>'fixed-key','city'=>'Львів'] && $writes->calls===1,
+$check($answer===['asset'=>['asset_id'=>'PROP-0123456789ABCDEF0123'],'tenant'=>'cos-test-tenant','key'=>'fixed-key','city'=>'Львів'] && $writes->calls===1,
     'Valid canonical human write was not routed correctly.');
 $reject(static fn()=>$gateway->invoke($manager,'property.asset.create',
     ['type_code'=>'house','city'=>'Львів'],'cron','key-2','trace-123'));
@@ -105,5 +143,25 @@ try {
     new CanonicalCapabilityGateway($catalog,$modules,$bindings,[$reads,$reads]);
     throw new RuntimeException('Duplicate binding accepted.');
 } catch (LogicException) {}
+
+// An output contract failure occurs AFTER a mutation: reconcile, never replay.
+$badWrites=new class implements CapabilityInvocationAdapterInterface {
+    public int $calls=0;
+    public function binding():string { return 'command:property.asset.create'; }
+    public function invoke(TenantContext $actor,array $input,string $key,string $trace):mixed {
+        $this->calls++;
+        return ['unverified'=>'mutation might have happened'];
+    }
+};
+$state->enabled=true;
+$badGateway=new CanonicalCapabilityGateway($catalog,$modules,$bindings,[$badWrites]);
+try {
+    $badGateway->invoke($manager,'property.asset.create',
+        ['type_code'=>'house','city'=>'Львів'],'human_ui','fixed-key-output','trace-789');
+    throw new RuntimeException('Unverified command output accepted.');
+} catch (DomainException $e) {
+    $check(str_contains($e->getMessage(),'output unverified'),'Missing uncertainty classification.');
+}
+$check($badWrites->calls===1,'Output validation should not create a second mutation.');
 
 echo "Canonical Capability Gateway tenant/policy/input dispatch PASS.\n";

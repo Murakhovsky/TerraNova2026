@@ -27,6 +27,7 @@ use Kernel\Workflow\Model\StepStatus;
 use Kernel\Workflow\Model\WorkflowStatus;
 use LogicException;
 use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
+use Platform\Orchestration\Goal\GoalCapabilityPinGuard;
 use Platform\Workflow\Contract\WorkflowExecutionStoreInterface;
 use Platform\Workflow\Model\WorkflowDefinitionSnapshot;
 use Platform\Workflow\Model\WorkflowRunCommand;
@@ -201,6 +202,9 @@ final readonly class FederationCanonicalWorkflowBridge
                     throw new DomainException('Canonical Goal cannot dispatch unsupported side effects.');
                 }
             }
+            // No canonical Run may start if an approved Plan's pinned
+            // contract/schema changed after independent human approval.
+            (new GoalCapabilityPinGuard($this->capabilities))->assertPlan($decoded['steps']);
             $definition = new WorkflowDefinitionSnapshot('federation.approved-plan','1.0.0',$decoded['steps']);
             $digest=hash('sha256',(string)$plan['plan_json']);
             $inputDigest=$hasNonAction
@@ -324,6 +328,14 @@ final readonly class FederationCanonicalWorkflowBridge
         $steps=json_decode((string)$row['plan_json'],true,512,JSON_THROW_ON_ERROR)['steps']??null;
         if (!is_array($steps) || !array_is_list($steps) || $steps===[]) {
             throw new DomainException('Pinned Plan topology missing.');
+        }
+        // Re-attest before each new Action/Step selection, not just at Run start.
+        // A drift after a partial external effect demands reconciliation, not
+        // a retry or submission through a changed handler.
+        try {
+            (new GoalCapabilityPinGuard($this->capabilities))->assertPlan($steps);
+        } catch (DomainException) {
+            return $result('manual_reconciliation_required');
         }
         $hasNonAction=false;
         foreach ($steps as $candidate) {

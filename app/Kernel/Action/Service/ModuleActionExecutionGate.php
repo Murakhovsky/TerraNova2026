@@ -7,6 +7,7 @@ use Kernel\Action\Action;
 use Kernel\Action\Contract\ActionExecutionGateInterface;
 use Kernel\Action\Contract\FederatedActionAdmissionInterface;
 use Kernel\Action\Contract\WorkflowActionWorkerAdmissionInterface;
+use Kernel\Action\Contract\FailClosedWorkflowAdmissionMarkerInterface;
 use Kernel\Execution\ExecutionFailureException;
 use Kernel\Module\ActiveModuleResolver;
 use Kernel\Module\DomainModuleRegistry;
@@ -19,6 +20,17 @@ final readonly class ModuleActionExecutionGate implements ActionExecutionGateInt
         private ?FederatedActionAdmissionInterface $federation = null,
         private ?WorkflowActionWorkerAdmissionInterface $workflow = null,
     ) {
+    }
+
+    /** Pure introspection of the SAME gate object used by ActionExecutor. */
+    public function workflowAdmissionMode(): string
+    {
+        if ($this->workflow === null) {
+            return 'WORKER_ADMISSION_NOT_INSTALLED';
+        }
+        return $this->workflow instanceof FailClosedWorkflowAdmissionMarkerInterface
+            ? 'WORKER_DISABLED_FAIL_CLOSED'
+            : 'WORKER_ADMISSION_REGISTERED_NOT_CERTIFIED';
     }
 
     public function assertExecutable(Action $action): void
