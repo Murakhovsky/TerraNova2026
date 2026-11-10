@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Platform\Orchestration\Goal;
 
 use Kernel\Module\CanonicalCapabilityCatalog;
+use Kernel\Module\CapabilityContractFingerprint;
 
 /**
  * Deterministic capability resolution for proposed steps. No dispatch or SQL.
@@ -23,6 +24,7 @@ final readonly class GoalPlanValidator
         GoalSpecification $specification,
         array $steps,
         array $tenantAvailableCapabilities,
+        bool $pinContractSnapshot = false,
     ): array {
         // Preserve implicit sequential execution for legacy plans. New Plans
         // may declare explicit DAG edges; reject cycles and unknown nodes
@@ -87,6 +89,19 @@ final readonly class GoalPlanValidator
                     continue;
                 }
             }
+            $pin = [];
+            if ($pinContractSnapshot) {
+                try {
+                    $snapshot = $this->catalog->snapshot($capabilityId);
+                    $pin = [
+                        'contract_digest' => $snapshot['contract_digest'],
+                        'input_digest' => CapabilityContractFingerprint::inputDigest($input),
+                    ];
+                } catch (\DomainException $exception) {
+                    $errors[] = 'unverifiable_capability_contract:' . $capabilityId;
+                    continue;
+                }
+            }
             $normalized[] = [
                 'id' => $id,
                 'depends_on' => $dependencies[$id],
@@ -101,7 +116,7 @@ final readonly class GoalPlanValidator
                 // SHA-256 approved plan snapshot; execution must never use
                 // caller-supplied parameters after approval.
                 'input' => $input,
-            ] + ($pinnedEvidence === null ? [] : ['evidence' => $pinnedEvidence]);
+            ] + $pin + ($pinnedEvidence === null ? [] : ['evidence' => $pinnedEvidence]);
         }
         if ($normalized === []) {
             $errors[] = 'empty_executable_plan';

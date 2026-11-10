@@ -9,7 +9,57 @@
     <a class="cos-button cos-button--ghost" href="/workspace/goals">До цілей</a>
     <a class="cos-button cos-button--ghost" href="/workspace/property/bulk">Імпорт до 10 об'єктів</a>
     <a class="cos-button cos-button--ghost" href="/workspace/capabilities/intents">Пропозиції AI/CRON</a>
+    <a class="cos-button cos-button--ghost" href="/api/v1/capabilities/coverage">Контракти: аудит JSON</a>
+    <a class="cos-button cos-button--ghost" href="/api/v1/capabilities/bindings">Bindings: аудит JSON</a>
   </header>
+  <section class="cos-card" aria-labelledby="cos-capability-coverage">
+    <p class="cos-card__eyebrow">CL-01/02 · Єдині контракти Domains</p>
+    <h2 class="cos-card__title" id="cos-capability-coverage">Повнота бібліотеки</h2>
+    <div class="cos-section-grid" data-capability-coverage>
+      <p><strong>{{ coverage.counts.declared }}</strong> оголошених функцій</p>
+      <p><strong>{{ coverage.counts.typed }}</strong> типізованих контрактів</p>
+      <p><strong>{{ coverage.counts.declarative_only }}</strong> потребують контракту</p>
+      <p><strong>{{ coverage.counts.invalid_contract }}</strong> структурних помилок</p>
+      <p><strong>{{ coverage.counts.governance_warnings }}</strong> зауважень до доказів</p>
+    </div>
+    <p class="cos-card__copy">Цифри охоплюють усі Domain manifests, зокрема внутрішні службові. У списку нижче службові команди приховані. Аналіз визначень не підтверджує живий worker, дозволи tenant чи бізнес-результат.</p>
+    {% if coverage.counts.declarative_only > 0 or coverage.counts.invalid_contract > 0 %}
+      <p class="cos-card__copy" role="status"><strong>Міграція триває:</strong> усі оголошені функції ще не мають повністю стандартних контрактів. Не прирівнюйте декларації до виконуваних команд.</p>
+    {% else %}
+      <p class="cos-card__copy">Усі визначення типізовані. Сертифікація runtime і native evidence перевіряється окремо.</p>
+    {% endif %}
+  </section>
+  <section class="cos-card" aria-label="Пошук доступних бізнес-функцій">
+    <h2 class="cos-card__title">Знайти команду COS</h2>
+    <form method="get" action="/workspace/capabilities" class="cos-section-grid" role="search">
+      <label class="cos-field"><span>Назва функції або Domain</span>
+        <input class="cos-input" type="search" name="q" value="{{ searchQuery|default('') }}" maxlength="80" placeholder="Наприклад: property.asset"></label>
+      <label class="cos-field"><span>Режим виклику</span>
+        <select class="cos-input" name="status">
+          {% for value, title in {'':'Усі', 'read_only':'Тільки читання', 'direct_human':'Дозволено людині', 'workflow_approval_required':'Потребує Workflow', 'unavailable':'Недоступно'} %}
+            <option value="{{ value }}" {{ searchStatus|default('') == value ? 'selected' : '' }}>{{ title }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="cos-field"><span>Domain</span>
+        <select class="cos-input" name="domain">
+          <option value="">Усі Domains</option>
+          {% for domain in domains %}
+            <option value="{{ domain }}" {{ selectedDomain == domain ? 'selected' : '' }}>{{ domain }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="cos-field"><span>Тип контракту</span>
+        <select class="cos-input" name="kind">
+          {% for kind, label in {'':'Усі типи', 'query':'Query', 'command':'Command', 'job':'Job', 'workflow':'Workflow', 'agent_tool':'Agent Tool'} %}
+            <option value="{{ kind }}" {{ selectedKind == kind ? 'selected' : '' }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="cos-button cos-button--primary" type="submit">Пошук функцій</button>
+    </form>
+    <p class="cos-card__copy">Готовність контракту, наявність handler і право на виконання — різні перевірки. Каталог не видає дозволів.</p>
+  </section>
   {% if verifiedPropertyId %}
     <div class="cos-alert cos-alert--success" role="status">
       Property Asset <code>{{ verifiedPropertyId }}</code> знайдено повторним читанням із Domain.
@@ -54,10 +104,60 @@
       <p class="cos-card__eyebrow">{{ capability.owner_domain }} · {{ capability.status }}</p>
       <h2 class="cos-card__title">{{ capability.id }}</h2>
       <p class="cos-card__copy">{{ capability.reason }}</p>
+      <p class="cos-card__copy">Контракт: <strong>{{ capability.definition_readiness|default('UNKNOWN') }}</strong>
+        {% if capability.definition_snapshot %}
+          · Версія {{ capability.definition_snapshot.version }}
+          · Fingerprint <code>{{ capability.definition_snapshot.contract_digest|slice(0, 16) }}…</code>
+        {% endif %}
+      </p>
       {% if capability.contract %}
         <p class="cos-card__copy">Тип: {{ capability.contract.kind }} · Версія: {{ capability.contract.version }} · Ризик: {{ capability.contract.side_effect_level }} · Погодження: {{ capability.contract.approval_policy }}</p>
         <p class="cos-card__copy"><code>{{ capability.contract.input_schema }}</code> → <code>{{ capability.contract.output_schema }}</code></p>
       {% endif %}
+      {% set audit = coverageById[capability.id]|default(null) %}
+      {% if audit %}
+        <p class="cos-card__copy">Стан визначення: <strong>{{ audit.definition_status }}</strong>
+          · Handler/worker: <strong>{{ capability.binding_witness|default('UNVERIFIED') }}</strong>
+          · Доступ: <strong>{{ capability.status }}</strong>
+        </p>
+        {% if audit.issues is not empty %}
+          <details class="cos-page__stack">
+            <summary>Прогалини контракту ({{ audit.issues|length }})</summary>
+            <ul>
+              {% for issue in audit.issues %}
+                <li><code>{{ issue.code }}</code> · {{ issue.severity }}
+                  {% if issue.related_capability|default(null) %}· {{ issue.related_capability }}{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </details>
+        {% endif %}
+      {% endif %}
+      {% if capability.contract %}
+        <details class="cos-page__stack">
+          <summary>Повний контракт · параметри, залежності, governance</summary>
+          <p class="cos-card__copy">Виконання: {{ capability.contract.execution_binding }}
+            · Idempotency: {{ capability.contract.idempotency }}
+            · Асинхронність: {{ capability.contract.async ? 'так' : 'ні' }}
+            · Permission: {{ capability.contract.permission|default('лише read policy') }}
+          </p>
+          <p class="cos-card__copy">Залежності:
+            {% if capability.contract.dependencies is empty %}немає оголошених{% else %}
+              {{ capability.contract.dependencies|join(', ') }}
+            {% endif %}
+          </p>
+          <p class="cos-card__copy">Документація: <code>{{ capability.contract.documentation|default('не вказано') }}</code></p>
+          <p class="cos-card__copy">Тести:
+            {% if capability.contract.tests is empty %}не вказано{% else %}
+              {% for test in capability.contract.tests %}<code>{{ test }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
+            {% endif %}
+          </p>
+          <p class="cos-card__copy">Планування: доступне лише після валідації <code>POST /api/v1/capability-plans/validate</code> та подальшого Policy/Approval. Перевірка плану не створює дій.</p>
+        </details>
+      {% endif %}
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_capabilities_workspace_detail', {id: capability.id}) }}">
+        {% if capability.contract %}Контракт і перевірка входу{% else %}Деталі декларації{% endif %}
+      </a>
       <a class="cos-button cos-button--ghost" href="/api/v1/capabilities/{{ capability.id }}">Переглянути JSON</a>
     </article>
   {% else %}

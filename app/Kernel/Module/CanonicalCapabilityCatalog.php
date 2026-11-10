@@ -45,6 +45,36 @@ final class CanonicalCapabilityCatalog
         return $this->contracts[$id] ?? null;
     }
 
+    /**
+     * Deterministic current-build snapshot. No claim of runtime handler
+     * availability: module manifests and schema bytes alone are not evidence.
+     * @return array{capability_id:string,version:string,contract_digest:string,input_schema_digest:string,output_schema_digest:string}
+     */
+    public function snapshot(string $id, ?string $projectRoot = null): array
+    {
+        $contract = $this->describe($id);
+        if ($contract === null) {
+            throw new \DomainException('Missing typed capability contract: ' . $id);
+        }
+        return CapabilityContractFingerprint::snapshot($contract, $projectRoot);
+    }
+
+    /**
+     * A pinned Plan MUST NOT silently drift to a new handler/schema.
+     * Historical version execution needs a separately verified immutable
+     * snapshot and compatible adapter, never auto-selected by this catalog.
+     */
+    public function resolvePinned(string $id, string $version, string $digest, ?string $projectRoot = null): CapabilityContract
+    {
+        $contract = $this->describe($id);
+        if ($contract === null || $contract->version !== $version
+            || !preg_match('/^[a-f0-9]{64}$/D', $digest)
+            || !hash_equals($this->snapshot($id, $projectRoot)['contract_digest'], $digest)) {
+            throw new \DomainException('Pinned capability version or digest unavailable; re-approval required.');
+        }
+        return $contract;
+    }
+
     public function ownerOf(string $id): ?string
     {
         return $this->owners[$id] ?? null;

@@ -172,6 +172,15 @@
                     <section class="cos-card" data-goal-plan="{{ plan.plan_id }}">
                         <h4 class="cos-card__title">План №{{ plan.plan_version }} · {{ plan.steps|length }} операцій</h4>
                         <p class="cos-card__copy">Статус: <strong>{{ plan.state == 'approved' ? 'Погоджений' : (plan.state == 'proposed' ? 'Очікує погодження' : plan.state) }}</strong></p>
+                        <p class="cos-card__copy">Контрактні відбитки:
+                            {% if plan.contract_pin_state == 'PINS_PRESENT_NOT_ATTESTED' %}
+                                <strong>присутні у плані</strong>. Дійсність буде повторно перевірена перед виконанням.
+                            {% elseif plan.contract_pin_state == 'LEGACY_NO_PINS' %}
+                                <strong>історичний план без digest</strong>. Працює за попередніми обмеженнями; автоматичної міграції немає.
+                            {% else %}
+                                <strong>неповний pinning, виконання потребує перевірки</strong>.
+                            {% endif %}
+                        </p>
                         <ol class="cos-card__copy">
                             {% for step in plan.steps %}
                                 <li>{{ step.capability }}{% if step.title %}: {{ step.title }}{% endif %}{% if step.target %} · {{ step.target }}{% endif %}</li>
