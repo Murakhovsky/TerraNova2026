@@ -17,12 +17,18 @@ final class CanonicalCapabilityCatalog
     /** @var array<string, string> */
     private array $owners = [];
 
+    /** @var array<string,string> Explicit non-executable legacy classifications. */
+    private array $legacyProfiles = [];
+
     public function __construct(ModuleCatalog $catalog)
     {
         $registry = new ModuleCapabilityRegistry($catalog);
         $this->owners = $registry->all();
 
         foreach ($catalog->definitions() as $definition) {
+            foreach ($definition->contributions->capabilityProfiles as $id => $profile) {
+                $this->legacyProfiles[$id] = $profile;
+            }
             foreach ($definition->contributions->capabilityContracts as $contract) {
                 if ($contract->ownerDomain !== $definition->manifest->id) {
                     throw new InvalidArgumentException(sprintf('Capability %s owner %s differs from manifest %s.', $contract->id, $contract->ownerDomain, $definition->manifest->id));
@@ -38,11 +44,48 @@ final class CanonicalCapabilityCatalog
         }
         ksort($this->contracts);
         ksort($this->owners);
+        ksort($this->legacyProfiles);
     }
 
     public function describe(string $id): ?CapabilityContract
     {
         return $this->contracts[$id] ?? null;
+    }
+
+    /**
+     * Deterministic current-build snapshot. No claim of runtime handler
+     * availability: module manifests and schema bytes alone are not evidence.
+     * @return array{capability_id:string,version:string,contract_digest:string,input_schema_digest:string,output_schema_digest:string}
+     */
+    public function snapshot(string $id, ?string $projectRoot = null): array
+    {
+        $contract = $this->describe($id);
+        if ($contract === null) {
+            throw new \DomainException('Missing typed capability contract: ' . $id);
+        }
+        return CapabilityContractFingerprint::snapshot($contract, $projectRoot);
+    }
+
+    /**
+     * A pinned Plan MUST NOT silently drift to a new handler/schema.
+     * Historical version execution needs a separately verified immutable
+     * snapshot and compatible adapter, never auto-selected by this catalog.
+     */
+    public function resolvePinned(string $id, string $version, string $digest, ?string $projectRoot = null): CapabilityContract
+    {
+        $contract = $this->describe($id);
+        if ($contract === null || $contract->version !== $version
+            || !preg_match('/^[a-f0-9]{64}$/D', $digest)
+            || !hash_equals($this->snapshot($id, $projectRoot)['contract_digest'], $digest)) {
+            throw new \DomainException('Pinned capability version or digest unavailable; re-approval required.');
+        }
+        return $contract;
+    }
+
+    /** Explicit semantic classification: never an invocation grant. */
+    public function legacyProfileOf(string $id): ?string
+    {
+        return $this->legacyProfiles[$id] ?? null;
     }
 
     public function ownerOf(string $id): ?string
