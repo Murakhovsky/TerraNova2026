@@ -6,6 +6,7 @@ namespace App\Web\Administration;
 use App\Security\SessionCsrfValidator;
 use Infrastructure\Llm\ChatGptPlanOAuth;
 use Infrastructure\Llm\OpenCodeStructuredLlmClient;
+use Infrastructure\Llm\ZaiChatCompletionsStructuredLlmClient;
 use Kernel\Llm\StructuredLlmRequest;
 use App\Web\Experience\Archetype\PageArchetype;
 use App\Web\Experience\Archetype\PagePresentationFactory;
@@ -36,6 +37,7 @@ final readonly class PlatformSettingsController
         private LlmModelCatalogInterface $modelCatalog,
         private ChatGptPlanOAuth $chatgptOAuth,
         private OpenCodeStructuredLlmClient $opencode,
+        private ZaiChatCompletionsStructuredLlmClient $zai,
         private string $fallbackProvider = 'http',
         private string $fallbackModel = '',
         private string $fallbackToken = '',
@@ -77,13 +79,14 @@ final readonly class PlatformSettingsController
         );
     }
 
-    public function llm(Request $request, ?string $opencodeResult = null, ?string $opencodeError = null): Response
+    public function llm(Request $request, ?string $opencodeResult = null, ?string $opencodeError = null, ?string $zaiResult = null, ?string $zaiError = null): Response
     {
         $tenant = $this->admin();
         if ($tenant instanceof Response) return $tenant;
 
         $organizationId = $tenant->organizationId()->value();
         $secret = $this->settings->secret($organizationId, 'llm', 'openai.api_key', $this->fallbackToken);
+        $zaiSecret = $this->settings->secret($organizationId, 'llm', 'zai.api_key', getenv('ZAI_API_KEY') ?: null);
         $data = [
             'provider' => (string) $this->settings->value($organizationId, 'llm', 'provider', $this->fallbackProvider),
             'default_model' => (string) $this->settings->value($organizationId, 'llm', 'default_model', $this->fallbackModel),
@@ -96,6 +99,9 @@ final readonly class PlatformSettingsController
             'qa_model' => (string) $this->settings->value($organizationId, 'engineering', 'qa.model', $this->fallbackQaModel),
             'api_key_configured' => is_string($secret) && trim($secret) !== '',
             'api_key_suffix' => is_string($secret) && strlen($secret) >= 4 ? substr($secret, -4) : '',
+            'zai_key_configured' => is_string($zaiSecret) && trim($zaiSecret) !== '',
+            'zai_result' => $zaiResult,
+            'zai_error' => $zaiError,
             'chatgpt_plan_enabled' => $this->chatgptOAuth->configured(),
             'opencode_enabled' => $this->opencode->authorizedFor($organizationId, (string) $tenant->userId()->value()),
             'opencode_result' => $opencodeResult,
@@ -183,6 +189,50 @@ final readonly class PlatformSettingsController
         }
     }
 
+    public function testZai(Request $request): Response
+    {
+        $tenant = $this->admin();
+        if ($tenant instanceof Response) return $tenant;
+        if (!$this->csrf->isValid($request)) {
+            return new Response('Invalid CSRF token.', Response::HTTP_FORBIDDEN);
+        }
+
+        $session = $request->getSession();
+        $now = time();
+        if ($now - (int) $session->get('cos.zai.last_test', 0) < 15) {
+            return $this->llm($request, null, null, null, 'Повторний тест можливий через 15 секунд.');
+        }
+        $session->set('cos.zai.last_test', $now);
+
+        try {
+            $response = $this->zai->complete(new StructuredLlmRequest(
+                systemPrompt: 'Тест з’єднання Z.AI із COS. Відповідай коротко українською.',
+                userPrompt: 'Поверни JSON з полем answer, у якому написано, що API працює.',
+                context: [],
+                responseSchema: [
+                    'type' => 'object',
+                    'properties' => ['answer' => ['type' => 'string']],
+                    'required' => ['answer'],
+                    'additionalProperties' => false,
+                ],
+                model: 'glm-4.7-flash',
+                maxOutputTokens: 128,
+                organizationId: $tenant->organizationId()->value(),
+                useCase: 'zai.connection_test',
+                correlationId: bin2hex(random_bytes(16)),
+                actorId: (string) $tenant->userId()->value(),
+            ));
+            $answer = $response->output['answer'] ?? null;
+            if (!is_string($answer) || trim($answer) === '') {
+                return $this->llm($request, null, null, null, 'Z.AI повернув неправильний JSON.');
+            }
+            return $this->llm($request, null, null, mb_substr($answer, 0, 400));
+        } catch (Throwable $error) {
+            error_log('platform.settings.zai.test_failed '.get_class($error).' '.$error->getMessage());
+            return $this->llm($request, null, null, null, 'Z.AI test failed: '.$error->getMessage());
+        }
+    }
+
     public function saveLlm(Request $request): Response
     {
         $tenant = $this->admin();
@@ -196,7 +246,7 @@ final readonly class PlatformSettingsController
 
         try {
             $provider = strtolower(trim((string) $request->request->get('provider', 'openai')));
-            if (!in_array($provider, ['openai','http','fixture'], true)) {
+            if (!in_array($provider, ['openai','zai','http','fixture'], true)) {
                 throw new \InvalidArgumentException('Unsupported LLM provider.');
             }
 
@@ -238,6 +288,15 @@ final readonly class PlatformSettingsController
                     $actorId,
                     $correlationId,
                 );
+            }
+
+            $removeZaiKey = $request->request->getBoolean('remove_zai_api_key');
+            if ($removeZaiKey) {
+                $this->writer->deleteSecret($organizationId, 'llm', 'zai.api_key', $actorId, $correlationId);
+            }
+            $zaiKey = trim((string) $request->request->get('zai_api_key', ''));
+            if (!$removeZaiKey && $zaiKey !== '') {
+                $this->writer->putSecret($organizationId, 'llm', 'zai.api_key', $zaiKey, $actorId, $correlationId);
             }
 
             return $this->redirect('Налаштування LLM збережено.');
