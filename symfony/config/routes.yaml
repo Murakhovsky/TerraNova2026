@@ -2467,6 +2467,11 @@ cos_web_platform_settings_opencode_test:
   controller: App\Web\Administration\PlatformSettingsController::testOpenCode
   methods: [POST]
 
+cos_web_platform_settings_zai_test:
+  path: /admin/settings/llm/zai/test
+  controller: App\Web\Administration\PlatformSettingsController::testZai
+  methods: [POST]
+
 cos_web_platform_settings_llm_save:
   path: /admin/settings/llm
   controller: App\Web\Administration\PlatformSettingsController::saveLlm
