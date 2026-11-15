@@ -64,6 +64,18 @@ foreach (['/admin/settings', '/admin/settings/llm'] as $path) {
 foreach (['Continue with ChatGPT', 'chatgpt-plan-unavailable', 'disabled aria-describedby'] as $marker) {
     if (!str_contains($settingsLlm, $marker)) throw new RuntimeException('Disabled ChatGPT UI missing '.$marker);
 }
+foreach (['zai.api_key', 'testZai', "['openai','zai','http','fixture']"] as $needle) {
+    if (!str_contains($settingsController, $needle)) throw new RuntimeException('Z.AI admin settings contract missing '.$needle);
+}
+if (!str_contains($services, "zai: '@Infrastructure\\Llm\\ZaiChatCompletionsStructuredLlmClient'")) {
+    throw new RuntimeException('Z.AI provider must be registered in the canonical registry.');
+}
+if (!str_contains($settingsLlm, 'name="zai_api_key" type="password"')) {
+    throw new RuntimeException('Z.AI secret must only be accepted as a masked input.');
+}
+if (!str_contains($routes, '/admin/settings/llm/zai/test')) {
+    throw new RuntimeException('Z.AI admin test route missing.');
+}
 if (!str_contains($settingsController, 'if (!$tenant->isAdmin())'))
     throw new RuntimeException('LLM settings must be restricted to tenant admins.');
 echo "Platform Settings architecture contract passed.\n";
