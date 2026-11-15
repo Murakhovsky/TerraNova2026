@@ -37,7 +37,7 @@
                 <label class="cos-field">
                     <span>{{ 'Provider'|trans }}</span>
                     <select class="cos-select" name="provider">
-                        {% for provider in ['openai','http','fixture'] %}
+                        {% for provider in ['openai','zai','http','fixture'] %}
                             <option value="{{ provider }}" {% if settings.provider == provider %}selected{% endif %}>{{ provider }}</option>
                         {% endfor %}
                     </select>
@@ -80,6 +80,23 @@
             <label class="cos-field">
                 <span>{{ 'Повернути ENV fallback'|trans }}</span>
                 <span><input type="checkbox" name="remove_openai_api_key" value="1"> {{ 'Видалити DB override ключа'|trans }}</span>
+            </label>
+        </twig:CosFormSection>
+
+        <twig:CosFormSection title="Z.AI / GLM API key" description="Encrypted tenant secret, separate from OpenAI.">
+            <p class="cos-card__copy">
+                {% if settings.zai_key_configured %}
+                    Z.AI ключ налаштовано. Значення ніколи не відображається.
+                {% else %}
+                    Z.AI ключ відсутній. Збережіть ключ перед тестуванням.
+                {% endif %}
+            </p>
+            <label class="cos-field">
+                <span>Z.AI API key</span>
+                <input class="cos-input" name="zai_api_key" type="password" autocomplete="new-password" placeholder="залиште порожнім, щоб не змінювати">
+            </label>
+            <label class="cos-field">
+                <span><input type="checkbox" name="remove_zai_api_key" value="1"> Видалити DB override Z.AI ключа</span>
             </label>
         </twig:CosFormSection>
 
@@ -152,6 +169,21 @@
             <button class="cos-button cos-button--primary" type="submit">Зберегти налаштування</button>
         </twig:CosStickyActions>
     </form>
+
+    <section class="cos-card cos-pattern-stack" aria-label="Z.AI connection test">
+        <h2>Z.AI GLM-4.7-Flash: тест API</h2>
+        <p>Адміністративний тест JSON-відповіді. Не змінює бізнес-дані й не запускає агентів.</p>
+        <form method="post" action="/admin/settings/llm/zai/test">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <button class="cos-button cos-button--primary" type="submit" {% if not settings.zai_key_configured %}disabled{% endif %}>Перевірити Z.AI</button>
+        </form>
+        {% if settings.zai_error %}
+            <twig:CosAlert title="Z.AI: помилка" copy="{{ settings.zai_error }}" tone="warning" />
+        {% endif %}
+        {% if settings.zai_result %}
+            <div class="cos-card"><strong>Відповідь Z.AI</strong><p>{{ settings.zai_result }}</p></div>
+        {% endif %}
+    </section>
 
     <section class="cos-card cos-pattern-stack" aria-label="OpenCode integration test">
         <h2>OpenCode: тест через ChatGPT-підписку</h2>
