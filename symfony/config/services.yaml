@@ -1464,6 +1464,10 @@ services:
       $model: '%env(LLM_MODEL)%'
       $provider: '%env(LLM_PROVIDER)%'
 
+  Infrastructure\Llm\ZaiChatCompletionsStructuredLlmClient:
+    arguments:
+      $settings: '@Platform\Settings\Contract\PlatformSettingsReaderInterface'
+
   Infrastructure\Llm\ChatGptPlanOAuth:
     arguments:
       $enabled: '%env(bool:COS_SIWC_ENABLED)%'
@@ -1501,6 +1505,7 @@ services:
         chatgpt_plan: '@Infrastructure\Llm\ChatGptPlanStructuredLlmClient'
         opencode: '@Infrastructure\Llm\OpenCodeStructuredLlmClient'
         openai: '@Infrastructure\Llm\OpenAiResponsesStructuredLlmClient'
+        zai: '@Infrastructure\Llm\ZaiChatCompletionsStructuredLlmClient'
 
   wave4.llm.primary_route:
     class: Kernel\Llm\LlmRoute
