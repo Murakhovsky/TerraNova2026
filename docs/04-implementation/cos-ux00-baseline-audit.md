@@ -1,5 +1,6 @@
 ---
-title: UX-00 — COS Unified Workspace baseline audit
+title: UX-00 — Аудит базового стану COS Unified Workspace
+description: Перевірка існуючого інтерфейсу, покриття можливостей та критеріїв приймання COS.
 status: preacceptance
 updated: 2026-11-17
 kind: implementation
@@ -7,12 +8,12 @@ source_spec: COS Unified Workspace Master Specification v1.0
 baseline_main_sha: 3a8640593cfd819b0c8b7e562968eacce8ee5270
 ---
 
-# UX-00 — Baseline audit, coverage, cleanup and release gate
+# UX-00 — Аудит, покриття функціоналу та контроль релізу
 
 **Status: PREACCEPTANCE / NOT READY FOR UX-01 CODE MERGE.**
 The current main code is NOT claimed production-certified. This report is a static repository + GitHub metadata audit, not a live Symfony/MySQL/2-tenant/approval/agent E2E witness.
 
-## 1. Immutable audit reference
+## 1. Зафіксований вихідний стан
 
 - Repository: Murakhovsky/TerraNova2026.
 - Current main after documentation-only PR #412: **3a8640593cfd819b0c8b7e562968eacce8ee5270**.
@@ -23,7 +24,7 @@ The current main code is NOT claimed production-certified. This report is a stat
 - Existing 411 branch refs were enumerated prior to the two UX-00 refs; naming alone does not prove they are stale or safe to delete.
 - Risk: the current runtime workflow deploys AWS dev after qualifying pushes to main for selected source paths. The proposal to deploy on *every* main merge (#391) was rejected.
 
-## 2. Measured inventory on audit baseline
+## 2. Кількісна інвентаризація
 
 Repository tree and source-manifest census:
 
@@ -43,7 +44,7 @@ Repository tree and source-manifest census:
 
 **Important:** PR #419 documents a further legacy split of 75 feature surfaces vs 99 contract candidates. That classification is **NOT in main** and is deliberately not asserted by this report. The current baseline is 16 typed / 174 declarative.
 
-## 3. Existing architectural map — reuse first
+## 3. Карта архітектури та повторне використання
 
 | Layer / boundary | Main source | UX-00 disposition |
 |---|---|---|
@@ -69,7 +70,7 @@ Repository tree and source-manifest census:
 4. Capability Library currently shows technical IDs and contracts. It is an operator tool, not a business-friendly action discovery surface.
 5. Shopify read-only smoke at current application code SHA c3c747a (run 42528976715) failed with GraphQL error **Access denied for products field.** OAuth/transport alone does not prove read-products entitlement; investigate actual app scopes and reauthorization before pilot.
 
-## 4. P0 operation-level UI coverage, not runtime certification
+## 4. Покриття інтерфейсу бізнес-операціями P0
 
 Six readiness dimensions are independent:
 defined / registered / available_for_tenant / authorized / ui_ready / execution_verified.
@@ -90,7 +91,7 @@ defined / registered / available_for_tenant / authorized / ui_ready / execution_
 
 **Status semantics:** PARTIAL = source UI/controller/contract exists, not all six runtime states passed; UNKNOWN = linkage or runtime not proven; MISSING direct UI = no exact UI contract demonstrated by the audit. No P0 typed operation is marked execution_verified.
 
-## 5. Runtime baseline and CI
+## 5. Перевірки середовища виконання та CI
 
 - Successful full CI + Runtime on main was observed for the earlier application SHA a4498c4530ad1fcf24051cd32483146b4dd4f555, not for final main. Do not apply the old pass to the current commit.
 - Current application's latest push run for Shopify read-only smoke (42528976715) failed with a GraphQL permission error (not general network failure). See issue #428 evidence comment.
@@ -98,7 +99,7 @@ defined / registered / available_for_tenant / authorized / ui_ready / execution_
 - Runtime tests requiring MySQL, multiple users, real operator approval, external integration secrets or live Hermes have **not been executed by this UX-00 audit**.
 - The source repository was not present as a local executable checkout in the audit environment; GitHub API gave read/write metadata and source access. This is a limitation, not a passed test.
 
-## 6. Minimum P0 business pilot, not a new framework
+## 6. Мінімальний бізнес-пілот P0
 
 1. R1: tenant-authorized Property asset search/get or Sales Leads/Deals read, including search/filter, empty, denied and mobile.
 2. R2: human Property asset create with CSRF, real Capability/Command, idempotent retry, native readback, activity and audit; alternatively verified Sales follow-up create.
@@ -106,7 +107,7 @@ defined / registered / available_for_tenant / authorized / ui_ready / execution_
 4. UX-01 starts only after the above P0 readiness targets are explicitly known; UX-01 Shell read-only slice can be developed independently of complete Golden 50.
 5. No fake Shopify/Meta/Hermes success or unseen provider data.
 
-## 7. Ordered remaining acceptance gates
+## 7. Послідовність критеріїв приймання
 
 | Gate | Requirement | Current |
 |---|---|---|
@@ -121,7 +122,7 @@ defined / registered / available_for_tenant / authorized / ui_ready / execution_
 | G8 Integrations | Shopify scope fix, separate Hermes/Meta sandbox gates | BLOCKED / NOT VERIFIED |
 | G9 Sign-off | accepted UX00 coverage, release gate and next UX-01 slice | PENDING |
 
-## 8. Gap backlog / implementation order
+## 8. Завдання для усунення прогалин
 
 - **UX00-B01 P0:** CI on frozen exact source SHA; publish workflow links and failures.
 - **UX00-B02 P0:** real Symfony DI/route, DB migration preflight and two tenant negative runtime suite.
@@ -136,7 +137,7 @@ defined / registered / available_for_tenant / authorized / ui_ready / execution_
 - **UX00-B11 gated:** reconcile Capability Library #415–#422 as a tested isolated integration candidate, restore the two missing #415 changed paths; never merge cumulative branch as-is.
 - **UX00-B12 gated:** restart isolated Hermes, Z.AI, Shopify, CM changes only with exact policy/secret/release approval.
 
-## 9. ADR triggers / nonnegotiable invariants
+## 9. Архітектурні рішення та незмінні правила
 
 Proposed ADRs: unified authenticated Shell migration; UIAction presentation descriptor compatibility; adaptive semantic triggers; aggregation of existing operations projections; agent runtime adapter boundary; Tabler component integration. Preserve Wave 12 Web technical decisions and existing Kernel / Application / Capability / Policy / Goal / Workflow contracts.
 
