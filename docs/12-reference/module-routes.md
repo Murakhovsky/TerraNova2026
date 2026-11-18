@@ -23,6 +23,7 @@ generated: true
 | `growth` | — | 1 |
 | `hr` | — | 0 |
 | `procurement` | — | 0 |
+| `product_management` | — | 0 |
 | `property` | — | 1 |
 | `real_estate` | — | 0 |
 | `sales` | — | 0 |

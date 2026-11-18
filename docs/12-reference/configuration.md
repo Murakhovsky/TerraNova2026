@@ -23,6 +23,7 @@ generated: true
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
+| `product_management` | `0.1.0` | — | 6 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
 | `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 12 |
@@ -81,6 +82,12 @@ generated: true
 - manifest: `app/Domains/Procurement/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `product_management`
+
+- manifest: `app/Domains/ProductManagement/module.php`;
+- configuration provisioners: —;
+- capabilities: `product_management.product.create`, `product_management.product.get`, `product_management.product.search`, `product_management.stock.balance.get`, `product_management.price.base.get`, `product_management.sync.status.get`.
 
 ## `property`
 
