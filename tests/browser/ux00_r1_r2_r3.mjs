@@ -7,8 +7,6 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 const base = process.env.UX00_E2E_BASE_URL || '';
 const email = process.env.UX00_E2E_EMAIL || '';
 const password = process.env.UX00_E2E_PASSWORD || '';
-const foreignEmail = process.env.UX00_E2E_FOREIGN_EMAIL || '';
-const foreignPassword = process.env.UX00_E2E_FOREIGN_PASSWORD || '';
 const chrome = process.env.CHROME_PATH || '';
 const evidenceDir = 'tmp/ux00-r1-r2-r3';
 const uid = String(process.env.GITHUB_RUN_ID || Date.now()).replace(/[^a-zA-Z0-9]/g, '').slice(-16);
@@ -46,6 +44,13 @@ const invoke = async (ctx, id, input, csrf, key = '') => json(
   }),
   'Capability ' + id,
 );
+const sqlExecute = (query) => execFileSync('docker', [
+  'compose', 'exec', '-T', 'mysql', 'mysql', '-N', '-s',
+  '-u' + (process.env.MYSQL_USER || 'cos'),
+  '-p' + (process.env.MYSQL_PASSWORD || ''),
+  process.env.MYSQL_DATABASE || 'cos', '-e', query,
+], { encoding: 'utf8', timeout: 15000 }).trim();
+
 const sqlCount = (assetId) => {
   assert(/^PROP-[A-F0-9]{20}$/.test(assetId), 'Unsafe asset reference');
   const user = process.env.MYSQL_USER || 'cos';
@@ -63,34 +68,45 @@ const sqlCount = (assetId) => {
 
 if (process.env.UX00_E2E_MUTATION_SAFE !== '1'
   || !/^http:\/\/(127\.0\.0\.1|localhost):8081\/?$/.test(base)
-  || !email || !password || !foreignEmail || !foreignPassword) {
-  throw new Error('UX-00 acceptance requires explicit mutation-safe localhost CI fixtures and two identities.');
+  || !email || !password) {
+  throw new Error('UX-00 acceptance requires explicit mutation-safe localhost CI fixtures and a disposable authenticated fixture.');
 }
 
 mkdirSync(evidenceDir, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(chrome ? { executablePath: chrome } : {}) });
-let admin, foreign, page, foreignPage;
+let admin, page;
 let assetId = '', batchId = '', planId = '';
 try {
   admin = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  foreign = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
   page = await login(admin, email, password);
-  foreignPage = await login(foreign, foreignEmail, foreignPassword);
 
   // R1. The authenticated capability QueryBus exists and is tenant-scoped.
   assert((await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' }))?.status() === 200,
     'R1/R2: Capability workspace missing');
   const csrf = await authToken(page);
-  assert((await foreignPage.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' }))?.status() === 200,
-    'R1: Foreign manager capability workspace missing');
-  const foreignCsrf = await authToken(foreignPage);
+
+  // The current AccountAuthenticationService is explicitly pinned to
+  // COS_ORGANIZATION_ID=default, so a second tenant CANNOT log into this
+  // one-host fixture. Seed a native *foreign* Asset+available Inventory
+  // instead, and demand that all authenticated default-tenant reads deny it.
+  // This is a real two-tenant DB boundary test, not a two-login UI claim.
+  const foreignAssetId = 'PROP-' + uid.padStart(20, '0').slice(-20);
+  const foreignInventoryId = 'INV-' + uid.padStart(20, '0').slice(-20);
+  sqlExecute("INSERT INTO tn_property_assets (organization_id,asset_id,kind,type_code,lifecycle) "
+    + "VALUES ('foreign-tenant','" + foreignAssetId + "','residential','house','unknown')");
+  sqlExecute("INSERT INTO tn_property_inventory_items "
+    + "(organization_id,inventory_id,asset_id,transaction_type,status,price_amount,price_currency) "
+    + "VALUES ('foreign-tenant','" + foreignInventoryId + "','" + foreignAssetId
+    + "','sale','available',100000,'USD')");
   const initialSearch = await invoke(admin, 'property.asset.search', { q: 'ux00-nothing-' + uid }, csrf);
   assert(initialSearch.ok === true && Array.isArray(initialSearch.data?.items)
     && initialSearch.data?.pagination?.total === 0, 'R1: empty typed Property Query is broken');
-  const initialForeign = await invoke(foreign, 'property.asset.search', { q: 'ux00-nothing-' + uid }, foreignCsrf);
-  assert(initialForeign.ok === true && initialForeign.data?.pagination?.total === 0,
-    'R1: Foreign tenant empty Query incorrect');
-  add('R1.empty_and_tenant_scoped_query', { mode: 'real QueryBus, desktop+mobile authenticated contexts' });
+  const forge = await admin.request.post(abs('/api/v1/capabilities/property.asset.search/invoke'), {
+    data: { q: foreignAssetId, organization_id: 'foreign-tenant' },
+    headers: { 'X-CSRF-Token': csrf }, maxRedirects: 0,
+  });
+  assert(forge.status() === 422, 'R1: tenant override was accepted by Search');
+  add('R1.empty_query_and_scope_override_denied', { mode: 'real tenant-scoped QueryBus' });
 
   // R2. The only UI writer is the manager form calling the canonical Domain Gateway.
   const form = page.locator('form[action="/workspace/capabilities/property/create"]');
@@ -160,17 +176,18 @@ try {
     'R1 direct Property API read');
   assert(direct.ok && direct.data?.property?.asset_id === assetId,
     'R1: native Property API read mismatch');
-  const foreignGet = await invoke(foreign, 'property.asset.get', { reference: assetId }, foreignCsrf);
-  assert(foreignGet.ok && foreignGet.data === null, 'R1: cross-tenant canonical Get leaked Property');
-  const foreignSearch = await invoke(foreign, 'property.asset.search', { q: assetId }, foreignCsrf);
+  const foreignGet = await invoke(admin, 'property.asset.get', { reference: foreignAssetId }, csrf);
+  assert(foreignGet.ok && foreignGet.data === null, 'R1: typed Get leaked another tenant Property');
+  const foreignSearch = await invoke(admin, 'property.asset.search', { q: foreignAssetId }, csrf);
   assert(foreignSearch.ok && foreignSearch.data?.pagination?.total === 0,
-    'R1: cross-tenant canonical Search leaked Property');
-  const foreignDirect = await foreign.request.get(abs('/api/v1/properties/' + assetId));
-  assert(foreignDirect.status() === 404, 'R1: foreign tenant direct GET must be 404');
-  await foreignPage.goto(abs('/workspace/capabilities?reference=' + assetId));
-  assert(await foreignPage.locator('.cos-alert--success').count() === 0,
-    'R1: foreign UI displayed verified Property belonging to another tenant');
-  add('R1.positive_search_read_and_cross_tenant_denial', { asset_id: assetId });
+    'R1: typed Search leaked another tenant available Inventory');
+  const foreignDirect = await admin.request.get(abs('/api/v1/properties/' + foreignAssetId));
+  assert(foreignDirect.status() === 404, 'R1: direct API leaked foreign tenant Asset');
+  await page.goto(abs('/workspace/capabilities?reference=' + foreignAssetId));
+  assert(await page.locator('.cos-alert--success').count() === 0,
+    'R1: browser displayed verified Property belonging to another tenant');
+  add('R1.positive_search_read_and_foreign_tenant_db_denial',
+    { asset_id: assetId, foreign_asset: foreignAssetId });
 
   // R3 UI. Upload rejects duplicate identities, then stages a bounded
   // real CSV, projects an immutable digest, proposes a Goal/Plan and remains
@@ -209,9 +226,15 @@ try {
     && /^[a-f0-9]{64}$/.test(staged.digest)
     && staged.items.every(item => item.native_asset_id === null),
     'R3: staged batch must contain exactly 2 unexecuted items');
-  const foreignBatch = await foreign.request.get(abs('/api/v1/property/bulk/' + batchId));
-  assert([403, 404].includes(foreignBatch.status()), 'R3: foreign tenant can read Property batch');
-  add('R3.browser_csv_stage_preview_tenant_denial', { batch_id: batchId, items: 2 });
+  const anonymous = await browser.newContext();
+  try {
+    const anonymousBatch = await anonymous.request.get(abs('/api/v1/property/bulk/' + batchId));
+    assert([401, 403, 404].includes(anonymousBatch.status()),
+      'R3: unauthenticated client can read Property batch');
+  } finally {
+    await anonymous.close();
+  }
+  add('R3.browser_csv_stage_preview_guest_denial', { batch_id: batchId, items: 2 });
 
   const badDigest = await admin.request.post(
     abs('/workspace/property/bulk/' + batchId + '/propose'),
@@ -250,6 +273,7 @@ try {
 
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
+    tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',
     checks, tested_at: new Date().toISOString(),
     remaining_gate: 'R3 real Action approval and worker E2E covered by separate Federation MySQL CI job; staging rollout/operator sign-off not covered' };
   writeFileSync(evidenceDir + '/results.json', JSON.stringify(report, null, 2) + '\n');
