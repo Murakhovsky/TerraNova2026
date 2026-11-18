@@ -7,7 +7,7 @@ kind: domain
 contract: domain-v1
 ---
 
-# Marketing Domain
+# Домен Marketing
 
 Marketing володіє маркетинговими кампаніями та планами. Meta Ads є адаптером Paid Media. Жодного дублювання Growth, Product, Sales або Finance.
 

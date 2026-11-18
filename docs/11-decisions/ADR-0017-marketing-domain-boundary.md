@@ -6,7 +6,7 @@ updated: 2026-11-18
 kind: adr
 ---
 
-# ADR-0017: Marketing Domain
+# ADR-0017: Межі домену Marketing
 
 Status: proposed. Marketing owns Marketing Campaign, Brief, Audience targeting, Creative plan, paid placements and provider-reported spend. Meta Ads is a Paid Media adapter, not a new Domain.
 
