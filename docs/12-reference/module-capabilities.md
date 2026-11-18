@@ -308,12 +308,17 @@ Manifest capabilities не задекларовані.
 
 ### Задекларовані capabilities
 
+- `product_management.location.create`;
 - `product_management.price.base.get`;
+- `product_management.price.base.set`;
 - `product_management.product.create`;
 - `product_management.product.get`;
 - `product_management.product.search`;
 - `product_management.stock.balance.get`;
+- `product_management.stock.issue`;
+- `product_management.stock.receive`;
 - `product_management.sync.status.get`;
+- `product_management.variant.create`;
 
 ## Property (`property`)
 
