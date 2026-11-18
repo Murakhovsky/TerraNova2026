@@ -3,6 +3,7 @@ title: Огляд домену Marketing
 description: Кампанії, Paid Media, Meta Ads і доказова аналітика.
 status: draft
 updated: 2026-11-18
+version: 0.1.0
 kind: domain
 contract: domain-v1
 ---
