@@ -114,3 +114,12 @@ php symfony/bin/console cos:product:shopify pull --organization=tenant-id --conn
 verifies the app's OAuth grant without persisting the token. Pull
 records only external observations and conflicts in COS; it neither
 publishes Products nor writes to Shopify. No periodic sync is started.
+
+## Canonical Gateway acceptance
+
+`tests/unit/product_management_capability_gateway.php` verifies that
+live Command/Query bindings honor tenant activation, manager permissions,
+unforgeable tenant/actor input schemas and human-only mutation provenance.
+`tests/unit/product_management_capability_input_schemas.php` exercises
+the fail-closed local JSON Schema validator. Both run under existing
+`bin/verify fast`, without new execution authority.
