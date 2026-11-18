@@ -917,7 +917,8 @@ jobs:
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
           if ! CHROME_PATH="$CHROME_BIN" node tests/browser/ux00_r1_r2_r3.mjs; then
-            docker compose logs --no-color --tail=200 php nginx
+            docker compose logs --no-color --tail=80 php nginx
+            docker compose exec -T php sh -c 'for f in /var/www/html/symfony/var/log/*.log; do test -f "$f" && { echo "APPLICATION_LOG $f"; tail -n 150 "$f"; }; done' || true
             exit 1
           fi
 
