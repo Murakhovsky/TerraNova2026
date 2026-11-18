@@ -87,12 +87,13 @@ GRAPHQL;
                 ++$pageCount;$productsSeen+=$seenOnPage;$conflicts+=$conflictsOnPage;
                 $hasNext=$page['pageInfo']['hasNextPage']??null;
                 $next=$page['pageInfo']['endCursor']??null;
-                if (!is_bool($hasNext)||($hasNext&&(!is_string($next)||$next===''))) {
+                if (!is_bool($hasNext)||($hasNext&&(!is_string($next)||$next===''||strlen($next)>512||$next===$cursor))) {
                     throw new DomainException('Unsafe Shopify cursor.');
                 }
                 $cursor=$hasNext?$next:null;
                 $this->observations->checkpoint($org,$connectionId,$run,$cursor??'', $seenOnPage,$conflictsOnPage,!$hasNext);
             } while ($hasNext && $pageCount<$maxPages);
+            $this->observations->release($org,$connectionId,$run);
             return ['run_id'=>$run,'pages'=>$pageCount,'products_observed'=>$productsSeen,
                 'conflicts'=>$conflicts,'status'=>$hasNext?'paused':'completed',
                 'next_cursor_present'=>$hasNext];

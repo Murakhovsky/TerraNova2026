@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS pm_external_connections (
  mode VARCHAR(32) NOT NULL DEFAULT 'shopify_authoritative',
  status VARCHAR(24) NOT NULL DEFAULT 'disabled',
  page_cursor VARCHAR(512) NULL,
+ sync_run_id CHAR(32) NULL,
+ sync_lease_expires_at DATETIME(6) NULL,
  last_sync_at DATETIME(6) NULL,
  updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
  PRIMARY KEY (organization_id,connection_id),

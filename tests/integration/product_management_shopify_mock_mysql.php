@@ -118,6 +118,16 @@ catch (DomainException) { $denied=true; }
 $assert($denied && $http->readCalls===0 && $http->oauthCalls===0,
     'inactive tenant module cannot initiate even a read-only import');
 $state->setEnabled($org,'product_management',true);
+$held=$observations->start($org,$id);
+$blocked=false;
+try { $observations->start($org,$id); }
+catch (DomainException) { $blocked=true; }
+$assert($blocked,'Concurrent Shopify run cannot take the same connection lease');
+$observations->fail($org,$held,'ci_lease_release');
+$stale=false;
+try { $observations->checkpoint($org,$id,$held,'old-cursor',1,0,false); }
+catch (DomainException) { $stale=true; }
+$assert($stale,'Stale run cannot overwrite the active cursor');
 $first=$pull->pull($org,$id,1);
 $assert($first['products_observed']===1 && $first['conflicts']===1
     && $first['status']==='completed','remote unknown Product must be quarantined after observation');

@@ -92,25 +92,71 @@ final readonly class ShopifyObservationStore
             [$org,bin2hex(random_bytes(16)),$conn,mb_substr($gid,0,191),mb_substr($reason,0,80),json_encode($details,JSON_THROW_ON_ERROR)]);
     }
 
+    /**
+     * Atomic, tenant-scoped sync lease. A stale pull may be replaced only
+     * after its lease expires; subsequent stale checkpoints are fenced.
+     */
     public function start(string $org,string $conn): string
     {
-        $id=bin2hex(random_bytes(16));
-        $this->query('INSERT INTO pm_sync_runs (organization_id,run_id,connection_id) VALUES (?,?,?)',[$org,$id,$conn]);
-        return $id;
+        $run=bin2hex(random_bytes(16));
+        $this->connection->beginTransaction();
+        try {
+            $row=$this->query('SELECT sync_run_id, (sync_lease_expires_at>UTC_TIMESTAMP(6)) AS lease_active FROM pm_external_connections WHERE organization_id=? AND connection_id=? AND status=? FOR UPDATE',
+                [$org,$conn,'ready'])->fetch(PDO::FETCH_ASSOC);
+            if ($row===false) throw new DomainException('Unknown or disabled Shopify connection.');
+            if ($row['sync_run_id']!==null && (int)$row['lease_active']===1) {
+                throw new DomainException('Shopify sync already has an active tenant lease.');
+            }
+            $this->query('INSERT INTO pm_sync_runs (organization_id,run_id,connection_id) VALUES (?,?,?)',
+                [$org,$run,$conn]);
+            $this->query('UPDATE pm_external_connections SET sync_run_id=?,sync_lease_expires_at=DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 15 MINUTE) WHERE organization_id=? AND connection_id=?',
+                [$run,$org,$conn]);
+            $this->connection->commit();
+            return $run;
+        } catch (\\Throwable $e) {
+            if ($this->connection->inTransaction()) $this->connection->rollBack();
+            throw $e;
+        }
     }
 
     public function checkpoint(string $org,string $conn,string $run,string $cursor,int $count,int $conflicts,bool $finished): void
     {
-        $this->query('UPDATE pm_sync_runs SET pages=pages+1,observed_products=observed_products+?,conflicts=conflicts+?,page_cursor=?,state=? WHERE organization_id=? AND connection_id=? AND run_id=?',
-            [$count,$conflicts,$cursor,$finished?'completed':'paused',$org,$conn,$run]);
-        $this->query('UPDATE pm_external_connections SET page_cursor=?,last_sync_at=COALESCE(?,last_sync_at) WHERE organization_id=? AND connection_id=?',
-            [$finished?null:$cursor,$finished?gmdate('Y-m-d H:i:s'):null,$org,$conn]);
+        if (strlen($cursor)>512 || $count<0 || $conflicts<0) {
+            throw new DomainException('Invalid bounded Shopify checkpoint.');
+        }
+        $this->connection->beginTransaction();
+        try {
+            $row=$this->query('SELECT sync_run_id FROM pm_external_connections WHERE organization_id=? AND connection_id=? FOR UPDATE',
+                [$org,$conn])->fetch(PDO::FETCH_ASSOC);
+            if ($row===false || $row['sync_run_id']!==$run) {
+                throw new DomainException('Shopify checkpoint denied: stale or foreign lease.');
+            }
+            $updated=$this->query("UPDATE pm_sync_runs SET pages=pages+1,observed_products=observed_products+?,conflicts=conflicts+?,page_cursor=?,state=? WHERE organization_id=? AND connection_id=? AND run_id=? AND state IN ('running','paused')",
+                [$count,$conflicts,$cursor,$finished?'completed':'paused',$org,$conn,$run]);
+            if ($updated->rowCount()!==1) throw new DomainException('Shopify sync run missing or no longer writable.');
+            $this->query('UPDATE pm_external_connections SET page_cursor=?,last_sync_at=CASE WHEN ?=1 THEN UTC_TIMESTAMP(6) ELSE last_sync_at END,sync_lease_expires_at=DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 15 MINUTE) WHERE organization_id=? AND connection_id=? AND sync_run_id=?',
+                [$finished?null:$cursor,$finished?1:0,$org,$conn,$run]);
+            $this->connection->commit();
+        } catch (\\Throwable $e) {
+            if ($this->connection->inTransaction()) $this->connection->rollBack();
+            throw $e;
+        }
+    }
+
+    public function release(string $org,string $conn,string $run): void
+    {
+        $stmt=$this->query('UPDATE pm_external_connections SET sync_run_id=NULL,sync_lease_expires_at=NULL WHERE organization_id=? AND connection_id=? AND sync_run_id=?',
+            [$org,$conn,$run]);
+        if ($stmt->rowCount()!==1) throw new DomainException('Stale Shopify sync cannot release another run.');
     }
 
     public function fail(string $org,string $run,string $code): void
     {
         $this->query("UPDATE pm_sync_runs SET state='error',error_code=? WHERE organization_id=? AND run_id=?",
             [mb_substr($code,0,190),$org,$run]);
+        // Compare-and-release never clears a replacement run's lease.
+        $this->query('UPDATE pm_external_connections SET sync_run_id=NULL,sync_lease_expires_at=NULL WHERE organization_id=? AND sync_run_id=?',
+            [$org,$run]);
     }
 
     /** @return array<string,mixed> */

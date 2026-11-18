@@ -75,3 +75,12 @@ digest and batch identity; the same key cannot stage different data.
 `product_management.import.batch.get` reads native per-row results.
 The signed `digest` is returned for the later approved commit workflow.
 Batch apply remains disabled until Kernel Action + independent Approval exists.
+
+## Shopify pull lease and recovery
+
+One active pull lease exists per tenant connection. Starting another pull during
+an active lease fails closed. Each page atomically checkpoints its cursor and
+extends the bounded lease. A previous run's stale callback cannot overwrite
+the connection cursor or release a replacement run. Failed requests retain
+their last completed page cursor for deliberate retry. This is a local sync
+reservation, **not** a new workflow executor or autonomous scheduler.
