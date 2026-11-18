@@ -101,9 +101,9 @@ final readonly class ShopifyObservationStore
 
     public function checkpoint(string $org,string $conn,string $run,string $cursor,int $count,int $conflicts,bool $finished): void
     {
-        $this->query('UPDATE pm_sync_runs SET pages=pages+1,observed_products=observed_products+?,conflicts=conflicts+?,cursor=?,state=? WHERE organization_id=? AND connection_id=? AND run_id=?',
+        $this->query('UPDATE pm_sync_runs SET pages=pages+1,observed_products=observed_products+?,conflicts=conflicts+?,page_cursor=?,state=? WHERE organization_id=? AND connection_id=? AND run_id=?',
             [$count,$conflicts,$cursor,$finished?'completed':'paused',$org,$conn,$run]);
-        $this->query('UPDATE pm_external_connections SET cursor=?,last_sync_at=COALESCE(?,last_sync_at) WHERE organization_id=? AND connection_id=?',
+        $this->query('UPDATE pm_external_connections SET page_cursor=?,last_sync_at=COALESCE(?,last_sync_at) WHERE organization_id=? AND connection_id=?',
             [$finished?null:$cursor,$finished?gmdate('Y-m-d H:i:s'):null,$org,$conn]);
     }
 
@@ -122,7 +122,7 @@ final readonly class ShopifyObservationStore
         $pending=$this->query("SELECT COUNT(*) FROM pm_sync_conflicts WHERE organization_id=? AND connection_id=? AND state='open'",[$org,$conn])->fetchColumn();
         $webhooks=$this->query("SELECT COUNT(*) FROM pm_webhook_inbox WHERE organization_id=? AND connection_id=? AND state='pending_reconciliation'",[$org,$conn])->fetchColumn();
         return ['shop_domain'=>$connection['shop_domain'],'mode'=>$connection['mode'],
-            'last_sync_at'=>$connection['last_sync_at'],'cursor_pending'=>$connection['cursor']!==null,
+            'last_sync_at'=>$connection['last_sync_at'],'cursor_pending'=>$connection['page_cursor']!==null,
             'last_run'=>$run===false?null:$run,'open_conflicts'=>(int)$pending,'pending_webhooks'=>(int)$webhooks];
     }
 

@@ -57,7 +57,7 @@ GRAPHQL;
             throw new DomainException('Connection mode not read-only.');
         }
         $token=$this->credentials->accessToken($connection['shop_domain'],$connection['secret_ref']);
-        $cursor=$connection['cursor'];
+        $cursor=$connection['page_cursor'];
         $run=$this->observations->start($org,$connectionId);
         $pageCount=0;$productsSeen=0;$conflicts=0;
         try {
