@@ -169,7 +169,7 @@ try {
       maxRedirects: 0,
     }), 'R1 available inventory fixture', 201,
   );
-  assert(inventoryCreate.ok === true && inventoryCreate.data?.asset_id === assetId,
+  assert(inventoryCreate.ok === true && inventoryCreate.data?.property_asset_id === assetId,
     'R1: cannot register searchable available Inventory');
   const found = await invoke(admin, 'property.asset.search', { q: assetId, page: 1, per_page: 10 }, csrf);
   assert(found.ok === true && found.data.pagination.total === 1
