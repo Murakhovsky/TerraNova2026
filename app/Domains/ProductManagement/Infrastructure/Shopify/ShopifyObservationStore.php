@@ -19,6 +19,21 @@ final readonly class ShopifyObservationStore
         return $row;
     }
 
+    /**
+     * Webhook routing must not trust caller tenant identifiers. We only accept
+     * an active shop configured for exactly one tenant; ambiguity blocks ingress.
+     * @return array{organization_id:string,connection_id:string}
+     */
+    public function uniqueConnectionForShop(string $shopDomain): array
+    {
+        ShopifyReadClient::assertShopDomain($shopDomain);
+        $rows=$this->query('SELECT organization_id,connection_id FROM pm_external_connections WHERE provider=? AND shop_domain=? AND status=? LIMIT 2',
+            ['shopify',$shopDomain,'ready'])->fetchAll(PDO::FETCH_ASSOC);
+        if (count($rows)!==1) throw new DomainException('Shopify webhook shop is unknown or ambiguous.');
+        return ['organization_id'=>(string)$rows[0]['organization_id'],
+            'connection_id'=>(string)$rows[0]['connection_id']];
+    }
+
     /** Explicit operator-only provisioning, never from a webhook payload. */
     public function provision(string $org,string $shopDomain,string $secretRef): string
     {

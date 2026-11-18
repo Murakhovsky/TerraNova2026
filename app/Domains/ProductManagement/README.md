@@ -28,3 +28,14 @@ E0 bootstrap → E1 catalog → E2 stock ledger → E3 pricing/import →
 E4 Shopify read-only pull with staging and reconciliation.
 
 See `docs/11-decisions/ADR-0016-product-management-domain.md`.
+
+## Shopify webhook ingress
+
+`POST /api/v1/integrations/shopify/webhook` accepts only a bounded raw body
+with a valid Shopify HMAC-SHA256, enabled Product Management tenant, and a
+uniquely resolvable active shop connection. The inbox deduplicates webhook IDs
+and persists a digest, **not** the incoming PII-bearing payload. Webhooks are
+not authorization to write stock or directly start Platform Workflow.
+
+`SHOPIFY_CLIENT_SECRET` must exist in trusted server configuration.
+Ambiguous shops and inactive tenants fail closed. No Shopify writeback in E4.
