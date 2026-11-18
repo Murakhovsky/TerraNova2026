@@ -1,0 +1,53 @@
+<?php
+declare(strict_types=1);
+return [
+ 'id'=>'marketing','name'=>'Marketing','version'=>'0.1.0','schema_version'=>'0.1.0',
+ 'kernel_constraint'=>'>=0.11.0 <0.12.0','description'=>'Marketing campaigns and paid media reporting, fail-closed for paid writes.',
+ 'icon'=>'megaphone','dependencies'=>[],'enabled_by_default'=>false,
+ 'contributions'=>[
+  'runtime_module_service'=>'marketingDomainModule',
+  'job_handler_services'=>[],'api_route_contributor_services'=>[],
+  'configuration_provisioner_services'=>[],
+  'extension_services'=>[
+   'web.navigation'=>['marketingNavigationContributor'],
+   'web.search'=>['marketingNavigationContributor'],
+   'web.commands'=>['marketingNavigationContributor'],
+   'web.workspace'=>['marketingNavigationContributor'],
+  ],
+  'cross_domain_contracts'=>[],
+  'migration_files'=>['app/migrations/20261118_000156_marketing_core_paid_read.sql'],
+  'capability_contracts'=>[
+   [
+    'id'=>'marketing.campaign.create','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'command',
+    'input_schema'=>'resources/contracts/marketing/campaign-create-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/campaign-create-output.schema.json',
+    'execution_binding'=>'command:marketing.campaign.create',
+    'side_effect_level'=>'internal','permission'=>'cos.tenant.manage',
+    'approval_policy'=>'conditional','idempotency'=>'required',
+    'timeout_policy'=>['seconds'=>30],'retry_policy'=>['max_attempts'=>1],
+    'failure_contract'=>'Reconcile the tenant-scoped draft receipt before retry; never call Meta.',
+    'lifecycle'=>'experimental','tests'=>['tests/architecture/marketing_domain_boundary.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+   ],
+   [
+    'id'=>'marketing.campaign.search','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'query',
+    'input_schema'=>'resources/contracts/marketing/campaign-search-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/campaign-search-output.schema.json',
+    'execution_binding'=>'query:marketing.campaign.search',
+    'side_effect_level'=>'none','permission'=>'cos.tenant.manage',
+    'lifecycle'=>'experimental','tests'=>['tests/architecture/marketing_domain_boundary.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+   ],
+   [
+    'id'=>'marketing.paid.account.list','version'=>'1.0.0','owner_domain'=>'marketing','kind'=>'query',
+    'input_schema'=>'resources/contracts/marketing/paid-accounts-input.schema.json',
+    'output_schema'=>'resources/contracts/marketing/paid-accounts-output.schema.json',
+    'execution_binding'=>'query:marketing.paid.account.list',
+    'side_effect_level'=>'none','permission'=>'cos.tenant.manage',
+    'lifecycle'=>'experimental','tests'=>['tests/architecture/marketing_domain_boundary.php'],
+    'documentation'=>'docs/04-domains/marketing/overview.md',
+   ],
+  ],
+  'capabilities'=>['marketing.campaign.create','marketing.campaign.search','marketing.paid.account.list'],
+ ],
+];
