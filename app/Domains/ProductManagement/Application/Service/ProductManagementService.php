@@ -67,7 +67,10 @@ final readonly class ProductManagementService
     public function recordMovement(string $organizationId, string $variantId, string $locationId, string $delta, string $kind, string $source, string $key, string $actor, string $correlation): array
     {
         $this->scope($organizationId, $key, $actor, $correlation);
-        if (!in_array($kind, ['receipt','issue','adjustment'], true)) throw new DomainException('Invalid movement type.');
+        // Adjustment is not an approved P0 capability. Do not expose this through
+        // generic Domain services until a verified Kernel Action admission exists.
+        if ($kind === 'adjustment') throw new DomainException('Adjustment requires approved canonical Action.');
+        if (!in_array($kind, ['receipt','issue'], true)) throw new DomainException('Invalid movement type.');
         if ($kind === 'receipt' && str_starts_with($delta, '-')) throw new DomainException('Receipt must add stock.');
         if ($kind === 'issue' && !str_starts_with($delta, '-')) throw new DomainException('Issue must remove stock.');
         if (trim($source) === '' || strlen($source) > 191) throw new DomainException('Documented source_ref required.');

@@ -55,6 +55,13 @@ $assert($again===$created,'exact idempotency replay');
 $reject(static fn()=> $products->createProduct($org,['sku'=>$sku,'name'=>'Different','type'=>'stock'],$createKey,'ci-user','ci-pm'),'idempotency payload conflict');
 $assert($products->getProduct($other,$created['product_id'])===null,'tenant catalog isolation');
 $assert(count($products->searchProducts($org,$sku))===1,'search by SKU');
+$reject(static fn()=> $products->createProduct($org,['sku'=>$sku,'name'=>'Duplicate SKU','type'=>'stock'],
+    'pm-dup-'.$token,'ci-user','ci-pm'),'duplicate SKU in same tenant');
+$otherCreated=$products->createProduct($other,['sku'=>$sku,'name'=>'Other tenant product','type'=>'stock'],
+    'pm-other-create-'.$token,'ci-other','ci-pm');
+$assert($otherCreated['product_id']!==$created['product_id'],'SKU identity is tenant-local');
+$assert(count($products->searchProducts($org,$sku))===1,'other tenant Product hidden from catalog');
+
 $location=$products->createLocation($org,'L-'.$token,'Test warehouse','pm-loc-'.$token,'ci-user','ci-pm');
 $variant=$created['variant_id'];$loc=$location['location_id'];
 $receipt=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');
@@ -65,6 +72,11 @@ $products->recordMovement($org,$variant,$loc,'-4.000000','issue','TEST-SALE','pm
 $balance=$products->balance($org,$variant,$loc);
 $assert((string)$balance['on_hand']==='6.000000','on_hand must be 6');
 $assert((string)$balance['available']==='6.000000','available must be 6');
+$reject(static fn()=> $products->recordMovement($other,$variant,$loc,'2.000000','receipt','TEST-PO-OTHER',
+    'pm-cross-'.$token,'ci-other','ci-pm'),'cross-tenant stock write');
+$reject(static fn()=> $products->recordMovement($org,$variant,$loc,'-2.000000','adjustment','MISSING-APPROVAL',
+    'pm-adjust-'.$token,'ci-user','ci-pm'),'adjustment must be gated outside approved action');
+
 $statement=$pdo->prepare('SELECT COUNT(*),SUM(quantity_delta) FROM pm_stock_movements WHERE organization_id=? AND variant_id=?');
 $statement->execute([$org,$variant]);
 [$count,$sum]=$statement->fetch(PDO::FETCH_NUM);

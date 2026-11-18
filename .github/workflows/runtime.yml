@@ -97,6 +97,10 @@ jobs:
         run: |
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Product Management E0-E4 native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_mysql.php
       - name: Property Bulk real MySQL duplicate and tenant fencing
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
