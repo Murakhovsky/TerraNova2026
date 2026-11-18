@@ -26,10 +26,18 @@ foreach(['activate','budget.update','campaign.publish','ads.create'] as $blocked
   $assert(!str_contains($cap,$blocked),'Paid write capability advertised: '.$blocked);
  }
 }
+// Root Composer does not autoload the Symfony App namespace; its separate
+// composer.json does. Architecture tests inspect source without booting Symfony.
 foreach([
- 'App\Infrastructure\Capability\MarketingCampaignCreateAdapter',
- 'App\Infrastructure\Capability\MarketingCampaignSearchAdapter',
- 'App\Infrastructure\Capability\MarketingPaidAccountsAdapter',
-] as $class)$assert(class_exists($class),'Capability adapter not autoloaded: '.$class);
+ 'MarketingCampaignCreateAdapter.php',
+ 'MarketingCampaignSearchAdapter.php',
+ 'MarketingPaidAccountsAdapter.php',
+] as $filename){
+ $path=$root.'/symfony/src/Infrastructure/Capability/'.$filename;
+ $assert(is_file($path),'Capability adapter source missing: '.$filename);
+ $source=file_get_contents($path);
+ $assert(str_contains($source,'CapabilityInvocationAdapterInterface'),
+  'Capability adapter must use canonical Gateway: '.$filename);
+}
 $assert(is_file($root.'/symfony/templates/experience/marketing/workspace.html.twig'),'Workspace Twig missing.');
 echo "marketing_workspace_wiring OK\n";
