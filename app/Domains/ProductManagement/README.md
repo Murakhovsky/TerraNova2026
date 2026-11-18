@@ -93,3 +93,24 @@ native Product to a tenant-local Category once, through a durable operation
 receipt and Domain Event. `category.search` reads paged hierarchy nodes.
 Product reads expose category membership. Destructive merges and category
 deletion remain deliberately unsupported.
+
+## Manual Shopify canary via existing Symfony Console
+
+Only a supervised shell operator with exported
+`COS_SHOPIFY_OPERATOR_ENABLED=1` may use `cos:product:shopify`.
+The `product_management` tenant module must first be installed/current
+and explicitly activated through existing COS module administration.
+
+Example workflow (replace references, do not paste secrets):
+
+```sh
+php symfony/bin/console cos:product:shopify provision --organization=tenant-id --shop=your-store.myshopify.com --confirm=PROVISION_READ_ONLY
+php symfony/bin/console cos:product:shopify status --organization=tenant-id --connection=existing-32-character-id
+php symfony/bin/console cos:product:shopify pull --organization=tenant-id --connection=existing-32-character-id --pages=1 --confirm=PULL_READ_ONLY
+```
+
+`SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_CLIENT_ID` and
+`SHOPIFY_CLIENT_SECRET` must be exported server-side only. Provision
+verifies the app's OAuth grant without persisting the token. Pull
+records only external observations and conflicts in COS; it neither
+publishes Products nor writes to Shopify. No periodic sync is started.
