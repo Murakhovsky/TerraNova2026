@@ -86,8 +86,8 @@ $assert(!$observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$to
 $reject(static fn()=> $observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":2}'),'duplicate webhook different digest');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===4,'four confirmed native domain events');
+$assert((int)$stmt->fetchColumn()===5,'five confirmed native domain events');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===4,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===5,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";
