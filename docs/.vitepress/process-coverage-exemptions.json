@@ -22,6 +22,11 @@
       "reason": "V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation."
     },
     {
+      "domain": "marketing",
+      "owner": "COS Marketing",
+      "reason": "M0/M1 only: tenant-scoped draft creation and read-only Meta observations; fully controlled campaign approval, Finance F1 reservations, paid activation, settlement and attribution end-to-end await separately accepted canonical Workflow and integration evidence."
+    },
+    {
       "domain": "procurement",
       "owner": "COS Architecture",
       "reason": "V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation."

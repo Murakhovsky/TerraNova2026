@@ -3682,3 +3682,46 @@ cos_api_v1_capital_markets_portfolio_performance:
   path: /api/v1/capital-markets/portfolio/performance
   controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::performance
   methods: [GET]
+
+# Marketing M0/M1: tenant-authorized draft creation and bounded read-only Meta observations.
+cos_marketing_overview:
+  path: /marketing
+  controller: App\Web\Marketing\MarketingPageController::overview
+  methods: [GET]
+
+cos_marketing_campaigns:
+  path: /marketing/campaigns
+  controller: App\Web\Marketing\MarketingPageController::campaigns
+  methods: [GET]
+
+cos_marketing_accounts:
+  path: /marketing/accounts
+  controller: App\Web\Marketing\MarketingPageController::accounts
+  methods: [GET]
+
+cos_marketing_performance:
+  path: /marketing/performance
+  controller: App\Web\Marketing\MarketingPageController::performance
+  methods: [GET]
+
+cos_marketing_campaign_create:
+  path: /marketing/campaigns/create
+  controller: App\Web\Marketing\MarketingPageController::create
+  methods: [POST]
+
+cos_marketing_account_connect:
+  path: /marketing/accounts/connect
+  controller: App\Web\Marketing\MarketingPageController::connect
+  methods: [POST]
+
+cos_marketing_account_sync:
+  path: /marketing/accounts/{id}/sync
+  controller: App\Web\Marketing\MarketingPageController::sync
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_marketing_insights_sync:
+  path: /marketing/accounts/{id}/insights/sync
+  controller: App\Web\Marketing\MarketingPageController::syncInsights
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }

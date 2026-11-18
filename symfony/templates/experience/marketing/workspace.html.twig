@@ -1,0 +1,97 @@
+{% extends 'experience/portal_shell.html.twig' %}
+{% block title %}{{ title }} | COS{% endblock %}
+{% block portal_content %}
+<section class="cos-page__stack" data-cos-marketing>
+ <header class="cos-card">
+  <p class="cos-card__eyebrow">COS / Marketing Domain</p>
+  <h1 class="cos-card__title">{{ title }}</h1>
+  <p class="cos-card__copy">Планування маркетингу, рекламні акаунти та доказова статистика. Жодної активації реклами чи зміни бюджетів: Finance F1 і Platform Workflow ще не пройшли acceptance.</p>
+  <nav class="cos-page__stack" aria-label="Marketing sections">
+   <a href="/marketing">Огляд</a>
+   <a href="/marketing/campaigns">Кампанії</a>
+   <a href="/marketing/accounts">Рекламні акаунти</a>
+   <a href="/marketing/performance">Аналітика</a>
+  </nav>
+  {% if notice %}<p class="cos-card__copy">Зміна: {{ notice }}</p>{% endif %}
+ </header>
+
+ {% if view == 'overview' %}
+ <section class="cos-card">
+  <h2 class="cos-card__title">Операційний зріз</h2>
+  <p class="cos-card__copy">Кампаній: {{ campaigns|length }} · Акаунтів Meta: {{ accounts|length }}.</p>
+  <p class="cos-card__copy">Read-only Meta, ручний імпорт і Campaign Draft. Платне виконання недоступне.</p>
+  <a href="/marketing/campaigns" class="cos-button cos-button--primary">Відкрити кампанії</a>
+ </section>
+ {% elseif view == 'campaigns' %}
+ <section class="cos-card">
+  <h2 class="cos-card__title">Нова кампанія: чернетка</h2>
+  <form method="post" action="/marketing/campaigns/create" class="cos-page__stack">
+   <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+   <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
+   <label class="cos-field"><span>Назва</span><input class="cos-input" name="name" maxlength="190" required></label>
+   <label class="cos-field"><span>Мета (технічний код, наприклад leads)</span><input class="cos-input" name="objective" maxlength="64" value="leads" required></label>
+   <label class="cos-field"><span>Короткий brief</span><textarea class="cos-input" name="brief" rows="4"></textarea></label>
+   <label class="cos-field"><span>Плановий бюджет у мінімальних одиницях валюти (не reservation)</span><input class="cos-input" name="planned_budget_minor" type="number" min="0"></label>
+   <label class="cos-field"><span>Валюта</span><input class="cos-input" name="currency" maxlength="3" placeholder="UAH"></label>
+   <button type="submit" class="cos-button cos-button--primary">Створити чернетку</button>
+  </form>
+ </section>
+ <section class="cos-card">
+  <h2 class="cos-card__title">Кампанії</h2>
+  {% for c in campaigns %}
+   <article><strong>{{ c.name }}</strong> · {{ c.objective }} · {{ c.status }} · r{{ c.revision }}
+    {% if c.planned_budget_minor is not null %} · {{ c.planned_budget_minor }} {{ c.currency }} (план){% endif %}
+   </article>
+  {% else %}<p class="cos-card__copy">Кампаній ще немає.</p>{% endfor %}
+ </section>
+ {% elseif view == 'accounts' %}
+ <section class="cos-card">
+  <h2 class="cos-card__title">Meta Ads · read-only підключення</h2>
+  <p class="cos-card__copy">Спочатку створіть env://-секрет у Platform Vault; тут вказується лише reference, не токен.</p>
+  <form method="post" action="/marketing/accounts/connect" class="cos-page__stack">
+   <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+   <label class="cos-field"><span>Meta Account ID</span><input class="cos-input" name="external_account_id" placeholder="act_123456789" required></label>
+   <label class="cos-field"><span>Vault reference</span><input class="cos-input" name="credential_ref" placeholder="env://META_MARKETING_READ_SECRET" required></label>
+   <button type="submit" class="cos-button cos-button--primary">Перевірити read-only доступ</button>
+  </form>
+ </section>
+ <section class="cos-card">
+  <h2 class="cos-card__title">Рекламні акаунти</h2>
+  {% for a in accounts %}
+   <article>
+    <strong>{{ a.external_account_id }}</strong> · {{ a.state }} · {{ a.currency }} · {{ a.timezone }}
+    <form method="post" action="/marketing/accounts/{{ a.account_id }}/sync">
+     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+     <button class="cos-button cos-button--ghost" type="submit">Зчитати кампанії, AdSets та Ads</button>
+    </form>
+   </article>
+  {% else %}<p class="cos-card__copy">Рекламних акаунтів немає.</p>{% endfor %}
+ </section>
+ {% elseif view == 'performance' %}
+ <section class="cos-card">
+  <h2 class="cos-card__title">Meta Insights · лише кампанії та одна валюта на рядок</h2>
+  <form method="get" action="/marketing/performance" class="cos-page__stack">
+   <label class="cos-field"><span>Акаунт</span><select class="cos-input" name="account" required>
+    {% for a in accounts %}<option value="{{ a.account_id }}" {% if selectedAccount == a.account_id %}selected{% endif %}>{{ a.external_account_id }} · {{ a.currency }}</option>{% endfor %}
+   </select></label>
+   <label class="cos-field"><span>Від</span><input class="cos-input" type="date" name="since" value="{{ since }}" required></label>
+   <label class="cos-field"><span>До</span><input class="cos-input" type="date" name="until" value="{{ until }}" required></label>
+   <button class="cos-button cos-button--ghost" type="submit">Показати накопичені дані</button>
+  </form>
+  {% for item in insights %}
+   <p>{{ item.spend_minor }} {{ item.currency }} (minor units), {{ item.impressions }} impressions, {{ item.clicks }} clicks. Стан: provisional.</p>
+  {% else %}<p class="cos-card__copy">За вибраними параметрами даних немає.</p>{% endfor %}
+  {% for a in accounts %}
+   {% if selectedAccount == a.account_id %}
+   <form method="post" action="/marketing/accounts/{{ a.account_id }}/insights/sync" class="cos-page__stack">
+    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+    <input type="hidden" name="since" value="{{ since }}">
+    <input type="hidden" name="until" value="{{ until }}">
+    <button class="cos-button cos-button--primary" type="submit">Оновити статистику (GET Meta)</button>
+   </form>
+   {% endif %}
+  {% endfor %}
+ </section>
+ {% endif %}
+</section>
+{% endblock %}

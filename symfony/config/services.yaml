@@ -2674,6 +2674,33 @@ services:
   growthNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\GrowthWebProvider
 
+  Domains\Marketing\Bootstrap\MarketingDomainModule: ~
+
+  marketingDomainModule:
+    alias: Domains\Marketing\Bootstrap\MarketingDomainModule
+
+  marketingNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\MarketingWebProvider
+
+  Domains\Marketing\Infrastructure\Persistence\MySqlMarketingStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Domains\Marketing\Infrastructure\Meta\CurlMetaReadTransport: ~
+
+  Domains\Marketing\Infrastructure\Meta\MetaReadTransportInterface:
+    alias: Domains\Marketing\Infrastructure\Meta\CurlMetaReadTransport
+
+  Domains\Marketing\Infrastructure\Meta\MetaAdsReadClient: ~
+
+  Domains\Marketing\Application\Service\MetaReadOnlyConnectionService:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  App\Web\Marketing\MarketingPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   capitalMarketsDomainModule:
     alias: Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule
 
