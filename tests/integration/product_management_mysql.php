@@ -108,6 +108,12 @@ $assert($observations->connection($org,$connectionId)['shop_domain']==='pm-unit-
 $reject(static fn()=> $observations->connection($other,$connectionId),'cross tenant connection isolation');
 $remoteGid='gid://shopify/Product/123';
 $observations->map($org,$connectionId,'product',$remoteGid,$created['product_id']);
+$observations->conflict($org,$connectionId,$remoteGid,'unmapped_variant',['variant'=>'remote-1']);
+$observations->conflict($org,$connectionId,$remoteGid,'unmapped_variant',['variant'=>'remote-1']);
+$conflictStmt=$pdo->prepare("SELECT COUNT(*) FROM pm_sync_conflicts WHERE organization_id=? AND connection_id=? AND external_gid=? AND state='open'");
+$conflictStmt->execute([$org,$connectionId,$remoteGid]);
+$assert((int)$conflictStmt->fetchColumn()===1,'repeated Shopify observation must not multiply open conflicts');
+
 $assert($observations->mapping($org,$connectionId,'product',$remoteGid)['canonical_id']===$created['product_id'],'mapping integrity');
 $assert($observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":1}'),'new webhook delivery');
 $assert(!$observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":1}'),'duplicate webhook is idempotent');

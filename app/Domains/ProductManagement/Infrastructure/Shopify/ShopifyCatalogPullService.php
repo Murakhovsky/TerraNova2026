@@ -108,6 +108,9 @@ GRAPHQL;
         if (!is_string($gid)||!preg_match('#^gid://shopify/Product/[0-9]+$#D',$gid)) {
             throw new DomainException('Invalid Shopify product GID.');
         }
+        // Retain an independently reviewable raw provider snapshot even when
+        // downstream SKU, variants or stock shape is incomplete.
+        $this->observations->observeProduct($org,$conn,$gid,$remote);
         $variants=$remote['variants']['nodes']??null;
         if (!is_array($variants)||$variants===[]||!empty($remote['variants']['pageInfo']['hasNextPage'])) {
             throw new DomainException('Empty or truncated Shopify variants; requires pagination/review.');
@@ -126,7 +129,7 @@ GRAPHQL;
         }
         // Every verified observation is saved regardless of canonical mapping.
         // A Shopify snapshot is not a stock receipt or Product create command.
-        $this->observations->observeProduct($org,$conn,$gid,$remote);
+        
         foreach ($normalized as $variant) {
             $item=$variant['remote']['inventoryItem']??null;
             if (is_array($item) && is_string($item['id']??null)) {

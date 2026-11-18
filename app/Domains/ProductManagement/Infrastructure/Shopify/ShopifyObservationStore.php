@@ -88,7 +88,7 @@ final readonly class ShopifyObservationStore
 
     public function conflict(string $org,string $conn,string $gid,string $reason,array $details=[]): void
     {
-        $this->query('INSERT INTO pm_sync_conflicts (organization_id,conflict_id,connection_id,external_gid,reason,detail_json) VALUES (?,?,?,?,?,?)',
+        $this->query('INSERT IGNORE INTO pm_sync_conflicts (organization_id,conflict_id,connection_id,external_gid,reason,detail_json) VALUES (?,?,?,?,?,?)',
             [$org,bin2hex(random_bytes(16)),$conn,mb_substr($gid,0,191),mb_substr($reason,0,80),json_encode($details,JSON_THROW_ON_ERROR)]);
     }
 

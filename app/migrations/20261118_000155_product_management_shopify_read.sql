@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS pm_sync_conflicts (
  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
  PRIMARY KEY (organization_id,conflict_id),
  KEY idx_pm_conflict_pending (organization_id,connection_id,state),
+ UNIQUE KEY uq_pm_open_conflict_identity (organization_id,connection_id,external_gid,reason,state),
  CONSTRAINT fk_pm_conflict_connection FOREIGN KEY (organization_id,connection_id)
   REFERENCES pm_external_connections(organization_id,connection_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
