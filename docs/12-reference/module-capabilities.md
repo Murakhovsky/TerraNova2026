@@ -308,6 +308,9 @@ Manifest capabilities не задекларовані.
 
 ### Задекларовані capabilities
 
+- `product_management.category.assign`;
+- `product_management.category.create`;
+- `product_management.category.search`;
 - `product_management.import.batch.get`;
 - `product_management.import.preview`;
 - `product_management.location.create`;

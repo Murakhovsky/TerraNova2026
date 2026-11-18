@@ -75,6 +75,9 @@ $assert(count($products->getProduct($org,$created['product_id'])['categories'])=
     'Product native read must include category membership');
 $assert(count($products->categories($org))===2 && $products->categories($other)===[],
     'Tenant category hierarchy isolation');
+$catEvent=$pdo->prepare('SELECT aggregate_id FROM cos_events WHERE organization_id=? AND type=? AND aggregate_id=?');
+$catEvent->execute([$org,'product_management.category.created',$category['category_id']]);
+$assert($catEvent->fetchColumn()===$category['category_id'],'Category event must reference native Category identity');
 $reject(static fn()=> $products->assignCategory($other,$created['product_id'],$child['category_id'],
     'pm-cross-cat-'.$token,'ci-other','ci-pm'),'cross-tenant Product/Category assignment');
 
