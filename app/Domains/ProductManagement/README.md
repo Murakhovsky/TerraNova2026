@@ -48,3 +48,12 @@ GID mappings when present and quarantines missing or inconsistent mappings.
 Approved canonical import is a separate follow-up action through the existing
 Kernel Action/Approval and Platform Workflow path, not a hidden effect of a
 GraphQL read. The pull service is not exposed as a public command.
+
+## Human-only operational capabilities
+
+The canonical Capability Gateway exposes `variant.create`, `location.create`,
+`stock.receive`, `stock.issue` and `price.base.set` in addition to
+Product creation and queries. These require an active tenant module, a manager
+with `cos.tenant.manage`, CSRF-protected invocation and a bounded
+idempotency key. Automated invokers still require approved Platform Workflow.
+Destructive adjustments and Shopify writes are intentionally **not** enabled.
