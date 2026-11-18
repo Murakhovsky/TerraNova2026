@@ -2751,6 +2751,11 @@ services:
   documentsDomainModule:
     alias: Domains\Documents\Bootstrap\DocumentsDomainModule
 
+  # Product Management E0: domain stays tenant-disabled until explicit activation.
+  Domains\ProductManagement\Bootstrap\ProductManagementDomainModule: ~
+  productManagementDomainModule:
+    alias: Domains\ProductManagement\Bootstrap\ProductManagementDomainModule
+
   Kernel\Module\DomainModuleRegistry:
     arguments:
       $modules:
@@ -2763,6 +2768,7 @@ services:
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
         - '@Domains\Service\Bootstrap\ServiceDomainModule'
         - '@Domains\Growth\Bootstrap\GrowthDomainModule'
+        - '@Domains\ProductManagement\Bootstrap\ProductManagementDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
