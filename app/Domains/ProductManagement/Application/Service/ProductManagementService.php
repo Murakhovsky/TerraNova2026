@@ -83,14 +83,14 @@ final readonly class ProductManagementService
 
     private function tenant(string $organizationId): void
     {
-        if ($organizationId === '' || strlen($organizationId) > 190) throw new DomainException('Trusted tenant context required.');
+        if ($organizationId === '' || strlen($organizationId) > 40) throw new DomainException('Trusted tenant context required.');
     }
 
     private function scope(string $org, string $key, string $actor, string $correlation): void
     {
         $this->tenant($org);
-        foreach ([$key,$actor,$correlation] as $value) {
-            if ($value === '' || strlen($value) > 191) throw new DomainException('Idempotency, actor and correlation required.');
+        if ($key==='' || strlen($key)>191 || $actor==='' || strlen($actor)>100 || $correlation==='' || strlen($correlation)>191) {
+            throw new DomainException('Idempotency, actor and correlation must satisfy Kernel event bounds.');
         }
     }
 }

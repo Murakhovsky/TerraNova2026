@@ -87,6 +87,9 @@ $reject(static fn()=> $observations->recordVerifiedDelivery($org,$connectionId,'
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
 $assert((int)$stmt->fetchColumn()===5,'five confirmed native domain events');
+$stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
+$stmt->execute([$org,'product_management.product.created']);
+$assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
 $assert((int)$stmt->fetchColumn()===5,'same-transaction event/outbox evidence');

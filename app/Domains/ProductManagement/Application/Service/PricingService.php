@@ -33,7 +33,7 @@ final readonly class PricingService
         $amount=ProductRules::money($amount);
         $currency=$this->currency($currency);
         if ($org===''||$variantId===''||$key===''||$actor===''||$correlation===''
-            ||strlen($org)>190||strlen($key)>191||strlen($actor)>190||strlen($correlation)>191) {
+            ||strlen($org)>40||strlen($key)>191||strlen($actor)>100||strlen($correlation)>191) {
             throw new DomainException('Trusted tenant, variant, actor and idempotency required.');
         }
         $hash=hash('sha256',json_encode([$variantId,$currency,$amount],JSON_THROW_ON_ERROR));
@@ -63,7 +63,7 @@ final readonly class PricingService
                 [$org,$priceId,$variantId,$currency,$old===false?null:$old['amount'],$amount,$actor]);
             $result=$this->get($org,$variantId,$currency);
             $this->events->append(new DomainEvent(bin2hex(random_bytes(16)),$org,'product_management.price.updated','Price',$variantId,
-                ['currency'=>$currency,'amount'=>$amount,'revision'=>$result['revision']],new EventMetadata($correlation,null,'HUMAN',$actor),
+                ['currency'=>$currency,'amount'=>$amount,'revision'=>$result['revision']],new EventMetadata(strlen($correlation)<=40?$correlation:substr(hash('sha256',$correlation),0,40),null,'USER',$actor),
                 new \DateTimeImmutable('now',new \DateTimeZone('UTC'))));
             $this->query('UPDATE pm_operation_receipts SET result_json=? WHERE organization_id=? AND idempotency_key=?',
                 [json_encode($result,JSON_THROW_ON_ERROR),$org,$key]);

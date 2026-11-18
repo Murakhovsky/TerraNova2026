@@ -19,12 +19,12 @@ query COSProducts($first: Int!, $after: String) {
   products(first: $first, after: $after) {
     nodes {
       id title status updatedAt
-      variants(first: 100) {
+      variants(first: 20) {
         nodes {
           id sku price barcode
           inventoryItem {
             id tracked
-            inventoryLevels(first: 50) {
+            inventoryLevels(first: 10) {
               nodes {
                 location { id name }
                 quantities(names: ["on_hand", "available"]) { name quantity }
@@ -63,7 +63,7 @@ GRAPHQL;
         try {
             do {
                 $result=$this->client->query($connection['shop_domain'],$token,self::PRODUCTS_QUERY,
-                    ['first'=>25,'after'=>$cursor]);
+                    ['first'=>5,'after'=>$cursor]);
                 $page=$result['data']['products']??null;
                 if (!is_array($page)||!is_array($page['nodes']??null)||!is_array($page['pageInfo']??null)) {
                     throw new DomainException('Unexpected products pagination shape.');
