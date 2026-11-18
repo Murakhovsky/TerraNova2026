@@ -213,6 +213,7 @@ generated: true
 | `product_management` | `app/migrations/20261118_000154_product_management_prices_import.sql` | `pm_base_price_history` |
 | `product_management` | `app/migrations/20261118_000154_product_management_prices_import.sql` | `pm_base_prices` |
 | `product_management` | `app/migrations/20261118_000154_product_management_prices_import.sql` | `pm_import_batches` |
+| `product_management` | `app/migrations/20261118_000154_product_management_prices_import.sql` | `pm_import_requests` |
 | `product_management` | `app/migrations/20261118_000154_product_management_prices_import.sql` | `pm_import_rows` |
 | `product_management` | `app/migrations/20261118_000154_product_management_prices_import.sql` | `pm_variants` |
 | `product_management` | `app/migrations/20261118_000155_product_management_shopify_read.sql` | `pm_external_connections` |

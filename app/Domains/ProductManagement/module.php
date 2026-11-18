@@ -5,7 +5,7 @@ return [
     'id' => 'product_management',
     'name' => 'Product Management',
     'version' => '0.1.0',
-    'schema_version' => '0.4.0',
+    'schema_version' => '0.5.0',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Tenant-scoped goods catalog, stock ledger, base prices and channel observations.',
     'icon' => 'package',

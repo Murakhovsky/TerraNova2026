@@ -27,7 +27,7 @@ contract: domain-v1
 ```text
 id: product_management
 version: 0.1.0
-schema_version: 0.4.0
+schema_version: 0.5.0
 runtime: tenant-disabled by default
 persistence: E1–E4 migrations proposed, not production-verified
 capabilities: 16 executable declarations pending integration acceptance
