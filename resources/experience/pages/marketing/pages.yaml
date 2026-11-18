@@ -1,0 +1,89 @@
+# Marketing M0/M1 Experience contracts. CONTRACTED is not UX acceptance.
+pages:
+  - id: marketing.overview
+    route: { name: cos_marketing_overview, path: /marketing, methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.overview.view
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [marketing_manager]
+    product:
+      primary_goal: "Review campaign drafts, paid accounts and the current implementation gates."
+      page_purpose: "Marketing domain overview for planning and read-only paid media."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: [EntityList, EmptyState, ErrorState]
+    primary_action: marketing.open_campaigns
+    states: [normal]
+    responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.campaigns
+    route: { name: cos_marketing_campaigns, path: /marketing/campaigns, methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.campaign.search
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [marketing_manager]
+    product:
+      primary_goal: "Inspect marketing drafts and add a new versioned draft."
+      page_purpose: "Tenant-scoped campaign draft collection and create entrypoint."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [EmptyState, ErrorState]
+    primary_action: marketing.campaign.create
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.accounts
+    route: { name: cos_marketing_accounts, path: /marketing/accounts, methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.paid.account.list
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [marketing_manager]
+    product:
+      primary_goal: "Inspect verified read-only Meta connections without exposing credentials."
+      page_purpose: "Paid Media connection collection and manual read-only sync entrypoint."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [EmptyState, ErrorState]
+    primary_action: marketing.paid.account.connect
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: canonical }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.performance
+    route: { name: cos_marketing_performance, path: /marketing/performance, methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.performance.summary
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [marketing_manager]
+    product:
+      primary_goal: "Review provider spend as provisional evidence, separated by grain and currency."
+      page_purpose: "Read-only paid advertising performance without financial accounting."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: [EntityList, EmptyState, ErrorState]
+    primary_action: marketing.performance.refresh
+    states: [normal]
+    responsive: { desktop: dashboard, tablet: dashboard, mobile: stacked_dashboard }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
