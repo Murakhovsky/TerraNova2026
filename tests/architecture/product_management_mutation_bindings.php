@@ -9,7 +9,7 @@ use Kernel\Module\ModuleCatalog;
 $catalog=new ModuleCatalog((new ModuleDiscovery($root.'/app/Domains'))->discover());
 $pm=$catalog->definition('product_management');
 $contracts=$pm->contributions->capabilityContracts;
-$expected=['variant.create','location.create','stock.receive','stock.issue','price.base.set'];
+$expected=['variant.create','location.create','stock.receive','stock.issue','price.base.set','import.preview'];
 foreach($expected as $operation){
     $id='product_management.'.$operation;
     $match=array_values(array_filter($contracts,static fn($x)=>$x->id===$id));

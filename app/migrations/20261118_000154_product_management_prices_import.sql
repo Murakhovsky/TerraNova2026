@@ -58,3 +58,17 @@ CREATE TABLE IF NOT EXISTS pm_import_rows (
   REFERENCES pm_import_batches(organization_id,batch_id),
  CONSTRAINT ck_pm_import_row_status CHECK (status IN ('ready','invalid','duplicate','applied','failed'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Link a requested preview's idempotency key to one immutable CSV digest.
+-- Atomic with the staged batch and rows; no Product state change.
+CREATE TABLE IF NOT EXISTS pm_import_requests (
+ organization_id VARCHAR(190) NOT NULL,
+ idempotency_key VARCHAR(191) NOT NULL,
+ batch_id CHAR(32) NOT NULL,
+ payload_digest CHAR(64) NOT NULL,
+ created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+ PRIMARY KEY (organization_id,idempotency_key),
+ KEY idx_pm_import_requests_batch (organization_id,batch_id),
+ CONSTRAINT fk_pm_import_request_batch FOREIGN KEY (organization_id,batch_id)
+  REFERENCES pm_import_batches (organization_id,batch_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

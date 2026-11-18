@@ -112,7 +112,14 @@ $assert(
     && (string)$set['price']==='129.9900',
     'base price replay must preserve price revision and amount'
 );
-$batch=$csv->preview($org,"sku,name,type,uom,track_inventory\nCSV".$token.",Sample,stock,pcs,1\n",'ci-user');
+$csvPayload="sku,name,type,uom,track_inventory\nCSV".$token.",Sample,stock,pcs,1\n";
+$batch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
+$againBatch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
+$assert($againBatch['batch_id']===$batch['batch_id'] && $againBatch['digest']===$batch['digest'],
+    'CSV preview replay must retain one batch and digest');
+$reject(static fn()=> $csv->preview($org,$csvPayload."NEW,Another,stock,pcs,1\n",'ci-user','pm-csv-stage-'.$token),
+    'CSV preview key reused for changed input');
+
 $assert(($batch['counts']['ready']??0)===1 && $batch['state']==='staged','CSV validation-only stage');
 $assert(count($products->searchProducts($org,'CSV'.$token))===0,'CSV stage must not write Product');
 $connectionId=$observations->provision($org,'pm-unit-test.myshopify.com','shopify_env_primary');

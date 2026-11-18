@@ -65,3 +65,13 @@ Destructive adjustments and Shopify writes are intentionally **not** enabled.
 Archiving never deletes the Product or movements. Archiving a Product with
 active reservations is rejected. `stock.movement.search` returns immutable
 tenant-scoped movement facts, not a computed/forged stock history.
+
+## Bounded CSV staging over Capability Gateway
+
+`product_management.import.preview` (human manager only, max 12,000
+characters through the existing 16 KiB Gateway) stages CSV without
+creating any Products. It atomically binds `X-Idempotency-Key` to the CSV
+digest and batch identity; the same key cannot stage different data.
+`product_management.import.batch.get` reads native per-row results.
+The signed `digest` is returned for the later approved commit workflow.
+Batch apply remains disabled until Kernel Action + independent Approval exists.

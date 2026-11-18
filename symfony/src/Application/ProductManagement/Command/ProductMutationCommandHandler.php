@@ -5,6 +5,7 @@ namespace App\Application\ProductManagement\Command;
 
 use DomainException;
 use Domains\ProductManagement\Application\Service\PricingService;
+use Domains\ProductManagement\Application\Service\CsvProductImportService;
 use Domains\ProductManagement\Application\Service\ProductManagementService;
 use Kernel\Application\Command\CommandHandlerInterface;
 
@@ -14,6 +15,7 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
     public function __construct(
         private ProductManagementService $products,
         private PricingService $prices,
+        private CsvProductImportService $imports,
     ) {}
 
     /** @return array<string,mixed> */
@@ -48,6 +50,9 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
                 $org, (string) $in['variant_id'], (string) $in['location_id'],
                 '-' . (string) $in['quantity'], 'issue', (string) $in['source_ref'],
                 $key, $actor, $trace,
+            ),
+            'import.preview' => $this->imports->preview(
+                $org,(string)$in['csv'],$actor,$key,
             ),
             'price.base.set' => $this->prices->set(
                 $org, (string) $in['variant_id'], (string) $in['currency'],
