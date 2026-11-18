@@ -39,3 +39,12 @@ not authorization to write stock or directly start Platform Workflow.
 
 `SHOPIFY_CLIENT_SECRET` must exist in trusted server configuration.
 Ambiguous shops and inactive tenants fail closed. No Shopify writeback in E4.
+
+## Shopify E4 canonical write safety
+
+A catalog pull does **not** create or update canonical Product, Variant, Price
+or Stock. It records remote product/stock observations, verifies preapproved
+GID mappings when present and quarantines missing or inconsistent mappings.
+Approved canonical import is a separate follow-up action through the existing
+Kernel Action/Approval and Platform Workflow path, not a hidden effect of a
+GraphQL read. The pull service is not exposed as a public command.

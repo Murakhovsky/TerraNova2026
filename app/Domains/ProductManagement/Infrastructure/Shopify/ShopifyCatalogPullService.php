@@ -9,7 +9,7 @@ use Domains\ProductManagement\Domain\ProductRules;
 use Throwable;
 
 /**
- * Shopify-authoritative E4: imports canonical identity where unambiguous,
+ * Shopify-authoritative E4: stages read-only observations and checks approved mappings,
  * records exact external location/stock observations separately, never writes to Shopify.
  */
 final readonly class ShopifyCatalogPullService
@@ -97,71 +97,63 @@ GRAPHQL;
         }
     }
 
-    /** @param array<string,mixed> $remote */
+    /**
+     * Observe remote facts without canonical Product/Variant mutations.
+     * Unmapped identity must be reconciled under a separately approved Action.
+     * @param array<string,mixed> $remote
+     */
     private function applyProduct(string $org,string $conn,array $remote): void
     {
         $gid=$remote['id']??null;
-        if (!is_string($gid)||!preg_match('#^gid://shopify/Product/[0-9]+$#D',$gid)) throw new DomainException('Invalid Shopify product GID.');
+        if (!is_string($gid)||!preg_match('#^gid://shopify/Product/[0-9]+$#D',$gid)) {
+            throw new DomainException('Invalid Shopify product GID.');
+        }
         $variants=$remote['variants']['nodes']??null;
         if (!is_array($variants)||$variants===[]||!empty($remote['variants']['pageInfo']['hasNextPage'])) {
-            throw new DomainException('Empty or unbounded variant connection, stage for bulk review.');
+            throw new DomainException('Empty or truncated Shopify variants; requires pagination/review.');
         }
         $normalized=[];
         foreach ($variants as $variant) {
-            $vgid=$variant['id']??null;
-            if (!is_string($vgid)||!preg_match('#^gid://shopify/ProductVariant/[0-9]+$#D',$vgid)) throw new DomainException('Invalid Shopify variant GID.');
+            $variantGid=$variant['id']??null;
+            if (!is_string($variantGid)||!preg_match('#^gid://shopify/ProductVariant/[0-9]+$#D',$variantGid)) {
+                throw new DomainException('Invalid Shopify variant GID.');
+            }
             $sku=ProductRules::sku((string)($variant['sku']??''));
-            $normalized[]=['sku'=>$sku,'gid'=>$vgid,'remote'=>$variant];
             if (!empty($variant['inventoryItem']['inventoryLevels']['pageInfo']['hasNextPage'])) {
-                throw new DomainException('Inventory locations truncated; require full pagination.');
+                throw new DomainException('Inventory locations truncated; separate full pagination required.');
             }
+            $normalized[]=['gid'=>$variantGid,'sku'=>$sku,'remote'=>$variant];
         }
-        $first=$normalized[0];
-        $mapping=$this->observations->mapping($org,$conn,'product',$gid);
-        if ($mapping===null) {
-            $tracked=(bool)($first['remote']['inventoryItem']['tracked']??false);
-            $anyTracked=false;
-            foreach ($normalized as $entry) {
-                if (!empty($entry['remote']['inventoryItem']['tracked'])) { $anyTracked=true; break; }
-            }
-            $data=['name'=>ProductRules::name((string)($remote['title']??'')),
-                'sku'=>$first['sku'],'type'=>$anyTracked?'stock':'service',
-                'uom'=>'pcs','track_inventory'=>$tracked];
-            $created=$this->products->createProduct($org,$data,$this->idem($conn,'p',$gid),
-                'shopify:'.$conn,$this->idem($conn,'trace',$gid));
-            $mapping=['canonical_id'=>$created['product_id']];
-            $this->observations->map($org,$conn,'product',$gid,$created['product_id']);
-            $this->observations->map($org,$conn,'variant',$first['gid'],$created['variant_id']);
-        }
-        $product=$this->products->getProduct($org,$mapping['canonical_id']);
-        if ($product===null) throw new DomainException('Mapped canonical product is missing.');
+        // Every verified observation is saved regardless of canonical mapping.
+        // A Shopify snapshot is not a stock receipt or Product create command.
+        $this->observations->observeProduct($org,$conn,$gid,$remote);
         foreach ($normalized as $variant) {
-            $known=$this->observations->mapping($org,$conn,'variant',$variant['gid']);
-            if ($known===null) {
-                $local=null;
-                foreach ($product['variants'] as $v) {
-                    if ($v['sku']===$variant['sku']) {$local=$v['variant_id'];break;}
-                }
-                if ($local===null) {
-                    $remoteTracked=(bool)($variant['remote']['inventoryItem']['tracked']??false);
-                    $created=$this->products->createVariant($org,$product['product_id'],$variant['sku'],'pcs',$remoteTracked,
-                        $this->idem($conn,'v',$variant['gid']),'shopify:'.$conn,$this->idem($conn,'trace',$variant['gid']));
-                    $local=$created['variant_id'];
-                }
-                $this->observations->map($org,$conn,'variant',$variant['gid'],$local);
-            }
             $item=$variant['remote']['inventoryItem']??null;
             if (is_array($item) && is_string($item['id']??null)) {
                 foreach ($item['inventoryLevels']['nodes']??[] as $level) {
-                    if (is_array($level)) $this->observations->observeStock($org,$conn,$variant['gid'],$item['id'],$level);
+                    if (is_array($level)) {
+                        $this->observations->observeStock($org,$conn,$variant['gid'],$item['id'],$level);
+                    }
                 }
             }
         }
-        $this->observations->observeProduct($org,$conn,$gid,$remote);
+        $mapping=$this->observations->mapping($org,$conn,'product',$gid);
+        if ($mapping===null) {
+            throw new DomainException('Shopify product observed without approved COS identity mapping.');
+        }
+        $product=$this->products->getProduct($org,$mapping['canonical_id']);
+        if ($product===null) throw new DomainException('Mapped canonical Product is absent.');
+        foreach ($normalized as $variant) {
+            $known=$this->observations->mapping($org,$conn,'variant',$variant['gid']);
+            if ($known===null) throw new DomainException('Shopify variant observed without approved COS mapping.');
+            $matched=false;
+            foreach ($product['variants'] as $local) {
+                if ($local['variant_id']===$known['canonical_id'] && $local['sku']===$variant['sku']) {
+                    $matched=true; break;
+                }
+            }
+            if (!$matched) throw new DomainException('Mapped Shopify Variant and canonical SKU disagree.');
+        }
     }
 
-    private function idem(string $connectionId,string $kind,string $gid): string
-    {
-        return 'pm:'.hash('sha256',$connectionId.':'.$kind.':'.$gid);
-    }
 }
