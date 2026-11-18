@@ -66,6 +66,13 @@ $otherCreated=$products->createProduct($other,['sku'=>$sku,'name'=>'Other tenant
     'pm-other-create-'.$token,'ci-other','ci-pm');
 $assert($otherCreated['product_id']!==$created['product_id'],'SKU identity is tenant-local');
 $assert(count($products->searchProducts($org,$sku))===1,'other tenant Product hidden from catalog');
+$updated=$products->updateProduct($org,$created['product_id'],['name'=>'Renamed Product','brand'=>'COS'],1,
+    'pm-update-'.$token,'ci-user','ci-pm');
+$assert($updated['revision']===2 && $products->getProduct($org,$created['product_id'])['name']==='Renamed Product',
+    'Product update must commit guarded revision');
+$reject(static fn()=> $products->updateProduct($org,$created['product_id'],['name'=>'Concurrent edit'],1,
+    'pm-stale-'.$token,'ci-user','ci-pm'),'stale Product expected_revision');
+
 
 $location=$products->createLocation($org,'L-'.$token,'Test warehouse','pm-loc-'.$token,'ci-user','ci-pm');
 $variant=$created['variant_id'];$loc=$location['location_id'];
@@ -82,6 +89,11 @@ $products->recordMovement($org,$variant,$loc,'-4.000000','issue','TEST-SALE','pm
 $balance=$products->balance($org,$variant,$loc);
 $assert((string)$balance['on_hand']==='6.000000','on_hand must be 6');
 $assert((string)$balance['available']==='6.000000','available must be 6');
+$movements=$products->stockMovements($org,$variant,50,0);
+$assert(count($movements)===2 && $movements[0]['variant_id']===$variant,
+    'immutable stock movement search must expose both postings');
+$assert($products->stockMovements($other,$variant,50,0)===[],'tenant movement isolation');
+
 $reject(static fn()=> $products->recordMovement($other,$variant,$loc,'2.000000','receipt','TEST-PO-OTHER',
     'pm-cross-'.$token,'ci-other','ci-pm'),'cross-tenant stock write');
 $reject(static fn()=> $products->recordMovement($org,$variant,$loc,'-2.000000','adjustment','MISSING-APPROVAL',
@@ -118,13 +130,17 @@ $assert($observations->mapping($org,$connectionId,'product',$remoteGid)['canonic
 $assert($observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":1}'),'new webhook delivery');
 $assert(!$observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":1}'),'duplicate webhook is idempotent');
 $reject(static fn()=> $observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":2}'),'duplicate webhook different digest');
+$archived=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.$token,'ci-user','ci-pm');
+$assert($archived['revision']===3 && $archived['status']==='archived','Product archive must preserve state');
+$reject(static fn()=> $products->updateProduct($org,$created['product_id'],['name'=>'After archive'],3,
+    'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===5,'five confirmed native domain events');
+$assert((int)$stmt->fetchColumn()===7,'seven confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===5,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===7,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";

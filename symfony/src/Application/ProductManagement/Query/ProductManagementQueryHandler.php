@@ -28,6 +28,10 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
                 'items'=>$this->products->searchProducts($org,(string)($in['q']??''),(int)($in['limit']??30),(int)($in['offset']??0)),
                 'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
             ],
+            'stock.movement.search' => [
+                'items'=>$this->products->stockMovements($org,(string)$in['variant_id'],(int)($in['limit']??30),(int)($in['offset']??0)),
+                'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
+            ],
             'stock.balance.get' => $this->products->balance($org,(string)$in['variant_id'],(string)$in['location_id']),
             'price.base.get' => $this->prices->get($org,(string)$in['variant_id'],(string)$in['currency']),
             'sync.status.get' => $this->shopify->status($org,(string)$in['connection_id']),

@@ -9,6 +9,12 @@ interface ProductManagementStoreInterface
     public function createProduct(string $organizationId, array $data, string $key, string $actor, string $correlation): array;
     /** @return array<string,mixed> */
     public function createVariant(string $organizationId,string $productId,string $sku,string $uom,bool $track,string $key,string $actor,string $correlation): array;
+    /** @param array<string,mixed> $changes @return array<string,mixed> */
+    public function updateProduct(string $organizationId, string $productId, array $changes, int $expectedRevision, string $key, string $actor, string $correlation): array;
+    /** @return array<string,mixed> */
+    public function archiveProduct(string $organizationId, string $productId, int $expectedRevision, string $key, string $actor, string $correlation): array;
+    /** @return list<array<string,mixed>> */
+    public function searchStockMovements(string $organizationId, string $variantId, int $limit, int $offset): array;
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array;
     /** @return list<array<string,mixed>> */

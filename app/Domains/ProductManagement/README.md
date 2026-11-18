@@ -57,3 +57,11 @@ Product creation and queries. These require an active tenant module, a manager
 with `cos.tenant.manage`, CSRF-protected invocation and a bounded
 idempotency key. Automated invokers still require approved Platform Workflow.
 Destructive adjustments and Shopify writes are intentionally **not** enabled.
+
+## Product lifecycle and independent ledger read
+
+`product.update` and `product.archive` require the current
+`expected_revision` and return a committed new revision or a conflict.
+Archiving never deletes the Product or movements. Archiving a Product with
+active reservations is rejected. `stock.movement.search` returns immutable
+tenant-scoped movement facts, not a computed/forged stock history.

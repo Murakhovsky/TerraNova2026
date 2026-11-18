@@ -41,6 +41,44 @@ final readonly class ProductManagementService
         return $this->store->createVariant($org,$productId,$sku,$uom,$track,$key,$actor,$correlation);
     }
 
+    /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function updateProduct(string $org, string $productId, array $input, int $expectedRevision, string $key, string $actor, string $correlation): array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if (!preg_match('/^[a-f0-9]{32}$/D',$productId) || $expectedRevision<1) throw new DomainException('Invalid Product reference or revision.');
+        $changes=[];
+        if (array_key_exists('name',$input)) {
+            if (!is_string($input['name'])) throw new DomainException('Name must be a string.');
+            $changes['name']=ProductRules::name($input['name']);
+        }
+        foreach(['description'=>20000,'brand'=>190] as $field=>$max) {
+            if (array_key_exists($field,$input)) {
+                if (!is_string($input[$field]) || mb_strlen($input[$field])>$max) throw new DomainException('Invalid Product text field: '.$field);
+                $changes[$field]=trim($input[$field]);
+            }
+        }
+        if ($changes===[]) throw new DomainException('At least one permitted field must change.');
+        return $this->store->updateProduct($org,$productId,$changes,$expectedRevision,$key,$actor,$correlation);
+    }
+
+    /** @return array<string,mixed> */
+    public function archiveProduct(string $org, string $productId, int $expectedRevision, string $key, string $actor, string $correlation): array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if (!preg_match('/^[a-f0-9]{32}$/D',$productId) || $expectedRevision<1) throw new DomainException('Invalid Product reference or revision.');
+        return $this->store->archiveProduct($org,$productId,$expectedRevision,$key,$actor,$correlation);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function stockMovements(string $org, string $variantId, int $limit=30, int $offset=0): array
+    {
+        $this->tenant($org);
+        if (!preg_match('/^[a-f0-9]{32}$/D',$variantId)||$limit<1||$limit>100||$offset<0) {
+            throw new DomainException('Invalid stock movement search bounds.');
+        }
+        return $this->store->searchStockMovements($org,$variantId,$limit,$offset);
+    }
+
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array
     {

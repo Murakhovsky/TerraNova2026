@@ -45,6 +45,50 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             },'product_management.variant.created','Product');
     }
 
+    public function updateProduct(string $organizationId, string $productId, array $changes, int $expectedRevision, string $key, string $actor, string $correlation): array
+    {
+        return $this->mutate($organizationId,'product.update',$key,[$productId,$changes,$expectedRevision],$actor,$correlation,
+            function () use ($organizationId,$productId,$changes,$expectedRevision): array {
+                $row=$this->one('SELECT revision,status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$organizationId,$productId]);
+                if ($row===null||$row['status']==='archived') throw new DomainException('Product absent or archived.');
+                if ((int)$row['revision']!==$expectedRevision) throw new DomainException('Product revision conflict.');
+                $allowed=['name','description','brand'];
+                $set=[];$values=[];
+                foreach ($changes as $field=>$value) {
+                    if (!in_array($field,$allowed,true)) throw new DomainException('Unexpected Product field.');
+                    $set[]=$field.'=?';$values[]=$value;
+                }
+                $values[]=$organizationId;$values[]=$productId;
+                $this->execute('UPDATE pm_products SET '.implode(',',$set).',revision=revision+1 WHERE organization_id=? AND product_id=?',$values);
+                return ['product_id'=>$productId,'revision'=>$expectedRevision+1,'status'=>$row['status']];
+            },'product_management.product.updated','Product');
+    }
+
+    public function archiveProduct(string $organizationId, string $productId, int $expectedRevision, string $key, string $actor, string $correlation): array
+    {
+        return $this->mutate($organizationId,'product.archive',$key,[$productId,$expectedRevision],$actor,$correlation,
+            function () use ($organizationId,$productId,$expectedRevision): array {
+                $row=$this->one('SELECT revision,status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$organizationId,$productId]);
+                if ($row===null||$row['status']==='archived') throw new DomainException('Product absent or archived.');
+                if ((int)$row['revision']!==$expectedRevision) throw new DomainException('Product revision conflict.');
+                $reserved=$this->one('SELECT COUNT(*) AS total FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND b.reserved>0',[$organizationId,$productId]);
+                if ($reserved!==null && (int)$reserved['total']>0) throw new DomainException('Product has active stock reservations.');
+                $this->execute("UPDATE pm_products SET status='archived',revision=revision+1 WHERE organization_id=? AND product_id=?",[$organizationId,$productId]);
+                return ['product_id'=>$productId,'revision'=>$expectedRevision+1,'status'=>'archived'];
+            },'product_management.product.archived','Product');
+    }
+
+    public function searchStockMovements(string $organizationId, string $variantId, int $limit, int $offset): array
+    {
+        $stmt=$this->connection->prepare('SELECT movement_id,variant_id,location_id,quantity_delta,movement_type,source_ref,actor_ref,occurred_at FROM pm_stock_movements WHERE organization_id=:org AND variant_id=:variant ORDER BY occurred_at DESC,movement_id DESC LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$organizationId);
+        $stmt->bindValue(':variant',$variantId);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);
+        $stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getProduct(string $organizationId, string $id): ?array
     {
         $row = $this->one('SELECT * FROM pm_products WHERE organization_id=? AND product_id=?', [$organizationId,$id]);
