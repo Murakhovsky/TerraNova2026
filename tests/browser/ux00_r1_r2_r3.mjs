@@ -81,8 +81,12 @@ try {
   page = await login(admin, email, password);
 
   // R1. The authenticated capability QueryBus exists and is tenant-scoped.
-  assert((await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' }))?.status() === 200,
-    'R1/R2: Capability workspace missing');
+  const capabilityPage = await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
+  if (capabilityPage?.status() !== 200) {
+    const responseText = (await page.locator('body').innerText().catch(() => '')).slice(0, 1300);
+    throw new Error('R1/R2 Capability workspace HTTP ' + (capabilityPage?.status() ?? 'none')
+      + ' URL ' + page.url() + ' BODY ' + responseText);
+  }
   const csrf = await authToken(page);
 
   // The current AccountAuthenticationService is explicitly pinned to
