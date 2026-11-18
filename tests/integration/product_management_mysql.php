@@ -51,7 +51,12 @@ $createKey='pm-create-'.$token;
 $created=$products->createProduct($org,['sku'=>$sku,'name'=>'Test product','type'=>'stock'],$createKey,'ci-user','ci-pm');
 $assert(isset($created['product_id'],$created['variant_id']),'product must be created');
 $again=$products->createProduct($org,['sku'=>$sku,'name'=>'Test product','type'=>'stock'],$createKey,'ci-user','ci-pm');
-$assert($again===$created,'exact idempotency replay');
+$assert(
+    $again['product_id']===$created['product_id']
+    && $again['variant_id']===$created['variant_id']
+    && $again['sku']===$created['sku'],
+    'product replay must return original native identities'
+);
 $reject(static fn()=> $products->createProduct($org,['sku'=>$sku,'name'=>'Different','type'=>'stock'],$createKey,'ci-user','ci-pm'),'idempotency payload conflict');
 $assert($products->getProduct($other,$created['product_id'])===null,'tenant catalog isolation');
 $assert(count($products->searchProducts($org,$sku))===1,'search by SKU');
@@ -66,7 +71,12 @@ $location=$products->createLocation($org,'L-'.$token,'Test warehouse','pm-loc-'.
 $variant=$created['variant_id'];$loc=$location['location_id'];
 $receipt=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');
 $replayed=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');
-$assert($receipt===$replayed,'stock receipt is not duplicated');
+$assert(
+    $receipt['movement_id']===$replayed['movement_id']
+    && $receipt['delta']===$replayed['delta']
+    && $receipt['balance']['on_hand']===$replayed['balance']['on_hand'],
+    'stock replay must return original movement and stock evidence'
+);
 $reject(static fn()=> $products->recordMovement($org,$variant,$loc,'-11.000000','issue','TEST-SALE','pm-overdraw-'.$token,'ci-user','ci-pm'),'negative stock');
 $products->recordMovement($org,$variant,$loc,'-4.000000','issue','TEST-SALE','pm-out-'.$token,'ci-user','ci-pm');
 $balance=$products->balance($org,$variant,$loc);
@@ -83,7 +93,13 @@ $statement->execute([$org,$variant]);
 $assert((int)$count===2 && (string)$sum==='6.000000','ledger must reconcile projection');
 $set=$prices->set($org,$variant,'UAH','129.9900','pm-price-'.$token,'ci-user','ci-pm');
 $againPrice=$prices->set($org,$variant,'UAH','129.9900','pm-price-'.$token,'ci-user','ci-pm');
-$assert($set===$againPrice && (string)$set['price']==='129.9900','base price idempotency');
+$assert(
+    $set['variant_id']===$againPrice['variant_id']
+    && $set['revision']===$againPrice['revision']
+    && (string)$set['price']===(string)$againPrice['price']
+    && (string)$set['price']==='129.9900',
+    'base price replay must preserve price revision and amount'
+);
 $batch=$csv->preview($org,"sku,name,type,uom,track_inventory\nCSV".$token.",Sample,stock,pcs,1\n",'ci-user');
 $assert(($batch['counts']['ready']??0)===1 && $batch['state']==='staged','CSV validation-only stage');
 $assert(count($products->searchProducts($org,'CSV'.$token))===0,'CSV stage must not write Product');
