@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PMBasePriceGetV1",
+  "type": "object",
+  "required": [
+    "variant_id",
+    "currency"
+  ],
+  "properties": {
+    "variant_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3,
+      "pattern": "^[A-Za-z]{3}$"
+    }
+  },
+  "additionalProperties": false
+}

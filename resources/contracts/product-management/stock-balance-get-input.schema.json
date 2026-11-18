@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PMStockBalanceGetV1",
+  "type": "object",
+  "required": [
+    "variant_id",
+    "location_id"
+  ],
+  "properties": {
+    "variant_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "location_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    }
+  },
+  "additionalProperties": false
+}
