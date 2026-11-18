@@ -41,23 +41,40 @@ final readonly class MetaReadOnlyConnectionService {
   $timezone=(string)($result['timezone_name']??'');
   if(!preg_match('/^[A-Z]{3}$/D',$currency)||$timezone===''||strlen($timezone)>64)
    throw new RuntimeException('Meta account currency/timezone unavailable.');
-  $id=bin2hex(random_bytes(16));
-  $s=$this->connection->prepare('INSERT INTO mkt_paid_accounts(organization_id,account_id,provider,external_account_id,credential_ref,state,timezone,currency,last_verified_at) VALUES(?,?,"meta",?,?,"READ_ONLY",?,?,CURRENT_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE credential_ref=VALUES(credential_ref),timezone=VALUES(timezone),currency=VALUES(currency),state="READ_ONLY",last_verified_at=CURRENT_TIMESTAMP(6),last_error_code=NULL');
-  $s->execute([$org,$id,'act_'.$account,$credentialRef,$timezone,$currency]);
-  $read=$this->connection->prepare('SELECT account_id FROM mkt_paid_accounts WHERE organization_id=? AND provider="meta" AND external_account_id=?');
-  $read->execute([$org,'act_'.$account]);$canonical=$read->fetchColumn();
-  return ['account_id'=>(string)$canonical,'provider'=>'meta','state'=>'READ_ONLY',
+  // Global unique account binding is authoritative. Never update another tenant's
+  // record through an ON DUPLICATE KEY clause: reject cross-tenant collisions.
+  $this->connection->beginTransaction();
+  try {
+   $lookup=$this->connection->prepare('SELECT organization_id,account_id FROM mkt_paid_accounts WHERE provider="meta" AND external_account_id=? FOR UPDATE');
+   $lookup->execute(['act_'.$account]);$existing=$lookup->fetch(PDO::FETCH_ASSOC);
+   if(is_array($existing)&&$existing['organization_id']!==$org)
+    throw new DomainException('Ad account already bound to another tenant.');
+   if(is_array($existing)){
+    $canonical=(string)$existing['account_id'];
+    $s=$this->connection->prepare('UPDATE mkt_paid_accounts SET credential_ref=?,timezone=?,currency=?,state="READ_ONLY",capability_scopes_json=?,last_verified_at=CURRENT_TIMESTAMP(6),last_error_code=NULL WHERE organization_id=? AND account_id=?');
+    $s->execute([$credentialRef,$timezone,$currency,'["ads_read"]',$org,$canonical]);
+   }else{
+    $canonical=bin2hex(random_bytes(16));
+    $s=$this->connection->prepare('INSERT INTO mkt_paid_accounts(organization_id,account_id,provider,external_account_id,credential_ref,state,timezone,currency,capability_scopes_json,last_verified_at) VALUES(?,?,"meta",?,?,"READ_ONLY",?,?,?,CURRENT_TIMESTAMP(6))');
+    $s->execute([$org,$canonical,'act_'.$account,$credentialRef,$timezone,$currency,'["ads_read"]']);
+   }
+   $this->connection->commit();
+  }catch(Throwable $e) {
+   if($this->connection->inTransaction())$this->connection->rollBack();
+   throw $e;
+  }
+  return ['account_id'=>$canonical,'provider'=>'meta','state'=>'READ_ONLY',
    'timezone'=>$timezone,'currency'=>$currency];
  }
 
  /** Bounded and cursor-checkpointed read sync; never clears prior observations. */
  public function sync(string $org,string $accountId,int $maxPages=10):array {
   $row=$this->store->account($org,$accountId);
-  if($row===null||(string)$row['provider']!=='meta'||(string)$row['state']==='DISCONNECTED')
+  if($row===null||(string)$row['provider']!=='meta'||(string)$row['state']!=='READ_ONLY')
    throw new DomainException('Marketing Meta account not available for this tenant.');
   $account=$this->accountId((string)$row['external_account_id']);
   $token=$this->token($org,$account,(string)$row['credential_ref']);
-  $pages=0;$imported=0;$maxPages=max(1,min(30,$maxPages));
+  $pages=0;$imported=0;$completed=0;$maxPages=max(1,min(30,$maxPages));
   foreach(['campaign','adset','ad'] as $stream) {
    $cursor=$this->cursor($org,$accountId,$stream);
    $seen=[];
@@ -75,7 +92,7 @@ final readonly class MetaReadOnlyConnectionService {
      if($next!==null)$seen[$next]=true;
      $this->checkpoint($org,$accountId,$stream,$next,$next===null?'COMPLETE':'PARTIAL');
      $cursor=$next;
-     if($next===null)break;
+     if($next===null){$completed++;break;}
     }catch(Throwable $e){
      $this->checkpoint($org,$accountId,$stream,$cursor,'ERROR','PROVIDER_READ_FAILED');
      throw $e;
@@ -85,7 +102,7 @@ final readonly class MetaReadOnlyConnectionService {
   }
   $s=$this->connection->prepare('UPDATE mkt_paid_accounts SET last_sync_at=CURRENT_TIMESTAMP(6),last_error_code=NULL WHERE organization_id=? AND account_id=?');
   $s->execute([$org,$accountId]);
-  return ['imported'=>$imported,'pages'=>$pages,'complete'=>$pages<$maxPages];
+  return ['imported'=>$imported,'pages'=>$pages,'complete'=>$completed===3];
  }
 
  /** Provider spend is provisional evidence, never an Expense or Payment. */

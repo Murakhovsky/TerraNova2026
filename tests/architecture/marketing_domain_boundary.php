@@ -22,7 +22,7 @@ $rootDomain=$root.'/app/Domains/Marketing';
 $source=file_get_contents($rootDomain.'/Application/Service/MetaReadOnlyConnectionService.php');
 $assert(!str_contains($source,'CURLOPT_POST')&&!str_contains($source,'setDeliveryStatus'),'Meta must be read-only.');
 $sql=file_get_contents($root.'/app/migrations/20261118_000156_marketing_core_paid_read.sql');
-foreach(['mkt_campaigns','mkt_paid_accounts','mkt_paid_objects','mkt_paid_insight_snapshots','mkt_operation_receipts','organization_id'] as $word) {
+foreach(['mkt_campaigns','mkt_paid_accounts','mkt_paid_objects','mkt_paid_insight_snapshots','mkt_operation_receipts','organization_id','uq_mkt_external_global','EXTERNALLY_MANAGED'] as $word) {
  $assert(str_contains($sql,$word),'Marketing persistence invariant missing: '.$word);
 }
 $http=new class implements MetaReadTransportInterface {

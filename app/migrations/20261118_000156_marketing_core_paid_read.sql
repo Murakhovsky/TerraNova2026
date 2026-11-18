@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS mkt_paid_accounts (
  provider VARCHAR(32) NOT NULL,
  external_account_id VARCHAR(80) NOT NULL,
  credential_ref VARCHAR(190) NOT NULL,
+ business_id VARCHAR(80) NULL,
+ capability_scopes_json JSON NULL,
  state VARCHAR(32) NOT NULL DEFAULT 'READ_ONLY',
  timezone VARCHAR(64) NOT NULL,
  currency CHAR(3) NOT NULL,
@@ -67,7 +69,8 @@ CREATE TABLE IF NOT EXISTS mkt_paid_accounts (
  last_error_code VARCHAR(80) NULL,
  PRIMARY KEY(organization_id,account_id),
  UNIQUE KEY uq_mkt_external(organization_id,provider,external_account_id),
- CONSTRAINT ck_mkt_account_state CHECK(state IN ('READ_ONLY','DEGRADED','DISCONNECTED','COS_MANAGED'))
+ UNIQUE KEY uq_mkt_external_global(provider,external_account_id),
+ CONSTRAINT ck_mkt_account_state CHECK(state IN ('NOT_CONNECTED','CONNECTING','READ_ONLY','WRITE_ELIGIBLE','EXPIRED','REVOKED','ERROR'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS mkt_paid_objects (
@@ -78,6 +81,7 @@ CREATE TABLE IF NOT EXISTS mkt_paid_objects (
  parent_external_id VARCHAR(80) NULL,
  name VARCHAR(255) NOT NULL,
  provider_status VARCHAR(64) NOT NULL,
+ management_mode VARCHAR(32) NOT NULL DEFAULT 'EXTERNALLY_MANAGED',
  effective_status VARCHAR(64) NOT NULL,
  source_updated_at VARCHAR(64) NULL,
  source_hash CHAR(64) NOT NULL,
@@ -85,7 +89,8 @@ CREATE TABLE IF NOT EXISTS mkt_paid_objects (
  PRIMARY KEY(organization_id,account_id,object_type,external_id),
  CONSTRAINT fk_mkt_object_account FOREIGN KEY(organization_id,account_id)
  REFERENCES mkt_paid_accounts(organization_id,account_id),
- CONSTRAINT ck_mkt_object_type CHECK(object_type IN ('campaign','adset','ad'))
+ CONSTRAINT ck_mkt_object_type CHECK(object_type IN ('campaign','adset','ad')),
+ CONSTRAINT ck_mkt_object_mode CHECK(management_mode IN ('EXTERNALLY_MANAGED','COS_MANAGED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS mkt_paid_insight_snapshots (
