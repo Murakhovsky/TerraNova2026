@@ -199,6 +199,14 @@ generated: true
 | `growth` | `app/migrations/20260926_000113_growth_v0480_market_discovery.sql` | `tn_growth_market_universes` |
 | `growth` | `app/migrations/20260926_000114_growth_v0490_cos_for_cos_vertical_slice.sql` | — |
 | `growth` | `app/migrations/20260926_000115_growth_v0500_release_hardening.sql` | `tn_growth_market_discovery_runs` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_campaign_revisions` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_campaigns` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_event_outbox` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_operation_receipts` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_paid_accounts` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_paid_insight_snapshots` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_paid_objects` |
+| `marketing` | `app/migrations/20261118_000156_marketing_core_paid_read.sql` | `mkt_paid_sync_checkpoints` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 142 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 145 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -166,6 +166,9 @@ generated: true
 | `growth` | `growth.signal.polling_workspace` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.signal.scheduled_polling` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.workspace` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
+| `marketing` | `marketing.campaign.create` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.campaign.search` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.paid.account.list` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `property` | `property.analytics` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.asset.create` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |

@@ -26,6 +26,7 @@ generated: true
 | `finance` | 0 |
 | `growth` | 0 |
 | `hr` | 0 |
+| `marketing` | 0 |
 | `procurement` | 0 |
 | `property` | 4 |
 | `real_estate` | 0 |
@@ -63,6 +64,10 @@ generated: true
 Явних `*Command` DTO contracts не знайдено.
 
 ## HR (`hr`)
+
+Явних `*Command` DTO contracts не знайдено.
+
+## Marketing (`marketing`)
 
 Явних `*Command` DTO contracts не знайдено.
 

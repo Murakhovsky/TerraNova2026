@@ -22,6 +22,7 @@ generated: true
 | `finance` | `0.1.0` | — | 0 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
+| `marketing` | `0.1.0` | — | 3 |
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
@@ -75,6 +76,12 @@ generated: true
 - manifest: `app/Domains/HR/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `marketing`
+
+- manifest: `app/Domains/Marketing/module.php`;
+- configuration provisioners: —;
+- capabilities: `marketing.campaign.create`, `marketing.campaign.search`, `marketing.paid.account.list`.
 
 ## `procurement`
 
