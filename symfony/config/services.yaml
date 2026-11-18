@@ -2767,6 +2767,12 @@ services:
       $connection: '@cos.database.pdo'
 
 
+  Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials: ~
+
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule: ~
   productManagementDomainModule:
