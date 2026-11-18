@@ -2758,6 +2758,14 @@ services:
   Domains\ProductManagement\Application\Contract\ProductManagementStoreInterface:
     alias: Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore
   Domains\ProductManagement\Application\Service\ProductManagementService: ~
+  Domains\ProductManagement\Application\Service\PricingService:
+    arguments:
+      $connection: '@cos.database.pdo'
+      $events: '@Kernel\Event\Contract\EventStoreInterface'
+  Domains\ProductManagement\Application\Service\CsvProductImportService:
+    arguments:
+      $connection: '@cos.database.pdo'
+
 
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule: ~
