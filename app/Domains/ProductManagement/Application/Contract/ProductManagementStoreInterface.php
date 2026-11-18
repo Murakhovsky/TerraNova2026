@@ -7,6 +7,8 @@ interface ProductManagementStoreInterface
 {
     /** @param array<string,mixed> $data @return array<string,mixed> */
     public function createProduct(string $organizationId, array $data, string $key, string $actor, string $correlation): array;
+    /** @return array<string,mixed> */
+    public function createVariant(string $organizationId,string $productId,string $sku,string $uom,bool $track,string $key,string $actor,string $correlation): array;
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array;
     /** @return list<array<string,mixed>> */

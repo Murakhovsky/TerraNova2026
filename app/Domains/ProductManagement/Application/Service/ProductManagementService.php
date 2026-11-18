@@ -32,6 +32,15 @@ final readonly class ProductManagementService
         ], $key, $actor, $correlation);
     }
 
+    /** @return array<string,mixed> */
+    public function createVariant(string $org,string $productId,string $sku,string $uom,bool $track,string $key,string $actor,string $correlation): array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        $sku=ProductRules::sku($sku);
+        if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_-]{0,15}$/D',$uom)) throw new DomainException('Invalid UOM.');
+        return $this->store->createVariant($org,$productId,$sku,$uom,$track,$key,$actor,$correlation);
+    }
+
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array
     {

@@ -2773,6 +2773,11 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials: ~
 
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
+
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule: ~
   productManagementDomainModule:

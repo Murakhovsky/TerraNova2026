@@ -31,6 +31,20 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             }, 'product_management.product.created', 'Product');
     }
 
+    public function createVariant(string $organizationId,string $productId,string $sku,string $uom,bool $track,string $key,string $actor,string $correlation): array
+    {
+        return $this->mutate($organizationId,'variant.create',$key,[$productId,$sku,$uom,$track],$actor,$correlation,
+            function () use ($organizationId,$productId,$sku,$uom,$track): array {
+                $product=$this->one('SELECT product_type FROM pm_products WHERE organization_id=? AND product_id=?',[$organizationId,$productId]);
+                if ($product===null) throw new DomainException('Unknown product.');
+                if (in_array($product['product_type'],['service','digital'],true)&&$track) throw new DomainException('Non-stock product cannot track inventory.');
+                $id=bin2hex(random_bytes(16));
+                $this->execute('INSERT INTO pm_variants (organization_id,variant_id,product_id,sku,uom,track_inventory) VALUES (?,?,?,?,?,?)',
+                    [$organizationId,$id,$productId,$sku,$uom,$track?1:0]);
+                return ['product_id'=>$productId,'variant_id'=>$id,'sku'=>$sku];
+            },'product_management.variant.created','Product');
+    }
+
     public function getProduct(string $organizationId, string $id): ?array
     {
         $row = $this->one('SELECT * FROM pm_products WHERE organization_id=? AND product_id=?', [$organizationId,$id]);

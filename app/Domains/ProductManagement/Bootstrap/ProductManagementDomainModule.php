@@ -15,6 +15,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
     {
         return [
             'product_management.product.created',
+            'product_management.variant.created',
             'product_management.location.created',
             'product_management.stock.movement_posted',
             'product_management.price.updated',
