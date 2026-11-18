@@ -15,6 +15,10 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore;
 use Domains\ProductManagement\Application\Service\ProductManagementService;
 use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\ModuleCatalog;
+use Kernel\Module\ModuleDiscovery;
+use Kernel\Module\Contract\ModuleStateRepositoryInterface;
 
 $pdo=new PDO(
     sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
@@ -90,12 +94,30 @@ $http=new class($sku) implements ShopifyHttpTransportInterface {
 $observations=new ShopifyObservationStore($pdo);
 $id=$observations->provision($org,$shop,'shopify_env_primary');
 $products=new ProductManagementService(new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)));
+$state=new class implements ModuleStateRepositoryInterface {
+    public bool $enabled=false;
+    public function enabledOverride(string $org,string $moduleId):?bool {
+        return $moduleId==='product_management'?$this->enabled:null;
+    }
+    public function setEnabled(string $org,string $moduleId,bool $enabled):void {
+        if ($moduleId==='product_management') $this->enabled=$enabled;
+    }
+};
+$catalog=new ModuleCatalog((new ModuleDiscovery(dirname(__DIR__,2).'/app/Domains'))->discover());
+$modules=new ActiveModuleResolver($catalog,$state);
 $pull=new ShopifyCatalogPullService(
-    $observations,new ShopifyReadClient($http),new ShopifyClientCredentials($http),$products
+    $observations,new ShopifyReadClient($http),new ShopifyClientCredentials($http),$products,
+    $modules
 );
 $assert=static function(bool $value,string $message):void {
     if (!$value)throw new RuntimeException('Shopify mock MySQL: '.$message);
 };
+$denied=false;
+try { $pull->pull($org,$id,1); }
+catch (DomainException) { $denied=true; }
+$assert($denied && $http->readCalls===0 && $http->oauthCalls===0,
+    'inactive tenant module cannot initiate even a read-only import');
+$state->setEnabled($org,'product_management',true);
 $first=$pull->pull($org,$id,1);
 $assert($first['products_observed']===1 && $first['conflicts']===1
     && $first['status']==='completed','remote unknown Product must be quarantined after observation');

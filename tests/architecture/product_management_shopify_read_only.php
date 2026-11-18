@@ -5,6 +5,8 @@ $pull=(string)file_get_contents($root.'/app/Domains/ProductManagement/Infrastruc
 $webhook=(string)file_get_contents($root.'/symfony/src/Http/Api/V1/Controller/ShopifyWebhookController.php');
 $assert=static function(bool $ok,string $msg):void { if (!$ok) throw new RuntimeException($msg); };
 $assert(str_contains($pull,'observeProduct(')&&str_contains($pull,'observeStock('),'Shopify observations missing.');
+$assert(str_contains($pull,'$this->modules->isEnabled(')
+    && str_contains($pull,"'product_management'"),'Product pull must require active tenant module.');
 $assert(str_contains($pull,'Shopify product observed without approved COS identity mapping.'),
     'Unknown remote identity must be quarantined.');
 $assert(!str_contains($pull,'$this->products->createProduct(')

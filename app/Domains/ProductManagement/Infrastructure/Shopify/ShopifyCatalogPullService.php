@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Domains\ProductManagement\Infrastructure\Shopify;
 
 use DomainException;
+use Kernel\Module\ActiveModuleResolver;
 use Domains\ProductManagement\Application\Service\ProductManagementService;
 use Domains\ProductManagement\Domain\ProductRules;
 use Throwable;
@@ -46,12 +47,16 @@ GRAPHQL;
         private ShopifyReadClient $client,
         private ShopifyClientCredentials $credentials,
         private ProductManagementService $products,
+        private ActiveModuleResolver $modules,
     ) {}
 
     /** @return array<string,mixed> */
     public function pull(string $org,string $connectionId,int $maxPages=1): array
     {
         if ($org===''||$connectionId===''||$maxPages<1||$maxPages>20) throw new DomainException('Invalid sync scope.');
+        if (!$this->modules->isEnabled($org,'product_management')) {
+            throw new DomainException('Product Management module is inactive for tenant.');
+        }
         $connection=$this->observations->connection($org,$connectionId);
         if ($connection['mode']!=='shopify_authoritative'&&$connection['mode']!=='observation_only') {
             throw new DomainException('Connection mode not read-only.');
