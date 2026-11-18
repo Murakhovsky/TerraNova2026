@@ -120,8 +120,12 @@ GRAPHQL;
         $mapping=$this->observations->mapping($org,$conn,'product',$gid);
         if ($mapping===null) {
             $tracked=(bool)($first['remote']['inventoryItem']['tracked']??false);
+            $anyTracked=false;
+            foreach ($normalized as $entry) {
+                if (!empty($entry['remote']['inventoryItem']['tracked'])) { $anyTracked=true; break; }
+            }
             $data=['name'=>ProductRules::name((string)($remote['title']??'')),
-                'sku'=>$first['sku'],'type'=>$tracked?'stock':'service',
+                'sku'=>$first['sku'],'type'=>$anyTracked?'stock':'service',
                 'uom'=>'pcs','track_inventory'=>$tracked];
             $created=$this->products->createProduct($org,$data,$this->idem($conn,'p',$gid),
                 'shopify:'.$conn,$this->idem($conn,'trace',$gid));

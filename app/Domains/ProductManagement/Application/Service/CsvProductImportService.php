@@ -80,37 +80,10 @@ final readonly class CsvProductImportService
     }
 
     /**
-     * Restricted internal operation. A caller MUST independently hold
-     * an approved canonical Action receipt before invoking this method.
-     * No external route or capability binding is provided.
-     * @return array<string,mixed>
+     * No CSV apply method is exposed until a validated Kernel Action admission
+     * and approval-evidence verifier are bound. Staging remains read-only.
+     * Never accept caller-supplied approval strings as sufficient authority.
      */
-    public function commitApproved(string $org,string $batchId,string $approvedActionReference,string $actor,string $correlation): array
-    {
-        if ($approvedActionReference===''||$actor===''||$correlation==='') throw new DomainException('Approved Action identity required.');
-        $batch=$this->batch($org,$batchId);
-        if ($batch===null) throw new DomainException('Unknown import batch.');
-        if ($batch['state']==='blocked') throw new DomainException('Batch blocked for review.');
-        $this->query("UPDATE pm_import_batches SET state='applying' WHERE organization_id=? AND batch_id=? AND state IN ('staged','applying')",[$org,$batchId]);
-        $rows=$this->query("SELECT row_no,payload_json FROM pm_import_rows WHERE organization_id=? AND batch_id=? AND status='ready' ORDER BY row_no",[$org,$batchId])->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $row) {
-            $index=(int)$row['row_no'];
-            $data=json_decode($row['payload_json'],true,flags:JSON_THROW_ON_ERROR);
-            try {
-                $created=$this->products->createProduct($org,$data,'csv:'.$batchId.':'.$index,$actor,$correlation);
-                $this->query("UPDATE pm_import_rows SET status='applied',product_id=?,applied_at=NOW(6) WHERE organization_id=? AND batch_id=? AND row_no=? AND status='ready'",
-                    [$created['product_id'],$org,$batchId,$index]);
-            } catch (Throwable $e) {
-                $this->query("UPDATE pm_import_rows SET status='failed',error_code=? WHERE organization_id=? AND batch_id=? AND row_no=? AND status='ready'",
-                    [mb_substr($e->getMessage(),0,128),$org,$batchId,$index]);
-            }
-        }
-        $pending=$this->query("SELECT COUNT(*) FROM pm_import_rows WHERE organization_id=? AND batch_id=? AND status='ready'",[$org,$batchId])->fetchColumn();
-        $this->query("UPDATE pm_import_batches SET state=? WHERE organization_id=? AND batch_id=?",
-            [(int)$pending===0?'applied':'applying',$org,$batchId]);
-        return $this->report($org,$batchId);
-    }
-
     /** @return array<string,mixed>|null */
     private function batch(string $org,string $batchId): ?array
     {

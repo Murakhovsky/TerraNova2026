@@ -130,7 +130,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             $result=$callback();
             $id=(string)($result['product_id']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
             $event=new DomainEvent(bin2hex(random_bytes(16)),$org,$eventType,$aggregateType,$id,
-                ['operation'=>$operation,'result'=>$result],new EventMetadata($correlation,null,'HUMAN',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC')));
+                ['operation'=>$operation,'result'=>$result],new EventMetadata($correlation,null,str_starts_with($actor,'shopify:')?'EXTERNAL':'HUMAN',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC')));
             $this->events->append($event); // writes cos_events + cos_event_outbox in this same transaction
             $this->execute('UPDATE pm_operation_receipts SET result_json=? WHERE organization_id=? AND idempotency_key=?',
                 [json_encode($result,JSON_THROW_ON_ERROR),$org,$key]);

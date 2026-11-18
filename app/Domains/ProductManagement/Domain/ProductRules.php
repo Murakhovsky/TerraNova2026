@@ -40,7 +40,7 @@ final class ProductRules
         $pattern = $allowNegative
             ? '/^-?(?:0|[1-9][0-9]{0,13})(?:\.[0-9]{1,6})?$/D'
             : '/^(?:0|[1-9][0-9]{0,13})(?:\.[0-9]{1,6})?$/D';
-        if (!preg_match($pattern, $value) || (float) $value == 0.0) {
+        if (!preg_match($pattern, $value) || preg_match('/^-?0(?:\\.0+)?$/D', $value) === 1) {
             throw new DomainException('Quantity must be nonzero DECIMAL(20,6).');
         }
         return $value;
