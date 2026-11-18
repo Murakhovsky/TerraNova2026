@@ -3851,6 +3851,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Capability\CapabilityLibraryController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Capability\AutomationIntentReviewController:
     public: true
     tags: ['controller.service_arguments']
