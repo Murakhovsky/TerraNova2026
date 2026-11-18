@@ -15,6 +15,12 @@ interface ProductManagementStoreInterface
     public function archiveProduct(string $organizationId, string $productId, int $expectedRevision, string $key, string $actor, string $correlation): array;
     /** @return list<array<string,mixed>> */
     public function searchStockMovements(string $organizationId, string $variantId, int $limit, int $offset): array;
+    /** @return array<string,mixed> */
+    public function createCategory(string $org,string $name,string $slug,?string $parentId,string $key,string $actor,string $correlation):array;
+    /** @return array<string,mixed> */
+    public function assignCategory(string $org,string $productId,string $categoryId,string $key,string $actor,string $correlation):array;
+    /** @return list<array<string,mixed>> */
+    public function searchCategories(string $org,int $limit,int $offset):array;
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array;
     /** @return list<array<string,mixed>> */

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PM category.assign input",
+  "type": "object",
+  "required": [
+    "product_id",
+    "category_id"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "category_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    }
+  },
+  "additionalProperties": false
+}

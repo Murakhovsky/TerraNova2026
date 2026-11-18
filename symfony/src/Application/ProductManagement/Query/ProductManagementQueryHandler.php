@@ -25,6 +25,10 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
         $org=$query->organization->value();
         $in=$query->input;
         return match($query->operation) {
+            'category.search' => [
+                'items'=>$this->products->categories($org,(int)($in['limit']??30),(int)($in['offset']??0)),
+                'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
+            ],
             'product.get' => $this->get($org,(string)$in['product_id']),
             'product.search' => [
                 'items'=>$this->products->searchProducts($org,(string)($in['q']??''),(int)($in['limit']??30),(int)($in['offset']??0)),

@@ -38,6 +38,13 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
                 (string) ($in['uom'] ?? 'pcs'), (bool) ($in['track_inventory'] ?? true),
                 $key, $actor, $trace,
             ),
+            'category.create' => $this->products->createCategory(
+                $org,(string)$in['name'],(string)$in['slug'],isset($in['parent_id'])?(string)$in['parent_id']:null,
+                $key,$actor,$trace,
+            ),
+            'category.assign' => $this->products->assignCategory(
+                $org,(string)$in['product_id'],(string)$in['category_id'],$key,$actor,$trace,
+            ),
             'location.create' => $this->products->createLocation(
                 $org, (string) $in['code'], (string) $in['name'], $key, $actor, $trace,
             ),

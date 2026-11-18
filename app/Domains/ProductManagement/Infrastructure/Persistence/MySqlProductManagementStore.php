@@ -89,11 +89,54 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function createCategory(string $org,string $name,string $slug,?string $parentId,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'category.create',$key,[$name,$slug,$parentId],$actor,$correlation,
+            function() use ($org,$name,$slug,$parentId):array {
+                if($parentId!==null) {
+                    $parent=$this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=?',
+                        [$org,$parentId]);
+                    if($parent===null)throw new DomainException('Parent category missing in tenant.');
+                }
+                $id=bin2hex(random_bytes(16));
+                $this->execute('INSERT INTO pm_categories (organization_id,category_id,parent_id,name,slug) VALUES (?,?,?,?,?)',
+                    [$org,$id,$parentId,$name,$slug]);
+                return ['category_id'=>$id,'slug'=>$slug,'parent_id'=>$parentId];
+            },'product_management.category.created','Category');
+    }
+
+    public function assignCategory(string $org,string $productId,string $categoryId,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'category.assign',$key,[$productId,$categoryId],$actor,$correlation,
+            function() use ($org,$productId,$categoryId):array {
+                $product=$this->one('SELECT status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',
+                    [$org,$productId]);
+                if($product===null||$product['status']==='archived')throw new DomainException('Product missing or archived.');
+                if($this->one('SELECT category_id FROM pm_categories WHERE organization_id=? AND category_id=?',
+                    [$org,$categoryId])===null)throw new DomainException('Category missing in tenant.');
+                $this->execute('INSERT INTO pm_product_categories (organization_id,product_id,category_id) VALUES (?,?,?)',
+                    [$org,$productId,$categoryId]);
+                return ['product_id'=>$productId,'category_id'=>$categoryId];
+            },'product_management.category.assigned','Product');
+    }
+
+    public function searchCategories(string $org,int $limit,int $offset):array
+    {
+        $stmt=$this->connection->prepare('SELECT category_id,parent_id,name,slug FROM pm_categories WHERE organization_id=:org ORDER BY name,category_id LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);
+        $stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getProduct(string $organizationId, string $id): ?array
     {
         $row = $this->one('SELECT * FROM pm_products WHERE organization_id=? AND product_id=?', [$organizationId,$id]);
         if ($row === null) return null;
         $row['variants'] = $this->rows('SELECT * FROM pm_variants WHERE organization_id=? AND product_id=? ORDER BY sku', [$organizationId,$id]);
+        $row['categories']=$this->rows('SELECT c.category_id,c.name,c.slug,c.parent_id FROM pm_categories c INNER JOIN pm_product_categories pc ON pc.organization_id=c.organization_id AND pc.category_id=c.category_id WHERE pc.organization_id=? AND pc.product_id=? ORDER BY c.name',
+            [$organizationId,$id]);
         return $row;
     }
 

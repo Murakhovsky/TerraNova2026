@@ -79,6 +79,33 @@ final readonly class ProductManagementService
         return $this->store->searchStockMovements($org,$variantId,$limit,$offset);
     }
 
+    /** @return array<string,mixed> */
+    public function createCategory(string $org,string $name,string $slug,?string $parentId,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if ($parentId!==null&&!preg_match('/^[a-f0-9]{32}$/D',$parentId)) throw new DomainException('Invalid parent category.');
+        return $this->store->createCategory($org,ProductRules::name($name),ProductRules::slug($slug),
+            $parentId,$key,$actor,$correlation);
+    }
+
+    /** @return array<string,mixed> */
+    public function assignCategory(string $org,string $productId,string $categoryId,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if (!preg_match('/^[a-f0-9]{32}$/D',$productId)||!preg_match('/^[a-f0-9]{32}$/D',$categoryId)) {
+            throw new DomainException('Invalid Product or Category ID.');
+        }
+        return $this->store->assignCategory($org,$productId,$categoryId,$key,$actor,$correlation);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function categories(string $org,int $limit=30,int $offset=0):array
+    {
+        $this->tenant($org);
+        if ($limit<1||$limit>100||$offset<0) throw new DomainException('Invalid Category listing bounds.');
+        return $this->store->searchCategories($org,$limit,$offset);
+    }
+
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array
     {

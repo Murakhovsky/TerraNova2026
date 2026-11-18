@@ -60,6 +60,24 @@ $assert(
 $reject(static fn()=> $products->createProduct($org,['sku'=>$sku,'name'=>'Different','type'=>'stock'],$createKey,'ci-user','ci-pm'),'idempotency payload conflict');
 $assert($products->getProduct($other,$created['product_id'])===null,'tenant catalog isolation');
 $assert(count($products->searchProducts($org,$sku))===1,'search by SKU');
+$category=$products->createCategory($org,'Technical Equipment','technical-equipment-'.$token,null,
+    'pm-cat-'.$token,'ci-user','ci-pm');
+$child=$products->createCategory($org,'Test Components','components-'.$token,$category['category_id'],
+    'pm-child-'.$token,'ci-user','ci-pm');
+$assert($child['parent_id']===$category['category_id'],'Child category must preserve parent ID');
+$assigned=$products->assignCategory($org,$created['product_id'],$child['category_id'],
+    'pm-assign-'.$token,'ci-user','ci-pm');
+$assert($assigned['product_id']===$created['product_id'],'Product Category assignment must persist');
+$assignedAgain=$products->assignCategory($org,$created['product_id'],$child['category_id'],
+    'pm-assign-'.$token,'ci-user','ci-pm');
+$assert($assignedAgain['category_id']===$child['category_id'],'Idempotent category assignment');
+$assert(count($products->getProduct($org,$created['product_id'])['categories'])===1,
+    'Product native read must include category membership');
+$assert(count($products->categories($org))===2 && $products->categories($other)===[],
+    'Tenant category hierarchy isolation');
+$reject(static fn()=> $products->assignCategory($other,$created['product_id'],$child['category_id'],
+    'pm-cross-cat-'.$token,'ci-other','ci-pm'),'cross-tenant Product/Category assignment');
+
 $reject(static fn()=> $products->createProduct($org,['sku'=>$sku,'name'=>'Duplicate SKU','type'=>'stock'],
     'pm-dup-'.$token,'ci-user','ci-pm'),'duplicate SKU in same tenant');
 $otherCreated=$products->createProduct($other,['sku'=>$sku,'name'=>'Other tenant product','type'=>'stock'],
@@ -143,11 +161,11 @@ $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['nam
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===7,'seven confirmed native Domain events');
+$assert((int)$stmt->fetchColumn()===10,'ten confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===7,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===10,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";

@@ -26,6 +26,15 @@ final class ProductRules
         return $name;
     }
 
+    public static function slug(string $slug): string
+    {
+        $slug=strtolower(trim($slug));
+        if (strlen($slug)>190 || !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D',$slug)) {
+            throw new DomainException('Category slug must be lowercase ASCII words separated by hyphens.');
+        }
+        return $slug;
+    }
+
     public static function code(string $code): string
     {
         $code = strtoupper(trim($code));

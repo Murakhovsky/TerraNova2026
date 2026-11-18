@@ -84,3 +84,12 @@ extends the bounded lease. A previous run's stale callback cannot overwrite
 the connection cursor or release a replacement run. Failed requests retain
 their last completed page cursor for deliberate retry. This is a local sync
 reservation, **not** a new workflow executor or autonomous scheduler.
+
+## E1 categories
+
+`category.create` creates tenant-scoped slugs and optional child nodes
+only when a valid tenant-local parent exists. `category.assign` links a
+native Product to a tenant-local Category once, through a durable operation
+receipt and Domain Event. `category.search` reads paged hierarchy nodes.
+Product reads expose category membership. Destructive merges and category
+deletion remain deliberately unsupported.
