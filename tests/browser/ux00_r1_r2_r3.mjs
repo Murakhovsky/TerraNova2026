@@ -121,8 +121,10 @@ try {
       type_code: 'house', city: 'Львів', address: 'UX00 invalid ' + uid },
     maxRedirects: 0,
   });
-  assert(badCsrf.status() === 400, 'R2: invalid CSRF did not block Property create');
-  add('R2.csrf_fail_closed');
+  assert([400, 403].includes(badCsrf.status()),
+    'R2: invalid CSRF did not fail closed: HTTP ' + badCsrf.status()
+      + ' body=' + (await badCsrf.text()).slice(0, 300));
+  add('R2.csrf_fail_closed', { denied_status: badCsrf.status() });
 
   const city = 'Львів';
   const address = 'UX00 browser ' + uid;
