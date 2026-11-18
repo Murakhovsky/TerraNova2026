@@ -113,7 +113,7 @@ final readonly class ShopifyObservationStore
                 [$run,$org,$conn]);
             $this->connection->commit();
             return $run;
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($this->connection->inTransaction()) $this->connection->rollBack();
             throw $e;
         }
@@ -137,7 +137,7 @@ final readonly class ShopifyObservationStore
             $this->query('UPDATE pm_external_connections SET page_cursor=?,last_sync_at=CASE WHEN ?=1 THEN UTC_TIMESTAMP(6) ELSE last_sync_at END,sync_lease_expires_at=DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 15 MINUTE) WHERE organization_id=? AND connection_id=? AND sync_run_id=?',
                 [$finished?null:$cursor,$finished?1:0,$org,$conn,$run]);
             $this->connection->commit();
-        } catch (\\Throwable $e) {
+        } catch (\Throwable $e) {
             if ($this->connection->inTransaction()) $this->connection->rollBack();
             throw $e;
         }

@@ -9,6 +9,10 @@ $assert(str_contains($pull,'$this->modules->isEnabled(')
     && str_contains($pull,"'product_management'"),'Product pull must require active tenant module.');
 $assert(str_contains($pull,'Shopify product observed without approved COS identity mapping.'),
     'Unknown remote identity must be quarantined.');
+$store=(string)file_get_contents($root.'/app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyObservationStore.php');
+$assert(str_contains($store,'FOR UPDATE') && str_contains($store,'sync_run_id')
+    && str_contains($store,'Stale Shopify sync cannot release another run.'),
+    'Shopify sync must use tenant-scoped MySQL run fencing.');
 $assert(!str_contains($pull,'$this->products->createProduct(')
     && !str_contains($pull,'$this->products->createVariant(')
     && !str_contains($pull,'$this->observations->map('),
