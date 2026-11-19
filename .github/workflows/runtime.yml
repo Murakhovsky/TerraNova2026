@@ -1006,6 +1006,7 @@ jobs:
           EXTERNAL_REFERENCE_EMAIL: sales-functional-acceptance@example.test
           EXTERNAL_REFERENCE_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
           EXTERNAL_REFERENCE_OUTPUT_DIR: tmp/external-reference
+          EXTERNAL_REFERENCE_CI_RATE_LIMIT_RETRY: '1'
         run: |
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
