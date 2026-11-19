@@ -35,14 +35,58 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($organizationId,'variant.create',$key,[$productId,$sku,$uom,$track],$actor,$correlation,
             function () use ($organizationId,$productId,$sku,$uom,$track): array {
-                $product=$this->one('SELECT product_type FROM pm_products WHERE organization_id=? AND product_id=?',[$organizationId,$productId]);
-                if ($product===null) throw new DomainException('Unknown product.');
+                $product=$this->one('SELECT product_type,status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$organizationId,$productId]);
+                if ($product===null||$product['status']==='archived') throw new DomainException('Unknown or archived product.');
                 if (in_array($product['product_type'],['service','digital'],true)&&$track) throw new DomainException('Non-stock product cannot track inventory.');
                 $id=bin2hex(random_bytes(16));
                 $this->execute('INSERT INTO pm_variants (organization_id,variant_id,product_id,sku,uom,track_inventory) VALUES (?,?,?,?,?,?)',
                     [$organizationId,$id,$productId,$sku,$uom,$track?1:0]);
                 return ['product_id'=>$productId,'variant_id'=>$id,'sku'=>$sku];
             },'product_management.variant.created','Product');
+    }
+
+    public function updateVariant(string $org,string $variantId,array $changes,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'variant.update',$key,[$variantId,$changes,$expectedRevision],$actor,$correlation,
+            function()use($org,$variantId,$changes,$expectedRevision):array {
+                $variant=$this->one('SELECT v.sku,v.revision,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
+                    [$org,$variantId]);
+                if ($variant===null||$variant['status']!=='active'||$variant['product_status']==='archived') {
+                    throw new DomainException('Variant or parent Product is inactive.');
+                }
+                if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
+                if (isset($changes['sku']) && $changes['sku']!==$variant['sku']) {
+                    $history=$this->one('SELECT movement_id FROM pm_stock_movements WHERE organization_id=? AND variant_id=? LIMIT 1',
+                        [$org,$variantId]);
+                    if ($history!==null) throw new DomainException('Cannot change SKU after stock movements.');
+                }
+                $allowed=['sku','uom','barcode','options_json'];
+                $set=[];$values=[];
+                foreach($changes as $field=>$value) {
+                    if (!in_array($field,$allowed,true)) throw new DomainException('Variant field not editable.');
+                    $set[]=$field.'=?';$values[]=$value;
+                }
+                $values[]=$org;$values[]=$variantId;
+                $this->execute('UPDATE pm_variants SET '.implode(',',$set).',revision=revision+1 WHERE organization_id=? AND variant_id=?',$values);
+                return ['variant_id'=>$variantId,'revision'=>$expectedRevision+1,'status'=>'active'];
+            },'product_management.variant.updated','Variant');
+    }
+
+    public function archiveVariant(string $org,string $variantId,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'variant.archive',$key,[$variantId,$expectedRevision],$actor,$correlation,
+            function()use($org,$variantId,$expectedRevision):array {
+                $variant=$this->one('SELECT revision,status FROM pm_variants WHERE organization_id=? AND variant_id=? FOR UPDATE',
+                    [$org,$variantId]);
+                if ($variant===null||$variant['status']!=='active') throw new DomainException('Variant absent or archived.');
+                if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
+                $balance=$this->one('SELECT location_id FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND (on_hand<>0 OR reserved<>0) LIMIT 1 FOR UPDATE',
+                    [$org,$variantId]);
+                if ($balance!==null) throw new DomainException('Variant cannot be archived with stock or reservations.');
+                $this->execute("UPDATE pm_variants SET status='archived',revision=revision+1 WHERE organization_id=? AND variant_id=?",
+                    [$org,$variantId]);
+                return ['variant_id'=>$variantId,'revision'=>$expectedRevision+1,'status'=>'archived'];
+            },'product_management.variant.archived','Variant');
     }
 
     public function updateProduct(string $organizationId, string $productId, array $changes, int $expectedRevision, string $key, string $actor, string $correlation): array

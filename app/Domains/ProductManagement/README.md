@@ -123,3 +123,12 @@ unforgeable tenant/actor input schemas and human-only mutation provenance.
 `tests/unit/product_management_capability_input_schemas.php` exercises
 the fail-closed local JSON Schema validator. Both run under existing
 `bin/verify fast`, without new execution authority.
+
+## E1 Variant lifecycle
+
+`variant.update` edits SKU, UOM, barcode and a small flat options object with
+`expected_revision` optimistic concurrency fencing. SKU is immutable after
+the first posted inventory movement. No change of inventory-tracking mode is
+permitted through this capability. `variant.archive` is a soft archive,
+allowed only with zero on-hand/reserved across all tenant locations. Events
+and operation receipts are transactionally appended to Kernel Outbox.

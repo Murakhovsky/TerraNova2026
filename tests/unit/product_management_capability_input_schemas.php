@@ -10,7 +10,7 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==19)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==21)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
  'product_management.category.create'=>['name'=>'Components','slug'=>'components'],
@@ -20,6 +20,9 @@ $good=[
      'quantity'=>'1.125000','source_ref'=>'PO-123'],
  'product_management.stock.issue'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),
      'quantity'=>'3','source_ref'=>'ORDER-123'],
+ 'product_management.variant.update'=>['variant_id'=>str_repeat('a',32),'expected_revision'=>1,'barcode'=>'1234567',
+    'options'=>['color'=>'blue','size'=>'L']],
+ 'product_management.variant.archive'=>['variant_id'=>str_repeat('a',32),'expected_revision'=>2],
  'product_management.product.update'=>['product_id'=>str_repeat('a',32),'expected_revision'=>2,'name'=>'Updated'],
  'product_management.import.preview'=>['csv'=>"sku,name,type,uom,track_inventory\nA,Test,stock,pcs,1\n"],
 ];
@@ -29,6 +32,8 @@ $bad=[
  'product_management.category.assign'=>[['product_id'=>'foo','category_id'=>str_repeat('b',32)]],
  'product_management.stock.receive'=>[['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'-1','source_ref'=>'X'],
   ['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'0.0000001','source_ref'=>'X']],
+ 'product_management.variant.update'=>[['variant_id'=>str_repeat('a',32),'expected_revision'=>1,'options'=>['color'=>['nested'=>'invalid']]]],
+ 'product_management.variant.archive'=>[['variant_id'=>str_repeat('a',32),'expected_revision'=>0]],
  'product_management.product.update'=>[['product_id'=>str_repeat('a',32),'expected_revision'=>0]],
  'product_management.import.preview'=>[['csv'=>str_repeat('x',12001)]],
 ];

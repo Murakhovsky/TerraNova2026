@@ -18,6 +18,8 @@ final readonly class ProductManagementRuleContextProvider implements RuleContext
         if (!in_array($event->type, [
             'product_management.product.created',
             'product_management.variant.created',
+            'product_management.variant.updated',
+            'product_management.variant.archived',
             'product_management.category.created',
             'product_management.category.assigned',
             'product_management.location.created',

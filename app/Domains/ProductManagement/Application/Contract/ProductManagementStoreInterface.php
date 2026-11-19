@@ -10,6 +10,10 @@ interface ProductManagementStoreInterface
     /** @return array<string,mixed> */
     public function createVariant(string $organizationId,string $productId,string $sku,string $uom,bool $track,string $key,string $actor,string $correlation): array;
     /** @param array<string,mixed> $changes @return array<string,mixed> */
+    public function updateVariant(string $org,string $variantId,array $changes,int $expectedRevision,string $key,string $actor,string $correlation):array;
+    /** @return array<string,mixed> */
+    public function archiveVariant(string $org,string $variantId,int $expectedRevision,string $key,string $actor,string $correlation):array;
+    /** @param array<string,mixed> $changes @return array<string,mixed> */
     public function updateProduct(string $organizationId, string $productId, array $changes, int $expectedRevision, string $key, string $actor, string $correlation): array;
     /** @return array<string,mixed> */
     public function archiveProduct(string $organizationId, string $productId, int $expectedRevision, string $key, string $actor, string $correlation): array;

@@ -33,6 +33,12 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
             'product.archive' => $this->products->archiveProduct(
                 $org,(string)$in['product_id'],(int)$in['expected_revision'],$key,$actor,$trace,
             ),
+            'variant.update' => $this->products->updateVariant(
+                $org,(string)$in['variant_id'],$in,(int)$in['expected_revision'],$key,$actor,$trace,
+            ),
+            'variant.archive' => $this->products->archiveVariant(
+                $org,(string)$in['variant_id'],(int)$in['expected_revision'],$key,$actor,$trace,
+            ),
             'variant.create' => $this->products->createVariant(
                 $org, (string) $in['product_id'], (string) $in['sku'],
                 (string) ($in['uom'] ?? 'pcs'), (bool) ($in['track_inventory'] ?? true),

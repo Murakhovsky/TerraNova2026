@@ -42,6 +42,59 @@ final readonly class ProductManagementService
     }
 
     /** @param array<string,mixed> $input @return array<string,mixed> */
+    public function updateVariant(string $org,string $variantId,array $input,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if (!preg_match('/^[a-f0-9]{32}$/D',$variantId) || $expectedRevision<1) {
+            throw new DomainException('Invalid Variant reference or revision.');
+        }
+        $changes=[];
+        if (array_key_exists('sku',$input)) {
+            if (!is_string($input['sku'])) throw new DomainException('SKU must be a string.');
+            $changes['sku']=ProductRules::sku($input['sku']);
+        }
+        if (array_key_exists('uom',$input)) {
+            $uom=$input['uom'];
+            if (!is_string($uom)||!preg_match('/^[a-zA-Z][a-zA-Z0-9_-]{0,15}$/D',$uom)) {
+                throw new DomainException('Invalid UOM.');
+            }
+            $changes['uom']=$uom;
+        }
+        if (array_key_exists('barcode',$input)) {
+            if (!is_string($input['barcode'])||strlen($input['barcode'])>128
+                || ($input['barcode']!==''&&!preg_match('/^[A-Za-z0-9._:\/-]+$/D',$input['barcode']))) {
+                throw new DomainException('Invalid Variant barcode.');
+            }
+            $changes['barcode']=$input['barcode']!==''?$input['barcode']:null;
+        }
+        if (array_key_exists('options',$input)) {
+            $options=$input['options'];
+            if (!is_array($options)||array_is_list($options)||count($options)>12) {
+                throw new DomainException('Variant options must be a bounded object.');
+            }
+            foreach($options as $name=>$value) {
+                if (!is_string($name)||!preg_match('/^[a-z][a-z0-9_]{0,39}$/D',$name)
+                    ||!is_string($value)||trim($value)===''||mb_strlen($value)>190) {
+                    throw new DomainException('Variant option must be a nonempty named string.');
+                }
+            }
+            $changes['options_json']=json_encode($options,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
+        }
+        if ($changes===[]) throw new DomainException('Variant update requires a permitted field.');
+        return $this->store->updateVariant($org,$variantId,$changes,$expectedRevision,$key,$actor,$correlation);
+    }
+
+    /** @return array<string,mixed> */
+    public function archiveVariant(string $org,string $variantId,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if (!preg_match('/^[a-f0-9]{32}$/D',$variantId)||$expectedRevision<1) {
+            throw new DomainException('Invalid Variant reference or revision.');
+        }
+        return $this->store->archiveVariant($org,$variantId,$expectedRevision,$key,$actor,$correlation);
+    }
+
+    /** @param array<string,mixed> $input @return array<string,mixed> */
     public function updateProduct(string $org, string $productId, array $input, int $expectedRevision, string $key, string $actor, string $correlation): array
     {
         $this->scope($org,$key,$actor,$correlation);

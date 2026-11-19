@@ -95,6 +95,14 @@ $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['nam
     'pm-stale-'.$token,'ci-user','ci-pm'),'stale Product expected_revision');
 
 
+$variantChanged=$products->updateVariant($org,$created['variant_id'],
+    ['barcode'=>'BAR'.$token,'options'=>['color'=>'blue','size'=>'L']],1,
+    'pm-var-update-'.$token,'ci-user','ci-pm');
+$assert($variantChanged['revision']===2,'Variant update must increment revision');
+$reject(static fn()=> $products->updateVariant($org,$created['variant_id'],['barcode'=>'BAD'],1,
+    'pm-var-stale-'.$token,'ci-user','ci-pm'),'stale Variant revision');
+$reject(static fn()=> $products->updateVariant($other,$created['variant_id'],['barcode'=>'BAD'],2,
+    'pm-var-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Variant update');
 $location=$products->createLocation($org,'L-'.$token,'Test warehouse','pm-loc-'.$token,'ci-user','ci-pm');
 $variant=$created['variant_id'];$loc=$location['location_id'];
 $receipt=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');
@@ -110,6 +118,11 @@ $products->recordMovement($org,$variant,$loc,'-4.000000','issue','TEST-SALE','pm
 $balance=$products->balance($org,$variant,$loc);
 $assert((string)$balance['on_hand']==='6.000000','on_hand must be 6');
 $assert((string)$balance['available']==='6.000000','available must be 6');
+$reject(static fn()=> $products->updateVariant($org,$variant,['sku'=>'REKEY'.$token],2,
+    'pm-var-rekey-'.$token,'ci-user','ci-pm'),'SKU cannot change after stock movements');
+$reject(static fn()=> $products->archiveVariant($org,$variant,2,
+    'pm-var-stock-archive-'.$token,'ci-user','ci-pm'),'stocked Variant cannot be archived');
+
 $movements=$products->stockMovements($org,$variant,50,0);
 $assert(count($movements)===2 && $movements[0]['variant_id']===$variant,
     'immutable stock movement search must expose both postings');
@@ -158,17 +171,24 @@ $assert($observations->mapping($org,$connectionId,'product',$remoteGid)['canonic
 $assert($observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":1}'),'new webhook delivery');
 $assert(!$observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":1}'),'duplicate webhook is idempotent');
 $reject(static fn()=> $observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":2}'),'duplicate webhook different digest');
+$products->recordMovement($org,$variant,$loc,'-6.000000','issue','TEST-ZERO-STOCK',
+    'pm-zero-'.$token,'ci-user','ci-pm');
+$variantArchived=$products->archiveVariant($org,$variant,2,'pm-var-archive-'.$token,'ci-user','ci-pm');
+$assert($variantArchived['revision']===3 && $variantArchived['status']==='archived',
+    'Zero-stock Variant may be soft archived');
+$reject(static fn()=> $products->updateVariant($org,$variant,['barcode'=>'FAIL'],3,
+    'pm-var-archived-update-'.$token,'ci-user','ci-pm'),'Archived Variant is immutable');
 $archived=$products->archiveProduct($org,$created['product_id'],2,'pm-archive-'.$token,'ci-user','ci-pm');
 $assert($archived['revision']===3 && $archived['status']==='archived','Product archive must preserve state');
 $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['name'=>'After archive'],3,
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===10,'ten confirmed native Domain events');
+$assert((int)$stmt->fetchColumn()===13,'thirteen confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===10,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===13,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";
