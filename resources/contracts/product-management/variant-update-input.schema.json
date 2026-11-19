@@ -29,15 +29,26 @@
       "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,15}$"
     },
     "options": {
-      "type": "object",
-      "maxProperties": 12,
-      "propertyNames": {
-        "pattern": "^[a-z][a-z0-9_]{0,39}$"
-      },
-      "additionalProperties": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 190
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 190
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "additionalProperties": false
       }
     }
   },

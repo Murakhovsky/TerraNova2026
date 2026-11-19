@@ -96,7 +96,7 @@ $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['nam
 
 
 $variantChanged=$products->updateVariant($org,$created['variant_id'],
-    ['barcode'=>'BAR'.$token,'options'=>['color'=>'blue','size'=>'L']],1,
+    ['barcode'=>'BAR'.$token,'options'=>[['name'=>'color','value'=>'blue'],['name'=>'size','value'=>'L']]],1,
     'pm-var-update-'.$token,'ci-user','ci-pm');
 $assert($variantChanged['revision']===2,'Variant update must increment revision');
 $reject(static fn()=> $products->updateVariant($org,$created['variant_id'],['barcode'=>'BAD'],1,

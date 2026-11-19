@@ -69,16 +69,23 @@ final readonly class ProductManagementService
         }
         if (array_key_exists('options',$input)) {
             $options=$input['options'];
-            if (!is_array($options)||array_is_list($options)||count($options)>12) {
-                throw new DomainException('Variant options must be a bounded object.');
+            if (!is_array($options)||!array_is_list($options)||count($options)>12) {
+                throw new DomainException('Variant options must be a bounded name/value list.');
             }
-            foreach($options as $name=>$value) {
-                if (!is_string($name)||!preg_match('/^[a-z][a-z0-9_]{0,39}$/D',$name)
-                    ||!is_string($value)||trim($value)===''||mb_strlen($value)>190) {
-                    throw new DomainException('Variant option must be a nonempty named string.');
+            $normal=[];
+            foreach($options as $entry) {
+                if (!is_array($entry)||array_keys($entry)!==['name','value']) {
+                    throw new DomainException('Variant option requires name and value.');
                 }
+                $name=$entry['name'];$value=$entry['value'];
+                if (!is_string($name)||!preg_match('/^[a-z][a-z0-9_]{0,39}$/D',$name)
+                    ||!is_string($value)||trim($value)===''||mb_strlen($value)>190
+                    ||array_key_exists($name,$normal)) {
+                    throw new DomainException('Variant option must be unique and nonempty.');
+                }
+                $normal[$name]=$value;
             }
-            $changes['options_json']=json_encode($options,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
+            $changes['options_json']=json_encode($normal,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
         }
         if ($changes===[]) throw new DomainException('Variant update requires a permitted field.');
         return $this->store->updateVariant($org,$variantId,$changes,$expectedRevision,$key,$actor,$correlation);

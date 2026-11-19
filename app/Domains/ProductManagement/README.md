@@ -126,7 +126,7 @@ the fail-closed local JSON Schema validator. Both run under existing
 
 ## E1 Variant lifecycle
 
-`variant.update` edits SKU, UOM, barcode and a small flat options object with
+`variant.update` edits SKU, UOM, barcode and a small name/value options list with
 `expected_revision` optimistic concurrency fencing. SKU is immutable after
 the first posted inventory movement. No change of inventory-tracking mode is
 permitted through this capability. `variant.archive` is a soft archive,
