@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 161 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 163 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -184,7 +184,9 @@ generated: true
 | `product_management` | `product_management.stock.movement.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.stock.receive` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.sync.status.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.variant.archive` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.variant.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.variant.update` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `property` | `property.analytics` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |
 | `property` | `property.asset.create` | ні | так | `manifest-only` | — | `app/Domains/Property/module.php` |

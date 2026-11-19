@@ -326,7 +326,9 @@ Manifest capabilities не задекларовані.
 - `product_management.stock.movement.search`;
 - `product_management.stock.receive`;
 - `product_management.sync.status.get`;
+- `product_management.variant.archive`;
 - `product_management.variant.create`;
+- `product_management.variant.update`;
 
 ## Property (`property`)
 
