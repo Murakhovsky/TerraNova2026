@@ -21,7 +21,8 @@ if(!str_contains($adapter,'FROM cos_document_files WHERE organization_id=? AND f
    ||!str_contains($adapter,'hash_equals(')||!str_contains($adapter,'getimagesizefromstring(')
    ||!str_contains($store,'product_management.media.attached')
    ||!str_contains($store,'product_management.media.detached')
-   ||!str_contains($store,"status='detached'")) {
+   ||!str_contains($store,"status='detached'")
+   ||!str_contains($store,"role='cover' AND status='active'")) {
     throw new RuntimeException('Product Media bypassed tenant-owned files or native events.');
 }
 echo "Product Management verified Product Media architecture PASS.\n";

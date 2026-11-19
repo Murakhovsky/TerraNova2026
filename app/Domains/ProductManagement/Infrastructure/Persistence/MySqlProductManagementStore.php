@@ -206,6 +206,15 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                     AND product_id=? AND variant_id <=> ? AND source_file_id=? AND status='active' LIMIT 1",
                     [$org,$productId,$variantId,$file['file_id']]);
                 if($existing!==null)throw new DomainException('This verified image is already attached to Product.');
+                // At most one active cover within a Product or a specific
+                // Variant context. Product row lock serializes rival attaches.
+                if($role==='cover'){
+                    $cover=$this->one("SELECT media_id FROM pm_media_refs
+                        WHERE organization_id=? AND product_id=? AND variant_id <=> ?
+                          AND role='cover' AND status='active' LIMIT 1",
+                        [$org,$productId,$variantId]);
+                    if($cover!==null)throw new DomainException('Product or Variant already has an active cover.');
+                }
                 $mediaId=bin2hex(random_bytes(16));
                 $this->execute('INSERT INTO pm_media_refs
                     (organization_id,media_id,product_id,variant_id,storage_ref,source_file_id,checksum,role,sort_order,status)

@@ -67,6 +67,18 @@ $assert(!array_key_exists('storage_ref',$projection['media'][0]),
     'Internal Platform storage key leaked through Product read');
 $reject(static fn()=> $media->attach($org,$pid,$fileId,$p['variant_id'],'gallery',20,
     'pm-duplicate-'.$token,'42','ci-media'),'duplicate active file relation was accepted');
+$cover2File='FILE-B'.strtoupper($token);
+$cover2Key='documents/'.substr(hash('sha256',$org),0,20).'/DOC-'.$token.'/'.$cover2File.'/second.png';
+$cover2=$storage->put($cover2Key,$png,'image/png');
+$pdo->prepare('INSERT INTO cos_document_files
+ (organization_id,file_id,storage_key,mime_type,size_bytes,sha256,created_by)
+ VALUES (?,?,?,?,?,?,?)')->execute([
+    $org,$cover2File,$cover2->key,'image/png',$cover2->size,$cover2->sha256,42,
+]);
+$reject(static fn()=> $media->attach($org,$pid,$cover2File,$p['variant_id'],'cover',9,
+    'pm-second-cover-'.$token,'42','ci-media'),
+    'a Variant may not have two simultaneously active cover photos');
+
 $reject(static fn()=> $media->attach($org,$pid,$fileId,$p['variant_id'],'cover',12,
     'pm-attach-'.$token,'42','ci-media'),'media key was reused with changed payload');
 $reject(static fn()=> $media->detach($other,$attached['media_id'],
