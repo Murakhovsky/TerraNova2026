@@ -115,8 +115,8 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 $row=$this->one('SELECT revision,status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$organizationId,$productId]);
                 if ($row===null||$row['status']==='archived') throw new DomainException('Product absent or archived.');
                 if ((int)$row['revision']!==$expectedRevision) throw new DomainException('Product revision conflict.');
-                $reserved=$this->one('SELECT COUNT(*) AS total FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND b.reserved>0',[$organizationId,$productId]);
-                if ($reserved!==null && (int)$reserved['total']>0) throw new DomainException('Product has active stock reservations.');
+                $reserved=$this->one('SELECT COUNT(*) AS total FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND (b.on_hand<>0 OR b.reserved<>0)',[$organizationId,$productId]);
+                if ($reserved!==null && (int)$reserved['total']>0) throw new DomainException('Product has nonzero stock or reservations.');
                 $this->execute("UPDATE pm_products SET status='archived',revision=revision+1 WHERE organization_id=? AND product_id=?",[$organizationId,$productId]);
                 return ['product_id'=>$productId,'revision'=>$expectedRevision+1,'status'=>'archived'];
             },'product_management.product.archived','Product');
@@ -208,9 +208,9 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     {
         return $this->mutate($organizationId,'stock.movement',$key,[$variantId,$locationId,$delta,$kind,$source],$actor,$correlation,
             function () use ($organizationId,$variantId,$locationId,$delta,$kind,$source,$key,$actor): array {
-                $variant=$this->one('SELECT track_inventory,status FROM pm_variants WHERE organization_id=? AND variant_id=?', [$organizationId,$variantId]);
+                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=?', [$organizationId,$variantId]);
                 $location=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=?', [$organizationId,$locationId]);
-                if ($variant === null || (int)$variant['track_inventory'] !== 1 || $variant['status'] !== 'active'
+                if ($variant === null || (int)$variant['track_inventory'] !== 1 || $variant['status'] !== 'active' || $variant['product_status'] === 'archived'
                     || $location === null || $location['status'] !== 'active') {
                     throw new DomainException('Active trackable variant and location required.');
                 }
@@ -259,7 +259,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 return json_decode((string)$existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
             $result=$callback();
-            $id=(string)($result['product_id']??$result['category_id']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
+            $id=(string)($result['product_id']??$result['variant_id']??$result['category_id']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
             $event=new DomainEvent(bin2hex(random_bytes(16)),$org,$eventType,$aggregateType,$id,
                 ['operation'=>$operation,'result'=>$result],new EventMetadata(strlen($correlation)<=40?$correlation:substr(hash('sha256',$correlation),0,40),null,str_starts_with($actor,'shopify:')?'INTEGRATION':'USER',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC')));
             $this->events->append($event); // writes cos_events + cos_event_outbox in this same transaction

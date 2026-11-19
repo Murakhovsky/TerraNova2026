@@ -152,3 +152,10 @@ The read transport handles both this condition and transient 429/503 with
 at most three bounded retry attempts. Other GraphQL errors fail closed.
 No response containing unresolved errors is promoted to a Product snapshot.
 Large stores still require a later cost-aware bulk import strategy.
+
+## Archived Product stock fence
+
+A Product cannot be archived while any tenant variant has nonzero
+`on_hand` or `reserved`, not merely active reservations. Postings on
+variants whose parent Product has been archived are rejected at the
+transactional store. Variant Domain Events use the real variant aggregate ID.

@@ -120,6 +120,9 @@ $assert((string)$balance['on_hand']==='6.000000','on_hand must be 6');
 $assert((string)$balance['available']==='6.000000','available must be 6');
 $reject(static fn()=> $products->updateVariant($org,$variant,['sku'=>'REKEY'.$token],2,
     'pm-var-rekey-'.$token,'ci-user','ci-pm'),'SKU cannot change after stock movements');
+$reject(static fn()=> $products->archiveProduct($org,$created['product_id'],2,
+    'pm-archive-with-stock-'.$token,'ci-user','ci-pm'),
+    'Product with remaining on_hand cannot be archived');
 $reject(static fn()=> $products->archiveVariant($org,$variant,2,
     'pm-var-stock-archive-'.$token,'ci-user','ci-pm'),'stocked Variant cannot be archived');
 
@@ -173,6 +176,9 @@ $assert(!$observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$to
 $reject(static fn()=> $observations->recordVerifiedDelivery($org,$connectionId,'webhook-'.$token,'products/update','{"id":2}'),'duplicate webhook different digest');
 $products->recordMovement($org,$variant,$loc,'-6.000000','issue','TEST-ZERO-STOCK',
     'pm-zero-'.$token,'ci-user','ci-pm');
+$eventIdentity=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type=? AND aggregate_id=?');
+$eventIdentity->execute([$org,'product_management.variant.updated',$variant]);
+$assert((int)$eventIdentity->fetchColumn()===1,'Variant update event must use native Variant aggregate ID');
 $variantArchived=$products->archiveVariant($org,$variant,2,'pm-var-archive-'.$token,'ci-user','ci-pm');
 $assert($variantArchived['revision']===3 && $variantArchived['status']==='archived',
     'Zero-stock Variant may be soft archived');
