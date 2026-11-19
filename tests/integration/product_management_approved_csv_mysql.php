@@ -49,6 +49,7 @@ $moduleState=new class implements ModuleStateRepositoryInterface {
 $catalog=new ModuleCatalog((new ModuleDiscovery($root.'/app/Domains'))->discover());
 $modules=new ActiveModuleResolver($catalog,$moduleState);
 $handler=new ProductImportApplyHandler($csv,$modules);
+$moduleState->setEnabled('pm-gate-test','product_management',true);
 $token=bin2hex(random_bytes(7));
 $org='pm-approved-'.$token;
 $skuA='CSV'.strtoupper($token).'A';$skuB='CSV'.strtoupper($token).'B';
@@ -74,6 +75,7 @@ $cross=$makeAction('pm-other-'.$token,$params);
 $assert(!$handler->execute($cross)->successful,'Other tenant could apply approved batch');
 $assert($products->searchProducts($org,$skuA)===[],'Denied Action created a Product');
 $action=$makeAction($org,$params);
+$moduleState->setEnabled($org,'product_management',false);
 $assert(!$handler->execute($action)->successful,
     'Disabled tenant must not apply even a valid approved CSV Action');
 $assert($products->searchProducts($org,$skuA)===[],

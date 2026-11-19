@@ -23,6 +23,7 @@ if(!str_contains($handler,'IdempotentExternalActionHandlerInterface')
     ||!str_contains($handler,'/^wf:[a-f0-9]{64}$/D')
     ||!str_contains($module,'ActionOwningModuleInterface')
     ||!str_contains($module,'PolicyDecision::ApprovalRequired')
+    ||!str_contains($handler,'$this->modules->isEnabled(')
     ||!str_contains($csv,'Immutable CSV staged row differs from approved evidence.')
     ||!str_contains($csv,'Manual native Product receipt reconciliation')
         &&!str_contains($csv,'manual native Product receipt reconciliation')) {
