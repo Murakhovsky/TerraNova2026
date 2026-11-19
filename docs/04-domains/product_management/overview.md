@@ -28,12 +28,12 @@ contract: domain-v1
 ```text
 id: product_management
 version: 0.1.0
-schema_version: 0.7.0
+schema_version: 0.8.0
 runtime: tenant-disabled by default
 persistence: E1–E4 migrations proposed, not production-verified
 capabilities: 27 executable declarations pending integration acceptance
 Shopify: read-only; no outbound writes
-process model: CSV Action admission implemented; full Goal/Plan E2E pending
+process model: canonical Goal/Plan proposal + approved Action boundary; full E2E acceptance pending
 ```
 
 Код E0–E4 у чернетці PR, не вважається завершеним або перевіреним

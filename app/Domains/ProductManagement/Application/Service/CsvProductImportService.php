@@ -130,6 +130,39 @@ final readonly class CsvProductImportService
         return hash('sha256',json_encode([$no,$sku,$normalize($payload),$status,$error],JSON_THROW_ON_ERROR));
     }
 
+    /**
+     * Independent human Plan proposal reads validated, pinned CSV evidence.
+     * No Product writes, no Action submit, no approving on behalf of a user.
+     * @return list<array{row_no:int,sku:string,hash:string}>
+     */
+    public function reviewForPlan(string $org,string $batchId,string $digest,string $rowsDigest):array
+    {
+        if($org===''||strlen($org)>64||!preg_match('/^[a-f0-9]{32}$/D',$batchId)
+            ||!preg_match('/^[a-f0-9]{64}$/D',$digest)
+            ||!preg_match('/^[a-f0-9]{64}$/D',$rowsDigest)) {
+            throw new DomainException('Invalid Product CSV Plan review identity.');
+        }
+        $batch=$this->batch($org,$batchId);
+        if($batch===null||$batch['state']!=='staged'
+            ||($batch['plan_id']??null)!==null
+            ||!hash_equals((string)$batch['digest'],$digest)
+            ||!is_string($batch['rows_digest'])
+            ||!hash_equals($batch['rows_digest'],$rowsDigest)){
+            throw new DomainException('CSV Plan review requires unclaimed immutable staged batch.');
+        }
+        $rows=$this->stagedRows($org,$batchId,false);
+        $this->verifySnapshot($rows,$rowsDigest);
+        $ready=[];
+        foreach($rows as $row){
+            if($row['staged_status']!=='ready'||$row['status']!=='ready'
+                ||!is_string($row['sku'])||$row['sku']==='') {
+                throw new DomainException('CSV Plan requires every row ready; resolve duplicates and invalid rows first.');
+            }
+            $ready[]=['row_no'=>(int)$row['row_no'],'sku'=>$row['sku'],'hash'=>$row['staged_hash']];
+        }
+        return $ready;
+    }
+
     /** @return array<string,mixed>|null */
     private function request(string $org,string $key): ?array
     {

@@ -239,3 +239,13 @@ registry and Kernel Outbox, re-execution reads its original receipt, checks
 native Product identity/SKU and completes the still-unwritten CSV row
 receipt. No second Product or Domain Event is produced. Rows with conflicting
 native evidence remain blocked for manual reconciliation.
+
+## E3 canonical Goal / Plan proposal
+
+`ProductImportPlanProposalService::propose` is a human-only, tenant-manager
+application entry point that validates each immutable staged CSV row before
+creating a real COS Goal and pinned Federation Plan through the existing
+`FederationGoalStore`. It binds a batch to only one Goal/Plan and requires
+all rows ready, rejecting invalid and duplicate rows rather than silently
+skipping them. It neither approves a Plan nor starts an Action or Product
+mutation. Independent Plan and Action Approvals remain mandatory.
