@@ -54,15 +54,7 @@ return [
             'web.commands' => ['marketingNavigationContributor'],
             'web.workspace' => ['marketingNavigationContributor'],
         ],
-        'cross_domain_contracts' => [
-            [
-                'contract' => 'Domains\\Finance\\Application\\Contract\\FinanceApplicationBoundary',
-                'role' => 'requires',
-                'counterpart' => 'finance',
-                'kind' => 'synchronous_port',
-                'purpose' => 'Future approved spend envelope and atomic reservations; no paid mutation until the Finance F1 boundary is live.',
-            ],
-        ],
+        'cross_domain_contracts' => [], // Finance F1 remains a future port, not a falsely wired dependency.
         'migration_files' => ['app/migrations/20261119_000152_marketing_foundation.sql'],
         'capabilities' => [
             'marketing.campaign.search',
