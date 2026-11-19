@@ -4,7 +4,7 @@ description: Планування маркетингових кампаній і
 status: draft
 updated: 2026-11-19
 kind: domain
-version: 0.1.1
+version: 0.1.2
 ---
 
 # Огляд домену Marketing
@@ -25,7 +25,7 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Шість typed capabilities початкового зрізу: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+Сім typed capabilities початкового зрізу: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`, `marketing.paid.spend.evidence.get`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
@@ -38,6 +38,18 @@ Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `l
 Якщо provider read або database import не завершилися, синхронізація залишає попередній успішний snapshot без змін, записує окрему `FAILED` спробу з **лише** санітизованим кодом `REMOTE_READ_FAILED` або `IMPORT_REJECTED`; raw API exception, access token чи provider URL не зберігаються. Якщо DB повністю недоступна, сам failure receipt також може бути недоступним; оператор отримує server error, але система не видає успіх. Дані Meta не модифікуються.
 
 `/marketing/actions` показує останні спроби, посилання на account і операційну рекомендацію, включно зі станом `STALE_OR_NO_SYNC` після 24 годин від **останнього успішного синку**, без тверджень, що звіти за всі періоди свіжі. `marketing.paid.sync.history` доступний як tenant-safe read-only canonical Query. Ці receipts **не** є повним M3 external-mutation incident ledger.
+
+## Finance-facing readback: перевірені за ключем дані Marketing
+
+`marketing.paid.spend.evidence.get` є **read-only Query** для одного збереженого Campaign-grain Meta Insights snapshot, ідентифікованого через `account_id` + `source_snapshot_ref`. Доступ з боку UI/AI/API підкоряється чинним tenant manager permissions та canonical Capability Gateway.
+
+Результат включає тільки Finance-сумісний evidence payload: Marketing account ref, stable source snapshot ref, `grain=campaign`, зовнішній Campaign ID, незмінний reporting window, timezone, currency, attribution hash, provider source hash, `source_revision`, source status та точний десятковий `reported_spend_decimal`. Query не повертає raw Meta metrics, access token, Vault reference або фінансові об'єкти.
+
+Запит читає snapshot **разом із account** із перевіркою tenant, account binding, Meta provider, `READ_ONLY` connection, однакових валют і timezone. Невідома/чужа/застаріла прив'язка відхиляється. Provider row updates змінюють revision і hash, але зберігають snapshot ID; Finance зможе застосувати його власну перевірку ідемпотентності.
+
+Важлива різниця: `readback_status=MARKETING_DB_SNAPSHOT` підтверджує **тільки наявність збереженого запису в Marketing**. Не доводить актуальну інформацію Meta Ads Manager, виставлену фактуру, оплату чи перевірене походження провайдерних даних. Вивід `finance_expense_confirmed=false`. Наразі **немає автоматичного Finance ingestion**: Finance #436 окремий Draft PR, і цей Query не надає права запису у Finance чи списання бюджету.
+
+Реальний MySQL regression: `tests/integration/marketing_meta_atomic_mysql.php`. Контракт: `resources/contracts/marketing/spend-evidence-get-{input,output}.schema.json`.
 
 ## Рівні готовності та обмеження
 
