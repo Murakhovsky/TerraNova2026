@@ -75,10 +75,10 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
                 ->execute([$organizationId,$accountId]);
             $pdo->prepare("INSERT INTO marketing_paid_sync_runs (organization_id,id,account_id,requested_by,state,fetched_count,started_at,finished_at) VALUES (?,?,?,?,?,?,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))")
                 ->execute([$organizationId,'msr-'.bin2hex(random_bytes(12)),$accountId,'manual_manager','SUCCEEDED',array_sum($counts)]);
-            if($ownsTransaction)$pdo->commit();
+            $pdo->commit();
             return $counts;
         }catch(Throwable $e){
-            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
+            if($pdo->inTransaction())$pdo->rollBack();
             throw $e;
         }
     }
@@ -163,10 +163,10 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
                 }
                 $counts['ads']++;
             }
-            $pdo->commit();
+            if($ownsTransaction)$pdo->commit();
             return $counts;
         }catch(Throwable $e){
-            if($pdo->inTransaction())$pdo->rollBack();
+            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
             throw $e;
         }
     }
