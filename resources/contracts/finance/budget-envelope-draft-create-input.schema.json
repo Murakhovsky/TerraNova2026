@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "name",
+    "source_domain",
+    "source_ref",
+    "currency",
+    "period_start",
+    "period_end",
+    "limit_minor"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 190
+    },
+    "source_domain": {
+      "type": "string",
+      "const": "marketing"
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 190
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "period_start": {
+      "type": "string",
+      "format": "date"
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date"
+    },
+    "limit_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000
+    }
+  },
+  "additionalProperties": false
+}
