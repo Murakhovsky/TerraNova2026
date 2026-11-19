@@ -234,9 +234,35 @@
             <p>Campaign activation, changes to budgets, new paused provider objects and autonomous agent edits are unavailable until F1 + canonical Workflow acceptance.</p>
             <p>No unresolved mutation incidents can be reported as zero: mutations are not enabled in this version.</p>
         </section>
-        <section class="cos-panel"><h2>Connection health</h2>
-            {% for a in accounts %}<p>{{ a.ad_account_id }} · {{ a.connection_status }} · last verified {{ a.last_verified_at|default('unknown') }}</p>
-            {% else %}<p>Not connected.</p>{% endfor %}
+        <section class="cos-panel">
+            <h2>Meta read-sync health and operator queue</h2>
+            <p>Latest ten attempts for up to twenty tenant accounts. A warning means no successful import in the past 24 hours (UTC), not proof that Meta Ads stopped. The read-only connection remains valid independently of sync freshness.</p>
+            {% for h in accountHealth %}
+                <article class="cos-page__stack">
+                    <div class="cos-page__section-head">
+                        <strong>{{ h.account.ad_account_id }} · {{ h.health_label }}</strong>
+                        <span>{{ h.account.currency }} · {{ h.account.timezone }}</span>
+                    </div>
+                    <p>Connection: {{ h.account.connection_status }} · credentials verified {{ h.account.last_verified_at|default('unknown') }}
+                    · last committed import {{ h.account.last_synced_at|default('never') }}</p>
+                    {% if h.last_attempt_failed %}
+                        <p>Operator action: review the sanitized failure code, verify credential permission/account access and retry a bounded exact date window. Previous snapshot remains available.</p>
+                    {% elseif h.stale_or_never_synced %}
+                        <p>Operator action: perform a fresh authorized read-only import. Exact reporting window may differ from the timestamp above.</p>
+                    {% endif %}
+                    {% for run in h.recent_runs %}
+                        <div class="cos-page__section-head">
+                            <span>{{ run.state }} · {{ run.started_at }} · {{ run.error_code|default('no error') }}</span>
+                            <small>{{ run.fetched_count }} provider records · {{ run.id }}</small>
+                        </div>
+                    {% else %}
+                        <p>No read-sync attempts recorded for this account.</p>
+                    {% endfor %}
+                    <a class="btn btn-outline-secondary" href="/marketing/accounts">View account and sync</a>
+                </article>
+            {% else %}
+                <p>No Meta accounts connected. No successful sync or unresolved remote mutation can be inferred.</p>
+            {% endfor %}
         </section>
     {% endif %}
 </div>
