@@ -103,5 +103,5 @@ try{$repo->syncHistory($alien,$id,10);}catch(DomainException){$denyAlien=true;}
 $assert($denyAlien,'Other tenant must not read Meta operator history.');
 $assert($repo->account($org,$id)['last_synced_at']!==null,'A failure receipt must not reset last success.');
 $assert($repo->insights($org,$id,'campaign',$from,$to)[0]['revision']===$beforeRevision,
-    'A failed operator attempt must not change committed provider metrics.')
+    'A failed operator attempt must not change committed provider metrics.');
 echo "Marketing Meta real MySQL atomic sync, rollback, replay, tenant and provider evidence PASS\n";
