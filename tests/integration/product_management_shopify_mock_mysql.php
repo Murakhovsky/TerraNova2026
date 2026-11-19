@@ -185,8 +185,8 @@ $stmt=$pdo->prepare('SELECT payload_json FROM pm_external_product_snapshots WHER
 $stmt->execute([$org,$id,'gid://shopify/Product/901']);
 $stored=$stmt->fetchColumn();
 $assert(is_string($stored) && str_contains($stored,'Observed Remote Product'),'provider snapshot persisted');
-$stmt=$pdo->prepare('SELECT on_hand,available FROM pm_external_stock_observations WHERE organization_id=? AND connection_id=? AND variant_gid=? AND location_gid='gid://shopify/Location/904'');
-$stmt->execute([$org,$id,'gid://shopify/ProductVariant/902']);
+$stmt=$pdo->prepare('SELECT on_hand,available FROM pm_external_stock_observations WHERE organization_id=? AND connection_id=? AND variant_gid=? AND location_gid=?');
+$stmt->execute([$org,$id,'gid://shopify/ProductVariant/902','gid://shopify/Location/904']);
 $stock=$stmt->fetch(PDO::FETCH_ASSOC);
 $assert(is_array($stock) && (string)$stock['on_hand']==='9.000000'
     && (string)$stock['available']==='7.000000','external stock observation recorded exactly');
