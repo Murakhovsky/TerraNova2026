@@ -173,6 +173,16 @@ final readonly class CsvProductImportService
             ||$correlation===''||strlen($correlation)>191) {
             throw new DomainException('Invalid approved Product CSV Action identity.');
         }
+        // MySQL advisory lock is connection-scoped and released on process
+        // death. Concurrent worker connections must never run the same
+        // approved batch together, even when they share an Action key.
+        // This is NOT an executor: it only fences this Domain's writer.
+        $lockName='pm-csv:'.substr(hash('sha256',$org.':'.$batchId),0,48);
+        $lock=$this->query('SELECT GET_LOCK(?,0)',[$lockName])->fetchColumn();
+        if((int)$lock!==1) {
+            throw new DomainException('Product CSV already has an active writer; retry requires reconciliation.');
+        }
+        try {
         // Claim the original approved snapshot under a row lock. This method
         // must never be called within another active PDO transaction.
         $this->connection->beginTransaction();
@@ -259,6 +269,12 @@ final readonly class CsvProductImportService
             [$org,$batchId,$actionKey]);
         return ['batch_id'=>$batchId,'verified_count'=>count($applied),
             'product_ids'=>$applied,'state'=>'applied','rows_digest'=>$rowsDigest];
+        } finally {
+            // RELEASE_LOCK releases only this connection's acquired named lock.
+            // No MySQL transaction is permitted to remain active on exit.
+            if($this->connection->inTransaction())$this->connection->rollBack();
+            $this->query('SELECT RELEASE_LOCK(?)',[$lockName]);
+        }
     }
 
     /** @return list<array<string,mixed>> */

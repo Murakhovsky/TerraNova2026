@@ -81,6 +81,21 @@ $assert(!$handler->execute($action)->successful,
 $assert($products->searchProducts($org,$skuA)===[],
     'Disabled tenant Action silently wrote Products');
 $moduleState->setEnabled($org,'product_management',true);
+// A second database connection owns the batch lock, simulating another
+// running worker. The approved Action must fail before any Product write.
+$otherPdo=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+    (string)(getenv('DB_HOST')?:'mysql'),(int)(getenv('DB_PORT')?:3306),
+    (string)(getenv('DB_DATABASE')?:'cos')),
+    (string)(getenv('DB_USERNAME')?:'cos'),(string)(getenv('DB_PASSWORD')?:''),
+    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+$lockName='pm-csv:'.substr(hash('sha256',$org.':'.$batch['batch_id']),0,48);
+$claim=$otherPdo->prepare('SELECT GET_LOCK(?,0)');$claim->execute([$lockName]);
+$assert((int)$claim->fetchColumn()===1,'second MySQL writer could not claim fixture lock');
+$assert(!$handler->execute($action)->successful,'parallel worker was not fenced');
+$assert($products->searchProducts($org,$skuA)===[],'parallel worker wrote Product before lock release');
+$release=$otherPdo->prepare('SELECT RELEASE_LOCK(?)');$release->execute([$lockName]);
+$assert((int)$release->fetchColumn()===1,'fixture worker lock was not released');
+$otherPdo=null;
 $applied=$handler->execute($action);
 $assert($applied->successful,'Approved native Product CSV writer failed: '.($applied->error??''));
 $assert(($applied->data['verified_count']??null)===2

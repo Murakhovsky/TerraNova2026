@@ -206,3 +206,11 @@ for operator reconciliation; no automatic replay or Shopify writeback.
 The Action handler checks the existing `ActiveModuleResolver` before
 touching staged CSV or Product rows. A valid approved Action still fails
 closed when the target tenant's Product Management module is disabled.
+
+### Parallel Action worker fencing
+
+The approved CSV writer holds one tenant/batch-specific MySQL advisory lock
+across row execution. A second worker on a different DB connection fails
+before any Product write. A process crash releases its named lock at DB
+connection teardown, while durable row receipts and Action claims determine
+recovery eligibility; expired local locks never authorize an unapproved Action.
