@@ -75,10 +75,10 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
                 ->execute([$organizationId,$accountId]);
             $pdo->prepare("INSERT INTO marketing_paid_sync_runs (organization_id,id,account_id,requested_by,state,fetched_count,started_at,finished_at) VALUES (?,?,?,?,?,?,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))")
                 ->execute([$organizationId,'msr-'.bin2hex(random_bytes(12)),$accountId,'manual_manager','SUCCEEDED',array_sum($counts)]);
-            if($ownsTransaction)$pdo->commit();
+            $pdo->commit();
             return $counts;
         }catch(Throwable $e){
-            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
+            if($pdo->inTransaction())$pdo->rollBack();
             throw $e;
         }
     }
@@ -163,10 +163,10 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
                 }
                 $counts['ads']++;
             }
-            $pdo->commit();
+            if($ownsTransaction)$pdo->commit();
             return $counts;
         }catch(Throwable $e){
-            if($pdo->inTransaction())$pdo->rollBack();
+            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
             throw $e;
         }
     }
@@ -219,6 +219,45 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
         $stmt=$this->connection->prepare('SELECT id,provider_campaign_id,name,objective,delivery_status,management_mode,source_updated_at,updated_at,revision FROM marketing_paid_campaigns WHERE organization_id=? AND account_id=? ORDER BY updated_at DESC LIMIT '.$limit);
         $stmt->execute([$organizationId,$accountId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function recordSyncFailure(string $organizationId,string $accountId,string $requestedBy,string $errorCode):void
+    {
+        if(!in_array($errorCode,['REMOTE_READ_FAILED','IMPORT_REJECTED'],true)
+            ||$requestedBy===''||strlen($requestedBy)>190){
+            throw new DomainException('Invalid sanitized Meta sync failure context.');
+        }
+        // Provider details, tokens and raw error strings must never enter the operator ledger.
+        $pdo=$this->connection;
+        if($pdo->inTransaction())throw new DomainException('Cannot store a failure inside an open import transaction.');
+        $pdo->beginTransaction();
+        try {
+            $account=$this->lockedAccount($organizationId,$accountId);
+            if($account['connection_status']!=='READ_ONLY')throw new DomainException('Unknown or inactive account.');
+            $pdo->prepare("INSERT INTO marketing_paid_sync_runs
+                (organization_id,id,account_id,requested_by,state,fetched_count,error_code,started_at,finished_at)
+                VALUES (?,?,?,?,'FAILED',0,?,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))")
+                ->execute([$organizationId,'msr-'.bin2hex(random_bytes(12)),$accountId,$requestedBy,$errorCode]);
+            $pdo->commit();
+        }catch(Throwable $failure){
+            if($pdo->inTransaction())$pdo->rollBack();
+            throw $failure;
+        }
+    }
+
+    public function syncHistory(string $organizationId,string $accountId,int $limit=20):array
+    {
+        if($limit<1||$limit>50)throw new DomainException('Meta sync history limit must be within 1..50.');
+        $account=$this->account($organizationId,$accountId);
+        if($account===null)throw new DomainException('Unknown tenant Meta Ad Account.');
+        $q=$this->connection->prepare('SELECT id,account_id,requested_by,state,fetched_count,error_code,started_at,finished_at
+            FROM marketing_paid_sync_runs WHERE organization_id=? AND account_id=?
+            ORDER BY started_at DESC,id DESC LIMIT '.$limit);
+        $q->execute([$organizationId,$accountId]);
+        return array_map(static function(array $row):array {
+            $row['fetched_count']=(int)$row['fetched_count'];
+            return $row;
+        },$q->fetchAll(PDO::FETCH_ASSOC));
     }
 
     private function lockedAccount(string $org,string $id):array

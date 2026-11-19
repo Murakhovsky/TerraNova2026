@@ -38,6 +38,15 @@ $repository=new class implements MarketingPaidReadRepository {
             'id'=>self::ID,'connection_status'=>'READ_ONLY','ad_account_id'=>'act_12345','credential_ref'=>'env://META_ADS_READ_TEST'
         ]:null;
     }
+    public function recordSyncFailure(string $organizationId,string $accountId,string $requestedBy,string $errorCode):void
+    {
+        $this->received[]=['failed',$organizationId,$accountId,$requestedBy,$errorCode];
+    }
+    public function syncHistory(string $organizationId,string $accountId,int $limit=20):array
+    {
+        $this->received[]=['history',$organizationId,$accountId,$limit];
+        return [];
+    }
     public function importHierarchy(string $organizationId,string $accountId,array $hierarchy):array{throw new RuntimeException('Atomic-only import expected.');}
     public function importInsights(string $organizationId,string $accountId,string $grain,string $from,string $to,array $rows):int{throw new RuntimeException('Atomic-only import expected.');}
     public function importSnapshot(string $organizationId,string $accountId,string $from,string $to,array $hierarchy,array $insights):array
@@ -59,6 +68,7 @@ $repository=new class implements MarketingPaidReadRepository {
 };
 $provider=new class implements PaidMediaProviderInterface {
     public array $received=[];
+    public bool $fail=false;
     public function inspectAccount(string $organizationId,string $providerAccountId,string $credentialRef):array
     {
         $this->received[]=['inspect',$organizationId];
@@ -67,6 +77,7 @@ $provider=new class implements PaidMediaProviderInterface {
     public function hierarchy(string $organizationId,string $providerAccountId,string $credentialRef):array
     {
         $this->received[]=['hierarchy',$organizationId];
+        if($this->fail)throw new DomainException('Remote read failed; sensitive provider message must not persist.');
         return ['campaigns'=>[['id'=>'1']],'adsets'=>[['id'=>'2']],'ads'=>[['id'=>'3']]];
     }
     public function insights(string $organizationId,string $providerAccountId,string $credentialRef,string $from,string $to,string $grain):array
@@ -89,4 +100,20 @@ $assert($got['insights']===1,'Atomic snapshot receipt required.');
 $assert($repository->received[count($repository->received)-1][0]==='atomic','Only atomic import allowed.');
 $paid->hierarchy($manager,'mads-1234567890abcdef12345678');
 $assert($repository->received[count($repository->received)-1][1]==='org-a','Hierarchy must carry actor tenant.');
+$assert($paid->syncHistory($manager,'mads-1234567890abcdef12345678')===[],'Sync history should be tenant bound.');
+try {$paid->syncHistory($alien,'mads-1234567890abcdef12345678');}
+catch(Blocked){$historyDenied=true;}
+$assert($historyDenied??false,'Foreign tenant must not read sync history.');
+$provider->fail=true;
+try {$paid->sync($manager,'mads-1234567890abcdef12345678','2026-11-01','2026-11-07');}
+catch(Blocked){$remoteFailed=true;}
+$assert($remoteFailed??false,'Provider read failure must not be promoted to success.');
+$receipt=$repository->received[count($repository->received)-1];
+$assert($receipt===['failed','org-a','mads-1234567890abcdef12345678','1','REMOTE_READ_FAILED'],
+    'Failed remote read must create a sanitized tenant-only operator receipt.');
+$provider->fail=false;
+$before=count($provider->received);
+try {$paid->sync($manager,'mads-1234567890abcdef12345678','2026-02-31','2026-11-07');}
+catch(Blocked){$dateDenied=true;}
+$assert($dateDenied??false&&count($provider->received)===$before,'Invalid read reporting window must not reach Meta.');
 echo "Marketing Meta tenant and atomic sync service PASS\n";

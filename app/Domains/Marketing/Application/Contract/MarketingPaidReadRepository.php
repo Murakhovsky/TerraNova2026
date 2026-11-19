@@ -20,6 +20,10 @@ interface MarketingPaidReadRepository
     public function importSnapshot(string $organizationId,string $accountId,string $from,string $to,array $hierarchy,array $insights):array;
     /** @return array{campaigns:list<array<string,mixed>>,adsets:list<array<string,mixed>>,ads:list<array<string,mixed>>} */
     public function hierarchy(string $organizationId,string $accountId):array;
+    /** Sanitize error codes; provider token/error text must never persist. */
+    public function recordSyncFailure(string $organizationId,string $accountId,string $requestedBy,string $errorCode):void;
+    /** @return list<array<string,mixed>> */
+    public function syncHistory(string $organizationId,string $accountId,int $limit=20):array;
     /** @return list<array<string,mixed>> */
     public function campaigns(string $organizationId,string $accountId,int $limit=100):array;
 }
