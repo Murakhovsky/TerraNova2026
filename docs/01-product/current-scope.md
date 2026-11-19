@@ -22,7 +22,7 @@ kind: product
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
 | Federation | `1.0.0` | Опціональний канонічний обробник погодження Goal Plan через Action/Policy/Approval. Вимкнений за замовчуванням. Реальне міждоменне виконання та підтвердження Goal outcomes ще не завершені. |
 | Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
-| Marketing | `0.2.0` | M0/M1 Meta Ads read-only + M2a версійовані креативи, пропозиції з evidence та незалежний людський review у Workspace; Product API/Hermes delegation ще не інтегровані, paid writes заблоковані, D3–D5 не прийнято |
+| Marketing | `0.2.1` | M0/M1 атомарний Meta read-only sync з операційною історією невдалих спроб + M2a Creative revisions, human evidence proposals і незалежний review у Workspace; Product API/Hermes не інтегровані, paid writes заблоковані, D3–D5 не прийнято |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Service | `1.0.0` | V1-stable Request → Ticket → Assignment/SLA → Escalation → Resolution → Close runtime; schema `0.2.0`; lifecycle/idempotency/locking/event/audit release gates |
