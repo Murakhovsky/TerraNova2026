@@ -24,6 +24,7 @@ generated: true
 | `finance` | 0 |
 | `growth` | 1 |
 | `hr` | 0 |
+| `marketing` | 0 |
 | `procurement` | 0 |
 | `property` | 2 |
 | `real_estate` | 0 |
@@ -72,6 +73,10 @@ generated: true
 | `PrepareOpportunityHandoff` | `app/Domains/Growth/Application/UseCase/PrepareOpportunityHandoff.php` |
 
 ## HR (`hr`)
+
+Точок входу Application UseCase не знайдено.
+
+## Marketing (`marketing`)
 
 Точок входу Application UseCase не знайдено.
 

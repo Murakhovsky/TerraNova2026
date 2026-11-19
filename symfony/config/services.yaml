@@ -2743,6 +2743,35 @@ services:
       $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
 
 
+  # COS Marketing: restrictive tenant-manager read/draft slice; no paid writes.
+  Domains\Marketing\Domain\MarketingDraftPolicy: ~
+  Domains\Marketing\Application\Service\PaidMediaMutationGate: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingCampaignRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository
+  Domains\Marketing\Application\Service\MarketingCampaignService: ~
+  Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport: ~
+  Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
+    alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport
+  Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter: ~
+  Domains\Marketing\Application\Contract\PaidMediaProviderInterface:
+    alias: Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingPaidReadRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository
+  Domains\Marketing\Application\Service\MarketingPaidReadService: ~
+
+  marketingNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\MarketingWebProvider
+
+  App\Web\Marketing\MarketingPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   # Finance F1: the only budget writer, under Kernel Action + independent Policy approval.
   Domains\Finance\Domain\BudgetControlPolicy: ~
   Domains\Finance\Domain\FinanceSpendObservationPolicy: ~
@@ -2752,6 +2781,11 @@ services:
   Domains\Finance\Application\Contract\FinanceSpendObservationRepositoryInterface:
     alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository
   Domains\Finance\Application\Service\FinanceSpendObservationService: ~
+  # Private Finance-owned readback port through the Marketing application service.
+  # No HTTP/AI/CRON import binding until explicit canonical Workflow acceptance.
+  Domains\Finance\Application\Contract\MarketingSpendEvidenceReadPort:
+    alias: App\Infrastructure\Finance\MarketingSpendEvidenceReadAdapter
+  Domains\Finance\Application\Service\FinanceMarketingSpendReadbackService: ~
   Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository:
     arguments:
       $connection: '@cos.database.pdo'

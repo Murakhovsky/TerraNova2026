@@ -16,9 +16,9 @@ generated: true
 
 ## Підсумок
 
-- **Installable Domains:** 13
+- **Installable Domains:** 14
 - **Покрито канонічним процесом:** 8
-- **Явних exemptions:** 5
+- **Явних exemptions:** 6
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
@@ -28,9 +28,10 @@ generated: true
 | `diagnostic` · Diagnostics | `1.0.0` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `documents` · Documents | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `federation` · COS Federation | `1.0.0` | `covered` | 1 | 1 | 1/1 | 0 | 0 |
-| `finance` · Finance | `0.2.1` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `finance` · Finance | `0.2.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `marketing` · Marketing | `0.1.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `1.0.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `real_estate` · Real Estate | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
@@ -77,6 +78,11 @@ generated: true
 - **Exempt:** V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation.
 - **Owner:** COS Architecture
 
+### Marketing (`marketing`)
+
+- **Exempt:** M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation.
+- **Owner:** COS Marketing / Architecture
+
 ### Procurement (`procurement`)
 
 - **Exempt:** V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation.
@@ -115,6 +121,7 @@ generated: true
 | `documents` | COS Federation / Documents | Initial Documents V0.1 provides only approved, idempotent signature REQUEST Actions. A complete canonical signature-request-to-provider-verified-signed process is deferred until authenticated human/e-sign provider attestation and durable signer proof have been integrated and positively tested; request is never equivalent to signed outcome. |
 | `finance` | COS Architecture | Finance F1 exposes approved tenant-safe budget mutations but no accepted end-to-end paid spend workflow, provider confirmation or accounting expense settlement. Cross-domain execution remains deferred until Marketing M3 and independent acceptance. |
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |
+| `marketing` | COS Marketing / Architecture | M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation. |
 | `procurement` | COS Architecture | V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation. |
 
 ## Авторитетність і обмеження

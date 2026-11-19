@@ -4,7 +4,7 @@ description: Канонічний фінансовий домен COS із ко�
 status: draft
 updated: 2026-11-19
 kind: domain
-version: 0.2.1
+version: 0.2.2
 contract: domain-v1
 ---
 
@@ -56,9 +56,17 @@ Finance приймає й зберігає **окремий журнал спо�
 
 Для менеджера tenant додано query `finance.ad_spend.reconciliation.status` із суворим групуванням за ad account, валютою, attribution hash, timezone та **точним** вікном. Вона повертає `NO_OBSERVATIONS` або `UNRECONCILED`, кількість рядків і `source_reported_spend_decimal` без PHP float. Навіть `FINALIZED_BY_SOURCE` не є `Invoice`, `Payment`, `Expense` чи розрахунком прибутку.
 
-**Обмеження:** `FinanceSpendObservationService::acceptUnverifiedMarketingSnapshot` є лише внутрішнім контрактом для майбутнього довіреного bridge. Запису через HTTP, загальнодоступну Capability або Hermes немає. До приймання Marketing M1 та Finance F1 не існує перевіреного cross-domain джерела для автоматичної передачі. Усі записи позначаються `UNVERIFIED_SOURCE`; reserved/committed balances не змінюються. Реконсиляція з рахунками та бюджетний exposure coverage також не підтверджені.
+**Обмеження:** `FinanceSpendObservationService::acceptUnverifiedMarketingSnapshot` залишається внутрішнім Finance persistence-портом. У цьому Draft інтеграційному зрізі реалізовано окремий `FinanceMarketingSpendReadbackService`, який отримує доказ безпосередньо через tenant-scoped Marketing readback та Symfony adapter. Це реальний D2 міждоменний тест, але **не активований продукт**: публічного Capability/HTTP/AI/CRON імпорту немає до canonical Workflow acceptance. Усі дані залишаються `UNVERIFIED_SOURCE`; reserved/committed balances незмінні, а invoice/expense/budget exposure coverage не підтверджені.
 
 Автоматичний MySQL-тест: `tests/integration/finance_spend_observations_mysql.php` перевіряє незмінність попередніх версій, дублікати, tenant boundary, різні валюти/атрибуцію/вікна й відсутність фіктивних фінансових фактів.
+
+## Приватний Marketing → Finance readback (F1.2, D2)
+
+Тепер є приватний Finance-owned контракт `MarketingSpendEvidenceReadPort`, який дозволяє Finance **самостійно** запитати поточний запис `marketing.paid.spend.evidence.get` без приймання довільної суми, hash або `organization_id` від зовнішнього викликача. Інтеграційний адаптер `App\\Infrastructure\\Finance\\MarketingSpendEvidenceReadAdapter` делегує tenant-scoped lookup власнику Marketing; Finance не читає таблиць Marketing безпосередньо.
+
+Сервіс `FinanceMarketingSpendReadbackService` перевіряє manager і tenant permissions, точні ID `mads-`/`mis-`, форму джерела й прив'язку account/snapshot, після чого зберігає лише Finance observation з provenance `UNVERIFIED_SOURCE`. Повтор з тієї ж source revision повертає існуючий результат, revision correction оновлює доказ та додає event без дублювання spend. Витрату `Expense` і фінансові `committed_minor` це **не** змінює.
+
+`tests/integration/finance_marketing_spend_readback_mysql.php` перевіряє обидва домени на одній MySQL: справжню взаємодію Market read model → Finance ledger, replay, корекції, cross-tenant, чужий account, незалежний status і відсутність provider network write. Модулі лишаються вимкненими за замовчуванням, а API/agent/CRON ingress не реєструвався. Потрібні окремий canonical command/action із джерельною ідемпотентністю, D3 staging та незалежне приймання #435/#436/#440 перед експлуатацією.
 
 ## Відкладені залежності для Marketing
 
