@@ -352,6 +352,29 @@ try {
     native_writes: 0,
   });
 
+  // AC-08: The operation must be bookmarkable; pending items are not
+  // announced as verified native assets until independent receipts exist.
+  const pendingPage = await page.goto(abs('/workspace/property/bulk?batch=' + batchId),
+    { waitUntil: 'networkidle' });
+  assert(pendingPage?.status() === 200, 'R3: deep-linked batch is not readable');
+  const operation = page.locator('[data-property-bulk-operation="' + batchId + '"]');
+  await operation.waitFor({ state: 'visible', timeout: 15000 });
+  assert(await operation.locator('[data-property-bulk-progress="0/2"]').count() === 1,
+    'R3: pending batch progress incorrectly reports verified Assets');
+  assert(await operation.locator('[data-property-bulk-item]').count() === 2,
+    'R3: per-item status cardinality differs from staged CSV');
+  assert(await operation.locator('[data-property-bulk-item-verified]').count() === 0
+    && await operation.locator('[data-property-bulk-item-pending]').count() === 2
+    && await operation.locator('[data-property-bulk-verified]').count() === 0
+    && await operation.locator('[data-property-bulk-awaiting-verification]').count() === 1,
+  'R3: pending batch falsely claims native per-item verification');
+  const deepLink = await operation.locator('[data-property-bulk-deep-link]').getAttribute('href');
+  assert(deepLink === '/workspace/property/bulk?batch=' + batchId,
+    'R3: operation deep link was not stable and tenant-scoped');
+  add('R3.pending_deep_link_and_per_item_truth', {
+    batch_id: batchId, items: 2, verified: 0, deep_link: deepLink,
+  });
+
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
     tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',

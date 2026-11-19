@@ -53,6 +53,19 @@ kind: implementation
 
 **Доказ PASS цих нових перевірок має бути взятий лише з запуску CI на коміті, що містить S4.** Попередній прогін `44298988705` засвідчує рівно 8 початкових тестів і не може бути доказом нового S4. Цей тест **не створює Run і не доводить завершений Run-перегляд**; повне R3 browser Approval→worker→outcome лишається окремим release gate.
 
+## 3.2. Прогрес та посилання на результати R3 (нова реалізація)
+
+Розширено наявний Property Bulk Workspace без додавання executor, policy чи нових команд:
+
+- постійне, tenant-scoped посилання `/workspace/property/bulk?batch=…`;
+- підрахунок `verified / total` на основі збережених item statuses та native Asset references;
+- кожен підтверджений item показує посилання на незалежне читання `/workspace/capabilities?reference=…`;
+- staged/planned/непідтверджені items **не отримують** посилання verified та банер успіху;
+- невідповідність `batch.state=verified` і кількості підтверджених native Assets показує необхідність reconciliation, а не success;
+- Playwright `R3.pending_deep_link_and_per_item_truth` перевіряє справжній пакет із двох позицій, нуль verified, статус кожної та стабільність URL.
+
+Позитивний verified-item перехід у реальному браузері, незалежний worker та перехід Run у completed лишаються **непідтвердженими** без завершеного staging E2E. Новий тест не повинен успадковувати PASS від попередніх 13/13, потрібен окремий Runtime на новому SHA.
+
 ## 4. Межі доведеної готовності
 
 | Критерій | Статус |
