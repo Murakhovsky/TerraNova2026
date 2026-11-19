@@ -106,8 +106,8 @@ $state=new class implements ModuleStateRepositoryInterface {
 $catalog=new ModuleCatalog((new ModuleDiscovery(dirname(__DIR__,2).'/app/Domains'))->discover());
 $modules=new ActiveModuleResolver($catalog,$state);
 $pull=new ShopifyCatalogPullService(
-    $observations,new ShopifyReadClient($http),new ShopifyClientCredentials($http),$products,
-    $modules
+    $observations,new ShopifyReadClient($http),new \Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader(new ShopifyReadClient($http)),
+    new ShopifyClientCredentials($http),$products,$modules
 );
 $assert=static function(bool $value,string $message):void {
     if (!$value)throw new RuntimeException('Shopify mock MySQL: '.$message);

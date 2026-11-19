@@ -132,3 +132,15 @@ the first posted inventory movement. No change of inventory-tracking mode is
 permitted through this capability. `variant.archive` is a soft archive,
 allowed only with zero on-hand/reserved across all tenant locations. Events
 and operation receipts are transactionally appended to Kernel Outbox.
+
+## Shopify nested pagination (read-only)
+
+Every Product's variant connection and every InventoryItem's location
+connection is fully resolved before COS records stock observations.
+Additional GraphQL requests use `product(id)` or `inventoryItem(id)`
+with bounded `after` cursors. Maximum: 128 variant pages, 40 pages
+per InventoryItem and 256 extra nested GraphQL queries per Product.
+Repeated/missing cursors, identity changes, duplicate variant/location
+GIDs and budget overruns cause quarantined conflicts; original snapshots
+are retained and **no partial nested stock is accepted**. This remains
+read-only and does not apply Shopify quantities to canonical COS balances.

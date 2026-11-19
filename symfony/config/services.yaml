@@ -2776,6 +2776,7 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
 
   # Product Management E0: domain stays tenant-disabled until explicit activation.

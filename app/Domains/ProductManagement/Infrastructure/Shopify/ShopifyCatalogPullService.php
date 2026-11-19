@@ -30,11 +30,11 @@ query COSProducts($first: Int!, $after: String) {
                 location { id name }
                 quantities(names: ["on_hand", "available"]) { name quantity }
               }
-              pageInfo { hasNextPage }
+              pageInfo { hasNextPage endCursor }
             }
           }
         }
-        pageInfo { hasNextPage }
+        pageInfo { hasNextPage endCursor }
       }
     }
     pageInfo { hasNextPage endCursor }
@@ -45,6 +45,7 @@ GRAPHQL;
     public function __construct(
         private ShopifyObservationStore $observations,
         private ShopifyReadClient $client,
+        private ShopifyNestedConnectionReader $nested,
         private ShopifyClientCredentials $credentials,
         private ProductManagementService $products,
         private ActiveModuleResolver $modules,
@@ -76,7 +77,17 @@ GRAPHQL;
                 $seenOnPage=0;$conflictsOnPage=0;
                 foreach ($page['nodes'] as $remote) {
                     ++$seenOnPage;
-                    try { $this->applyProduct($org,$connectionId,$remote); }
+                    try {
+                        // Retain raw provider evidence before expanding nested pages:
+                        // partial/invalid pagination must not reach the COS stock ledger.
+                        if (is_array($remote) && is_string($remote['id']??null)
+                            && preg_match('#^gid://shopify/Product/[0-9]+$#D',$remote['id'])) {
+                            $this->observations->observeProduct($org,$connectionId,$remote['id'],$remote);
+                        }
+                        if (!is_array($remote)) throw new DomainException('Malformed Shopify Product node.');
+                        $complete=$this->nested->expand($connection['shop_domain'],$token,$remote);
+                        $this->applyProduct($org,$connectionId,$complete);
+                    }
                     catch (Throwable $e) {
                         ++$conflictsOnPage;
                         $gid=is_array($remote)?(string)($remote['id']??'unknown'):'unknown';
@@ -133,9 +144,7 @@ GRAPHQL;
             }
             $normalized[]=['gid'=>$variantGid,'sku'=>$sku,'remote'=>$variant];
         }
-        // Every verified observation is saved regardless of canonical mapping.
-        // A Shopify snapshot is not a stock receipt or Product create command.
-        
+        // A complete expanded snapshot is recorded only after all nested pages validate.
         foreach ($normalized as $variant) {
             $item=$variant['remote']['inventoryItem']??null;
             if (is_array($item) && is_string($item['id']??null)) {
