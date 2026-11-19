@@ -420,9 +420,15 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         $found=$this->one("SELECT m.canonical_id FROM pm_external_mappings m
             INNER JOIN pm_external_connections c
                 ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
-            WHERE m.organization_id=? AND m.entity_type=? AND m.canonical_id=?
+            LEFT JOIN pm_variants v
+                ON v.organization_id=m.organization_id AND v.variant_id=?
+            WHERE m.organization_id=?
+                AND (
+                    (m.entity_type=? AND m.canonical_id=?)
+                    OR (?='variant' AND m.entity_type='product' AND m.canonical_id=v.product_id)
+                )
                 AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
-            LIMIT 1",[$org,$entityType,$id]);
+            LIMIT 1",[$id,$org,$entityType,$id,$entityType]);
         if($found!==null)
             throw new DomainException('Shopify-authoritative identity requires controlled owner cutover.');
     }

@@ -135,6 +135,20 @@ $assert($checkCount('pm_stock_movements')===0
     &&$checkCount('pm_base_price_history')===2,
     'Rejected owner violation changed native Stock or Price history.');
 
+// Partial mapping recovery: a Product mapping alone must already fence
+// all its Variants, even before individual Variant GIDs are reconciled.
+$partial=$products->createProduct($org,[
+    'name'=>'Partially Mapped Shopify Product','sku'=>'PARTIAL'.strtoupper($token),
+    'type'=>'stock','uom'=>'pcs','track_inventory'=>true,
+], 'pm-partial-product-'.$token,'42','pm-partial-map');
+$observations->map($org,$connection,'product','gid://shopify/Product/99881',$partial['product_id']);
+$reject(static fn()=>$pricing->set($org,$partial['variant_id'],'USD','10.00',
+    'pm-partial-price-'.$token,'42','pm-owned-fence'));
+$reject(static fn()=>$products->updateVariant($org,$partial['variant_id'],['barcode'=>'A'],1,
+    'pm-partial-variant-'.$token,'42','pm-owned-fence'));
+$reject(static fn()=>$products->recordMovement($org,$partial['variant_id'],
+    $loc['location_id'],'1','receipt','PARTIAL','pm-partial-stock-'.$token,'42','pm-owned-fence'));
+
 $forged=new Action(bin2hex(random_bytes(16)),$org,ShopifyImportApplyHandler::TYPE,
     'shopify_import_preview',$previewId,
     ['source_hash'=>str_repeat('0',64),'normalized_digest'=>$digest],

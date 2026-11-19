@@ -178,6 +178,11 @@ $reject(static fn()=> $csv->preview($org,$csvPayload."NEW,Another,stock,pcs,1\n"
 $assert(($batch['counts']['ready']??0)===1 && $batch['state']==='staged','CSV validation-only stage');
 $assert(count($products->searchProducts($org,'CSV'.$token))===0,'CSV stage must not write Product');
 $connectionId=$observations->provision($org,'pm-unit-test.myshopify.com','shopify_env_primary');
+ // This fixture exercises native local inventory after mapping a Product.
+ // Explicit observation_only mode keeps COS the local writer; the default
+ // Shopify-authoritative mode must reject these subsequent local mutations.
+ $pdo->prepare("UPDATE pm_external_connections SET mode='observation_only' WHERE organization_id=? AND connection_id=?")
+     ->execute([$org,$connectionId]);
 $assert($observations->connection($org,$connectionId)['shop_domain']==='pm-unit-test.myshopify.com','tenant connection');
 $reject(static fn()=> $observations->connection($other,$connectionId),'cross tenant connection isolation');
 $remoteGid='gid://shopify/Product/123';

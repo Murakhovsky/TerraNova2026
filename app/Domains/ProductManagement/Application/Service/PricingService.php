@@ -49,10 +49,16 @@ final readonly class PricingService
                 $this->connection->commit();
                 return json_decode($existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
-            $owned=$this->query("SELECT m.canonical_id FROM pm_external_mappings m
+            $owned=$this->query("SELECT m.canonical_id FROM pm_variants v
+                INNER JOIN pm_external_mappings m
+                    ON m.organization_id=v.organization_id
+                    AND (
+                        (m.entity_type='variant' AND m.canonical_id=v.variant_id)
+                        OR (m.entity_type='product' AND m.canonical_id=v.product_id)
+                    )
                 INNER JOIN pm_external_connections c
                     ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
-                WHERE m.organization_id=? AND m.entity_type='variant' AND m.canonical_id=?
+                WHERE v.organization_id=? AND v.variant_id=?
                   AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
                 LIMIT 1",[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
             if($owned!==false)
