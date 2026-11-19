@@ -77,12 +77,21 @@ final readonly class CsvProductImportService
                 $rows[]=['row_no'=>$no,'sku'=>$payload['sku']??null,'payload'=>$payload,'status'=>$status,'error'=>$error];
             }
             if ($no===0) throw new DomainException('CSV contains no rows.');
+            // Immutable original preview evidence is checked again when an
+            // independently approved Action executes, not trusted from input.
+            $hashes=[];
+            foreach ($rows as &$row) {
+                $row['staged_hash']=self::rowDigest($row['row_no'],$row['sku'],$row['payload'],$row['status'],$row['error']);
+                $hashes[]=$row['staged_hash'];
+            }
+            unset($row);
+            $rowsDigest=hash('sha256',implode("\\n",$hashes));
             $this->connection->beginTransaction();
             try {
-                $this->query('INSERT INTO pm_import_batches (organization_id,batch_id,source,digest,actor_ref) VALUES (?,?,?,?,?)',[$org,$batchId,'csv',$digest,$actor]);
+                $this->query('INSERT INTO pm_import_batches (organization_id,batch_id,source,digest,actor_ref,rows_digest) VALUES (?,?,?,?,?,?)',[$org,$batchId,'csv',$digest,$actor,$rowsDigest]);
                 foreach ($rows as $row) {
-                    $this->query('INSERT INTO pm_import_rows (organization_id,batch_id,row_no,sku,payload_json,status,error_code) VALUES (?,?,?,?,?,?,?)',
-                        [$org,$batchId,$row['row_no'],$row['sku'],json_encode($row['payload'],JSON_THROW_ON_ERROR),$row['status'],$row['error']]);
+                    $this->query('INSERT INTO pm_import_rows (organization_id,batch_id,row_no,sku,payload_json,status,error_code,staged_hash,staged_status,staged_error_code) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                        [$org,$batchId,$row['row_no'],$row['sku'],json_encode($row['payload'],JSON_THROW_ON_ERROR),$row['status'],$row['error'],$row['staged_hash'],$row['status'],$row['error']]);
                 }
                 if ($key!==null) $this->linkRequest($org,$key,$batchId,$digest);
                 $this->connection->commit();
@@ -107,6 +116,18 @@ final readonly class CsvProductImportService
             }
             return $this->report($org,$batchId);
         } finally { fclose($input); }
+    }
+
+    /** Canonical representation survives MySQL JSON object key normalization. */
+    public static function rowDigest(int $no,?string $sku,array $payload,string $status,?string $error):string
+    {
+        $normalize=static function(mixed $value)use(&$normalize):mixed{
+            if(!is_array($value))return $value;
+            if(!array_is_list($value))ksort($value,SORT_STRING);
+            foreach($value as $key=>$item)$value[$key]=$normalize($item);
+            return $value;
+        };
+        return hash('sha256',json_encode([$no,$sku,$normalize($payload),$status,$error],JSON_THROW_ON_ERROR));
     }
 
     /** @return array<string,mixed>|null */
@@ -151,7 +172,7 @@ final readonly class CsvProductImportService
         $rows=$this->query('SELECT row_no,sku,status,error_code,product_id FROM pm_import_rows WHERE organization_id=? AND batch_id=? ORDER BY row_no',[$org,$batchId])->fetchAll(PDO::FETCH_ASSOC);
         $counts=[];
         foreach ($rows as $r) $counts[$r['status']]=($counts[$r['status']]??0)+1;
-        return ['batch_id'=>$batchId,'state'=>$batch['state'],'digest'=>$batch['digest'],'counts'=>$counts,'rows'=>$rows];
+        return ['batch_id'=>$batchId,'state'=>$batch['state'],'digest'=>$batch['digest'],'rows_digest'=>$batch['rows_digest'],'counts'=>$counts,'rows'=>$rows];
     }
 
     /** @param list<mixed> $params */

@@ -179,3 +179,12 @@ Domain Event/Outbox. Locales are bounded language tags such as `uk`, `en`,
 `en-US`. Reads through `product.get` return all tenant-local translations.
 An archived Product cannot receive translations. Shopify remains an external
 read-only observation source, not the authoritative editor for COS translations.
+
+## E3 immutable CSV staging evidence
+
+New CSV previews store an additional `rows_digest` over each original row's
+SKU, normalized payload, validation status and error. Both batch-level and
+per-row hashes are retained separately from mutable application state. Legacy
+staged batches without these hashes are **not** eligible for approved commit.
+The original CSV bytes remain represented by `digest`; apply must verify
+both pinned digests and independent canonical Action approval before writing.
