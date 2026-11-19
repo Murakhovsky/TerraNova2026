@@ -3840,6 +3840,7 @@ services:
         - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
         - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'

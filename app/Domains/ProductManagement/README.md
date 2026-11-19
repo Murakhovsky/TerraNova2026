@@ -249,3 +249,14 @@ creating a real COS Goal and pinned Federation Plan through the existing
 all rows ready, rejecting invalid and duplicate rows rather than silently
 skipping them. It neither approves a Plan nor starts an Action or Product
 mutation. Independent Plan and Action Approvals remain mandatory.
+
+## E3 independently attested Goal outcome
+
+`ProductImportRunOutcomeProvider` is registered with the existing
+`FederationTrustedOutcomeEvidenceResolver` and only accepts a completed,
+attested Workflow Action receipt tied to the same tenant and approved Plan.
+It recomputes every staged row hash, verifies exact CSV rowset digest,
+native Product name/type, Variant SKU, Product ID and row receipt key.
+A completed Workflow alone can never satisfy the Goal. Partial batches
+are unknown, and fingerprint drift fails closed. The outcome is one
+Run-scoped metric, `product_management.csv_products_verified`.
