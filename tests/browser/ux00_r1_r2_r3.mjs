@@ -277,6 +277,75 @@ try {
     batch_id: batchId, plan_id: planId, native_writes_before_approval: 0,
   });
 
+  // S4. One and the same real Goal/Plan must remain truthful in each mode.
+  // Changing the presentation mode is NEVER a command/admission or an
+  // implicit approval; verify persisted native/Action/Run cardinality.
+  const goalId = planned.goal_id;
+  const planActionsSql = "SELECT COUNT(*) FROM cos_actions WHERE organization_id='default'"
+    + " AND target_id='" + planId + "'";
+  const planRunsSql = "SELECT COUNT(*) FROM cos_workflow_runs WHERE organization_id='default'"
+    + " AND source_plan_id='" + planId + "'";
+  const initialActions = Number(sqlExecute(planActionsSql));
+  const initialRuns = Number(sqlExecute(planRunsSql));
+  assert(initialActions === 0 && initialRuns === 0,
+    'S4: unapproved Property Goal already has an Action or canonical Run');
+
+  const blockerUrl = new URL(earlyStart.headers()['location'] || '', base);
+  const blockerCode = blockerUrl.searchParams.get('blocker') || '';
+  assert(/^[a-z_]+$/.test(blockerCode), 'S4: missing safe typed denial code');
+  assert((await page.goto(blockerUrl.toString(), { waitUntil: 'networkidle' }))?.status() === 200,
+    'S4: Goals cannot render a real denial');
+  await page.locator('[data-goal-blocker="' + blockerCode + '"]')
+    .waitFor({ state: 'visible', timeout: 15000 });
+  add('S4.real_workflow_blocker_rendered', { blocker_code: blockerCode });
+
+  for (const mode of ['result', 'process', 'expert']) {
+    const button = page.locator('form[action="/workspace/goals/mode"] button[name="mode"][value="' + mode + '"]');
+    assert(await button.count() === 1, 'S4: missing mode button ' + mode);
+    const [post, rendered] = await Promise.all([
+      page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname === '/workspace/goals/mode' && response.request().method() === 'POST';
+      }),
+      page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname === '/workspace/goals' && response.request().method() === 'GET';
+      }),
+      button.click(),
+    ]);
+    assert(post.status() === 303 && rendered.status() === 200,
+      'S4: mode ' + mode + ' failed: POST ' + post.status() + ' GET ' + rendered.status());
+    const surface = page.locator('[data-cos-federation-goals][data-experience-mode="' + mode + '"]');
+    await surface.waitFor({ state: 'visible', timeout: 15000 });
+    const goal = surface.locator('[data-goal-id="' + goalId + '"]');
+    const plan = goal.locator('[data-goal-plan="' + planId + '"]');
+    await plan.waitFor({ state: 'visible', timeout: 15000 });
+    assert((await plan.innerText()).includes('Очікує погодження'),
+      'S4: unapproved Plan silently changed state in ' + mode + ' mode');
+    assert((await plan.innerText()).includes('property.bulk.create'),
+      'S4: canonical Domain capability missing from Plan in ' + mode + ' mode');
+    assert(await plan.locator('form[action="/workspace/goals/plans/' + planId
+      + '/request-approval"]').count() === 1,
+      'S4: independent approval entry missing in ' + mode + ' mode');
+    assert((await goal.locator('[data-goal-expert]').count() > 0) === (mode === 'expert'),
+      'S4: Expert-only diagnostics incorrectly disclosed/hidden in ' + mode + ' mode');
+    await goal.screenshot({ path: evidenceDir + '/goal-' + mode + '.png', animations: 'disabled' });
+    add('S4.' + mode + '_same_goal_pending_plan', { goal_id: goalId, plan_id: planId });
+  }
+
+  const afterModes = await json(await admin.request.get(abs('/api/v1/property/bulk/' + batchId)),
+    'S4 native batch read after mode changes');
+  assert(afterModes.state === 'planned' && afterModes.plan_id === planId
+    && afterModes.items.every(item => item.native_asset_id === null)
+    && Number(sqlExecute(planActionsSql)) === initialActions
+    && Number(sqlExecute(planRunsSql)) === initialRuns,
+    'S4: reading/changing Experience modes mutated a Plan, Action, Run or native Property');
+  add('S4.modes_cannot_execute_or_mutate', {
+    batch_id: batchId, goal_id: goalId, plan_id: planId,
+    plan_actions: initialActions, workflow_runs: initialRuns,
+    native_writes: 0,
+  });
+
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
     tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',
