@@ -126,3 +126,9 @@ Domain готовий, коли:
 - capability та access rules визначені;
 - installable Domain має process coverage або формальний exemption;
 - architecture/documentation tests не допускають випадкових залежностей.
+
+## Паспорт Domain (DAS-001)
+
+Для кожного installable Domain обов'язковий `docs/04-domains/<id>/passport.md` із 14 секціями та машинним блоком `COS-DOMAIN-PASSPORT-DATA`. Шаблон: `docs/.vitepress/templates/domain-passport.md`. Документ містить ownership і пояснення, а фактичні IDs/версії/контракти отримує з `module.php`, Process Registry та generated reference. Internal components не є самостійними installable modules.
+
+Перед merge виконайте `node docs/.vitepress/check-domain-passports.mjs` та `npm run docs:check`. Паспорт не може стверджувати D3/D4/D5 без independently linked acceptance evidence. Дивіться `docs/03-architecture/cos-domain-architecture-standard.md`.
