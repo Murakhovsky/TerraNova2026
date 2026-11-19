@@ -48,7 +48,7 @@ FROZEN --[approved release]--> RELEASED reservation
 
 Перевірки: `tests/unit/finance_budget_f1.php` і окрема MySQL 8.4 перевірка `tests/integration/finance_budget_f1_mysql.php` у Runtime CI. **Це кодові та інтеграційні перевірки, не дозвіл запускати рекламу.**
 
-## Source-reported Spend Observations (F1.1)
+## Спостереження рекламних витрат за даними джерела (F1.1)
 
 Finance приймає й зберігає **окремий журнал спостережень**, не `Expense`. Мета-звіт `reported_spend_decimal` залишається рядком з точним десятковим значенням (до шести знаків), валютою, часовим поясом, конкретним періодом, `grain=campaign`, attribution hash, ID провайдерного об'єкта і посиланням на незмінну версію Marketing snapshot.
 
