@@ -153,9 +153,185 @@ final readonly class CsvProductImportService
     }
 
     /**
-     * No CSV apply method is exposed until a validated Kernel Action admission
-     * and approval-evidence verifier are bound. Staging remains read-only.
-     * Never accept caller-supplied approval strings as sufficient authority.
+     * Only called from the approved canonical Action worker. No UI, cron,
+     * preview endpoint or Capability direct command can invoke this operation.
+     *
+     * Row-level Product creation owns its own durable receipt + Outbox transaction.
+     * A crash before the row receipt update is recovered by the SAME row key.
+     * Failures quarantine the batch; no automatic blind replay.
+     * @return array<string,mixed>
+     */
+    public function applyApproved(string $org,string $batchId,string $digest,string $rowsDigest,
+        string $actor,string $actionKey,string $correlation):array
+    {
+        if($org===''||strlen($org)>40
+            ||!preg_match('/^[a-f0-9]{32}$/D',$batchId)
+            ||!preg_match('/^[a-f0-9]{64}$/D',$digest)
+            ||!preg_match('/^[a-f0-9]{64}$/D',$rowsDigest)
+            ||!preg_match('/^wf:[a-f0-9]{64}$/D',$actionKey)
+            ||!ctype_digit($actor)||strlen($actor)>100
+            ||$correlation===''||strlen($correlation)>191) {
+            throw new DomainException('Invalid approved Product CSV Action identity.');
+        }
+        // Claim the original approved snapshot under a row lock. This method
+        // must never be called within another active PDO transaction.
+        $this->connection->beginTransaction();
+        try {
+            $batch=$this->query('SELECT * FROM pm_import_batches WHERE organization_id=? AND batch_id=? FOR UPDATE',
+                [$org,$batchId])->fetch(PDO::FETCH_ASSOC);
+            if($batch===false||$batch['source']!=='csv'
+                ||!hash_equals((string)$batch['digest'],$digest)
+                ||!is_string($batch['rows_digest'])||!hash_equals($batch['rows_digest'],$rowsDigest)
+                ||!in_array($batch['state'],['staged','applying','applied'],true)
+                ||($batch['action_key']!==null&&!hash_equals((string)$batch['action_key'],$actionKey))) {
+                throw new DomainException('Product CSV approved digest, Action fence or state mismatch.');
+            }
+            $rows=$this->stagedRows($org,$batchId,true);
+            $this->verifySnapshot($rows,$rowsDigest);
+            if($batch['state']==='staged') {
+                $this->query("UPDATE pm_import_batches SET state='applying',action_key=? WHERE organization_id=? AND batch_id=? AND state='staged'",
+                    [$actionKey,$org,$batchId]);
+            }
+            $this->connection->commit();
+        }catch(Throwable $e){
+            if($this->connection->inTransaction())$this->connection->rollBack();
+            throw $e;
+        }
+        $applied=[];
+        foreach($rows as $row){
+            if($row['staged_status']!=='ready')continue;
+            $rowNo=(int)$row['row_no'];
+            $key='pm-csv:'.hash('sha256',$org.':'.$batchId.':'.$rowNo);
+            if($row['status']==='applied') {
+                $this->assertNativeRow($org,$row,$key);
+                $applied[]=(string)$row['product_id'];
+                continue;
+            }
+            if($row['status']!=='ready') {
+                throw new DomainException('Product CSV contains a row requiring manual reconciliation.');
+            }
+            try {
+                $input=json_decode((string)$row['payload_json'],true,flags:JSON_THROW_ON_ERROR);
+                if(!is_array($input)||array_is_list($input)||($input['sku']??null)!==$row['sku']) {
+                    throw new DomainException('Invalid approved CSV row payload.');
+                }
+                $result=$this->products->createProduct($org,$input,$key,$actor,$correlation);
+                $native=$this->products->getProduct($org,(string)($result['product_id']??''));
+                $this->assertNative($native,$row['sku'],$input);
+                $this->connection->beginTransaction();
+                try {
+                    $updated=$this->query("UPDATE pm_import_rows SET status='applied',product_id=?,receipt_key=?,applied_at=UTC_TIMESTAMP(6)
+                        WHERE organization_id=? AND batch_id=? AND row_no=? AND staged_status='ready' AND status='ready' AND product_id IS NULL AND receipt_key IS NULL",
+                        [$result['product_id'],$key,$org,$batchId,$rowNo]);
+                    if($updated->rowCount()!==1)throw new DomainException('CSV row receipt state conflict.');
+                    $this->connection->commit();
+                }catch(Throwable $error){
+                    if($this->connection->inTransaction())$this->connection->rollBack();
+                    throw $error;
+                }
+                $applied[]=(string)$result['product_id'];
+            }catch(Throwable $e){
+                // The native Product may already exist if this process crashed
+                // between its transaction and this batch receipt. Do not
+                // pretend a failed row was never written.
+                $this->query("UPDATE pm_import_rows SET status='failed',error_code='manual_reconciliation'
+                    WHERE organization_id=? AND batch_id=? AND row_no=? AND status='ready'",
+                    [$org,$batchId,$rowNo]);
+                $this->query("UPDATE pm_import_batches SET state='blocked'
+                    WHERE organization_id=? AND batch_id=? AND action_key=? AND state='applying'",
+                    [$org,$batchId,$actionKey]);
+                throw new DomainException('CSV row requires manual native Product receipt reconciliation.',previous:$e);
+            }
+        }
+        // The Action result attests independently read native Product records,
+        // not only mutable CSV status columns.
+        $completed=$this->stagedRows($org,$batchId,false);
+        $this->verifySnapshot($completed,$rowsDigest);
+        foreach($completed as $row){
+            if($row['staged_status']==='ready'){
+                if($row['status']!=='applied')throw new DomainException('CSV batch not completely applied.');
+                $key='pm-csv:'.hash('sha256',$org.':'.$batchId.':'.(int)$row['row_no']);
+                $this->assertNativeRow($org,$row,$key);
+            }
+        }
+        $this->query("UPDATE pm_import_batches SET state='applied'
+            WHERE organization_id=? AND batch_id=? AND action_key=? AND state IN ('applying','applied')",
+            [$org,$batchId,$actionKey]);
+        return ['batch_id'=>$batchId,'verified_count'=>count($applied),
+            'product_ids'=>$applied,'state'=>'applied','rows_digest'=>$rowsDigest];
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function stagedRows(string $org,string $batchId,bool $lock):array
+    {
+        return $this->query('SELECT row_no,sku,payload_json,status,error_code,product_id,receipt_key,
+            staged_hash,staged_status,staged_error_code
+            FROM pm_import_rows WHERE organization_id=? AND batch_id=? ORDER BY row_no'.($lock?' FOR UPDATE':''),
+            [$org,$batchId])->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** @param list<array<string,mixed>> $rows */
+    private function verifySnapshot(array $rows,string $expectedDigest):void
+    {
+        if($rows===[]||count($rows)>5000)throw new DomainException('Approved Product CSV has invalid row count.');
+        $hashes=[];$last=0;
+        foreach($rows as $row) {
+            $no=(int)$row['row_no'];
+            $originalStatus=$row['staged_status']??null;
+            if($no!==$last+1||!in_array($originalStatus,['ready','duplicate','invalid'],true)
+                ||!is_string($row['staged_hash']??null)) {
+                throw new DomainException('Product CSV row numbering or original stage is missing.');
+            }
+            $last=$no;
+            $payload=json_decode((string)$row['payload_json'],true,flags:JSON_THROW_ON_ERROR);
+            if(!is_array($payload))throw new DomainException('Product CSV payload object is missing.');
+            $hash=self::rowDigest($no,$row['sku'],$payload,$originalStatus,$row['staged_error_code']);
+            if(!hash_equals($row['staged_hash'],$hash)) {
+                throw new DomainException('Immutable CSV staged row differs from approved evidence.');
+            }
+            if($originalStatus==='ready'){
+                if(!in_array($row['status'],['ready','applied','failed'],true)) {
+                    throw new DomainException('Unexpected approved CSV row state.');
+                }
+            }elseif($row['status']!==$originalStatus){
+                throw new DomainException('Non-ready CSV row was modified after staging.');
+            }
+            $hashes[]=$hash;
+        }
+        if(!hash_equals($expectedDigest,hash('sha256',implode("\\n",$hashes)))) {
+            throw new DomainException('Immutable CSV rowset differs from approved digest.');
+        }
+    }
+
+    /** @param array<string,mixed> $row */
+    private function assertNativeRow(string $org,array $row,string $key):void
+    {
+        if(!is_string($row['product_id'])||!preg_match('/^[a-f0-9]{32}$/D',$row['product_id'])
+            ||$row['receipt_key']!==$key) {
+            throw new DomainException('CSV row lacks matching native Product receipt.');
+        }
+        $input=json_decode((string)$row['payload_json'],true,flags:JSON_THROW_ON_ERROR);
+        $this->assertNative($this->products->getProduct($org,$row['product_id']),$row['sku'],$input);
+    }
+
+    /** @param array<string,mixed>|null $product @param array<string,mixed> $input */
+    private function assertNative(?array $product,?string $sku,array $input):void
+    {
+        if($product===null||$product['name']!==($input['name']??null)
+            ||$product['product_type']!==($input['type']??null)
+            ||$product['status']==='archived') {
+            throw new DomainException('Native Product no longer matches approved CSV row.');
+        }
+        $matched=false;
+        foreach($product['variants']??[] as $variant) {
+            if($variant['sku']===$sku){$matched=true;break;}
+        }
+        if(!$matched)throw new DomainException('Native Variant SKU no longer matches approved CSV.');
+    }
+
+    /**
+     * Private CSV staging lookup. Application is restricted to applyApproved,
+     * reached solely by a canonical, independently approved Kernel Action.
      */
     /** @return array<string,mixed>|null */
     private function batch(string $org,string $batchId): ?array
