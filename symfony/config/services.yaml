@@ -2780,7 +2780,10 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
 
   # Product Management E0: domain stays tenant-disabled until explicit activation.
-  Domains\ProductManagement\Bootstrap\ProductManagementDomainModule: ~
+  Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
+  Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
+    arguments:
+      $importHandler: '@Domains\ProductManagement\Automation\Action\ProductImportApplyHandler'
   productManagementDomainModule:
     alias: Domains\ProductManagement\Bootstrap\ProductManagementDomainModule
 

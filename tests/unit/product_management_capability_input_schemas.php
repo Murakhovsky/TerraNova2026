@@ -10,7 +10,7 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==23)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==24)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
  'product_management.translation.upsert'=>['product_id'=>str_repeat('a',32),'locale'=>'uk','name'=>'Українська назва',

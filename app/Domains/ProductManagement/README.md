@@ -188,3 +188,15 @@ per-row hashes are retained separately from mutable application state. Legacy
 staged batches without these hashes are **not** eligible for approved commit.
 The original CSV bytes remain represented by `digest`; apply must verify
 both pinned digests and independent canonical Action approval before writing.
+
+## E3 approved CSV apply (canonical Action only)
+
+`product_management.import.apply` is **not a direct Command Bus/HTTP mutation**.
+The existing Goal/Plan/Platform Workflow must independently approve and
+create a high-risk `APPROVAL_REQUIRED` Kernel Action with a pinned
+`target_type=product_import_batch`, `target_id`, `batch_digest`,
+`rows_digest` and canonical `wf:<SHA-256>` idempotency key.
+The configured Product Management module exposes a required human approval
+policy and one domain-owned handler to the **existing** Action Worker.
+`import.preview` cannot apply any row. A partial failure blocks the batch
+for operator reconciliation; no automatic replay or Shopify writeback.
