@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "evidence",
+    "readback_status",
+    "finance_expense_confirmed"
+  ],
+  "properties": {
+    "evidence": {
+      "type": "object",
+      "required": [
+        "ad_account_ref",
+        "source_snapshot_ref",
+        "grain",
+        "external_id",
+        "window_start",
+        "window_end",
+        "timezone",
+        "currency",
+        "attribution_hash",
+        "source_hash",
+        "source_revision",
+        "source_status",
+        "reported_spend_decimal"
+      ],
+      "properties": {
+        "ad_account_ref": {
+          "type": "string",
+          "pattern": "^mads-[a-f0-9]{24}$"
+        },
+        "source_snapshot_ref": {
+          "type": "string",
+          "pattern": "^mis-[a-f0-9]{24}$"
+        },
+        "grain": {
+          "type": "string",
+          "const": "campaign"
+        },
+        "external_id": {
+          "type": "string",
+          "pattern": "^[0-9]{1,100}$"
+        },
+        "window_start": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "window_end": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 80
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "attribution_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000000000
+        },
+        "source_status": {
+          "type": "string",
+          "enum": [
+            "PROVISIONAL",
+            "REVISED",
+            "FINALIZED_BY_SOURCE"
+          ]
+        },
+        "reported_spend_decimal": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,13})(\\.[0-9]{1,6})?$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "readback_status": {
+      "type": "string",
+      "const": "MARKETING_DB_SNAPSHOT"
+    },
+    "finance_expense_confirmed": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "additionalProperties": false
+}
