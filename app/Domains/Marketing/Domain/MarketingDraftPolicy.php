@@ -14,9 +14,14 @@ final class MarketingDraftPolicy
                 throw new DomainException('Domain identity or lifecycle state must not come from caller input.');
             }
         }
-        $name = trim((string)($input['name'] ?? ''));
-        $objective = trim((string)($input['business_objective'] ?? ''));
-        $brief = trim((string)($input['brief'] ?? ''));
+        foreach (['name','business_objective','brief'] as $field) {
+            if(array_key_exists($field,$input) && !is_string($input[$field])) {
+                throw new DomainException('Campaign text fields must be strings.');
+            }
+        }
+        $name = trim($input['name'] ?? '');
+        $objective = trim($input['business_objective'] ?? '');
+        $brief = trim($input['brief'] ?? '');
         if (mb_strlen($name) < 3 || mb_strlen($name) > 180) throw new DomainException('Campaign name must be 3 to 180 characters.');
         if ($objective === '' || mb_strlen($objective) > 250) throw new DomainException('Business objective must be 1 to 250 characters.');
         if (mb_strlen($brief) > 5000) throw new DomainException('Brief is too long.');
