@@ -22,6 +22,7 @@ generated: true
 | `finance` | — | 0 |
 | `growth` | — | 1 |
 | `hr` | — | 0 |
+| `marketing` | — | 0 |
 | `procurement` | — | 0 |
 | `property` | — | 1 |
 | `real_estate` | — | 0 |
