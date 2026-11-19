@@ -25,6 +25,8 @@ interface ProductManagementStoreInterface
     public function assignCategory(string $org,string $productId,string $categoryId,string $key,string $actor,string $correlation):array;
     /** @return list<array<string,mixed>> */
     public function searchCategories(string $org,int $limit,int $offset):array;
+    /** @return array<string,mixed> */
+    public function upsertProductTranslation(string $org,string $productId,string $locale,string $name,?string $description,string $key,string $actor,string $correlation):array;
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array;
     /** @return list<array<string,mixed>> */

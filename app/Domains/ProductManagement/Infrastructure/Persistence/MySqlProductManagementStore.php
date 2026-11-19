@@ -174,12 +174,26 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function upsertProductTranslation(string $org,string $productId,string $locale,string $name,?string $description,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'product.translation.upsert',$key,[$productId,$locale,$name,$description],$actor,$correlation,
+            function()use($org,$productId,$locale,$name,$description):array{
+                $row=$this->one('SELECT status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$org,$productId]);
+                if($row===null||$row['status']==='archived')throw new DomainException('Product absent or archived for translation.');
+                $this->execute('INSERT INTO pm_product_translations (organization_id,product_id,locale,name,description) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE name=VALUES(name),description=VALUES(description)',
+                    [$org,$productId,$locale,$name,$description]);
+                return ['product_id'=>$productId,'locale'=>$locale,'name'=>$name,'description'=>$description];
+            },'product_management.translation.upserted','Product');
+    }
+
     public function getProduct(string $organizationId, string $id): ?array
     {
         $row = $this->one('SELECT * FROM pm_products WHERE organization_id=? AND product_id=?', [$organizationId,$id]);
         if ($row === null) return null;
         $row['variants'] = $this->rows('SELECT * FROM pm_variants WHERE organization_id=? AND product_id=? ORDER BY sku', [$organizationId,$id]);
         $row['categories']=$this->rows('SELECT c.category_id,c.name,c.slug,c.parent_id FROM pm_categories c INNER JOIN pm_product_categories pc ON pc.organization_id=c.organization_id AND pc.category_id=c.category_id WHERE pc.organization_id=? AND pc.product_id=? ORDER BY c.name',
+            [$organizationId,$id]);
+        $row['translations']=$this->rows('SELECT locale,name,description FROM pm_product_translations WHERE organization_id=? AND product_id=? ORDER BY locale',
             [$organizationId,$id]);
         return $row;
     }

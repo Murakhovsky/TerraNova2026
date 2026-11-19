@@ -27,6 +27,10 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
         $actor = $command->actorId;
         $trace = $command->correlationId;
         return match ($command->operation) {
+            'translation.upsert' => $this->products->upsertProductTranslation(
+                $org,(string)$in['product_id'],(string)$in['locale'],(string)$in['name'],
+                array_key_exists('description',$in)?(string)$in['description']:null,$key,$actor,$trace,
+            ),
             'product.update' => $this->products->updateProduct(
                 $org,(string)$in['product_id'],$in,(int)$in['expected_revision'],$key,$actor,$trace,
             ),

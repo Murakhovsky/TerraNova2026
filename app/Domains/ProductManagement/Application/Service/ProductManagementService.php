@@ -166,6 +166,21 @@ final readonly class ProductManagementService
         return $this->store->searchCategories($org,$limit,$offset);
     }
 
+    /** @return array<string,mixed> */
+    public function upsertProductTranslation(string $org,string $productId,string $locale,string $name,?string $description,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        if(!preg_match('/^[a-f0-9]{32}$/D',$productId)
+            ||!preg_match('/^[a-z]{2}(?:-[A-Z]{2})?$/D',$locale)) {
+            throw new DomainException('Invalid Product translation target or locale.');
+        }
+        $name=ProductRules::name($name);
+        if($description!==null && mb_strlen($description)>20000) {
+            throw new DomainException('Product translation description too long.');
+        }
+        return $this->store->upsertProductTranslation($org,$productId,$locale,$name,$description,$key,$actor,$correlation);
+    }
+
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array
     {

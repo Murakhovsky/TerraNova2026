@@ -170,3 +170,12 @@ and writes one `product_management.stock.transferred` event via Kernel Outbox
 within the same MySQL transaction. It rejects cross-tenant, same-location,
 overdrawn and reused-key-with-different-payload requests. Shopify writeback
 remains unavailable.
+
+## E1 multilingual product content
+
+`translation.upsert` writes a Product translation (locale, name, optional
+description) through the canonical Capability Gateway and a transactional
+Domain Event/Outbox. Locales are bounded language tags such as `uk`, `en`,
+`en-US`. Reads through `product.get` return all tenant-local translations.
+An archived Product cannot receive translations. Shopify remains an external
+read-only observation source, not the authoritative editor for COS translations.

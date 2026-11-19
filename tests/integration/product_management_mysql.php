@@ -60,6 +60,24 @@ $assert(
 $reject(static fn()=> $products->createProduct($org,['sku'=>$sku,'name'=>'Different','type'=>'stock'],$createKey,'ci-user','ci-pm'),'idempotency payload conflict');
 $assert($products->getProduct($other,$created['product_id'])===null,'tenant catalog isolation');
 $assert(count($products->searchProducts($org,$sku))===1,'search by SKU');
+$ua=$products->upsertProductTranslation($org,$created['product_id'],'uk',
+    'Назва товару','Тестовий опис','pm-translation-uk-'.$token,'ci-user','ci-pm');
+$uaReplay=$products->upsertProductTranslation($org,$created['product_id'],'uk',
+    'Назва товару','Тестовий опис','pm-translation-uk-'.$token,'ci-user','ci-pm');
+$assert($ua['locale']===$uaReplay['locale'] && $ua['name']===$uaReplay['name'],
+    'Product translation idempotency must retain existing row');
+$en=$products->upsertProductTranslation($org,$created['product_id'],'en-US',
+    'English product title',null,'pm-translation-en-'.$token,'ci-user','ci-pm');
+$assert(count($products->getProduct($org,$created['product_id'])['translations'])===2,
+    'Native Product projection must include localized content');
+$assert($products->getProduct($other,$created['product_id'])===null,'Cross-tenant translations cannot leak');
+$reject(static fn()=> $products->upsertProductTranslation($other,$created['product_id'],'uk',
+    'Changed','Other tenant','pm-translation-other-'.$token,'ci-other','ci-pm'),
+    'Cross-tenant translation write');
+$reject(static fn()=> $products->upsertProductTranslation($org,$created['product_id'],'unknown-LOCALE',
+    'Invalid',null,'pm-translation-invalid-'.$token,'ci-user','ci-pm'),
+    'Invalid locale must be rejected');
+
 $category=$products->createCategory($org,'Technical Equipment','technical-equipment-'.$token,null,
     'pm-cat-'.$token,'ci-user','ci-pm');
 $child=$products->createCategory($org,'Test Components','components-'.$token,$category['category_id'],
@@ -219,11 +237,11 @@ $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['nam
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===18,'eighteen confirmed native Domain events');
+$assert((int)$stmt->fetchColumn()===20,'twenty confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===18,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===20,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";

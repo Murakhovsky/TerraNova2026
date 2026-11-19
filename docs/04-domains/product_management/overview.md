@@ -30,7 +30,7 @@ version: 0.1.0
 schema_version: 0.5.0
 runtime: tenant-disabled by default
 persistence: E1–E4 migrations proposed, not production-verified
-capabilities: 22 executable declarations pending integration acceptance
+capabilities: 23 executable declarations pending integration acceptance
 Shopify: read-only; no outbound writes
 process model: explicitly deferred
 ```
