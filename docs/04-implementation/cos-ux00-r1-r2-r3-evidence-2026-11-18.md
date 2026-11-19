@@ -66,6 +66,13 @@ kind: implementation
 
 Позитивний verified-item перехід у реальному браузері, незалежний worker та перехід Run у completed лишаються **непідтвердженими** без завершеного staging E2E. Новий тест не повинен успадковувати PASS від попередніх 13/13, потрібен окремий Runtime на новому SHA.
 
+## 3.3. Незалежне погодження Plan через UI (нова перевірка R3-P)
+
+Окремі браузерні сеанси двох користувачів **одного** tenant: власник надсилає Plan у Policy, незалежний менеджер ухвалює Approval через Control Center; штатний \`cos:queue:run\` виконує лише Federation Plan Approval Action. Тест перевіряє \`APPROVAL_REQUIRED\`, неможливість self-approval, ідентичність reviewer, рівно один Action attempt/receipt та \`cos_federation_plans.state=approved\`. Production-вимкнення зовнішніх Workflow-owned Actions лишається незмінним; нуль Property writes після погодження Plan є обов'язковим.
+
+Це тестова CI fixture з opt-in Federation-модулем та активною policy **тільки у disposable MySQL**. Джерело \`tests/fixtures/ui/ux00_plan_approval.sql\` не є міграцією. PASS цього нового сценарію дозволено встановити лише після окремого Runtime на відповідному SHA. Він не підтверджує незалежне погодження зовнішнього Action, його worker admission або завершений Property Run.
+
+
 ## 4. Межі доведеної готовності
 
 | Критерій | Статус |

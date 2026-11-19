@@ -375,11 +375,122 @@ try {
     batch_id: batchId, items: 2, verified: 0, deep_link: deepLink,
   });
 
+  // R3-P: real two-user Plan approval through the canonical UI + Policy
+  // + Approval queue + Federation Action handler. No external Property Action
+  // permission is enabled; the native batch must stay at zero verified.
+  const reviewerEmail = process.env.UX00_E2E_REVIEWER_EMAIL || '';
+  const reviewerPassword = process.env.UX00_E2E_REVIEWER_PASSWORD || '';
+  assert(reviewerEmail && reviewerPassword, 'R3-P needs independent CI manager identity');
+  const reviewerCtx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+  try {
+    const reviewerPage = await login(reviewerCtx, reviewerEmail, reviewerPassword);
+    assert((await page.goto(abs('/workspace/goals'), { waitUntil: 'networkidle' }))?.status()===200,
+      'R3-P: Goal owner cannot open Approval workspace');
+    const planApprovalForm = page.locator('form[action="/workspace/goals/plans/' + planId
+      + '/request-approval"]');
+    assert(await planApprovalForm.count()===1, 'R3-P: Plan approval request UI missing');
+    await Promise.all([
+      page.waitForURL(url => url.pathname === '/workspace/goals'
+        && url.searchParams.get('notice') === 'approval_requested', { timeout: 30000 }),
+      planApprovalForm.locator('button[type="submit"]').click(),
+    ]);
+    add('R3.plan_owner_requested_real_policy_approval', { plan_id:planId });
+
+    const actionResult = sqlExecute("SELECT CONCAT(id,'|',status) FROM cos_actions "
+      + "WHERE organization_id='default' AND type='cos.federation.plan.approval' "
+      + "AND target_id='" + planId + "'");
+    const actionParts = actionResult.split('|');
+    assert(actionParts.length===2 && /^[a-f0-9]{32}$/.test(actionParts[0])
+      && actionParts[1]==='PENDING_APPROVAL',
+      'R3-P: Policy did not produce one pending canonical Plan Action: ' + actionResult);
+    const planActionId=actionParts[0];
+    const approvalResult=sqlExecute("SELECT CONCAT(id,'|',status) FROM cos_approvals "
+      + "WHERE organization_id='default' AND action_id='" + planActionId + "'");
+    const approvalParts=approvalResult.split('|');
+    assert(approvalParts.length===2 && /^[a-f0-9]{32}$/.test(approvalParts[0])
+      && approvalParts[1]==='PENDING',
+      'R3-P: no single pending human approval record: ' + approvalResult);
+    const approvalId=approvalParts[0];
+    add('R3.plan_policy_pending_human_approval', {action_id:planActionId, approval_id:approvalId});
+
+    // Owner cannot self-approve. The database MUST remain pending.
+    const ownerControl=await page.goto(abs('/cos/control-center#approval-' + approvalId),
+      {waitUntil:'networkidle'});
+    assert(ownerControl?.status()===200,'R3-P: owner Control Center unavailable');
+    const ownerApprove=page.locator('form[action="/cos/approval/' + approvalId + '/approve"]');
+    assert(await ownerApprove.count()===1,'R3-P: canonical owner approval control absent');
+    await Promise.all([
+      page.waitForURL(url=>url.pathname==='/cos/control-center'
+        && url.searchParams.has('status_message'),{timeout:30000}),
+      ownerApprove.locator('button[type="submit"]').click(),
+    ]);
+    assert(sqlExecute("SELECT status FROM cos_approvals WHERE organization_id='default' AND id='"
+      +approvalId+"'")==='PENDING',
+      'R3-P: owner self-approved independent Plan');
+    add('R3.plan_owner_self_approval_denied', {approval_id:approvalId});
+
+    // Authenticated second manager, same organization, distinct user/session.
+    const control=await reviewerPage.goto(abs('/cos/control-center#approval-'+approvalId),
+      {waitUntil:'networkidle'});
+    assert(control?.status()===200,'R3-P: independent reviewer cannot open Control Center');
+    const independentApprove=reviewerPage.locator('form[action="/cos/approval/'
+      +approvalId+'/approve"]');
+    assert(await independentApprove.count()===1,
+      'R3-P: independent reviewer cannot access the Approval');
+    await Promise.all([
+      reviewerPage.waitForURL(url=>url.pathname==='/cos/control-center'
+        && url.searchParams.get('status_message')==='APPROVED',{timeout:30000}),
+      independentApprove.locator('button[type="submit"]').click(),
+    ]);
+    const reviewEvidence=sqlExecute("SELECT CONCAT(status,'|',decided_by_type,'|',decided_by_id) "
+      +"FROM cos_approvals WHERE organization_id='default' AND id='"+approvalId+"'");
+    const reviewerId=sqlExecute("SELECT id FROM tn_users WHERE organization_id='default' AND email='"
+      +reviewerEmail+"'");
+    assert(reviewEvidence==='APPROVED|USER|'+reviewerId,
+      'R3-P: canonical Approval did not record independent manager: '+reviewEvidence);
+    add('R3.independent_manager_approved_via_web',{approval_id:approvalId});
+
+    // The existing canonical queue worker, not a direct handler/SQL update.
+    const queueOutput=execFileSync('docker',[
+      'compose','exec','-T','php','php','bin/console','cos:queue:run',
+      '--worker-id=ux00-plan-'+uid,'--limit=20',
+    ],{encoding:'utf8',timeout:30000});
+    assert(queueOutput.includes('"processed"'), 'R3-P: canonical queue worker failed: '+queueOutput);
+    const finalAction=sqlExecute("SELECT status FROM cos_actions WHERE organization_id='default'"
+      +" AND id='"+planActionId+"'");
+    const finalPlan=sqlExecute("SELECT state FROM cos_federation_plans WHERE organization_id='default'"
+      +" AND plan_id='"+planId+"'");
+    assert(finalAction==='COMPLETED' && finalPlan==='approved',
+      'R3-P: trusted Plan handler did not complete: Action='+finalAction+' Plan='+finalPlan);
+    assert(Number(sqlExecute("SELECT COUNT(*) FROM cos_action_attempts WHERE organization_id='default'"
+      +" AND action_id='"+planActionId+"'"))===1,
+      'R3-P: duplicate or absent Action receipt attempt');
+    add('R3.canonical_plan_worker_receipt_completed',
+      {action_id:planActionId,plan_id:planId,attempts:1});
+
+    // Current deployment intentionally has *no* external Workflow admission.
+    const noRun=await admin.request.post(abs('/workspace/goals/plans/'+planId+'/start'),{
+      form:{csrf_token:csrf},maxRedirects:0,
+    });
+    assert(noRun.status()===303 && (noRun.headers()['location']||'').includes('blocker='),
+      'R3-P: non-allowlisted Property Workflow began from an approved Plan');
+    const nativePending=await json(await admin.request.get(abs('/api/v1/property/bulk/'+batchId)),
+      'R3-P immutable native Property readback');
+    assert(nativePending.state==='planned'
+      && nativePending.items.every(item=>item.native_asset_id===null)
+      && Number(sqlExecute(planRunsSql))===0,
+      'R3-P: unadmitted external Property writes escaped after Plan approval');
+    add('R3.approved_plan_external_workflow_still_fail_closed',
+      {plan_id:planId,run_count:0,native_writes:0});
+  } finally {
+    await reviewerCtx.close();
+  }
+
   const report = { schema: 1, suite: 'COS UX-00 R1/R2/R3 browser acceptance',
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
     tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',
     checks, tested_at: new Date().toISOString(),
-    remaining_gate: 'R3 real Action approval and worker E2E covered by separate Federation MySQL CI job; staging rollout/operator sign-off not covered' };
+    remaining_gate: 'Real two-user Plan approval is CI verified; external Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
   writeFileSync(evidenceDir + '/results.json', JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ ok: true, ...report }, null, 2));
 } catch (error) {
