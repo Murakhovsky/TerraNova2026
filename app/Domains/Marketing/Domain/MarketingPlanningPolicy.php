@@ -61,6 +61,9 @@ final class MarketingPlanningPolicy
             ||!preg_match('/^[a-zA-Z0-9.-]{4,253}$/D',$parts['host'])
             ||!str_contains($parts['host'],'.')
             ||str_ends_with(strtolower($parts['host']),'.local')
+            ||str_ends_with(strtolower($parts['host']),'.internal')
+            ||str_ends_with(strtolower($parts['host']),'.test')
+            ||filter_var($parts['host'],FILTER_VALIDATE_IP)!==false
             ||strtolower($parts['host'])==='localhost'
             ||isset($parts['user'])||isset($parts['pass'])||isset($parts['port'])
             ||mb_strlen($url)>1200){

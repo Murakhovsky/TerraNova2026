@@ -36,8 +36,13 @@ final readonly class MysqlMarketingPlanningRepository implements MarketingPlanni
     {
         $hash=self::hash(['creative'=>$creativeId,'revision'=>$expectedRevision,'actor'=>$actor,'content'=>$content]);
         return $this->write($org,'creative_revise',$key,$hash,function()use($org,$creativeId,$actor,$expectedRevision,$content):array {
+            // Resolve parent without a lock, then enforce stable Campaign -> Creative lock ordering.
+            $q=$this->connection->prepare('SELECT campaign_id FROM marketing_creative_briefs WHERE organization_id=? AND id=?');
+            $q->execute([$org,$creativeId]);$parent=$q->fetchColumn();
+            if(!is_string($parent)||$parent==='')throw new DomainException('Marketing Creative unavailable.');
+            $campaign=$this->campaign($org,$parent,true);
             $brief=$this->lockedCreative($org,$creativeId);
-            $campaign=$this->campaign($org,(string)$brief['campaign_id'],true);
+            if($brief['campaign_id']!==$parent)throw new DomainException('Creative parent changed during revision.');
             if($campaign['status']!=='DRAFT'||$brief['status']!=='DRAFT'){
                 throw new DomainException('Creative revisions require a mutable internal draft.');
             }

@@ -30,6 +30,7 @@ foreach([
     [...$creative,'destination_url'=>'http://example.com/'],
     [...$creative,'destination_url'=>'https://user:pass@example.com'],
     [...$creative,'language'=>'javascript:'],
+    [...$creative,'destination_url'=>'https://127.0.0.1/internal'],
     [...$creative,'product_ref'=>'../bad'],
     [...$creative,'status'=>'APPROVED'],
     [...$creative,'media_sha256'=>'not-a-digest']
