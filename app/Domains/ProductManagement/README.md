@@ -134,6 +134,41 @@ permitted through this capability. `variant.archive` is a soft archive,
 allowed only with zero on-hand/reserved across all tenant locations. Events
 and operation receipts are transactionally appended to Kernel Outbox.
 
+## E4 immutable Shopify import preview (no canonical writes)
+
+A supervised operator can stage a complete remote Product snapshot after
+a successful bounded read-only pull. Every snapshot now tracks
+`is_complete`: raw first-page observations are incomplete and only
+a fully expanded and validated variant/location snapshot is eligible.
+Legacy snapshots default to incomplete.
+
+Shopify shop currency is read from `shop.currencyCode` on the authenticated
+GraphQL read and must be fresher than 24 hours, as must the Product snapshot.
+Only base shop currency is represented, not customer market pricing.
+
+The operator can inspect a snapshot's SHA-256 and completeness without
+exposing raw catalog data:
+
+```sh
+php symfony/bin/console cos:product:shopify inspect --organization=tenant-id \
+  --connection=existing-32-character-id --product-gid=gid://shopify/Product/123
+```
+
+Then stage a pinned candidate:
+
+```sh
+php symfony/bin/console cos:product:shopify stage --organization=tenant-id \
+  --connection=existing-32-character-id --product-gid=gid://shopify/Product/123 \
+  --expected-hash=64-character-source-sha256 --confirm=STAGE_NO_WRITES
+```
+
+Stage verifies each Variant, unique SKU, inventory pagination, currency
+and base price, rejects existing mappings and native SKU collisions, and
+records immutable normalized JSON/source digest in
+`pm_shopify_import_previews` for human review. **No Product/Variant/Price,
+stock ledger or mapping mutation occurs.** The separate approved canonical
+Action materialization remains a required next release gate.
+
 ## Shopify nested pagination (read-only)
 
 Every Product's variant connection and every InventoryItem's location

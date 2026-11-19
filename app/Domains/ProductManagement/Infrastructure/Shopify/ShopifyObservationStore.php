@@ -66,11 +66,30 @@ final readonly class ShopifyObservationStore
     }
 
     /** @param array<string,mixed> $snapshot */
-    public function observeProduct(string $org,string $conn,string $gid,array $snapshot): void
+    public function observeProduct(string $org,string $conn,string $gid,array $snapshot,bool $complete=false): void
     {
         $json=json_encode($snapshot,JSON_THROW_ON_ERROR);
-        $this->query('INSERT INTO pm_external_product_snapshots (organization_id,connection_id,product_gid,payload_hash,payload_json) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE payload_hash=VALUES(payload_hash),payload_json=VALUES(payload_json),observed_at=NOW(6)',
-            [$org,$conn,$gid,hash('sha256',$json),$json]);
+        $this->query('INSERT INTO pm_external_product_snapshots (organization_id,connection_id,product_gid,payload_hash,payload_json,is_complete,observed_at) VALUES (?,?,?,?,?,?,UTC_TIMESTAMP(6)) ON DUPLICATE KEY UPDATE payload_hash=VALUES(payload_hash),payload_json=VALUES(payload_json),is_complete=VALUES(is_complete),observed_at=UTC_TIMESTAMP(6)',
+            [$org,$conn,$gid,hash('sha256',$json),$json,$complete?1:0]);
+    }
+
+    /** Shop currency is authenticated provider evidence, never a user-supplied guess. */
+    public function recordShopCurrency(string $org,string $conn,string $currency):void
+    {
+        if (!preg_match('/^[A-Z]{3}$/D',$currency)) throw new DomainException('Shopify reported invalid currency.');
+        $stmt=$this->query('UPDATE pm_external_connections SET shop_currency=?,shop_currency_checked_at=UTC_TIMESTAMP(6)
+            WHERE organization_id=? AND connection_id=? AND provider=? AND status=?',
+            [$currency,$org,$conn,'shopify','ready']);
+        if ($stmt->rowCount()!==1) throw new DomainException('Missing Shopify currency connection scope.');
+    }
+
+    /** @return array<string,mixed>|null */
+    public function productSnapshot(string $org,string $conn,string $gid):?array
+    {
+        $row=$this->query('SELECT product_gid,payload_hash,payload_json,is_complete,observed_at
+            FROM pm_external_product_snapshots WHERE organization_id=? AND connection_id=? AND product_gid=?',
+            [$org,$conn,$gid])->fetch(PDO::FETCH_ASSOC);
+        return $row===false?null:$row;
     }
 
     /** @param array<string,mixed> $level */

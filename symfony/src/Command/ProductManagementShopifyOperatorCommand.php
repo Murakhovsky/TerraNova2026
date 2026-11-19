@@ -8,6 +8,7 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService;
 use Kernel\Module\ActiveModuleResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -29,18 +30,21 @@ final class ProductManagementShopifyOperatorCommand extends Command
         private readonly ShopifyCatalogPullService $puller,
         private readonly ShopifyClientCredentials $credentials,
         private readonly ActiveModuleResolver $modules,
+        private readonly ShopifyImportPreviewService $previews,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull')
+        $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull|inspect|stage')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
             ->addOption('connection',null,InputOption::VALUE_REQUIRED,'Existing 32-character connection ID')
             ->addOption('pages',null,InputOption::VALUE_REQUIRED,'Maximum 1..20 product pages','1')
+            ->addOption('product-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Product GID')
+            ->addOption('expected-hash',null,InputOption::VALUE_REQUIRED,'Pinned snapshot SHA-256')
             ->addOption('confirm',null,InputOption::VALUE_REQUIRED,'PROVISION_READ_ONLY or PULL_READ_ONLY');
     }
 
@@ -57,7 +61,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['provision','status','pull'],true)) {
+            if (!in_array($action,['provision','status','pull','inspect','stage'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             if (!$this->modules->isEnabled($org,'product_management')) {
@@ -85,6 +89,32 @@ final class ProductManagementShopifyOperatorCommand extends Command
             }
             if ($action==='status') {
                 return $this->result($output,$this->observations->status($org,$connection),Command::SUCCESS);
+            }
+            if ($action==='inspect') {
+                $gid=trim((string)$input->getOption('product-gid'));
+                if (!preg_match('#^gid://shopify/Product/[0-9]+$#D',$gid)) {
+                    return $this->result($output,['status'=>'INVALID_PRODUCT_GID'],Command::INVALID);
+                }
+                $this->observations->connection($org,$connection);
+                $snapshot=$this->observations->productSnapshot($org,$connection,$gid);
+                if ($snapshot===null) {
+                    return $this->result($output,['status'=>'NOT_OBSERVED'],Command::FAILURE);
+                }
+                return $this->result($output,[
+                    'status'=>'SNAPSHOT_EVIDENCE','product_gid'=>$gid,
+                    'source_hash'=>$snapshot['payload_hash'],
+                    'complete'=>(int)$snapshot['is_complete']===1,
+                    'observed_at'=>$snapshot['observed_at'],
+                ],Command::SUCCESS);
+            }
+            if ($action==='stage') {
+                if ($input->getOption('confirm')!=='STAGE_NO_WRITES') {
+                    return $this->result($output,['status'=>'CONFIRMATION_REQUIRED'],Command::INVALID);
+                }
+                $gid=trim((string)$input->getOption('product-gid'));
+                $hash=trim((string)$input->getOption('expected-hash'));
+                $result=$this->previews->stage($org,$connection,$gid,'operator',$hash);
+                return $this->result($output,$result,Command::SUCCESS);
             }
             if ($input->getOption('confirm')!=='PULL_READ_ONLY') {
                 return $this->result($output,['status'=>'CONFIRMATION_REQUIRED'],Command::INVALID);

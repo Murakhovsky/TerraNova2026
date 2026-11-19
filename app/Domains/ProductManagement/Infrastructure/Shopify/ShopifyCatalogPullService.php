@@ -17,6 +17,7 @@ final readonly class ShopifyCatalogPullService
 {
     private const PRODUCTS_QUERY = <<<'GRAPHQL'
 query COSProducts($first: Int!, $after: String) {
+  shop { currencyCode }
   products(first: $first, after: $after) {
     nodes {
       id title status updatedAt
@@ -70,6 +71,11 @@ GRAPHQL;
             do {
                 $result=$this->client->query($connection['shop_domain'],$token,self::PRODUCTS_QUERY,
                     ['first'=>5,'after'=>$cursor]);
+                $currency=$result['data']['shop']['currencyCode']??null;
+                if (!is_string($currency)||!preg_match('/^[A-Z]{3}$/D',$currency)) {
+                    throw new DomainException('Shopify shop currency missing or invalid.');
+                }
+                $this->observations->recordShopCurrency($org,$connectionId,$currency);
                 $page=$result['data']['products']??null;
                 if (!is_array($page)||!is_array($page['nodes']??null)||!is_array($page['pageInfo']??null)) {
                     throw new DomainException('Unexpected products pagination shape.');
@@ -127,7 +133,7 @@ GRAPHQL;
         }
         // Retain an independently reviewable raw provider snapshot even when
         // downstream SKU, variants or stock shape is incomplete.
-        $this->observations->observeProduct($org,$conn,$gid,$remote);
+        $this->observations->observeProduct($org,$conn,$gid,$remote,true);
         $variants=$remote['variants']['nodes']??null;
         if (!is_array($variants)||$variants===[]||!empty($remote['variants']['pageInfo']['hasNextPage'])) {
             throw new DomainException('Empty or truncated Shopify variants; requires pagination/review.');

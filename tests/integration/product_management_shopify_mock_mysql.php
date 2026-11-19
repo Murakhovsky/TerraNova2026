@@ -109,7 +109,7 @@ $http=new class($sku) implements ShopifyHttpTransportInterface {
             'variants'=>[
                 'nodes'=>[[
                     'id'=>'gid://shopify/ProductVariant/902',
-                    'sku'=>$this->sku,'barcode'=>null,
+                    'sku'=>$this->sku,'price'=>'12.00','barcode'=>null,
                     'inventoryItem'=>[
                         'id'=>'gid://shopify/InventoryItem/903',
                         'tracked'=>true,
@@ -130,7 +130,7 @@ $http=new class($sku) implements ShopifyHttpTransportInterface {
         ];
         return [
             'status'=>200,
-            'body'=>json_encode(['data'=>['products'=>[
+            'body'=>json_encode(['data'=>['shop'=>['currencyCode'=>'USD'],'products'=>[
                 'nodes'=>[$record],
                 'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null],
             ]]],JSON_THROW_ON_ERROR),

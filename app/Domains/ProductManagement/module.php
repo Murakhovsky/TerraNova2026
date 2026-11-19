@@ -26,6 +26,7 @@ return [
             'app/migrations/20261119_000156_product_management_approved_import.sql',
             'app/migrations/20261119_000157_product_management_media_links.sql',
             'app/migrations/20261119_000158_product_management_import_plan_binding.sql',
+            'app/migrations/20261119_000159_product_management_shopify_import_preview.sql',
         ],
         // Expose only implemented bindings, never aspirational commands.
         'capability_contracts' => [

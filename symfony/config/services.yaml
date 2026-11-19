@@ -2782,6 +2782,9 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
 
