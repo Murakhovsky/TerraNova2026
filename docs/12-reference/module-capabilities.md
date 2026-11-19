@@ -327,6 +327,7 @@ Manifest capabilities не задекларовані.
 - `product_management.stock.receive`;
 - `product_management.stock.transfer`;
 - `product_management.sync.status.get`;
+- `product_management.translation.upsert`;
 - `product_management.variant.archive`;
 - `product_management.variant.create`;
 - `product_management.variant.update`;
