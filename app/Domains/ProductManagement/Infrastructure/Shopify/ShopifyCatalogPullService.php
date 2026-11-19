@@ -131,9 +131,8 @@ GRAPHQL;
         if (!is_string($gid)||!preg_match('#^gid://shopify/Product/[0-9]+$#D',$gid)) {
             throw new DomainException('Invalid Shopify product GID.');
         }
-        // Retain an independently reviewable raw provider snapshot even when
-        // downstream SKU, variants or stock shape is incomplete.
-        $this->observations->observeProduct($org,$conn,$gid,$remote,true);
+        // Raw first-page evidence was already stored as incomplete. Only promote
+        // the fully validated remote snapshot after all stock observations succeed.
         $variants=$remote['variants']['nodes']??null;
         if (!is_array($variants)||$variants===[]||!empty($remote['variants']['pageInfo']['hasNextPage'])) {
             throw new DomainException('Empty or truncated Shopify variants; requires pagination/review.');
@@ -161,6 +160,9 @@ GRAPHQL;
                 }
             }
         }
+        // Missing external identity mappings are expected during initial sync:
+        // this complete provider snapshot may be staged separately for approval.
+        $this->observations->observeProduct($org,$conn,$gid,$remote,true);
         $mapping=$this->observations->mapping($org,$conn,'product',$gid);
         if ($mapping===null) {
             throw new DomainException('Shopify product observed without approved COS identity mapping.');
