@@ -21,6 +21,7 @@ final readonly class ShopifyWebhookController
     public function __construct(
         private ShopifyObservationStore $observations,
         private ActiveModuleResolver $modules,
+        private \Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials $credentials,
     ) {}
 
     public function receive(Request $request): JsonResponse
@@ -30,13 +31,17 @@ final readonly class ShopifyWebhookController
         $signature=(string)$request->headers->get('X-Shopify-Hmac-Sha256','');
         $delivery=(string)$request->headers->get('X-Shopify-Webhook-Id','');
         $topic=(string)$request->headers->get('X-Shopify-Topic','');
-        $secret=getenv('SHOPIFY_CLIENT_SECRET');
         if (strlen($raw)>1048576) return $this->reply('payload_too_large',413);
-        if (!is_string($secret)||$secret==='') return $this->reply('webhook_disabled',503);
         try {
             ShopifyReadClient::assertShopDomain($shop);
-            ShopifyWebhookVerifier::verify($raw,$signature,$secret);
+            // Never authenticate a different store with a global app secret.
+            // Shop is untrusted until HMAC verification; the lookup only selects
+            // server-owned credential material and must be unique/fail-closed.
             $connection=$this->observations->uniqueConnectionForShop($shop);
+            $secret=$this->credentials->webhookSecret(
+                $shop,$connection['secret_ref'],$connection['organization_id'],$connection['connection_id']
+            );
+            ShopifyWebhookVerifier::verify($raw,$signature,$secret);
             if (!$this->modules->isEnabled($connection['organization_id'],'product_management')) {
                 throw new DomainException('Product Management is inactive for the target tenant.');
             }

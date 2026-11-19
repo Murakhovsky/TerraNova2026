@@ -62,7 +62,7 @@ GRAPHQL;
         if ($connection['mode']!=='shopify_authoritative'&&$connection['mode']!=='observation_only') {
             throw new DomainException('Connection mode not read-only.');
         }
-        $token=$this->credentials->accessToken($connection['shop_domain'],$connection['secret_ref']);
+        $token=$this->credentials->accessToken($connection['shop_domain'],$connection['secret_ref'],$org,$connectionId);
         $cursor=$connection['page_cursor'];
         $run=$this->observations->start($org,$connectionId);
         $pageCount=0;$productsSeen=0;$conflicts=0;

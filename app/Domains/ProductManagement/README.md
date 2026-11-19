@@ -270,3 +270,23 @@ Approval, Product writer, Action receipt attestation and Run-scoped Goal
 outcome against MySQL 8.4. It rejects premature execution, duplicate
 Action dispatch and forged CSV row receipts. No second executor exists.
 This technical E2E does not substitute for operator sign-off or UI acceptance.
+
+## E4 per-store COS Credential Vault binding
+
+The supervised Shopify operator can provision a connection with
+`--secret-ref=env://COS_SHOPIFY_STORE_A` rather than the legacy
+`shopify_env_primary` pilot configuration. Set `COS_SHOPIFY_STORE_A` on the
+server to a **JSON object**, for example
+`{"shop_domain":"store-a.myshopify.com","client_id":"...","client_secret":"..."}`.
+The existing `CredentialVaultInterface` resolves the JSON in the trusted
+connection/tenant context; only its **reference** is stored in COS. The
+resolved `shop_domain` must exactly match the provisioned shop. No secret is
+sent to the Workspace, log, event or import snapshot.
+
+OAuth read tokens and webhook HMAC both select credentials from the
+**uniquely matched connection**. A Shopify webhook with an unknown or
+ambiguous shop fails closed. Store A's HMAC is never checked against Store
+B's secret. The default legacy single-store resolver remains temporarily
+available for the existing operator pilot and should not be used when
+onboarding multiple stores. This changes neither Shopify source-of-truth
+ownership nor the E4 prohibition on remote writes.

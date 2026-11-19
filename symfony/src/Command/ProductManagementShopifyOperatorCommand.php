@@ -38,6 +38,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
         $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
+            ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
             ->addOption('connection',null,InputOption::VALUE_REQUIRED,'Existing 32-character connection ID')
             ->addOption('pages',null,InputOption::VALUE_REQUIRED,'Maximum 1..20 product pages','1')
             ->addOption('confirm',null,InputOption::VALUE_REQUIRED,'PROVISION_READ_ONLY or PULL_READ_ONLY');
@@ -70,8 +71,10 @@ final class ProductManagementShopifyOperatorCommand extends Command
                 ShopifyReadClient::assertShopDomain($shop);
                 // Verify server-held app credentials against the explicitly
                 // selected shop before persisting any ready connection.
-                $this->credentials->accessToken($shop,'shopify_env_primary');
-                $connection=$this->observations->provision($org,$shop,'shopify_env_primary');
+                $ref=trim((string)$input->getOption('secret-ref'));
+                ShopifyClientCredentials::assertSecretReference($ref);
+                $this->credentials->accessToken($shop,$ref,$org,'shopify-provision-preflight');
+                $connection=$this->observations->provision($org,$shop,$ref);
                 return $this->result($output,
                     ['status'=>'PROVISIONED_READ_ONLY','organization_id'=>$org,'connection_id'=>$connection],
                     Command::SUCCESS);
