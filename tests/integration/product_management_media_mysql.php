@@ -33,7 +33,7 @@ $other='pm-media-other-'.$token;
 $fileId='FILE-'.strtoupper($token);
 $rootFolder=sys_get_temp_dir().'/cos-media-test-'.$token;
 $storage=new LocalFileStorage($rootFolder);
-$png=base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL5WQAAAABJRU5ErkJggg==',true);
+$png=base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==',true);
 $assert(is_string($png)&&@getimagesizefromstring($png)!==false,'test PNG fixture missing');
 $key='documents/'.substr(hash('sha256',$org),0,20).'/DOC-'.$token.'/'.$fileId.'/tiny.png';
 $uploaded=$storage->put($key,$png,'image/png');
