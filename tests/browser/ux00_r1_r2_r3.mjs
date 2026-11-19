@@ -315,6 +315,9 @@ try {
     ]);
     assert(post.status() === 303 && rendered.status() === 200,
       'S4: mode ' + mode + ' failed: POST ' + post.status() + ' GET ' + rendered.status());
+    // HTTP response headers precede the browser's document swap. Ensure the
+    // redirected document is stable before inspecting and capturing evidence.
+    await page.waitForLoadState('networkidle');
     const surface = page.locator('[data-cos-federation-goals][data-experience-mode="' + mode + '"]');
     await surface.waitFor({ state: 'visible', timeout: 15000 });
     const goal = surface.locator('[data-goal-id="' + goalId + '"]');
@@ -329,7 +332,10 @@ try {
       'S4: independent approval entry missing in ' + mode + ' mode');
     assert((await goal.locator('[data-goal-expert]').count() > 0) === (mode === 'expert'),
       'S4: Expert-only diagnostics incorrectly disclosed/hidden in ' + mode + ' mode');
-    await goal.screenshot({ path: evidenceDir + '/goal-' + mode + '.png', animations: 'disabled' });
+    // A page screenshot is stable even if Stimulus replaces a Goal card while
+    // applying progressive enhancement; a detached-element screenshot is not.
+    await page.screenshot({ path: evidenceDir + '/goal-' + mode + '.png',
+      fullPage: true, animations: 'disabled' });
     add('S4.' + mode + '_same_goal_pending_plan', { goal_id: goalId, plan_id: planId });
   }
 
