@@ -2745,6 +2745,13 @@ services:
 
   # Finance F1: the only budget writer, under Kernel Action + independent Policy approval.
   Domains\Finance\Domain\BudgetControlPolicy: ~
+  Domains\Finance\Domain\FinanceSpendObservationPolicy: ~
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinanceSpendObservationRepositoryInterface:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository
+  Domains\Finance\Application\Service\FinanceSpendObservationService: ~
   Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository:
     arguments:
       $connection: '@cos.database.pdo'
