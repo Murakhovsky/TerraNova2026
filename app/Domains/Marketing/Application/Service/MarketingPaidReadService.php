@@ -2,7 +2,9 @@
 declare(strict_types=1);
 namespace Domains\Marketing\Application\Service;
 
+use DateTimeImmutable;
 use DomainException;
+use Throwable;
 use Domains\Marketing\Application\Contract\MarketingPaidReadRepository;
 use Domains\Marketing\Application\Contract\PaidMediaProviderInterface;
 use Kernel\Tenant\Model\TenantContext;
@@ -38,10 +40,38 @@ final readonly class MarketingPaidReadService
         $this->guard($actor);
         $org=$actor->organizationId()->value();
         $account=$this->requiredAccount($org,$accountId);
-        $hierarchy=$this->provider->hierarchy($org,(string)$account['ad_account_id'],(string)$account['credential_ref']);
-        $insights=$this->provider->insights($org,(string)$account['ad_account_id'],(string)$account['credential_ref'],$from,$to,'campaign');
-        // No current successful provider state is promoted before all remote reads succeed.
-        return $this->repository->importSnapshot($org,$accountId,$from,$to,$hierarchy,$insights);
+        $dateFrom=DateTimeImmutable::createFromFormat('!Y-m-d',$from);
+        $dateTo=DateTimeImmutable::createFromFormat('!Y-m-d',$to);
+        if(!$dateFrom||!$dateTo||$dateFrom->format('Y-m-d')!==$from||$dateTo->format('Y-m-d')!==$to
+            ||$dateFrom>$dateTo||$dateFrom->diff($dateTo)->days>30){
+            throw new DomainException('Meta read sync requires an exact 1-31 day calendar window.');
+        }
+        $stage='remote';
+        try {
+            $hierarchy=$this->provider->hierarchy($org,(string)$account['ad_account_id'],(string)$account['credential_ref']);
+            $insights=$this->provider->insights($org,(string)$account['ad_account_id'],(string)$account['credential_ref'],$from,$to,'campaign');
+            $stage='import';
+            // Successful run receipt is atomically committed with all imported facts.
+            return $this->repository->importSnapshot($org,$accountId,$from,$to,$hierarchy,$insights);
+        }catch(Throwable $failure){
+            try {
+                $this->repository->recordSyncFailure($org,$accountId,$actor->userId()->value(),
+                    $stage==='remote'?'REMOTE_READ_FAILED':'IMPORT_REJECTED');
+            }catch(Throwable $receiptFailure){
+                error_log('marketing.sync.failure_receipt_unavailable '.$receiptFailure::class);
+            }
+            throw $failure;
+        }
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function syncHistory(TenantContext $actor,string $accountId,int $limit=20):array
+    {
+        $this->guard($actor);
+        $org=$actor->organizationId()->value();
+        $this->requiredAccount($org,$accountId);
+        if($limit<1||$limit>50)throw new DomainException('Invalid Meta history page size.');
+        return $this->repository->syncHistory($org,$accountId,$limit);
     }
 
     /** @return array{campaigns:list<array<string,mixed>>,adsets:list<array<string,mixed>>,ads:list<array<string,mixed>>} */
