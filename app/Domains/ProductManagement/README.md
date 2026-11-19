@@ -73,8 +73,9 @@ characters through the existing 16 KiB Gateway) stages CSV without
 creating any Products. It atomically binds `X-Idempotency-Key` to the CSV
 digest and batch identity; the same key cannot stage different data.
 `product_management.import.batch.get` reads native per-row results.
-The signed `digest` is returned for the later approved commit workflow.
-Batch apply remains disabled until Kernel Action + independent Approval exists.
+The pinned `digest` and `rows_digest` support a separate, independently
+approved `product_management.import.apply` Kernel Action. Preview never
+commits Products directly.
 
 ## Shopify pull lease and recovery
 

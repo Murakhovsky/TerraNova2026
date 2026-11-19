@@ -2,7 +2,7 @@
 title: Огляд домену управління товарами
 description: Призначення, межі, дані та обмеження пілотної реалізації домену Product Management у COS.
 status: active
-updated: 2026-11-18
+updated: 2026-11-19
 kind: domain
 contract: domain-v1
 ---
@@ -18,7 +18,8 @@ contract: domain-v1
 - **Товари:** назва, тип, статус, SKU та варіанти.
 - **Склади:** локації, баланси, надходження й списання.
 - **Ціни:** базова ціна за варіантом і валютою, історія зміни.
-- **Імпорт:** перевірка CSV і збереження проміжних пакетів.
+- **Імпорт:** незмінне CSV staging, окремий approved Kernel Action і native reconciliation.
+- **Медіа:** безпечні Product/Variant-зв'язки з існуючими tenant-owned файлами COS.
 - **Зовнішні джерела:** Shopify GraphQL лише для читання,
   окремі знімки залишків, контроль зовнішніх ідентифікаторів.
 
@@ -32,7 +33,7 @@ runtime: tenant-disabled by default
 persistence: E1–E4 migrations proposed, not production-verified
 capabilities: 27 executable declarations pending integration acceptance
 Shopify: read-only; no outbound writes
-process model: explicitly deferred
+process model: CSV Action admission implemented; full Goal/Plan E2E pending
 ```
 
 Код E0–E4 у чернетці PR, не вважається завершеним або перевіреним
