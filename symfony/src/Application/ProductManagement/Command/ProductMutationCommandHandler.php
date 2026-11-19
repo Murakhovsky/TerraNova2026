@@ -7,6 +7,7 @@ use DomainException;
 use Domains\ProductManagement\Application\Service\PricingService;
 use Domains\ProductManagement\Application\Service\CsvProductImportService;
 use Domains\ProductManagement\Application\Service\ProductManagementService;
+use Domains\ProductManagement\Application\Service\ProductMediaService;
 use Kernel\Application\Command\CommandHandlerInterface;
 
 /** Domain use cases remain the only local writers; no parallel executor. */
@@ -16,6 +17,7 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
         private ProductManagementService $products,
         private PricingService $prices,
         private CsvProductImportService $imports,
+        private ProductMediaService $media,
     ) {}
 
     /** @return array<string,mixed> */
@@ -27,6 +29,15 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
         $actor = $command->actorId;
         $trace = $command->correlationId;
         return match ($command->operation) {
+            'media.attach' => $this->media->attach(
+                $org,(string)$in['product_id'],(string)$in['file_id'],
+                isset($in['variant_id'])?(string)$in['variant_id']:null,
+                (string)($in['role']??'gallery'),(int)($in['sort_order']??100),
+                $key,$actor,$trace,
+            ),
+            'media.detach' => $this->media->detach(
+                $org,(string)$in['media_id'],$key,$actor,$trace,
+            ),
             'translation.upsert' => $this->products->upsertProductTranslation(
                 $org,(string)$in['product_id'],(string)$in['locale'],(string)$in['name'],
                 array_key_exists('description',$in)?(string)$in['description']:null,$key,$actor,$trace,

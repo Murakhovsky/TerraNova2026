@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Application\ProductManagement\Query;
 
 use Domains\ProductManagement\Application\Service\ProductManagementService;
+use Domains\ProductManagement\Application\Service\ProductMediaService;
 use Domains\ProductManagement\Application\Service\PricingService;
 use Domains\ProductManagement\Application\Service\CsvProductImportService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
@@ -17,6 +18,7 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
         private PricingService $prices,
         private CsvProductImportService $imports,
         private ShopifyObservationStore $shopify,
+        private ProductMediaService $media,
     ) {}
 
     /** @return array<string,mixed> */
@@ -25,6 +27,10 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
         $org=$query->organization->value();
         $in=$query->input;
         return match($query->operation) {
+            'media.search' => [
+                'items'=>$this->media->search($org,(string)$in['product_id'],(int)($in['limit']??30),(int)($in['offset']??0)),
+                'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
+            ],
             'category.search' => [
                 'items'=>$this->products->categories($org,(int)($in['limit']??30),(int)($in['offset']??0)),
                 'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),

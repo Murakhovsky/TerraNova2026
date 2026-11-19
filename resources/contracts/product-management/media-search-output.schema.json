@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagement media.search OutputV1",
+  "type": "object",
+  "additionalProperties": true
+}
