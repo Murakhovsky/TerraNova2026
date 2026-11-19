@@ -97,6 +97,10 @@ jobs:
         run: |
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Marketing Finance typed readback real MySQL end to end
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_marketing_spend_readback_mysql.php
       - name: Finance F1 real MySQL source spend evidence and reconciliation
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
