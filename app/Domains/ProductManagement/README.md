@@ -144,3 +144,11 @@ Repeated/missing cursors, identity changes, duplicate variant/location
 GIDs and budget overruns cause quarantined conflicts; original snapshots
 are retained and **no partial nested stock is accepted**. This remains
 read-only and does not apply Shopify quantities to canonical COS balances.
+
+## Shopify throttling
+
+Admin GraphQL can return HTTP 200 with `errors[].extensions.code=THROTTLED`.
+The read transport handles both this condition and transient 429/503 with
+at most three bounded retry attempts. Other GraphQL errors fail closed.
+No response containing unresolved errors is promoted to a Product snapshot.
+Large stores still require a later cost-aware bulk import strategy.
