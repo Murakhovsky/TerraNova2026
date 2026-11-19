@@ -1,0 +1,133 @@
+pages:
+  - id: marketing.overview
+    route: { name: cos_marketing_overview, path: "/marketing", methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.overview.view
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Monitor campaign planning and real provider observation."
+      page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
+    archetype: domain_dashboard
+    patterns:
+      required: [PageHeader, KpiStrip]
+      optional: [Toolbar, EntityList]
+    primary_action: marketing.overview.open
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.campaigns
+    route: { name: cos_marketing_campaigns, path: "/marketing/campaigns", methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.campaigns.view
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Create and find a safely scoped Marketing campaign draft."
+      page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [FilterBar, EmptyState]
+    primary_action: marketing.campaign.create
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.campaign
+    route: { name: cos_marketing_campaign, path: "/marketing/campaigns/{id}", methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.campaign.view
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Inspect campaign brief, related products and approval blockers."
+      page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
+    archetype: entity_workspace
+    patterns:
+      required: [WorkspaceHeader, EntityHeader]
+      optional: [ContextPanel, Timeline]
+    primary_action: marketing.campaign.inspect
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.accounts
+    route: { name: cos_marketing_accounts, path: "/marketing/accounts", methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.accounts.view
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Inspect and verify scoped Meta Ad Accounts."
+      page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [EmptyState, ErrorState]
+    primary_action: marketing.paid.account.inspect
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.performance
+    route: { name: cos_marketing_performance, path: "/marketing/performance", methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.performance.view
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Review campaign-level Meta spend observations with provenance and currency."
+      page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, Toolbar]
+      optional: [FilterBar, EmptyState]
+    primary_action: marketing.paid.insights.query
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: marketing.actions
+    route: { name: cos_marketing_actions, path: "/marketing/actions", methods: [GET] }
+    surface: workspace
+    domain: Marketing
+    capability: marketing.actions.view
+    owner: Marketing
+    priority: P0
+    status: CONTRACTED
+    personas: [manager]
+    product:
+      primary_goal: "Inspect blocked paid operations and evidence-based read-sync failures with operator follow-up."
+      page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
+    archetype: operational_queue
+    patterns:
+      required: [PageHeader, EntityList]
+      optional: [Toolbar, EmptyState]
+    primary_action: marketing.actions.inspect
+    states: [normal, error]
+    responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+

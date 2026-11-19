@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "name",
+    "business_objective"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 180
+    },
+    "business_objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 250
+    },
+    "brief": {
+      "type": "string",
+      "maxLength": 5000
+    },
+    "product_refs": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+      }
+    }
+  },
+  "additionalProperties": false
+}

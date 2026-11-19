@@ -3682,3 +3682,52 @@ cos_api_v1_capital_markets_portfolio_performance:
   path: /api/v1/capital-markets/portfolio/performance
   controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::performance
   methods: [GET]
+
+# Marketing M0/M1: human-only planning and Meta read-only sync.
+cos_marketing_overview:
+  path: /marketing
+  controller: App\Web\Marketing\MarketingPageController::overview
+  methods: [GET]
+
+cos_marketing_campaigns:
+  path: /marketing/campaigns
+  controller: App\Web\Marketing\MarketingPageController::campaigns
+  methods: [GET]
+
+cos_marketing_create:
+  path: /marketing/campaigns
+  controller: App\Web\Marketing\MarketingPageController::create
+  methods: [POST]
+
+cos_marketing_campaign:
+  path: /marketing/campaigns/{id}
+  controller: App\Web\Marketing\MarketingPageController::campaign
+  methods: [GET]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_accounts:
+  path: /marketing/accounts
+  controller: App\Web\Marketing\MarketingPageController::accounts
+  methods: [GET]
+
+cos_marketing_connect:
+  path: /marketing/accounts
+  controller: App\Web\Marketing\MarketingPageController::connect
+  methods: [POST]
+
+cos_marketing_sync:
+  path: /marketing/accounts/{id}/sync
+  controller: App\Web\Marketing\MarketingPageController::sync
+  methods: [POST]
+  requirements: { id: 'mads-[a-f0-9]{24}' }
+
+cos_marketing_performance:
+  path: /marketing/performance
+  controller: App\Web\Marketing\MarketingPageController::performance
+  methods: [GET]
+
+cos_marketing_actions:
+  path: /marketing/actions
+  controller: App\Web\Marketing\MarketingPageController::actions
+  methods: [GET]
+
