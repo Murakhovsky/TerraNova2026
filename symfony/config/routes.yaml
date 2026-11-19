@@ -3705,6 +3705,31 @@ cos_marketing_campaign:
   methods: [GET]
   requirements: { id: 'mkt-[a-f0-9]{24}' }
 
+
+cos_marketing_creative_create:
+  path: /marketing/campaigns/{id}/creatives
+  controller: App\Web\Marketing\MarketingPageController::createCreative
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_creative_revise:
+  path: /marketing/campaigns/{id}/creatives/{creativeId}/revisions
+  controller: App\Web\Marketing\MarketingPageController::reviseCreative
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', creativeId: 'mkcr-[a-f0-9]{24}' }
+
+cos_marketing_analyst_propose:
+  path: /marketing/campaigns/{id}/proposals
+  controller: App\Web\Marketing\MarketingPageController::propose
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}' }
+
+cos_marketing_analyst_review:
+  path: /marketing/campaigns/{id}/proposals/{proposalId}/review
+  controller: App\Web\Marketing\MarketingPageController::review
+  methods: [POST]
+  requirements: { id: 'mkt-[a-f0-9]{24}', proposalId: 'mkpr-[a-f0-9]{24}' }
+
 cos_marketing_accounts:
   path: /marketing/accounts
   controller: App\Web\Marketing\MarketingPageController::accounts

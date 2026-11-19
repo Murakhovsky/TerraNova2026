@@ -53,13 +53,13 @@ pages:
     status: CONTRACTED
     personas: [manager]
     product:
-      primary_goal: "Inspect campaign brief, related products and approval blockers."
+      primary_goal: "Inspect campaign draft, versioned Creative variants, and independently reviewed proposals."
       page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
     archetype: entity_workspace
     patterns:
       required: [WorkspaceHeader, EntityHeader]
       optional: [ContextPanel, Timeline]
-    primary_action: marketing.campaign.inspect
+    primary_action: marketing.creative.create
     states: [normal, error]
     responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }

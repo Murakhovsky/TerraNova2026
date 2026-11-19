@@ -64,6 +64,103 @@
             <p>State: {{ c.status }} · Revision: {{ c.revision }} · Owner: {{ c.owner_id }}</p>
             <h3>Product links</h3>
             {% if c.product_refs is not empty %}<p>{{ c.product_refs|join(', ') }} (read-only, not yet verified)</p>{% else %}<p>No Product links yet.</p>{% endif %}
+
+            <h3>Creative drafts</h3>
+            <p>Planning records only. Product availability, landing URL, regulatory compliance and media ownership have NOT been verified. Nothing here creates or activates an ad.</p>
+            <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ planningKey }}">
+                <label>Headline <input class="form-control" name="headline" required minlength="3" maxlength="180"></label>
+                <label>Ad text <textarea class="form-control" name="primary_text" required minlength="5" maxlength="2500"></textarea></label>
+                <label>Call to action <input class="form-control" name="call_to_action" value="Learn more" required minlength="2" maxlength="80"></label>
+                <label>Destination HTTPS URL <input class="form-control" type="url" name="destination_url" required placeholder="https://shop.example.com/item"></label>
+                <label>Language <input class="form-control" name="language" value="uk" required pattern="[a-z]{2}(-[A-Z]{2})?"></label>
+                <label>Product reference (optional, unverified) <input class="form-control" name="product_ref"></label>
+                <label>Media SHA-256 (optional) <input class="form-control" name="media_sha256" maxlength="64"></label>
+                <button class="btn btn-outline-primary" type="submit">Save creative draft</button>
+            </form>
+
+            {% for creative in creatives %}
+            <section class="cos-panel">
+                <div class="cos-page__section-head">
+                    <div><strong>{{ creative.content.headline }}</strong> <small>{{ creative.status }} · revision {{ creative.revision }}</small></div>
+                    <small>Author {{ creative.actor_id }} · {{ creative.id }}</small>
+                </div>
+                <p>{{ creative.content.primary_text }}</p>
+                <p>{{ creative.content.call_to_action }} · {{ creative.content.language }} · {{ creative.content.destination_url }}</p>
+                <p>Product: {{ creative.content.product_ref|default('not linked') }} · {{ creative.content.product_verification }} · URL {{ creative.content.destination_verification }}</p>
+                <details>
+                    <summary>Revise this creative (appends a version)</summary>
+                    <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/creatives/{{ creative.id|url_encode }}/revisions" class="cos-page__stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="mkt-revise-{{ creative.id }}-{{ creative.revision }}-{{ planningKey }}">
+                        <input type="hidden" name="expected_revision" value="{{ creative.revision }}">
+                        <label>Headline <input class="form-control" name="headline" required value="{{ creative.content.headline }}"></label>
+                        <label>Ad text <textarea class="form-control" name="primary_text" required>{{ creative.content.primary_text }}</textarea></label>
+                        <label>Call to action <input class="form-control" name="call_to_action" required value="{{ creative.content.call_to_action }}"></label>
+                        <label>Destination URL <input class="form-control" name="destination_url" required value="{{ creative.content.destination_url }}"></label>
+                        <label>Language <input class="form-control" name="language" required value="{{ creative.content.language }}"></label>
+                        <label>Product reference <input class="form-control" name="product_ref" value="{{ creative.content.product_ref|default('') }}"></label>
+                        <label>Media SHA-256 <input class="form-control" name="media_sha256" value="{{ creative.content.media_sha256|default('') }}"></label>
+                        <button class="btn btn-outline-secondary" type="submit">Save next creative revision</button>
+                    </form>
+                </details>
+                <details>
+                    <summary>Submit a human analyst recommendation about this revision</summary>
+                    <p>Evidence is recorded as a source reference, not verified automatically. Hermes delegation is not connected in this milestone.</p>
+                    <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/proposals" class="cos-page__stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="mkt-propose-{{ creative.id }}-{{ creative.revision }}-{{ planningKey }}">
+                        <input type="hidden" name="campaign_revision" value="{{ c.revision }}">
+                        <input type="hidden" name="creative_id" value="{{ creative.id }}">
+                        <input type="hidden" name="creative_revision" value="{{ creative.revision }}">
+                        <input type="hidden" name="evidence_ref" value="{{ planningEvidenceRef }}">
+                        <label>Recommendation <textarea class="form-control" name="recommendation" required minlength="8" maxlength="4000"></textarea></label>
+                        <label>Rationale <textarea class="form-control" name="rationale" required minlength="8" maxlength="4000"></textarea></label>
+                        <label>Evidence note <textarea class="form-control" name="evidence_note" required minlength="3" maxlength="500"></textarea></label>
+                        <button class="btn btn-outline-primary" type="submit">Submit for independent human review</button>
+                    </form>
+                </details>
+            </section>
+            {% else %}
+                <p>No creative drafts. Create a human-owned draft above.</p>
+            {% endfor %}
+
+            <h3>Analyst proposals and independent review</h3>
+            <p>Accepting a recommendation does NOT approve a Campaign, verify a Product, reserve funds or authorize Meta delivery.</p>
+            {% for proposal in proposals %}
+            <section class="cos-panel">
+                <div class="cos-page__section-head">
+                    <strong>{{ proposal.status }} · {{ proposal.origin }} proposal</strong>
+                    <small>{{ proposal.id }} · submitted by {{ proposal.submitted_by }} · revision {{ proposal.revision }}</small>
+                </div>
+                <p><strong>Suggested action:</strong> {{ proposal.recommendation }}</p>
+                <p><strong>Rationale:</strong> {{ proposal.rationale }}</p>
+                <p>Creative {{ proposal.creative_id }} (revision {{ proposal.creative_revision }}); Campaign revision {{ proposal.campaign_revision }}</p>
+                {% for item in proposal.evidence %}
+                    <p>Evidence: {{ item.source_type }} / {{ item.reference }} · {{ item.note }} · {{ item.verification_status }}</p>
+                {% endfor %}
+                {% if proposal.status == 'PROPOSED' and proposal.submitted_by != currentUserId %}
+                    <form method="post" action="/marketing/campaigns/{{ c.id|url_encode }}/proposals/{{ proposal.id|url_encode }}/review" class="cos-page__stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                        <input type="hidden" name="idempotency_key" value="mkt-review-{{ proposal.id }}-{{ planningKey }}">
+                        <input type="hidden" name="expected_revision" value="{{ proposal.revision }}">
+                        <label>Reviewer reason <input class="form-control" name="reason" required minlength="5" maxlength="300"></label>
+                        <div class="cos-toolbar">
+                            <button class="btn btn-outline-primary" type="submit" name="decision" value="ACCEPT">Accept recommendation</button>
+                            <button class="btn btn-outline-secondary" type="submit" name="decision" value="REJECT">Reject recommendation</button>
+                        </div>
+                    </form>
+                {% elseif proposal.status == 'PROPOSED' %}
+                    <p>Awaiting a different manager. Self-approval is forbidden.</p>
+                {% else %}
+                    <p>Reviewed by {{ proposal.reviewed_by }} · {{ proposal.review_reason }} · {{ proposal.reviewed_at }}</p>
+                {% endif %}
+            </section>
+            {% else %}
+                <p>No proposals yet. First create a creative and submit evidence-backed human feedback.</p>
+            {% endfor %}
+
             <h3>Activation and approvals</h3><p>Blocked: Finance F1 and independent Workflow approval have not been accepted.</p>
         </section>
     {% elseif section == 'accounts' %}
