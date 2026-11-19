@@ -19,9 +19,10 @@ generated: true
 | `diagnostic` | `1.0.0` | — | 5 |
 | `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
-| `finance` | `0.2.1` | — | 8 |
+| `finance` | `0.2.2` | — | 8 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
+| `marketing` | `0.1.2` | — | 14 |
 | `procurement` | `0.1.0` | — | 0 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
@@ -75,6 +76,12 @@ generated: true
 - manifest: `app/Domains/HR/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `marketing`
+
+- manifest: `app/Domains/Marketing/module.php`;
+- configuration provisioners: —;
+- capabilities: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.sync.history`, `marketing.paid.spend.evidence.get`, `marketing.paid.insights.query`, `marketing.campaign.update`, `marketing.campaign.archive`, `marketing.paid.sync.request`, `marketing.paid.change.request`, `marketing.paid.meta.campaign.create_paused`, `marketing.paid.meta.campaign.activate`, `marketing.paid.meta.campaign.pause`.
 
 ## `procurement`
 
