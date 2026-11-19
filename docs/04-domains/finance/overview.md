@@ -4,13 +4,13 @@ description: Канонічний фінансовий домен COS із ко�
 status: draft
 updated: 2026-11-19
 kind: domain
-version: 0.2.0
+version: 0.2.1
 contract: domain-v1
 ---
 
 # Огляд домену Finance
 
-Finance `0.2.0` додає ізольований бюджетний контур **F1 Budget Control** поверх базового Finance V1. Це **не повноцінна бухгалтерія**, не модуль платежів і не підтверджена інтеграція з банками або рекламними провайдерами.
+Finance `0.2.1` додає ізольований бюджетний контур **F1 Budget Control** поверх базового Finance V1. Це **не повноцінна бухгалтерія**, не модуль платежів і не підтверджена інтеграція з банками або рекламними провайдерами.
 
 Усі фінансові операції залишаються вимкненими для tenants за замовчуванням. У production модуль не активовано; приймання реального бюджету та витрат не завершено.
 
@@ -42,11 +42,23 @@ FROZEN --[approved release]--> RELEASED reservation
 
 ## Структура й докази
 
-База: `cos_finance_budget_envelopes`, `cos_finance_budget_reservations`, `cos_finance_budget_intents`, `cos_finance_budget_events`.
+База бюджетів: `cos_finance_budget_envelopes`, `cos_finance_budget_reservations`, `cos_finance_budget_intents`, `cos_finance_budget_events`.
 
 Кожна мутація атомарно записує стан, idempotency receipt і immutable event. Операції відхиляють чужий tenant, застарілу ревізію, повторювані provider operation keys, прострочений бюджет, overspend і неузгоджені переходи.
 
 Перевірки: `tests/unit/finance_budget_f1.php` і окрема MySQL 8.4 перевірка `tests/integration/finance_budget_f1_mysql.php` у Runtime CI. **Це кодові та інтеграційні перевірки, не дозвіл запускати рекламу.**
+
+## Source-reported Spend Observations (F1.1)
+
+Finance приймає й зберігає **окремий журнал спостережень**, не `Expense`. Мета-звіт `reported_spend_decimal` залишається рядком з точним десятковим значенням (до шести знаків), валютою, часовим поясом, конкретним періодом, `grain=campaign`, attribution hash, ID провайдерного об'єкта і посиланням на незмінну версію Marketing snapshot.
+
+Таблиці: `cos_finance_spend_observations`, `cos_finance_spend_evidence_events`. Унікальний ключ обмежує один запис на конкретні account/campaign/window/attribution. Новий `source_revision` допускається тільки строго вище попереднього; повтор версії ідентичний, конфлікт версії відхиляється. Журнал подій не видаляється.
+
+Для менеджера tenant додано query `finance.ad_spend.reconciliation.status` із суворим групуванням за ad account, валютою, attribution hash, timezone та **точним** вікном. Вона повертає `NO_OBSERVATIONS` або `UNRECONCILED`, кількість рядків і `source_reported_spend_decimal` без PHP float. Навіть `FINALIZED_BY_SOURCE` не є `Invoice`, `Payment`, `Expense` чи розрахунком прибутку.
+
+**Обмеження:** `FinanceSpendObservationService::acceptUnverifiedMarketingSnapshot` є лише внутрішнім контрактом для майбутнього довіреного bridge. Запису через HTTP, загальнодоступну Capability або Hermes немає. До приймання Marketing M1 та Finance F1 не існує перевіреного cross-domain джерела для автоматичної передачі. Усі записи позначаються `UNVERIFIED_SOURCE`; reserved/committed balances не змінюються. Реконсиляція з рахунками та бюджетний exposure coverage також не підтверджені.
+
+Автоматичний MySQL-тест: `tests/integration/finance_spend_observations_mysql.php` перевіряє незмінність попередніх версій, дублікати, tenant boundary, різні валюти/атрибуцію/вікна й відсутність фіктивних фінансових фактів.
 
 ## Відкладені залежності для Marketing
 

@@ -19,3 +19,9 @@ kind: decision
 7. Новий Domain Action не отримує bypass через UI/AI/API/CRON. Джерелом виконання є Kernel/Platform Workflow. Наявність capability не дорівнює праву її викликати.
 8. F1 залишається disabled by default. Немає ані Meta платного запису, ані settlement/Expense, ані доказу фактичних коштів на банківському рахунку.
 
+## FIN-ADR-001a: Відокремлена рекламна observation
+
+9. Meta/Marketing reported spend не резервує й не списує кошти. Finance зберігає source-reported decimal, source snapshot ID/version/hash, reporting window, timezone, currency, attribution та tenant в окремому незмінному журналі ревізій.
+10. Evidence залишається `UNVERIFIED_SOURCE`, доки повноцінний перевірений Marketing→Finance bridge не підтвердив походження. Фінансове `reconciliation.status=UNRECONCILED` навіть якщо Meta позначив джерело `FINALIZED_BY_SOURCE`.
+11. Без invoice/payment/settlement receipt не створювати `Expense`, не оновлювати `committed_minor` і не показувати net profit.
+12. Повторні імпорти мають бути ідемпотентними. Різні reporting windows, attribution settings і валюти не можна бездумно сумувати. F1 Query використовує тільки точне й однорідне порівняння.

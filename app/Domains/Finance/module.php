@@ -7,7 +7,7 @@ return [
     'version' => '0.2.1',
     'schema_version' => '0.2.1',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Finance F1 Budget Control: tenant-safe budgets and reservation ledger under independent Kernel Action approval, no payments.',
+    'description' => 'Finance F1 budget envelopes, approved reservations and unverified provider spend evidence; no settlement, payments or Meta writes.',
     'icon' => 'wallet-cards',
     'dependencies' => [],
     'enabled_by_default' => false,
