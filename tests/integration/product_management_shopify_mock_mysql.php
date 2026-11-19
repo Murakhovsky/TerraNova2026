@@ -56,6 +56,52 @@ $http=new class($sku) implements ShopifyHttpTransportInterface {
             throw new RuntimeException('Shopify GraphQL request must be authenticated read-only.');
         }
         ++$this->readCalls;
+        $vars=$query['variables']??[];
+        if (str_contains($query['query'],'COSProductVariants')) {
+            if (($vars['id']??null)!=='gid://shopify/Product/901'
+                ||($vars['after']??null)!=='variant-cursor-1') {
+                throw new RuntimeException('Unexpected Shopify Variant cursor.');
+            }
+            return ['status'=>200,'body'=>json_encode(['data'=>['product'=>[
+                'id'=>'gid://shopify/Product/901',
+                'variants'=>[
+                    'nodes'=>[[
+                        'id'=>'gid://shopify/ProductVariant/912',
+                        'sku'=>'EXTRA-912','price'=>'9.00',
+                        'inventoryItem'=>[
+                            'id'=>'gid://shopify/InventoryItem/913',
+                            'tracked'=>true,
+                            'inventoryLevels'=>[
+                                'nodes'=>[[
+                                    'location'=>['id'=>'gid://shopify/Location/914','name'=>'Secondary'],
+                                    'quantities'=>[['name'=>'on_hand','quantity'=>5],
+                                        ['name'=>'available','quantity'=>4]],
+                                ]],
+                                'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null],
+                            ],
+                        ],
+                    ]],
+                    'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null],
+                ],
+            ]]],JSON_THROW_ON_ERROR)];
+        }
+        if (str_contains($query['query'],'COSInventoryLevels')) {
+            if (($vars['id']??null)!=='gid://shopify/InventoryItem/903'
+                ||($vars['after']??null)!=='location-cursor-1') {
+                throw new RuntimeException('Unexpected Shopify InventoryItem cursor.');
+            }
+            return ['status'=>200,'body'=>json_encode(['data'=>['inventoryItem'=>[
+                'id'=>'gid://shopify/InventoryItem/903',
+                'inventoryLevels'=>[
+                    'nodes'=>[[
+                        'location'=>['id'=>'gid://shopify/Location/915','name'=>'Overflow'],
+                        'quantities'=>[['name'=>'on_hand','quantity'=>3],
+                            ['name'=>'available','quantity'=>2]],
+                    ]],
+                    'pageInfo'=>['hasNextPage'=>false,'endCursor'=>null],
+                ],
+            ]]],JSON_THROW_ON_ERROR)];
+        }
         $record=[
             'id'=>'gid://shopify/Product/901',
             'title'=>'Observed Remote Product',
@@ -75,11 +121,11 @@ $http=new class($sku) implements ShopifyHttpTransportInterface {
                                     ['name'=>'available','quantity'=>7],
                                 ],
                             ]],
-                            'pageInfo'=>['hasNextPage'=>false],
+                            'pageInfo'=>['hasNextPage'=>true,'endCursor'=>'location-cursor-1'],
                         ],
                     ],
                 ]],
-                'pageInfo'=>['hasNextPage'=>false],
+                'pageInfo'=>['hasNextPage'=>true,'endCursor'=>'variant-cursor-1'],
             ],
         ];
         return [
@@ -139,13 +185,20 @@ $stmt=$pdo->prepare('SELECT payload_json FROM pm_external_product_snapshots WHER
 $stmt->execute([$org,$id,'gid://shopify/Product/901']);
 $stored=$stmt->fetchColumn();
 $assert(is_string($stored) && str_contains($stored,'Observed Remote Product'),'provider snapshot persisted');
-$stmt=$pdo->prepare('SELECT on_hand,available FROM pm_external_stock_observations WHERE organization_id=? AND connection_id=? AND variant_gid=?');
+$stmt=$pdo->prepare('SELECT on_hand,available FROM pm_external_stock_observations WHERE organization_id=? AND connection_id=? AND variant_gid=? AND location_gid='gid://shopify/Location/904'');
 $stmt->execute([$org,$id,'gid://shopify/ProductVariant/902']);
 $stock=$stmt->fetch(PDO::FETCH_ASSOC);
 $assert(is_array($stock) && (string)$stock['on_hand']==='9.000000'
     && (string)$stock['available']==='7.000000','external stock observation recorded exactly');
+$extraStock=$pdo->prepare('SELECT COUNT(*) FROM pm_external_stock_observations WHERE organization_id=? AND connection_id=?');
+$extraStock->execute([$org,$id]);
+$assert((int)$extraStock->fetchColumn()===3,'Nested Shopify pagination must persist all three stock locations');
+$expanded=json_decode($stored,true,flags:JSON_THROW_ON_ERROR);
+$assert(count($expanded['variants']['nodes'])===2
+    && $expanded['variants']['pageInfo']['hasNextPage']===false,
+    'Saved Shopify Product must include fully resolved variant pages');
 $second=$pull->pull($org,$id,1);
-$assert($second['products_observed']===1 && $http->readCalls===2 && $http->oauthCalls===2,
+$assert($second['products_observed']===1 && $http->readCalls===6 && $http->oauthCalls===2,
     'Two explicitly requested sync passes should issue only read calls');
 $assert($observations->status($org,$id)['open_conflicts']===1,
     'Repeated remote observations cannot multiply identical open conflicts');
