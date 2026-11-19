@@ -117,6 +117,39 @@ $stmt=$pdo->prepare("SELECT COUNT(*) FROM cos_event_outbox o INNER JOIN cos_even
 $stmt->execute([$org]);
 $assert((int)$stmt->fetchColumn()===2,'Native writer did not append transactional Outbox receipts');
 
+// Simulate a worker dying after Product.create commits but BEFORE its
+// pm_import_rows receipt update. The same approved Action must recover
+// the original native receipt under the immutable row idempotency key.
+$recoveryOrg='pm-recovery-'.$token;
+$recoverySku='RECOVER'.strtoupper($token);
+$recoveryBatch=$csv->preview($recoveryOrg,
+    "sku,name,type,uom,track_inventory\n".$recoverySku.",Recovered,stock,pcs,1\n",
+    '42','csv-recovery-'.$token);
+$recoveryRowKey='pm-csv:'.hash('sha256',$recoveryOrg.':'.$recoveryBatch['batch_id'].':1');
+$preCommitted=$products->createProduct($recoveryOrg,[
+    'sku'=>$recoverySku,'name'=>'Recovered','type'=>'stock',
+    'uom'=>'pcs','track_inventory'=>true
+],$recoveryRowKey,'42','ci-precrash');
+$recAction=new Action(bin2hex(random_bytes(16)),$recoveryOrg,ProductImportApplyHandler::TYPE,
+    'product_import_batch',$recoveryBatch['batch_id'],
+    ['batch_digest'=>$recoveryBatch['digest'],'rows_digest'=>$recoveryBatch['rows_digest']],
+    'USER','42','APPROVAL_REQUIRED','HIGH',
+    'wf:'.hash('sha256',$recoveryOrg.':'.$recoveryBatch['batch_id']),
+    new DateTimeImmutable(),ActionStatus::Running,'ci-postcrash');
+$recovered=$handler->execute($recAction);
+$assert($recovered->successful &&
+    $recovered->data['product_ids']===[(string)$preCommitted['product_id']],
+    'Crash recovery should attach the existing Product receipt without creating another Product');
+$recoveryReport=$csv->report($recoveryOrg,$recoveryBatch['batch_id']);
+$assert($recoveryReport['state']==='applied'
+    &&($recoveryReport['rows'][0]['product_id']??null)===$preCommitted['product_id'],
+    'Recovered CSV row was not independently attested');
+$rows=$pdo->prepare('SELECT COUNT(*) FROM pm_products WHERE organization_id=?');
+$rows->execute([$recoveryOrg]);
+$assert((int)$rows->fetchColumn()===1,'Crash recovery duplicated a native Product');
+$assert($handler->execute($recAction)->successful,'Repeated recovery Action was not idempotent');
+
+// Rejection of tampering and collisions is verified independently below.
 // A changed staged payload must fail before the first Product write.
 $tamperedOrg='pm-tampered-'.$token;
 $tamperedSku='TAMPER'.strtoupper($token);

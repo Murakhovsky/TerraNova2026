@@ -229,3 +229,12 @@ are native Product Management records. Detach never deletes shared Platform
 file bytes. Product reads include safe media metadata and never return
 internal storage keys. Legacy `tn_media_assets` are not treated as
 tenant-owned evidence and cannot be linked directly.
+
+### Crash between native Product creation and CSV row receipt
+
+An approved Action can safely reuse the same row idempotency key after a
+worker crash. If Product.create already committed to the native Product
+registry and Kernel Outbox, re-execution reads its original receipt, checks
+native Product identity/SKU and completes the still-unwritten CSV row
+receipt. No second Product or Domain Event is produced. Rows with conflicting
+native evidence remain blocked for manual reconciliation.
