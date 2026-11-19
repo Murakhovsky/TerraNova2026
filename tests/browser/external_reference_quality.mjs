@@ -73,10 +73,24 @@ try {
   await loginPage.goto(absolute('/auth/login'), { waitUntil: 'networkidle' });
   await loginPage.locator('input[name="email"]').fill(email);
   await loginPage.locator('input[name="password"]').fill(password);
-  await Promise.all([
-    loginPage.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
-    loginPage.locator('button[type="submit"]').click(),
-  ]);
+  // Prove HTTP-level login acceptance instead of hiding an actual
+  // rejected login behind a generic navigation timeout. This changes no
+  // retry/authentication behavior and never logs form credentials.
+  const loginPost = loginPage.waitForResponse(
+    response => new URL(response.url()).pathname === '/auth/login'
+      && response.request().method() === 'POST',
+    { timeout: 30000 },
+  );
+  await loginPage.locator('button[type="submit"]').click();
+  const loginResponse = await loginPost;
+  if (loginResponse.status() !== 302 && loginResponse.status() !== 303) {
+    const body = (await loginPage.locator('body').innerText().catch(() => '')).slice(0, 900);
+    throw new Error('External-reference authenticated fixture login rejected: HTTP '
+      + loginResponse.status() + ', URL ' + loginPage.url() + ', page: ' + body);
+  }
+  await loginPage.waitForURL(
+    url => !url.pathname.startsWith('/auth/login'), { timeout: 25000 },
+  );
   const authState = await loginContext.storageState();
   await loginContext.close();
 

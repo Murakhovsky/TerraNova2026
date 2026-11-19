@@ -987,6 +987,19 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Verify external-reference CI identity is still active
+        run: |
+          EXTERNAL_ACCOUNT_COUNT="$(docker compose exec -T mysql mysql -N -s -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            SELECT COUNT(*) FROM tn_users u
+            INNER JOIN cos_organization_memberships m
+              ON m.organization_id=u.organization_id AND m.user_id=u.id
+            WHERE u.organization_id='default'
+              AND u.email='sales-functional-acceptance@example.test'
+              AND u.status='active' AND m.status='ACTIVE'
+          ")"
+          echo "Active external-reference CI identities: $EXTERNAL_ACCOUNT_COUNT"
+          test "$EXTERNAL_ACCOUNT_COUNT" = '1'
+
       - name: External reference browser QA
         env:
           EXTERNAL_REFERENCE_BASE_URL: http://127.0.0.1:8081
