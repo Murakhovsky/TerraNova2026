@@ -260,3 +260,13 @@ native Product name/type, Variant SKU, Product ID and row receipt key.
 A completed Workflow alone can never satisfy the Goal. Partial batches
 are unknown, and fingerprint drift fails closed. The outcome is one
 Run-scoped metric, `product_management.csv_products_verified`.
+
+## E3 full canonical acceptance
+
+`tests/integration/product_management_approved_goal_e2e_mysql.php` runs
+the actual Product-backed Goal/Plan, stored independent Plan Approval
+evidence, canonical Platform Workflow/Action claim, independent Action
+Approval, Product writer, Action receipt attestation and Run-scoped Goal
+outcome against MySQL 8.4. It rejects premature execution, duplicate
+Action dispatch and forged CSV row receipts. No second executor exists.
+This technical E2E does not substitute for operator sign-off or UI acceptance.

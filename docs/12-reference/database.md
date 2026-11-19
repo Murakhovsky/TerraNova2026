@@ -226,6 +226,7 @@ generated: true
 | `product_management` | `app/migrations/20261119_000156_product_management_approved_import.sql` | `pm_import_batches` |
 | `product_management` | `app/migrations/20261119_000156_product_management_approved_import.sql` | `pm_import_rows` |
 | `product_management` | `app/migrations/20261119_000157_product_management_media_links.sql` | `pm_media_refs` |
+| `product_management` | `app/migrations/20261119_000158_product_management_import_plan_binding.sql` | `pm_import_batches` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

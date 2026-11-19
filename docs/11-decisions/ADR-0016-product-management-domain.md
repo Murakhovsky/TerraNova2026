@@ -71,6 +71,7 @@ Release E0–E4 не дозволяє зовнішні Shopify writes, automated
 ### Відкриті критерії приймання
 
 - Наскрізний Goal → Plan → незалежні Approval → Workflow → Kernel Action →
-  Product native receipt → Goal outcome, без другого executor.
+  Product native receipt → Goal outcome перевірено в isolated MySQL E2E;
+  production operator sign-off залишається обов'язковим.
 - UI для завантаження та редагування Product Media через Unified Workspace.
 - Реальний read-only Shopify smoke та операторський release sign-off.

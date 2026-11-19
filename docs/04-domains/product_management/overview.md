@@ -33,7 +33,7 @@ runtime: tenant-disabled by default
 persistence: E1–E4 migrations proposed, not production-verified
 capabilities: 27 executable declarations pending integration acceptance
 Shopify: read-only; no outbound writes
-process model: canonical Goal/Plan proposal + approved Action boundary; full E2E acceptance pending
+process model: canonical Goal/Plan Approval Workflow Action and Goal outcome MySQL E2E passed
 ```
 
 Код E0–E4 у чернетці PR, не вважається завершеним або перевіреним
