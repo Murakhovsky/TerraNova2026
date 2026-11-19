@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 $root=dirname(__DIR__,2);
-require $root.'/vendor/autoload.php';
+require (getenv('COS_TEST_AUTOLOAD') ?: $root.'/vendor/autoload.php');
 
 use Kernel\Module\CapabilityContract;
 use Platform\Orchestration\Goal\CapabilityJsonInputValidator;
