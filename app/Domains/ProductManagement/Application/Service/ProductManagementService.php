@@ -203,6 +203,19 @@ final readonly class ProductManagementService
     }
 
     /** @return array<string,mixed> */
+    public function transferStock(string $org,string $variantId,string $fromLocation,string $toLocation,string $quantity,string $source,string $key,string $actor,string $correlation):array
+    {
+        $this->scope($org,$key,$actor,$correlation);
+        foreach([$variantId,$fromLocation,$toLocation] as $id) {
+            if (!preg_match('/^[a-f0-9]{32}$/D',$id)) throw new DomainException('Invalid transfer identifier.');
+        }
+        if($fromLocation===$toLocation)throw new DomainException('Stock transfer needs two distinct locations.');
+        if(trim($source)===''||strlen($source)>191)throw new DomainException('Transfer requires a bounded source document.');
+        return $this->store->transferStock($org,$variantId,$fromLocation,$toLocation,
+            ProductRules::quantity($quantity),$source,$key,$actor,$correlation);
+    }
+
+    /** @return array<string,mixed> */
     public function balance(string $organizationId, string $variantId, string $locationId): array
     {
         $this->tenant($organizationId);

@@ -228,6 +228,50 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             }, 'product_management.stock.movement_posted','Stock');
     }
 
+    /** Atomic paired ledger transfer, no additional execution authority. */
+    public function transferStock(string $org,string $variantId,string $fromLocation,string $toLocation,string $qty,string $source,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'stock.transfer',$key,
+            [$variantId,$fromLocation,$toLocation,$qty,$source],$actor,$correlation,
+            function()use($org,$variantId,$fromLocation,$toLocation,$qty,$source,$key,$actor):array {
+                $variant=$this->one('SELECT v.track_inventory,v.status,p.status AS product_status FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE',
+                    [$org,$variantId]);
+                if($variant===null||(int)$variant['track_inventory']!==1||$variant['status']!=='active'||$variant['product_status']==='archived')
+                    throw new DomainException('Active trackable Variant required for stock transfer.');
+                $locIds=[$fromLocation,$toLocation];
+                sort($locIds,SORT_STRING);
+                foreach($locIds as $id){
+                    $loc=$this->one('SELECT status FROM pm_locations WHERE organization_id=? AND location_id=? FOR UPDATE',[$org,$id]);
+                    if($loc===null||$loc['status']!=='active')throw new DomainException('Both tenant warehouse locations must be active.');
+                }
+                foreach($locIds as $id){
+                    $this->execute('INSERT IGNORE INTO pm_stock_balances (organization_id,variant_id,location_id) VALUES (?,?,?)',[$org,$variantId,$id]);
+                }
+                foreach($locIds as $id){
+                    if($this->one('SELECT location_id FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND location_id=? FOR UPDATE',[$org,$variantId,$id])===null){
+                        throw new DomainException('Warehouse stock projection is missing.');
+                    }
+                }
+                $out=$this->connection->prepare('UPDATE pm_stock_balances SET on_hand=on_hand-CAST(:qty AS DECIMAL(20,6)),revision=revision+1 WHERE organization_id=:org AND variant_id=:variant AND location_id=:loc AND on_hand-CAST(:guard AS DECIMAL(20,6))>=reserved');
+                $out->execute(['qty'=>$qty,'guard'=>$qty,'org'=>$org,'variant'=>$variantId,'loc'=>$fromLocation]);
+                if($out->rowCount()!==1)throw new DomainException('Insufficient available stock for transfer.');
+                $in=$this->connection->prepare('UPDATE pm_stock_balances SET on_hand=on_hand+CAST(:qty AS DECIMAL(20,6)),revision=revision+1 WHERE organization_id=:org AND variant_id=:variant AND location_id=:loc');
+                $in->execute(['qty'=>$qty,'org'=>$org,'variant'=>$variantId,'loc'=>$toLocation]);
+                if($in->rowCount()!==1)throw new DomainException('Destination stock projection update failed.');
+                $outId=bin2hex(random_bytes(16));$inId=bin2hex(random_bytes(16));
+                $digest=hash('sha256',$org.':'.$key);
+                foreach([[$outId,$fromLocation,'-'.$qty,'issue','pm-xfer-out:'.$digest],
+                         [$inId,$toLocation,$qty,'receipt','pm-xfer-in:'.$digest]] as $record){
+                    $this->execute('INSERT INTO pm_stock_movements (organization_id,movement_id,variant_id,location_id,quantity_delta,movement_type,source_ref,idempotency_key,actor_ref) VALUES (?,?,?,?,?,?,?,?,?)',
+                        [$org,$record[0],$variantId,$record[1],$record[2],$record[3],$source,$record[4],$actor]);
+                }
+                return ['variant_id'=>$variantId,'from_location_id'=>$fromLocation,'to_location_id'=>$toLocation,
+                    'quantity'=>$qty,'source_ref'=>$source,'out_movement_id'=>$outId,'in_movement_id'=>$inId,
+                    'from_balance'=>$this->stockBalance($org,$variantId,$fromLocation),
+                    'to_balance'=>$this->stockBalance($org,$variantId,$toLocation)];
+            },'product_management.stock.transferred','Stock');
+    }
+
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array
     {
         $variant=$this->one('SELECT track_inventory FROM pm_variants WHERE organization_id=? AND variant_id=?',[$organizationId,$variantId]);

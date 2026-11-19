@@ -159,3 +159,14 @@ A Product cannot be archived while any tenant variant has nonzero
 `on_hand` or `reserved`, not merely active reservations. Postings on
 variants whose parent Product has been archived are rejected at the
 transactional store. Variant Domain Events use the real variant aggregate ID.
+
+## Atomic warehouse-to-warehouse transfer
+
+`stock.transfer` is a single tenant-scoped Capability Gateway Command,
+not separate independently retriable issue/receipt requests. It locks
+the two active locations and balances in deterministic order, posts
+two equal and opposite entries in the native immutable stock ledger,
+and writes one `product_management.stock.transferred` event via Kernel Outbox
+within the same MySQL transaction. It rejects cross-tenant, same-location,
+overdrawn and reused-key-with-different-payload requests. Shopify writeback
+remains unavailable.

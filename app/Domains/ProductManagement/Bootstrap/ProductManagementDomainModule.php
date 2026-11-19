@@ -29,6 +29,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             'product_management.category.assigned',
             'product_management.location.created',
             'product_management.stock.movement_posted',
+            'product_management.stock.transferred',
             'product_management.price.updated',
         ];
     }

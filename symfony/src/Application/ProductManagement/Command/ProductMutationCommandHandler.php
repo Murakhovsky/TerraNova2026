@@ -59,6 +59,10 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
                 (string) $in['quantity'], 'receipt', (string) $in['source_ref'],
                 $key, $actor, $trace,
             ),
+            'stock.transfer' => $this->products->transferStock(
+                $org,(string)$in['variant_id'],(string)$in['from_location_id'],(string)$in['to_location_id'],
+                (string)$in['quantity'],(string)$in['source_ref'],$key,$actor,$trace,
+            ),
             'stock.issue' => $this->products->recordMovement(
                 $org, (string) $in['variant_id'], (string) $in['location_id'],
                 '-' . (string) $in['quantity'], 'issue', (string) $in['source_ref'],

@@ -179,6 +179,35 @@ $products->recordMovement($org,$variant,$loc,'-6.000000','issue','TEST-ZERO-STOC
 $eventIdentity=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type=? AND aggregate_id=?');
 $eventIdentity->execute([$org,'product_management.variant.updated',$variant]);
 $assert((int)$eventIdentity->fetchColumn()===1,'Variant update event must use native Variant aggregate ID');
+$target=$products->createLocation($org,'T-'.$token,'Transfer destination',
+    'pm-xfer-loc-'.$token,'ci-user','ci-pm');
+$dest=$target['location_id'];
+$products->recordMovement($org,$variant,$loc,'4.000000','receipt','TRANSFER-SEED',
+    'pm-xfer-seed-'.$token,'ci-user','ci-pm');
+$tx=$products->transferStock($org,$variant,$loc,$dest,'2.250000','WH-MOVE-1',
+    'pm-xfer-'.$token,'ci-user','ci-pm');
+$txReplay=$products->transferStock($org,$variant,$loc,$dest,'2.250000','WH-MOVE-1',
+    'pm-xfer-'.$token,'ci-user','ci-pm');
+$assert($tx['out_movement_id']===$txReplay['out_movement_id'] &&
+    $tx['in_movement_id']===$txReplay['in_movement_id'],'transfer replay must preserve same ledger pair');
+$assert((string)$products->balance($org,$variant,$loc)['on_hand']==='1.750000' &&
+    (string)$products->balance($org,$variant,$dest)['on_hand']==='2.250000',
+    'transfer must preserve total exact stock across two warehouses');
+$reject(static fn()=> $products->transferStock($org,$variant,$loc,$dest,'2.000000','OVERDRAW',
+    'pm-xfer-overdraw-'.$token,'ci-user','ci-pm'),'insufficient source stock');
+$reject(static fn()=> $products->transferStock($org,$variant,$loc,$loc,'1','SAME',
+    'pm-xfer-same-'.$token,'ci-user','ci-pm'),'transfer to same warehouse');
+$reject(static fn()=> $products->transferStock($other,$variant,$loc,$dest,'1','OTHER',
+    'pm-xfer-other-'.$token,'ci-other','ci-pm'),'cross-tenant transfer');
+$reject(static fn()=> $products->transferStock($org,$variant,$loc,$dest,'1','CHANGED',
+    'pm-xfer-'.$token,'ci-user','ci-pm'),'reused idempotency key with different transfer');
+$products->recordMovement($org,$variant,$loc,'-1.750000','issue','TRANSFER-DRAIN',
+    'pm-xfer-drain-1-'.$token,'ci-user','ci-pm');
+$products->recordMovement($org,$variant,$dest,'-2.250000','issue','TRANSFER-DRAIN',
+    'pm-xfer-drain-2-'.$token,'ci-user','ci-pm');
+$assert((string)$products->balance($org,$variant,$loc)['on_hand']==='0.000000' &&
+    (string)$products->balance($org,$variant,$dest)['on_hand']==='0.000000',
+    'transfer must leave both warehouse balances zero after drain');
 $variantArchived=$products->archiveVariant($org,$variant,2,'pm-var-archive-'.$token,'ci-user','ci-pm');
 $assert($variantArchived['revision']===3 && $variantArchived['status']==='archived',
     'Zero-stock Variant may be soft archived');
@@ -190,11 +219,11 @@ $reject(static fn()=> $products->updateProduct($org,$created['product_id'],['nam
     'pm-edit-archived-'.$token,'ci-user','ci-pm'),'archived Product cannot be edited');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===13,'thirteen confirmed native Domain events');
+$assert((int)$stmt->fetchColumn()===18,'eighteen confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===13,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===18,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";
