@@ -2849,6 +2849,11 @@ services:
   Domains\Finance\Application\Contract\FinanceSpendObservationRepositoryInterface:
     alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository
   Domains\Finance\Application\Service\FinanceSpendObservationService: ~
+  # Private Finance-owned readback port through the Marketing application service.
+  # No HTTP/AI/CRON import binding until explicit canonical Workflow acceptance.
+  Domains\Finance\Application\Contract\MarketingSpendEvidenceReadPort:
+    alias: App\Infrastructure\Finance\MarketingSpendEvidenceReadAdapter
+  Domains\Finance\Application\Service\FinanceMarketingSpendReadbackService: ~
   Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository:
     arguments:
       $connection: '@cos.database.pdo'
