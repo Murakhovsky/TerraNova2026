@@ -1,30 +1,44 @@
 ---
-title: Marketing Domain
-description: Marketing planning and Meta Ads read-only foundation.
+title: Маркетинг як окремий домен COS
+description: Планування маркетингових кампаній і безпечне читання Meta Ads без рекламних мутацій.
 status: draft
 updated: 2026-11-19
 kind: domain
 ---
 
-# Marketing Domain
+# Огляд домену Marketing
 
-**Runtime status:** M0 code foundation, not yet staging-tested or accepted. The manifest is disabled by default.
+Marketing — окремий bounded context, що володіє рекламними планами, внутрішніми кампаніями, їхніми версіями, аудиторіями, креативами та спостереженнями рекламних провайдерів.
 
-Marketing is the single owner of campaign briefs, advertising audiences and creatives, provider campaign mapping and provider-reported spend/insight snapshots. Growth retains OpportunityCandidate and pre-handoff outreach. Product and Sales facts are only read through explicit contracts. Finance owns monetary envelope, reservations and financial expenses.
+**Стан:** початкова реалізація M0/M1, очікує перевірок на staging і користувацького приймання. Домін встановлюється вимкненим за замовчуванням. Реальні платні операції заблоковано.
 
-A Marketing Campaign is an internal plan. PaidMedia Campaign is a provider-specific execution of that plan; imported Meta objects remain EXTERNALLY_MANAGED. Reported Meta spend is evidence, not an accounting Expense. A paid write is forbidden until Finance F1, independent approval, canonical Platform Workflow and native provider readback are accepted.
+## Розподіл відповідальності
 
-Initial capabilities: campaign draft create/get/search and provider read-model account/insights queries. Inactive or unbound declarations must remain unavailable in Capability Library, not silently fall back to direct SQL or agent execution.
+- **Marketing**: маркетингові кампанії й чернетки, рекламні аудиторії, креативи, імпорт Meta Campaign/AdSet/Ad та спостережені Insights.
+- **Growth**: Market Universe, Signals, OpportunityCandidate, Qualification, Outreach, Response Routing і Growth Learning. Жодного перенесення Growth даних не відбулося.
+- **Product**: товари, варіації, доступність і ціни. Marketing зберігає лише посилання та не оголошує їх перевіреними до приймання Product API.
+- **Sales**: первинні факти лідів, угод і продажів.
+- **Finance**: грошові ліміти, резервування, справжні витрати, платежі та фінансова звірка. Показник `spend` із Meta — не бухгалтерський Expense.
 
-Current tenant gate: the existing Kernel cos.tenant.access and cos.tenant.manage permissions. Dedicated marketing.* RBAC is a follow-up migration and must be accepted before wider delegation. No raw Meta tokens in domain tables; only opaque credential references.
+Внутрішня Marketing Campaign може мати декілька зовнішніх PaidMediaCampaign. Імпортовані рекламні об'єкти залишаються `EXTERNALLY_MANAGED`.
 
-## Delivery levels
+## Фактично додані можливості
 
-- M0: foundation SQL and pure services, D1 code (not D3/D4).
-- M1: Meta read-only adapter and ingestion, requires real authorized account and ad-manager reconciliation for D3.
-- M2: Product draft linkage and human-reviewed AI proposal (pending accepted Product API).
-- F1/M3: Finance-owned reservations and governed Meta writes are **not enabled**.
-- M4/M5: Attribution optimization and more providers are not implemented.
+П'ять typed capabilities початкового зрізу: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
-See the Marketing ADR and COS-MKT-TZ-001 for full acceptance criteria.
+На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
+
+Активація, створення рекламних кампаній у Meta, зміна бюджету та інші paid writes відсутні й навмисно блокуються. Для них потрібні Finance F1, незалежне погодження, canonical Workflow і провайдерний readback.
+
+## Рівні готовності та обмеження
+
+- **M0**: SQL, сервіси, контракти, початкові тести; приймання D2–D5 ще не доведене.
+- **M1**: Meta read-only адаптер і збереження спостережень, але без підтвердженого реального рекламного акаунта та Ads Manager reconciliation.
+- **M2**: Product, креативні затвердження та Hermes Paid Media Analyst не реалізовані.
+- **F1/M3**: Finance reservation та зовнішні рекламні дії заблоковано.
+- **M4/M5**: мультиджерельна атрибуція, оптимізація й додаткові провайдери не реалізовані.
+
+Початкова модель прав використовує `cos.tenant.access` та `cos.tenant.manage`; окремі `marketing.*` permissions необхідно додати до ширшого розгортання. У таблицях зберігаються лише непрозорі посилання на облікові дані, що розкриваються Platform Credential Vault під час дозволеного запиту.
+
+Критерії подальшого приймання й контрольні етапи визначає `COS-MKT-TZ-001`.
 

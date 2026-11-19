@@ -1,13 +1,22 @@
-# MKT-ADR-001: Marketing Domain ownership
+---
+title: Рішення про межі відповідальності Marketing
+description: Архітектурне рішення про власність рекламних кампаній і фінансовий контроль взаємодії з Meta Ads у COS.
+status: active
+updated: 2026-11-19
+kind: decision
+---
 
-Status: accepted for initial code foundation (2026-11-19). Superseded only by an explicit subsequent ADR.
+# MKT-ADR-001: Межі домену Marketing
 
-1. MarketingCampaign = a provider-independent planning object. PaidMediaCampaign = one external campaign execution, potentially many per MarketingCampaign.
-2. Marketing owns marketing planning, paid-campaign mappings, advertising creatives, audience specs and provider observations. Growth retains market intelligence, candidate experiments, outreach and qualification. No Growth migration or dual-write.
-3. Product owns SKU/stock/prices. Marketing stores read-only links. Sales owns leads and deal outcomes. Finance owns envelopes/reservations/Expenses and rate policy.
-4. Default state of imported external ads is EXTERNALLY_MANAGED. Account-to-tenant binding is globally unique.
-5. All external paid writes fail closed until Finance F1, Policy/Approval and canonical Workflow execution are accepted. Human proposal is never enough. No parallel execution engine or raw token delegation to Hermes.
-6. Meta reported spend is a non-accounting observation. Same-grain/timezone/currency attribution views only; never sum account+campaign+adset+ad.
-7. Initial permissions are deliberately restrictive to existing tenant managers until dedicated marketing.* RBAC is provisioned.
-8. SQL is tenant-scoped by organization_id, and write intents are idempotent and revisioned. Provider secrets resolve only via Platform Credential Vault.
+**Статус:** прийнято для початкового кодового зрізу. Зміни довготривалих меж потребують нового ADR.
+
+1. MarketingCampaign є внутрішнім незалежним від платформи маркетинговим планом. PaidMediaCampaign — виконання цього плану на рекламній платформі. Один план може мати кілька рекламних реалізацій.
+2. Marketing володіє планами, аудиторіями, рекламними креативами, відповідністю внутрішніх та зовнішніх ID і спостереженнями рекламного провайдера. Growth зберігає власність над OpportunityCandidate, pre-handoff Outreach та ICP/Signal Intelligence. Жодних dual-write або автоматичного перенесення даних Growth.
+3. Product залишається джерелом істини щодо SKU, наявності й ціни. Marketing зберігає лише read-only references. Sales володіє лідами й угодами. Finance володіє фінансовими лімітами, резервуванням, Expense та оплатами.
+4. Імпортовані рекламні об'єкти отримують `EXTERNALLY_MANAGED`. Прив'язка Meta Ad Account у початковій реалізації унікальна між tenants.
+5. Усі платні мутації заблоковано до приймання Finance F1, independent approval і canonical Platform Workflow. Людська або Hermes-пропозиція не прирівнюється до дозволу на виконання. Паралельного executor не створюємо.
+6. Meta reported spend є зовнішнім спостереженням, а не фінансовим Expense. Порівнюють тільки дані однакового grain, timezone, currency, attribution window. Підсумовування одночасно на рівнях Account/Campaign/AdSet/Ad заборонено.
+7. До інтеграції деталізованих `marketing.*` прав доступ до початкових операцій надано лише tenant менеджерам із чинним `cos.tenant.manage`.
+8. Кожна SQL-операція використовує `organization_id`; внутрішні чернетки мають ідемпотентність та ревізії. Секрети передаються лише через Platform Credential Vault.
+9. Межа Finance F1 зараз є архітектурною передумовою, а не зареєстрованим виконуваним міждоменним портом. Його декларацію слід додавати тільки після створення та фактичного використання typed contract.
 
