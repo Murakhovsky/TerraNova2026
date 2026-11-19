@@ -27,6 +27,12 @@ interface ProductManagementStoreInterface
     public function searchCategories(string $org,int $limit,int $offset):array;
     /** @return array<string,mixed> */
     public function upsertProductTranslation(string $org,string $productId,string $locale,string $name,?string $description,string $key,string $actor,string $correlation):array;
+    /** @param array{file_id:string,storage_key:string,sha256:string,mime_type:string} $file @return array<string,mixed> */
+    public function attachMedia(string $org,string $productId,?string $variantId,array $file,string $role,int $sortOrder,string $key,string $actor,string $correlation):array;
+    /** @return array<string,mixed> */
+    public function detachMedia(string $org,string $mediaId,string $key,string $actor,string $correlation):array;
+    /** @return list<array<string,mixed>> */
+    public function searchMedia(string $org,string $productId,int $limit,int $offset):array;
     /** @return array<string,mixed>|null */
     public function getProduct(string $organizationId, string $id): ?array;
     /** @return list<array<string,mixed>> */

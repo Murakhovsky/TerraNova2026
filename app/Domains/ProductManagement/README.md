@@ -214,3 +214,18 @@ across row execution. A second worker on a different DB connection fails
 before any Product write. A process crash releases its named lock at DB
 connection teardown, while durable row receipts and Action claims determine
 recovery eligibility; expired local locks never authorize an unapproved Action.
+
+## E1 Product Media: verified file references
+
+Product media links reuse Platform FileStorage and the tenant-owned COS
+Documents `cos_document_files` registry. A media `file_id` is accepted
+only for the same organization, with a verified original SHA-256 checksum,
+matching byte size and detected image MIME, and a tenant-hashed storage path.
+An authorized user cannot pass arbitrary external URLs, filesystem paths,
+or another organization's file ID.
+
+Product/Variant relations, cover/gallery role, sort order and soft-detach
+are native Product Management records. Detach never deletes shared Platform
+file bytes. Product reads include safe media metadata and never return
+internal storage keys. Legacy `tn_media_assets` are not treated as
+tenant-owned evidence and cannot be linked directly.

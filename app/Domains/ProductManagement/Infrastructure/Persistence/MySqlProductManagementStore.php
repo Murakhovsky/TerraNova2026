@@ -186,6 +186,65 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             },'product_management.translation.upserted','Product');
     }
 
+    /** @param array{file_id:string,storage_key:string,sha256:string,mime_type:string} $file */
+    public function attachMedia(string $org,string $productId,?string $variantId,array $file,string $role,int $sortOrder,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'media.attach',$key,
+            [$productId,$variantId,$file['file_id'],$file['sha256'],$role,$sortOrder],$actor,$correlation,
+            function()use($org,$productId,$variantId,$file,$role,$sortOrder):array{
+                $product=$this->one('SELECT status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',
+                    [$org,$productId]);
+                if($product===null||$product['status']==='archived')
+                    throw new DomainException('Media Product is missing or archived.');
+                if($variantId!==null){
+                    $variant=$this->one('SELECT product_id,status FROM pm_variants
+                        WHERE organization_id=? AND variant_id=? FOR UPDATE',[$org,$variantId]);
+                    if($variant===null||$variant['product_id']!==$productId||$variant['status']!=='active')
+                        throw new DomainException('Media Variant is not active or belongs to another Product.');
+                }
+                $existing=$this->one("SELECT media_id FROM pm_media_refs WHERE organization_id=?
+                    AND product_id=? AND variant_id <=> ? AND source_file_id=? AND status='active' LIMIT 1",
+                    [$org,$productId,$variantId,$file['file_id']]);
+                if($existing!==null)throw new DomainException('This verified image is already attached to Product.');
+                $mediaId=bin2hex(random_bytes(16));
+                $this->execute('INSERT INTO pm_media_refs
+                    (organization_id,media_id,product_id,variant_id,storage_ref,source_file_id,checksum,role,sort_order,status)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)',
+                    [$org,$mediaId,$productId,$variantId,$file['storage_key'],$file['file_id'],
+                     $file['sha256'],$role,$sortOrder,'active']);
+                return ['media_id'=>$mediaId,'product_id'=>$productId,'variant_id'=>$variantId,
+                    'file_id'=>$file['file_id'],'role'=>$role,'sort_order'=>$sortOrder,'status'=>'active'];
+            },'product_management.media.attached','Product');
+    }
+
+    public function detachMedia(string $org,string $mediaId,string $key,string $actor,string $correlation):array
+    {
+        return $this->mutate($org,'media.detach',$key,[$mediaId],$actor,$correlation,
+            function()use($org,$mediaId):array{
+                $row=$this->one('SELECT media_id,product_id,status FROM pm_media_refs
+                    WHERE organization_id=? AND media_id=? FOR UPDATE',[$org,$mediaId]);
+                if($row===null||$row['status']!=='active')
+                    throw new DomainException('Active Product Media reference not found.');
+                $this->execute("UPDATE pm_media_refs SET status='detached'
+                    WHERE organization_id=? AND media_id=? AND status='active'",[$org,$mediaId]);
+                return ['media_id'=>$mediaId,'product_id'=>$row['product_id'],'status'=>'detached'];
+            },'product_management.media.detached','Product');
+    }
+
+    public function searchMedia(string $org,string $productId,int $limit,int $offset):array
+    {
+        $stmt=$this->connection->prepare("SELECT media_id,product_id,variant_id,source_file_id AS file_id,
+            role,sort_order,checksum,status FROM pm_media_refs
+            WHERE organization_id=:org AND product_id=:pid AND status='active'
+            ORDER BY (role='cover') DESC,sort_order ASC,media_id ASC LIMIT :lim OFFSET :off");
+        $stmt->bindValue(':org',$org);
+        $stmt->bindValue(':pid',$productId);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);
+        $stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function getProduct(string $organizationId, string $id): ?array
     {
         $row = $this->one('SELECT * FROM pm_products WHERE organization_id=? AND product_id=?', [$organizationId,$id]);
@@ -195,6 +254,8 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             [$organizationId,$id]);
         $row['translations']=$this->rows('SELECT locale,name,description FROM pm_product_translations WHERE organization_id=? AND product_id=? ORDER BY locale',
             [$organizationId,$id]);
+        // No internal storage key is returned through Product/Capability reads.
+        $row['media']=$this->searchMedia($organizationId,$id,100,0);
         return $row;
     }
 
