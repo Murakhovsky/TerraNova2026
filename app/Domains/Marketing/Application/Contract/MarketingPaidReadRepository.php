@@ -16,6 +16,10 @@ interface MarketingPaidReadRepository
     public function importInsights(string $organizationId,string $accountId,string $grain,string $from,string $to,array $rows):int;
     /** @return list<array<string,mixed>> */
     public function insights(string $organizationId,string $accountId,string $grain,string $from,string $to):array;
+    /** @param array<string,list<array<string,mixed>>> $hierarchy @param list<array<string,mixed>> $insights @return array<string,int> */
+    public function importSnapshot(string $organizationId,string $accountId,string $from,string $to,array $hierarchy,array $insights):array;
+    /** @return array{campaigns:list<array<string,mixed>>,adsets:list<array<string,mixed>>,ads:list<array<string,mixed>>} */
+    public function hierarchy(string $organizationId,string $accountId):array;
     /** @return list<array<string,mixed>> */
     public function campaigns(string $organizationId,string $accountId,int $limit=100):array;
 }

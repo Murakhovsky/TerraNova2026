@@ -80,7 +80,7 @@
         {% for a in accounts %}
             <section class="cos-panel">
                 <h2>{{ a.ad_account_id }} <small>{{ a.connection_status }}</small></h2>
-                <p>{{ a.currency }} · {{ a.timezone }} · Last verified {{ a.last_verified_at|default('unknown') }}</p>
+                <p>{{ a.currency }} · {{ a.timezone }} · Last verified {{ a.last_verified_at|default('unknown') }} · Last successful import {{ a.last_synced_at|default('never') }}</p>
                 <p>Capability scopes: {{ a.capability_scope|default([])|join(', ') }}</p>
                 <form method="post" action="/marketing/accounts/{{ a.id }}/sync" class="cos-toolbar">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
@@ -107,6 +107,29 @@
                     </div>
                 {% else %}<p>No matching real Meta Insights snapshot. Sync the account to import data; nothing has been estimated.</p>{% endfor %}
             </div>
+        </section>
+        <section class="cos-panel">
+            <h2>Imported Meta Campaign → AdSet → Ad</h2>
+            <p>These are provider-observed objects, not COS-controlled ads. Imported objects retain their external IDs and observed effective statuses.</p>
+            {% for c in providerHierarchy.campaigns|default([]) %}
+                <article class="cos-page__section-head">
+                    <div>
+                        <strong>{{ c.name }}</strong>
+                        <p>{{ c.provider_campaign_id }} · {{ c.objective }} · {{ c.delivery_status }} · {{ c.management_mode }}</p>
+                        <small>Provider state updated {{ c.source_updated_at|default('unknown') }}</small>
+                        {% set groups = providerHierarchy.adsets|default([])|filter(a => a.paid_campaign_id == c.id) %}
+                        {% for g in groups %}
+                            <div style="padding-inline-start: 1.25rem;">
+                                <strong>AdSet: {{ g.name }}</strong> · {{ g.provider_adset_id }} · {{ g.delivery_status }}
+                                {% set placements = providerHierarchy.ads|default([])|filter(ad => ad.paid_adset_id == g.id) %}
+                                {% for ad in placements %}
+                                    <div style="padding-inline-start: 1.25rem;">Ad: {{ ad.name }} · {{ ad.provider_ad_id }} · {{ ad.delivery_status }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            {% else %}<p>No imported Meta hierarchy. Connect and sync an authorized account to see provider campaigns, ad sets and ads.</p>{% endfor %}
         </section>
         <section class="cos-panel"><h2>Attribution and Finance</h2><p>No accepted Shopify/Sales attribution or Finance expense reconciliation yet. ROAS and net profit are not confirmed.</p></section>
     {% elseif section == 'actions' %}

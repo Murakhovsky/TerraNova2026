@@ -41,9 +41,15 @@ final readonly class MarketingPaidReadService
         $hierarchy=$this->provider->hierarchy($org,(string)$account['ad_account_id'],(string)$account['credential_ref']);
         $insights=$this->provider->insights($org,(string)$account['ad_account_id'],(string)$account['credential_ref'],$from,$to,'campaign');
         // No current successful provider state is promoted before all remote reads succeed.
-        $counts=$this->repository->importHierarchy($org,$accountId,$hierarchy);
-        $counts['insights']=$this->repository->importInsights($org,$accountId,'campaign',$from,$to,$insights);
-        return $counts;
+        return $this->repository->importSnapshot($org,$accountId,$from,$to,$hierarchy,$insights);
+    }
+
+    /** @return array{campaigns:list<array<string,mixed>>,adsets:list<array<string,mixed>>,ads:list<array<string,mixed>>} */
+    public function hierarchy(TenantContext $actor,string $accountId):array
+    {
+        $this->guard($actor);
+        $this->requiredAccount($actor->organizationId()->value(),$accountId);
+        return $this->repository->hierarchy($actor->organizationId()->value(),$accountId);
     }
 
     /** @return list<array<string,mixed>> */

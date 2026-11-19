@@ -51,7 +51,7 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
     public function accounts(string $organizationId,int $limit=100):array
     {
         $limit=max(1,min(100,$limit));
-        $stmt=$this->connection->prepare('SELECT id,provider,ad_account_id,business_id,currency,timezone,connection_status,capability_scope_json,last_verified_at,revision,updated_at FROM marketing_paid_accounts WHERE organization_id=? ORDER BY updated_at DESC LIMIT '.$limit);
+        $stmt=$this->connection->prepare('SELECT id,provider,ad_account_id,business_id,currency,timezone,connection_status,capability_scope_json,last_verified_at,last_synced_at,revision,updated_at FROM marketing_paid_accounts WHERE organization_id=? ORDER BY updated_at DESC LIMIT '.$limit);
         $stmt->execute([$organizationId]);
         return array_map(self::accountProjection(...),$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
@@ -63,6 +63,36 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
         return is_array($row)?self::accountProjection($row):null;
     }
 
+    public function importSnapshot(string $organizationId,string $accountId,string $from,string $to,array $hierarchy,array $insights):array
+    {
+        $pdo=$this->connection;
+        if($pdo->inTransaction())throw new DomainException('Nested snapshot transaction denied.');
+        try {
+            $pdo->beginTransaction();
+            $counts=$this->importHierarchy($organizationId,$accountId,$hierarchy);
+            $counts['insights']=$this->importInsights($organizationId,$accountId,'campaign',$from,$to,$insights);
+            $pdo->prepare('UPDATE marketing_paid_accounts SET last_synced_at=UTC_TIMESTAMP(6) WHERE organization_id=? AND id=?')
+                ->execute([$organizationId,$accountId]);
+            $pdo->prepare("INSERT INTO marketing_paid_sync_runs (organization_id,id,account_id,requested_by,state,fetched_count,started_at,finished_at) VALUES (?,?,?,?,?,?,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))")
+                ->execute([$organizationId,'msr-'.bin2hex(random_bytes(12)),$accountId,'manual_manager','SUCCEEDED',array_sum($counts)]);
+            if($ownsTransaction)$pdo->commit();
+            return $counts;
+        }catch(Throwable $e){
+            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public function hierarchy(string $organizationId,string $accountId):array
+    {
+        $campaigns=$this->campaigns($organizationId,$accountId,100);
+        $adsets=$this->connection->prepare('SELECT a.id,a.paid_campaign_id,a.provider_adset_id,a.name,a.delivery_status,a.updated_at,a.revision FROM marketing_paid_adsets a JOIN marketing_paid_campaigns c ON c.organization_id=a.organization_id AND c.id=a.paid_campaign_id WHERE c.organization_id=? AND c.account_id=? ORDER BY a.updated_at DESC LIMIT 1000');
+        $adsets->execute([$organizationId,$accountId]);
+        $ads=$this->connection->prepare('SELECT d.id,d.paid_adset_id,d.provider_ad_id,d.name,d.creative_ref,d.delivery_status,d.updated_at,d.revision FROM marketing_paid_ads d JOIN marketing_paid_adsets a ON a.organization_id=d.organization_id AND a.id=d.paid_adset_id JOIN marketing_paid_campaigns c ON c.organization_id=a.organization_id AND c.id=a.paid_campaign_id WHERE c.organization_id=? AND c.account_id=? ORDER BY d.updated_at DESC LIMIT 1000');
+        $ads->execute([$organizationId,$accountId]);
+        return ['campaigns'=>$campaigns,'adsets'=>$adsets->fetchAll(PDO::FETCH_ASSOC),'ads'=>$ads->fetchAll(PDO::FETCH_ASSOC)];
+    }
+
     public function importHierarchy(string $organizationId,string $accountId,array $hierarchy):array
     {
         foreach(['campaigns','adsets','ads'] as $key){
@@ -71,9 +101,10 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
             }
         }
         $pdo=$this->connection;
+        $ownsTransaction=!$pdo->inTransaction();
         $counts=['campaigns'=>0,'adsets'=>0,'ads'=>0];
         try {
-            $pdo->beginTransaction();
+            if($ownsTransaction)$pdo->beginTransaction();
             $account=$this->lockedAccount($organizationId,$accountId);
             if($account['connection_status']!=='READ_ONLY')throw new DomainException('Connection is not read-only verified.');
             $campaignMap=[];$adsetMap=[];
@@ -144,8 +175,9 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
     {
         if(!in_array($grain,['account','campaign','adset','ad'],true)||count($rows)>1000)throw new DomainException('Invalid insight scope.');
         $pdo=$this->connection;
+        $ownsTransaction=!$pdo->inTransaction();
         try {
-            $pdo->beginTransaction();
+            if($ownsTransaction)$pdo->beginTransaction();
             $account=$this->lockedAccount($organizationId,$accountId);
             $attribution=hash('sha256','meta-default-adset-attribution-v1');
             foreach($rows as $row){
@@ -161,10 +193,10 @@ final readonly class MysqlMarketingPaidReadRepository implements MarketingPaidRe
                 $pdo->prepare("INSERT INTO marketing_paid_insight_snapshots (organization_id,id,account_id,provider,grain,external_id,window_start,window_end,timezone,currency,attribution_hash,source_hash,source_status,spend_decimal,metrics_json) VALUES (?,?,?,'meta',?,?,?,?,?,?,?,?,'PROVISIONAL',?,?) ON DUPLICATE KEY UPDATE revision=IF(source_hash<>VALUES(source_hash),revision+1,revision),source_status=IF(source_hash<>VALUES(source_hash),'REVISED',source_status),source_hash=VALUES(source_hash),spend_decimal=VALUES(spend_decimal),metrics_json=VALUES(metrics_json),fetched_at=UTC_TIMESTAMP(6)")
                     ->execute([$organizationId,$id,$accountId,$grain,$external,$from,$to,$account['timezone'],$account['currency'],$attribution,$hash,$spend,json_encode($row,JSON_THROW_ON_ERROR)]);
             }
-            $pdo->commit();
+            if($ownsTransaction)$pdo->commit();
             return count($rows);
         }catch(Throwable $e){
-            if($pdo->inTransaction())$pdo->rollBack();
+            if($ownsTransaction&&$pdo->inTransaction())$pdo->rollBack();
             throw $e;
         }
     }

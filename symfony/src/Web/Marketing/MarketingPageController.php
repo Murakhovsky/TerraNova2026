@@ -105,14 +105,15 @@ final readonly class MarketingPageController
             $campaigns=$this->campaigns->search($actor,trim((string)$request->query->get('q','')),50);
             $accountId=trim((string)$request->query->get('account',''));
             if($accountId===''&&isset($accounts[0]))$accountId=(string)$accounts[0]['id'];
-            $providerCampaigns=[];$observations=[];$from='';$to='';
+            $providerCampaigns=[];$providerHierarchy=['campaigns'=>[],'adsets'=>[],'ads'=>[]];$observations=[];$from='';$to='';
             if($accountId!==''){
                 $account=null;foreach($accounts as $row){if($row['id']===$accountId)$account=$row;}
                 if($account===null)throw new DomainException('Unknown account in tenant.');
                 $tz=new DateTimeZone((string)$account['timezone']);
                 $now=new DateTimeImmutable('now',$tz);
                 $from=$now->modify('-6 days')->format('Y-m-d');$to=$now->format('Y-m-d');
-                $providerCampaigns=$this->paid->campaigns($actor,$accountId);
+                $providerHierarchy=$this->paid->hierarchy($actor,$accountId);
+                $providerCampaigns=$providerHierarchy['campaigns'];
                 $observations=$this->paid->insights($actor,$accountId,'campaign',$from,$to);
             }
             $role=$actor->role()->value();
@@ -131,6 +132,7 @@ final readonly class MarketingPageController
             return new Response($this->twig->render('experience/marketing/workspace.html.twig',[
                 'shell'=>$shell,'pageTitle'=>$title,'section'=>$section,
                 'accounts'=>$accounts,'campaigns'=>$campaigns,'providerCampaigns'=>$providerCampaigns,
+                'providerHierarchy'=>$providerHierarchy,
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
                 'from'=>$from,'to'=>$to,'csrfToken'=>$this->csrf->token($request),
                 'draftKey'=>'mktform-'.bin2hex(random_bytes(12)),
