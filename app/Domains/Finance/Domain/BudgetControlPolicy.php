@@ -12,7 +12,7 @@ use DomainException;
  */
 final class BudgetControlPolicy
 {
-    public static function id(string $id,string $kind='finb'):string
+    public static function id(string $id,string $kind='finb-'):string
     {
         if(!preg_match('/^'.preg_quote($kind,'/').'[a-f0-9]{24}$/D',$id))throw new DomainException('Invalid Finance reference.');
         return $id;
@@ -97,4 +97,5 @@ final class BudgetControlPolicy
         return $date;
     }
 }
+
 
