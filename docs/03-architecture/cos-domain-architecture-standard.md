@@ -113,7 +113,7 @@ Manifest описує `id`, `name`, `description`, `version`, `schema_version`, 
 | Experience / UI | Navigation, search, commands, screens |
 | Audit / Operations | Correlation IDs, mutation receipts, recovery |
 
-## 8. Domain Passport
+## 8. Паспорт Domain
 
 Канонічний шлях: `docs/04-domains/<id>/passport.md`. `overview.md` залишається короткою бізнесовою навігацією.
 

@@ -52,7 +52,7 @@ Consumer/provider authority, `requires/provides`, types, auth, tenant і failure
 ## 9. Tenant, Policy та Security
 Межі організації, дозволи, секрети, audit, retention, доступи.
 
-## 10. Unified Workspace
+## 10. Робочий простір Unified Workspace
 Завдання користувача, screens, API, blocked/error states, QA.
 
 ## 11. Operations та Recovery
@@ -61,7 +61,7 @@ Activation, provisioning, migrations, jobs, monitoring, external effects, rollba
 ## 12. Готовність і докази
 D0–D5 незалежно від manifest version; UNKNOWN за відсутності незалежного доказу. Required: exact SHA, tenant, environment, readback, acceptance.
 
-## 13. Roadmap, debt, decisions
+## 13. План розвитку, борги та рішення
 Блокери, наступний E2E, ADR, architecture exemptions.
 
 ## 14. Карта джерел

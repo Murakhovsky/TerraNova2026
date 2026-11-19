@@ -13,8 +13,8 @@ const required = [
   'Ідентичність', 'Межі відповідальності', 'Внутрішні компоненти',
   'Бізнесова модель', 'Use Cases та Capabilities', 'Виконання',
   'Міждоменні контракти', 'Процеси та результати', 'Tenant, Policy та Security',
-  'Unified Workspace', 'Operations та Recovery', 'Готовність і докази',
-  'Roadmap, debt, decisions', 'Карта джерел'
+  'Робочий простір Unified Workspace', 'Operations та Recovery', 'Готовність і докази',
+  'План розвитку, борги та рішення', 'Карта джерел'
 ];
 const asArray = (v) => Array.isArray(v) ? v : [];
 const error = (msg) => errors.push(msg);

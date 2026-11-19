@@ -82,7 +82,7 @@ Process Registry: поточний main має explicit exemption; відсут�
 
 Runtime permissions і tenant activation зчитуються з Kernel та manifest, без автоматичного permission grant із паспорта. Credential та зовнішні секрети не зберігаються в паспорті.
 
-## 10. Unified Workspace
+## 10. Робочий простір Unified Workspace
 
 Користувацькі точки входу й заблоковані дії мають резолвитися через спільні capabilities. Наявність screens сама по собі не підтверджує працездатність. Потрібен owner review UX-сценаріїв.
 
@@ -95,7 +95,7 @@ ModuleLifecycle, migrations, workers та rollback контролюються в
 **Engineering:** UNKNOWN. **Tenant activation:** не підтверджено. **Outcome:** unverified.
 До позначки D3/D4/D5 обов'язкові exact commit SHA, environment, tenant, test/CI URL та native business readback; поточних evidence у цьому паспорті немає.
 
-## 13. Roadmap, debt, decisions
+## 13. План розвитку, борги та рішення
 
 Наступний крок: Domain-owner review бізнесових компонентів, актуальний capability-to-component mapping, перевірка integration boundaries та один незалежний UI → Use Case → Domain readback E2E.
 Архітектурні зміни узгоджувати з ADR-0001 і DAS-001.
