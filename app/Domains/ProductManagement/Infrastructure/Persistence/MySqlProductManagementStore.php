@@ -37,6 +37,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             function () use ($organizationId,$productId,$sku,$uom,$track): array {
                 $product=$this->one('SELECT product_type,status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$organizationId,$productId]);
                 if ($product===null||$product['status']==='archived') throw new DomainException('Unknown or archived product.');
+                $this->assertShopifyLocalOwnership($organizationId,'product',$productId);
                 if (in_array($product['product_type'],['service','digital'],true)&&$track) throw new DomainException('Non-stock product cannot track inventory.');
                 $id=bin2hex(random_bytes(16));
                 $this->execute('INSERT INTO pm_variants (organization_id,variant_id,product_id,sku,uom,track_inventory) VALUES (?,?,?,?,?,?)',
@@ -54,6 +55,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 if ($variant===null||$variant['status']!=='active'||$variant['product_status']==='archived') {
                     throw new DomainException('Variant or parent Product is inactive.');
                 }
+                $this->assertShopifyLocalOwnership($org,'variant',$variantId);
                 if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
                 if (isset($changes['sku']) && $changes['sku']!==$variant['sku']) {
                     $history=$this->one('SELECT movement_id FROM pm_stock_movements WHERE organization_id=? AND variant_id=? LIMIT 1',
@@ -79,6 +81,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 $variant=$this->one('SELECT revision,status FROM pm_variants WHERE organization_id=? AND variant_id=? FOR UPDATE',
                     [$org,$variantId]);
                 if ($variant===null||$variant['status']!=='active') throw new DomainException('Variant absent or archived.');
+                $this->assertShopifyLocalOwnership($org,'variant',$variantId);
                 if ((int)$variant['revision']!==$expectedRevision) throw new DomainException('Variant revision conflict.');
                 $balance=$this->one('SELECT location_id FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND (on_hand<>0 OR reserved<>0) LIMIT 1 FOR UPDATE',
                     [$org,$variantId]);
@@ -95,6 +98,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             function () use ($organizationId,$productId,$changes,$expectedRevision): array {
                 $row=$this->one('SELECT revision,status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$organizationId,$productId]);
                 if ($row===null||$row['status']==='archived') throw new DomainException('Product absent or archived.');
+                $this->assertShopifyLocalOwnership($organizationId,'product',$productId);
                 if ((int)$row['revision']!==$expectedRevision) throw new DomainException('Product revision conflict.');
                 $allowed=['name','description','brand'];
                 $set=[];$values=[];
@@ -114,6 +118,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             function () use ($organizationId,$productId,$expectedRevision): array {
                 $row=$this->one('SELECT revision,status FROM pm_products WHERE organization_id=? AND product_id=? FOR UPDATE',[$organizationId,$productId]);
                 if ($row===null||$row['status']==='archived') throw new DomainException('Product absent or archived.');
+                $this->assertShopifyLocalOwnership($organizationId,'product',$productId);
                 if ((int)$row['revision']!==$expectedRevision) throw new DomainException('Product revision conflict.');
                 $reserved=$this->one('SELECT COUNT(*) AS total FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE v.organization_id=? AND v.product_id=? AND (b.on_hand<>0 OR b.reserved<>0)',[$organizationId,$productId]);
                 if ($reserved!==null && (int)$reserved['total']>0) throw new DomainException('Product has nonzero stock or reservations.');
@@ -298,6 +303,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                     || $location === null || $location['status'] !== 'active') {
                     throw new DomainException('Active trackable variant and location required.');
                 }
+                $this->assertShopifyLocalOwnership($organizationId,'variant',$variantId);
                 $this->execute('INSERT IGNORE INTO pm_stock_balances (organization_id,variant_id,location_id) VALUES (?,?,?)',[$organizationId,$variantId,$locationId]);
                 $balance=$this->one('SELECT on_hand,reserved FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND location_id=? FOR UPDATE',[$organizationId,$variantId,$locationId]);
                 if ($balance === null) throw new DomainException('Stock row missing.');
@@ -322,6 +328,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                     [$org,$variantId]);
                 if($variant===null||(int)$variant['track_inventory']!==1||$variant['status']!=='active'||$variant['product_status']==='archived')
                     throw new DomainException('Active trackable Variant required for stock transfer.');
+                $this->assertShopifyLocalOwnership($org,'variant',$variantId);
                 $locIds=[$fromLocation,$toLocation];
                 sort($locIds,SORT_STRING);
                 foreach($locIds as $id){
@@ -399,6 +406,25 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             if ($this->connection->inTransaction()) $this->connection->rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * Preserve Shopify-authoritative catalog/stock ownership. A local owner
+     * switch requires a separately reviewed policy/cutover, not a hidden
+     * override in a generic Product or Stock command.
+     */
+    private function assertShopifyLocalOwnership(string $org,string $entityType,string $id):void
+    {
+        if(!in_array($entityType,['product','variant'],true))
+            throw new DomainException('Invalid Product ownership entity.');
+        $found=$this->one("SELECT m.canonical_id FROM pm_external_mappings m
+            INNER JOIN pm_external_connections c
+                ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
+            WHERE m.organization_id=? AND m.entity_type=? AND m.canonical_id=?
+                AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
+            LIMIT 1",[$org,$entityType,$id]);
+        if($found!==null)
+            throw new DomainException('Shopify-authoritative identity requires controlled owner cutover.');
     }
 
     /** @param list<mixed> $params */

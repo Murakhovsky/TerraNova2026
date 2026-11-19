@@ -202,6 +202,21 @@ Variant receipt. A synthetic completed Workflow flag alone is insufficient.
 Release gates still include full human UI approval acceptance, live read-only
 Shopify scope verification, production operator sign-off, and crash/recovery soak.
 
+## Shopify-authoritative local write fence
+
+After an approved import attaches Product/Variant mappings to a ready
+`shopify_authoritative` connection, native Product/Variant updates and
+archives, new Variants on that Product, base price changes, and local stock
+receipts/issues/transfers are rejected by the Domain's own writers.
+This includes direct UI/Capability commands and background use of the same
+services. The approved importer initializes all Variants and prices **before**
+attaching the Product mapping; it never uses a privileged bypass.
+
+An eventual ownership cutover is a separate reviewed business workflow.
+Changing source ownership through SQL or assuming `observation_only` is a
+production-ready switch is not an authorized cutover procedure. Shopify
+stock observations remain separate from the native ledger throughout E4.
+
 ## Shopify nested pagination (read-only)
 
 Every Product's variant connection and every InventoryItem's location

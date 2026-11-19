@@ -49,6 +49,14 @@ final readonly class PricingService
                 $this->connection->commit();
                 return json_decode($existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
+            $owned=$this->query("SELECT m.canonical_id FROM pm_external_mappings m
+                INNER JOIN pm_external_connections c
+                    ON c.organization_id=m.organization_id AND c.connection_id=m.connection_id
+                WHERE m.organization_id=? AND m.entity_type='variant' AND m.canonical_id=?
+                  AND c.provider='shopify' AND c.mode='shopify_authoritative' AND c.status='ready'
+                LIMIT 1",[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
+            if($owned!==false)
+                throw new DomainException('Shopify-authoritative Price requires controlled owner cutover.');
             $variant=$this->query('SELECT variant_id FROM pm_variants WHERE organization_id=? AND variant_id=?',[$org,$variantId])->fetch(PDO::FETCH_ASSOC);
             if ($variant===false) throw new DomainException('Unknown variant in tenant.');
             $old=$this->query('SELECT amount,revision FROM pm_base_prices WHERE organization_id=? AND variant_id=? AND currency=? FOR UPDATE',[$org,$variantId,$currency])->fetch(PDO::FETCH_ASSOC);

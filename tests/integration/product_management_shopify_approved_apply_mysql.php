@@ -112,6 +112,29 @@ $assert($checkCount('pm_products')===1
     &&$checkCount('pm_stock_movements')===0
     &&$checkCount('pm_shopify_import_step_receipts')===2,
     'Replay duplicated Product/Price/stock effects.');
+// Shopify-owned canonical entities must not accept independent local writes.
+$reject=static function(callable $f)use($assert):void {
+    try{$f();throw new RuntimeException('Unauthorized local Shopify-owned write admitted.');}
+    catch(DomainException $e) {
+        $assert(str_contains($e->getMessage(),'Shopify-authoritative'),
+            'Wrong ownership rejection: '.$e->getMessage());
+    }
+};
+$loc=$products->createLocation($org,'LOCAL'.$token,'Local warehouse','pm-loc-'.$token,'42','pm-owned-fence');
+$reject(static fn()=>$pricing->set($org,$result['variant_ids'][0],'USD','13.00',
+    'pm-forbidden-price-'.$token,'42','pm-owned-fence'));
+$reject(static fn()=>$products->updateVariant($org,$result['variant_ids'][0],
+    ['barcode'=>'FORBIDDEN'],2,'pm-forbidden-variant-'.$token,'42','pm-owned-fence'));
+$reject(static fn()=>$products->updateProduct($org,$result['product_id'],
+    ['name'=>'FORBIDDEN'],1,'pm-forbidden-product-'.$token,'42','pm-owned-fence'));
+$reject(static fn()=>$products->createVariant($org,$result['product_id'],
+    'FORBIDDEN'.$token,'pcs',true,'pm-forbidden-new-'.$token,'42','pm-owned-fence'));
+$reject(static fn()=>$products->recordMovement($org,$result['variant_ids'][0],
+    $loc['location_id'],'2','receipt','LOCAL-RECEIPT','pm-forbidden-stock-'.$token,'42','pm-owned-fence'));
+$assert($checkCount('pm_stock_movements')===0
+    &&$checkCount('pm_base_price_history')===2,
+    'Rejected owner violation changed native Stock or Price history.');
+
 $forged=new Action(bin2hex(random_bytes(16)),$org,ShopifyImportApplyHandler::TYPE,
     'shopify_import_preview',$previewId,
     ['source_hash'=>str_repeat('0',64),'normalized_digest'=>$digest],

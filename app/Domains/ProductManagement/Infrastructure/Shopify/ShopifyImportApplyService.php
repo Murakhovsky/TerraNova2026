@@ -86,7 +86,6 @@ final readonly class ShopifyImportApplyService
                 'track_inventory'=>$first['track_inventory'],
             ],$productKey,$actor,$correlation);
             $productId=(string)$created['product_id'];
-            $this->observations->map($org,(string)$scope['connection_id'],'product',(string)$scope['product_gid'],$productId);
             foreach($variants as $index=>$variant) {
                 $nativeId=(string)$created['variant_id'];
                 if($index!==0) {
@@ -113,6 +112,10 @@ final readonly class ShopifyImportApplyService
                 $this->receipt($org,$previewId,'variant:'.$index,$variant['gid'],$nativeId,
                     hash('sha256',json_encode($variant,JSON_THROW_ON_ERROR)));
             }
+            // Attach Product mapping only after all native Variants and prices
+            // have committed, so Shopify-owned mutability fences do not
+            // block the importer's remaining canonical initialization.
+            $this->observations->map($org,(string)$scope['connection_id'],'product',(string)$scope['product_gid'],$productId);
             $verified=$this->verifyNative($org,$scope,$candidate,$productId);
             $latest=$this->observations->productSnapshot(
                 $org,(string)$scope['connection_id'],(string)$scope['product_gid']);
