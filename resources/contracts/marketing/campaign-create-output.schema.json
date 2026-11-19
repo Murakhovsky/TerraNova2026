@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "id",
+    "status",
+    "revision"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "status": {
+      "const": "DRAFT"
+    },
+    "revision": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": true
+}

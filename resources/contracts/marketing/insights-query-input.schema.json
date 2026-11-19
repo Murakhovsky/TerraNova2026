@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "account_id",
+    "from",
+    "to",
+    "grain"
+  ],
+  "properties": {
+    "account_id": {
+      "type": "string",
+      "pattern": "^mads-[a-f0-9]{24}$"
+    },
+    "from": {
+      "type": "string",
+      "format": "date"
+    },
+    "to": {
+      "type": "string",
+      "format": "date"
+    },
+    "grain": {
+      "enum": [
+        "account",
+        "campaign",
+        "adset",
+        "ad"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
