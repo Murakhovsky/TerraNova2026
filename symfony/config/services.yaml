@@ -2743,6 +2743,103 @@ services:
       $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
 
 
+  # COS Marketing: restrictive tenant-manager read/draft slice; no paid writes.
+  Domains\Marketing\Domain\MarketingDraftPolicy: ~
+  Domains\Marketing\Application\Service\PaidMediaMutationGate: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingCampaignRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository
+  Domains\Marketing\Application\Service\MarketingCampaignService: ~
+  Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport: ~
+  Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
+    alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport
+  Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter: ~
+  Domains\Marketing\Application\Contract\PaidMediaProviderInterface:
+    alias: Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingPaidReadRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository
+  Domains\Marketing\Application\Service\MarketingPaidReadService: ~
+
+  marketingNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\MarketingWebProvider
+
+  App\Web\Marketing\MarketingPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  capitalMarketsDomainModule:
+    alias: Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule
+
+  capitalMarketsNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\CapitalMarketsWebProvider
+
+  App\Infrastructure\Module\PdoModuleStateRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Kernel\Module\Contract\ModuleStateRepositoryInterface:
+    alias: App\Infrastructure\Module\PdoModuleStateRepository
+
+  App\Infrastructure\Module\PdoModuleLifecycleRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  Kernel\Module\Contract\ModuleLifecycleRepositoryInterface:
+    alias: App\Infrastructure\Module\PdoModuleLifecycleRepository
+
+  Kernel\Module\ActiveModuleResolver:
+    arguments:
+      $catalog: '@Kernel\Module\ModuleCatalog'
+      $states: '@Kernel\Module\Contract\ModuleStateRepositoryInterface'
+      $installations: '@Kernel\Module\Contract\ModuleLifecycleRepositoryInterface'
+
+  Infrastructure\Process\JsonProcessRegistry:
+    arguments:
+      $directory: '%kernel.project_dir%/../resources/processes'
+
+  Kernel\Process\ProcessRegistryInterface:
+    alias: Infrastructure\Process\JsonProcessRegistry
+
+  Domains\Federation\Bootstrap\FederationDomainModule:
+    arguments:
+      $approvalHandler: '@App\Persistence\Federation\FederationPlanApproveHandler'
+
+  Domains\Documents\Application\Service\VerifiedSignatureAttestationVerifier: ~
+
+  App\Persistence\Federation\FederationDocumentSignatureProofInbox:
+    arguments:
+      $documents: '@Platform\Documents\Contract\DocumentsRepositoryInterface'
+      $verifier: '@Domains\Documents\Application\Service\VerifiedSignatureAttestationVerifier'
+      $trustedPublicKeyPem: '%env(string:COS_DOCUMENTS_PROOF_RSA_PUBLIC_KEY)%'
+      $trustedIssuer: '%env(string:COS_DOCUMENTS_PROOF_ISSUER)%'
+
+  Domains\Documents\Application\Service\SignatureRequestService:
+    arguments:
+      $documents: '@Platform\Documents\Service\DocumentsRuntimeService'
+
+  Domains\Documents\Automation\Action\RequestSignatureHandler:
+    arguments:
+      $documents: '@Domains\Documents\Application\Service\SignatureRequestService'
+
+  Domains\Documents\Automation\Action\RecordVerifiedSignatureHandler:
+    arguments:
+      $documents: '@Platform\Documents\Contract\DocumentsRepositoryInterface'
+      $runtime: '@Platform\Documents\Service\DocumentsRuntimeService'
+      $proofs: '@App\Persistence\Federation\FederationDocumentSignatureProofInbox'
+      $origins: '@App\Persistence\Federation\FederationOutcomeOriginRecorder'
+
+  Domains\Documents\Automation\Action\PrepareProposalDraftHandler:
+    arguments:
+      $generator: '@Platform\Documents\Contract\DocumentTemplateGenerationPort'
+      $attachments: '@Platform\Documents\Contract\DocumentAttachmentPort'
+      $handoffs: '@Domains\Growth\Application\Contract\GrowthHandoffBoundary'
+      $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
+
   # Finance F1: the only budget writer, under Kernel Action + independent Policy approval.
   Domains\Finance\Domain\BudgetControlPolicy: ~
   Domains\Finance\Domain\FinanceSpendObservationPolicy: ~
