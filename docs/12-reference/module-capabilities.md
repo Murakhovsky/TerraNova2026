@@ -29,7 +29,7 @@ generated: true
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
-| `product_management` | Product Management | `0.1.0` | `0.6.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | Product Management | `0.1.0` | `0.7.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
@@ -304,7 +304,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`.
+- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`.
 
 ### Задекларовані capabilities
 
@@ -315,6 +315,9 @@ Manifest capabilities не задекларовані.
 - `product_management.import.batch.get`;
 - `product_management.import.preview`;
 - `product_management.location.create`;
+- `product_management.media.attach`;
+- `product_management.media.detach`;
+- `product_management.media.search`;
 - `product_management.price.base.get`;
 - `product_management.price.base.set`;
 - `product_management.product.archive`;
