@@ -60,6 +60,7 @@ $blocked(static fn()=> (new CapabilityJsonInputValidator())->validate($found,[
 ]),'Caller must not forge financial expense in read query');
 $source=(string)file_get_contents($root.'/app/Domains/Finance/Application/Service/FinanceSpendObservationService.php');
 $assert(str_contains($source,'NOT exposed as a Capability writer') &&
-    str_contains($source,'UNVERIFIED'),'Spend observation source cannot advertise a live public write API.');
+    str_contains($source,'acceptUnverifiedMarketingSnapshot') &&
+    str_contains($source,'$this->policy->validate($marketingSnapshot)'),'Spend observation source cannot advertise a live public write API.');
 echo "Finance F1 source spend evidence, exact query scope and no false Expense PASS\n";
 
