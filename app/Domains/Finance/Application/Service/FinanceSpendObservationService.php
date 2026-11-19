@@ -27,7 +27,10 @@ final readonly class FinanceSpendObservationService
             throw new DomainException('Trusted tenant and stable correlation are required for an evidence import.');
         }
         // Intentionally NOT exposed as a Capability writer or HTTP endpoint.
-        return $this->repository->record($organizationId,$this->policy->validate($marketingSnapshot),$correlationId);
+        // Repository is the single schema authority for writes. Re-validating
+        // an already normalized payload adds internal fields that the strict
+        // input validator (correctly) rejects on the second pass.
+        return $this->repository->record($organizationId,$marketingSnapshot,$correlationId);
     }
 
     /** @return array<string,mixed> */
