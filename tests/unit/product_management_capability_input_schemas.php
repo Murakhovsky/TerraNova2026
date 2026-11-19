@@ -13,6 +13,10 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
 if(count($contracts)!==27)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.media.attach'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-123',
+    'variant_id'=>str_repeat('b',32),'role'=>'cover','sort_order'=>10],
+ 'product_management.media.detach'=>['media_id'=>str_repeat('a',32)],
+ 'product_management.media.search'=>['product_id'=>str_repeat('a',32),'limit'=>20],
  'product_management.translation.upsert'=>['product_id'=>str_repeat('a',32),'locale'=>'uk','name'=>'Українська назва',
      'description'=>'Опис товару'],
  'product_management.category.create'=>['name'=>'Components','slug'=>'components'],
@@ -32,6 +36,9 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.media.attach'=>[['product_id'=>str_repeat('a',32),'file_id'=>'../outside','role'=>'cover']],
+ 'product_management.media.detach'=>[['media_id'=>'invalid']],
+ 'product_management.media.search'=>[['product_id'=>str_repeat('a',32),'limit'=>101]],
  'product_management.translation.upsert'=>[['product_id'=>str_repeat('a',32),'locale'=>'invalid','name'=>'X']],
  'product_management.category.create'=>[['name'=>'A','slug'=>'illegal space'],['name'=>'A','slug'=>'a','organization_id'=>'other']],
  'product_management.category.assign'=>[['product_id'=>'foo','category_id'=>str_repeat('b',32)]],
