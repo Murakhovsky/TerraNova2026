@@ -125,6 +125,10 @@ generated: true
 | `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_recommendation_transitions` |
 | `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_sessions` |
 | `diagnostic` | `app/migrations/20260928_000116_diagnostic_v070_semantic_convergence.sql` | `diagnostic_state_snapshots` |
+| `finance` | `app/migrations/20261119_000153_finance_budget_f1.sql` | `cos_finance_budget_envelopes` |
+| `finance` | `app/migrations/20261119_000153_finance_budget_f1.sql` | `cos_finance_budget_events` |
+| `finance` | `app/migrations/20261119_000153_finance_budget_f1.sql` | `cos_finance_budget_intents` |
+| `finance` | `app/migrations/20261119_000153_finance_budget_f1.sql` | `cos_finance_budget_reservations` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_candidate_signals` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_candidates` |
 | `growth` | `app/migrations/20260921_000067_growth_v020_runtime.sql` | `tn_growth_operation_receipts` |

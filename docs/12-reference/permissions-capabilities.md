@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 142 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 149 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -74,6 +74,13 @@ generated: true
 | `documents` | `documents.signature.request` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `documents` | `documents.signature.sign` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `federation` | `federation.plan.approval` | ні | так | `manifest-only` | — | `app/Domains/Federation/module.php` |
+| `finance` | `finance.budget.envelope.activate` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.budget.envelope.draft.create` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.budget.envelope.freeze` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.budget.envelope.get` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.budget.reservation.list` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.budget.reservation.release` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.budget.reservation.reserve` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `growth` | `growth.account.brief` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.discover` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
 | `growth` | `growth.account.enrich` | ні | так | `manifest-only` | — | `app/Domains/Growth/module.php` |
