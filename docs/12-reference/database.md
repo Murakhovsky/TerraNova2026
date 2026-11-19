@@ -223,6 +223,8 @@ generated: true
 | `product_management` | `app/migrations/20261118_000155_product_management_shopify_read.sql` | `pm_sync_conflicts` |
 | `product_management` | `app/migrations/20261118_000155_product_management_shopify_read.sql` | `pm_sync_runs` |
 | `product_management` | `app/migrations/20261118_000155_product_management_shopify_read.sql` | `pm_webhook_inbox` |
+| `product_management` | `app/migrations/20261119_000156_product_management_approved_import.sql` | `pm_import_batches` |
+| `product_management` | `app/migrations/20261119_000156_product_management_approved_import.sql` | `pm_import_rows` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |

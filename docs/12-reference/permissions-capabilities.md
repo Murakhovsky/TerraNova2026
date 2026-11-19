@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 165 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 166 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -169,6 +169,7 @@ generated: true
 | `product_management` | `product_management.category.assign` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.category.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.category.search` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
+| `product_management` | `product_management.import.apply` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.import.batch.get` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.import.preview` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
 | `product_management` | `product_management.location.create` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
