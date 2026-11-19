@@ -4,6 +4,7 @@ description: Планування маркетингових кампаній і
 status: draft
 updated: 2026-11-19
 kind: domain
+version: 0.1.0
 ---
 
 # Огляд домену Marketing

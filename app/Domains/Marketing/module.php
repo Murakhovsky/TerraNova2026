@@ -5,35 +5,7 @@ declare(strict_types=1);
  * D1 foundation. Live bindings require separately wired adapters; a declaration
  * never grants an AI, scheduled job or worker execution authority.
  */
-$contracts = [];
-foreach ([
-    'marketing.campaign.search' => ['query', 'none', 'marketing/campaign-search', 'cos.tenant.manage'],
-    'marketing.campaign.get' => ['query', 'none', 'marketing/campaign-get', 'cos.tenant.manage'],
-    'marketing.campaign.create' => ['command', 'internal', 'marketing/campaign-create', 'cos.tenant.manage'],
-    'marketing.paid.account.list' => ['query', 'none', 'marketing/account-list', 'cos.tenant.manage'],
-    'marketing.paid.insights.query' => ['query', 'none', 'marketing/insights-query', 'cos.tenant.manage'],
-] as $id => [$kind, $sideEffect, $schema, $permission]) {
-    $contracts[] = [
-        'id' => $id,
-        'version' => '1.0.0',
-        'owner_domain' => 'marketing',
-        'kind' => $kind,
-        'input_schema' => 'resources/contracts/'.$schema.'-input.schema.json',
-        'output_schema' => 'resources/contracts/'.$schema.'-output.schema.json',
-        'execution_binding' => $kind.':'.$id,
-        'side_effect_level' => $sideEffect,
-        'permission' => $permission,
-        'approval_policy' => 'none',
-        'idempotency' => $kind === 'command' ? 'required' : 'none',
-        'timeout_policy' => $kind === 'command' ? ['seconds' => 30] : [],
-        'retry_policy' => $kind === 'command' ? ['max_attempts' => 1] : [],
-        'failure_contract' => $kind === 'command' ? 'An ambiguous database outcome is inspected by stable idempotency key before any new draft is attempted.' : '',
-        'lifecycle' => 'experimental',
-        'tests' => ['tests/unit/marketing_domain_foundation.php'],
-        'documentation' => 'docs/04-domains/marketing/overview.md',
-    ];
-}
-return [
+$manifest = [
     'id' => 'marketing',
     'name' => 'Marketing',
     'version' => '0.1.0',
@@ -70,6 +42,37 @@ return [
             'marketing.paid.meta.campaign.activate',
             'marketing.paid.meta.campaign.pause',
         ],
-        'capability_contracts' => $contracts,
+        'capability_contracts' => [],
     ],
 ];
+
+$contracts = [];
+foreach ([
+    'marketing.campaign.search' => ['query', 'none', 'marketing/campaign-search', 'cos.tenant.manage'],
+    'marketing.campaign.get' => ['query', 'none', 'marketing/campaign-get', 'cos.tenant.manage'],
+    'marketing.campaign.create' => ['command', 'internal', 'marketing/campaign-create', 'cos.tenant.manage'],
+    'marketing.paid.account.list' => ['query', 'none', 'marketing/account-list', 'cos.tenant.manage'],
+    'marketing.paid.insights.query' => ['query', 'none', 'marketing/insights-query', 'cos.tenant.manage'],
+] as $id => [$kind, $sideEffect, $schema, $permission]) {
+    $contracts[] = [
+        'id' => $id,
+        'version' => '1.0.0',
+        'owner_domain' => 'marketing',
+        'kind' => $kind,
+        'input_schema' => 'resources/contracts/'.$schema.'-input.schema.json',
+        'output_schema' => 'resources/contracts/'.$schema.'-output.schema.json',
+        'execution_binding' => $kind.':'.$id,
+        'side_effect_level' => $sideEffect,
+        'permission' => $permission,
+        'approval_policy' => 'none',
+        'idempotency' => $kind === 'command' ? 'required' : 'none',
+        'timeout_policy' => $kind === 'command' ? ['seconds' => 30] : [],
+        'retry_policy' => $kind === 'command' ? ['max_attempts' => 1] : [],
+        'failure_contract' => $kind === 'command' ? 'An ambiguous database outcome is inspected by stable idempotency key before any new draft is attempted.' : '',
+        'lifecycle' => 'experimental',
+        'tests' => ['tests/unit/marketing_domain_foundation.php'],
+        'documentation' => 'docs/04-domains/marketing/overview.md',
+    ];
+}
+$manifest['contributions']['capability_contracts'] = $contracts;
+return $manifest;
