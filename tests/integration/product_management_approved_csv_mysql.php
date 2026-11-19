@@ -19,6 +19,8 @@ use Kernel\Action\Action;
 use Kernel\Action\ActionStatus;
 use Kernel\Module\ModuleDiscovery;
 use Kernel\Module\ModuleCatalog;
+use Kernel\Module\ActiveModuleResolver;
+use Kernel\Module\Contract\ModuleStateRepositoryInterface;
 
 $pdo=new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
     (string)(getenv('DB_HOST')?:'mysql'),(int)(getenv('DB_PORT')?:3306),
@@ -35,7 +37,18 @@ foreach(['pm_import_batches','pm_import_rows','cos_events','cos_event_outbox'] a
 }
 $products=new ProductManagementService(new MySqlProductManagementStore($pdo,new MysqlEventStore($pdo)));
 $csv=new CsvProductImportService($pdo,$products);
-$handler=new ProductImportApplyHandler($csv);
+$moduleState=new class implements ModuleStateRepositoryInterface {
+    public bool $enabled=false;
+    public function enabledOverride(string $organizationId,string $moduleId):?bool {
+        return $moduleId==='product_management'?$this->enabled:null;
+    }
+    public function setEnabled(string $organizationId,string $moduleId,bool $enabled):void {
+        if($moduleId==='product_management')$this->enabled=$enabled;
+    }
+};
+$catalog=new ModuleCatalog((new ModuleDiscovery($root.'/app/Domains'))->discover());
+$modules=new ActiveModuleResolver($catalog,$moduleState);
+$handler=new ProductImportApplyHandler($csv,$modules);
 $token=bin2hex(random_bytes(7));
 $org='pm-approved-'.$token;
 $skuA='CSV'.strtoupper($token).'A';$skuB='CSV'.strtoupper($token).'B';
@@ -61,6 +74,11 @@ $cross=$makeAction('pm-other-'.$token,$params);
 $assert(!$handler->execute($cross)->successful,'Other tenant could apply approved batch');
 $assert($products->searchProducts($org,$skuA)===[],'Denied Action created a Product');
 $action=$makeAction($org,$params);
+$assert(!$handler->execute($action)->successful,
+    'Disabled tenant must not apply even a valid approved CSV Action');
+$assert($products->searchProducts($org,$skuA)===[],
+    'Disabled tenant Action silently wrote Products');
+$moduleState->setEnabled($org,'product_management',true);
 $applied=$handler->execute($action);
 $assert($applied->successful,'Approved native Product CSV writer failed: '.($applied->error??''));
 $assert(($applied->data['verified_count']??null)===2

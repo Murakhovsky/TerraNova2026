@@ -200,3 +200,9 @@ The configured Product Management module exposes a required human approval
 policy and one domain-owned handler to the **existing** Action Worker.
 `import.preview` cannot apply any row. A partial failure blocks the batch
 for operator reconciliation; no automatic replay or Shopify writeback.
+
+### Tenant activation fence on approved imports
+
+The Action handler checks the existing `ActiveModuleResolver` before
+touching staged CSV or Product rows. A valid approved Action still fails
+closed when the target tenant's Product Management module is disabled.
