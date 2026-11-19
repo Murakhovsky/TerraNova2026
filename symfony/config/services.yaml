@@ -2785,14 +2785,19 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportApplyService:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
 
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
   Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
     arguments:
       $importHandler: '@Domains\ProductManagement\Automation\Action\ProductImportApplyHandler'
+      $shopifyHandler: '@Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler'
   productManagementDomainModule:
     alias: Domains\ProductManagement\Bootstrap\ProductManagementDomainModule
 
@@ -3844,6 +3849,7 @@ services:
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
         - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
         - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'

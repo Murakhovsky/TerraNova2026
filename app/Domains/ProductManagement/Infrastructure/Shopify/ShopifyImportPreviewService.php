@@ -68,7 +68,7 @@ final readonly class ShopifyImportPreviewService
             }
         }
         $json=json_encode($normalized,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
-        $digest=hash('sha256',$json);
+        $digest=ShopifyImportCandidateNormalizer::fingerprint($normalized);
         $id=substr(hash('sha256',$org."\0".$conn."\0".$gid."\0".$expectedHash),0,32);
         try {
             $this->query('INSERT INTO pm_shopify_import_previews

@@ -10,7 +10,7 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==27)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==28)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
  'product_management.media.attach'=>['product_id'=>str_repeat('a',32),'file_id'=>'FILE-123',

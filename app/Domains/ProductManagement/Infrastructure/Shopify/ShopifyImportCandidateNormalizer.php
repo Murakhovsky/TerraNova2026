@@ -9,6 +9,23 @@ use Domains\ProductManagement\Domain\ProductRules;
 /** Pure snapshot-to-canonical candidate normalization; never writes Product/Stock. */
 final class ShopifyImportCandidateNormalizer
 {
+
+    /**
+     * Stable fingerprint of a JSON value after MySQL's JSON key reordering.
+     * Array list order is meaningful, object key order is not.
+     */
+    public static function fingerprint(array $candidate):string
+    {
+        $normalize=static function(mixed $value)use(&$normalize):mixed{
+            if(!is_array($value))return $value;
+            if(!array_is_list($value))ksort($value,SORT_STRING);
+            foreach($value as $key=>$item)$value[$key]=$normalize($item);
+            return $value;
+        };
+        return hash('sha256',json_encode($normalize($candidate),
+            JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));
+    }
+
     /** @param array<string,mixed> $snapshot @return array<string,mixed> */
     public static function normalize(array $snapshot,string $currency):array
     {

@@ -27,6 +27,7 @@ return [
             'app/migrations/20261119_000157_product_management_media_links.sql',
             'app/migrations/20261119_000158_product_management_import_plan_binding.sql',
             'app/migrations/20261119_000159_product_management_shopify_import_preview.sql',
+            'app/migrations/20261119_000160_product_management_shopify_approved_apply.sql',
         ],
         // Expose only implemented bindings, never aspirational commands.
         'capability_contracts' => [
@@ -393,6 +394,20 @@ return [
                 'documentation'=>'docs/04-domains/product_management/overview.md',
             ],
             [
+                'id'=>'product_management.shopify.import.apply','version'=>'1.0.0','owner_domain'=>'product_management',
+                'kind'=>'command',
+                'input_schema'=>'resources/contracts/product-management/shopify-import-apply-input.schema.json',
+                'output_schema'=>'resources/contracts/product-management/shopify-import-apply-output.schema.json',
+                'execution_binding'=>'action:product_management.shopify.import.apply',
+                'async'=>true,'side_effect_level'=>'external',
+                'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
+                'timeout_policy'=>['seconds'=>300],'retry_policy'=>['max_attempts'=>1],
+                'failure_contract'=>'Shopify native import has uncertain effects: quarantine and independently reconcile tenant Product/Variant/Price/mappings/receipts before any replay.',
+                'lifecycle'=>'experimental',
+                'tests'=>['tests/architecture/product_management_shopify_approved_import_contract.php'],
+                'documentation'=>'docs/04-domains/product_management/overview.md',
+            ],
+            [
                 'id'=>'product_management.import.apply','version'=>'1.0.0','owner_domain'=>'product_management',
                 'kind'=>'command',
                 'input_schema'=>'resources/contracts/product-management/import-apply-input.schema.json',
@@ -462,6 +477,7 @@ return [
             'product_management.media.detach',
             'product_management.media.search',
             'product_management.import.apply',
+            'product_management.shopify.import.apply',
             'product_management.translation.upsert',
             'product_management.stock.transfer',
             'product_management.variant.update',

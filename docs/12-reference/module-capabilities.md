@@ -304,7 +304,7 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`.
+- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`.
 
 ### Задекларовані capabilities
 
@@ -325,6 +325,7 @@ Manifest capabilities не задекларовані.
 - `product_management.product.get`;
 - `product_management.product.search`;
 - `product_management.product.update`;
+- `product_management.shopify.import.apply`;
 - `product_management.stock.balance.get`;
 - `product_management.stock.issue`;
 - `product_management.stock.movement.search`;

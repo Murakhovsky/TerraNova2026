@@ -10,6 +10,7 @@ use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
 use Kernel\Policy\ActionPolicy;
 use Kernel\Policy\PolicyDecision;
 use Domains\ProductManagement\Automation\Action\ProductImportApplyHandler;
+use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
 use Domains\ProductManagement\Rule\ProductManagementRuleContextProvider;
@@ -18,23 +19,36 @@ use Domains\ProductManagement\Rule\ProductManagementRuleContextProvider;
 final readonly class ProductManagementDomainModule implements DomainModuleInterface, EventOwningModuleInterface,
     ActionOwningModuleInterface, PolicyProvidingModuleInterface, BootstrapPolicyProvidingModuleInterface
 {
-    public function __construct(private ?ProductImportApplyHandler $importHandler = null) {}
+    public function __construct(
+        private ?ProductImportApplyHandler $importHandler = null,
+        private ?ShopifyImportApplyHandler $shopifyHandler = null,
+    ) {}
 
     public function name(): string { return 'product_management'; }
     public function actionTypes():array {
-        return $this->importHandler===null?[]:[ProductImportApplyHandler::TYPE];
+        return array_values(array_filter([
+            $this->importHandler===null?null:ProductImportApplyHandler::TYPE,
+            $this->shopifyHandler===null?null:ShopifyImportApplyHandler::TYPE,
+        ]));
     }
 
     public function actionHandlers():array {
-        return $this->importHandler===null?[]:[$this->importHandler];
+        return array_values(array_filter([$this->importHandler,$this->shopifyHandler]));
     }
 
     public function policies(string $organizationId):array {
-        if($this->importHandler===null)return [];
-        $policyId=substr(hash('sha256',$organizationId.':product-import-approved-v1'),0,32);
-        return [new ActionPolicy($policyId,$organizationId,ProductImportApplyHandler::TYPE,[],
-            PolicyDecision::ApprovalRequired,10,
-            'Product CSV apply is a high-risk canonical approved Action, not a direct import.')];
+        $policies=[];
+        if($this->importHandler!==null) {
+            $policyId=substr(hash('sha256',$organizationId.':product-import-approved-v1'),0,32);
+            $policies[]=new ActionPolicy($policyId,$organizationId,ProductImportApplyHandler::TYPE,[],
+                PolicyDecision::ApprovalRequired,10,'CSV requires independently approved canonical Action.');
+        }
+        if($this->shopifyHandler!==null) {
+            $policyId=substr(hash('sha256',$organizationId.':shopify-import-approved-v1'),0,32);
+            $policies[]=new ActionPolicy($policyId,$organizationId,ShopifyImportApplyHandler::TYPE,[],
+                PolicyDecision::ApprovalRequired,10,'Shopify import requires independently approved canonical Action.');
+        }
+        return $policies;
     }
 
     public function bootstrapPolicies():array {return $this->policies('default');}

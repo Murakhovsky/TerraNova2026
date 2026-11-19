@@ -169,6 +169,39 @@ records immutable normalized JSON/source digest in
 stock ledger or mapping mutation occurs.** The separate approved canonical
 Action materialization remains a required next release gate.
 
+## E4 independently approved Shopify canonical import (tenant-disabled pilot)
+
+After a supervised read-only pull, `inspect` and `stage` freeze a Shopify
+Product candidate and its **shop-base** currency, every Variant SKU/Barcode,
+base price, source GID, and exact normalized digest. **Staging writes no
+canonical Product, Price or Stock.**
+
+An authenticated tenant manager proposes a single Goal + immutable Plan using
+`ShopifyImportPlanProposalService::propose(actor, preview_id, source_hash,
+normalized_digest)`. The Plan has one
+`product_management.shopify.import.apply` capability step with a pinned
+`shopify_import_preview` target. Independent Plan Approval, canonical
+Platform Workflow, and independently approved high-risk Action are required.
+Neither the operator console nor a webhook can invoke the writer directly.
+
+The Action Worker dispatches only `ShopifyImportApplyHandler` and checks tenant
+activation before applying. `ShopifyImportApplyService` fences concurrent
+writers by tenant, connection and external Product GID. It reuses native
+Product/Variant/Price services with deterministic operation receipt keys,
+commits external GID mappings only after native evidence, and keeps per-Variant
+receipt rows for independent verification and crash recovery. Successful
+materialization creates ONE Product with all approved Variants and base prices.
+It **does not** write back to Shopify or create any stock movements.
+
+A source snapshot change or ambiguous partial write blocks the preview for
+**operator reconciliation**; no automatic blind retry. The Run outcome
+`product_management.shopify_variants_verified` requires an attested Action
+receipt *and* rereads each native Product, Variant, Price, mapping and immutable
+Variant receipt. A synthetic completed Workflow flag alone is insufficient.
+
+Release gates still include full human UI approval acceptance, live read-only
+Shopify scope verification, production operator sign-off, and crash/recovery soak.
+
 ## Shopify nested pagination (read-only)
 
 Every Product's variant connection and every InventoryItem's location

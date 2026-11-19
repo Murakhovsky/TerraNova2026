@@ -109,6 +109,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/product_management_shopify_import_preview_mysql.php
+      - name: Product Management Shopify approved Action native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_shopify_approved_apply_mysql.php
       - name: Product Management verified Product Media native MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
