@@ -14,7 +14,7 @@
     {
       "domain": "finance",
       "owner": "COS Architecture",
-      "reason": "V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation."
+      "reason": "Finance F1 exposes approved tenant-safe budget mutations but no accepted end-to-end paid spend workflow, provider confirmation or accounting expense settlement. Cross-domain execution remains deferred until Marketing M3 and independent acceptance."
     },
     {
       "domain": "hr",

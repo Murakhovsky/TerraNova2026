@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace Domains\Finance\Application\Contract;
 
-/** Marker for the intentionally empty Finance application boundary in V1 skeleton state. */
+/** Legacy Finance marker. F1 uses explicit FinanceBudgetControlInterface; this marker grants no execution authority. */
 interface FinanceApplicationBoundary
 {
 }
+
