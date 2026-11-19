@@ -16,6 +16,6 @@ Marketing є власником збережених read-only Meta Insights, Fi
 
 Припущення про достовірність провайдера **не робиться**. На рівні Finance F1.1 прийнята ознака \`UNVERIFIED_SOURCE\` зберігається, навіть якщо у Marketing є актуальна версія Meta snapshot.
 
-Наступний integration milestone має реалізувати actor-scoped typed Finance-owned importer, який **сам отримує** доказ через canonical Marketing Query / дозволений adapter. Викликач не повинен мати можливості передати довільний JSON як зовнішньо верифіковане джерело. Потрібна коректна ідемпотентність при source revisions, відмова від застарілих версій і незалежна перевірка tenant/account, повноти періоду й валюти.
+У приватній тестовій інтеграції Finance-owned `FinanceMarketingSpendReadbackService` **сам отримує** доказ із Marketing readback через `MarketingSpendEvidenceReadPort`; tenant, account та source revision перевіряються на MySQL, а викликач не надсилає довільну суму. Проте публічна canonical імпортна Capability, перевірка idempotency key на рівні Workflow та фінансове приймання **ще не реалізовані**. У production цей сервіс не викликається через UI/API/AI/CRON.
 
 До інтеграційного приймання Finance PR #436 і Marketing PR #435 залишаються Draft, paid writes вимкнені, немає Meta activation, Finance Expense, Invoice, Payment чи визнаного ROAS.

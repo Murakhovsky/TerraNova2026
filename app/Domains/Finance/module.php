@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'finance',
     'name' => 'Finance',
-    'version' => '0.2.1',
-    'schema_version' => '0.2.1',
+    'version' => '0.2.2',
+    'schema_version' => '0.2.2',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Finance F1 budget envelopes, approved reservations and unverified provider spend evidence; no settlement, payments or Meta writes.',
     'icon' => 'wallet-cards',
