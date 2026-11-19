@@ -74,6 +74,15 @@ $blocked(static fn()=> $validator->validate($contracts['marketing.analyst.propos
     'proposal_id'=>'mkpr-'.str_repeat('c',24),'expected_revision'=>1,
     'decision'=>'UNSAFE_ACTIVATE','reason'=>'Bogus transition'
 ]),'Invalid review should fail schema gate');
+$history=$contracts['marketing.paid.sync.history']??null;
+$expect($history!==null&&$history->kind==='query'
+    &&$history->sideEffectLevel==='none'
+    &&$history->executionBinding==='query:marketing.paid.sync.history',
+    'M2 merge must retain tenant-scoped M1.1 safe read sync history without provider mutations.');
+$mergeController=(string)file_get_contents($root.'/symfony/src/Web/Marketing/MarketingPageController.php');
+$expect(str_contains($mergeController,'accountHealth')
+    &&str_contains($mergeController,'$this->planning->reviewProposal('),
+    'M1.1 sync operator queue and M2 independent review must coexist in the same Workspace.');
 $expect($manifest['enabled_by_default']===false,'Marketing M2 must remain disabled by default.');
 $expect(in_array('app/migrations/20261119_000154_marketing_planning_m2.sql',$manifest['contributions']['migration_files'],true),
     'M2 migration missing from module manifest.');
