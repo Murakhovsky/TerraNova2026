@@ -119,7 +119,7 @@ pages:
     status: CONTRACTED
     personas: [manager]
     product:
-      primary_goal: "Inspect advertising actions that remain blocked pending Finance governance."
+      primary_goal: "Inspect blocked paid operations and evidence-based read-sync failures with operator follow-up."
       page_purpose: "Marketing workspace, early implementation, user acceptance still pending."
     archetype: operational_queue
     patterns:

@@ -102,6 +102,28 @@ final readonly class MarketingPageController
         if($actor instanceof Response)return $actor;
         try {
             $accounts=$this->paid->accounts($actor);
+            $accountHealth=[];
+            if(in_array($section,['accounts','actions'],true)){
+                $nowUtc=new DateTimeImmutable('now',new DateTimeZone('UTC'));
+                foreach(array_slice($accounts,0,20) as $account){
+                    $attempts=$this->paid->syncHistory($actor,(string)$account['id'],10);
+                    $lastSuccess=$account['last_synced_at']??null;
+                    $isStale=true;
+                    if(is_string($lastSuccess)&&$lastSuccess!==''){
+                        $lastDate=DateTimeImmutable::createFromFormat('!Y-m-d H:i:s.u',$lastSuccess,new DateTimeZone('UTC'));
+                        if(!$lastDate)$lastDate=DateTimeImmutable::createFromFormat('!Y-m-d H:i:s',$lastSuccess,new DateTimeZone('UTC'));
+                        if($lastDate && $lastDate->getTimestamp()<= $nowUtc->getTimestamp()
+                            &&($nowUtc->getTimestamp()-$lastDate->getTimestamp())<=86400)$isStale=false;
+                    }
+                    $latestFailed=isset($attempts[0])&&$attempts[0]['state']==='FAILED';
+                    $accountHealth[]=[
+                        'account'=>$account,'recent_runs'=>$attempts,
+                        'last_attempt_failed'=>$latestFailed,
+                        'stale_or_never_synced'=>$isStale,
+                        'health_label'=>$latestFailed?'LAST_ATTEMPT_FAILED':($isStale?'STALE_OR_NO_SYNC':'RECENT_SYNC'),
+                    ];
+                }
+            }
             $campaigns=$this->campaigns->search($actor,trim((string)$request->query->get('q','')),50);
             $accountId=trim((string)$request->query->get('account',''));
             if($accountId===''&&isset($accounts[0]))$accountId=(string)$accounts[0]['id'];
@@ -131,6 +153,7 @@ final readonly class MarketingPageController
             ]);
             return new Response($this->twig->render('experience/marketing/workspace.html.twig',[
                 'shell'=>$shell,'pageTitle'=>$title,'section'=>$section,
+                'accountHealth'=>$accountHealth,
                 'accounts'=>$accounts,'campaigns'=>$campaigns,'providerCampaigns'=>$providerCampaigns,
                 'providerHierarchy'=>$providerHierarchy,
                 'observations'=>$observations,'selectedCampaign'=>$selected,'accountId'=>$accountId,
