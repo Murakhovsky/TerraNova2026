@@ -17,3 +17,7 @@ Read-only Property Get/Search проходять через поточний typ
 ## Завершення людської команди
 
 Форма на Unified Workspace використовує наявний Web-контролер CapabilityLibraryController та CanonicalCapabilityGateway. Параметр return_to приймає лише фіксоване внутрішнє значення unified, не довільні URL. Після успіху відбувається перехід на /workspace/unified/property?reference=… із повторним native Domain Query; непідтверджений результат — fail-closed. Browser тест перевіряє реальний write і same-key replay без нового виконавця.
+
+## Обмеження експозиції
+
+Статус typed у Capability Library сам по собі не створює картку бізнесової дії. UX-02 показує лише capability ID, для якого є явний human-readable presenter; інші навіть typed declarations лишаються в технічному каталозі до окремого UI acceptance. Це не дублюючий реєстр команд: право й активність операції завжди беруться з canonical Gateway.

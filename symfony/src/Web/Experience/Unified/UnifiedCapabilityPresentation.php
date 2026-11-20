@@ -10,6 +10,9 @@ final readonly class UnifiedCapabilityPresentation {
         'property.asset.get'=>['label'=>'Переглянути об’єкт','type'=>'query','href'=>'/workspace/unified/property'],
         'property.bulk.create'=>['label'=>'Імпорт об’єктів','type'=>'approval','href'=>'/workspace/property/bulk'],
     ];
+    public function supports(string $id): bool {
+        return isset(self::PRESENTERS[$id]);
+    }
     /** @param array<string,mixed> $entry @return array<string,mixed> */
     public function describe(array $entry): array {
         $id=(string)($entry['id']??'');

@@ -41,6 +41,9 @@ final readonly class UnifiedCapabilityController {
         $operations=[];
         foreach ($inventory as $entry) {
             if (!is_array($entry) || !is_array($entry['contract']??null)) continue;
+            // A typed contract alone must never become an actionable/dummy
+            // card. Expose only explicitly designed and domain-owned pilots.
+            if (!$this->presenter->supports((string)($entry['id']??''))) continue;
             $operations[]=$this->presenter->describe($entry);
         }
         return $this->render($actor,'experience/unified/capabilities.html.twig',[
