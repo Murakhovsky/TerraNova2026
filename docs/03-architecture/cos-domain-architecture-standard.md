@@ -1,15 +1,15 @@
 ---
 title: Стандарт архітектури Business Domains COS (DAS-001)
 description: Єдиний стандарт структури, володіння, компонентів, контрактів, виконання та паспортизації бізнес-доменів COS.
-status: draft
-updated: 2026-11-19
+status: active
+updated: 2026-11-20
 kind: architecture
 contract: architecture-v1
 ---
 
 # DAS-001: Стандарт архітектури Domains COS
 
-**Редакція:** 0.1, на архітектурне приймання. **Сфера:** нові та наявні installable Business Domains.
+**Редакція:** 1.0, прийнятий стандарт. **Сфера:** нові та наявні installable Business Domains.
 **Нормативна основа:** ADR-0001 (Kernel / Domain ownership), ADR-0015 (Federation) та чинні module/Capability/Process contracts. Цей документ не змінює їхніх runtime-повноважень.
 
 ## 1. Визначення та інваріанти
@@ -161,3 +161,10 @@ Manifest описує `id`, `name`, `description`, `version`, `schema_version`, 
 - `docs/03-architecture/cross-domain-contracts.md`
 
 **Критерій приймання:** читач або агент за паспортом визначає, для чого існує Domain, хто володіє його станом, як компоненти пов'язані з функціями, хто їх викликає, як вони підпорядковуються Kernel і які результати реально підтверджені.
+## 13. Перевірки приймання та контроль боргу
+
+- `npm run docs:domain-compliance` запускає регресійний DAS-001 gate для всіх installable Domains.
+- `docs/.vitepress/das-001-compliance-baseline.json` фіксує максимально допустимі **наявні** descriptive-only та process capability gaps. Новий борг блокує CI; змінювати baseline дозволяється тільки в окремо переглянутому change set.
+- Зменшення боргу означає реальну появу типізованого контракту і перевіреної реалізації. **Заборонено** прибирати gap лише додаванням порожнього handler або descriptive alias.
+- `docs/10-operations/das-001-domain-acceptance.md` визначає D3–D5 acceptance: реальний tenant, незалежні Approval, persisted workflow/receipts, native readback, reviewer і evidence URL.
+- Gate наявності схем і declared bindings не є доказом runtime wiring, tenant permission або business outcome. Ці осі перевіряються окремо.
