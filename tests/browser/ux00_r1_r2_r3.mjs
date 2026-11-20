@@ -321,6 +321,29 @@ try {
   assert(sqlCount(assetId) === 1,
     'UX01: read-only unified Home unexpectedly wrote native Property');
   add('UX01.real_provider_search_and_canonical_shell', { asset_id: assetId, native_delta: 0 });
+
+  // UX-01 real responsive/dark/density UI, using the already-installed
+  // Appearance Stimulus controller rather than another frontend app.
+  await page.setViewportSize({width:390,height:844});
+  const ux01mobile=await page.goto(abs('/workspace/unified?q='+assetId),
+    {waitUntil:'networkidle'});
+  assert(ux01mobile?.status()===200
+    && await page.locator('[data-cos-unified-home]').count()===1,
+    'UX01: mobile canonical Shell unavailable');
+  const ux01Overflow=await page.evaluate(()=>Math.max(
+    document.documentElement.scrollWidth,document.body.scrollWidth,
+  )-document.documentElement.clientWidth);
+  assert(ux01Overflow<=2,'UX01: mobile Shell overflow '+ux01Overflow);
+  await page.locator('button[data-action="click->appearance#setTheme"][data-theme="dark"]').click();
+  await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='dark');
+  await page.locator('button[data-action="click->appearance#setDensity"][data-density="compact"]').click();
+  await page.waitForFunction(()=>document.documentElement.dataset.cosDensity==='compact');
+  await page.screenshot({path:evidenceDir+'/ux01-mobile-dark-compact.png',animations:'disabled'});
+  add('UX01.mobile_dark_compact_real_shell',
+    {viewport:'390x844',overflow:ux01Overflow,theme:'dark',density:'compact'});
+  await page.locator('button[data-action="click->appearance#setTheme"][data-theme="light"]').click();
+  await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='light');
+  await page.setViewportSize({width:1440,height:1000});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 
   // R3 UI. Upload rejects duplicate identities, then stages a bounded

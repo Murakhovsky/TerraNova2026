@@ -13,3 +13,7 @@ kind: architecture
 Tabler залишається кандидатом, але не runtime dependency: до встановлення необхідно окремо перевірити ліцензію конкретної версії, dependency/compatibility з Bootstrap, Turbo, accessibility і регресію. Новий frontend framework не вводимо.
 
 Маршрут opt-in, legacy URL збережені; rollback = вилучення нового entry/route. Зареєстрований Workspace не означає execution-verified. Відсутність перевіреного AI/realtime handshake зафіксована як UX-01 gap.
+
+## Перевірка мобільного оформлення
+
+Сторінка UX-01 використовує вже встановлений Appearance Stimulus controller для світлої/темної теми та comfortable/compact щільності. Реальний Playwright сценарій перевіряє viewport 390×844, відсутність горизонтального переповнення, перемикання обох параметрів та повернення у світлу тему. Скриншот зберігається в ізольованому CI; результат на новому SHA повинен бути перевірений окремо від попереднього PASS.
