@@ -42,7 +42,11 @@ function evaluateEvidence(id, data) {
         if (!e || typeof e[k] !== 'string' || !e[k].trim()) error(id + ': missing evidence field '+k);
       }
       if (!/^[a-f0-9]{40}$/.test(e?.revision_sha ?? '')) error(id + ': evidence must pin exact 40-char SHA');
-      if (!/^https?:\/\//.test(e?.evidence_url ?? '')) error(id + ': evidence requires resolvable URL');
+      if (!/^https:\/\/[^\s/]+\//.test(e?.evidence_url ?? '') || /example\.(com|org|net)/.test(e?.evidence_url ?? '')) error(id + ': evidence requires concrete HTTPS artifact URL');
+      if (e?.result !== 'PASS') error(id + ': D3-D5 requires PASS result, not a declaration');
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:.+(Z|[+-]\d{2}:\d{2})$/.test(e?.performed_at ?? '')) error(id + ': evidence performed_at requires timezone-aware ISO timestamp');
+      if (typeof e?.business_readback !== 'string' || e.business_readback.trim().length < 20) error(id + ': native business_readback requires specific evidence');
+      if (!e?.independent_reviewer || typeof e.independent_reviewer !== 'string') error(id + ': independent reviewer is required');
     }
   }
 }
