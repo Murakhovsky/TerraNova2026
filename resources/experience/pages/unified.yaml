@@ -65,3 +65,25 @@ pages:
     responsive: { desktop: canonical, tablet: canonical, mobile: entity_list }
     qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
     quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
+
+  - id: unified.business.workspace
+    route: { name: cos_unified_business_workspace, path: "/workspace/unified/business/{workspaceId}", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Core
+    capability: unified.business.workspace.view
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Знайти клієнтів, угоди та об'єкти у підключеному Domain Workspace."
+      page_purpose: "Серверна композиція реальних tenant-scoped бізнесових сутностей."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [EmptyState, ErrorState]
+    primary_action: unified.business.search
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: entity_list }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }

@@ -9,3 +9,21 @@
 .cos-uw__result:hover,.cos-uw__result:focus-visible{background:var(--cos-state-hover-bg);outline:2px solid var(--cos-focus-ring)}
 .cos-uw__result small{color:var(--cos-color-text-muted)}
 @media(max-width:650px){.cos-uw__appearance{margin-inline-start:0}.cos-uw__result{flex-direction:column;align-items:flex-start}}
+
+.cos-uw__tabs{display:flex;gap:var(--cos-space-2);flex-wrap:wrap;overflow:auto}
+.cos-uw__tabs [aria-current="page"]{border-color:var(--cos-color-primary-strong);color:var(--cos-color-primary-strong)}
+.cos-uw__business-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(17rem,1fr);gap:var(--cos-space-5);align-items:start}
+.cos-uw__entities{display:grid;gap:var(--cos-space-3)}
+.cos-uw__entities--cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))}
+.cos-uw__entity{min-width:0;padding:var(--cos-space-4);border:1px solid var(--cos-color-border);border-radius:var(--cos-radius-md)}
+.cos-uw__entity h3{font-size:var(--cos-font-lg);overflow-wrap:anywhere}
+.cos-uw__action{display:grid;gap:var(--cos-space-1);margin-block:var(--cos-space-3)}
+.cos-uw__action small{color:var(--cos-color-text-muted)}
+@media(max-width:1050px){.cos-uw__business-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Explicit no-overflow UX03 mobile business card contracts */
+.cos-uw__business-grid > *{min-width:0}
+.cos-uw__entities .cos-uw__entity{overflow-wrap:anywhere}
+@media(max-width:650px){.cos-uw__business-grid{display:block}.cos-uw__business-grid > aside{margin-top:var(--cos-space-5)}.cos-uw__tabs{max-width:100%;overflow-x:auto}}
+
+.cos-uw__relations{list-style:none;margin:0;padding:0;display:grid;gap:var(--cos-space-3)}

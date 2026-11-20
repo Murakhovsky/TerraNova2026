@@ -3697,3 +3697,15 @@ cos_unified_property_query:
   path: /workspace/unified/property
   controller: App\Web\Experience\Unified\UnifiedCapabilityController::property
   methods: [GET, HEAD]
+
+cos_unified_business_workspace:
+  path: /workspace/unified/business/{workspaceId}
+  controller: App\Web\Experience\Unified\UnifiedBusinessWorkspaceController::show
+  methods: [GET, HEAD]
+  requirements: { workspaceId: '[a-z][a-z0-9_.-]{0,96}' }
+
+cos_unified_saved_view:
+  path: /workspace/unified/business/{workspaceId}/views
+  controller: App\Web\Experience\Unified\UnifiedBusinessWorkspaceController::saveView
+  methods: [POST]
+  requirements: { workspaceId: '[a-z][a-z0-9_.-]{0,96}' }

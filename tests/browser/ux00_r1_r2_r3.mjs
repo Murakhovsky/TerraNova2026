@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core';
+import AxeBuilder from '@axe-core/playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -302,6 +303,25 @@ try {
     add('S2.restricted_buyer_valid_csrf_no_native_write', {
       role: 'buyer', api_status: 403, form_status: 303, native_delta: 0,
     });
+
+    // UX03 negative UI+saved view: valid buyer session and valid CSRF do not
+    // gain manager Workspace or session preference write authority.
+    const deniedUx03 = await restrictedCtx.request.get(
+      abs('/workspace/unified/business/property.asset'));
+    const deniedSavedView = await restrictedCtx.request.post(
+      abs('/workspace/unified/business/property.asset/views'), {
+        form:{csrf_token:buyerToken,operation:'save',name:'Forbidden buyer view',
+          q:assetId,view:'cards',sort:'relevance'},
+        maxRedirects:0,
+      });
+    assert(deniedUx03.status()===403 && deniedSavedView.status()===403,
+      'UX03: buyer role escaped Business Workspace or saved-view ACL');
+    assert(Number(sqlExecute(
+      "SELECT COUNT(*) FROM tn_property_assets WHERE organization_id='default'"))
+      === nativeBefore,
+      'UX03: denied buyer view mutated native Property rows');
+    add('UX03.restricted_buyer_workspace_and_view_denied',
+      {html_status:403,preference_post_status:403,native_delta:0});
   } finally {
     await restrictedCtx.close();
   }
@@ -432,6 +452,168 @@ try {
   await page.locator('#cos-shell-locale').selectOption('uk');
   await page.waitForFunction(()=>document.documentElement.lang==='uk');
   add('UX02.english_property_query_and_restore_uk',{locales:['en','uk']});
+  await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
+
+  // UX-03: registered provider composed Sales and Property, no entity
+  // accepted from client until a tenant-bound SearchResult proves ownership.
+  const business = await page.goto(abs('/workspace/unified/business/property.asset?q=' + assetId),
+    { waitUntil: 'networkidle' });
+  assert(business?.status() === 200
+      && await page.locator('[data-cos-unified-business][data-workspace-id="property.asset"]').count() === 1,
+      'UX03: Property provider composition unavailable');
+  const nativeEntity = page.locator('[data-entity-ref="property.asset:' + assetId + '"]');
+  assert(await nativeEntity.count() === 1,
+      'UX03: canonical tenant-bound Property EntityRef missing');
+  const selectedBusiness = await page.goto(abs('/workspace/unified/business/property.asset?q='
+      + assetId + '&selected=property.asset:' + assetId), { waitUntil: 'networkidle' });
+  assert(selectedBusiness?.status() === 200
+      && await page.locator('[data-cos-selected-entity="property.asset:' + assetId + '"]').count() === 1,
+      'UX03: verified Property entity detail cannot compose');
+  assert(await page.locator('[data-cos-selected-entity] [data-cos-business-summary] .cos-entity-summary__item').count()>0,
+    'UX03: selected real Property Asset has no verified canonical summary');
+  add('UX03.real_tenant_property_entity_summary',{asset_id:assetId});
+  const foreignBusiness = await page.goto(abs('/workspace/unified/business/property.asset?q='
+      + assetId + '&selected=property.asset:' + foreignAssetId), { waitUntil: 'networkidle' });
+  assert(foreignBusiness?.status() === 200
+      && await page.locator('[data-cos-selected-entity]').count() === 0
+      && await page.locator('[role="alert"]').count() > 0,
+      'UX03: unverified foreign Property EntityRef displayed');
+  const salesBusiness = await page.goto(abs('/workspace/unified/business/sales.deal'),
+    { waitUntil: 'networkidle' });
+  assert(salesBusiness?.status() === 200
+      && await page.locator('[data-cos-unified-business][data-workspace-id="sales.deal"]').count() === 1,
+      'UX03: Sales Workspace provider not available');
+  assert(sqlCount(assetId) === 1, 'UX03: Workspace reads mutated native Property');
+  add('UX03.sales_property_composition_and_entity_fencing', {asset_id:assetId,foreign_asset:foreignAssetId});
+
+  // Positive Sales deal readback uses an existing real pipeline fixture.
+  // The canonical Sales read model, not client-provided entity IDs, must
+  // resolve it before Workspace composition and Business Summary.
+  const pipelineRead=await page.goto(abs('/sales/pipeline'),{waitUntil:'networkidle'});
+  assert(pipelineRead?.status()===200,'UX03: Sales pipeline read unavailable');
+  const firstDeal=page.locator('[data-sales-deal-card]').first();
+  assert(await firstDeal.count()===1,'UX03: Sales fixture has no canonical Deal');
+  const salesId=await firstDeal.getAttribute('data-deal-id');
+  const salesTitle=(await firstDeal.locator('.cos-sales-pipeline-card__subtitle').innerText()).trim();
+  assert(/^[1-9][0-9]{0,9}$/.test(salesId||'') && salesTitle.length>0,
+    'UX03: Sales fixture lacks verified Deal search identity');
+  const salesQuery=encodeURIComponent(salesTitle.slice(0,120));
+  const salesList=await page.goto(abs('/workspace/unified/business/sales.deal?q='+salesQuery),
+    {waitUntil:'networkidle'});
+  assert(salesList?.status()===200
+    && await page.locator('[data-entity-ref="sales.deal:'+salesId+'"]').count()===1,
+    'UX03: actual Sales Deal is not discoverable through tenant Domain search');
+  const selectedSales=await page.goto(abs(
+    '/workspace/unified/business/sales.deal?q='+salesQuery+'&selected=sales.deal:'+salesId),
+    {waitUntil:'networkidle'});
+  assert(selectedSales?.status()===200
+    && await page.locator('[data-cos-selected-entity="sales.deal:'+salesId+'"]').count()===1
+    && await page.locator('[data-cos-business-summary] .cos-entity-summary__item').count()>0,
+    'UX03: real Sales Deal fails verified detail and summary');
+  add('UX03.real_sales_deal_query_context_and_summary',{deal_id:salesId});
+
+
+  // UX-03 server-session user filter state: same-name replay is idempotent,
+  // no new Domain/Action/Asset mutation, deletion scoped to current session.
+  const savedName='UX03 CI '+uid;
+  const saveFirst=await admin.request.post(
+    abs('/workspace/unified/business/property.asset/views'), {
+      form:{csrf_token:csrf,operation:'save',name:savedName,q:assetId,
+        view:'cards',sort:'label'},maxRedirects:0,
+    });
+  assert(saveFirst.status()===303,'UX03 saved view refused authorized CSRF');
+  const reopened=await page.goto(abs('/workspace/unified/business/property.asset'),
+    {waitUntil:'networkidle'});
+  assert(reopened?.status()===200
+    && await page.locator('[data-cos-saved-views] [data-cos-saved-view]').count()===1,
+    'UX03 persisted session view not readable');
+  const saved=page.locator('[data-cos-saved-view]').first();
+  const id=await saved.getAttribute('data-cos-saved-view');
+  assert(/^[a-f0-9]{16}$/.test(id||''),'UX03 invalid stable saved view ID');
+  const replayView=await admin.request.post(
+    abs('/workspace/unified/business/property.asset/views'), {
+      form:{csrf_token:csrf,operation:'save',name:savedName,q:assetId,
+        view:'cards',sort:'label'},maxRedirects:0,
+    });
+  assert(replayView.status()===303,'UX03 saved view replay failed');
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-saved-view]').count()===1,
+    'UX03 duplicate saved view produced on replay');
+  add('UX03.saved_query_session_scoped_replay',{id,number:1});
+  const deleteView=await admin.request.post(
+    abs('/workspace/unified/business/property.asset/views'), {
+      form:{csrf_token:csrf,operation:'delete',view_id:id},maxRedirects:0,
+    });
+  assert(deleteView.status()===303,'UX03 saved view delete refused');
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-saved-view]').count()===0
+    && sqlCount(assetId)===1,'UX03 delete leaked view or touched business Domain');
+  add('UX03.saved_query_remove_no_domain_write',{native_rows:1});
+  // UX-03 translated domain labels from provider names and UI-only content.
+  await page.locator('#cos-shell-locale').selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-business] h1').innerText()).trim()
+      ==='Property Workspace','UX03: Workspace heading not localized in English');
+  assert((await page.locator('#cos-uw-business-search').innerText()).trim()
+      ==='Records and search','UX03: business query controls not translated');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  add('UX03.business_workspace_uk_en_locale',{locales:['en','uk']});
+
+  // UX-03 mobile parity: real Property and Sales workspaces at phone width,
+  // no horizontal document clipping and no implicit Action/Domain mutation.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileBusiness = await page.goto(abs('/workspace/unified/business/property.asset?q='
+      + assetId + '&view=cards'), { waitUntil: 'networkidle' });
+  assert(mobileBusiness?.status()===200
+      && await page.locator('[data-cos-business-results] [data-entity-ref="property.asset:'
+      +assetId+'"]').count()===1, 'UX03 mobile: actual Property card unavailable');
+  const mobileOverflow = await page.evaluate(() => Math.max(
+    document.documentElement.scrollWidth, document.body.scrollWidth,
+  ) - document.documentElement.clientWidth);
+  assert(mobileOverflow<=2, 'UX03 mobile: horizontal viewport overflow '+mobileOverflow);
+  await page.screenshot({path:evidenceDir+'/ux03-property-mobile.png',
+    animations:'disabled'});
+  add('UX03.mobile_property_card_and_responsive_layout',
+      {asset_id:assetId,viewport:'390x844',document_overflow:mobileOverflow});
+  const mobileSales = await page.goto(abs('/workspace/unified/business/sales.deal'),
+    {waitUntil:'networkidle'});
+  assert(mobileSales?.status()===200
+      && await page.locator('[data-workspace-id="sales.deal"]').count()===1,
+      'UX03 mobile: Sales provider workspace unavailable');
+  await page.screenshot({path:evidenceDir+'/ux03-sales-mobile.png',
+    animations:'disabled'});
+  assert(sqlCount(assetId)===1,'UX03 mobile: read mutated Property');
+  add('UX03.mobile_sales_provider_no_native_write',{viewport:'390x844',native_rows:1});
+  // Accessibility + navigation performance on genuine authenticated
+  // Unified pages, in the same 390px browser environment. Results are
+  // recorded independently per surface to prevent a decorative CI PASS.
+  const uxA11y=[
+    {id:'home',path:'/workspace/unified'},
+    {id:'actions',path:'/workspace/unified/actions'},
+    {id:'property',path:'/workspace/unified/property?q='+assetId},
+    {id:'business',path:'/workspace/unified/business/property.asset?q='+assetId},
+  ];
+  for(const target of uxA11y) {
+    const res=await page.goto(abs(target.path),{waitUntil:'networkidle'});
+    assert(res?.status()===200,'UX03 a11y page missing '+target.id);
+    const scan=await new AxeBuilder({page}).withTags(
+      ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze();
+    const critical=scan.violations.filter(v=>['critical','serious'].includes(v.impact));
+    assert(critical.length===0,'UX03 '+target.id+' WCAG serious violations: '
+      +JSON.stringify(critical.map(v=>({
+        id:v.id,impact:v.impact,
+        nodes:v.nodes.slice(0,4).map(n=>({target:n.target,reason:n.failureSummary}))
+      }))));
+    const duration=await page.evaluate(
+      ()=>performance.getEntriesByType('navigation')[0]?.duration ?? 0);
+    assert(Number.isFinite(duration)&&duration>=0&&duration<15000,
+      'UX03 '+target.id+' navigation exceeded 15s basic performance guard');
+    add('UX03.a11y_and_navigation_'+target.id,{
+      viewport:'390x844',serious_violations:0,nav_duration_ms:Math.round(duration),
+    });
+  }
+  await page.setViewportSize({width:1440,height:1000});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 
   // R3 UI. Upload rejects duplicate identities, then stages a bounded

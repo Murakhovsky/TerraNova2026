@@ -46,7 +46,7 @@
           <p class="cos-card__eyebrow">{{ 'uw.home.registered'|trans }}</p>
           <h3 class="cos-card__title">{{ workspace.label|trans }}</h3>
           <p class="cos-card__copy">{{ workspace.id }}</p>
-          <a class="cos-button cos-button--ghost" href="{{ workspace.path }}">{{ 'uw.home.open'|trans }}</a>
+          <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{workspaceId:workspace.id}) }}">{{ 'uw.home.open'|trans }}</a>
         </article>
       {% else %}
         <p class="cos-card">{{ 'uw.home.empty'|trans }}</p>
