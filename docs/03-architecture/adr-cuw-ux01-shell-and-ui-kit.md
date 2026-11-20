@@ -2,6 +2,8 @@
 title: ADR — Канонічний Shell UX-01
 description: Повторне використання Symfony UI.
 status: isolated-pilot
+updated: 2026-11-20
+kind: architecture
 ---
 
 # ADR — Канонічний робочий простір UX-01
