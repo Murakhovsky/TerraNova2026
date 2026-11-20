@@ -73,7 +73,9 @@ kind: implementation
 Це тестова CI fixture з opt-in Federation-модулем та активною policy **тільки у disposable MySQL**. Джерело \`tests/fixtures/ui/ux00_plan_approval.sql\` не є міграцією. PASS цього нового сценарію дозволено встановити лише після окремого Runtime на відповідному SHA. Він не підтверджує незалежне погодження зовнішнього Action, його worker admission або завершений Property Run.
 
 
-## 4. Межі доведеної готовності## 3.4. Mobile acceptance extension (pending exact-head CI)
+## 4. Межі доведеної готовності## 3.4. Mobile acceptance extension (verified on exact-head CI)
+
+Два нові Playwright assertions **PASS** на `9660df81a044e927bb3f6e6f64a7d070ed71569d`: [Runtime 44695313624](https://github.com/Murakhovsky/TerraNova2026/actions/runs/44695313624). **22/22 checks PASS**, всі п'ять CI workflow families SUCCESS; GHCR publish і AWS dev deploy SKIPPED.
 
 Додано **два нові Playwright assertions** до наявного `tests/browser/ux00_r1_r2_r3.mjs`:
 
@@ -81,7 +83,13 @@ kind: implementation
 - `S3.mobile_pending_items_and_deep_link`: viewport 390×844, два непідтверджені item statuses, нуль помилкових verified позначок, реальний перехід за постійним batch deep link.
 - Артефакти `property-mobile-read.png` і `property-mobile-pending.png` робляться тільки на disposable localhost fixture.
 
-**Evidence policy:** код перевірок не означає PASS. Статус mobile acceptance залишити `PENDING` до успішного Runtime job на *точному новому SHA*. Перевірки не запускають додаткових мутацій і не підміняють staging R3 worker/outcome sign-off.
+**Evidence policy:** мобільні перевірки мають фактичне підтвердження з exact-head CI; staging R3 worker/outcome sign-off, справжні два tenant login та production лишаються поза межами цього PASS.
+
+## 3.5. Negative actor authorization acceptance (new candidate, PENDING CI)
+
+На окремому authenticated buyer/не-manager акаунті з поточним tenant і власним **валідним CSRF** перевіряємо відмову доступу до Capability Library та typed inventory, заборону `property.asset.create` через API і Web, і незмінність кількості native Property Asset rows. Це не анонімний користувач і не підроблений CSRF: перевірка саме server-side `isManager/cos.tenant.manage`.
+
+Зміни в ізольованій disposable CI fixture та браузерному тесті, не в production Policy, Realm, Auth чи Domain Gateway. Статус **PENDING**, доки новий SHA не отримає фактичний PASS. Ліміт login 10 POST/300 s не обходиться; один допустимий retry суворо поважає серверний `Retry-After` тільки у GitHub localhost fixture.
 
 
 
@@ -93,7 +101,8 @@ kind: implementation
 | R3 backend повний approval→Workflow→Action→10 Property→receipts→outcome | Ізольований MySQL CI PASS |
 | R3 browser approve→worker→per-item finished outcome | НЕ ПІДТВЕРДЖЕНО |
 | Два одночасні логіни до різних tenant одного хоста | НЕ ПЕРЕВІРЕНО; поточний login прив'язаний до організації інсталяції |
-| Перевірки viewer-role негативних дій, ручний operator signoff | НЕ ПІДТВЕРДЖЕНО |
+| Негативні дії authenticated buyer / non-manager з валідним CSRF | PENDING новий CI; попередній 22/22 цього не перевіряв |
+| Ручний operator signoff | НЕ ПІДТВЕРДЖЕНО |
 | Розгорнутий staging і production / release | НЕ ПІДТВЕРДЖЕНО, без merge |
 
 Машинна матриця `cos-ux00-experience-coverage.csv` у цьому PR уточнює **лише чотири** Property-контракти з окремими CI-статусами. Решта рядків залишаються `UNVERIFIED`, без екстраполяції зеленого CI на функціонал, який не тестувався.

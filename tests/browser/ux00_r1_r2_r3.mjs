@@ -21,14 +21,37 @@ const json = async (res, label, code = 200) => {
 };
 const login = async (context, user, pass) => {
   const page = await context.newPage();
-  const response = await page.goto(abs('/auth/login'), { waitUntil: 'domcontentloaded' });
-  assert(response?.status() === 200, 'Login form unavailable');
-  await page.locator('input[name="email"]').fill(user);
-  await page.locator('input[name="password"]').fill(pass);
-  await Promise.all([
-    page.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 30000 }),
-    page.locator('button[type="submit"]').click(),
-  ]);
+  const visit = async () => {
+    const response = await page.goto(abs('/auth/login'), { waitUntil: 'domcontentloaded' });
+    assert(response?.status() === 200, 'Login form unavailable');
+    await page.locator('input[name="email"]').fill(user);
+    await page.locator('input[name="password"]').fill(pass);
+  };
+  const submit = async () => {
+    const response = page.waitForResponse(r => new URL(r.url()).pathname === '/auth/login'
+      && r.request().method() === 'POST', { timeout: 30000 });
+    await page.locator('button[type="submit"]').click();
+    return response;
+  };
+  await visit();
+  let attempt = await submit();
+  // Never bypass the actual 10-POST/300s auth limiter. Disposable localhost
+  // GitHub CI may respect the server's bounded Retry-After exactly ONCE.
+  if (attempt.status() === 429
+      && process.env.GITHUB_ACTIONS === 'true'
+      && process.env.UX00_E2E_MUTATION_SAFE === '1'
+      && /^http:\/\/(?:127\.0\.0\.1|localhost):8081\/?$/.test(base)) {
+    const seconds = Number(attempt.headers()['retry-after']);
+    assert(Number.isInteger(seconds) && seconds >= 1 && seconds <= 300,
+      'Unbounded or missing login Retry-After');
+    console.log('UX-00 CI login rate-limited; respecting Retry-After=' + seconds + ' once');
+    await new Promise(resolve => setTimeout(resolve, (seconds + 1) * 1000));
+    await visit();
+    attempt = await submit();
+  }
+  assert([302, 303].includes(attempt.status()),
+    'Fixture login rejected HTTP ' + attempt.status() + ' for ' + user);
+  await page.waitForURL(url => !url.pathname.startsWith('/auth/login'), { timeout: 30000 });
   return page;
 };
 const authToken = async page => {
@@ -222,6 +245,64 @@ try {
     asset_id: assetId, viewport: '390x844', native_rows: 1,
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
+
+  // S2-N: An authenticated non-manager with a legitimate session and valid
+  // CSRF must not reach the manager-only UI/API or write native Property.
+  const restrictedEmail = process.env.UX00_E2E_RESTRICTED_EMAIL || '';
+  const restrictedPassword = process.env.UX00_E2E_RESTRICTED_PASSWORD || '';
+  assert(restrictedEmail && restrictedPassword, 'S2-N: missing restricted fixture');
+  const restrictedCtx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  try {
+    const restrictedPage = await login(restrictedCtx, restrictedEmail, restrictedPassword);
+    const access = await restrictedPage.goto(abs('/account/access'), { waitUntil: 'networkidle' });
+    assert(access?.status() === 200, 'S2-N: buyer account lacks legitimate account access');
+    const buyerToken = await restrictedPage.locator('input[name="csrf_token"]').first().inputValue();
+    assert(buyerToken.length > 10, 'S2-N: no valid buyer-session CSRF token');
+    const deniedPage = await restrictedCtx.request.get(abs('/workspace/capabilities'));
+    const deniedCatalog = await restrictedCtx.request.get(abs('/api/v1/capabilities'));
+    assert(deniedPage.status() === 403 && deniedCatalog.status() === 403,
+      'S2-N: buyer can read restricted Capability inventory/UI');
+    add('S2.restricted_buyer_inventory_and_workspace_denied', {
+      role: 'buyer', html: deniedPage.status(), api: deniedCatalog.status(),
+    });
+
+    const nativeBefore = Number(sqlExecute(
+      "SELECT COUNT(*) FROM tn_property_assets WHERE organization_id='default'"));
+    assert(Number.isInteger(nativeBefore) && nativeBefore >= 1,
+      'S2-N: native Property baseline invalid');
+    const deniedMutation = await restrictedCtx.request.post(
+      abs('/api/v1/capabilities/property.asset.create/invoke'), {
+        data: { type_code: 'house', city: 'Львів', address: 'UX00 forbidden ' + uid },
+        headers: {
+          'X-CSRF-Token': buyerToken, 'X-Idempotency-Key': 'ux00-restricted-' + uid,
+        },
+        maxRedirects: 0,
+      });
+    const deniedResult = await deniedMutation.json();
+    assert(deniedMutation.status() === 422
+      && deniedResult.error === 'invocation_blocked',
+      'S2-N: buyer Capability API mutation was not denied by Domain Gateway');
+    const deniedForm = await restrictedCtx.request.post(
+      abs('/workspace/capabilities/property/create'), {
+        form: {
+          csrf_token: buyerToken, idempotency_key: 'ux00-restricted-ui-' + uid,
+          type_code: 'house', city: 'Львів', address: 'UX00 forbidden UI ' + uid,
+        },
+        maxRedirects: 0,
+      });
+    assert(deniedForm.status() === 303
+      && (deniedForm.headers()['location'] || '').includes('notice=invalid'),
+      'S2-N: buyer UI mutation did not fail closed through canonical Gateway');
+    const nativeAfter = Number(sqlExecute(
+      "SELECT COUNT(*) FROM tn_property_assets WHERE organization_id='default'"));
+    assert(nativeAfter === nativeBefore,
+      'S2-N: restricted buyer wrote Property despite authenticated denial');
+    add('S2.restricted_buyer_valid_csrf_no_native_write', {
+      role: 'buyer', api_status: 422, form_status: 303, native_delta: 0,
+    });
+  } finally {
+    await restrictedCtx.close();
+  }
 
   // R3 UI. Upload rejects duplicate identities, then stages a bounded
   // real CSV, projects an immutable digest, proposes a Goal/Plan and remains
@@ -545,7 +626,7 @@ try {
     environment: 'GitHub Actions disposable localhost MySQL', run_id: uid,
     tenant_scope: 'Authenticated default tenant vs foreign-tenant native fixtures; multi-org login not offered by this deployment',
     checks, tested_at: new Date().toISOString(),
-    remaining_gate: 'Real two-user Plan approval is CI verified; external Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
+    remaining_gate: 'Buyer role denial requires exact-head CI; external Property Step approval, production fail-closed worker admission and completed Run UI staging remain unverified' };
   writeFileSync(evidenceDir + '/results.json', JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ ok: true, ...report }, null, 2));
 } catch (error) {
