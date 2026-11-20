@@ -306,6 +306,74 @@ try {
     await restrictedCtx.close();
   }
 
+  // UX-01 uses the existing authenticated shell and true Application-backed
+  // global search; visiting it must be read-only and tenant-scoped.
+  const home = await page.goto(abs('/workspace/unified?q=' + assetId),
+    { waitUntil: 'networkidle' });
+  assert(home?.status() === 200, 'UX01: unified Home not accessible to manager');
+  assert(await page.locator('[data-cos-unified-home]').count() === 1,
+    'UX01: no canonical Unified Workspace shell');
+  assert(await page.locator('[data-cos-provider-workspaces] [data-cos-provider-workspace]').count() > 0,
+    'UX01: no active registered Domain Workspace context');
+  const sourceHit = page.locator('.cos-uw__result').filter({ hasText: assetId });
+  assert(await sourceHit.count() > 0,
+    'UX01: real tenant-bound Property Query not visible in Unified Home');
+  assert(sqlCount(assetId) === 1,
+    'UX01: read-only unified Home unexpectedly wrote native Property');
+  add('UX01.real_provider_search_and_canonical_shell', { asset_id: assetId, native_delta: 0 });
+
+  // UX-01 real responsive/dark/density UI, using the already-installed
+  // Appearance Stimulus controller rather than another frontend app.
+  await page.setViewportSize({width:390,height:844});
+  const ux01mobile=await page.goto(abs('/workspace/unified?q='+assetId),
+    {waitUntil:'networkidle'});
+  assert(ux01mobile?.status()===200
+    && await page.locator('[data-cos-unified-home]').count()===1,
+    'UX01: mobile canonical Shell unavailable');
+  const ux01Overflow=await page.evaluate(()=>Math.max(
+    document.documentElement.scrollWidth,document.body.scrollWidth,
+  )-document.documentElement.clientWidth);
+  assert(ux01Overflow<=2,'UX01: mobile Shell overflow '+ux01Overflow);
+  await page.locator('button[data-action="click->appearance#setTheme"][data-theme="dark"]').click();
+  await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='dark');
+  await page.locator('button[data-action="click->appearance#setDensity"][data-density="compact"]').click();
+  await page.waitForFunction(()=>document.documentElement.dataset.cosDensity==='compact');
+  await page.screenshot({path:evidenceDir+'/ux01-mobile-dark-compact.png',animations:'disabled'});
+  add('UX01.mobile_dark_compact_real_shell',
+    {viewport:'390x844',overflow:ux01Overflow,theme:'dark',density:'compact'});
+  // Canonical global keyboard palette: keyboard open, input focus,
+  // Escape closes and restores focus to the invoking control.
+  await page.setViewportSize({width:1440,height:1000});
+  const paletteTrigger=page.locator('.cos-shell__search-trigger');
+  await paletteTrigger.focus();
+  await page.keyboard.press('Control+k');
+  const palette=page.locator('#cos-command-palette');
+  assert(!(await palette.isHidden())
+    && await page.locator('.cos-command__input').evaluate(
+      el => el === document.activeElement),
+    'UX01: global keyboard palette did not focus search input');
+  await page.keyboard.press('Escape');
+  assert(await palette.isHidden()
+    && await paletteTrigger.evaluate(el => el === document.activeElement),
+    'UX01: global palette did not close and restore focus');
+  add('UX01.keyboard_palette_focus_restoration',{shortcut:'Ctrl+K',escape:true});
+  const locale=page.locator('#cos-shell-locale');
+  await locale.selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='My Workspaces',
+    'UX01: server locale changed but Unified screen stayed Ukrainian');
+  assert((await page.locator('[data-cos-provider-workspaces]').innerText())
+    .includes('Property Workspace'),'UX01: Domain Workspace label not localized');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='Мої робочі простори',
+    'UX01: Ukrainian locale not restored');
+  add('UX01.english_ukrainian_locale_real_server_switch',{locales:['en','uk']});
+  await page.locator('button[data-action="click->appearance#setTheme"][data-theme="light"]').click();
+  await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='light');
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
+
   // R3 UI. Upload rejects duplicate identities, then stages a bounded
   // real CSV, projects an immutable digest, proposes a Goal/Plan and remains
   // fail-closed without two independent approvals and worker admission.

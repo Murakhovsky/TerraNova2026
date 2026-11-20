@@ -3682,3 +3682,8 @@ cos_api_v1_capital_markets_portfolio_performance:
   path: /api/v1/capital-markets/portfolio/performance
   controller: App\Http\Api\V1\Controller\CapitalMarketsCapitalRiskController::performance
   methods: [GET]
+
+cos_unified_home:
+  path: /workspace/unified
+  controller: App\Web\Experience\Unified\UnifiedWorkspaceController::index
+  methods: [GET, HEAD]
