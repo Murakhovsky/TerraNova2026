@@ -5,44 +5,44 @@
          data-entity-type="{{ workspace.definition.entityType|default('') }}">
   <header class="cos-card">
     <p class="cos-card__eyebrow">COS / Business Workspace / {{ shell.tenantLabel }}</p>
-    <h1 class="cos-card__title">{{ workspace.definition.label }}</h1>
-    <p class="cos-card__copy">Контекст отримано з активного Domain Provider; збережені бізнес-дані не дублюються в інтерфейсі.</p>
+    <h1 class="cos-card__title">{{ workspace.definition.label|trans }}</h1>
+    <p class="cos-card__copy">{{ 'uw.business.summary'|trans }}</p>
     <div class="cos-uw__row">
-      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_home') }}">Всі контексти</a>
-      <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">Відкрити повний Domain Workspace</a>
-      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">Операції</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_home') }}">{{ 'uw.business.contexts'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">{{ 'uw.business.domain'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">{{ 'uw.nav.operations'|trans }}</a>
     </div>
   </header>
-  <nav class="cos-uw__tabs" aria-label="Бізнес-контексти">
+  <nav class="cos-uw__tabs" aria-label="{{ 'uw.business.tabs'|trans }}">
     {% for option in workspaces %}
       <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{workspaceId:option.id}) }}"
-         {% if option.id == workspace.definition.id %}aria-current="page"{% endif %}>{{ option.label }}</a>
+         {% if option.id == workspace.definition.id %}aria-current="page"{% endif %}>{{ option.label|trans }}</a>
     {% endfor %}
   </nav>
   <div class="cos-uw__business-grid">
     <div class="cos-page__stack">
       <section class="cos-card" aria-labelledby="cos-uw-business-search">
-        <h2 id="cos-uw-business-search" class="cos-card__title">Записи та пошук</h2>
+        <h2 id="cos-uw-business-search" class="cos-card__title">{{ 'uw.business.records'|trans }}</h2>
         <form method="get" action="{{ path('cos_unified_business_workspace',{workspaceId:workspace.definition.id}) }}"
               role="search" class="cos-uw__search">
-          <label for="cos-uw-business-q">Знайти сутність у вибраному контексті</label>
+          <label for="cos-uw-business-q">{{ 'uw.business.filter_label'|trans }}</label>
           <input id="cos-uw-business-q" name="q" type="search" maxlength="120" value="{{ query }}" class="cos-input">
           <div class="cos-uw__row">
-            <label for="cos-uw-sort">Сортувати</label>
+            <label for="cos-uw-sort">{{ 'uw.business.sort'|trans }}</label>
             <select id="cos-uw-sort" class="cos-input" name="sort">
-              <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>За релевантністю</option>
-              <option value="label" {% if sort == 'label' %}selected{% endif %}>За назвою</option>
+              <option value="relevance" {% if sort == 'relevance' %}selected{% endif %}>{{ 'uw.business.relevance'|trans }}</option>
+              <option value="label" {% if sort == 'label' %}selected{% endif %}>{{ 'uw.business.name'|trans }}</option>
             </select>
-            <label for="cos-uw-view">Вигляд</label>
+            <label for="cos-uw-view">{{ 'uw.business.view'|trans }}</label>
             <select id="cos-uw-view" class="cos-input" name="view">
-              <option value="list" {% if view == 'list' %}selected{% endif %}>Список</option>
-              <option value="cards" {% if view == 'cards' %}selected{% endif %}>Картки</option>
+              <option value="list" {% if view == 'list' %}selected{% endif %}>{{ 'uw.business.list'|trans }}</option>
+              <option value="cards" {% if view == 'cards' %}selected{% endif %}>{{ 'uw.business.cards'|trans }}</option>
             </select>
-            <button class="cos-button cos-button--primary" type="submit">Знайти</button>
+            <button class="cos-button cos-button--primary" type="submit">{{ 'uw.common.find'|trans }}</button>
           </div>
         </form>
         {% if savedViews is not empty %}
-          <nav class="cos-uw__saved" aria-label="Збережені пошукові вигляди" data-cos-saved-views>
+          <nav class="cos-uw__saved" aria-label="{{ 'uw.business.saved'|trans }}" data-cos-saved-views>
             {% for saved in savedViews %}
               <div class="cos-uw__saved-entry" data-cos-saved-view="{{ saved.id }}">
                 <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{
@@ -52,7 +52,7 @@
                   <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
                   <input type="hidden" name="operation" value="delete">
                   <input type="hidden" name="view_id" value="{{ saved.id }}">
-                  <button class="cos-button cos-button--ghost" type="submit" aria-label="Видалити збережений вигляд {{ saved.name }}">Видалити</button>
+                  <button class="cos-button cos-button--ghost" type="submit" aria-label="{{ 'uw.business.delete_aria'|trans }} {{ saved.name }}">{{ 'uw.business.delete'|trans }}</button>
                 </form>
               </div>
             {% endfor %}
@@ -66,19 +66,19 @@
             <input type="hidden" name="q" value="{{ query }}">
             <input type="hidden" name="sort" value="{{ sort }}">
             <input type="hidden" name="view" value="{{ view }}">
-            <label for="cos-uw-save-name">Зберегти цей фільтр</label>
+            <label for="cos-uw-save-name">{{ 'uw.business.save_label'|trans }}</label>
             <input id="cos-uw-save-name" name="name" class="cos-input" maxlength="50" required
-                   placeholder="Назва вигляду">
-            <button class="cos-button cos-button--ghost" type="submit">Зберегти</button>
+                   placeholder="{{ 'uw.business.save_placeholder'|trans }}">
+            <button class="cos-button cos-button--ghost" type="submit">{{ 'uw.business.save'|trans }}</button>
           </form>
         {% endif %}
         {% if query is empty %}
-          <p class="cos-card__copy">Введіть запит або відкрийте повний Domain Workspace. Порожній пошук не вигадує записи.</p>
+          <p class="cos-card__copy">{{ 'uw.business.empty_query'|trans }}</p>
         {% elseif not searchAvailable %}
-          <p class="cos-alert" role="alert">Дані зараз недоступні. Перевірка не завершена, тому результат пошуку не підтверджений.</p>
+          <p class="cos-alert" role="alert">{{ 'uw.business.read_error'|trans }}</p>
         {% else %}
           <p class="cos-card__copy" role="status" data-cos-result-count>
-            Підтверджених записів у поточній обмеженій вибірці: {{ results|length }}
+            {{ 'uw.business.result_count'|trans }} {{ results|length }}
           </p>
           <div class="cos-uw__entities {{ view == 'cards' ? 'cos-uw__entities--cards' : '' }}" data-cos-business-results>
           {% for hit in results %}
@@ -88,62 +88,62 @@
               <div class="cos-uw__row">
                 <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{
                     workspaceId:workspace.definition.id,q:query,sort:sort,view:view,selected:hit.entity.key()
-                }) }}">Контекст</a>
-                <a class="cos-button cos-button--ghost" href="{{ hit.path }}">Відкрити запис</a>
+                }) }}">{{ 'uw.business.entity_context'|trans }}</a>
+                <a class="cos-button cos-button--ghost" href="{{ hit.path }}">{{ 'uw.business.open_entity'|trans }}</a>
               </div>
             </article>
           {% else %}
-            <div class="cos-card" role="status">Знайдених і підтверджених записів немає.</div>
+            <div class="cos-card" role="status">{{ 'uw.business.no_results'|trans }}</div>
           {% endfor %}
           </div>
         {% endif %}
       </section>
       {% if selectionDenied %}
-        <div class="cos-alert" role="alert">Запитаний запис не підтверджений у поточному tenant та фільтрі.</div>
+        <div class="cos-alert" role="alert">{{ 'uw.business.selection_denied'|trans }}</div>
       {% elseif selected %}
         <section class="cos-card" aria-labelledby="cos-uw-selected" data-cos-selected-entity="{{ selected.key() }}">
-          <p class="cos-card__eyebrow">Підтверджений EntityRef</p>
+          <p class="cos-card__eyebrow">{{ 'uw.business.verified'|trans }}</p>
           <h2 id="cos-uw-selected" class="cos-card__title">{{ selectedHit.label }}</h2>
           <p class="cos-card__copy">{{ selectedHit.subtitle }}</p>
-          <p class="cos-card__copy">Ідентифікатор: <code>{{ selected.key() }}</code></p>
-          {% if selectedUrl %}<a class="cos-button cos-button--primary" href="{{ selectedUrl }}">Відкрити канонічний запис</a>{% endif %}
+          <p class="cos-card__copy">{{ 'uw.business.identifier'|trans }} <code>{{ selected.key() }}</code></p>
+          {% if selectedUrl %}<a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>{% endif %}
         </section>
       {% endif %}
       <section class="cos-card" aria-labelledby="cos-uw-business-activity">
-        <h2 id="cos-uw-business-activity" class="cos-card__title">Активність організації</h2>
-        <p class="cos-card__copy">Події scoped до організації, а не до вибраного запису.</p>
+        <h2 id="cos-uw-business-activity" class="cos-card__title">{{ 'uw.business.activity'|trans }}</h2>
+        <p class="cos-card__copy">{{ 'uw.business.activity_scope'|trans }}</p>
         {% if activityAvailable %}
           <div class="cos-uw__results">
           {% for event in activity %}
             <article class="cos-uw__entity">
               <strong>{{ event.label }}</strong>
               <p class="cos-card__copy">{{ event.status }} · {{ event.detail|default('') }}</p>
-              {% if event.path and event.path starts with '/' and not (event.path starts with '//') %}<a href="{{ event.path }}">Переглянути</a>{% endif %}
+              {% if event.path and event.path starts with '/' and not (event.path starts with '//') %}<a href="{{ event.path }}">{{ 'uw.business.view_activity'|trans }}</a>{% endif %}
             </article>
           {% else %}
-            <p class="cos-card__copy">Активності зараз немає.</p>
+            <p class="cos-card__copy">{{ 'uw.business.no_activity'|trans }}</p>
           {% endfor %}
           </div>
         {% else %}
-          <p class="cos-card__copy" role="status">Зараз неможливо підтвердити активність, потрібне повторне читання.</p>
+          <p class="cos-card__copy" role="status">{{ 'uw.business.activity_error'|trans }}</p>
         {% endif %}
       </section>
     </div>
-    <aside class="cos-page__stack" aria-label="Контекст та дії">
+    <aside class="cos-page__stack" aria-label="{{ 'uw.business.context_actions'|trans }}">
       <section class="cos-card">
-        <h2 class="cos-card__title">Доступні дії</h2>
+        <h2 class="cos-card__title">{{ 'uw.business.actions'|trans }}</h2>
         {% for action in workspace.primaryActions %}
           <div class="cos-uw__action">
-            <strong>{{ action.label }}</strong>
-            <small>{{ action.enabled ? 'Відкрийте відповідний Domain Workspace для виконання' : action.disabledReason }}</small>
+            <strong>{{ action.label|trans }}</strong>
+            <small>{{ action.enabled ? ('uw.business.open_domain_action'|trans) : (action.disabledReason|trans) }}</small>
           </div>
         {% else %}
-          <p class="cos-card__copy">Контекстних дій поки немає.</p>
+          <p class="cos-card__copy">{{ 'uw.business.no_actions'|trans }}</p>
         {% endfor %}
         <a class="cos-button cos-button--ghost" href="{{ workspace.definition.path }}">Domain Workspace</a>
       </section>
       {% if workspace.hasSlot('sidebar') %}
-        <section class="cos-card" aria-label="Розширення контексту">
+        <section class="cos-card" aria-label="{{ 'uw.business.side_extensions'|trans }}">
           {% for ext in workspace.extensions('sidebar') %}
             {% set extContext=ext.props|merge({'workspace':workspace}) %}
             {% include ext.template with extContext only %}
@@ -151,10 +151,9 @@
         </section>
       {% endif %}
       <section class="cos-card" role="status">
-        <h2 class="cos-card__title">Процес та AI</h2>
-        <p class="cos-card__copy">Без перевіреного Agent Runtime ці вкладки не запускають дій.
-          Прогрес і підтвердження слід перевіряти в Operations Center.</p>
-        <a class="cos-button cos-button--ghost" href="/cos/control-center">Перейти до операцій</a>
+        <h2 class="cos-card__title">{{ 'uw.business.process_ai'|trans }}</h2>
+        <p class="cos-card__copy">{{ 'uw.business.ai_unverified'|trans }}</p>
+        <a class="cos-button cos-button--ghost" href="/cos/control-center">{{ 'uw.business.go_operations'|trans }}</a>
       </section>
     </aside>
   </div>

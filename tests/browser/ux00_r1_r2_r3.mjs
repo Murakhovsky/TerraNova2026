@@ -518,6 +518,16 @@ try {
   assert(await page.locator('[data-cos-saved-view]').count()===0
     && sqlCount(assetId)===1,'UX03 delete leaked view or touched business Domain');
   add('UX03.saved_query_remove_no_domain_write',{native_rows:1});
+  // UX-03 translated domain labels from provider names and UI-only content.
+  await page.locator('#cos-shell-locale').selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-business] h1').innerText()).trim()
+      ==='Property Workspace','UX03: Workspace heading not localized in English');
+  assert((await page.locator('#cos-uw-business-search').innerText()).trim()
+      ==='Records and search','UX03: business query controls not translated');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  add('UX03.business_workspace_uk_en_locale',{locales:['en','uk']});
 
   // UX-03 mobile parity: real Property and Sales workspaces at phone width,
   // no horizontal document clipping and no implicit Action/Domain mutation.

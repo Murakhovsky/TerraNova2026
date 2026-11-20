@@ -25,3 +25,7 @@ UX-03 реалізує обмежені до десяти персональні
 ## Негативне приймання прав
 
 Authenticated користувач із роллю buyer і валідним CSRF має отримати HTTP 403 як на читання менеджерського Business Workspace, так і на збереження персонального Workspace filter; native Property rows мають залишитися незмінними. Це окремий E2E сценарій, а не висновок зі статичного UI hiding.
+
+## Мовне приймання бізнесових контекстів
+
+Збережено всі server-side Business Workspace дані та UI translations у наявному Symfony Translator. `WorkspaceDefinition.label` перекладається як presentation-only lookup; доменні дані клієнта, адреси, ліди, документи не перекладаються. Playwright перевіряє UK/EN з наявним серверним locale switch і тим самим authenticated tenant.
