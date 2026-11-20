@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "standard": "DAS-001",
+  "purpose": "Regression ceilings. A reviewed change must update the baseline explicitly; counts are not execution proofs.",
+  "domains": {
+    "capital_markets": {
+      "min_typed": 1,
+      "max_descriptive_only": 38,
+      "max_process_gaps": 0
+    },
+    "construction": {
+      "min_typed": 0,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
+    },
+    "diagnostic": {
+      "min_typed": 0,
+      "max_descriptive_only": 5,
+      "max_process_gaps": 7
+    },
+    "documents": {
+      "min_typed": 3,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
+    },
+    "federation": {
+      "min_typed": 1,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
+    },
+    "finance": {
+      "min_typed": 8,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
+    },
+    "growth": {
+      "min_typed": 4,
+      "max_descriptive_only": 88,
+      "max_process_gaps": 0
+    },
+    "hr": {
+      "min_typed": 0,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
+    },
+    "procurement": {
+      "min_typed": 0,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
+    },
+    "property": {
+      "min_typed": 5,
+      "max_descriptive_only": 20,
+      "max_process_gaps": 0
+    },
+    "real_estate": {
+      "min_typed": 0,
+      "max_descriptive_only": 6,
+      "max_process_gaps": 0
+    },
+    "sales": {
+      "min_typed": 2,
+      "max_descriptive_only": 10,
+      "max_process_gaps": 12
+    },
+    "service": {
+      "min_typed": 0,
+      "max_descriptive_only": 7,
+      "max_process_gaps": 0
+    },
+    "product_management": {
+      "min_typed": 28,
+      "max_descriptive_only": 0,
+      "max_process_gaps": 0
+    },
+    "marketing": {
+      "min_typed": 6,
+      "max_descriptive_only": 7,
+      "max_process_gaps": 0
+    }
+  }
+}

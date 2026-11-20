@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "status",
+    "provider",
+    "grain",
+    "currency",
+    "source_reported_spend_decimal",
+    "source_count",
+    "unverified_count",
+    "finance_expense_confirmed",
+    "invoice_reconciled",
+    "budget_exposure_coverage_confirmed"
+  ],
+  "properties": {
+    "status": {
+      "type": "string"
+    },
+    "provider": {
+      "type": "string"
+    },
+    "grain": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "source_reported_spend_decimal": {
+      "type": "string"
+    },
+    "source_count": {
+      "type": "integer"
+    },
+    "unverified_count": {
+      "type": "integer"
+    },
+    "finance_expense_confirmed": {
+      "type": "boolean"
+    },
+    "invoice_reconciled": {
+      "type": "boolean"
+    },
+    "budget_exposure_coverage_confirmed": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": true
+}
