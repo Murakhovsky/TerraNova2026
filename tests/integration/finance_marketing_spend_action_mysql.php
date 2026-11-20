@@ -148,4 +148,54 @@ $ledger->execute([$org,'SUCCEEDED']);$check((int)$ledger->fetchColumn()===2,
 $budgets=$db->prepare('SELECT COUNT(*) FROM cos_finance_budget_reservations WHERE organization_id=?');
 $budgets->execute([$org]);$check((int)$budgets->fetchColumn()===0,
     'Source-only Finance Action created a budget reservation.');
+
+// Two independent MySQL connections must not let one idempotency key be
+// claimed twice while the first writer's source intent is row-locked.
+$dbOther=new PDO(sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+    getenv('DB_HOST')?:'127.0.0.1',getenv('DB_PORT')?:'3306',getenv('DB_DATABASE')?:'cos'),
+    getenv('DB_USERNAME')?:'cos',getenv('DB_PASSWORD')?:'',
+    [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+$dbOther->exec('SET SESSION innodb_lock_wait_timeout=1');
+$otherIntents=new MysqlFinanceMarketingSpendActionIntentRepository($dbOther);
+$db->beginTransaction();
+try {
+    $held=$db->prepare('SELECT idempotency_key
+        FROM cos_finance_spend_import_action_intents
+        WHERE organization_id=? AND idempotency_key=? FOR UPDATE');
+    $held->execute([$org,$keyV2]);
+    $check($held->fetchColumn()===$keyV2,'Finance approved intent was not lockable.');
+    $contended=false;
+    try{
+        $otherIntents->claim($org,$keyV2,$id,$sourceId,2,$new['source_hash']);
+    }catch(PDOException){$contended=true;}
+    $check($contended,'Independent connection bypassed Finance Action intent row lock.');
+    $check(!$dbOther->inTransaction(),'Contending Finance Action writer leaked a transaction.');
+}finally{
+    if($db->inTransaction())$db->rollBack();
+}
+$afterRelease=$otherIntents->claim($org,$keyV2,$id,$sourceId,2,$new['source_hash']);
+$check($afterRelease['state']==='SUCCEEDED'
+    &&$afterRelease['finance_observation_id']===$first->data['finance_observation_ref'],
+    'After lock release Finance Action did not replay exact approved receipt.');
+
+// An interrupted CLAIMED attempt is recoverable with the same source fingerprint,
+// but cannot mutate another source or skip its source version pinning.
+$recoverKey='approved-source-recovery-0003';
+$claimed=$otherIntents->claim($org,$recoverKey,$id,$sourceId,2,$new['source_hash']);
+$check($claimed['state']==='CLAIMED','Recovery fixture did not create an immutable Action claim.');
+$deniedConflict=false;
+try{$otherIntents->claim($org,$recoverKey,$id,$sourceId,1,$expected['source_hash']);}
+catch(DomainException){$deniedConflict=true;}
+$check($deniedConflict,'Incomplete Action intent was repurposed for a different approved version.');
+$recovered=$handler->execute($make($org,$recoverKey,[
+    ...$params,'expected_source_revision'=>2,'expected_source_hash'=>$new['source_hash']
+],$sourceId));
+$check($recovered->successful
+    &&$recovered->data['finance_observation_ref']===$first->data['finance_observation_ref'],
+    'Canonical Action could not recover an interrupted identical source-intent claim.');
+$q->execute([$org,$recoverKey]);$recoveredIntent=$q->fetch(PDO::FETCH_ASSOC);
+$check($recoveredIntent['state']==='SUCCEEDED','Recovered Action lacks a durable completion receipt.');
+$events->execute([$org]);$check((int)$events->fetchColumn()===2,
+    'Recovering an already observed provider revision created a duplicate Finance event.');
+
 echo "Finance approved Action real MySQL, Policy ApprovalRequired, pinned revisions, durable idempotency and tenant fences PASS\n";
