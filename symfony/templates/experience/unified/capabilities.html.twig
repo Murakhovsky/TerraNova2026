@@ -9,6 +9,13 @@
       Реєстрація команди не означає її виконання.</p>
     <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_home') }}">Робочі простори</a>
   </header>
+  {% if notice %}
+    <div class="cos-alert" role="alert">
+      {% if notice == 'invalid' %}Дані або права не пройшли перевірку. Запис не підтверджено.
+      {% elseif notice == 'unverified' %}Результат потребує незалежної перевірки. Не повторюйте команду без звірки.
+      {% else %}Операція недоступна. Перевірте поточний стан Property перед новою спробою.{% endif %}
+    </div>
+  {% endif %}
   <section class="cos-uw__grid" aria-label="Доступні можливості" data-cos-operation-catalog>
   {% for op in operations %}
     <article class="cos-card" data-cos-operation-id="{{ op.id }}" data-cos-operation-ready="{{ op.ui_ready ? 'yes' : 'no' }}">
@@ -33,6 +40,7 @@
     <form method="post" action="{{ path('cos_capabilities_property_create') }}" class="cos-uw__search">
       <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
       <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
+      <input type="hidden" name="return_to" value="unified">
       <label for="cos-uw-kind">Тип об'єкта</label>
       <input id="cos-uw-kind" name="type_code" class="cos-input" value="house" required maxlength="200">
       <label for="cos-uw-city">Місто</label>

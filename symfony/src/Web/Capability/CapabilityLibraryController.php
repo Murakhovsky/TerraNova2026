@@ -69,6 +69,8 @@ final readonly class CapabilityLibraryController
         $actor = $this->tenants->current();
         if ($actor === null) return new RedirectResponse('/auth/login');
         if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF token.', 400);
+        $unified = (string)$request->request->get('return_to','') === 'unified';
+        $failureBase = $unified ? '/workspace/unified/actions' : '/workspace/capabilities';
         $key = trim((string) $request->request->get('idempotency_key', ''));
         $input = [
             'type_code'=>trim((string)$request->request->get('type_code', '')),
@@ -82,7 +84,7 @@ final readonly class CapabilityLibraryController
         if ($area !== '') {
             if (!is_numeric($area) || !is_finite((float)$area)
                 || (float)$area < 0 || (float)$area > 1000000) {
-                return new RedirectResponse('/workspace/capabilities?notice=invalid',303);
+                return new RedirectResponse($failureBase.'?notice=invalid',303);
             }
             $input['area_total']=(float)$area;
         }
@@ -96,16 +98,17 @@ final readonly class CapabilityLibraryController
             $assetId=$result['asset']['asset_id'] ?? $result['property']['asset_id'] ?? null;
             if (!is_string($assetId) || !preg_match('/^PROP-[A-F0-9]{20}$/D',$assetId)) {
                 // A Domain result without a verifiable reference is NOT success.
-                return new RedirectResponse('/workspace/capabilities?notice=unverified',303);
+                return new RedirectResponse($failureBase.'?notice=unverified',303);
             }
             return new RedirectResponse(
-                '/workspace/capabilities?reference='.rawurlencode($assetId),303
+                ($unified ? '/workspace/unified/property' : '/workspace/capabilities')
+                    .'?reference='.rawurlencode($assetId),303
             );
         } catch (DomainException|\InvalidArgumentException) {
-            return new RedirectResponse('/workspace/capabilities?notice=invalid',303);
+            return new RedirectResponse($failureBase.'?notice=invalid',303);
         } catch (Throwable $error) {
             error_log('cos.capability.ui.property.create_failed '.$error->getMessage());
-            return new RedirectResponse('/workspace/capabilities?notice=unavailable',303);
+            return new RedirectResponse($failureBase.'?notice=unavailable',303);
         }
     }
 }
