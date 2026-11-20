@@ -195,6 +195,34 @@ try {
   add('R1.positive_search_read_and_foreign_tenant_db_denial',
     { asset_id: assetId, foreign_asset: foreignAssetId });
 
+  // S1-M: Mobile is a real read-only Property UI, not merely a resized
+  // desktop screenshot. No new Command, Action, Run, or native write.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileRead = await page.goto(abs('/workspace/capabilities?reference=' + assetId),
+    { waitUntil: 'networkidle' });
+  assert(mobileRead?.status() === 200, 'S1-M: native Property mobile read unavailable');
+  const mobileVerified = page.locator('.cos-alert--success').first();
+  assert(await mobileVerified.isVisible()
+    && (await mobileVerified.innerText()).includes(assetId),
+    'S1-M: mobile read lacks actual tenant-scoped Property evidence');
+  const mobileForm = page.locator('form[action="/workspace/capabilities/property/create"]');
+  const mobileSubmit = mobileForm.locator('button[type="submit"]');
+  assert(await mobileForm.isVisible() && await mobileSubmit.isVisible(),
+    'S1-M: mobile Property action entry cannot be reached');
+  const mobileGeometry = await mobileSubmit.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, width: window.innerWidth };
+  });
+  assert(mobileGeometry.left >= -1 && mobileGeometry.right <= mobileGeometry.width + 1,
+    'S1-M: primary action is horizontally clipped on mobile');
+  assert(sqlCount(assetId) === 1, 'S1-M: mobile reading created a native Property duplicate');
+  await page.screenshot({ path: evidenceDir + '/property-mobile-read.png',
+    animations: 'disabled' });
+  add('S1.mobile_verified_property_read_and_action_access', {
+    asset_id: assetId, viewport: '390x844', native_rows: 1,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+
   // R3 UI. Upload rejects duplicate identities, then stages a bounded
   // real CSV, projects an immutable digest, proposes a Goal/Plan and remains
   // fail-closed without two independent approvals and worker admission.
@@ -374,6 +402,33 @@ try {
   add('R3.pending_deep_link_and_per_item_truth', {
     batch_id: batchId, items: 2, verified: 0, deep_link: deepLink,
   });
+
+  // S3-M: a narrow-screen operator can reopen a pending batch, inspect
+  // both native item statuses and navigate its canonical, tenant-scoped link.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileBatch = await page.goto(abs('/workspace/property/bulk?batch=' + batchId),
+    { waitUntil: 'networkidle' });
+  assert(mobileBatch?.status() === 200, 'S3-M: Property Bulk mobile detail unavailable');
+  const mobileOperation = page.locator('[data-property-bulk-operation="' + batchId + '"]');
+  await mobileOperation.waitFor({ state: 'visible', timeout: 15000 });
+  assert(await mobileOperation.locator('[data-property-bulk-item-pending]').count() === 2
+    && await mobileOperation.locator('[data-property-bulk-item-verified]').count() === 0,
+    'S3-M: mobile view fabricated success or lost item details');
+  const mobileLink = mobileOperation.locator('[data-property-bulk-deep-link]');
+  assert(await mobileLink.isVisible(), 'S3-M: persistent operation link hidden on mobile');
+  await page.screenshot({ path: evidenceDir + '/property-mobile-pending.png',
+    animations: 'disabled' });
+  await mobileLink.click();
+  await page.waitForLoadState('networkidle');
+  const mobileUrl = new URL(page.url());
+  assert(mobileUrl.pathname === '/workspace/property/bulk'
+    && mobileUrl.searchParams.get('batch') === batchId
+    && await page.locator('[data-property-bulk-item-pending]').count() === 2,
+    'S3-M: mobile batch link lost persisted item readback');
+  add('S3.mobile_pending_items_and_deep_link', {
+    batch_id: batchId, viewport: '390x844', pending: 2, verified: 0,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   // R3-P: real two-user Plan approval through the canonical UI + Policy
   // + Approval queue + Federation Action handler. No external Property Action

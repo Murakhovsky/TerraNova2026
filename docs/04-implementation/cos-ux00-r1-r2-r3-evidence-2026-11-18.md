@@ -73,7 +73,17 @@ kind: implementation
 Це тестова CI fixture з opt-in Federation-модулем та активною policy **тільки у disposable MySQL**. Джерело \`tests/fixtures/ui/ux00_plan_approval.sql\` не є міграцією. PASS цього нового сценарію дозволено встановити лише після окремого Runtime на відповідному SHA. Він не підтверджує незалежне погодження зовнішнього Action, його worker admission або завершений Property Run.
 
 
-## 4. Межі доведеної готовності
+## 4. Межі доведеної готовності## 3.4. Mobile acceptance extension (pending exact-head CI)
+
+Додано **два нові Playwright assertions** до наявного `tests/browser/ux00_r1_r2_r3.mjs`:
+
+- `S1.mobile_verified_property_read_and_action_access`: viewport 390×844, реальний tenant-scoped Property readback, доступність кнопки створення без горизонтального обрізання та незмінність кількості native Asset rows.
+- `S3.mobile_pending_items_and_deep_link`: viewport 390×844, два непідтверджені item statuses, нуль помилкових verified позначок, реальний перехід за постійним batch deep link.
+- Артефакти `property-mobile-read.png` і `property-mobile-pending.png` робляться тільки на disposable localhost fixture.
+
+**Evidence policy:** код перевірок не означає PASS. Статус mobile acceptance залишити `PENDING` до успішного Runtime job на *точному новому SHA*. Перевірки не запускають додаткових мутацій і не підміняють staging R3 worker/outcome sign-off.
+
+
 
 | Критерій | Статус |
 |---|---|
