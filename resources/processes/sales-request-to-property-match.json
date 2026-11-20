@@ -23,10 +23,14 @@
       "kind": "operation",
       "owner": "Sales application",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.inbound.request.read",
       "critical": true,
       "runtime": [
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/SalesInboundRequestReadAdapter.php",
+          "symbol": "SalesProposalLeadReadModelInterface"
+        },
         {
           "type": "source",
           "path": "app/Domains/Sales/Application/Service/SalesInboundService.php",

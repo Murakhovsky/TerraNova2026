@@ -27,7 +27,7 @@ generated: true
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
 | Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 0/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
-| Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 1/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
+| Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 2/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
 | Service Request → Ticket Close | `service` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/service-request-to-close.md) |
 
 ## Модель перевірки та можливостей
@@ -50,7 +50,7 @@ generated: true
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
 | Sales Lead → Managed Case | 8/8 | 0/8 | 8/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
-| Sales Request → Property Match | 5/5 | 1/5 | 4/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
+| Sales Request → Property Match | 5/5 | 2/5 | 3/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 | Service Request → Ticket Close | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 6/6 | 0/6 |
 
 ## Market Source → Trusted Market State
@@ -333,7 +333,7 @@ generated: true
 - **Schema:** `v5`
 - **Domain:** `sales`
 - **Бізнес-стан:** `as-is`
-- **Покриття capabilities:** 1/5 кроків
+- **Покриття capabilities:** 2/5 кроків
 - **Cross-domain кроки:** 1/5
 - **Derived verification:** `source-verified`
 - **Тригер:** Sales operator converts an inbound request into a Client Case with referenced Property context
@@ -349,7 +349,7 @@ generated: true
 
 | Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
 | --- | --- | --- | --- | --- | --- | --- |
-| Load inbound request and referenced Property context | Sales application | `sales` | gap: `missing-domain-capability` | `operation` | так | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `createCaseFromRequest(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `inboundRequest(` [source] |
+| Load inbound request and referenced Property context | Sales application | `sales` | `sales.inbound.request.read` | `operation` | так | source `symfony/src/Infrastructure/Capability/SalesInboundRequestReadAdapter.php` · `SalesProposalLeadReadModelInterface` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `createCaseFromRequest(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `inboundRequest(` [source] |
 | Create Client Case and link inbound request | Sales application | `sales` | gap: `missing-domain-capability` | `state` | так | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `createCaseFromRequest(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `createCase(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `attachInboundRequest(` [source] |
 | Resolve canonical Property presentation | Property read boundary | `property` | `property.reference` | `operation` | так | contract `Domains\Property\Contract\PropertyReferencePort` [runtime]<br>source `app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php` · `getPropertyPresentation(` [source] |
 | Record Property Match in Sales | Sales application | `sales` | gap: `missing-domain-capability` | `state` | так | source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `upsertPropertyMatch(` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `PropertyMatchStatus::Interested` [source] |
