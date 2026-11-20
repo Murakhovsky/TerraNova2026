@@ -38,6 +38,6 @@ UX-03 підключає tenant-scoped читання `Sales Client Case → Pro
 
 Вибрану tenant-підтверджену сутність збагачено через Application `BusinessEntitySummaryReadInterface` і наявні Sales Workspace та Property Reference read contracts. UI використовує наявний `CosEntitySummary`, показуючи тільки реально присутні status, stage, owner, next action чи type/address. Немає вигаданих фінансових KPI, відсутні поля приховуються. При збої read model відображається невизначеність, а не вигаданий успіх. Unit/E2E тести включають чужий tenant, неправильний ID та реальний Property selected summary.
 
-## WCAG contrast correction
+## Виправлення контрасту за WCAG
 
 У справжньому 390px axe CI прогоні виявлено одну serious contrast violation на Business Workspace. Активний tab колір `--cos-color-primary` (#5367ff) на білому тлі мав ~4.42:1, трохи нижче 4.5:1 для звичайного тексту. Використано вже наявний `--cos-color-primary-strong` (#3144d8, ~7.12:1) для active tab text/border; темна тема має відповідний семантичний токен. A11y E2E збережено, розширено diagnostics selector/reason, жодного ignore/disable.
