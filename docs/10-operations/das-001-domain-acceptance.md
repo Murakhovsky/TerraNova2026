@@ -10,17 +10,17 @@ kind: operations
 
 Цей runbook не надає доступу й не запускає side effects. Мітка \`UNKNOWN\` не є дефектом: це чесна відсутність незалежних доказів.
 
-## D3 — staging E2E
+## D3 — наскрізне приймання на тестовому середовищі
 1. Закріпити exact commit SHA, staging environment, tenant і scenario. Виконавець тесту не може самостійно схвалювати фінансові або зовнішні Action.
 2. Перевірити ModuleLifecycle для tenant, permissions, versioned capability, schema validation, approved execution origin, actual handler і audit correlation.
 3. Пройти UI/API → Capability → Use Case → durable Workflow/Action (де застосовно) → native Domain persistence → незалежний readback.
 4. Негативні сценарії: cross-tenant, відсутній дозвіл/Approval, duplicate idempotency key, partial external effect, quarantine і recovery.
 5. Незалежний reviewer фіксує performed_at, PASS/FAIL, native rows/result refs та URL до журналу виконання. Лише після цього оновлюється \`readiness.evidence\`.
 
-## D4 — user acceptance
+## D4 — користувацьке приймання
 Той самий exact SHA/environment/tenant + сценарій реального користувача у відповідному Workspace, user signoff, контроль заборонених функцій та відтворювані результати. Перевірити результати для кожного зовнішнього provider окремо.
 
-## D5 — production verified
+## D5 — підтверджена робота у виробничому середовищі
 Виконати контрольований canary у production на погодженому tenant зі справжнім native readback, operational alerting та перевіреною процедурою rollback або безпечного disable. CI green, \`enabled_by_default\`, UUID чи успішний Action status самі по собі не є D5.
 
 ## Запис evidence у Domain Passport

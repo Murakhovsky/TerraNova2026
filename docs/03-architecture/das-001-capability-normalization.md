@@ -6,17 +6,17 @@ updated: 2026-11-20
 kind: architecture
 ---
 
-# DAS-001 P0 — Capability normalization
+# DAS-001 P0 — Нормалізація можливостей доменів
 
 **Джерело істини:** \`docs/.vitepress/capability-debt.json\` (19 items). Ця сторінка визначає критерії закриття, але не дублює перелік кожного процесного gap.
 
-## Sales (12 process gaps)
+## Sales: 12 прогалин у процесах
 
 Послідовність: lead intake → inbox/canonical state → case/owner → pipeline → activity/follow-up → deal outcome, а також request read → client-case creation → Property match → activity events.
 
 Для кожної операції: спочатку підтвердити, чи існує відповідний Sales-owned Use Case/CommandBus/QueryBus, чи потрібна нова реалізація. Далі надати \`input_schema\`, \`output_schema\`, permission, policy, side-effect level, ідемпотентність, execution binding та integration/negative tests. Property лише читається через declared port; Sales не пише у Property persistence.
 
-## Diagnostic (7 process gaps)
+## Diagnostic: 7 прогалин у процесах
 
 Послідовність: methodology management → session start → evidence capture → evaluation → result recording → session completion → recommendation acceptance.
 
