@@ -1,0 +1,23 @@
+# Verified only to contract/declaration level; production/browser DoD remains separate.
+pages:
+  - id: unified.workspace.home
+    route: { name: cos_unified_home, path: "/workspace/unified", methods: [GET, HEAD] }
+    surface: workspace
+    domain: Core
+    capability: unified.workspace.read
+    owner: COS Experience Platform
+    priority: P0
+    status: CONTRACTED
+    personas: [manager, administrator]
+    product:
+      primary_goal: "Знайти доступний бізнес-контекст та прочитати підтверджені дані."
+      page_purpose: "Єдиний вхід до бізнесових Workspace та пошуку."
+    archetype: collection
+    patterns:
+      required: [PageHeader, EntityList, FilterBar]
+      optional: [EmptyState, ErrorState]
+    primary_action: unified.workspace.open
+    states: [normal]
+    responsive: { desktop: canonical, tablet: canonical, mobile: entity_list }
+    qa: { functional: false, visual: false, responsive: false, accessibility: false, human_acceptance: false }
+    quality: { functionality: 0, ux: 0, visual: 0, responsive: 0, accessibility: 0, content: 0 }
