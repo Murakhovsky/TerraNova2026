@@ -373,6 +373,43 @@ try {
   assert(sqlCount(assetId) === 1, 'UX03: Workspace reads mutated native Property');
   add('UX03.sales_property_composition_and_entity_fencing', {asset_id:assetId,foreign_asset:foreignAssetId});
 
+  // UX-03 server-session user filter state: same-name replay is idempotent,
+  // no new Domain/Action/Asset mutation, deletion scoped to current session.
+  const savedName='UX03 CI '+uid;
+  const saveFirst=await admin.request.post(
+    abs('/workspace/unified/business/property.asset/views'), {
+      form:{csrf_token:csrf,operation:'save',name:savedName,q:assetId,
+        view:'cards',sort:'label'},maxRedirects:0,
+    });
+  assert(saveFirst.status()===303,'UX03 saved view refused authorized CSRF');
+  const reopened=await page.goto(abs('/workspace/unified/business/property.asset'),
+    {waitUntil:'networkidle'});
+  assert(reopened?.status()===200
+    && await page.locator('[data-cos-saved-views] [data-cos-saved-view]').count()===1,
+    'UX03 persisted session view not readable');
+  const saved=page.locator('[data-cos-saved-view]').first();
+  const id=await saved.getAttribute('data-cos-saved-view');
+  assert(/^[a-f0-9]{16}$/.test(id||''),'UX03 invalid stable saved view ID');
+  const replayView=await admin.request.post(
+    abs('/workspace/unified/business/property.asset/views'), {
+      form:{csrf_token:csrf,operation:'save',name:savedName,q:assetId,
+        view:'cards',sort:'label'},maxRedirects:0,
+    });
+  assert(replayView.status()===303,'UX03 saved view replay failed');
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-saved-view]').count()===1,
+    'UX03 duplicate saved view produced on replay');
+  add('UX03.saved_query_session_scoped_replay',{id,number:1});
+  const deleteView=await admin.request.post(
+    abs('/workspace/unified/business/property.asset/views'), {
+      form:{csrf_token:csrf,operation:'delete',view_id:id},maxRedirects:0,
+    });
+  assert(deleteView.status()===303,'UX03 saved view delete refused');
+  await page.reload({waitUntil:'networkidle'});
+  assert(await page.locator('[data-cos-saved-view]').count()===0
+    && sqlCount(assetId)===1,'UX03 delete leaked view or touched business Domain');
+  add('UX03.saved_query_remove_no_domain_write',{native_rows:1});
+
   // UX-03 mobile parity: real Property and Sales workspaces at phone width,
   // no horizontal document clipping and no implicit Action/Domain mutation.
   await page.setViewportSize({ width: 390, height: 844 });

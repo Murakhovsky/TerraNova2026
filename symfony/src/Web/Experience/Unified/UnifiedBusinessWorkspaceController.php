@@ -11,6 +11,7 @@ use App\Web\Experience\Workspace\WorkspaceCompositionResolver;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\ShellConnectionState;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
+use App\Security\SessionCsrfValidator;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantPermissions;
 use InvalidArgumentException;
@@ -32,6 +33,7 @@ final readonly class UnifiedBusinessWorkspaceController {
         private WorkspaceCompositionResolver $composition,
         private EntityLinkResolver $links,
         private WorkspaceShellFactory $shells,
+        private SessionCsrfValidator $csrf,
         private Environment $twig,
     ) {}
     public function show(Request $request,string $workspaceId): Response {
@@ -120,6 +122,7 @@ final readonly class UnifiedBusinessWorkspaceController {
             $activityAvailable=false;
             error_log('cos.unified.business.activity_unavailable '.$e->getMessage());
         }
+        $savedViews=$this->loadSavedViews($request,$tenant,$workspaceId);
         $shell=$this->shells->create($tenant,$context,$workspace->definition->label,[
             new ShellBreadcrumb('Робочі простори','/workspace/unified'),
             new ShellBreadcrumb($workspace->definition->label),
@@ -131,9 +134,81 @@ final readonly class UnifiedBusinessWorkspaceController {
             'selected'=>$selected,'selectedHit'=>$selectedHit,'selectedUrl'=>$selectedUrl,
             'activity'=>$activity,'activityAvailable'=>$activityAvailable,
             'selectionDenied'=>$selectedKey!=='' && $selected===null,
+            'savedViews'=>$savedViews,'csrfToken'=>$this->csrf->token($request),
         ]),200,[
             'Content-Type'=>'text/html; charset=UTF-8',
             'Cache-Control'=>'no-store, private','X-Robots-Tag'=>'noindex, nofollow',
         ]);
     }
+    /**
+     * UI-only filter preferences. Never creates a Domain Action or writes
+     * business records. Bound to the server session + actor + organization.
+     */
+    public function saveView(Request $request,string $workspaceId): Response {
+        $tenant=$this->tenants->current();
+        if ($tenant===null) return new RedirectResponse('/auth/login');
+        if (!$tenant->isManager() || !$tenant->allows(TenantPermissions::ACCESS)
+            || !$tenant->allows(TenantPermissions::MANAGE)) return new Response('Forbidden',403);
+        if (!$this->csrf->isValid($request)) return new Response('Invalid CSRF.',403);
+        if (!$request->hasSession()) return new Response('Session unavailable.',400);
+        $context=new WebExtensionContext(
+            organizationId:$tenant->organizationId()->value(),
+            role:$tenant->role()->value(),surface:'workspace',
+            activeSection:'workspaces',activeItem:'unified',
+        );
+        try {
+            $this->composition->resolve($tenant,$context,$workspaceId);
+        } catch (InvalidArgumentException|LogicException) {
+            return new Response('Unknown or unavailable workspace.',404);
+        }
+        $session=$request->getSession();
+        $all=$session->get('cos_uw_saved_views_v1',[]);
+        if (!is_array($all)) $all=[];
+        $bucket=$this->savedViewBucket($tenant,$workspaceId);
+        $views=is_array($all[$bucket]??null) ? $all[$bucket] : [];
+        $action=(string)$request->request->get('operation','save');
+        if ($action==='delete') {
+            $id=(string)$request->request->get('view_id','');
+            if (!preg_match('/^[a-f0-9]{16}$/D',$id)) return new Response('Invalid view reference.',422);
+            unset($views[$id]);
+        } elseif ($action==='save') {
+            $name=trim((string)$request->request->get('name',''));
+            $query=trim((string)$request->request->get('q',''));
+            $sort=(string)$request->request->get('sort','relevance');
+            $view=(string)$request->request->get('view','list');
+            if ($name==='' || mb_strlen($name)>50 || $query==='' || mb_strlen($query)>120
+                || !in_array($sort,['relevance','label'],true)
+                || !in_array($view,['list','cards'],true)) {
+                return new Response('Invalid saved view input.',422);
+            }
+            $id=substr(hash('sha256',mb_strtolower($name)),0,16);
+            if (!isset($views[$id]) && count($views)>=10) {
+                return new Response('Saved view limit reached.',422);
+            }
+            $views[$id]=['id'=>$id,'name'=>$name,'q'=>$query,'sort'=>$sort,'view'=>$view];
+        } else {
+            return new Response('Unknown preference operation.',422);
+        }
+        $all[$bucket]=$views;
+        $session->set('cos_uw_saved_views_v1',$all);
+        return new RedirectResponse(
+            '/workspace/unified/business/'.rawurlencode($workspaceId).'?saved=1',
+            Response::HTTP_SEE_OTHER,
+        );
+    }
+
+    /** @return list<array{id:string,name:string,q:string,sort:string,view:string}> */
+    private function loadSavedViews(Request $request,\Kernel\Tenant\Model\TenantContext $tenant,string $workspaceId): array {
+        if (!$request->hasSession()) return [];
+        $all=$request->getSession()->get('cos_uw_saved_views_v1',[]);
+        if (!is_array($all)) return [];
+        $items=$all[$this->savedViewBucket($tenant,$workspaceId)]??[];
+        return is_array($items) ? array_values(array_filter($items,'is_array')) : [];
+    }
+
+    private function savedViewBucket(\Kernel\Tenant\Model\TenantContext $tenant,string $workspaceId): string {
+        return hash('sha256',$tenant->organizationId()->value().'|'
+            .$tenant->userId()->value().'|'.$workspaceId);
+    }
+
 }

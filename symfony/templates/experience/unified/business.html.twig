@@ -41,6 +41,37 @@
             <button class="cos-button cos-button--primary" type="submit">Знайти</button>
           </div>
         </form>
+        {% if savedViews is not empty %}
+          <nav class="cos-uw__saved" aria-label="Збережені пошукові вигляди" data-cos-saved-views>
+            {% for saved in savedViews %}
+              <div class="cos-uw__saved-entry" data-cos-saved-view="{{ saved.id }}">
+                <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{
+                    workspaceId:workspace.definition.id,q:saved.q,sort:saved.sort,view:saved.view
+                }) }}">{{ saved.name }}</a>
+                <form method="post" action="{{ path('cos_unified_saved_view',{workspaceId:workspace.definition.id}) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                  <input type="hidden" name="operation" value="delete">
+                  <input type="hidden" name="view_id" value="{{ saved.id }}">
+                  <button class="cos-button cos-button--ghost" type="submit" aria-label="Видалити збережений вигляд {{ saved.name }}">Видалити</button>
+                </form>
+              </div>
+            {% endfor %}
+          </nav>
+        {% endif %}
+        {% if query is not empty %}
+          <form method="post" action="{{ path('cos_unified_saved_view',{workspaceId:workspace.definition.id}) }}"
+                class="cos-uw__row" data-cos-save-view-form>
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="operation" value="save">
+            <input type="hidden" name="q" value="{{ query }}">
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="view" value="{{ view }}">
+            <label for="cos-uw-save-name">Зберегти цей фільтр</label>
+            <input id="cos-uw-save-name" name="name" class="cos-input" maxlength="50" required
+                   placeholder="Назва вигляду">
+            <button class="cos-button cos-button--ghost" type="submit">Зберегти</button>
+          </form>
+        {% endif %}
         {% if query is empty %}
           <p class="cos-card__copy">Введіть запит або відкрийте повний Domain Workspace. Порожній пошук не вигадує записи.</p>
         {% elseif not searchAvailable %}

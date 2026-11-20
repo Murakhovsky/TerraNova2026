@@ -6,7 +6,8 @@ $source=$get('symfony/src/Web/Experience/Unified/UnifiedBusinessWorkspaceControl
 $twig=$get('symfony/templates/experience/unified/business.html.twig');
 foreach (['WorkspaceCompositionResolver','WebExtensionCatalog','EntityLinkResolver',
           'TenantPermissions::MANAGE','$hit->entity->type!==$entityType','selectedKey',
-          'activityAvailable','no-store, private'] as $marker) {
+          'activityAvailable','no-store, private','SessionCsrfValidator',
+          'cos_uw_saved_views_v1','savedViewBucket'] as $marker) {
     if (!str_contains($source,$marker)) throw new RuntimeException('UX03 missing: '.$marker);
 }
 foreach (['PDO','Doctrine\\','SELECT ','INSERT ','UPDATE ','/api/v1/','new UIAction('] as $bad) {
