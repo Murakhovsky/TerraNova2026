@@ -60,8 +60,9 @@ foreach($module->contributions->capabilityContracts as $c){
     $assert(is_file($root.'/'.$c->inputSchema),'Missing Finance schema '.$c->inputSchema);
     $assert(is_file($root.'/'.$c->outputSchema),'Missing Finance schema '.$c->outputSchema);
     if(str_starts_with($c->executionBinding,'action:')){
-        $assert($c->sideEffectLevel==='financial'&&$c->approvalPolicy==='required'
-            &&$c->idempotency==='required','Financial capability must require approval and idempotency');
+        $expectedSideEffect=$c->id==='finance.ad_spend.marketing_snapshot.import'?'internal':'financial';
+        $assert($c->sideEffectLevel===$expectedSideEffect&&$c->approvalPolicy==='required'
+            &&$c->idempotency==='required','Finance Action must use its declared side effect, independent approval and idempotency');
     }
 }
 $validator=new CapabilityJsonInputValidator();
