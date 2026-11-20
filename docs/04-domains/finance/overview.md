@@ -2,9 +2,9 @@
 title: Огляд домену Finance
 description: Канонічний фінансовий домен COS із контрольованими бюджетами, резервами та незалежним погодженням операцій.
 status: draft
-updated: 2026-11-19
+updated: 2026-11-20
 kind: domain
-version: 0.2.2
+version: 0.2.3
 contract: domain-v1
 ---
 
@@ -67,6 +67,18 @@ Finance приймає й зберігає **окремий журнал спо�
 Сервіс `FinanceMarketingSpendReadbackService` перевіряє manager і tenant permissions, точні ID `mads-`/`mis-`, форму джерела й прив'язку account/snapshot, після чого зберігає лише Finance observation з provenance `UNVERIFIED_SOURCE`. Повтор з тієї ж source revision повертає існуючий результат, revision correction оновлює доказ та додає event без дублювання spend. Витрату `Expense` і фінансові `committed_minor` це **не** змінює.
 
 `tests/integration/finance_marketing_spend_readback_mysql.php` перевіряє обидва домени на одній MySQL: справжню взаємодію Market read model → Finance ledger, replay, корекції, cross-tenant, чужий account, незалежний status і відсутність provider network write. Модулі лишаються вимкненими за замовчуванням, а API/agent/CRON ingress не реєструвався. Потрібні окремий canonical command/action із джерельною ідемпотентністю, D3 staging та незалежне приймання #435/#436/#440 перед експлуатацією.
+
+## Керований імпорт джерела як Finance Action (F1.3, D2)
+
+`finance.ad_spend.marketing_snapshot.import` оголошено як **canonical Kernel Action**, а не як пряму `command:` або HTTP мутацію. Finance Domain власноруч реєструє Action handler і tenant-scoped `ActionPolicy::ApprovalRequired`: незалежне погодження перед виконанням забезпечується Kernel Action/Policy/Approval runtime. Під час перевірки цього зрізу імпортується тільки `UNVERIFIED_SOURCE`, жодного Expense, Settlement, Meta write чи зміни Budget.
+
+**Approved input:** точні `ad_account_ref` і `source_snapshot_ref`, `expected_source_revision` (integer), `expected_source_hash` (SHA-256). Action target type має бути `marketing_spend_snapshot` і target ID має точно збігатися зі snapshot ref. В організацію та суму втручатися через input не можна: `organizationId` бере лише Kernel Action, а source amount/window/currency визначає поточний Marketing repository readback.
+
+**Source fence:** якщо Marketing змінив `source_revision` або `source_hash` після погодження, стара дія завершується відмовою без імпорту нової суми. Для виправленої ревізії потрібен **новий Action і нове незалежне погодження**. Marketing readback залишається обмеженим власними tenant/account/grain/provider ідентифікаторами.
+
+**Finance idempotency:** таблиця `cos_finance_spend_import_action_intents` має PK `(organization_id,idempotency_key)`, зберігає точні account+snapshot+revision+hash та `CLAIMED/SUCCEEDED`. Повтор успішного Action повертає початковий зафіксований receipt навіть після пізнішої зміни Marketing source. Спроба використати той самий ключ для іншого snapshot/revision/hash відхиляється. Після неоднозначної помилки `CLAIMED` може повторити тільки той самий source version; Finance source ledger окремо захищений від дублікатів.
+
+**Контроль:** `tests/unit/finance_marketing_spend_action.php` і `tests/integration/finance_marketing_spend_action_mysql.php` перевіряють schema, policy декларацію, інтеграцію Action handler і джерела через MySQL, source pinning, повтор та ізоляцію організацій. CI підтверджує лише **D2**: незалежне staging-погодження/людське приймання (D3/D4), production (D5), а також повна перевірка фактичного Meta account ще відкриті. Модулі за замовчуванням вимкнені.
 
 ## Відкладені залежності для Marketing
 

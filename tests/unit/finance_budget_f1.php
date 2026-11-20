@@ -53,7 +53,7 @@ $manifest=require $root.'/app/Domains/Finance/module.php';
 $module=ModuleDefinition::fromArray($manifest);
 $assert($module->manifest->id==='finance'&&!$module->manifest->enabledByDefault,'Finance F1 must be disabled by default');
 $assert($module->contributions->runtimeModuleService==='financeDomainModule','Finance F1 missing runtime owner');
-$assert(count($module->contributions->capabilityContracts)===8,'Expected seven budget and one evidence-read Finance capabilities');
+$assert(count($module->contributions->capabilityContracts)===9,'Expected seven budget, one evidence-read and one approved source import Finance capabilities');
 $typed=[];
 foreach($module->contributions->capabilityContracts as $c){
     $typed[$c->id]=$c;
@@ -78,5 +78,10 @@ try{
 }catch(DomainException){$schemaBlocked=true;}
 $assert($schemaBlocked??false,'Finance schema must reject floats');
 $assert(in_array('finance.budget.reservation.release',$manifest['contributions']['capabilities'],true),'Finance release unavailable');
+$approvedEvidence=$typed['finance.ad_spend.marketing_snapshot.import']??null;
+$assert($approvedEvidence!==null&&$approvedEvidence->kind==='command'
+    &&$approvedEvidence->executionBinding==='action:finance.ad_spend.marketing_snapshot.import'
+    &&$approvedEvidence->approvalPolicy==='required'&&$approvedEvidence->idempotency==='required',
+    'Source observation import must remain a canonical approved Finance Action, not an unguarded command.');
 echo "Finance F1 bounded amounts, approval schemas and capability contracts PASS\n";
 
