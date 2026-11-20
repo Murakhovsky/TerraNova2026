@@ -601,7 +601,10 @@ try {
       ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze();
     const critical=scan.violations.filter(v=>['critical','serious'].includes(v.impact));
     assert(critical.length===0,'UX03 '+target.id+' WCAG serious violations: '
-      +JSON.stringify(critical.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.length}))));
+      +JSON.stringify(critical.map(v=>({
+        id:v.id,impact:v.impact,
+        nodes:v.nodes.slice(0,4).map(n=>({target:n.target,reason:n.failureSummary}))
+      }))));
     const duration=await page.evaluate(
       ()=>performance.getEntriesByType('navigation')[0]?.duration ?? 0);
     assert(Number.isFinite(duration)&&duration>=0&&duration<15000,

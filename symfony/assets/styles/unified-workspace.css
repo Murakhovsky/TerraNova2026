@@ -11,7 +11,7 @@
 @media(max-width:650px){.cos-uw__appearance{margin-inline-start:0}.cos-uw__result{flex-direction:column;align-items:flex-start}}
 
 .cos-uw__tabs{display:flex;gap:var(--cos-space-2);flex-wrap:wrap;overflow:auto}
-.cos-uw__tabs [aria-current="page"]{border-color:var(--cos-color-primary);color:var(--cos-color-primary)}
+.cos-uw__tabs [aria-current="page"]{border-color:var(--cos-color-primary-strong);color:var(--cos-color-primary-strong)}
 .cos-uw__business-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(17rem,1fr);gap:var(--cos-space-5);align-items:start}
 .cos-uw__entities{display:grid;gap:var(--cos-space-3)}
 .cos-uw__entities--cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))}
