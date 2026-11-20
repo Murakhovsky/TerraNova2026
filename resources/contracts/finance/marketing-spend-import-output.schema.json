@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "status",
+    "finance_observation_ref",
+    "source_snapshot_ref",
+    "source_revision",
+    "idempotent_replay",
+    "finance_expense_confirmed",
+    "budget_mutated",
+    "source_verified_by_provider"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "const": "SOURCE_OBSERVATION_UNRECONCILED"
+    },
+    "finance_observation_ref": {
+      "type": "string",
+      "pattern": "^fins-[a-f0-9]{24}$"
+    },
+    "source_snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    },
+    "source_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "idempotent_replay": {
+      "type": "boolean"
+    },
+    "finance_expense_confirmed": {
+      "type": "boolean",
+      "const": false
+    },
+    "budget_mutated": {
+      "type": "boolean",
+      "const": false
+    },
+    "source_verified_by_provider": {
+      "type": "boolean",
+      "const": false
+    }
+  },
+  "additionalProperties": false
+}
