@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__,2).'/vendor/autoload.php';
+$root=dirname(__DIR__,2);
+require $root.'/vendor/autoload.php';
+spl_autoload_register(static function(string $class) use ($root): void {
+    if (!str_starts_with($class,'App\\')) return;
+    $path=$root.'/symfony/src/'.str_replace('\\','/',substr($class,4)).'.php';
+    if (is_file($path)) require $path;
+});
 
 use App\Infrastructure\Experience\Relations\SalesPropertyRelatedEntityRead;
 use Domains\Sales\Application\Contract\ClientCaseReadModelFactoryInterface;
