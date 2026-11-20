@@ -91,7 +91,9 @@ final readonly class CapabilityLibraryController
                 $actor,'property.asset.create',$input,'human_ui',
                 $key,CorrelationId::generate()->value(),
             );
-            $assetId=$result['asset']['asset_id'] ?? null;
+            // Idempotent replay reads the same native Asset via PropertyReferencePort.
+            // Its read-model shape is `property`, not the fresh Command's `asset`.
+            $assetId=$result['asset']['asset_id'] ?? $result['property']['asset_id'] ?? null;
             if (!is_string($assetId) || !preg_match('/^PROP-[A-F0-9]{20}$/D',$assetId)) {
                 // A Domain result without a verifiable reference is NOT success.
                 return new RedirectResponse('/workspace/capabilities?notice=unverified',303);

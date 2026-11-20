@@ -51,6 +51,10 @@ $check(str_contains($form,"'property.asset.create'") && str_contains($form,"'pro
     'Canonical Property form must reuse Gateway, CSRF and independent read.');
 $check(str_contains($get('symfony/config/routes.yaml'),'cos_capabilities_property_create'),
     'Property form route missing.');
+$services=$get('symfony/config/services.yaml');
+$check(str_contains($services, 'App\\Web\\Capability\\CapabilityLibraryController:')
+    && preg_match('/App\\\\Web\\\\Capability\\\\CapabilityLibraryController:\\s*public:\\s*true\\s*tags:\\s*\\[\x27controller\\.service_arguments\x27\\]/', $services) === 1,
+    'Capability Library route controller must be a public Symfony controller service.');
 $check(!str_contains($gateway,'PDO')&&!str_contains($gateway,'ActionExecutor'),
     'Parallel execution authority not permitted.');
 echo "Canonical capability library contract PASS.\n";
