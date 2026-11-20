@@ -279,9 +279,11 @@ try {
         maxRedirects: 0,
       });
     const deniedResult = await deniedMutation.json();
-    assert(deniedMutation.status() === 422
-      && deniedResult.error === 'invocation_blocked',
-      'S2-N: buyer Capability API mutation was not denied by Domain Gateway');
+    // /api/v1 is guarded by ROLE_MANAGER at Symfony access_control,
+    // while the human Web form independently checks Domain Gateway policy.
+    assert(deniedMutation.status() === 403
+      && deniedResult.ok === false,
+      'S2-N: buyer API mutation escaped Symfony role access control');
     const deniedForm = await restrictedCtx.request.post(
       abs('/workspace/capabilities/property/create'), {
         form: {
@@ -298,7 +300,7 @@ try {
     assert(nativeAfter === nativeBefore,
       'S2-N: restricted buyer wrote Property despite authenticated denial');
     add('S2.restricted_buyer_valid_csrf_no_native_write', {
-      role: 'buyer', api_status: 422, form_status: 303, native_delta: 0,
+      role: 'buyer', api_status: 403, form_status: 303, native_delta: 0,
     });
   } finally {
     await restrictedCtx.close();

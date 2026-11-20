@@ -87,7 +87,7 @@ kind: implementation
 
 ## 3.5. Negative actor authorization acceptance (new candidate, PENDING CI)
 
-На окремому authenticated buyer/не-manager акаунті з поточним tenant і власним **валідним CSRF** перевіряємо відмову доступу до Capability Library та typed inventory, заборону `property.asset.create` через API і Web, і незмінність кількості native Property Asset rows. Це не анонімний користувач і не підроблений CSRF: перевірка саме server-side `isManager/cos.tenant.manage`.
+На окремому authenticated buyer/не-manager акаунті з поточним tenant і власним **валідним CSRF** перевіряємо відмову доступу до Capability Library та typed inventory, заборону `property.asset.create` через API і Web, і незмінність кількості native Property Asset rows. Це не анонімний користувач і не підроблений CSRF: API має бути відхилено на Symfony `ROLE_MANAGER` (403), а людську Web-форму окремо блокує canonical Gateway через `isManager/cos.tenant.manage` (303 з повідомленням `invalid`); native writes = 0.
 
 Зміни в ізольованій disposable CI fixture та браузерному тесті, не в production Policy, Realm, Auth чи Domain Gateway. Статус **PENDING**, доки новий SHA не отримає фактичний PASS. Ліміт login 10 POST/300 s не обходиться; один допустимий retry суворо поважає серверний `Retry-After` тільки у GitHub localhost fixture.
 
