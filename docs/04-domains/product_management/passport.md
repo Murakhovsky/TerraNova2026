@@ -24,7 +24,16 @@ domain_id: product_management
         "product_management.product.search",
         "product_management.variant.create",
         "product_management.category.create",
-        "product_management.media.attach"
+        "product_management.media.attach",
+        "product_management.product.update",
+        "product_management.product.archive",
+        "product_management.category.assign",
+        "product_management.category.search",
+        "product_management.variant.update",
+        "product_management.variant.archive",
+        "product_management.translation.upsert",
+        "product_management.media.detach",
+        "product_management.media.search"
       ]
     },
     {
@@ -56,7 +65,8 @@ domain_id: product_management
         "product_management.import.preview",
         "product_management.import.apply",
         "product_management.shopify.import.apply",
-        "product_management.sync.status.get"
+        "product_management.sync.status.get",
+        "product_management.import.batch.get"
       ]
     }
   ],
