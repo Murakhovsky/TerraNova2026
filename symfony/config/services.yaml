@@ -4071,3 +4071,6 @@ services:
 
   App\Application\Experience\Relations\Contract\RelatedEntityReadInterface:
     alias: App\Infrastructure\Experience\Relations\SalesPropertyRelatedEntityRead
+
+  App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface:
+    alias: App\Infrastructure\Experience\Business\TenantBusinessEntitySummaryRead

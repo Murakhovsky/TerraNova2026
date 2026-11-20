@@ -4,6 +4,7 @@ namespace App\Web\Experience\Unified;
 
 use App\Web\Experience\Extension\WebExtensionCatalog;
 use App\Application\Experience\Relations\Contract\RelatedEntityReadInterface;
+use App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface;
 use App\Web\Experience\Extension\EntityLinkResolver;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
@@ -34,6 +35,7 @@ final readonly class UnifiedBusinessWorkspaceController {
         private WorkspaceCompositionResolver $composition,
         private EntityLinkResolver $links,
         private RelatedEntityReadInterface $relatedRead,
+        private BusinessEntitySummaryReadInterface $summaryRead,
         private WorkspaceShellFactory $shells,
         private SessionCsrfValidator $csrf,
         private Environment $twig,
@@ -116,6 +118,18 @@ final readonly class UnifiedBusinessWorkspaceController {
                 // Ambiguous links are never fabricated or followed.
             }
         }
+        $selectedFacts=[];
+        $summaryAvailable=true;
+        if ($selected instanceof EntityRef) {
+            try {
+                $selectedFacts=$this->summaryRead->facts(
+                    $tenant->organizationId()->value(),$selected->type,$selected->id,
+                );
+            } catch (Throwable $e) {
+                $summaryAvailable=false;
+                error_log('cos.unified.business.summary_unavailable '.$e->getMessage());
+            }
+        }
         $related=[];
         $relatedAvailable=true;
         if ($selected instanceof EntityRef) {
@@ -169,6 +183,7 @@ final readonly class UnifiedBusinessWorkspaceController {
             'selected'=>$selected,'selectedHit'=>$selectedHit,'selectedUrl'=>$selectedUrl,
             'activity'=>$activity,'activityAvailable'=>$activityAvailable,
             'relatedEntities'=>$related,'relatedAvailable'=>$relatedAvailable,
+            'selectedFacts'=>$selectedFacts,'summaryAvailable'=>$summaryAvailable,
             'selectionDenied'=>$selectedKey!=='' && $selected===null,
             'savedViews'=>$savedViews,'csrfToken'=>$this->csrf->token($request),
         ]),200,[

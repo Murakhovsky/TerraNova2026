@@ -469,6 +469,9 @@ try {
   assert(selectedBusiness?.status() === 200
       && await page.locator('[data-cos-selected-entity="property.asset:' + assetId + '"]').count() === 1,
       'UX03: verified Property entity detail cannot compose');
+  assert(await page.locator('[data-cos-selected-entity] [data-cos-business-summary] .cos-entity-summary__item').count()>0,
+    'UX03: selected real Property Asset has no verified canonical summary');
+  add('UX03.real_tenant_property_entity_summary',{asset_id:assetId});
   const foreignBusiness = await page.goto(abs('/workspace/unified/business/property.asset?q='
       + assetId + '&selected=property.asset:' + foreignAssetId), { waitUntil: 'networkidle' });
   assert(foreignBusiness?.status() === 200

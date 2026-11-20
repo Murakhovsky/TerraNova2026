@@ -7,7 +7,7 @@ $twig=$get('symfony/templates/experience/unified/business.html.twig');
 foreach (['WorkspaceCompositionResolver','WebExtensionCatalog','EntityLinkResolver',
           'TenantPermissions::MANAGE','$hit->entity->type!==$entityType','selectedKey',
           'activityAvailable','no-store, private','SessionCsrfValidator',
-          'RelatedEntityReadInterface',
+          'RelatedEntityReadInterface','BusinessEntitySummaryReadInterface',
           'cos_uw_saved_views_v1','savedViewBucket'] as $marker) {
     if (!str_contains($source,$marker)) throw new RuntimeException('UX03 missing: '.$marker);
 }

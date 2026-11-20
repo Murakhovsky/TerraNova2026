@@ -58,6 +58,8 @@ jobs:
         run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: UX-03 verified Business Entity Summary
+        run: php tests/unit/cos_unified_entity_summary.php
       - name: UX-03 verified Sales to Property relationships
         run: php tests/unit/cos_unified_related_entities.php
       - name: UX-01 to UX-03 locale coverage contract

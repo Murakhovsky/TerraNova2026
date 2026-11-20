@@ -105,6 +105,19 @@
           <p class="cos-card__eyebrow">{{ 'uw.business.verified'|trans }}</p>
           <h2 id="cos-uw-selected" class="cos-card__title">{{ selectedHit.label }}</h2>
           <p class="cos-card__copy">{{ selectedHit.subtitle }}</p>
+          <div data-cos-business-summary>
+            {% if not summaryAvailable %}
+              <p class="cos-alert" role="alert">{{ 'uw.business.summary_unavailable'|trans }}</p>
+            {% elseif selectedFacts is not empty %}
+              {% set localizedFacts=[] %}
+              {% for fact in selectedFacts %}
+                {% set localizedFacts=localizedFacts|merge([{label:fact.label|trans,value:fact.value}]) %}
+              {% endfor %}
+              <twig:CosEntitySummary :items="localizedFacts" label="{{ 'uw.business.summary_title'|trans }}" />
+            {% else %}
+              <p class="cos-card__copy">{{ 'uw.business.summary_missing'|trans }}</p>
+            {% endif %}
+          </div>
           <p class="cos-card__copy">{{ 'uw.business.identifier'|trans }} <code>{{ selected.key() }}</code></p>
           {% if selectedUrl %}<a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>{% endif %}
         </section>

@@ -33,3 +33,7 @@ Authenticated користувач із роллю buyer і валідним CSR
 ## Пов’язані бізнес-сутності: перший реальний провайдер
 
 UX-03 підключає tenant-scoped читання `Sales Client Case → Property Match → Property Asset` через Application `RelatedEntityReadInterface`, яке реалізоване в Infrastructure, без бізнесових мутацій або SQL у Web Controller. Client Case і Property незалежно перевіряють поточну організацію. На екрані показуються лише позитивно верифіковані property assets, dedup, межа 10, canonical EntityLinkResolver або наявний typed Property Get screen. Для інших Domain, які ще не реалізували relationship read model, відображається відсутність підтверджених зв’язків, не вигадані відносини. Unit тест перевіряє позитивний match, чужий tenant, відсутній Asset та дублікати.
+
+## Контекстний Business Summary
+
+Вибрану tenant-підтверджену сутність збагачено через Application `BusinessEntitySummaryReadInterface` і наявні Sales Workspace та Property Reference read contracts. UI використовує наявний `CosEntitySummary`, показуючи тільки реально присутні status, stage, owner, next action чи type/address. Немає вигаданих фінансових KPI, відсутні поля приховуються. При збої read model відображається невизначеність, а не вигаданий успіх. Unit/E2E тести включають чужий tenant, неправильний ID та реальний Property selected summary.
