@@ -357,6 +357,18 @@ try {
     && await paletteTrigger.evaluate(el => el === document.activeElement),
     'UX01: global palette did not close and restore focus');
   add('UX01.keyboard_palette_focus_restoration',{shortcut:'Ctrl+K',escape:true});
+  const locale=page.locator('#cos-shell-locale');
+  await locale.selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='My Workspaces',
+    'UX01: server locale changed but Unified screen stayed Ukrainian');
+  assert((await page.locator('[data-cos-provider-workspaces]').innerText())
+    .includes('Property Workspace'),'UX01: Domain Workspace label not localized');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='Мої робочі простори',
+    'UX01: Ukrainian locale not restored');
+  add('UX01.english_ukrainian_locale_real_server_switch',{locales:['en','uk']});
   await page.locator('button[data-action="click->appearance#setTheme"][data-theme="light"]').click();
   await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='light');
   await page.setViewportSize({width:1440,height:1000});

@@ -4,28 +4,28 @@
 <section class="cos-uw cos-page__stack" data-cos-unified-home data-workspace-id="unified.home">
   <header class="cos-card">
     <p class="cos-card__eyebrow">COS / Unified Workspace</p>
-    <h1 class="cos-card__title">Мої робочі простори</h1>
-    <p class="cos-card__copy">Активна організація: <strong>{{ shell.tenantLabel }}</strong>. Зміна організації в цьому сеансі не доступна.</p>
+    <h1 class="cos-card__title">{{ 'uw.home.title'|trans }}</h1>
+    <p class="cos-card__copy">{{ 'uw.home.active_org'|trans }} <strong>{{ shell.tenantLabel }}</strong>. {{ 'uw.home.no_org_switch'|trans }}</p>
     <div class="cos-uw__row">
-      <a class="cos-button cos-button--primary" href="/workspace/capabilities">Команди та запити</a>
-      <a class="cos-button cos-button--ghost" href="/cos/control-center">Операції та погодження</a>
+      <a class="cos-button cos-button--primary" href="/workspace/capabilities">{{ 'uw.home.commands'|trans }}</a>
+      <a class="cos-button cos-button--ghost" href="/cos/control-center">{{ 'uw.home.operations'|trans }}</a>
       <div class="cos-uw__appearance" data-controller="appearance"
            data-appearance-theme-value="light" data-appearance-density-value="comfortable"
-           role="group" aria-label="Оформлення">
-        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setTheme" data-theme="light">Світла тема</button>
-        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setTheme" data-theme="dark">Темна тема</button>
-        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setDensity" data-density="comfortable">Звичайна щільність</button>
-        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setDensity" data-density="compact">Компактна щільність</button>
+           role="group" aria-label="{{ 'uw.home.appearance'|trans }}">
+        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setTheme" data-theme="light">{{ 'uw.home.light'|trans }}</button>
+        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setTheme" data-theme="dark">{{ 'uw.home.dark'|trans }}</button>
+        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setDensity" data-density="comfortable">{{ 'uw.home.comfortable'|trans }}</button>
+        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setDensity" data-density="compact">{{ 'uw.home.compact'|trans }}</button>
       </div>
     </div>
   </header>
   <section class="cos-card" aria-labelledby="cos-uw-search">
-    <h2 id="cos-uw-search" class="cos-card__title">Знайти дані</h2>
+    <h2 id="cos-uw-search" class="cos-card__title">{{ 'uw.home.find'|trans }}</h2>
     <form role="search" method="get" action="{{ path('cos_unified_home') }}" class="cos-uw__search">
-      <label for="cos-uw-q">Клієнт, угода, об'єкт або команда</label>
+      <label for="cos-uw-q">{{ 'uw.home.search_label'|trans }}</label>
       <div class="cos-uw__row">
-        <input id="cos-uw-q" class="cos-input" name="q" type="search" maxlength="120" value="{{ query }}" placeholder="Пошук у доступних даних">
-        <button class="cos-button cos-button--primary" type="submit">Знайти</button>
+        <input id="cos-uw-q" class="cos-input" name="q" type="search" maxlength="120" value="{{ query }}" placeholder="{{ 'uw.home.search_placeholder'|trans }}">
+        <button class="cos-button cos-button--primary" type="submit">{{ 'uw.common.find'|trans }}</button>
       </div>
     </form>
     {% if query is not empty %}
@@ -33,26 +33,26 @@
         {% for hit in matches %}
           <a class="cos-uw__result" href="{{ hit.path }}"><strong>{{ hit.label }}</strong><small>{{ hit.subtitle ?: hit.kind }}</small></a>
         {% else %}
-          <p class="cos-card__copy">Підтверджених результатів немає.</p>
+          <p class="cos-card__copy">{{ 'uw.home.no_results'|trans }}</p>
         {% endfor %}
       </div>
     {% endif %}
   </section>
   <section aria-labelledby="cos-uw-business">
-    <h2 id="cos-uw-business" class="cos-card__title">Доступні бізнес-контексти</h2>
+    <h2 id="cos-uw-business" class="cos-card__title">{{ 'uw.home.contexts'|trans }}</h2>
     <div class="cos-uw__grid" data-cos-provider-workspaces>
       {% for workspace in workspaces %}
         <article class="cos-card" data-cos-provider-workspace="{{ workspace.id }}">
-          <p class="cos-card__eyebrow">Зареєстрований контекст</p>
-          <h3 class="cos-card__title">{{ workspace.label }}</h3>
+          <p class="cos-card__eyebrow">{{ 'uw.home.registered'|trans }}</p>
+          <h3 class="cos-card__title">{{ workspace.label|trans }}</h3>
           <p class="cos-card__copy">{{ workspace.id }}</p>
-          <a class="cos-button cos-button--ghost" href="{{ workspace.path }}">Перейти до даних</a>
+          <a class="cos-button cos-button--ghost" href="{{ workspace.path }}">{{ 'uw.home.open'|trans }}</a>
         </article>
       {% else %}
-        <p class="cos-card">Активних бізнес-контекстів немає.</p>
+        <p class="cos-card">{{ 'uw.home.empty'|trans }}</p>
       {% endfor %}
     </div>
-    <p class="cos-card__copy">Наявність контексту не підтверджує працездатність усіх його команд.</p>
+    <p class="cos-card__copy">{{ 'uw.home.readiness'|trans }}</p>
   </section>
 </section>
 {% endblock %}
