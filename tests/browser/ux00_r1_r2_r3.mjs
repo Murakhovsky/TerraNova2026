@@ -360,6 +360,34 @@ try {
   await page.screenshot({path:evidenceDir+'/ux01-mobile-dark-compact.png',animations:'disabled'});
   add('UX01.mobile_dark_compact_real_shell',
     {viewport:'390x844',overflow:ux01Overflow,theme:'dark',density:'compact'});
+  // Canonical global keyboard palette: keyboard open, input focus,
+  // Escape closes and restores focus to the invoking control.
+  await page.setViewportSize({width:1440,height:1000});
+  const paletteTrigger=page.locator('.cos-shell__search-trigger');
+  await paletteTrigger.focus();
+  await page.keyboard.press('Control+k');
+  const palette=page.locator('#cos-command-palette');
+  assert(!(await palette.isHidden())
+    && await page.locator('.cos-command__input').evaluate(
+      el => el === document.activeElement),
+    'UX01: global keyboard palette did not focus search input');
+  await page.keyboard.press('Escape');
+  assert(await palette.isHidden()
+    && await paletteTrigger.evaluate(el => el === document.activeElement),
+    'UX01: global palette did not close and restore focus');
+  add('UX01.keyboard_palette_focus_restoration',{shortcut:'Ctrl+K',escape:true});
+  const locale=page.locator('#cos-shell-locale');
+  await locale.selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='My Workspaces',
+    'UX01: server locale changed but Unified screen stayed Ukrainian');
+  assert((await page.locator('[data-cos-provider-workspaces]').innerText())
+    .includes('Property Workspace'),'UX01: Domain Workspace label not localized');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  assert((await page.locator('[data-cos-unified-home] h1').innerText()).trim()==='Мої робочі простори',
+    'UX01: Ukrainian locale not restored');
+  add('UX01.english_ukrainian_locale_real_server_switch',{locales:['en','uk']});
   await page.locator('button[data-action="click->appearance#setTheme"][data-theme="light"]').click();
   await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='light');
   await page.setViewportSize({width:1440,height:1000});
@@ -415,6 +443,14 @@ try {
     'UX02: same key replay duplicated or lost Property reference');
   add('UX02.human_unified_form_native_receipt_and_replay',
     {asset_id:unifiedAssetId,native_rows:1});
+  await page.locator('#cos-shell-locale').selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-property-query] h1').innerText())
+      .trim()==='Find a property',
+      'UX02: actual Property Query page not localized EN');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  add('UX02.english_property_query_and_restore_uk',{locales:['en','uk']});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 
   // UX-03: registered provider composed Sales and Property, no entity

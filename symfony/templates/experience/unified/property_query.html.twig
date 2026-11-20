@@ -4,33 +4,33 @@
 <section class="cos-uw cos-page__stack" data-cos-unified-property-query>
   <header class="cos-card">
     <p class="cos-card__eyebrow">Property / Application Query</p>
-    <h1 class="cos-card__title">Знайти об’єкт нерухомості</h1>
-    <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">Операції</a>
+    <h1 class="cos-card__title">{{ 'uw.property.title'|trans }}</h1>
+    <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">{{ 'uw.nav.operations'|trans }}</a>
   </header>
   <form method="get" action="{{ path('cos_unified_property_query') }}" class="cos-card cos-uw__search" role="search">
-    <label for="cos-uw-search-property">Адреса, назва або ідентифікатор</label>
+    <label for="cos-uw-search-property">{{ 'uw.property.label'|trans }}</label>
     <div class="cos-uw__row">
       <input id="cos-uw-search-property" name="q" class="cos-input" type="search" maxlength="120" value="{{ query }}">
-      <button class="cos-button cos-button--primary" type="submit">Знайти</button>
+      <button class="cos-button cos-button--primary" type="submit">{{ 'uw.common.find'|trans }}</button>
     </div>
   </form>
   {% if error %}
-    <div class="cos-alert" role="alert">{{ error }}</div>
+    <div class="cos-alert" role="alert">{{ error|trans }}</div>
   {% elseif reference is not empty %}
     {% if data and data.property is defined and data.property %}
       <article class="cos-card" data-cos-native-property="{{ data.property.asset_id|default('') }}">
-        <h2 class="cos-card__title">Підтверджений запис Property</h2>
+        <h2 class="cos-card__title">{{ 'uw.property.verified'|trans }}</h2>
         <p class="cos-card__copy">Asset: <code>{{ data.property.asset_id|default('') }}</code></p>
-        <p class="cos-card__copy">Тип: {{ data.property.type_code|default('Невідомо') }}</p>
-        <p class="cos-card__copy">Адреса: {{ data.property.formatted_address|default('Не вказано') }}</p>
+        <p class="cos-card__copy">{{ 'uw.property.type'|trans }} {{ data.property.type_code|default('uw.property.unknown'|trans) }}</p>
+        <p class="cos-card__copy">{{ 'uw.property.address'|trans }} {{ data.property.formatted_address|default('uw.property.not_set'|trans) }}</p>
       </article>
     {% else %}
-      <div class="cos-card" role="status">Об'єкт не знайдено або доступ обмежено.</div>
+      <div class="cos-card" role="status">{{ 'uw.property.missing'|trans }}</div>
     {% endif %}
   {% elseif query is not empty %}
     {% set hits=data.items|default([]) %}
     <section class="cos-card" aria-labelledby="cos-uw-property-list">
-      <h2 id="cos-uw-property-list" class="cos-card__title">Знайдені записи</h2>
+      <h2 id="cos-uw-property-list" class="cos-card__title">{{ 'uw.property.hits'|trans }}</h2>
       <div class="cos-uw__results" data-cos-property-results>
       {% for item in hits %}
         {% set asset=item.property|default({}) %}
@@ -41,17 +41,17 @@
           </a>
         {% endif %}
       {% else %}
-        <p class="cos-card__copy">Підтверджених записів немає.</p>
+        <p class="cos-card__copy">{{ 'uw.property.none'|trans }}</p>
       {% endfor %}
       </div>
       {% set total=data.pagination.total|default(0) %}
-      <p class="cos-card__copy">Усього за фільтром: {{ total }}. Показано поточну сторінку.</p>
+      <p class="cos-card__copy">{{ 'uw.property.total'|trans }} {{ total }}. {{ 'uw.property.page'|trans }}</p>
       {% if total > page * perPage %}
-        <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_property_query', {q:query,page:page+1}) }}">Наступна сторінка</a>
+        <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_property_query', {q:query,page:page+1}) }}">{{ 'uw.property.next'|trans }}</a>
       {% endif %}
     </section>
   {% else %}
-    <div class="cos-card" role="status">Введіть фільтр. Читання не створює Goal або Action.</div>
+    <div class="cos-card" role="status">{{ 'uw.property.empty'|trans }}</div>
   {% endif %}
 </section>
 {% endblock %}
