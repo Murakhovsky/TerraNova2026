@@ -374,6 +374,66 @@ try {
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 
+  // UX02: read-only typed Query through canonical Gateway and a human
+  // action form that POSTs exclusively to the existing CSRF writer.
+  const queryPage = await page.goto(abs('/workspace/unified/property?q=' + assetId),
+    { waitUntil: 'networkidle' });
+  assert(queryPage?.status() === 200, 'UX02: typed Property search page unavailable');
+  assert(await page.locator('[data-cos-property-results]').count() === 1
+      && (await page.locator('[data-cos-property-results]').innerText()).includes(assetId),
+      'UX02: actual typed Property Query item missing');
+  const detailPage = await page.goto(abs('/workspace/unified/property?reference=' + assetId),
+    { waitUntil: 'networkidle' });
+  assert(detailPage?.status() === 200
+      && await page.locator('[data-cos-native-property="' + assetId + '"]').count() === 1,
+      'UX02: tenant-bound native Property Get readback absent');
+  const actionPage = await page.goto(abs('/workspace/unified/actions'), { waitUntil: 'networkidle' });
+  assert(actionPage?.status() === 200
+      && await page.locator('form[action="/workspace/capabilities/property/create"]').count() === 1,
+      'UX02: human Action not mapped to existing canonical form');
+  assert(sqlCount(assetId)===1, 'UX02: reads mutated native Property');
+  add('UX02.typed_read_and_canonical_human_form', {asset_id:assetId,native_rows:1});
+
+  // R2 through the Unified form and the EXISTING canonical human Command,
+  // with genuine native Domain readback and same idempotency key replay.
+  const unifiedForm = page.locator('form[action="/workspace/capabilities/property/create"]');
+  const unifiedKey = await unifiedForm.locator('input[name="idempotency_key"]').inputValue();
+  const unifiedAddress = 'UX02 human form '+uid;
+  await unifiedForm.locator('input[name="type_code"]').fill('house');
+  await unifiedForm.locator('input[name="city"]').fill('Львів');
+  await unifiedForm.locator('input[name="address"]').fill(unifiedAddress);
+  await Promise.all([
+    page.waitForURL(url => url.pathname==='/workspace/unified/property'
+      && url.searchParams.has('reference'),{timeout:30000}),
+    unifiedForm.locator('button[type="submit"]').click(),
+  ]);
+  const unifiedAssetId=new URL(page.url()).searchParams.get('reference')||'';
+  assert(/^PROP-[A-F0-9]{20}$/.test(unifiedAssetId)
+    && await page.locator('[data-cos-native-property="'+unifiedAssetId+'"]').count()===1
+    && sqlCount(unifiedAssetId)===1,
+    'UX02: human Command lacked verified native Domain readback');
+  const unifiedReplay=await admin.request.post(
+    abs('/workspace/capabilities/property/create'),{
+      form:{csrf_token:csrf,idempotency_key:unifiedKey,return_to:'unified',
+        type_code:'house',city:'Львів',address:unifiedAddress},maxRedirects:0,
+    });
+  assert(unifiedReplay.status()===303
+    && new URL(unifiedReplay.headers()['location']||'',base)
+       .searchParams.get('reference')===unifiedAssetId
+    && sqlCount(unifiedAssetId)===1,
+    'UX02: same key replay duplicated or lost Property reference');
+  add('UX02.human_unified_form_native_receipt_and_replay',
+    {asset_id:unifiedAssetId,native_rows:1});
+  await page.locator('#cos-shell-locale').selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-property-query] h1').innerText())
+      .trim()==='Find a property',
+      'UX02: actual Property Query page not localized EN');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  add('UX02.english_property_query_and_restore_uk',{locales:['en','uk']});
+  await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
+
   // R3 UI. Upload rejects duplicate identities, then stages a bounded
   // real CSV, projects an immutable digest, proposes a Goal/Plan and remains
   // fail-closed without two independent approvals and worker admission.

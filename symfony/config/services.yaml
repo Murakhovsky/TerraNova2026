@@ -4060,3 +4060,7 @@ services:
   App\Web\Experience\Unified\UnifiedWorkspaceController:
     public: true
     tags: ['controller.service_arguments']
+
+  App\Web\Experience\Unified\UnifiedCapabilityController:
+    public: true
+    tags: ['controller.service_arguments']
