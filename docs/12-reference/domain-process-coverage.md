@@ -28,7 +28,7 @@ generated: true
 | `diagnostic` · Diagnostics | `1.0.0` | `covered` | 1 | 7 | 0/7 | 7 | 7 |
 | `documents` · Documents | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `federation` · COS Federation | `1.0.0` | `covered` | 1 | 1 | 1/1 | 0 | 0 |
-| `finance` · Finance | `0.2.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `finance` · Finance | `0.2.3` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `marketing` · Marketing | `0.1.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
