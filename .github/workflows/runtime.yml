@@ -97,6 +97,14 @@ jobs:
         run: |
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Finance Marketing approved Action unit governance and replay
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/unit/finance_marketing_spend_action.php
+      - name: Finance Marketing approved Action real MySQL idempotency and source revision
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_marketing_spend_action_mysql.php
       - name: Marketing Finance typed readback real MySQL end to end
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

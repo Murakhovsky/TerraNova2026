@@ -2786,6 +2786,16 @@ services:
   Domains\Finance\Application\Contract\MarketingSpendEvidenceReadPort:
     alias: App\Infrastructure\Finance\MarketingSpendEvidenceReadAdapter
   Domains\Finance\Application\Service\FinanceMarketingSpendReadbackService: ~
+  # Action-only Finance evidence import: Kernel Policy/Approval is the executor.
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceMarketingSpendActionIntentRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinanceMarketingSpendActionIntentRepositoryInterface:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceMarketingSpendActionIntentRepository
+  Domains\Finance\Application\Contract\ApprovedMarketingSpendEvidenceReadPort:
+    alias: App\Infrastructure\Finance\ApprovedMarketingSpendEvidenceReadAdapter
+  Domains\Finance\Application\Service\ApprovedFinanceMarketingSpendImportOperations: ~
+  Domains\Finance\Automation\Action\FinanceMarketingSpendImportActionHandler: ~
   Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository:
     arguments:
       $connection: '@cos.database.pdo'

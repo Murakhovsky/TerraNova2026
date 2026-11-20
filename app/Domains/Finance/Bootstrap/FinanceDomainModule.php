@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Domains\Finance\Bootstrap;
 
 use Domains\Finance\Automation\Action\FinanceBudgetActionHandler;
+use Domains\Finance\Automation\Action\FinanceMarketingSpendImportActionHandler;
 use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
 use Kernel\Module\Contract\PolicyProvidingModuleInterface;
@@ -14,7 +15,7 @@ use Kernel\Policy\PolicyDecision;
 final readonly class FinanceDomainModule implements DomainModuleInterface,
     ActionOwningModuleInterface,PolicyProvidingModuleInterface,BootstrapPolicyProvidingModuleInterface
 {
-    public function __construct(private FinanceBudgetActionHandler $handler){}
+    public function __construct(private FinanceBudgetActionHandler $handler,private FinanceMarketingSpendImportActionHandler $spendImport){}
     public function name():string{return 'finance';}
     public function actionTypes():array
     {
@@ -23,9 +24,10 @@ final readonly class FinanceDomainModule implements DomainModuleInterface,
             FinanceBudgetActionHandler::RESERVE,
             FinanceBudgetActionHandler::RELEASE,
             FinanceBudgetActionHandler::FREEZE,
+            FinanceMarketingSpendImportActionHandler::IMPORT,
         ];
     }
-    public function actionHandlers():array{return [$this->handler];}
+    public function actionHandlers():array{return [$this->handler,$this->spendImport];}
     public function policies(string $organizationId):array
     {
         $policies=[];

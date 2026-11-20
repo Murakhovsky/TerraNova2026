@@ -25,7 +25,7 @@ generated: true
 | `diagnostic` | Diagnostics | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Diagnostic/module.php` |
 | `documents` | Documents | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Documents/module.php` |
 | `federation` | COS Federation | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Federation/module.php` |
-| `finance` | Finance | `0.2.2` | `0.2.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
+| `finance` | Finance | `0.2.3` | `0.2.3` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
 | `marketing` | Marketing | `0.1.2` | `0.1.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
@@ -157,10 +157,11 @@ Manifest capabilities не задекларовані.
 - обробники jobs: —;
 - внески API routes: —;
 - постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000153_finance_budget_f1.sql`, `app/migrations/20261119_000155_finance_spend_observations.sql`.
+- міграції: `app/migrations/20261119_000153_finance_budget_f1.sql`, `app/migrations/20261119_000155_finance_spend_observations.sql`, `app/migrations/20261120_000156_finance_spend_import_action_intents.sql`.
 
 ### Задекларовані capabilities
 
+- `finance.ad_spend.marketing_snapshot.import`;
 - `finance.ad_spend.reconciliation.status`;
 - `finance.budget.envelope.activate`;
 - `finance.budget.envelope.draft.create`;
