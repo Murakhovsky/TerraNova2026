@@ -118,6 +118,10 @@ jobs:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
           COS_TEST_PM_SHOPIFY_FULL: "1"
         run: php tests/integration/product_management_shopify_approved_goal_e2e_mysql.php
+      - name: Product Management Shopify crash quarantine and recovery audit MySQL
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_shopify_crash_recovery_mysql.php
       - name: Product Management verified Product Media native MySQL acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

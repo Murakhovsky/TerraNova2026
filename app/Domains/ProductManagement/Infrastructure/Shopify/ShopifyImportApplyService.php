@@ -58,6 +58,21 @@ final readonly class ShopifyImportApplyService
                     throw new DomainException('Shopify candidate approval, version or Action fence mismatch.');
                 }
                 $candidate=self::candidate($scope);
+                // A previous worker may have died between separate native
+                // Product/Variant/Price commits. We cannot infer that
+                // replay is safe from a live Action ID alone. The MySQL
+                // named lock guarantees no active writer currently owns this
+                // same external Product identity.
+                if ($scope['state']==='applying') {
+                    $update=$this->query("UPDATE pm_shopify_import_previews SET state='blocked'
+                        WHERE organization_id=? AND preview_id=? AND state='applying' AND action_key=?",
+                        [$org,$previewId,$actionKey]);
+                    if($update->rowCount()!==1) {
+                        throw new DomainException('Concurrent Shopify import recovery state changed.');
+                    }
+                    $this->connection->commit();
+                    throw new DomainException('Prior Shopify import has uncertain native effects; independent audit and human reconciliation required.');
+                }
                 $current=$this->observations->productSnapshot($org,(string)$scope['connection_id'],(string)$scope['product_gid']);
                 if($scope['state']!=='applied'
                     &&($current===null||(int)$current['is_complete']!==1

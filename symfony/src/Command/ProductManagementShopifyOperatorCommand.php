@@ -9,6 +9,7 @@ use Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit;
 use Kernel\Module\ActiveModuleResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -31,19 +32,21 @@ final class ProductManagementShopifyOperatorCommand extends Command
         private readonly ShopifyClientCredentials $credentials,
         private readonly ActiveModuleResolver $modules,
         private readonly ShopifyImportPreviewService $previews,
+        private readonly ShopifyImportRecoveryAudit $recoveryAudit,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull|inspect|stage')
+        $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull|inspect|stage|audit')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
             ->addOption('connection',null,InputOption::VALUE_REQUIRED,'Existing 32-character connection ID')
             ->addOption('pages',null,InputOption::VALUE_REQUIRED,'Maximum 1..20 product pages','1')
             ->addOption('product-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Product GID')
+            ->addOption('preview-id',null,InputOption::VALUE_REQUIRED,'Existing Shopify import preview ID for read-only recovery audit')
             ->addOption('expected-hash',null,InputOption::VALUE_REQUIRED,'Pinned snapshot SHA-256')
             ->addOption('confirm',null,InputOption::VALUE_REQUIRED,'PROVISION_READ_ONLY or PULL_READ_ONLY');
     }
@@ -61,7 +64,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['provision','status','pull','inspect','stage'],true)) {
+            if (!in_array($action,['provision','status','pull','inspect','stage','audit'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             if (!$this->modules->isEnabled($org,'product_management')) {
@@ -89,6 +92,11 @@ final class ProductManagementShopifyOperatorCommand extends Command
             }
             if ($action==='status') {
                 return $this->result($output,$this->observations->status($org,$connection),Command::SUCCESS);
+            }
+            if ($action==='audit') {
+                $id=trim((string)$input->getOption('preview-id'));
+                $report=$this->recoveryAudit->inspect($org,$connection,$id);
+                return $this->result($output,$report,Command::SUCCESS);
             }
             if ($action==='inspect') {
                 $gid=trim((string)$input->getOption('product-gid'));

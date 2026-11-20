@@ -217,6 +217,31 @@ Changing source ownership through SQL or assuming `observation_only` is a
 production-ready switch is not an authorized cutover procedure. Shopify
 stock observations remain separate from the native ledger throughout E4.
 
+## E4 unknown-outcome recovery audit
+
+A pre-existing `applying` state means that a previous worker can have
+committed native Product, Variant, Price, Events, mappings or receipts before
+losing its Action response. A second invocation of the same approved Action
+**does not resume any native writes**. Under the per-product MySQL named lock,
+it moves the uncertain attempt to `blocked`. No automatic retry, reset,
+mapping reassignment or deletion is authorized.
+
+For a supervised tenant-enabled server shell operator, inspect the immutable
+preview and existing native receipts **without writing anything**:
+
+```sh
+COS_SHOPIFY_OPERATOR_ENABLED=1 php symfony/bin/console cos:product:shopify audit \
+  --organization=tenant-id --connection=existing-32-character-id \
+  --preview-id=existing-32-character-preview-id
+```
+
+The resulting bounded JSON includes snapshot hash status, Product creation
+receipt, current native Product/Variant/Price verification, mapping status and
+per-step receipts. `automatic_replay_authorized` is always `false`.
+`manual_reconciliation_required` must be resolved by an independently
+reviewed recovery procedure outside this E4 pilot; the audit does not claim
+that operator acknowledgement itself makes a partially committed action safe.
+
 ## Shopify nested pagination (read-only)
 
 Every Product's variant connection and every InventoryItem's location

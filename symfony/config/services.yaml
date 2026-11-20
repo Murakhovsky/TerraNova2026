@@ -2788,6 +2788,9 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportApplyService:
     arguments:
       $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit:
+    arguments:
+      $connection: '@cos.database.pdo'
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
 

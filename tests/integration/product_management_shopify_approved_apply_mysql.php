@@ -13,6 +13,7 @@ use Domains\ProductManagement\Application\Service\PricingService;
 use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
 use Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportApplyService;
+use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
 use Infrastructure\Platform\Persistence\MySql\Event\MysqlEventStore;
@@ -43,6 +44,7 @@ $catalog=new ModuleCatalog((new ModuleDiscovery(dirname(__DIR__,2).'/app/Domains
 $modules=new ActiveModuleResolver($catalog,$state);
 $staging=new ShopifyImportPreviewService($pdo,$observations,$modules);
 $writer=new ShopifyImportApplyService($pdo,$products,$pricing,$observations);
+$audit=new ShopifyImportRecoveryAudit($pdo,$observations,$writer);
 $handler=new ShopifyImportApplyHandler($writer,$modules);
 $token=bin2hex(random_bytes(6));$org='pm-apply-'.$token;$shop='pm-apply-ci.myshopify.com';
 $connection=$observations->provision($org,$shop,'shopify_env_primary');
@@ -98,6 +100,10 @@ $assert((string)$pricing->get($org,$result['variant_ids'][0],'USD')['price']==='
     'Native Base Prices were not persisted.');
 $assert($writer->verifyApplied($org,$previewId,$hash,$digest)['variant_ids']===$result['variant_ids'],
     'Independent native receipt verification differs.');
+$report=$audit->inspect($org,$connection,$previewId);
+$assert($report['decision']==='applied_verified' && $report['verified_variant_steps']===2
+    && $report['automatic_replay_authorized']===false,
+    'Read-only recovery audit must independently attest committed Shopify import.');
 $replay=$handler->execute($action);
 $assert($replay->successful&&$replay->data['variant_ids']===$result['variant_ids'],
     'Approved replay duplicated native Variants.');
