@@ -13,3 +13,7 @@ Canonical Capability Library і CanonicalCapabilityGateway є єдиними в�
 Read-only Property Get/Search проходять через поточний typed Gateway з origin trusted_read. Людське створення через форму відправляється в наявний CSRF/idempotency Command endpoint; Bulk лише відкриває погоджений UI. Немає безпосереднього ORM, REST fetch або оптимістичного success. Server return відображає результат Query, а незавершена Action не видається за виконану.
 
 Контракти для інших Domain і довільні JSON-схеми не перетворюються на генеровані writable форми до їхнього окремого приймання.
+
+## Завершення людської команди
+
+Форма на Unified Workspace використовує наявний Web-контролер CapabilityLibraryController та CanonicalCapabilityGateway. Параметр return_to приймає лише фіксоване внутрішнє значення unified, не довільні URL. Після успіху відбувається перехід на /workspace/unified/property?reference=… із повторним native Domain Query; непідтверджений результат — fail-closed. Browser тест перевіряє реальний write і same-key replay без нового виконавця.

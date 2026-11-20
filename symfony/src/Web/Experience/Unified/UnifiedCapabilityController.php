@@ -47,6 +47,9 @@ final readonly class UnifiedCapabilityController {
             'operations'=>$operations,
             'csrfToken'=>$this->csrf->token($request),
             'idempotencyKey'=>bin2hex(random_bytes(16)),
+            'notice'=>in_array((string)$request->query->get('notice',''),
+                ['invalid','unverified','unavailable'],true)
+                ? (string)$request->query->get('notice','') : '',
         ],'Операції бізнесу');
     }
     public function property(Request $request): Response {
