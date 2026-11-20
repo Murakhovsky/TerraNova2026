@@ -86,17 +86,43 @@ try {
   });
   const authPage = await authContext.newPage();
 
-  const loginResponse = await authPage.goto(absolute('/auth/login'), { waitUntil: 'networkidle' });
-  if (!loginResponse || loginResponse.status() >= 400) {
-    throw new Error(`Login page returned HTTP ${loginResponse?.status() ?? 'no response'}`);
+  const visitLogin = async () => {
+    const response = await authPage.goto(absolute('/auth/login'), { waitUntil: 'networkidle' });
+    if (!response || response.status() !== 200) {
+      throw new Error(`Login page returned HTTP ${response?.status() ?? 'no response'}`);
+    }
+    await authPage.locator('input[name="email"]').fill(email);
+    await authPage.locator('input[name="password"]').fill(password);
+  };
+  const submitLogin = async () => {
+    const response = authPage.waitForResponse(
+      r => new URL(r.url()).pathname === '/auth/login' && r.request().method() === 'POST',
+      { timeout: 30000 },
+    );
+    await authPage.locator('button[type="submit"]').click();
+    return response;
+  };
+  await visitLogin();
+  let loginAttempt = await submitLogin();
+  // Existing production limiter is authoritative. Only disposable GitHub
+  // localhost CI may honor a bounded server Retry-After, at most once.
+  const allowCiRetry = process.env.GITHUB_ACTIONS === 'true'
+    && process.env.GOLDEN_EIGHT_CI_RATE_LIMIT_RETRY === '1'
+    && /^http:\/\/(?:127\.0\.0\.1|localhost):8081\/?$/.test(baseUrl);
+  if (loginAttempt.status() === 429 && allowCiRetry) {
+    const retryAfter = Number(loginAttempt.headers()['retry-after']);
+    if (!Number.isInteger(retryAfter) || retryAfter < 1 || retryAfter > 300) {
+      throw new Error('Golden Eight login limiter sent invalid Retry-After');
+    }
+    console.log('Golden Eight CI: respecting auth limiter Retry-After=' + retryAfter + ' seconds once');
+    await new Promise(resolve => setTimeout(resolve, (retryAfter + 1) * 1000));
+    await visitLogin();
+    loginAttempt = await submitLogin();
   }
-
-  await authPage.locator('input[name="email"]').fill(email);
-  await authPage.locator('input[name="password"]').fill(password);
-  await Promise.all([
-    authPage.waitForURL((url) => !url.pathname.startsWith('/auth/login'), { timeout: 25000 }),
-    authPage.locator('button[type="submit"]').click(),
-  ]);
+  if (![302, 303].includes(loginAttempt.status())) {
+    throw new Error('Golden Eight fixture login failed HTTP ' + loginAttempt.status());
+  }
+  await authPage.waitForURL(url => !url.pathname.startsWith('/auth/login'), { timeout: 25000 });
 
   const pipelineResponse = await authPage.goto(absolute('/sales/pipeline'), { waitUntil: 'networkidle' });
   if (!pipelineResponse || pipelineResponse.status() >= 400) {

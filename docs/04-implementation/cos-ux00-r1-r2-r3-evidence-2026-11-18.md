@@ -110,3 +110,7 @@ kind: implementation
 **Release gate:** PR #432 залишити draft до окремого розгляду деплою. У поточному `.github/workflows/runtime.yml` merge у `main` може автоматично запускати AWS dev deployment. Право на production rollouts із цього звіту не випливає.
 
 Відповідальні завдання: [UX-00 #428](https://github.com/Murakhovsky/TerraNova2026/issues/428), [Staging Acceptance #431](https://github.com/Murakhovsky/TerraNova2026/issues/431), [тестовий PR #432](https://github.com/Murakhovsky/TerraNova2026/pull/432).
+
+## 3.6. Сумісність браузерних тестів із захистом авторизації
+
+Окрема перевірка ролі додає одну законну спробу входу, тому після сумарних входів Sales/Property GitHub CI може досягти системного обмеження 10 POST за 300 секунд. На попередньому SHA UX-00 24/24 перевірки Property вже пройшли, але загальний Runtime зупинився в Golden Eight на очікуванні входу. Golden Eight тепер **один раз** поважає обмежений серверний `Retry-After` (1–300 секунд), виключно на localhost в GitHub Actions із явним прапорцем; production limiter та права не змінювалися. Це **не** сертифікація до повторного PASS усіх п'яти workflow на точному новому SHA.
