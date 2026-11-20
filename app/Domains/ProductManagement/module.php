@@ -28,6 +28,7 @@ return [
             'app/migrations/20261119_000158_product_management_import_plan_binding.sql',
             'app/migrations/20261119_000159_product_management_shopify_import_preview.sql',
             'app/migrations/20261119_000160_product_management_shopify_approved_apply.sql',
+            'app/migrations/20261120_000161_product_management_shopify_identity_claim.sql',
         ],
         // Expose only implemented bindings, never aspirational commands.
         'capability_contracts' => [

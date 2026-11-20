@@ -8,6 +8,9 @@ $audit=$read('app/Domains/ProductManagement/Infrastructure/Shopify/ShopifyImport
 $command=$read('symfony/src/Command/ProductManagementShopifyOperatorCommand.php');
 $services=$read('symfony/config/services.yaml');
 $workflow=$read('.github/workflows/runtime.yml');
+$claimMigration=$read('app/migrations/20261120_000161_product_management_shopify_identity_claim.sql');
+$planner=$read('symfony/src/Persistence/ProductManagement/ShopifyImportPlanProposalService.php');
+$manifest=$read('app/Domains/ProductManagement/module.php');
 $assert=static function(bool $ok,string $why):void {
     if(!$ok)throw new RuntimeException('Shopify recovery architecture: '.$why);
 };
@@ -42,4 +45,11 @@ $assert(str_contains($command,"if (\$action==='audit')")
 $assert(str_contains($services,'ShopifyImportRecoveryAudit')
     &&str_contains($workflow,'product_management_shopify_crash_recovery_mysql.php'),
     'Recovery audit service and MySQL acceptance must be registered.');
+
+$assert(str_contains($claimMigration,'GENERATED ALWAYS AS')
+    &&str_contains($claimMigration,'uq_pm_shopify_one_planned_identity')
+    &&str_contains($claimMigration,'connection_id,planned_product_gid')
+    &&str_contains($planner,'already claimed by a different planned preview')
+    &&str_contains($manifest,'20261120_000161_product_management_shopify_identity_claim.sql'),
+    'Shopify Product external identity must allow at most one approved import Plan.');
 echo "Product Management Shopify crash recovery architecture passed.\n";

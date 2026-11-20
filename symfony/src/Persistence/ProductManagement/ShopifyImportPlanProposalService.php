@@ -51,6 +51,18 @@ final readonly class ShopifyImportPlanProposalService
                 ||!hash_equals((string)$row['normalized_digest'],$digest)) {
                 throw new DomainException('Shopify import candidate was already planned or changed.');
             }
+            // Business preflight gives a clear reconciliation reason. A
+            // MySQL UNIQUE generated-column claim also fences the race
+            // between two concurrent proposals of different snapshots.
+            $other=$this->db->fetchOne(
+                'SELECT preview_id FROM pm_shopify_import_previews
+                 WHERE organization_id=:org AND connection_id=:conn AND product_gid=:gid
+                   AND preview_id<>:preview AND plan_id IS NOT NULL LIMIT 1',
+                ['org'=>$org,'conn'=>$row['connection_id'],
+                 'gid'=>$row['product_gid'],'preview'=>$previewId]);
+            if($other!==false) {
+                throw new DomainException('Shopify Product identity is already claimed by a different planned preview; manual reconciliation required.');
+            }
             $candidate=ShopifyImportApplyService::candidate($row);
             if(count($candidate['variants'])<1||count($candidate['variants'])>100) {
                 throw new DomainException('Invalid Shopify Plan Variant count.');

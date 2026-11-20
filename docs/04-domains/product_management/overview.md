@@ -31,7 +31,7 @@ version: 0.1.0
 schema_version: 0.8.0
 runtime: tenant-disabled by default
 persistence: E1–E4 migrations proposed, not production-verified
-capabilities: 27 executable declarations pending integration acceptance
+capabilities: 28 manifest declarations; approved Shopify Action includes native MySQL E2E
 Shopify: read-only; no outbound writes
 process model: canonical Goal/Plan Approval Workflow Action and Goal outcome MySQL E2E passed
 ```

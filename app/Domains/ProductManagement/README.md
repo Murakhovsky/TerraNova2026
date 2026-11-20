@@ -242,6 +242,18 @@ per-step receipts. `automatic_replay_authorized` is always `false`.
 reviewed recovery procedure outside this E4 pilot; the audit does not claim
 that operator acknowledgement itself makes a partially committed action safe.
 
+## Single approved Shopify Product identity claim
+
+Different immutable snapshots of the same external Product GID may be
+staged for comparison, but **only one preview** per tenant, Shopify connection
+and Product GID can have a bound canonical Plan. A generated MySQL
+`planned_product_gid` column and unique index enforce this even under
+concurrent Plan proposals. A blocked/unknown-outcome attempt retains its
+claim so a newer price/SKU snapshot cannot silently create a second native
+Product. Planner preflight reports this as a manual reconciliation conflict.
+The migration intentionally fails on conflicting historical planned rows:
+those must be reviewed, not silently deduplicated.
+
 ## Shopify nested pagination (read-only)
 
 Every Product's variant connection and every InventoryItem's location

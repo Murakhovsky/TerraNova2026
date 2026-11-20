@@ -150,6 +150,33 @@ $assert($count('pm_products')===1&&$count('pm_variants')===1
     &&$count('pm_stock_movements')===0,
     'Interrupted Action replay duplicated business effects.');
 
+// A new provider snapshot for the SAME GID may be staged for human review,
+// but cannot acquire a second independent Goal/Plan while an older attempt
+// remains blocked with unknown native Product effects.
+$changedIdentity=$partial['source'];
+$changedIdentity['variants']['nodes'][0]['sku']='RENEW'.strtoupper($token).'A';
+$changedIdentity['variants']['nodes'][1]['sku']='RENEW'.strtoupper($token).'B';
+$observations->observeProduct($org,$conn,$changedIdentity['id'],$changedIdentity,true);
+$updatedHash=$observations->productSnapshot($org,$conn,$changedIdentity['id'])['payload_hash'];
+$newVersion=$staging->stage($org,$conn,$changedIdentity['id'],'42',$updatedHash);
+$assert($newVersion['preview_id']!==$partial['preview_id'],
+    'New Shopify snapshot must preserve a separate immutable review candidate.');
+$secondPlanDenied=false;
+try {
+    $pdo->prepare('UPDATE pm_shopify_import_previews SET plan_id=?,goal_id=?
+        WHERE organization_id=? AND preview_id=?')
+        ->execute(['plan-conflict-'.$token,'goal-conflict-'.$token,$org,$newVersion['preview_id']]);
+}catch(PDOException $e) {
+    $secondPlanDenied=$e->getCode()==='23000';
+    if(!$secondPlanDenied)throw $e;
+}
+$assert($secondPlanDenied
+    &&$query('SELECT plan_id FROM pm_shopify_import_previews
+        WHERE organization_id=? AND preview_id=?',[$org,$newVersion['preview_id']])[0]['plan_id']===null,
+    'Second Plan illegally claimed a Shopify Product with blocked native effects.');
+$assert($count('pm_products')===1,
+    'Second Shopify identity claim duplicated Product during blocked recovery.');
+
 $partialPrice=$stage(69021);
 $thirdAction=$action($partialPrice);
 $created2=$products->createProduct($org,[
