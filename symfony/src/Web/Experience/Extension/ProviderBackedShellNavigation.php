@@ -31,6 +31,7 @@ final readonly class ProviderBackedShellNavigation
 
         $contributions = [
             new NavigationContribution('home', 'Overview', '/admin', 'HM', 10),
+            new NavigationContribution('workspaces', 'Робочі простори', '/workspace/unified', 'WS', 15),
             new NavigationContribution('cos', 'COS', '/cos/control-center', 'OS', 50),
             new NavigationContribution('cos-overview', 'Overview', '/cos/control-center', priority: 10, parentKey: 'cos'),
             new NavigationContribution('architecture', 'Architecture', '/cos/architecture', priority: 20, parentKey: 'cos'),

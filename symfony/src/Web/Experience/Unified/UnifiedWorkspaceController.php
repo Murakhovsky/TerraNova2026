@@ -7,6 +7,7 @@ use App\Web\Experience\Extension\WebExtensionCatalog;
 use App\Web\Experience\Search\GlobalSearchService;
 use App\Web\Experience\Shell\ShellBreadcrumb;
 use App\Web\Experience\Shell\WorkspaceShellFactory;
+use App\Web\Experience\Shell\ShellConnectionState;
 use Kernel\Tenant\Contract\TenantContextProviderInterface;
 use Kernel\Tenant\Model\TenantPermissions;
 use Symfony\Component\HttpFoundation\Request;
@@ -38,7 +39,10 @@ final readonly class UnifiedWorkspaceController {
         $workspaces=$this->extensions->forContext($context)->workspaces();
         $matches=$query==='' ? [] : $this->search->search($context,$query,24)->items;
         $shell=$this->shells->create($tenant,$context,'Мої робочі простори',
-            [new ShellBreadcrumb('Робочі простори')]);
+            [new ShellBreadcrumb('Робочі простори')],
+            aiAvailable: false,
+            connectionState: ShellConnectionState::Stale,
+        );
         return new Response($this->twig->render('experience/unified/home.html.twig',[
             'shell'=>$shell,'workspaces'=>$workspaces,'query'=>$query,'matches'=>$matches,
         ]),200,[

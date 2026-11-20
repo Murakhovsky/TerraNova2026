@@ -306,6 +306,23 @@ try {
     await restrictedCtx.close();
   }
 
+  // UX-01 uses the existing authenticated shell and true Application-backed
+  // global search; visiting it must be read-only and tenant-scoped.
+  const home = await page.goto(abs('/workspace/unified?q=' + assetId),
+    { waitUntil: 'networkidle' });
+  assert(home?.status() === 200, 'UX01: unified Home not accessible to manager');
+  assert(await page.locator('[data-cos-unified-home]').count() === 1,
+    'UX01: no canonical Unified Workspace shell');
+  assert(await page.locator('[data-cos-provider-workspaces] [data-cos-provider-workspace]').count() > 0,
+    'UX01: no active registered Domain Workspace context');
+  const sourceHit = page.locator('.cos-uw__result').filter({ hasText: assetId });
+  assert(await sourceHit.count() > 0,
+    'UX01: real tenant-bound Property Query not visible in Unified Home');
+  assert(sqlCount(assetId) === 1,
+    'UX01: read-only unified Home unexpectedly wrote native Property');
+  add('UX01.real_provider_search_and_canonical_shell', { asset_id: assetId, native_delta: 0 });
+  await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
+
   // R3 UI. Upload rejects duplicate identities, then stages a bounded
   // real CSV, projects an immutable digest, proposes a Goal/Plan and remains
   // fail-closed without two independent approvals and worker admission.

@@ -13,6 +13,7 @@ final readonly class CoreCommandCatalog
     {
         $commands = [
             new ShellCommandItem('core.home', 'Open Workspace Overview', '/admin', 'command', 'Core'),
+            new ShellCommandItem('core.unified', 'Мої робочі простори', '/workspace/unified', 'navigation', 'Workspace'),
             new ShellCommandItem('core.cos', 'Open COS Control Center', '/cos/control-center', 'command', 'Core'),
             new ShellCommandItem('core.analytics', 'Open Analytics', '/admin/analytics', 'command', 'Core'),
             new ShellCommandItem('core.administration', 'Open Administration', '/admin/content', 'command', 'Core'),
