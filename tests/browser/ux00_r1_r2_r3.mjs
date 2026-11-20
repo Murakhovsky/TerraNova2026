@@ -341,6 +341,22 @@ try {
   await page.screenshot({path:evidenceDir+'/ux01-mobile-dark-compact.png',animations:'disabled'});
   add('UX01.mobile_dark_compact_real_shell',
     {viewport:'390x844',overflow:ux01Overflow,theme:'dark',density:'compact'});
+  // Canonical global keyboard palette: keyboard open, input focus,
+  // Escape closes and restores focus to the invoking control.
+  await page.setViewportSize({width:1440,height:1000});
+  const paletteTrigger=page.locator('.cos-shell__search-trigger');
+  await paletteTrigger.focus();
+  await page.keyboard.press('Control+k');
+  const palette=page.locator('#cos-command-palette');
+  assert(!(await palette.isHidden())
+    && await page.locator('.cos-command__input').evaluate(
+      el => el === document.activeElement),
+    'UX01: global keyboard palette did not focus search input');
+  await page.keyboard.press('Escape');
+  assert(await palette.isHidden()
+    && await paletteTrigger.evaluate(el => el === document.activeElement),
+    'UX01: global palette did not close and restore focus');
+  add('UX01.keyboard_palette_focus_restoration',{shortcut:'Ctrl+K',escape:true});
   await page.locator('button[data-action="click->appearance#setTheme"][data-theme="light"]').click();
   await page.waitForFunction(()=>document.documentElement.dataset.cosTheme==='light');
   await page.setViewportSize({width:1440,height:1000});

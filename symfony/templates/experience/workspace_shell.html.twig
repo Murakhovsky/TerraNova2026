@@ -100,6 +100,7 @@
                     class="cos-shell__search-trigger"
                     type="button"
                     aria-haspopup="dialog"
+                    aria-controls="cos-command-palette"
                     data-action="click->workspace-shell#openPalette"
                 >
                     <span>{{ 'shell.search_workspace'|trans }}</span>
@@ -246,7 +247,7 @@
         </aside>
     </div>
 
-    <div class="cos-command" hidden data-workspace-shell-target="palette">
+    <div class="cos-command" id="cos-command-palette" hidden data-workspace-shell-target="palette">
         <button
             class="cos-command__backdrop"
             type="button"
