@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core';
+import AxeBuilder from '@axe-core/playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -554,6 +555,31 @@ try {
     animations:'disabled'});
   assert(sqlCount(assetId)===1,'UX03 mobile: read mutated Property');
   add('UX03.mobile_sales_provider_no_native_write',{viewport:'390x844',native_rows:1});
+  // Accessibility + navigation performance on genuine authenticated
+  // Unified pages, in the same 390px browser environment. Results are
+  // recorded independently per surface to prevent a decorative CI PASS.
+  const uxA11y=[
+    {id:'home',path:'/workspace/unified'},
+    {id:'actions',path:'/workspace/unified/actions'},
+    {id:'property',path:'/workspace/unified/property?q='+assetId},
+    {id:'business',path:'/workspace/unified/business/property.asset?q='+assetId},
+  ];
+  for(const target of uxA11y) {
+    const res=await page.goto(abs(target.path),{waitUntil:'networkidle'});
+    assert(res?.status()===200,'UX03 a11y page missing '+target.id);
+    const scan=await new AxeBuilder({page}).withTags(
+      ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze();
+    const critical=scan.violations.filter(v=>['critical','serious'].includes(v.impact));
+    assert(critical.length===0,'UX03 '+target.id+' WCAG serious violations: '
+      +JSON.stringify(critical.map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.length}))));
+    const duration=await page.evaluate(
+      ()=>performance.getEntriesByType('navigation')[0]?.duration ?? 0);
+    assert(Number.isFinite(duration)&&duration>=0&&duration<15000,
+      'UX03 '+target.id+' navigation exceeded 15s basic performance guard');
+    add('UX03.a11y_and_navigation_'+target.id,{
+      viewport:'390x844',serious_violations:0,nav_duration_ms:Math.round(duration),
+    });
+  }
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 

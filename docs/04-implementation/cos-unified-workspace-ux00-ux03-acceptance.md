@@ -47,3 +47,7 @@ kind: implementation
 ## Поточні незакриті обмеження
 
 Технічні Draft PR не є сертифікацією production, operator acceptance чи показником завершення Golden 50. Staging gate [#431](https://github.com/Murakhovsky/TerraNova2026/issues/431) і контрольний [#428](https://github.com/Murakhovsky/TerraNova2026/issues/428) залишаються відкритими. Не змінювати production default `FailClosedWorkflowActionWorkerAdmission` заради тестового PASS.
+
+## A11y, швидкість і локалізація
+
+В останньому UX-03 Playwright-доказі скануємо всі чотири реальні авторизовані Unified pages на телефонному viewport (390×844) через Axe WCAG 2.x A/AA. Блокуємо serious/critical violations, записуємо навігаційний час і вимагаємо його нижче 15 секунд у ізольованому CI (це guard, не фінальне SLA). Unit source contract перевіряє кожен використаний у Twig `uw.*` ключ в обох каталогах. Оцінку реальної продуктивності та фокус на iOS/Android потрібно повторити під час staging acceptance.
