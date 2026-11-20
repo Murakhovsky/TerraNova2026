@@ -18,7 +18,9 @@ domain_id: sales
   "components": [
     {
       "id": "leads",
-      "capability_ids": []
+      "capability_ids": [
+        "sales.inbound.request.read"
+      ]
     },
     {
       "id": "deals",

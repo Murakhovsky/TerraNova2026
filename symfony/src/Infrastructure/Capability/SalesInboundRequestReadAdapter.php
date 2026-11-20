@@ -1,0 +1,39 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Infrastructure\Capability;
+
+use App\Application\Capability\Contract\CapabilityInvocationAdapterInterface;
+use DomainException;
+use Domains\Sales\Application\Contract\SalesProposalLeadReadModelInterface;
+use Kernel\Tenant\Model\TenantContext;
+
+/** Tenant-authorized read boundary; Sales remains the authoritative data owner. */
+final readonly class SalesInboundRequestReadAdapter implements CapabilityInvocationAdapterInterface
+{
+    public function __construct(private SalesProposalLeadReadModelInterface $leads) {}
+
+    public function binding(): string
+    {
+        return 'query:sales.inbound.request.read';
+    }
+
+    public function invoke(TenantContext $actor, array $input, string $key, string $correlationId): mixed
+    {
+        foreach (['organization_id', 'tenant_id', 'actor_id', 'user_id'] as $forged) {
+            if (array_key_exists($forged, $input)) {
+                throw new DomainException('Sales request identity is server-owned: ' . $forged);
+            }
+        }
+        $leadId = $input['lead_id'] ?? null;
+        if (!is_int($leadId) || $leadId <= 0) {
+            throw new DomainException('A positive lead_id is required.');
+        }
+        $tenant = $actor->organizationId()->value();
+        $request = $this->leads->lead($tenant, $leadId);
+        if ($request !== null && (string)($request['organization_id'] ?? '') !== $tenant) {
+            throw new DomainException('Sales request read model violated tenant ownership.');
+        }
+        return ['found' => $request !== null, 'request' => $request];
+    }
+}

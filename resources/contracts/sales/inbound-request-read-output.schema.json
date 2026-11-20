@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SalesInboundRequestReadOutputV1",
+  "type": "object",
+  "required": [
+    "found",
+    "request"
+  ],
+  "properties": {
+    "found": {
+      "type": "boolean"
+    },
+    "request": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
