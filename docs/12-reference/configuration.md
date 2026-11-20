@@ -23,6 +23,7 @@ generated: true
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
 | `procurement` | `0.1.0` | — | 0 |
+| `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
 | `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 12 |
@@ -81,6 +82,12 @@ generated: true
 - manifest: `app/Domains/Procurement/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `product_management`
+
+- manifest: `app/Domains/ProductManagement/module.php`;
+- configuration provisioners: —;
+- capabilities: `product_management.media.attach`, `product_management.media.detach`, `product_management.media.search`, `product_management.import.apply`, `product_management.shopify.import.apply`, `product_management.translation.upsert`, `product_management.stock.transfer`, `product_management.variant.update`, `product_management.variant.archive`, `product_management.category.create`, `product_management.category.assign`, `product_management.category.search`, `product_management.import.preview`, `product_management.import.batch.get`, `product_management.product.update`, `product_management.product.archive`, `product_management.stock.movement.search`, `product_management.variant.create`, `product_management.location.create`, `product_management.stock.receive`, `product_management.stock.issue`, `product_management.price.base.set`, `product_management.product.create`, `product_management.product.get`, `product_management.product.search`, `product_management.stock.balance.get`, `product_management.price.base.get`, `product_management.sync.status.get`.
 
 ## `property`
 

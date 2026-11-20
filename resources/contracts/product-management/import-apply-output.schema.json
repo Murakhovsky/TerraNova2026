@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementApprovedCsvApplyActionOutputV1",
+  "type": "object",
+  "required": [
+    "batch_id",
+    "verified_count",
+    "product_ids",
+    "state",
+    "rows_digest"
+  ],
+  "properties": {
+    "batch_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "verified_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5000
+    },
+    "product_ids": {
+      "type": "array",
+      "maxItems": 5000,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{32}$"
+      }
+    },
+    "state": {
+      "type": "string",
+      "const": "applied"
+    },
+    "rows_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false
+}
