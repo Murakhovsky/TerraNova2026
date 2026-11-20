@@ -25,3 +25,5 @@
 .cos-uw__business-grid > *{min-width:0}
 .cos-uw__entities .cos-uw__entity{overflow-wrap:anywhere}
 @media(max-width:650px){.cos-uw__business-grid{display:block}.cos-uw__business-grid > aside{margin-top:var(--cos-space-5)}.cos-uw__tabs{max-width:100%;overflow-x:auto}}
+
+.cos-uw__relations{list-style:none;margin:0;padding:0;display:grid;gap:var(--cos-space-3)}

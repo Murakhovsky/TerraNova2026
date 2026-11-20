@@ -927,3 +927,7 @@
 "uw.business.process_ai": "Процес та AI"
 "uw.business.ai_unverified": "Без перевіреного Agent Runtime ці вкладки не запускають дій. Прогрес і підтвердження слід перевіряти в Operations Center."
 "uw.business.go_operations": "Перейти до операцій"
+"uw.business.related_title": "Пов’язані об’єкти"
+"uw.business.related_unavailable": "Зв’язки зараз не підтверджені. Повторіть читання."
+"uw.business.related_empty": "Підтверджених зв’язків немає."
+"uw.business.open_related": "Відкрити пов’язаний запис"

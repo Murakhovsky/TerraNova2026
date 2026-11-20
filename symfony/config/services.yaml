@@ -4068,3 +4068,6 @@ services:
   App\Web\Experience\Unified\UnifiedBusinessWorkspaceController:
     public: true
     tags: ['controller.service_arguments']
+
+  App\Application\Experience\Relations\Contract\RelatedEntityReadInterface:
+    alias: App\Infrastructure\Experience\Relations\SalesPropertyRelatedEntityRead

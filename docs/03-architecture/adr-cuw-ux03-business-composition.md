@@ -29,3 +29,7 @@ Authenticated користувач із роллю buyer і валідним CSR
 ## Мовне приймання бізнесових контекстів
 
 Збережено всі server-side Business Workspace дані та UI translations у наявному Symfony Translator. `WorkspaceDefinition.label` перекладається як presentation-only lookup; доменні дані клієнта, адреси, ліди, документи не перекладаються. Playwright перевіряє UK/EN з наявним серверним locale switch і тим самим authenticated tenant.
+
+## Пов’язані бізнес-сутності: перший реальний провайдер
+
+UX-03 підключає tenant-scoped читання `Sales Client Case → Property Match → Property Asset` через Application `RelatedEntityReadInterface`, яке реалізоване в Infrastructure, без бізнесових мутацій або SQL у Web Controller. Client Case і Property незалежно перевіряють поточну організацію. На екрані показуються лише позитивно верифіковані property assets, dedup, межа 10, canonical EntityLinkResolver або наявний typed Property Get screen. Для інших Domain, які ще не реалізували relationship read model, відображається відсутність підтверджених зв’язків, не вигадані відносини. Unit тест перевіряє позитивний match, чужий tenant, відсутній Asset та дублікати.

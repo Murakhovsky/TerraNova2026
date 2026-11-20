@@ -109,6 +109,27 @@
           {% if selectedUrl %}<a class="cos-button cos-button--primary" href="{{ selectedUrl }}">{{ 'uw.business.open_canonical'|trans }}</a>{% endif %}
         </section>
       {% endif %}
+      {% if selected %}
+      <section class="cos-card" aria-labelledby="cos-uw-business-related" data-cos-related-entities>
+        <h2 id="cos-uw-business-related" class="cos-card__title">{{ 'uw.business.related_title'|trans }}</h2>
+        {% if not relatedAvailable %}
+          <p class="cos-alert" role="alert">{{ 'uw.business.related_unavailable'|trans }}</p>
+        {% else %}
+          <ul class="cos-uw__relations">
+          {% for relation in relatedEntities %}
+            <li class="cos-uw__entity" data-cos-related-ref="{{ relation.type }}:{{ relation.id }}">
+              <small class="cos-card__eyebrow">{{ relation.relation }}</small>
+              <strong>{{ relation.label }}</strong>
+              {% if relation.detail %}<p class="cos-card__copy">{{ relation.detail }}</p>{% endif %}
+              {% if relation.path %}<a class="cos-button cos-button--ghost" href="{{ relation.path }}">{{ 'uw.business.open_related'|trans }}</a>{% endif %}
+            </li>
+          {% else %}
+            <li class="cos-card__copy">{{ 'uw.business.related_empty'|trans }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+      {% endif %}
       <section class="cos-card" aria-labelledby="cos-uw-business-activity">
         <h2 id="cos-uw-business-activity" class="cos-card__title">{{ 'uw.business.activity'|trans }}</h2>
         <p class="cos-card__copy">{{ 'uw.business.activity_scope'|trans }}</p>

@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Web\Experience\Unified;
 
 use App\Web\Experience\Extension\WebExtensionCatalog;
+use App\Application\Experience\Relations\Contract\RelatedEntityReadInterface;
 use App\Web\Experience\Extension\EntityLinkResolver;
 use App\Web\Experience\Extension\Model\SearchResult;
 use App\Web\Experience\Extension\Model\WebExtensionContext;
@@ -32,6 +33,7 @@ final readonly class UnifiedBusinessWorkspaceController {
         private WebExtensionCatalog $extensions,
         private WorkspaceCompositionResolver $composition,
         private EntityLinkResolver $links,
+        private RelatedEntityReadInterface $relatedRead,
         private WorkspaceShellFactory $shells,
         private SessionCsrfValidator $csrf,
         private Environment $twig,
@@ -114,6 +116,39 @@ final readonly class UnifiedBusinessWorkspaceController {
                 // Ambiguous links are never fabricated or followed.
             }
         }
+        $related=[];
+        $relatedAvailable=true;
+        if ($selected instanceof EntityRef) {
+            try {
+                foreach ($this->relatedRead->related(
+                    $tenant->organizationId()->value(), $selected->type, $selected->id, 10,
+                ) as $relatedRef) {
+                    $canonical=$this->links->resolve(
+                        $context, new EntityRef($relatedRef->type, $relatedRef->id),
+                    );
+                    // Property's existing typed Get screen is the verified
+                    // internal fallback until its Domain EntityLink provider is wired.
+                    $path=$canonical?->path;
+                    if ($path===null && $relatedRef->type==='property.asset') {
+                        $path='/workspace/unified/property?reference='.rawurlencode($relatedRef->id);
+                    }
+                    if ($path!==null && (!str_starts_with($path,'/')
+                        || str_starts_with($path,'//')
+                        || preg_match('/[\\x00-\\x1F\\x7F]/',$path)===1)) $path=null;
+                    $related[]=[
+                        'type'=>$relatedRef->type,
+                        'id'=>$relatedRef->id,
+                        'label'=>$relatedRef->label,
+                        'relation'=>$relatedRef->relation,
+                        'detail'=>$relatedRef->detail,
+                        'path'=>$path,
+                    ];
+                }
+            } catch (Throwable $e) {
+                $relatedAvailable=false;
+                error_log('cos.unified.business.related_unavailable '.$e->getMessage());
+            }
+        }
         $activity=[];
         $activityAvailable=true;
         try {
@@ -133,6 +168,7 @@ final readonly class UnifiedBusinessWorkspaceController {
             'searchAvailable'=>$searchAvailable,
             'selected'=>$selected,'selectedHit'=>$selectedHit,'selectedUrl'=>$selectedUrl,
             'activity'=>$activity,'activityAvailable'=>$activityAvailable,
+            'relatedEntities'=>$related,'relatedAvailable'=>$relatedAvailable,
             'selectionDenied'=>$selectedKey!=='' && $selected===null,
             'savedViews'=>$savedViews,'csrfToken'=>$this->csrf->token($request),
         ]),200,[

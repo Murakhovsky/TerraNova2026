@@ -927,3 +927,7 @@
 "uw.business.process_ai": "Process and AI"
 "uw.business.ai_unverified": "Without a verified agent runtime these sections do not execute actions. Check progress and receipts in Operations Center."
 "uw.business.go_operations": "Open Operations Center"
+"uw.business.related_title": "Related entities"
+"uw.business.related_unavailable": "Related records could not be verified. Retry the read."
+"uw.business.related_empty": "No verified relationships."
+"uw.business.open_related": "Open related record"
