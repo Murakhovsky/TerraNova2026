@@ -2674,6 +2674,35 @@ services:
   growthNavigationContributor:
     alias: App\Web\Experience\Extension\Provider\GrowthWebProvider
 
+  # COS Marketing: restrictive tenant-manager read/draft slice; no paid writes.
+  Domains\Marketing\Domain\MarketingDraftPolicy: ~
+  Domains\Marketing\Application\Service\PaidMediaMutationGate: ~
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingCampaignRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingCampaignRepository
+  Domains\Marketing\Application\Service\MarketingCampaignService: ~
+  Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport: ~
+  Domains\Marketing\Infrastructure\Meta\MetaHttpTransport:
+    alias: Domains\Marketing\Infrastructure\Meta\CurlMetaHttpTransport
+  Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter: ~
+  Domains\Marketing\Application\Contract\PaidMediaProviderInterface:
+    alias: Domains\Marketing\Infrastructure\Meta\MetaGraphReadAdapter
+  Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Marketing\Application\Contract\MarketingPaidReadRepository:
+    alias: Domains\Marketing\Infrastructure\Persistence\MySql\MysqlMarketingPaidReadRepository
+  Domains\Marketing\Application\Service\MarketingPaidReadService: ~
+
+  marketingNavigationContributor:
+    alias: App\Web\Experience\Extension\Provider\MarketingWebProvider
+
+  App\Web\Marketing\MarketingPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   capitalMarketsDomainModule:
     alias: Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule
 
@@ -4043,3 +4072,4 @@ services:
 
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2LiveWorkerFactory: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2AlertDelivery: ~
+
