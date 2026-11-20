@@ -4056,3 +4056,7 @@ services:
 
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2LiveWorkerFactory: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2AlertDelivery: ~
+
+  App\Web\Experience\Unified\UnifiedWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
