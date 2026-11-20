@@ -372,6 +372,33 @@ try {
       'UX03: Sales Workspace provider not available');
   assert(sqlCount(assetId) === 1, 'UX03: Workspace reads mutated native Property');
   add('UX03.sales_property_composition_and_entity_fencing', {asset_id:assetId,foreign_asset:foreignAssetId});
+
+  // UX-03 mobile parity: real Property and Sales workspaces at phone width,
+  // no horizontal document clipping and no implicit Action/Domain mutation.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileBusiness = await page.goto(abs('/workspace/unified/business/property.asset?q='
+      + assetId + '&view=cards'), { waitUntil: 'networkidle' });
+  assert(mobileBusiness?.status()===200
+      && await page.locator('[data-cos-business-results] [data-entity-ref="property.asset:'
+      +assetId+'"]').count()===1, 'UX03 mobile: actual Property card unavailable');
+  const mobileOverflow = await page.evaluate(() => Math.max(
+    document.documentElement.scrollWidth, document.body.scrollWidth,
+  ) - document.documentElement.clientWidth);
+  assert(mobileOverflow<=2, 'UX03 mobile: horizontal viewport overflow '+mobileOverflow);
+  await page.screenshot({path:evidenceDir+'/ux03-property-mobile.png',
+    animations:'disabled'});
+  add('UX03.mobile_property_card_and_responsive_layout',
+      {asset_id:assetId,viewport:'390x844',document_overflow:mobileOverflow});
+  const mobileSales = await page.goto(abs('/workspace/unified/business/sales.deal'),
+    {waitUntil:'networkidle'});
+  assert(mobileSales?.status()===200
+      && await page.locator('[data-workspace-id="sales.deal"]').count()===1,
+      'UX03 mobile: Sales provider workspace unavailable');
+  await page.screenshot({path:evidenceDir+'/ux03-sales-mobile.png',
+    animations:'disabled'});
+  assert(sqlCount(assetId)===1,'UX03 mobile: read mutated Property');
+  add('UX03.mobile_sales_provider_no_native_write',{viewport:'390x844',native_rows:1});
+  await page.setViewportSize({width:1440,height:1000});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 
   // R3 UI. Upload rejects duplicate identities, then stages a bounded

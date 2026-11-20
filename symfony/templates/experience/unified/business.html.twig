@@ -43,7 +43,12 @@
         </form>
         {% if query is empty %}
           <p class="cos-card__copy">Введіть запит або відкрийте повний Domain Workspace. Порожній пошук не вигадує записи.</p>
+        {% elseif not searchAvailable %}
+          <p class="cos-alert" role="alert">Дані зараз недоступні. Перевірка не завершена, тому результат пошуку не підтверджений.</p>
         {% else %}
+          <p class="cos-card__copy" role="status" data-cos-result-count>
+            Підтверджених записів у поточній обмеженій вибірці: {{ results|length }}
+          </p>
           <div class="cos-uw__entities {{ view == 'cards' ? 'cos-uw__entities--cards' : '' }}" data-cos-business-results>
           {% for hit in results %}
             <article class="cos-uw__entity" data-entity-ref="{{ hit.entity.key() }}">
@@ -82,7 +87,7 @@
             <article class="cos-uw__entity">
               <strong>{{ event.label }}</strong>
               <p class="cos-card__copy">{{ event.status }} · {{ event.detail|default('') }}</p>
-              {% if event.path and event.path starts with '/' %}<a href="{{ event.path }}">Переглянути</a>{% endif %}
+              {% if event.path and event.path starts with '/' and not (event.path starts with '//') %}<a href="{{ event.path }}">Переглянути</a>{% endif %}
             </article>
           {% else %}
             <p class="cos-card__copy">Активності зараз немає.</p>

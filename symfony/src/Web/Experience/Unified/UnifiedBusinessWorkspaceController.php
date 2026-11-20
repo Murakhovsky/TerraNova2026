@@ -60,13 +60,21 @@ final readonly class UnifiedBusinessWorkspaceController {
         $selectedKey=trim((string)$request->query->get('selected',''));
         if (strlen($selectedKey)>191) $selectedKey='';
         $results=[];
+        $searchAvailable=true;
         $selected=null;
         $selectedHit=null;
         $entityType=$workspace->definition->entityType;
         if ($query!=='') {
             // Global aggregation already enforces active modules and tenant scope.
             // Only SearchResult entities for the registered Workspace are allowed.
-            foreach ($catalog->search($query,50) as $hit) {
+            try {
+                $hits=$catalog->search($query,50);
+            } catch (Throwable $e) {
+                $searchAvailable=false;
+                $hits=[];
+                error_log('cos.unified.business.search_unavailable '.$e->getMessage());
+            }
+            foreach ($hits as $hit) {
                 if (!$hit instanceof SearchResult || $hit->entity===null
                     || $hit->entity->type!==$entityType
                     || !str_starts_with($hit->path,'/')
@@ -95,7 +103,11 @@ final readonly class UnifiedBusinessWorkspaceController {
         if ($selected instanceof EntityRef && $selectedHit instanceof SearchResult) {
             try {
                 $canonical=$this->links->resolve($context,$selected);
-                $selectedUrl=$canonical?->path ?? $selectedHit->path;
+                $candidate=$canonical?->path ?? $selectedHit->path;
+                if (str_starts_with($candidate,'/') && !str_starts_with($candidate,'//')
+                    && preg_match('/[\\x00-\\x1F\\x7F]/',$candidate)!==1) {
+                    $selectedUrl=$candidate;
+                }
             } catch (LogicException) {
                 // Ambiguous links are never fabricated or followed.
             }
@@ -115,6 +127,7 @@ final readonly class UnifiedBusinessWorkspaceController {
         return new Response($this->twig->render('experience/unified/business.html.twig',[
             'shell'=>$shell,'workspace'=>$workspace,'workspaces'=>$catalog->workspaces(),
             'query'=>$query,'view'=>$view,'sort'=>$sort,'results'=>$results,
+            'searchAvailable'=>$searchAvailable,
             'selected'=>$selected,'selectedHit'=>$selectedHit,'selectedUrl'=>$selectedUrl,
             'activity'=>$activity,'activityAvailable'=>$activityAvailable,
             'selectionDenied'=>$selectedKey!=='' && $selected===null,
