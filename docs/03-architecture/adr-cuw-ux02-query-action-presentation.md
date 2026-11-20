@@ -2,6 +2,8 @@
 title: ADR — UX-02 універсальний вигляд Query та Action
 description: Представлення підтверджених Capability контрактів без другого виконавця.
 status: isolated-pilot
+updated: 2026-11-20
+kind: architecture
 ---
 
 # UX-02: запити та дії

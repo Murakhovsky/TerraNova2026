@@ -2,6 +2,8 @@
 title: ADR — Бізнесові робочі простори UX-03
 description: Складення Sales і Property без дублювання Domain стану.
 status: isolated-pilot
+updated: 2026-11-20
+kind: architecture
 ---
 
 # UX-03: бізнесові робочі простори
