@@ -4,7 +4,7 @@ description: Повторне використання Symfony UI.
 status: isolated-pilot
 ---
 
-# ADR — Unified Workspace UX-01
+# ADR — Канонічний робочий простір UX-01
 
 Повторно використовуємо Symfony SSR, Twig, Turbo, Stimulus і дизайн-токени COS. Окремий маршрут /workspace/unified наслідує workspace_shell.html.twig та показує тільки зареєстровані tenant-enabled WorkspaceDefinition. Пошук через GlobalSearchService використовує справжні Application ReadModels, а не створює Goal або мутацію.
 

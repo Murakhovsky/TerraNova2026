@@ -4,7 +4,7 @@ description: Представлення підтверджених Capability к
 status: isolated-pilot
 ---
 
-# UX-02 Query / Action
+# UX-02: запити та дії
 
 Canonical Capability Library і CanonicalCapabilityGateway є єдиними власниками typed контрактів та допуску. UnifiedCapabilityPresentation містить вузький **allowlist UI-представлень**, а не Registry та не нову систему виконання. Невідомі декларації, зовнішні/ризикові Action та ті, що не мають перевіреного UI, показуються недоступними з причиною. Поле execution_verified не виводиться зі стану route або manifest.
 
