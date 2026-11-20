@@ -486,6 +486,33 @@ try {
   assert(sqlCount(assetId) === 1, 'UX03: Workspace reads mutated native Property');
   add('UX03.sales_property_composition_and_entity_fencing', {asset_id:assetId,foreign_asset:foreignAssetId});
 
+  // Positive Sales deal readback uses an existing real pipeline fixture.
+  // The canonical Sales read model, not client-provided entity IDs, must
+  // resolve it before Workspace composition and Business Summary.
+  const pipelineRead=await page.goto(abs('/sales/pipeline'),{waitUntil:'networkidle'});
+  assert(pipelineRead?.status()===200,'UX03: Sales pipeline read unavailable');
+  const firstDeal=page.locator('[data-sales-deal-card]').first();
+  assert(await firstDeal.count()===1,'UX03: Sales fixture has no canonical Deal');
+  const salesId=await firstDeal.getAttribute('data-deal-id');
+  const salesTitle=(await firstDeal.locator('.cos-sales-pipeline-card__subtitle').innerText()).trim();
+  assert(/^[1-9][0-9]{0,9}$/.test(salesId||'') && salesTitle.length>0,
+    'UX03: Sales fixture lacks verified Deal search identity');
+  const salesQuery=encodeURIComponent(salesTitle.slice(0,120));
+  const salesList=await page.goto(abs('/workspace/unified/business/sales.deal?q='+salesQuery),
+    {waitUntil:'networkidle'});
+  assert(salesList?.status()===200
+    && await page.locator('[data-entity-ref="sales.deal:'+salesId+'"]').count()===1,
+    'UX03: actual Sales Deal is not discoverable through tenant Domain search');
+  const selectedSales=await page.goto(abs(
+    '/workspace/unified/business/sales.deal?q='+salesQuery+'&selected=sales.deal:'+salesId),
+    {waitUntil:'networkidle'});
+  assert(selectedSales?.status()===200
+    && await page.locator('[data-cos-selected-entity="sales.deal:'+salesId+'"]').count()===1
+    && await page.locator('[data-cos-business-summary] .cos-entity-summary__item').count()>0,
+    'UX03: real Sales Deal fails verified detail and summary');
+  add('UX03.real_sales_deal_query_context_and_summary',{deal_id:salesId});
+
+
   // UX-03 server-session user filter state: same-name replay is idempotent,
   // no new Domain/Action/Asset mutation, deletion scoped to current session.
   const savedName='UX03 CI '+uid;

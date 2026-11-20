@@ -51,3 +51,7 @@ kind: implementation
 ## A11y, швидкість і локалізація
 
 В останньому UX-03 Playwright-доказі скануємо всі чотири реальні авторизовані Unified pages на телефонному viewport (390×844) через Axe WCAG 2.x A/AA. Блокуємо serious/critical violations, записуємо навігаційний час і вимагаємо його нижче 15 секунд у ізольованому CI (це guard, не фінальне SLA). Unit source contract перевіряє кожен використаний у Twig `uw.*` ключ в обох каталогах. Оцінку реальної продуктивності та фокус на iOS/Android потрібно повторити під час staging acceptance.
+
+## Позитивне Sales приймання
+
+Додано browser сценарій, який спочатку читає справжню Sales Deal картку з канонічного Pipeline, шукає її через tenant-scoped Business Workspace і відкриває лише verified EntityRef зі справжнім Domain Summary. Це відрізняє UX-03 Sales інтеграцію від простого GET порожнього Workspace. Не створює Sales дій або записів.
