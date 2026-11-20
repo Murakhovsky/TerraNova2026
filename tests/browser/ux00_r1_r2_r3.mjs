@@ -424,6 +424,14 @@ try {
     'UX02: same key replay duplicated or lost Property reference');
   add('UX02.human_unified_form_native_receipt_and_replay',
     {asset_id:unifiedAssetId,native_rows:1});
+  await page.locator('#cos-shell-locale').selectOption('en');
+  await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert((await page.locator('[data-cos-unified-property-query] h1').innerText())
+      .trim()==='Find a property',
+      'UX02: actual Property Query page not localized EN');
+  await page.locator('#cos-shell-locale').selectOption('uk');
+  await page.waitForFunction(()=>document.documentElement.lang==='uk');
+  add('UX02.english_property_query_and_restore_uk',{locales:['en','uk']});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 
   // R3 UI. Upload rejects duplicate identities, then stages a bounded

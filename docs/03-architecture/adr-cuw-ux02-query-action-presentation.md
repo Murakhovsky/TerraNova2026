@@ -21,3 +21,7 @@ Read-only Property Get/Search проходять через поточний typ
 ## Обмеження експозиції
 
 Статус typed у Capability Library сам по собі не створює картку бізнесової дії. UX-02 показує лише capability ID, для якого є явний human-readable presenter; інші навіть typed declarations лишаються в технічному каталозі до окремого UI acceptance. Це не дублюючий реєстр команд: право й активність операції завжди беруться з canonical Gateway.
+
+## Локалізація UX-02
+
+Використано ті самі Symfony UK/EN каталоги, що й у Shell. UI дій, форми та Property Query мають `uw.*` ключі, окремі доменні підписи capabilities мають точні `|trans` mappings. Пошукові дані з Read Models не перекладаються автоматично. E2E тест змінює мову через наявний локальний перемикач і перевіряє справжній Query view.
