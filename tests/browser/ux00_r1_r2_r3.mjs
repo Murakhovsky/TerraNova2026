@@ -344,6 +344,36 @@ try {
   add('UX02.typed_read_and_canonical_human_form', {asset_id:assetId,native_rows:1});
   await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
 
+  // UX-03: registered provider composed Sales and Property, no entity
+  // accepted from client until a tenant-bound SearchResult proves ownership.
+  const business = await page.goto(abs('/workspace/unified/business/property.asset?q=' + assetId),
+    { waitUntil: 'networkidle' });
+  assert(business?.status() === 200
+      && await page.locator('[data-cos-unified-business][data-workspace-id="property.asset"]').count() === 1,
+      'UX03: Property provider composition unavailable');
+  const nativeEntity = page.locator('[data-entity-ref="property.asset:' + assetId + '"]');
+  assert(await nativeEntity.count() === 1,
+      'UX03: canonical tenant-bound Property EntityRef missing');
+  const selectedBusiness = await page.goto(abs('/workspace/unified/business/property.asset?q='
+      + assetId + '&selected=property.asset:' + assetId), { waitUntil: 'networkidle' });
+  assert(selectedBusiness?.status() === 200
+      && await page.locator('[data-cos-selected-entity="property.asset:' + assetId + '"]').count() === 1,
+      'UX03: verified Property entity detail cannot compose');
+  const foreignBusiness = await page.goto(abs('/workspace/unified/business/property.asset?q='
+      + assetId + '&selected=property.asset:' + foreignAssetId), { waitUntil: 'networkidle' });
+  assert(foreignBusiness?.status() === 200
+      && await page.locator('[data-cos-selected-entity]').count() === 0
+      && await page.locator('[role="alert"]').count() > 0,
+      'UX03: unverified foreign Property EntityRef displayed');
+  const salesBusiness = await page.goto(abs('/workspace/unified/business/sales.deal'),
+    { waitUntil: 'networkidle' });
+  assert(salesBusiness?.status() === 200
+      && await page.locator('[data-cos-unified-business][data-workspace-id="sales.deal"]').count() === 1,
+      'UX03: Sales Workspace provider not available');
+  assert(sqlCount(assetId) === 1, 'UX03: Workspace reads mutated native Property');
+  add('UX03.sales_property_composition_and_entity_fencing', {asset_id:assetId,foreign_asset:foreignAssetId});
+  await page.goto(abs('/workspace/capabilities'), { waitUntil: 'networkidle' });
+
   // R3 UI. Upload rejects duplicate identities, then stages a bounded
   // real CSV, projects an immutable digest, proposes a Goal/Plan and remains
   // fail-closed without two independent approvals and worker admission.

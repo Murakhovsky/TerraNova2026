@@ -1,0 +1,13 @@
+---
+title: ADR — Бізнесові робочі простори UX-03
+description: Складення Sales і Property без дублювання Domain стану.
+status: isolated-pilot
+---
+
+# UX-03: бізнесові робочі простори
+
+Універсальний маршрут верифікує Workspace ID через WorkspaceCompositionResolver і лише ті Domain Web Providers, які активні для поточного tenant. Пошук використовує WebExtensionCatalog, а обрана користувачем сутність відображається лише після позитивного tenant-scoped EntityRef readback серед результатів того самого запиту. Немає ручного SQL, власних доменних копій даних, другого frontend чи командного виконавця.
+
+Sales (lead/deal/client) і Property використовують ті самі registered WorkspaceDefinition та Application Search adapters. Картки, список, URL-запити і сортування працюють через один серверний read path. Для незнайдених, відключених і чужих сутностей — fail-closed. EntityLinkResolver має перевагу над source SearchResult path. Активність — організаційна, не привласнюється вибраному запису. Непідтверджені AI/Process результати не видаються за факт.
+
+Повні прямі мутації, пагінація джерела понад bounded search, справжні Saved Views, міждоменні зв’язки, AI делегування та production rollout мають окремі gates після інтеграції відповідних Domain контрактів. Після UX-03 нові UX-04+ не розпочинаємо без рішення.

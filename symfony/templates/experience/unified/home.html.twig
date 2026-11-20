@@ -42,7 +42,7 @@
           <p class="cos-card__eyebrow">Зареєстрований контекст</p>
           <h3 class="cos-card__title">{{ workspace.label }}</h3>
           <p class="cos-card__copy">{{ workspace.id }}</p>
-          <a class="cos-button cos-button--ghost" href="{{ workspace.path }}">Перейти до даних</a>
+          <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_business_workspace',{workspaceId:workspace.id}) }}">Перейти до даних</a>
         </article>
       {% else %}
         <p class="cos-card">Активних бізнес-контекстів немає.</p>

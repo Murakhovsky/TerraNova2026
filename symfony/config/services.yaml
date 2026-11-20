@@ -4064,3 +4064,7 @@ services:
   App\Web\Experience\Unified\UnifiedCapabilityController:
     public: true
     tags: ['controller.service_arguments']
+
+  App\Web\Experience\Unified\UnifiedBusinessWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
