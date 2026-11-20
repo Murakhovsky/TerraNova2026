@@ -58,6 +58,8 @@ jobs:
         run: python3 -m py_compile bin/ci/step_timings.py
       - name: Current contracts and unit behavior
         run: bash bin/verify fast
+      - name: UX-02 Query Action contract
+        run: php tests/architecture/cos_unified_workspace_ux02_contract.php
       - name: UX-01 Workspace Shell contract
         run: php tests/architecture/cos_unified_workspace_ux01_contract.php
       - name: Canonical Capability Library contract

@@ -1,0 +1,57 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Пошук нерухомості | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-uw cos-page__stack" data-cos-unified-property-query>
+  <header class="cos-card">
+    <p class="cos-card__eyebrow">Property / Application Query</p>
+    <h1 class="cos-card__title">Знайти об’єкт нерухомості</h1>
+    <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_actions') }}">Операції</a>
+  </header>
+  <form method="get" action="{{ path('cos_unified_property_query') }}" class="cos-card cos-uw__search" role="search">
+    <label for="cos-uw-search-property">Адреса, назва або ідентифікатор</label>
+    <div class="cos-uw__row">
+      <input id="cos-uw-search-property" name="q" class="cos-input" type="search" maxlength="120" value="{{ query }}">
+      <button class="cos-button cos-button--primary" type="submit">Знайти</button>
+    </div>
+  </form>
+  {% if error %}
+    <div class="cos-alert" role="alert">{{ error }}</div>
+  {% elseif reference is not empty %}
+    {% if data and data.property is defined and data.property %}
+      <article class="cos-card" data-cos-native-property="{{ data.property.asset_id|default('') }}">
+        <h2 class="cos-card__title">Підтверджений запис Property</h2>
+        <p class="cos-card__copy">Asset: <code>{{ data.property.asset_id|default('') }}</code></p>
+        <p class="cos-card__copy">Тип: {{ data.property.type_code|default('Невідомо') }}</p>
+        <p class="cos-card__copy">Адреса: {{ data.property.formatted_address|default('Не вказано') }}</p>
+      </article>
+    {% else %}
+      <div class="cos-card" role="status">Об'єкт не знайдено або доступ обмежено.</div>
+    {% endif %}
+  {% elseif query is not empty %}
+    {% set hits=data.items|default([]) %}
+    <section class="cos-card" aria-labelledby="cos-uw-property-list">
+      <h2 id="cos-uw-property-list" class="cos-card__title">Знайдені записи</h2>
+      <div class="cos-uw__results" data-cos-property-results>
+      {% for item in hits %}
+        {% set asset=item.property|default({}) %}
+        {% if asset.asset_id|default('') %}
+          <a class="cos-uw__result" href="{{ path('cos_unified_property_query', { reference: asset.asset_id }) }}">
+            <strong>{{ asset.asset_id }}</strong>
+            <small>{{ asset.type_code|default('Property Asset') }}</small>
+          </a>
+        {% endif %}
+      {% else %}
+        <p class="cos-card__copy">Підтверджених записів немає.</p>
+      {% endfor %}
+      </div>
+      {% set total=data.pagination.total|default(0) %}
+      <p class="cos-card__copy">Усього за фільтром: {{ total }}. Показано поточну сторінку.</p>
+      {% if total > page * perPage %}
+        <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_property_query', {q:query,page:page+1}) }}">Наступна сторінка</a>
+      {% endif %}
+    </section>
+  {% else %}
+    <div class="cos-card" role="status">Введіть фільтр. Читання не створює Goal або Action.</div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -3687,3 +3687,13 @@ cos_unified_home:
   path: /workspace/unified
   controller: App\Web\Experience\Unified\UnifiedWorkspaceController::index
   methods: [GET, HEAD]
+
+cos_unified_actions:
+  path: /workspace/unified/actions
+  controller: App\Web\Experience\Unified\UnifiedCapabilityController::index
+  methods: [GET, HEAD]
+
+cos_unified_property_query:
+  path: /workspace/unified/property
+  controller: App\Web\Experience\Unified\UnifiedCapabilityController::property
+  methods: [GET, HEAD]

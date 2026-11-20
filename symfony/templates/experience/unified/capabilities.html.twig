@@ -1,0 +1,50 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}Операції бізнесу | COS{% endblock %}
+{% block workspace_content %}
+<section class="cos-uw cos-page__stack" data-cos-unified-capabilities>
+  <header class="cos-card">
+    <p class="cos-card__eyebrow">COS / Query · Action · Approval</p>
+    <h1 class="cos-card__title">Операції бізнесу</h1>
+    <p class="cos-card__copy">Команди доступні лише через чинні Domain контракти та політики.
+      Реєстрація команди не означає її виконання.</p>
+    <a class="cos-button cos-button--ghost" href="{{ path('cos_unified_home') }}">Робочі простори</a>
+  </header>
+  <section class="cos-uw__grid" aria-label="Доступні можливості" data-cos-operation-catalog>
+  {% for op in operations %}
+    <article class="cos-card" data-cos-operation-id="{{ op.id }}" data-cos-operation-ready="{{ op.ui_ready ? 'yes' : 'no' }}">
+      <p class="cos-card__eyebrow">{{ op.kind }} · {{ op.status }}</p>
+      <h2 class="cos-card__title">{{ op.label }}</h2>
+      <p class="cos-card__copy">{{ op.reason }}</p>
+      {% if op.needs_approval %}<p class="cos-card__copy">Потрібні погодження і перевірені квитанції виконання.</p>{% endif %}
+      {% if op.href %}
+        <a class="cos-button cos-button--ghost" href="{{ op.href }}">Відкрити</a>
+      {% else %}
+        <span class="cos-card__copy" role="status">UI виконання недоступний до приймання контракту.</span>
+      {% endif %}
+    </article>
+  {% else %}
+    <p class="cos-card">Немає зареєстрованих typed-команд у цьому контексті.</p>
+  {% endfor %}
+  </section>
+  <section id="cos-uw-create" class="cos-card" aria-labelledby="cos-uw-create-label">
+    <p class="cos-card__eyebrow">Property · людська команда</p>
+    <h2 id="cos-uw-create-label" class="cos-card__title">Створити Property Asset</h2>
+    <p class="cos-card__copy">Тільки Asset, без оголошення чи Inventory. Результат підтверджується повторним читанням Domain.</p>
+    <form method="post" action="{{ path('cos_capabilities_property_create') }}" class="cos-uw__search">
+      <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+      <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
+      <label for="cos-uw-kind">Тип об'єкта</label>
+      <input id="cos-uw-kind" name="type_code" class="cos-input" value="house" required maxlength="200">
+      <label for="cos-uw-city">Місто</label>
+      <input id="cos-uw-city" name="city" class="cos-input" required maxlength="200">
+      <label for="cos-uw-region">Область</label>
+      <input id="cos-uw-region" name="region" class="cos-input" maxlength="200">
+      <label for="cos-uw-address">Адреса</label>
+      <input id="cos-uw-address" name="address" class="cos-input" maxlength="400">
+      <label for="cos-uw-area">Площа, м²</label>
+      <input id="cos-uw-area" name="area_total" class="cos-input" type="number" min="0" max="1000000" step="0.01">
+      <button class="cos-button cos-button--primary" type="submit">Створити через Property Command</button>
+    </form>
+  </section>
+</section>
+{% endblock %}
