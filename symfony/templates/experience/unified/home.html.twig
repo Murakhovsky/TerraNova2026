@@ -9,9 +9,13 @@
     <div class="cos-uw__row">
       <a class="cos-button cos-button--primary" href="/workspace/unified/actions">Команди та запити</a>
       <a class="cos-button cos-button--ghost" href="/cos/control-center">Операції та погодження</a>
-      <div class="cos-uw__appearance" data-controller="appearance" data-appearance-theme-value="light" role="group" aria-label="Оформлення">
+      <div class="cos-uw__appearance" data-controller="appearance"
+           data-appearance-theme-value="light" data-appearance-density-value="comfortable"
+           role="group" aria-label="Оформлення">
         <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setTheme" data-theme="light">Світла тема</button>
         <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setTheme" data-theme="dark">Темна тема</button>
+        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setDensity" data-density="comfortable">Звичайна щільність</button>
+        <button type="button" class="cos-button cos-button--ghost" data-action="click->appearance#setDensity" data-density="compact">Компактна щільність</button>
       </div>
     </div>
   </header>
