@@ -18,19 +18,27 @@ domain_id: capital_markets
   "components": [
     {
       "id": "market_data",
-      "capability_ids": []
+      "capability_ids": [
+        "capital_markets.market_data.view"
+      ]
     },
     {
       "id": "research",
-      "capability_ids": []
+      "capability_ids": [
+        "capital_markets.research.result.record"
+      ]
     },
     {
       "id": "strategy",
-      "capability_ids": []
+      "capability_ids": [
+        "capital_markets.strategy.version.manage"
+      ]
     },
     {
       "id": "instrument_pool",
-      "capability_ids": []
+      "capability_ids": [
+        "capital_markets.instrument_pool.view"
+      ]
     }
   ],
   "process_ids": [
@@ -77,7 +85,7 @@ Authoritative state, Domain Events та persistence належать Domain. А�
 ## 5. Use Cases та Capabilities
 
 Точні callable IDs, typed schemas, execution bindings, permissions і lifecycle беруться **тільки** з `app/Domains/CapitalMarkets/module.php` та generated `docs/12-reference/module-capabilities.md`.
-Машинна карта поки не прив'язує capabilities до кожного internal component: `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
+Машинна карта містить перевірювані посилання лише на окремі manifest-declared capabilities. Це не посвідчує executable status. Порожній `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
 
 ## 6. Виконання
 

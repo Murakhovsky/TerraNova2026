@@ -18,19 +18,27 @@ domain_id: growth
   "components": [
     {
       "id": "market_discovery",
-      "capability_ids": []
+      "capability_ids": [
+        "growth.market.discovery"
+      ]
     },
     {
       "id": "qualification",
-      "capability_ids": []
+      "capability_ids": [
+        "growth.candidate.qualify"
+      ]
     },
     {
       "id": "engagement",
-      "capability_ids": []
+      "capability_ids": [
+        "growth.handoff.prepare"
+      ]
     },
     {
       "id": "learning",
-      "capability_ids": []
+      "capability_ids": [
+        "growth.attribution"
+      ]
     }
   ],
   "process_ids": [
@@ -75,7 +83,7 @@ Authoritative state, Domain Events та persistence належать Domain. А�
 ## 5. Use Cases та Capabilities
 
 Точні callable IDs, typed schemas, execution bindings, permissions і lifecycle беруться **тільки** з `app/Domains/Growth/module.php` та generated `docs/12-reference/module-capabilities.md`.
-Машинна карта поки не прив'язує capabilities до кожного internal component: `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
+Машинна карта містить перевірювані посилання лише на окремі manifest-declared capabilities. Це не посвідчує executable status. Порожній `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
 
 ## 6. Виконання
 

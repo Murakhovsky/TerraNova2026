@@ -18,19 +18,30 @@ domain_id: property
   "components": [
     {
       "id": "assets",
-      "capability_ids": []
+      "capability_ids": [
+        "property.asset.create",
+        "property.asset.get",
+        "property.asset.update",
+        "property.asset.search"
+      ]
     },
     {
       "id": "inventory",
-      "capability_ids": []
+      "capability_ids": [
+        "property.inventory"
+      ]
     },
     {
       "id": "listings",
-      "capability_ids": []
+      "capability_ids": [
+        "property.listing"
+      ]
     },
     {
       "id": "publication",
-      "capability_ids": []
+      "capability_ids": [
+        "property.publish"
+      ]
     }
   ],
   "process_ids": [
@@ -75,7 +86,7 @@ Authoritative state, Domain Events та persistence належать Domain. А�
 ## 5. Use Cases та Capabilities
 
 Точні callable IDs, typed schemas, execution bindings, permissions і lifecycle беруться **тільки** з `app/Domains/Property/module.php` та generated `docs/12-reference/module-capabilities.md`.
-Машинна карта поки не прив'язує capabilities до кожного internal component: `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
+Машинна карта містить перевірювані посилання лише на окремі manifest-declared capabilities. Це не посвідчує executable status. Порожній `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
 
 ## 6. Виконання
 

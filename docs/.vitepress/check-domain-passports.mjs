@@ -46,10 +46,10 @@ function evaluateEvidence(id, data) {
     }
   }
 }
-function checkPassport(id, moduleFile, manifest, coverage) {
+function checkPassport(id, moduleFile, manifest, coverage, sourceOverride = null) {
   const target = path.join(docsRoot, id, 'passport.md');
-  if (!fs.existsSync(target)) { error(id + ': missing docs/04-domains/'+id+'/passport.md'); return; }
-  const source = fs.readFileSync(target,'utf8');
+  if (sourceOverride === null && !fs.existsSync(target)) { error(id + ': missing docs/04-domains/'+id+'/passport.md'); return; }
+  const source = sourceOverride ?? fs.readFileSync(target,'utf8');
   const domainId = source.match(/^domain_id:\s*([^\s]+)\s*$/m)?.[1];
   if (domainId !== id) error(id + ': frontmatter domain_id mismatch');
   for (let i=0;i<required.length;i++) {
@@ -85,10 +85,28 @@ function checkPassport(id, moduleFile, manifest, coverage) {
   evaluateEvidence(id, data);
 }
 if (process.argv.includes('--self-test')) {
-  evaluateEvidence('fixture', {readiness:{level:'D4',evidence:[]}});
-  if (!errors.some(x=>x.includes('requires linked acceptance evidence'))) throw new Error('D4 guard not working');
-  errors.length=0;
-  console.log('Domain Passport negative acceptance guard passed.');
+  const domain='sales';
+  const manifestFile=path.join(domainsRoot,'Sales','module.php');
+  const manifest=manifestAt(manifestFile);
+  const coverage=buildDomainProcessCoverage().domains[domain];
+  const original=fs.readFileSync(path.join(docsRoot,domain,'passport.md'),'utf8');
+  function checkCase(label, content, expectedFailure) {
+    errors.length=0;
+    checkPassport(domain,manifestFile,manifest,coverage,content);
+    if (!errors.some(e=>e.includes(expectedFailure))) {
+      throw new Error(label + ': expected '+expectedFailure+'; got '+errors.join('; '));
+    }
+    errors.length=0;
+  }
+  checkPassport(domain,manifestFile,manifest,coverage,original);
+  if (errors.length > 0) throw new Error('Positive passport fixture invalid: '+errors.join('; '));
+  checkCase('wrong domain id',original.replace(/^domain_id: sales$/m,'domain_id: property'),'frontmatter domain_id mismatch');
+  checkCase('wrong manifest reference',original.replace('"app/Domains/Sales/module.php"','"app/Domains/Property/module.php"'),'manifest path does not match');
+  checkCase('unknown capability',original.replace('"capability_ids": []','"capability_ids": ["sales.unregistered_ghost"]'),'undeclared capability');
+  checkCase('fabricated process',original.replace('sales.lead-to-managed-case','sales.fake-process'),'process_ids drift');
+  checkCase('missing D4 evidence',original.replace('"level": "UNKNOWN"','"level": "D4"'),'requires linked acceptance evidence');
+  checkCase('missing required section',original.replace('## 14. Карта джерел','## 14. Без карти'),'missing section');
+  console.log('Domain Passport positive fixture and six independent negative cases passed.');
   process.exit(0);
 }
 const coverage = buildDomainProcessCoverage();
