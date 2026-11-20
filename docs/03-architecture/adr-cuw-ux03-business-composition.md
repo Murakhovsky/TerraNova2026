@@ -21,3 +21,7 @@ Sales (lead/deal/client) і Property використовують ті самі 
 ## Збережені вигляди
 
 UX-03 реалізує обмежені до десяти персональні named filter presets для активного Workspace в серверній Symfony session, з перевіркою CSRF, tenant/user scope та повторюваним ключем. Збережений вигляд не є бізнесовою подією і не проходить через Command Bus, оскільки змінює лише UI preference, без Domain-side write. Немає cross-device синхронізації та гарантії збереження після очищення сесії. Для довгострокових Saved Views потрібний окремий контрольований preference contract.
+
+## Негативне приймання прав
+
+Authenticated користувач із роллю buyer і валідним CSRF має отримати HTTP 403 як на читання менеджерського Business Workspace, так і на збереження персонального Workspace filter; native Property rows мають залишитися незмінними. Це окремий E2E сценарій, а не висновок зі статичного UI hiding.

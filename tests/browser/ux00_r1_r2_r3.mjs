@@ -302,6 +302,25 @@ try {
     add('S2.restricted_buyer_valid_csrf_no_native_write', {
       role: 'buyer', api_status: 403, form_status: 303, native_delta: 0,
     });
+
+    // UX03 negative UI+saved view: valid buyer session and valid CSRF do not
+    // gain manager Workspace or session preference write authority.
+    const deniedUx03 = await restrictedCtx.request.get(
+      abs('/workspace/unified/business/property.asset'));
+    const deniedSavedView = await restrictedCtx.request.post(
+      abs('/workspace/unified/business/property.asset/views'), {
+        form:{csrf_token:buyerToken,operation:'save',name:'Forbidden buyer view',
+          q:assetId,view:'cards',sort:'relevance'},
+        maxRedirects:0,
+      });
+    assert(deniedUx03.status()===403 && deniedSavedView.status()===403,
+      'UX03: buyer role escaped Business Workspace or saved-view ACL');
+    assert(Number(sqlExecute(
+      "SELECT COUNT(*) FROM tn_property_assets WHERE organization_id='default'"))
+      === nativeBefore,
+      'UX03: denied buyer view mutated native Property rows');
+    add('UX03.restricted_buyer_workspace_and_view_denied',
+      {html_status:403,preference_post_status:403,native_delta:0});
   } finally {
     await restrictedCtx.close();
   }
