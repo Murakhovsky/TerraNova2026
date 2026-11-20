@@ -31,7 +31,7 @@ generated: true
 | `finance` · Finance | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `marketing` · Marketing | `0.1.1` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `marketing` · Marketing | `0.1.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `1.0.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `real_estate` · Real Estate | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |

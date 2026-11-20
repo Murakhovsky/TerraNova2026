@@ -97,6 +97,10 @@ jobs:
         run: |
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Marketing spend evidence typed read-only contract
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/unit/marketing_spend_evidence_contract.php
       - name: Marketing Meta real MySQL atomic sync and rollback acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

@@ -99,6 +99,18 @@ final readonly class MarketingPaidReadService
         return $this->repository->insights($actor->organizationId()->value(),$accountId,$grain,$from,$to);
     }
 
+    /** @return array<string,mixed> */
+    public function spendEvidence(TenantContext $actor,string $accountId,string $sourceSnapshotRef):array
+    {
+        $this->guard($actor);
+        $org=$actor->organizationId()->value();
+        $this->requiredAccount($org,$accountId);
+        if(!preg_match('/^mis-[a-f0-9]{24}$/D',$sourceSnapshotRef)){
+            throw new DomainException('Invalid Marketing insight snapshot identifier.');
+        }
+        return $this->repository->spendEvidence($org,$accountId,$sourceSnapshotRef);
+    }
+
     private function requiredAccount(string $org,string $id):array
     {
         if(!preg_match('/^mads-[a-f0-9]{24}$/D',$id))throw new DomainException('Invalid account reference.');

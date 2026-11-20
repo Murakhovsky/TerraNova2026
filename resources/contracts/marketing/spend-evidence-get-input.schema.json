@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "account_id",
+    "source_snapshot_ref"
+  ],
+  "properties": {
+    "account_id": {
+      "type": "string",
+      "pattern": "^mads-[a-f0-9]{24}$"
+    },
+    "source_snapshot_ref": {
+      "type": "string",
+      "pattern": "^mis-[a-f0-9]{24}$"
+    }
+  },
+  "additionalProperties": false
+}

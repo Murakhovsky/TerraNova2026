@@ -8,8 +8,8 @@ declare(strict_types=1);
 $manifest = [
     'id' => 'marketing',
     'name' => 'Marketing',
-    'version' => '0.1.1',
-    'schema_version' => '0.1.1',
+    'version' => '0.1.2',
+    'schema_version' => '0.1.2',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Marketing planning and Meta Paid Media read-only; financial and external mutations are deliberately blocked.',
     'icon' => 'megaphone',
@@ -34,6 +34,7 @@ $manifest = [
             'marketing.campaign.create',
             'marketing.paid.account.list',
             'marketing.paid.sync.history',
+            'marketing.paid.spend.evidence.get',
             'marketing.paid.insights.query',
             'marketing.campaign.update',
             'marketing.campaign.archive',
@@ -54,6 +55,7 @@ foreach ([
     'marketing.campaign.create' => ['command', 'internal', 'marketing/campaign-create', 'cos.tenant.manage'],
     'marketing.paid.account.list' => ['query', 'none', 'marketing/account-list', 'cos.tenant.manage'],
     'marketing.paid.sync.history' => ['query', 'none', 'marketing/sync-history', 'cos.tenant.manage'],
+    'marketing.paid.spend.evidence.get' => ['query', 'none', 'marketing/spend-evidence-get', 'cos.tenant.manage'],
     'marketing.paid.insights.query' => ['query', 'none', 'marketing/insights-query', 'cos.tenant.manage'],
 ] as $id => [$kind, $sideEffect, $schema, $permission]) {
     $contracts[] = [
