@@ -85,7 +85,7 @@ kind: implementation
 
 **Evidence policy:** мобільні перевірки мають фактичне підтвердження з exact-head CI; staging R3 worker/outcome sign-off, справжні два tenant login та production лишаються поза межами цього PASS.
 
-## 3.5. Negative actor authorization acceptance (new candidate, PENDING CI)
+## 3.5. Перевірка обмеження доступу для користувача без повноважень
 
 На окремому authenticated buyer/не-manager акаунті з поточним tenant і власним **валідним CSRF** перевіряємо відмову доступу до Capability Library та typed inventory, заборону `property.asset.create` через API і Web, і незмінність кількості native Property Asset rows. Це не анонімний користувач і не підроблений CSRF: API має бути відхилено на Symfony `ROLE_MANAGER` (403), а людську Web-форму окремо блокує canonical Gateway через `isManager/cos.tenant.manage` (303 з повідомленням `invalid`); native writes = 0.
 
