@@ -14,6 +14,7 @@ foreach (['PDO','Doctrine\\','SELECT ','INSERT ','new CreatePropertyCommand','fe
 }
 if (!str_contains($presenter,'PRESENTERS')
     || !str_contains($presenter,"'execution_verified'=>false")
+    || !str_contains($controller,'$this->presenter->supports(')
     || !str_contains($view,"path('cos_capabilities_property_create')")
     || !str_contains($routes,'cos_unified_actions:')
     || !str_contains($routes,'cos_unified_property_query:')) {
