@@ -39,7 +39,7 @@ $read = new class implements SalesProposalLeadReadModelInterface {
     public function lead(string $organizationId, int $leadId): ?array {
         $this->calls[] = [$organizationId, $leadId];
         if ($organizationId === 'tenant-a' && $leadId === 7) {
-            return ['id' => 7, 'organization_id' => 'tenant-a', 'full_name' => 'Test'];
+            return ['id' => 7, 'organization_id' => 'tenant-a', 'full_name' => 'Test', 'status' => 'new', 'property_id' => 42];
         }
         return null;
     }
@@ -66,6 +66,7 @@ $reject = static function(callable $fn) use ($check): void {
 $check($gateway->describe($manager, 'sales.inbound.request.read')['status'] === 'read_only', 'Not a canonical read-only capability.');
 $hit = $gateway->invoke($manager, 'sales.inbound.request.read', ['lead_id' => 7], 'trusted_read', '', 'sales-trace');
 $check($hit['found'] === true && $hit['request']['id'] === 7, 'Sales native read model not used.');
+$check(($hit['request']['property_id'] ?? null) === 42 && !array_key_exists('full_name', $hit['request']), 'Sensitive lead fields leaked from generic capability.');
 $miss = $gateway->invoke($manager, 'sales.inbound.request.read', ['lead_id' => 9], 'human_api', '', 'sales-trace');
 $check($miss === ['found' => false, 'request' => null], 'Missing request must not invent a record.');
 $reject(static fn() => $gateway->invoke($manager, 'sales.inbound.request.read', ['lead_id' => 7, 'tenant_id' => 'tenant-b'], 'trusted_read', '', 'sales-trace'));

@@ -34,6 +34,16 @@ final readonly class SalesInboundRequestReadAdapter implements CapabilityInvocat
         if ($request !== null && (string)($request['organization_id'] ?? '') !== $tenant) {
             throw new DomainException('Sales request read model violated tenant ownership.');
         }
-        return ['found' => $request !== null, 'request' => $request];
+        // Never expose the full Sales lead aggregate (contact PII, notes,
+        // communications or activities) through the generic Capability API.
+        $summary = $request === null ? null : [
+            'id' => (int) $request['id'],
+            'status' => (string) ($request['status'] ?? ''),
+            'client_case_id' => isset($request['client_case_id']) && (int) $request['client_case_id'] > 0
+                ? (int) $request['client_case_id'] : null,
+            'property_id' => isset($request['property_id']) && (int) $request['property_id'] > 0
+                ? (int) $request['property_id'] : null,
+        ];
+        return ['found' => $request !== null, 'request' => $summary];
     }
 }
