@@ -56,7 +56,8 @@ foreach ([
 }
 if (str_contains($deploy, 'docker system prune')
     || str_contains($deploy, 'docker volume prune')
-    || !str_contains($workflow, "if: github.event_name == 'push' && github.ref == 'refs/heads/main'")) {
+    || substr_count($workflow, "if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true") !== 2
+    || str_contains($workflow, "if: github.event_name == 'push' && github.ref == 'refs/heads/main'")) {
     throw new RuntimeException('Dangerous data deletion or unguarded image publication');
 }
 echo "Lean COS image publication and minimal deploy contract PASS.\n";

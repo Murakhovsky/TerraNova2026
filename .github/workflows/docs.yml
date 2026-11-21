@@ -40,6 +40,12 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/workflows/runtime.yml'
   workflow_dispatch:
+    inputs:
+      deploy_docs:
+        description: 'Explicitly authorize AWS dev documentation deployment'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -114,7 +120,7 @@ jobs:
   deploy:
     name: Deploy docs to AWS dev
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_docs == true
     runs-on: ubuntu-latest
     environment: AWS TN2026
     concurrency:
