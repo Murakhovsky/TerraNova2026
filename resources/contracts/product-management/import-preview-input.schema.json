@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementimport-previewInputV1",
+  "type": "object",
+  "required": [
+    "csv"
+  ],
+  "properties": {
+    "csv": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 12000
+    }
+  },
+  "additionalProperties": false
+}
