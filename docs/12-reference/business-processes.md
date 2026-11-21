@@ -173,7 +173,7 @@ generated: true
 | Крок | Owner | Domain | Capability / gap | Вид | Критичний | Executable / evidence mapping |
 | --- | --- | --- | --- | --- | --- | --- |
 | Draft and publish methodology version | methodology author | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `DraftDiagnosticPack` [source]<br>use_case `PublishDiagnosticPack` [source] |
-| Start version-pinned session | diagnostic operator / interviewer | `diagnostic` | `diagnostic.session.start` | `operation` | так | use_case `StartDiagnosticSession` [source]<br>handler `App\Infrastructure\Capability\DiagnosticSessionStartAdapter` [unresolved] |
+| Start version-pinned session | diagnostic operator / interviewer | `diagnostic` | `diagnostic.session.start` | `operation` | так | use_case `StartDiagnosticSession` [source]<br>source `symfony/src/Infrastructure/Capability/DiagnosticSessionStartAdapter.php` · `DiagnosticSessionStartAdapter` [source] |
 | Capture evidence | diagnostic operator / interviewer | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `CaptureDiagnosticEvidence` [source] |
 | Evaluate structured evidence | deterministic evaluation engine | `diagnostic` | gap: `missing-domain-capability` | `operation` | так | use_case `EvaluateDiagnosticSession` [source] |
 | Record findings and recommendation | deterministic evaluation engine | `diagnostic` | gap: `missing-domain-capability` | `state` | так | use_case `RecordDiagnosticResult` [source] |
