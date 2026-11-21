@@ -12,16 +12,6 @@
       "target_capability": "diagnostic.methodology.manage"
     },
     {
-      "id": "diagnostic.session-to-recommendation:session",
-      "process_id": "diagnostic.session-to-recommendation",
-      "step_id": "session",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "diagnostic",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "diagnostic.session.start"
-    },
-    {
       "id": "diagnostic.session-to-recommendation:evidence",
       "process_id": "diagnostic.session-to-recommendation",
       "step_id": "evidence",

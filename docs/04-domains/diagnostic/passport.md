@@ -18,7 +18,9 @@ domain_id: diagnostic
   "components": [
     {
       "id": "sessions",
-      "capability_ids": []
+      "capability_ids": [
+        "diagnostic.session.start"
+      ]
     },
     {
       "id": "methodology",
