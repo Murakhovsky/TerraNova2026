@@ -3229,8 +3229,17 @@ services:
     arguments:
       $connection: '@cos.database.pdo'
 
+  App\Infrastructure\Automation\FederationPlanApprovalAuthority:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+  App\Infrastructure\Automation\CompositeActionApprovalAuthority:
+    arguments:
+      $sales: '@Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority'
+      $federation: '@App\Infrastructure\Automation\FederationPlanApprovalAuthority'
+
   Kernel\Approval\Contract\ApprovalAuthorityInterface:
-    alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesApprovalAuthority
+    alias: App\Infrastructure\Automation\CompositeActionApprovalAuthority
 
   Kernel\Approval\Service\ApprovalService:
     arguments:
@@ -3962,6 +3971,10 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+  App\Web\Capability\CapabilityLibraryController:
+    public: true
+    tags: ['controller.service_arguments']
+
   App\Web\Capability\AutomationIntentReviewController:
     public: true
     tags: ['controller.service_arguments']
@@ -4154,3 +4167,21 @@ services:
 
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2LiveWorkerFactory: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2AlertDelivery: ~
+
+  App\Web\Experience\Unified\UnifiedWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Experience\Unified\UnifiedCapabilityController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Web\Experience\Unified\UnifiedBusinessWorkspaceController:
+    public: true
+    tags: ['controller.service_arguments']
+
+  App\Application\Experience\Relations\Contract\RelatedEntityReadInterface:
+    alias: App\Infrastructure\Experience\Relations\SalesPropertyRelatedEntityRead
+
+  App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface:
+    alias: App\Infrastructure\Experience\Business\TenantBusinessEntitySummaryRead

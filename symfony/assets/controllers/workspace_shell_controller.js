@@ -202,6 +202,8 @@ export default class extends Controller {
     }
 
     openPalette() {
+        if (!this.paletteTarget.hidden) return;
+        this.paletteReturnFocus = document.activeElement;
         this.paletteTarget.hidden = false;
         document.body.dataset.cosCommandOpen = 'true';
         this.paletteInputTarget.value = '';
@@ -212,10 +214,16 @@ export default class extends Controller {
     }
 
     closePalette() {
+        if (this.paletteTarget.hidden) return;
         this.paletteTarget.hidden = true;
         delete document.body.dataset.cosCommandOpen;
         this.activeResultIndex = -1;
         this.clearResultSelection();
+        const previous = this.paletteReturnFocus;
+        this.paletteReturnFocus = null;
+        if (previous && previous.isConnected && typeof previous.focus === 'function') {
+            previous.focus();
+        }
     }
 
     searchPalette() {
@@ -305,6 +313,25 @@ export default class extends Controller {
         ) {
             event.preventDefault();
             this.openPalette();
+            return;
+        }
+
+        if (paletteOpen && event.key === 'Tab') {
+            // Keep keyboard focus inside the actual dialog while it is open.
+            const focusable = [...this.paletteTarget.querySelectorAll(
+                'input:not([disabled]),button:not([disabled]),a[href]:not([aria-disabled="true"])',
+            )].filter(node => node.getClientRects().length > 0);
+            if (focusable.length > 0) {
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            }
             return;
         }
 
