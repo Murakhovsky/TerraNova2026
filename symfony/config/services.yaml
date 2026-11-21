@@ -2865,7 +2865,7 @@ services:
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
         - '@Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule'
         - '@Domains\Documents\Bootstrap\DocumentsDomainModule'
-- '@Domains\Finance\Bootstrap\FinanceDomainModule'
+        - '@Domains\Finance\Bootstrap\FinanceDomainModule'
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
