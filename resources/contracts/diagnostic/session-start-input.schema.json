@@ -27,11 +27,6 @@
       "minLength": 1,
       "maxLength": 64
     },
-    "methodology_version": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 100
-    },
     "pack_version": {
       "type": "integer",
       "minimum": 1,
@@ -56,11 +51,6 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 1440
-    },
-    "parent_session_id": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 191
     }
   },
   "additionalProperties": false

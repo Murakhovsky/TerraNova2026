@@ -96,6 +96,8 @@ $reject(static fn() => $gateway->invoke($manager, 'diagnostic.session.start', $i
 $reject(static fn() => $gateway->invoke($manager, 'diagnostic.session.start', $input, 'human_api', '', 'trace-01'));
 $reject(static fn() => $gateway->invoke($manager, 'diagnostic.session.start', [...$input, 'tenant_id' => 'tenant-b'], 'human_api', 'key-02', 'trace-01'));
 $reject(static fn() => $gateway->invoke($manager, 'diagnostic.session.start', [...$input, 'session_id' => 'forged'], 'human_api', 'key-02', 'trace-01'));
+$reject(static fn() => $gateway->invoke($manager, 'diagnostic.session.start', [...$input, 'methodology_version' => 'fake-pinned-methodology'], 'human_api', 'key-02', 'trace-01'));
+$reject(static fn() => $gateway->invoke($manager, 'diagnostic.session.start', [...$input, 'parent_session_id' => 'foreign-tenant-session'], 'human_api', 'key-02', 'trace-01'));
 $reject(static fn() => $gateway->invoke($manager, 'diagnostic.session.start', [...$input, 'subject_id' => ''], 'human_api', 'key-02', 'trace-01'));
 $reject(static fn() => $gateway->invoke($viewer, 'diagnostic.session.start', $input, 'human_api', 'key-02', 'trace-01'));
 $check(count($bus->calls) === 1, 'Unauthorized operation reached Diagnostic command bus.');
