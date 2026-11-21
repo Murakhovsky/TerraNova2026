@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementStockTransferInputV1",
+  "type": "object",
+  "required": [
+    "variant_id",
+    "from_location_id",
+    "to_location_id",
+    "quantity",
+    "source_ref"
+  ],
+  "properties": {
+    "variant_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "from_location_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "to_location_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "quantity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 21,
+      "pattern": "^[0-9]+(\\.[0-9]{1,6})?$"
+    },
+    "source_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    }
+  },
+  "additionalProperties": false
+}

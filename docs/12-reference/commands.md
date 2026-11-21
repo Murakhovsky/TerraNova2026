@@ -27,6 +27,7 @@ generated: true
 | `growth` | 0 |
 | `hr` | 0 |
 | `procurement` | 0 |
+| `product_management` | 0 |
 | `property` | 4 |
 | `real_estate` | 0 |
 | `sales` | 7 |
@@ -67,6 +68,10 @@ generated: true
 Явних `*Command` DTO contracts не знайдено.
 
 ## Procurement (`procurement`)
+
+Явних `*Command` DTO contracts не знайдено.
+
+## Product Management (`product_management`)
 
 Явних `*Command` DTO contracts не знайдено.
 

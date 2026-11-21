@@ -22,6 +22,7 @@ kind: product
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
 | Federation | `1.0.0` | Опціональний канонічний обробник погодження Goal Plan через Action/Policy/Approval. Вимкнений за замовчуванням. Реальне міждоменне виконання та підтвердження Goal outcomes ще не завершені. |
 | Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
+| Product_management | `0.1.0` | Пілотний E0–E4 Domain: каталог, рухи, базові ціни, CSV staging, Shopify read-only. Tenant-disabled, MySQL/production acceptance не підтверджені |
 | Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Service | `1.0.0` | V1-stable Request → Ticket → Assignment/SLA → Escalation → Resolution → Close runtime; schema `0.2.0`; lifecycle/idempotency/locking/event/audit release gates |

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementApprovedShopifyApplyActionOutputV1",
+  "type": "object",
+  "required": [
+    "preview_id",
+    "product_id",
+    "verified_variants",
+    "variant_ids",
+    "state",
+    "source_hash",
+    "normalized_digest"
+  ],
+  "properties": {
+    "preview_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "verified_variants": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "variant_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{32}$"
+      }
+    },
+    "state": {
+      "type": "string",
+      "const": "applied"
+    },
+    "source_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "normalized_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false
+}

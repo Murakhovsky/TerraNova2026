@@ -16,9 +16,9 @@ generated: true
 
 ## Підсумок
 
-- **Installable Domains:** 13
+- **Installable Domains:** 14
 - **Покрито канонічним процесом:** 8
-- **Явних exemptions:** 5
+- **Явних exemptions:** 6
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
@@ -32,6 +32,7 @@ generated: true
 | `growth` · Growth | `0.50.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `product_management` · Product Management | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `property` · Property | `1.0.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `real_estate` · Real Estate | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 | `sales` · Sales | `1.0.0` | `covered` | 2 | 13 | 1/13 | 12 | 12 |
@@ -82,6 +83,11 @@ generated: true
 - **Exempt:** V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation.
 - **Owner:** COS Architecture
 
+### Product Management (`product_management`)
+
+- **Exempt:** E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted.
+- **Owner:** COS Product Management
+
 ### Property (`property`)
 
 - `property.submission-to-publication`
@@ -116,6 +122,7 @@ generated: true
 | `finance` | COS Architecture | V1 skeleton only; executable Finance process models are intentionally deferred until Finance runtime implementation. |
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |
 | `procurement` | COS Architecture | V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation. |
+| `product_management` | COS Product Management | E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted. |
 
 ## Авторитетність і обмеження
 

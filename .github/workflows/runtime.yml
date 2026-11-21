@@ -97,6 +97,44 @@ jobs:
         run: |
           php symfony/bin/console cos:schema:migrate
           php symfony/bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+      - name: Product Management E0-E4 native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_mysql.php
+      - name: Product Management Shopify read-only MySQL mock acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_shopify_mock_mysql.php
+      - name: Product Management Shopify immutable preview native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_shopify_import_preview_mysql.php
+      - name: Product Management Shopify approved Action native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_shopify_approved_apply_mysql.php
+      - name: Product Management Shopify canonical Goal Plan Approval Action MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PM_SHOPIFY_FULL: "1"
+        run: php tests/integration/product_management_shopify_approved_goal_e2e_mysql.php
+      - name: Product Management Shopify crash quarantine and recovery audit MySQL
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_shopify_crash_recovery_mysql.php
+      - name: Product Management verified Product Media native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_media_mysql.php
+      - name: Product Management canonical Goal Plan Approval CSV native MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+          COS_TEST_PM_CSV_FULL: "1"
+        run: php tests/integration/product_management_approved_goal_e2e_mysql.php
+      - name: Product Management approved CSV Action native MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/product_management_approved_csv_mysql.php
       - name: Property Bulk real MySQL duplicate and tenant fencing
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
