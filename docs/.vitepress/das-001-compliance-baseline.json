@@ -29,7 +29,7 @@
       "max_process_gaps": 0
     },
     "finance": {
-      "min_typed": 0,
+      "min_typed": 8,
       "max_descriptive_only": 0,
       "max_process_gaps": 0
     },

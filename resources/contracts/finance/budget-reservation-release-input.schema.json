@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "reservation_id",
+    "reason"
+  ],
+  "properties": {
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^finr-[a-f0-9]{24}$"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 250
+    }
+  },
+  "additionalProperties": false
+}

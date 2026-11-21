@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "envelope_id",
+    "amount_minor",
+    "expected_revision",
+    "source_domain",
+    "source_operation_key",
+    "reason"
+  ],
+  "properties": {
+    "envelope_id": {
+      "type": "string",
+      "pattern": "^finb-[a-f0-9]{24}$"
+    },
+    "amount_minor": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000000000
+    },
+    "expected_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "source_domain": {
+      "type": "string",
+      "const": "marketing"
+    },
+    "source_operation_key": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 191
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 250
+    }
+  },
+  "additionalProperties": false
+}

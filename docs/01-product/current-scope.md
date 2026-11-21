@@ -22,7 +22,9 @@ kind: product
 | Diagnostic | `1.0.0` | встановлюваний модуль із маршрутами API, споживачем подій і постійним станом |
 | Federation | `1.0.0` | Опціональний канонічний обробник погодження Goal Plan через Action/Policy/Approval. Вимкнений за замовчуванням. Реальне міждоменне виконання та підтвердження Goal outcomes ще не завершені. |
 | Property | `1.0.0` | canonical Asset/Inventory/Listing/Publication runtime; legacy `tn_properties` ізольований як compatibility output |
-| Finance | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
+| Product_management | `0.1.0` | Пілотний E0–E4 Domain: каталог, рухи, базові ціни, CSV staging, Shopify read-only. Tenant-disabled, MySQL/production acceptance не підтверджені |
+| Marketing | `0.1.1` | M0/M1 tenant-safe drafts, Meta read-only та атомарний MySQL sync із санітизованими failure receipts/операційною історією в Workspace; платні мутації вимкнено, D3–D5 не прийнято |
+| Finance | `0.2.1` | F1 бюджетні конверти, approved Action резервування/замороження та source-reported Meta Spend Observations з provenance й unreconciled read-model; без Expense, settlement, trusted Marketing bridge і Meta write; disabled by default |
 | Procurement | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |
 | Service | `1.0.0` | V1-stable Request → Ticket → Assignment/SLA → Escalation → Resolution → Close runtime; schema `0.2.0`; lifecycle/idempotency/locking/event/audit release gates |
 | Construction | `0.1.0` | встановлюваний V1 skeleton; runtime і persistence навмисно відкладені |

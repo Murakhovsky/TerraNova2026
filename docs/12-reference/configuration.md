@@ -19,13 +19,15 @@ generated: true
 | `diagnostic` | `1.0.0` | — | 5 |
 | `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
-| `finance` | `0.1.0` | — | 0 |
+| `finance` | `0.2.1` | — | 8 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
+| `marketing` | `0.1.1` | — | 13 |
 | `procurement` | `0.1.0` | — | 0 |
+| `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
 | `real_estate` | `1.0.0` | — | 6 |
-| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 13 |
+| `sales` | `1.0.0` | `salesModuleConfigurationProvisioner` | 12 |
 | `service` | `1.0.0` | — | 7 |
 
 ## `capital_markets`
@@ -62,7 +64,7 @@ generated: true
 
 - manifest: `app/Domains/Finance/module.php`;
 - configuration provisioners: —;
-- capabilities: —.
+- capabilities: `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`.
 
 ## `growth`
 
@@ -76,11 +78,23 @@ generated: true
 - configuration provisioners: —;
 - capabilities: —.
 
+## `marketing`
+
+- manifest: `app/Domains/Marketing/module.php`;
+- configuration provisioners: —;
+- capabilities: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.sync.history`, `marketing.paid.insights.query`, `marketing.campaign.update`, `marketing.campaign.archive`, `marketing.paid.sync.request`, `marketing.paid.change.request`, `marketing.paid.meta.campaign.create_paused`, `marketing.paid.meta.campaign.activate`, `marketing.paid.meta.campaign.pause`.
+
 ## `procurement`
 
 - manifest: `app/Domains/Procurement/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `product_management`
+
+- manifest: `app/Domains/ProductManagement/module.php`;
+- configuration provisioners: —;
+- capabilities: `product_management.media.attach`, `product_management.media.detach`, `product_management.media.search`, `product_management.import.apply`, `product_management.shopify.import.apply`, `product_management.translation.upsert`, `product_management.stock.transfer`, `product_management.variant.update`, `product_management.variant.archive`, `product_management.category.create`, `product_management.category.assign`, `product_management.category.search`, `product_management.import.preview`, `product_management.import.batch.get`, `product_management.product.update`, `product_management.product.archive`, `product_management.stock.movement.search`, `product_management.variant.create`, `product_management.location.create`, `product_management.stock.receive`, `product_management.stock.issue`, `product_management.price.base.set`, `product_management.product.create`, `product_management.product.get`, `product_management.product.search`, `product_management.stock.balance.get`, `product_management.price.base.get`, `product_management.sync.status.get`.
 
 ## `property`
 
@@ -98,7 +112,7 @@ generated: true
 
 - manifest: `app/Domains/Sales/module.php`;
 - configuration provisioners: `salesModuleConfigurationProvisioner`;
-- capabilities: `sales.create_task`, `sales.deal.won.observation`, `sales.inbound.request.read`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
+- capabilities: `sales.create_task`, `sales.deal.won.observation`, `sales.workspace.use`, `sales.director.view`, `sales.admin.view`, `sales.admin.pipeline.manage`, `sales.admin.rules.manage`, `sales.admin.agents.manage`, `sales.admin.policies.manage`, `sales.admin.teams.manage`, `sales.admin.integrations.manage`, `sales.admin.audit.view`.
 
 ## `service`
 
