@@ -22,6 +22,7 @@ generated: true
 | `finance` | `0.1.0` | — | 0 |
 | `growth` | `0.50.0` | — | 92 |
 | `hr` | `0.1.0` | — | 0 |
+| `marketing` | `0.1.1` | — | 13 |
 | `procurement` | `0.1.0` | — | 0 |
 | `product_management` | `0.1.0` | — | 28 |
 | `property` | `1.0.0` | `propertyModuleConfigurationProvisioner` | 25 |
@@ -76,6 +77,12 @@ generated: true
 - manifest: `app/Domains/HR/module.php`;
 - configuration provisioners: —;
 - capabilities: —.
+
+## `marketing`
+
+- manifest: `app/Domains/Marketing/module.php`;
+- configuration provisioners: —;
+- capabilities: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.sync.history`, `marketing.paid.insights.query`, `marketing.campaign.update`, `marketing.campaign.archive`, `marketing.paid.sync.request`, `marketing.paid.change.request`, `marketing.paid.meta.campaign.create_paused`, `marketing.paid.meta.campaign.activate`, `marketing.paid.meta.campaign.pause`.
 
 ## `procurement`
 
