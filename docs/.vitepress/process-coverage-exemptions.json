@@ -22,6 +22,11 @@
       "reason": "V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation."
     },
     {
+      "domain": "marketing",
+      "owner": "COS Marketing / Architecture",
+      "reason": "M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation."
+    },
+    {
       "domain": "procurement",
       "owner": "COS Architecture",
       "reason": "V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation."

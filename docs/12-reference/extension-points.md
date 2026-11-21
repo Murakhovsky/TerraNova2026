@@ -18,10 +18,10 @@ generated: true
 | `event.consumers` | module-defined | 2 |
 | `tenant.configuration` | built-in | 2 |
 | `web.actions` | module-defined | 1 |
-| `web.commands` | module-defined | 5 |
-| `web.navigation` | module-defined | 5 |
-| `web.search` | module-defined | 5 |
-| `web.workspace` | module-defined | 5 |
+| `web.commands` | module-defined | 6 |
+| `web.navigation` | module-defined | 6 |
+| `web.search` | module-defined | 6 |
+| `web.workspace` | module-defined | 6 |
 | `web.workspace.extensions` | module-defined | 1 |
 
 ## `api.routes`
@@ -65,6 +65,7 @@ generated: true
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
+| `marketing` | `marketingNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -77,6 +78,7 @@ generated: true
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
+| `marketing` | `marketingNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -89,6 +91,7 @@ generated: true
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
+| `marketing` | `marketingNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 
@@ -101,6 +104,7 @@ generated: true
 | `capital_markets` | `capitalMarketsNavigationContributor` |
 | `diagnostic` | `diagnosticNavigationContributor` |
 | `growth` | `growthNavigationContributor` |
+| `marketing` | `marketingNavigationContributor` |
 | `property` | `propertyNavigationContributor` |
 | `sales` | `salesNavigationContributor` |
 

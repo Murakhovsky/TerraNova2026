@@ -1,0 +1,173 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ pageTitle }} | Terra Nova COS{% endblock %}
+{% block workspace_content %}
+<div class="cos-page__stack">
+    <header class="cos-page__section-head">
+        <div>
+            <small>Marketing · Controlled Paid Media</small>
+            <h1>{{ pageTitle }}</h1>
+            <p>Internal campaign drafts and Meta Ads read-only observations. Paid activation and budget writes are disabled until Finance and Workflow acceptance.</p>
+        </div>
+    </header>
+    <nav class="cos-toolbar" aria-label="Marketing workspaces">
+        <a class="btn btn-outline-secondary" href="/marketing">Overview</a>
+        <a class="btn btn-outline-secondary" href="/marketing/campaigns">Campaigns</a>
+        <a class="btn btn-outline-secondary" href="/marketing/accounts">Ad Accounts</a>
+        <a class="btn btn-outline-secondary" href="/marketing/performance">Performance</a>
+        <a class="btn btn-outline-secondary" href="/marketing/actions">Action Queue</a>
+    </nav>
+    {% if section == 'overview' %}
+        <section class="cos-kpi-strip">
+            <twig:CosMetric label="Internal campaigns" value="{{ campaigns|length }}" hint="first 50 for this tenant" />
+            <twig:CosMetric label="Connected accounts" value="{{ accounts|length }}" hint="verified provider bindings" />
+            <twig:CosMetric label="Meta campaigns" value="{{ providerCampaigns|length }}" hint="imported, not COS managed" />
+            <twig:CosMetric label="Insights rows" value="{{ observations|length }}" hint="7-day exact window, provider evidence" />
+        </section>
+        <section class="cos-panel">
+            <h2>Current next action</h2>
+            {% if accounts is empty %}
+                <p>No verified Meta Ad Account. Connect an authorized read-only account to import real performance facts.</p>
+                <a class="btn btn-primary" href="/marketing/accounts">Configure account</a>
+            {% elseif observations is empty %}
+                <p>No recent insight snapshot for this account. Sync the exact reporting window before interpreting results.</p>
+                <a class="btn btn-primary" href="/marketing/accounts">Sync Meta account</a>
+            {% else %}
+                <p>Recent Meta observations are available. Review them with their own date window, currency and data freshness.</p>
+                <a class="btn btn-primary" href="/marketing/performance">Review performance</a>
+            {% endif %}
+        </section>
+    {% elseif section == 'campaigns' %}
+        <section class="cos-panel">
+            <h2>Create a campaign draft</h2>
+            <p>No Meta ad is created. Product links are unverified until Product has an accepted read API.</p>
+            <form method="post" action="/marketing/campaigns" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ draftKey }}">
+                <label>Campaign name <input class="form-control" name="name" required minlength="3" maxlength="180"></label>
+                <label>Business objective <input class="form-control" name="business_objective" required maxlength="250"></label>
+                <label>Brief <textarea class="form-control" name="brief" maxlength="5000"></textarea></label>
+                <label>Product references (optional, comma-separated) <input class="form-control" name="product_refs"></label>
+                <button class="btn btn-primary" type="submit">Save draft</button>
+            </form>
+        </section>
+        <section class="cos-panel">
+            <h2>Internal campaigns</h2>
+            {% for c in campaigns %}
+                <div class="cos-page__section-head"><a href="/marketing/campaigns/{{ c.id|url_encode }}">{{ c.name }}</a><span>{{ c.status }} · Revision {{ c.revision }}</span></div>
+            {% else %}<p>No Marketing campaigns for this tenant yet.</p>{% endfor %}
+        </section>
+    {% elseif section == 'campaign' %}
+        {% set c = selectedCampaign|default({}) %}
+        <section class="cos-panel">
+            <h2>{{ c.name }}</h2>
+            <p>{{ c.business_objective }}</p><p>{{ c.brief }}</p>
+            <p>State: {{ c.status }} · Revision: {{ c.revision }} · Owner: {{ c.owner_id }}</p>
+            <h3>Product links</h3>
+            {% if c.product_refs is not empty %}<p>{{ c.product_refs|join(', ') }} (read-only, not yet verified)</p>{% else %}<p>No Product links yet.</p>{% endif %}
+            <h3>Activation and approvals</h3><p>Blocked: Finance F1 and independent Workflow approval have not been accepted.</p>
+        </section>
+    {% elseif section == 'accounts' %}
+        <section class="cos-panel">
+            <h2>Connect read-only Meta Ad Account</h2>
+            <p>Use an authorized System User token already stored in Platform Credential Vault environment JSON, not a pasted token. OAuth onboarding is not yet available.</p>
+            <form method="post" action="/marketing/accounts" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <label>Ad Account ID <input class="form-control" name="ad_account_id" placeholder="act_123456789" required pattern="act_[0-9]+"></label>
+                <label>Vault reference <input class="form-control" name="credential_ref" placeholder="env://META_ADS_READ_TOKEN" required></label>
+                <button type="submit" class="btn btn-primary">Verify and connect</button>
+            </form>
+        </section>
+        {% for a in accounts %}
+            <section class="cos-panel">
+                <h2>{{ a.ad_account_id }} <small>{{ a.connection_status }}</small></h2>
+                <p>{{ a.currency }} · {{ a.timezone }} · Last verified {{ a.last_verified_at|default('unknown') }} · Last successful import {{ a.last_synced_at|default('never') }}</p>
+                <p>Capability scopes: {{ a.capability_scope|default([])|join(', ') }}</p>
+                <form method="post" action="/marketing/accounts/{{ a.id }}/sync" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <label>From <input class="form-control" type="date" name="from" value="{{ from }}" required></label>
+                    <label>To <input class="form-control" type="date" name="to" value="{{ to }}" required></label>
+                    <button type="submit" class="btn btn-outline-primary">Import hierarchy and campaign insights</button>
+                </form>
+            </section>
+        {% else %}<section class="cos-panel"><p>No connected Meta accounts.</p></section>{% endfor %}
+    {% elseif section == 'performance' %}
+        <section class="cos-panel">
+            <h2>Meta reported performance</h2>
+            <p>Provider observation, not financial Expense or profit. Grain: campaign. Window {{ from|default('—') }} to {{ to|default('—') }}, inclusive, in ad account timezone.</p>
+            <form method="get" action="/marketing/performance">
+                <label>Account <select class="form-select" name="account">
+                    {% for a in accounts %}<option value="{{ a.id }}" {% if accountId == a.id %}selected{% endif %}>{{ a.ad_account_id }} · {{ a.currency }}</option>{% endfor %}
+                </select></label><button class="btn btn-outline-secondary">View</button>
+            </form>
+            <div class="cos-page__stack">
+                {% for row in observations %}
+                    <div class="cos-page__section-head">
+                        <div><strong>Campaign {{ row.external_id }}</strong><small> · {{ row.source_status }} · fetched {{ row.fetched_at }}</small></div>
+                        <div><strong>{{ row.spend_decimal }} {{ row.currency }}</strong><small> · impressions {{ row.metrics.impressions|default('—') }} · clicks {{ row.metrics.clicks|default('—') }}</small></div>
+                    </div>
+                {% else %}<p>No matching real Meta Insights snapshot. Sync the account to import data; nothing has been estimated.</p>{% endfor %}
+            </div>
+        </section>
+        <section class="cos-panel">
+            <h2>Imported Meta Campaign → AdSet → Ad</h2>
+            <p>These are provider-observed objects, not COS-controlled ads. Imported objects retain their external IDs and observed effective statuses.</p>
+            {% for c in providerHierarchy.campaigns|default([]) %}
+                <article class="cos-page__section-head">
+                    <div>
+                        <strong>{{ c.name }}</strong>
+                        <p>{{ c.provider_campaign_id }} · {{ c.objective }} · {{ c.delivery_status }} · {{ c.management_mode }}</p>
+                        <small>Provider state updated {{ c.source_updated_at|default('unknown') }}</small>
+                        {% set groups = providerHierarchy.adsets|default([])|filter(a => a.paid_campaign_id == c.id) %}
+                        {% for g in groups %}
+                            <div style="padding-inline-start: 1.25rem;">
+                                <strong>AdSet: {{ g.name }}</strong> · {{ g.provider_adset_id }} · {{ g.delivery_status }}
+                                {% set placements = providerHierarchy.ads|default([])|filter(ad => ad.paid_adset_id == g.id) %}
+                                {% for ad in placements %}
+                                    <div style="padding-inline-start: 1.25rem;">Ad: {{ ad.name }} · {{ ad.provider_ad_id }} · {{ ad.delivery_status }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            {% else %}<p>No imported Meta hierarchy. Connect and sync an authorized account to see provider campaigns, ad sets and ads.</p>{% endfor %}
+        </section>
+        <section class="cos-panel"><h2>Attribution and Finance</h2><p>No accepted Shopify/Sales attribution or Finance expense reconciliation yet. ROAS and net profit are not confirmed.</p></section>
+    {% elseif section == 'actions' %}
+        <section class="cos-panel"><h2>Blocked paid operations</h2>
+            <p>Campaign activation, changes to budgets, new paused provider objects and autonomous agent edits are unavailable until F1 + canonical Workflow acceptance.</p>
+            <p>No unresolved mutation incidents can be reported as zero: mutations are not enabled in this version.</p>
+        </section>
+        <section class="cos-panel">
+            <h2>Meta read-sync health and operator queue</h2>
+            <p>Latest ten attempts for up to twenty tenant accounts. A warning means no successful import in the past 24 hours (UTC), not proof that Meta Ads stopped. The read-only connection remains valid independently of sync freshness.</p>
+            {% for h in accountHealth %}
+                <article class="cos-page__stack">
+                    <div class="cos-page__section-head">
+                        <strong>{{ h.account.ad_account_id }} · {{ h.health_label }}</strong>
+                        <span>{{ h.account.currency }} · {{ h.account.timezone }}</span>
+                    </div>
+                    <p>Connection: {{ h.account.connection_status }} · credentials verified {{ h.account.last_verified_at|default('unknown') }}
+                    · last committed import {{ h.account.last_synced_at|default('never') }}</p>
+                    {% if h.last_attempt_failed %}
+                        <p>Operator action: review the sanitized failure code, verify credential permission/account access and retry a bounded exact date window. Previous snapshot remains available.</p>
+                    {% elseif h.stale_or_never_synced %}
+                        <p>Operator action: perform a fresh authorized read-only import. Exact reporting window may differ from the timestamp above.</p>
+                    {% endif %}
+                    {% for run in h.recent_runs %}
+                        <div class="cos-page__section-head">
+                            <span>{{ run.state }} · {{ run.started_at }} · {{ run.error_code|default('no error') }}</span>
+                            <small>{{ run.fetched_count }} provider records · {{ run.id }}</small>
+                        </div>
+                    {% else %}
+                        <p>No read-sync attempts recorded for this account.</p>
+                    {% endfor %}
+                    <a class="btn btn-outline-secondary" href="/marketing/accounts">View account and sync</a>
+                </article>
+            {% else %}
+                <p>No Meta accounts connected. No successful sync or unresolved remote mutation can be inferred.</p>
+            {% endfor %}
+        </section>
+    {% endif %}
+</div>
+{% endblock %}
+
