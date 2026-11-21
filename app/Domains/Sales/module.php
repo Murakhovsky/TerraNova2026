@@ -95,6 +95,23 @@ return [
         ],
         'capability_contracts' => [
             [
+                'id' => 'sales.inbound.request.read',
+                'version' => '1.0.0',
+                'owner_domain' => 'sales',
+                'kind' => 'query',
+                'input_schema' => 'resources/contracts/sales/inbound-request-read-input.schema.json',
+                'output_schema' => 'resources/contracts/sales/inbound-request-read-output.schema.json',
+                'execution_binding' => 'query:sales.inbound.request.read',
+                'async' => false,
+                'side_effect_level' => 'none',
+                'permission' => 'cos.tenant.manage',
+                'approval_policy' => 'none',
+                'idempotency' => 'none',
+                'lifecycle' => 'experimental',
+                'tests' => ['tests/unit/sales_inbound_request_capability.php'],
+                'documentation' => 'docs/03-architecture/das-001-capability-normalization.md',
+            ],
+            [
                 'id' => 'sales.create_task',
                 'version' => '1.0.0',
                 'owner_domain' => 'sales',
@@ -136,6 +153,7 @@ return [
         'capabilities' => [
             'sales.create_task',
             'sales.deal.won.observation',
+            'sales.inbound.request.read',
             'sales.workspace.use',
             'sales.director.view',
             'sales.admin.view',

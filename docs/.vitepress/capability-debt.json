@@ -152,16 +152,6 @@
       "target_capability": "sales.deal.outcome.record"
     },
     {
-      "id": "sales.request-to-property-match:load-request",
-      "process_id": "sales.request-to-property-match",
-      "step_id": "load-request",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.inbound.request.read"
-    },
-    {
       "id": "sales.request-to-property-match:create-case",
       "process_id": "sales.request-to-property-match",
       "step_id": "create-case",

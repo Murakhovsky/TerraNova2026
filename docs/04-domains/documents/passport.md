@@ -18,11 +18,16 @@ domain_id: documents
   "components": [
     {
       "id": "document_operations",
-      "capability_ids": []
+      "capability_ids": [
+        "documents.proposal.prepare"
+      ]
     },
     {
       "id": "signatures",
-      "capability_ids": []
+      "capability_ids": [
+        "documents.signature.sign",
+        "documents.signature.request"
+      ]
     }
   ],
   "process_ids": [],

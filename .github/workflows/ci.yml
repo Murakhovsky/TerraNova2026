@@ -60,6 +60,10 @@ jobs:
         run: bash bin/verify fast
       - name: Canonical Capability Library contract
         run: php tests/architecture/cos_canonical_capability_library_contract.php
+      - name: Sales inbound request typed read capability
+        run: php tests/unit/sales_inbound_request_capability.php
+      - name: DAS-001 direct Capability binding source coverage
+        run: php tests/architecture/das_001_direct_binding_coverage.php
       - name: Canonical Property capability input validation
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries

@@ -106,7 +106,17 @@ if (process.argv.includes('--self-test')) {
   if (errors.length > 0) throw new Error('Positive passport fixture invalid: '+errors.join('; '));
   checkCase('wrong domain id',original.replace(/^domain_id: sales$/m,'domain_id: property'),'frontmatter domain_id mismatch');
   checkCase('wrong manifest reference',original.replace('"app/Domains/Sales/module.php"','"app/Domains/Property/module.php"'),'manifest path does not match');
-  checkCase('unknown capability',original.replace('"capability_ids": []','"capability_ids": ["sales.unregistered_ghost"]'),'undeclared capability');
+  // Mutate machine data rather than assuming a particular Sales component
+  // has no mapped capabilities. DAS-001 now requires full typed coverage.
+  const unknownCapabilityPassport = machineBlock(original, domain);
+  unknownCapabilityPassport.components[0].capability_ids.push('sales.unregistered_ghost');
+  const spoofed = original.replace(
+    /<!-- COS-DOMAIN-PASSPORT-DATA\s*[\s\S]*?\s*COS-DOMAIN-PASSPORT-DATA -->/,
+    '<!-- COS-DOMAIN-PASSPORT-DATA\n' +
+      JSON.stringify(unknownCapabilityPassport, null, 2) +
+      '\nCOS-DOMAIN-PASSPORT-DATA -->'
+  );
+  checkCase('unknown capability', spoofed, 'undeclared capability');
   checkCase('fabricated process',original.replace('sales.lead-to-managed-case','sales.fake-process'),'process_ids drift');
   checkCase('missing D4 evidence',original.replace('"level": "UNKNOWN"','"level": "D4"'),'requires linked acceptance evidence');
   checkCase('missing required section',original.replace('## 14. Карта джерел','## 14. Без карти'),'missing section');

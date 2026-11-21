@@ -26,7 +26,9 @@ domain_id: federation
     },
     {
       "id": "approvals",
-      "capability_ids": []
+      "capability_ids": [
+        "federation.plan.approval"
+      ]
     }
   ],
   "process_ids": [

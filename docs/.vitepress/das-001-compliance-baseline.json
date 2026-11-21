@@ -59,9 +59,9 @@
       "max_process_gaps": 0
     },
     "sales": {
-      "min_typed": 2,
+      "min_typed": 3,
       "max_descriptive_only": 10,
-      "max_process_gaps": 12
+      "max_process_gaps": 11
     },
     "service": {
       "min_typed": 0,

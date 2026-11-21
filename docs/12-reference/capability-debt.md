@@ -16,15 +16,15 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 19
-- **High severity:** 16
+- **Відкритих debt items:** 18
+- **High severity:** 15
 - **Medium severity:** 3
 - **Зачеплених Domains:** 2
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
 | `diagnostic` | 7 | 7 | 0 | 0 |
-| `sales` | 12 | 9 | 3 | 0 |
+| `sales` | 11 | 8 | 3 | 0 |
 
 ## Пріоритетний backlog
 
@@ -44,7 +44,6 @@ Capability debt означає, що бізнес-крок реальний, а�
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `outcome` · Record business outcome | `runtime` | `sales.deal.outcome.record` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `pipeline` · Manage pipeline stage | `source` | `sales.pipeline.stage.manage` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `create-case` · Create Client Case and link inbound request | `source` | `sales.client-case.create` | `declare-domain-capability` |
-| `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `load-request` · Load inbound request and referenced Property context | `source` | `sales.inbound.request.read` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Request → Property Match](../02-workflows/sales-request-to-property-match.md) · `record-match` · Record Property Match in Sales | `source` | `sales.property-match.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `activity` · Record activity / call | `source` | `sales.activity.record` | `declare-domain-capability` |
 | `medium` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `crm-inbox` · Process durable CRM inbox | `source` | `sales.crm.inbox.process` | `declare-domain-capability` |

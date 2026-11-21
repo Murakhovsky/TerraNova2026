@@ -18,11 +18,15 @@ domain_id: sales
   "components": [
     {
       "id": "leads",
-      "capability_ids": []
+      "capability_ids": [
+        "sales.inbound.request.read"
+      ]
     },
     {
       "id": "deals",
-      "capability_ids": []
+      "capability_ids": [
+        "sales.deal.won.observation"
+      ]
     },
     {
       "id": "activities",
@@ -73,7 +77,7 @@ Authoritative state, Domain Events та persistence належать Domain. А�
 ## 5. Use Cases та Capabilities
 
 Точні callable IDs, typed schemas, execution bindings, permissions і lifecycle беруться **тільки** з `app/Domains/Sales/module.php` та generated `docs/12-reference/module-capabilities.md`.
-Машинна карта містить перевірювані посилання лише на окремі manifest-declared capabilities. Це не посвідчує executable status. Порожній `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
+Машинна карта містить перевірювані посилання лише на окремі manifest-declared capabilities. Це не посвідчує executable status. Capability mapping відображає лише manifest-declared contracts, а не доказ runtime execution.
 
 ## 6. Виконання
 
