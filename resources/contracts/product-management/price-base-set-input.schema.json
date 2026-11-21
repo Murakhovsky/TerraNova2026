@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductManagementprice-base-setInputV1",
+  "type": "object",
+  "required": [
+    "variant_id",
+    "currency",
+    "amount"
+  ],
+  "properties": {
+    "variant_id": {
+      "type": "string",
+      "minLength": 32,
+      "maxLength": 32,
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3,
+      "pattern": "^[A-Za-z]{3}$"
+    },
+    "amount": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 21,
+      "pattern": "^[0-9]+(\\.[0-9]{1,4})?$"
+    }
+  },
+  "additionalProperties": false
+}

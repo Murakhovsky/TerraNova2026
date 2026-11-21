@@ -1,3 +1,9 @@
+# Product Management: signed Shopify events are staged only, never mutate stock.
+cos_product_management_shopify_webhook:
+  path: /api/v1/integrations/shopify/webhook
+  controller: App\Http\Api\V1\Controller\ShopifyWebhookController::receive
+  methods: [POST]
+
 # HMAC-authenticated machine proposals only, no Action dispatch.
 cos_automation_intents_submit:
   path: /api/v1/capability-intents/property-bulk

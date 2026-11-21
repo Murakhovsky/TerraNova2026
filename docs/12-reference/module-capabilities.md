@@ -28,8 +28,8 @@ generated: true
 | `finance` | Finance | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
-| `marketing` | Marketing | `0.1.1` | `0.1.1` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
+| `product_management` | Product Management | `0.1.0` | `0.8.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
 | `real_estate` | Real Estate | `1.0.0` | `0.2.0` | `>=0.11.0 <0.12.0` | так | property, sales | `app/Domains/RealEstate/module.php` |
 | `sales` | Sales | `1.0.0` | `0.8.6` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Sales/module.php` |
@@ -282,32 +282,6 @@ Manifest capabilities не задекларовані.
 
 Manifest capabilities не задекларовані.
 
-## Marketing (`marketing`)
-
-**Опис із manifest:** Marketing planning and Meta Paid Media read-only; financial and external mutations are deliberately blocked.
-
-- runtime service модуля: —;
-- обробники jobs: —;
-- внески API routes: —;
-- постачальники конфігурації: —;
-- міграції: `app/migrations/20261119_000152_marketing_foundation.sql`.
-
-### Задекларовані capabilities
-
-- `marketing.campaign.archive`;
-- `marketing.campaign.create`;
-- `marketing.campaign.get`;
-- `marketing.campaign.search`;
-- `marketing.campaign.update`;
-- `marketing.paid.account.list`;
-- `marketing.paid.change.request`;
-- `marketing.paid.insights.query`;
-- `marketing.paid.meta.campaign.activate`;
-- `marketing.paid.meta.campaign.create_paused`;
-- `marketing.paid.meta.campaign.pause`;
-- `marketing.paid.sync.history`;
-- `marketing.paid.sync.request`;
-
 ## Procurement (`procurement`)
 
 **Опис із manifest:** Procurement boundary for suppliers, purchase requests, quotes, orders and deliveries.
@@ -321,6 +295,47 @@ Manifest capabilities не задекларовані.
 ### Задекларовані capabilities
 
 Manifest capabilities не задекларовані.
+
+## Product Management (`product_management`)
+
+**Опис із manifest:** Tenant-scoped goods catalog, stock ledger, base prices and channel observations.
+
+- runtime service модуля: `productManagementDomainModule`;
+- обробники jobs: —;
+- внески API routes: —;
+- постачальники конфігурації: —;
+- міграції: `app/migrations/20261118_000152_product_management_catalog.sql`, `app/migrations/20261118_000153_product_management_inventory.sql`, `app/migrations/20261118_000154_product_management_prices_import.sql`, `app/migrations/20261118_000155_product_management_shopify_read.sql`, `app/migrations/20261119_000156_product_management_approved_import.sql`, `app/migrations/20261119_000157_product_management_media_links.sql`, `app/migrations/20261119_000158_product_management_import_plan_binding.sql`, `app/migrations/20261119_000159_product_management_shopify_import_preview.sql`, `app/migrations/20261119_000160_product_management_shopify_approved_apply.sql`, `app/migrations/20261120_000161_product_management_shopify_identity_claim.sql`.
+
+### Задекларовані capabilities
+
+- `product_management.category.assign`;
+- `product_management.category.create`;
+- `product_management.category.search`;
+- `product_management.import.apply`;
+- `product_management.import.batch.get`;
+- `product_management.import.preview`;
+- `product_management.location.create`;
+- `product_management.media.attach`;
+- `product_management.media.detach`;
+- `product_management.media.search`;
+- `product_management.price.base.get`;
+- `product_management.price.base.set`;
+- `product_management.product.archive`;
+- `product_management.product.create`;
+- `product_management.product.get`;
+- `product_management.product.search`;
+- `product_management.product.update`;
+- `product_management.shopify.import.apply`;
+- `product_management.stock.balance.get`;
+- `product_management.stock.issue`;
+- `product_management.stock.movement.search`;
+- `product_management.stock.receive`;
+- `product_management.stock.transfer`;
+- `product_management.sync.status.get`;
+- `product_management.translation.upsert`;
+- `product_management.variant.archive`;
+- `product_management.variant.create`;
+- `product_management.variant.update`;
 
 ## Property (`property`)
 

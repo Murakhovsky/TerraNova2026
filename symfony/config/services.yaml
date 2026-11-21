@@ -2703,6 +2703,7 @@ services:
     public: true
     tags: ['controller.service_arguments']
 
+
   capitalMarketsDomainModule:
     alias: Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule
 
@@ -2780,6 +2781,59 @@ services:
   documentsDomainModule:
     alias: Domains\Documents\Bootstrap\DocumentsDomainModule
 
+  Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+      $events: '@Kernel\Event\Contract\EventStoreInterface'
+  Domains\ProductManagement\Application\Contract\ProductManagementStoreInterface:
+    alias: Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore
+  Domains\ProductManagement\Application\Service\ProductManagementService: ~
+  Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Application\Contract\ProductMediaFileReferenceInterface:
+    alias: Domains\ProductManagement\Infrastructure\Media\ExistingDocumentsImageReference
+  Domains\ProductManagement\Application\Service\ProductMediaService: ~
+  Domains\ProductManagement\Application\Service\PricingService:
+    arguments:
+      $connection: '@cos.database.pdo'
+      $events: '@Kernel\Event\Contract\EventStoreInterface'
+  Domains\ProductManagement\Application\Service\CsvProductImportService:
+    arguments:
+      $connection: '@cos.database.pdo'
+
+
+  Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyHttpTransportInterface:
+    alias: Domains\ProductManagement\Infrastructure\Shopify\CurlShopifyHttpTransport
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyReadClient: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyClientCredentials: ~
+
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportPreviewService:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportApplyService:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyImportRecoveryAudit:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
+  Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
+
+  # Product Management E0: domain stays tenant-disabled until explicit activation.
+  Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
+  Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
+  Domains\ProductManagement\Bootstrap\ProductManagementDomainModule:
+    arguments:
+      $importHandler: '@Domains\ProductManagement\Automation\Action\ProductImportApplyHandler'
+      $shopifyHandler: '@Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler'
+  productManagementDomainModule:
+    alias: Domains\ProductManagement\Bootstrap\ProductManagementDomainModule
+
   Kernel\Module\DomainModuleRegistry:
     arguments:
       $modules:
@@ -2792,6 +2846,7 @@ services:
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'
         - '@Domains\Service\Bootstrap\ServiceDomainModule'
         - '@Domains\Growth\Bootstrap\GrowthDomainModule'
+        - '@Domains\ProductManagement\Bootstrap\ProductManagementDomainModule'
 
   Kernel\Rule\Service\ConditionEvaluator: ~
 
@@ -3826,6 +3881,8 @@ services:
         - '@Domains\Sales\Application\Service\SalesClosedOutcomeEvidenceProvider'
         - '@Domains\Sales\Application\Service\SalesLocalTaskOutcomeEvidenceProvider'
         - '@App\Persistence\Property\PropertyBulkRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ProductImportRunOutcomeProvider'
+        - '@App\Persistence\ProductManagement\ShopifyImportRunOutcomeProvider'
         - '@Domains\Growth\Application\Service\GrowthInboundResponseOutcomeEvidenceProvider'
         - '@App\Persistence\Federation\FederationGrowthRunLinkedOutcomeEvidenceProvider'
         - '@cos.federation.native_origin.research'
@@ -4072,4 +4129,3 @@ services:
 
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2LiveWorkerFactory: ~
   Domains\CapitalMarkets\Infrastructure\MarketData\L2\L2AlertDelivery: ~
-

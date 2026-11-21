@@ -24,8 +24,8 @@ generated: true
 | `finance` | 0 |
 | `growth` | 1 |
 | `hr` | 0 |
-| `marketing` | 0 |
 | `procurement` | 0 |
+| `product_management` | 0 |
 | `property` | 2 |
 | `real_estate` | 0 |
 | `sales` | 8 |
@@ -76,11 +76,11 @@ generated: true
 
 Точок входу Application UseCase не знайдено.
 
-## Marketing (`marketing`)
+## Procurement (`procurement`)
 
 Точок входу Application UseCase не знайдено.
 
-## Procurement (`procurement`)
+## Product Management (`product_management`)
 
 Точок входу Application UseCase не знайдено.
 
