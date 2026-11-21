@@ -47,13 +47,23 @@ expectDomainSkeleton($employee->positionId === 'position-1' && $recruitment->can
 expectDomainSkeleton($project->name === 'West site' && $object->projectId === 'project-1', 'Construction vocabulary must autoload.');
 expectDomainSkeleton($brokerageCase->propertyId === 'property-1' && $mandate->partyId === 'party-1', 'RealEstate vocabulary must reference Property without owning it.');
 
-foreach (['Finance', 'Procurement', 'HR', 'Construction'] as $name) {
+foreach (['Procurement', 'HR', 'Construction'] as $name) {
     $definition = require dirname(__DIR__, 2) . '/app/Domains/' . $name . '/module.php';
     $module = ModuleDefinition::fromArray($definition);
     expectDomainSkeleton($module->contributions->runtimeModuleService === null, $name . ' must remain skeleton-only without runtime service.');
     expectDomainSkeleton($module->contributions->migrationFiles === [], $name . ' must not declare persistence migrations yet.');
     expectDomainSkeleton($module->manifest->enabledByDefault === false, $name . ' skeleton must not auto-enable runtime behavior.');
 }
+$financeDefinition=ModuleDefinition::fromArray(require dirname(__DIR__,2).'/app/Domains/Finance/module.php');
+expectDomainSkeleton($financeDefinition->contributions->runtimeModuleService === 'financeDomainModule',
+    'Finance F1 must own its registered canonical budget Action runtime.');
+expectDomainSkeleton(in_array('app/migrations/20261119_000153_finance_budget_f1.sql',
+    $financeDefinition->contributions->migrationFiles,true),'Finance F1 migration must be explicitly declared.');
+expectDomainSkeleton($financeDefinition->manifest->enabledByDefault === false,
+    'Finance F1 must remain disabled until independent acceptance.');
+expectDomainSkeleton(count($financeDefinition->contributions->capabilityContracts)===8,
+    'Finance F1 must expose eight canonical typed capabilities, including reconciliation read.');
+
 $serviceDefinition = ModuleDefinition::fromArray(require dirname(__DIR__, 2) . '/app/Domains/Service/module.php');
 expectDomainSkeleton($serviceDefinition->contributions->runtimeModuleService === 'serviceDomainModule', 'Service V0.2 must expose its runtime module.');
 expectDomainSkeleton(

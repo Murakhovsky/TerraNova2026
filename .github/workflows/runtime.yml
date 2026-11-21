@@ -139,6 +139,18 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/marketing_meta_atomic_mysql.php
+      - name: Finance F1 real MySQL source spend evidence and reconciliation
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_spend_observations_mysql.php
+      - name: Finance F1 two-connection concurrent reservation and anti-overspend
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_budget_f1_concurrency_mysql.php
+      - name: Finance F1 real MySQL budget reservation and tenant fencing
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/finance_budget_f1_mysql.php
       - name: Property Bulk real MySQL duplicate and tenant fencing
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

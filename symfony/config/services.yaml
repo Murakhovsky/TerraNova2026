@@ -2772,6 +2772,30 @@ services:
       $handoffs: '@Domains\Growth\Application\Contract\GrowthHandoffBoundary'
       $sales: '@Domains\Sales\Application\Contract\SalesWorkspaceReadModelInterface'
 
+
+  # Finance F1: the only budget writer, under Kernel Action + independent Policy approval.
+  Domains\Finance\Domain\BudgetControlPolicy: ~
+  Domains\Finance\Domain\FinanceSpendObservationPolicy: ~
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinanceSpendObservationRepositoryInterface:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceSpendObservationRepository
+  Domains\Finance\Application\Service\FinanceSpendObservationService: ~
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinanceBudgetRepositoryInterface:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository
+  Domains\Finance\Application\Service\FinanceBudgetControlService: ~
+  Domains\Finance\Application\Contract\FinanceBudgetControlInterface:
+    alias: Domains\Finance\Application\Service\FinanceBudgetControlService
+  Domains\Finance\Application\Service\ApprovedFinanceBudgetOperations: ~
+  Domains\Finance\Automation\Action\FinanceBudgetActionHandler: ~
+  Domains\Finance\Bootstrap\FinanceDomainModule: ~
+  financeDomainModule:
+    alias: Domains\Finance\Bootstrap\FinanceDomainModule
+
   Domains\Documents\Bootstrap\DocumentsDomainModule:
     arguments:
       $requestSignature: '@Domains\Documents\Automation\Action\RequestSignatureHandler'
@@ -2841,6 +2865,7 @@ services:
         - '@Domains\Sales\Bootstrap\SalesDomainModule'
         - '@Domains\CapitalMarkets\Bootstrap\CapitalMarketsDomainModule'
         - '@Domains\Documents\Bootstrap\DocumentsDomainModule'
+        - '@Domains\Finance\Bootstrap\FinanceDomainModule'
         - '@Domains\Diagnostic\Bootstrap\DiagnosticDomainModule'
         - '@Domains\Property\Bootstrap\PropertyDomainModule'
         - '@Domains\RealEstate\Bootstrap\RealEstateDomainModule'

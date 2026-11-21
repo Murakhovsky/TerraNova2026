@@ -1,8 +1,8 @@
 ---
 title: Finance — паспорт домену COS
-description: Стандартизований паспорт відповідальності, компонентів, контрактів і готовності домену Finance.
+description: Архітектурний паспорт F1 бюджету й F1.1 спостережень рекламних витрат.
 status: draft
-updated: 2026-11-19
+updated: 2026-11-20
 kind: domain
 contract: domain-v1
 domain_id: finance
@@ -17,98 +17,95 @@ domain_id: finance
   "manifest": "app/Domains/Finance/module.php",
   "components": [
     {
-      "id": "accounts",
-      "capability_ids": []
-    },
-    {
       "id": "budgets",
-      "capability_ids": []
+      "capability_ids": [
+        "finance.budget.envelope.draft.create",
+        "finance.budget.envelope.get",
+        "finance.budget.reservation.list",
+        "finance.budget.envelope.activate",
+        "finance.budget.reservation.reserve",
+        "finance.budget.reservation.release",
+        "finance.budget.envelope.freeze"
+      ]
     },
     {
-      "id": "payments",
-      "capability_ids": []
+      "id": "spend_observations",
+      "capability_ids": [
+        "finance.ad_spend.reconciliation.status"
+      ]
     }
   ],
   "process_ids": [],
   "readiness": {
-    "level": "UNKNOWN",
+    "level": "D2",
     "evidence": []
   }
 }
 COS-DOMAIN-PASSPORT-DATA -->
 
-> **Базовий паспорт DAS-001.** Внутрішня карта компонентів є архітектурною класифікацією, а не твердженням про незалежні installable modules або їхню production-готовність. Рівень приймання UNKNOWN до незалежного E2E.
+> D2 засвідчує наявність автоматизованих unit/MySQL acceptance для окремого F1/F1.1 зрізу. Це **не** означає D3 staging, D4 операторське чи D5 production приймання.
 
 ## 1. Ідентичність
 
-**Domain ID:** `finance`. **Призначення:** Фінансові рахунки, бюджети, витрати, платежі й доходи.
-**Джерело версії, schema та runtime contributions:** `app/Domains/Finance/module.php`.
-Потрібне окреме підтвердження стану активації конкретного tenant.
+**Domain ID:** `finance`. **Версія, lifecycle та контракт contributions:** `app/Domains/Finance/module.php`. **Функція:** контроль бюджетних конвертів, резервування та фіксація спостережень щодо рекламних витрат, а не бухгалтерський облік чи реальні платежі. За замовчуванням модуль вимкнено.
 
 ## 2. Межі відповідальності
 
-**Власний предмет відповідальності:** Канонічний фінансовий словник; поточний main має skeleton v0.1 без operational persistence.
-**Не володіє:** Marketing-owned Meta reported spend не дорівнює підтвердженому Finance Expense.
-Актуальні invariants визначаються Domain Model/Application, а не текстом паспорта.
+Finance є єдиним authoritative writer для BudgetEnvelope, Reservation, ledger і source SpendObservation. Marketing володіє Campaign, Meta Ad Set, snapshots та рекламними творчими матеріалами. Source spend **не** перетворюється на Finance Expense або підтверджену Payment. Заборонено прямий Marketing SQL доступ до Finance tables, будь-яке несанкціоноване списання або створення конкуруючого execution engine.
 
 ## 3. Внутрішні компоненти
 
-| component_id | Призначення | Рівень доказів |
+| component_id | Володіння | Публічні можливості |
 | --- | --- | --- |
-| `accounts` | Функціональний розділ `finance`; деталізація capabilities потребує owner review | UNKNOWN |
-| `budgets` | Функціональний розділ `finance`; деталізація capabilities потребує owner review | UNKNOWN |
-| `payments` | Функціональний розділ `finance`; деталізація capabilities потребує owner review | UNKNOWN |
+| `budgets` | BudgetEnvelope, Reservations, ревізії, ідемпотентні фінансові події | 7 F1 типізованих контрактів |
+| `spend_observations` | Незмінні ревізійні спостереження джерела | 1 типізований статус звіряння |
 
-Компоненти не можуть незалежно активуватися без окремо підтвердженого ModuleLifecycle contract.
+Наведені компоненти не є незалежно installable Domain.
 
 ## 4. Бізнесова модель
 
-Authoritative state, Domain Events та persistence належать Domain. Актуальні aggregate roots, ports, migrations і transitions слід звіряти з кодом. Цей базовий паспорт не декларує готовність кожної з цих частин.
+BudgetEnvelope має DRAFT/ACTIVE/FROZEN та точні цілочисельні ліміти валюти; транзакційний lock і revision fencing запобігають oversubscription. Резервування та звільнення ідемпотентні й залишають audit receipts. SpendObservation зберігає exact currency/timezone/window/grain/attribution та immutable source revisions. Непідтверджені джерельні дані не змінюють фактичний баланс витрат.
 
 ## 5. Use Cases та Capabilities
 
-Точні callable IDs, typed schemas, execution bindings, permissions і lifecycle беруться **тільки** з `app/Domains/Finance/module.php` та generated `docs/12-reference/module-capabilities.md`.
-Машинна карта поки не прив'язує capabilities до кожного internal component: `capability_ids=[]` означає **mapping невідомий**, а не відсутність функціоналу.
+Машинне джерело callable IDs, input/output schemas, permissions, execution bindings: `app/Domains/Finance/module.php`. Бюджетний компонент публікує draft/create, get, reservations/list і чотири governed Action transitions. Спостереження публікують лише `finance.ad_spend.reconciliation.status`. Паспорт не надає прав виклику й не дублює версії контрактів.
 
 ## 6. Виконання
 
-Human UI/API, AI/Hermes та CRON можуть отримувати доступ лише через дозволені Domain public boundaries. Governed зовнішні дії потребують Kernel Policy/Approval та canonical Workflow/Action. Реальний end-to-end execution не підтверджується наявністю декларації.
+Draft/query проходять дозволений tenant-scoped Gateway; activation/reserve/release/freeze лише через canonical Kernel Action, Policy, незалежний Approval та durable Workflow/receipt. AI/CRON не одержують прямих прав на фінансові мутації. Карантин і ручна reconciliation для сумнівних зовнішніх результатів.
 
 ## 7. Міждоменні контракти
 
-Канонічні `requires/provides`, provider references, tenant/failure/version semantics визначає `contributions.cross_domain_contracts` у manifest. Прямий запис до чужого Domain заборонений.
+Marketing→Finance trusted source ingestion поки **не прийнятий** і не відкритий для автономного доступу. Приватний source observation contract не є public command. Майбутній зв'язок повинен мати declared requires/provides та незалежний review, tenant, origin, reconciliation та version semantics.
 
 ## 8. Процеси та результати
 
-Process Registry: поточний main має explicit exemption; відсутність повного процесу не означає runtime acceptance.
-Покриття означає **описану процесну модель**, не успішний користувацький сценарій.
+Process Registry: поточний явний виняток F1 означає відсутність прийнятого повного paid-spend-to-settlement процесу. Сам факт резерву або звіт Meta не є підтвердженим Expense. Виняток документується в `docs/.vitepress/process-coverage-exemptions.json`.
 
 ## 9. Tenant, Policy та Security
 
-Runtime permissions і tenant activation зчитуються з Kernel та manifest, без автоматичного permission grant із паспорта. Credential та зовнішні секрети не зберігаються в паспорті.
+Tenant scoping і permissions виконує Kernel; бюджетний Action потребує незалежного Approval. Currency вимірюється цілими minor units, spend observations зберігаються DECIMAL strings без Float. Provider credentials не надходять до Finance state або цього паспорта.
 
 ## 10. Робочий простір Unified Workspace
 
-Користувацькі точки входу й заблоковані дії мають резолвитися через спільні capabilities. Наявність screens сама по собі не підтверджує працездатність. Потрібен owner review UX-сценаріїв.
+Query та budget draft мають відображатись як окремі дозволені можливості; risk-bearing actions показують `approval_required` і не обходяться кнопками. Завершене тестування браузерного Workspace для F1 не підтверджено.
 
 ## 11. Operations та Recovery
 
-ModuleLifecycle, migrations, workers та rollback контролюються відповідними Platform mechanisms. Жодної автоматичної активації через цей документ.
+Фіксовані mutation receipts, InnoDB row-lock, idempotency і audit є основою перевірок. Потрібні staging workflow replay, crash recovery, independent native readback, production rollback/disable та ознаки provider source drift.
 
 ## 12. Готовність і докази
 
-**Engineering:** UNKNOWN. **Tenant activation:** не підтверджено. **Outcome:** unverified.
-До позначки D3/D4/D5 обов'язкові exact commit SHA, environment, tenant, test/CI URL та native business readback; поточних evidence у цьому паспорті немає.
+**Engineering D2:** F1/F1.1 unit та реальні MySQL integration/contended concurrency тести у PR #436. **D3/D4/D5:** не підтверджені. **Tenant activation:** production відсутня. **Outcome:** unverified. Паспорт не містить D3+ evidence, тому `readiness.evidence=[]`.
 
 ## 13. План розвитку, борги та рішення
 
-Наступний крок: Domain-owner review бізнесових компонентів, актуальний capability-to-component mapping, перевірка integration boundaries та один незалежний UI → Use Case → Domain readback E2E.
-Архітектурні зміни узгоджувати з ADR-0001 і DAS-001.
+P0: прийняти typed Finance→Marketing bridge лише після independent contract; забезпечити governed paid-spend acknowledgement, actual Expense reconciliation, Wallet/Payment лише окремими дозволеними і перевіреними етапами. Пройти DAS-001 compliance та D3 test plan перед будь-яким увімкненням.
 
 ## 14. Карта джерел
 
 - Manifest: `app/Domains/Finance/module.php`
-- Contracts: `resources/contracts/`
-- Process Registry: `resources/processes/*.json`
-- Generated reference: `docs/12-reference/`
-- Domain architecture: `docs/09-development/adding-a-domain.md`
+- Overview: `docs/04-domains/finance/overview.md`
+- Integration: `tests/integration/finance_budget_f1_mysql.php`, `tests/integration/finance_budget_f1_concurrency_mysql.php`, `tests/integration/finance_spend_observations_mysql.php`
+- Process exemption: `docs/.vitepress/process-coverage-exemptions.json`
+- Release: `docs/10-operations/das-001-domain-acceptance.md`
