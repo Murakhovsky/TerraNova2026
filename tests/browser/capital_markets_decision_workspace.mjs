@@ -52,7 +52,10 @@ try {
     throw new Error('English locale switch rejected: HTTP ' + localeResponse.status()
       + ' ' + (await localeResponse.text()).slice(0, 250));
   }
-  await assertOk(await login.reload({ waitUntil: 'domcontentloaded' }), 'English locale preflight');
+  // The canonical locale form opts out of Turbo and already navigates the
+  // full document. A second reload races with that redirect and may abort.
+  await login.waitForFunction(() => document.documentElement.lang === 'en', null,
+    { timeout: 25000 });
   const lang = await login.locator('html').getAttribute('lang');
   if (lang !== 'en') throw new Error('Expected switched English workspace locale, got ' + lang);
   const storageState = await loginContext.storageState();

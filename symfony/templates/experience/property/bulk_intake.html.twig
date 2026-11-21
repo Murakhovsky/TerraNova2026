@@ -32,14 +32,31 @@
       </form>
     </section>
   {% else %}
-    <section class="cos-card">
+    <section class="cos-card" data-property-bulk-operation="{{ batch.batch_id }}">
+      {% set verifiedItems = batch.items|filter(item => item.status == 'verified' and item.native_asset_id)|length %}
       <p class="cos-card__eyebrow">{{ batch.state }}</p>
       <h2 class="cos-card__title">2. Перевірка пакета {{ batch.batch_id }}</h2>
       <p class="cos-card__copy">Об'єктів: {{ batch.count }}. Знімок: <code>{{ batch.digest }}</code>.</p>
+      <p class="cos-card__copy" role="status" data-property-bulk-progress="{{ verifiedItems }}/{{ batch.count }}">
+        <strong>Підтверджено {{ verifiedItems }} із {{ batch.count }} об'єктів.</strong>
+        Підготовка та погодження Plan не вважаються виконанням.
+      </p>
+      <a class="cos-button cos-button--ghost" data-property-bulk-deep-link
+         href="/workspace/property/bulk?batch={{ batch.batch_id|url_encode }}">Постійне посилання на пакет</a>
       {% for item in batch.items %}
-        <div class="cos-card">
+        <div class="cos-card" data-property-bulk-item="{{ item.index }}" data-property-bulk-item-state="{{ item.status }}">
           <strong>#{{ item.index + 1 }} · {{ item.input.type_code }} · {{ item.input.city }}</strong>
-          <p class="cos-card__copy">{{ item.input.address }} · {{ item.status }} {% if item.native_asset_id %} · {{ item.native_asset_id }}{% endif %}</p>
+          <p class="cos-card__copy">{{ item.input.address }} · статус: {{ item.status }}</p>
+          {% if item.status == 'verified' and item.native_asset_id %}
+            <a class="cos-button cos-button--ghost" data-property-bulk-item-verified
+               href="/workspace/capabilities?reference={{ item.native_asset_id|url_encode }}">
+               Перевірити об'єкт {{ item.native_asset_id }}
+            </a>
+          {% else %}
+            <p class="cos-card__copy" role="status" data-property-bulk-item-pending>
+              Підтвердженого запису Property ще немає. Не запускайте повторне створення без звірки Action/Receipt.
+            </p>
+          {% endif %}
         </div>
       {% endfor %}
       {% if batch.state == 'staged' %}
@@ -54,8 +71,16 @@
         <p class="cos-card__copy">Наступний крок: запитати незалежне погодження Plan у Goals, потім погодження Action та запуск через Platform Workflow. Сама підготовка пакета нічого не виконує.</p>
         <a class="cos-button cos-button--primary" href="/workspace/goals">Погодити й виконати в Goals</a>
       {% endif %}
-      {% if batch.state == 'verified' %}
-        <div class="cos-alert cos-alert--success">Native Property записи перевірені. Для фінального Goal Outcome виконайте незалежну оцінку після завершення Run.</div>
+      {% if batch.state == 'verified' and verifiedItems == batch.count %}
+        <div class="cos-alert cos-alert--success" data-property-bulk-verified>Native Property записи перевірені. Для фінального Goal Outcome виконайте незалежну оцінку після завершення Run.</div>
+      {% elseif batch.state == 'verified' %}
+        <div class="cos-alert" role="alert" data-property-bulk-reconciliation-required>
+          Стан пакета не відповідає підтвердженим записам. Потрібна перевірка Action/Receipt, автоматичний повтор не запускається.
+        </div>
+      {% else %}
+        <p class="cos-card__copy" role="status" data-property-bulk-awaiting-verification>
+          Результат ще не підтверджений. Поверніться за посиланням після виконання та звірки квитанцій.
+        </p>
       {% endif %}
     </section>
   {% endif %}

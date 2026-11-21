@@ -22,6 +22,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy_dev:
+        description: 'Explicitly authorize GHCR publish and AWS dev deployment'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -960,12 +966,93 @@ jobs:
           test -n "$CHROME_BIN"
           CHROME_PATH="$CHROME_BIN" node tests/browser/sales_workspace.mjs
 
+      - name: Seed UX-00 independent manager and Federation Plan policy
+        env:
+          UX00_E2E_REVIEWER_EMAIL: ux00-independent-manager@example.test
+          UX00_E2E_REVIEWER_PASSWORD: UX00-Independent-Manager-CI-2026!
+        run: |
+          REVIEWER_HASH="$(php -r 'echo password_hash(getenv("UX00_E2E_REVIEWER_PASSWORD"), PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users
+              (organization_id,email,password_hash,full_name,role,status)
+            VALUES
+              ('default','$UX00_E2E_REVIEWER_EMAIL','$REVIEWER_HASH','UX00 Independent Manager','admin','active')
+            ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),role='admin',status='active';
+            INSERT INTO cos_organization_memberships
+              (organization_id,user_id,role,status)
+            SELECT 'default',id,'admin','ACTIVE' FROM tn_users
+             WHERE organization_id='default' AND email='$UX00_E2E_REVIEWER_EMAIL'
+            ON DUPLICATE KEY UPDATE role='admin',status='ACTIVE';
+          "
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" < tests/fixtures/ui/ux00_plan_approval.sql
+          test "$(docker compose exec -T mysql mysql -N -s -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            SELECT COUNT(*) FROM cos_organization_memberships m
+            JOIN tn_users u ON u.id=m.user_id
+            WHERE m.organization_id='default' AND u.email='$UX00_E2E_REVIEWER_EMAIL'
+            AND m.status='ACTIVE'")" = "1"
+
+      # Public-role negative fixture: auth is real; this buyer must never
+      # obtain cos.tenant.manage or be able to issue native Property writes.
+      - name: Seed UX-00 restricted Property actor (disposable CI)
+        env:
+          UX00_E2E_RESTRICTED_EMAIL: ux00-property-buyer@example.test
+          UX00_E2E_RESTRICTED_PASSWORD: UX00-Property-Buyer-CI-2026!
+        run: |
+          RESTRICTED_HASH="$(php -r 'echo password_hash(getenv("UX00_E2E_RESTRICTED_PASSWORD"), PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users
+              (organization_id,email,password_hash,full_name,role,status)
+            VALUES
+              ('default','$UX00_E2E_RESTRICTED_EMAIL','$RESTRICTED_HASH','UX00 Restricted Property Buyer','buyer','active')
+            ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),role='buyer',status='active';
+            INSERT INTO cos_organization_memberships
+              (organization_id,user_id,role,status)
+            SELECT 'default',id,'buyer','ACTIVE' FROM tn_users
+            WHERE organization_id='default' AND email='$UX00_E2E_RESTRICTED_EMAIL'
+            ON DUPLICATE KEY UPDATE role='buyer',status='ACTIVE';
+          "
+          test "$(docker compose exec -T mysql mysql -N -s -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            SELECT COUNT(*) FROM cos_organization_memberships m
+            JOIN tn_users u ON u.id=m.user_id
+            WHERE m.organization_id='default' AND u.email='$UX00_E2E_RESTRICTED_EMAIL'
+              AND m.role='buyer' AND m.status='ACTIVE'")" = "1"
+
+      # Tests only touch disposable localhost Compose tenants (never AWS).
+      - name: UX-00 R1 R2 R3 Property browser acceptance
+        env:
+          UX00_E2E_BASE_URL: http://127.0.0.1:8081
+          UX00_E2E_EMAIL: production-cutover-web@example.test
+          UX00_E2E_PASSWORD: Production-Cutover-Web-CI-Ab9!
+          UX00_E2E_REVIEWER_EMAIL: ux00-independent-manager@example.test
+          UX00_E2E_REVIEWER_PASSWORD: UX00-Independent-Manager-CI-2026!
+          UX00_E2E_RESTRICTED_EMAIL: ux00-property-buyer@example.test
+          UX00_E2E_RESTRICTED_PASSWORD: UX00-Property-Buyer-CI-2026!
+          UX00_E2E_MUTATION_SAFE: '1'
+        run: |
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME_BIN"
+          if ! CHROME_PATH="$CHROME_BIN" node tests/browser/ux00_r1_r2_r3.mjs; then
+            docker compose logs --no-color --tail=80 php nginx
+            docker compose exec -T php sh -c 'for f in /var/www/html/symfony/var/log/*.log; do test -f "$f" && { echo "APPLICATION_LOG $f"; tail -n 150 "$f"; }; done' || true
+            exit 1
+          fi
+
+      - name: Upload UX-00 Property browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ux00-r1-r2-r3-evidence
+          path: tmp/ux00-r1-r2-r3
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Golden Eight browser QA
         env:
           GOLDEN_EIGHT_BASE_URL: http://127.0.0.1:8081
           GOLDEN_EIGHT_EMAIL: sales-functional-acceptance@example.test
           GOLDEN_EIGHT_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
           GOLDEN_EIGHT_OUTPUT_DIR: tmp/golden-eight
+          GOLDEN_EIGHT_CI_RATE_LIMIT_RETRY: '1'
         run: |
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
@@ -989,12 +1076,26 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Verify external-reference CI identity is still active
+        run: |
+          EXTERNAL_ACCOUNT_COUNT="$(docker compose exec -T mysql mysql -N -s -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            SELECT COUNT(*) FROM tn_users u
+            INNER JOIN cos_organization_memberships m
+              ON m.organization_id=u.organization_id AND m.user_id=u.id
+            WHERE u.organization_id='default'
+              AND u.email='sales-functional-acceptance@example.test'
+              AND u.status='active' AND m.status='ACTIVE'
+          ")"
+          echo "Active external-reference CI identities: $EXTERNAL_ACCOUNT_COUNT"
+          test "$EXTERNAL_ACCOUNT_COUNT" = '1'
+
       - name: External reference browser QA
         env:
           EXTERNAL_REFERENCE_BASE_URL: http://127.0.0.1:8081
           EXTERNAL_REFERENCE_EMAIL: sales-functional-acceptance@example.test
           EXTERNAL_REFERENCE_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
           EXTERNAL_REFERENCE_OUTPUT_DIR: tmp/external-reference
+          EXTERNAL_REFERENCE_CI_RATE_LIMIT_RETRY: '1'
         run: |
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
@@ -1028,7 +1129,7 @@ jobs:
   publish-runtime-images:
     name: Publish immutable COS images to GHCR
     needs: [runtime, federation-mysql, capital-markets-unit]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -1080,7 +1181,7 @@ jobs:
   deploy-dev:
     name: Deploy main to AWS dev
     needs: [runtime, federation-mysql, capital-markets-unit, publish-runtime-images]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true
     runs-on: ubuntu-24.04
     environment: AWS TN2026
     permissions:
