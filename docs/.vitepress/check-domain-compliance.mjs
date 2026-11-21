@@ -103,6 +103,20 @@ function inspect(dir) {
     if (gapItems.length > policy.max_process_gaps) report(id, 'process capability gap debt increased: ' + gapItems.length + ' > ' + policy.max_process_gaps);
   }
   const unmappedTyped = typed.filter(contract => !mapped.has(contract?.id)).map(contract => contract.id);
+  // DAS-001: every typed contract needs exactly one accountable component. A
+  // declaration missing from the passport can no longer silently pass CI.
+  for (const id of unmappedTyped) report(module.id, 'typed capability has no owner component mapping: ' + id);
+  const componentCounts = new Map();
+  for (const component of asList(passport?.components)) {
+    for (const id of asList(component?.capability_ids)) {
+      componentCounts.set(id, (componentCounts.get(id) ?? 0) + 1);
+    }
+  }
+  for (const contract of typed) {
+    if ((componentCounts.get(contract.id) ?? 0) > 1) {
+      report(module.id, 'typed capability assigned to multiple components: ' + contract.id);
+    }
+  }
   if (passport && passport.domain_id !== id) report(id, 'passport ID mismatch');
   if (passport && passport.manifest !== 'app/Domains/' + dir + '/module.php') report(id, 'passport manifest mismatch');
   if (passport && !Array.isArray(passport.components)) report(id, 'missing passport component map');
