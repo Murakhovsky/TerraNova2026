@@ -23,6 +23,12 @@ domain_id: diagnostic
       ]
     },
     {
+      "id": "evidence",
+      "capability_ids": [
+        "diagnostic.evidence.capture"
+      ]
+    },
+    {
       "id": "methodology",
       "capability_ids": [
         "diagnostic.methodology.compile"
@@ -64,6 +70,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 | component_id | Призначення | Рівень доказів |
 | --- | --- | --- |
 | `sessions` | Функціональний розділ `diagnostic`; деталізація capabilities потребує owner review | UNKNOWN |
+| `evidence` | Tenant-owned Diagnostic evidence ingestion via verified CommandBus receipts | UNKNOWN |
 | `methodology` | Функціональний розділ `diagnostic`; деталізація capabilities потребує owner review | UNKNOWN |
 | `evaluation` | Функціональний розділ `diagnostic`; деталізація capabilities потребує owner review | UNKNOWN |
 

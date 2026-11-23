@@ -78,6 +78,8 @@ jobs:
         run: php tests/architecture/das_001_direct_binding_coverage.php
       - name: Diagnostic canonical session start capability
         run: php tests/unit/diagnostic_session_start_capability.php
+      - name: Diagnostic canonical evidence capture capability
+        run: php tests/unit/diagnostic_evidence_capture_capability.php
       - name: Canonical Property capability input validation
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries

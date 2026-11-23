@@ -18,7 +18,7 @@ kind: architecture
 
 ## Diagnostic: послідовне закриття процесних прогалин
 
-`diagnostic.session.start` під’єднано до наявного idempotent CommandBus. Решта кроків залишаються у реєстрі боргу до появи перевірених виконуваних контрактів. D3/D4/D5 цим не підтверджуються.
+`diagnostic.session.start` та `diagnostic.evidence.capture` під’єднано до наявних idempotent CommandBus handlers. Evidence Capture має лише human-only direct invocation, суворі input/output schemas, tenant fencing, idempotency та redacted receipt без значень фактів. Решта кроків залишаються у реєстрі боргу до появи перевірених виконуваних контрактів. D3/D4/D5 цим не підтверджуються.
 
 Послідовність: methodology management → session start → evidence capture → evaluation → result recording → session completion → recommendation acceptance.
 
