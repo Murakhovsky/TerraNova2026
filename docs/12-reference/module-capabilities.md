@@ -116,6 +116,7 @@ Manifest capabilities не задекларовані.
 
 - `diagnostic.methodology.compile`;
 - `diagnostic.semantic.v1`;
+- `diagnostic.session.start`;
 - `diagnostic.state.rebuild`;
 - `diagnostic.traceability`;
 - `diagnostic.v1`;

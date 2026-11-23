@@ -30,8 +30,14 @@
       "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "DraftDiagnosticPack" },
-        { "type": "use_case", "ref": "PublishDiagnosticPack" }
+        {
+          "type": "use_case",
+          "ref": "DraftDiagnosticPack"
+        },
+        {
+          "type": "use_case",
+          "ref": "PublishDiagnosticPack"
+        }
       ]
     },
     {
@@ -40,11 +46,18 @@
       "kind": "operation",
       "owner": "diagnostic operator / interviewer",
       "domain": "diagnostic",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "diagnostic.session.start",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "StartDiagnosticSession" }
+        {
+          "type": "use_case",
+          "ref": "StartDiagnosticSession"
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/DiagnosticSessionStartAdapter.php",
+          "symbol": "DiagnosticSessionStartAdapter"
+        }
       ]
     },
     {
@@ -57,7 +70,10 @@
       "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "CaptureDiagnosticEvidence" }
+        {
+          "type": "use_case",
+          "ref": "CaptureDiagnosticEvidence"
+        }
       ]
     },
     {
@@ -70,7 +86,10 @@
       "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "EvaluateDiagnosticSession" }
+        {
+          "type": "use_case",
+          "ref": "EvaluateDiagnosticSession"
+        }
       ]
     },
     {
@@ -83,7 +102,10 @@
       "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "RecordDiagnosticResult" }
+        {
+          "type": "use_case",
+          "ref": "RecordDiagnosticResult"
+        }
       ]
     },
     {
@@ -96,7 +118,10 @@
       "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "CompleteDiagnosticSession" }
+        {
+          "type": "use_case",
+          "ref": "CompleteDiagnosticSession"
+        }
       ]
     },
     {
@@ -109,17 +134,43 @@
       "capability_gap": "missing-domain-capability",
       "critical": true,
       "runtime": [
-        { "type": "use_case", "ref": "AcceptDiagnosticRecommendation" }
+        {
+          "type": "use_case",
+          "ref": "AcceptDiagnosticRecommendation"
+        }
       ]
     }
   ],
   "edges": [
-    { "from": "methodology", "to": "session" },
-    { "from": "session", "to": "evidence" },
-    { "from": "evidence", "to": "evaluation" },
-    { "from": "evaluation", "to": "evidence", "label": "insufficient evidence" },
-    { "from": "evaluation", "to": "result", "label": "sufficient" },
-    { "from": "result", "to": "complete" },
-    { "from": "complete", "to": "decision" }
+    {
+      "from": "methodology",
+      "to": "session"
+    },
+    {
+      "from": "session",
+      "to": "evidence"
+    },
+    {
+      "from": "evidence",
+      "to": "evaluation"
+    },
+    {
+      "from": "evaluation",
+      "to": "evidence",
+      "label": "insufficient evidence"
+    },
+    {
+      "from": "evaluation",
+      "to": "result",
+      "label": "sufficient"
+    },
+    {
+      "from": "result",
+      "to": "complete"
+    },
+    {
+      "from": "complete",
+      "to": "decision"
+    }
   ]
 }

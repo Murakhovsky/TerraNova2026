@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DiagnosticSessionStartInputV1",
+  "type": "object",
+  "required": [
+    "pack_id",
+    "subject_id"
+  ],
+  "properties": {
+    "pack_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "subject_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "pack_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "QUICK_SCAN",
+        "DEEP_DIAGNOSTIC",
+        "FOCUSED_DIAGNOSTIC",
+        "EVIDENCE_VALIDATION",
+        "FOLLOW_UP_DIAGNOSTIC"
+      ]
+    },
+    "question_budget": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "time_budget_minutes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1440
+    }
+  },
+  "additionalProperties": false
+}

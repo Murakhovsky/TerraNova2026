@@ -16,14 +16,14 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 18
-- **High severity:** 15
+- **Відкритих debt items:** 17
+- **High severity:** 14
 - **Medium severity:** 3
 - **Зачеплених Domains:** 2
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
-| `diagnostic` | 7 | 7 | 0 | 0 |
+| `diagnostic` | 6 | 6 | 0 | 0 |
 | `sales` | 11 | 8 | 3 | 0 |
 
 ## Пріоритетний backlog
@@ -36,7 +36,6 @@ Capability debt означає, що бізнес-крок реальний, а�
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `evidence` · Capture evidence | `source` | `diagnostic.evidence.capture` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `methodology` · Draft and publish methodology version | `source` | `diagnostic.methodology.manage` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `result` · Record findings and recommendation | `source` | `diagnostic.result.record` | `declare-domain-capability` |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `session` · Start version-pinned session | `source` | `diagnostic.session.start` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `assign-owner` · Assign owner | `runtime` | `sales.deal.owner.assign` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `canonical-state` · Create or update canonical Sales state | `source` | `sales.lead.state.manage` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `followup` · Schedule next action | `runtime` | `sales.followup.schedule` | `declare-domain-capability` |

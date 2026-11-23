@@ -76,6 +76,8 @@ jobs:
         run: php tests/unit/sales_inbound_request_capability.php
       - name: DAS-001 direct Capability binding source coverage
         run: php tests/architecture/das_001_direct_binding_coverage.php
+      - name: Diagnostic canonical session start capability
+        run: php tests/unit/diagnostic_session_start_capability.php
       - name: Canonical Property capability input validation
         run: php tests/unit/canonical_capability_property_input_validation.php
       - name: Canonical Capability Gateway invocation boundaries

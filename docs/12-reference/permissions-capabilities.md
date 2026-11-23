@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 192 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 193 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -67,6 +67,7 @@ generated: true
 | `capital_markets` | `capital_markets.view` | так | так | `both` | `app/Domains/CapitalMarkets/Model/CapitalMarketsCapability.php` | `app/Domains/CapitalMarkets/module.php` |
 | `diagnostic` | `diagnostic.methodology.compile` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.semantic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
+| `diagnostic` | `diagnostic.session.start` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.state.rebuild` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.traceability` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
 | `diagnostic` | `diagnostic.v1` | ні | так | `manifest-only` | — | `app/Domains/Diagnostic/module.php` |
