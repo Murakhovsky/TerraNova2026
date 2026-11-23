@@ -16,14 +16,14 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 17
-- **High severity:** 14
+- **Відкритих debt items:** 16
+- **High severity:** 13
 - **Medium severity:** 3
 - **Зачеплених Domains:** 2
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
-| `diagnostic` | 6 | 6 | 0 | 0 |
+| `diagnostic` | 5 | 5 | 0 | 0 |
 | `sales` | 11 | 8 | 3 | 0 |
 
 ## Пріоритетний backlog
@@ -33,7 +33,6 @@ Capability debt означає, що бізнес-крок реальний, а�
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `complete` · Complete coherent session | `source` | `diagnostic.session.complete` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `decision` · Review / accept recommendation | `source` | `diagnostic.recommendation.accept` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `evaluation` · Evaluate structured evidence | `source` | `diagnostic.evaluation.run` | `declare-domain-capability` |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `evidence` · Capture evidence | `source` | `diagnostic.evidence.capture` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `methodology` · Draft and publish methodology version | `source` | `diagnostic.methodology.manage` | `declare-domain-capability` |
 | `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `result` · Record findings and recommendation | `source` | `diagnostic.result.record` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `assign-owner` · Assign owner | `runtime` | `sales.deal.owner.assign` | `declare-domain-capability` |

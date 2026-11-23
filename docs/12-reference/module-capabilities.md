@@ -114,6 +114,7 @@ Manifest capabilities не задекларовані.
 
 ### Задекларовані capabilities
 
+- `diagnostic.evidence.capture`;
 - `diagnostic.methodology.compile`;
 - `diagnostic.semantic.v1`;
 - `diagnostic.session.start`;
