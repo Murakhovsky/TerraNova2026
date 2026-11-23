@@ -66,13 +66,17 @@
       "kind": "operation",
       "owner": "diagnostic operator / interviewer",
       "domain": "diagnostic",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "diagnostic.evidence.capture",
       "critical": true,
       "runtime": [
         {
           "type": "use_case",
           "ref": "CaptureDiagnosticEvidence"
+        },
+        {
+          "type": "source",
+          "path": "symfony/src/Infrastructure/Capability/DiagnosticEvidenceCaptureAdapter.php",
+          "symbol": "DiagnosticEvidenceCaptureAdapter"
         }
       ]
     },
