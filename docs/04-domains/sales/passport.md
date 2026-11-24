@@ -95,7 +95,14 @@ domain_id: sales
         "sales.order.source.page.read",
         "sales.order.source.pending.read",
         "sales.order.source.sync.start",
-        "sales.order.source.sync.status.read"
+        "sales.order.source.sync.status.read",
+        "sales.order.lifecycle.confirm",
+        "sales.order.lifecycle.allocate",
+        "sales.order.lifecycle.release",
+        "sales.order.lifecycle.fulfill",
+        "sales.order.lifecycle.cancel",
+        "sales.order.lifecycle.return",
+        "sales.order.lifecycle.read"
       ]
     },
     {
@@ -148,7 +155,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 | `deals` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `teams` | Sales team configuration and membership | UNKNOWN |
 | `offers` | Immutable quoted terms, negotiations and accepted commercial evidence | UNKNOWN |
-| `orders` | Native order snapshots, source reconciliation and placement evidence | UNKNOWN |
+| `orders` | Native order snapshots, lifecycle, allocation references, source reconciliation and fulfillment evidence | UNKNOWN |
 | `workspace` | Scoped operational workspace and currency-separated pipeline summary | UNKNOWN |
 | `activities` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 
