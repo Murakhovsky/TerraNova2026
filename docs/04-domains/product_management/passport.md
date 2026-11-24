@@ -2,7 +2,7 @@
 title: Product Management — паспорт домену COS
 description: Власність, компоненти, бізнес-контракти та обмеження production readiness.
 status: draft
-updated: 2026-11-20
+updated: 2026-11-24
 kind: domain
 contract: domain-v1
 domain_id: product_management
@@ -190,7 +190,7 @@ Tenant isolation у Domain/Kernel. COS Integration Vault керує Shopify cred
 
 ## 10. Робочий простір Unified Workspace
 
-Повний Product/Inventory/Integration Workspace, UI approval та UX-E2E залишаються окремим acceptance gate. Операторський CLI не замінює human UI.
+Product/Inventory/Attributes/Pricing/Dashboard Workspace та review intents реалізовані; повне UI approval та UX-E2E залишаються acceptance gate. Операторський CLI не замінює human UI.
 
 ## 11. Operations та Recovery
 
@@ -202,7 +202,7 @@ Read-only E5 Stock audit звіряє on_hand з ledger і reserved з акти�
 
 ## 13. План розвитку, борги та рішення
 
-E4: live Shopify OAuth/scopes canary, cursor/freshness/throttle, independent recovery soak, approval UI та sign-off. E5 advanced stock; E6 guarded Shopify write-back після окремого рішення власника.
+Native release: all CI at candidate SHA, actual browser and independent approval acceptance, live agent/LLM test, explicit operator sign-off. Remaining AI coverage: some human-only lifecycle, media, list-price and transfer mutations have no governed equivalent; no dynamic output substitution. Optional Shopify: independent live OAuth/scopes canary and recovery; write-back only after separate ownership decision.
 
 ## 14. Карта джерел
 
