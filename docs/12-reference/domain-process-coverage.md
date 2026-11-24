@@ -17,8 +17,8 @@ generated: true
 ## Підсумок
 
 - **Installable Domains:** 15
-- **Покрито канонічним процесом:** 8
-- **Явних exemptions:** 7
+- **Покрито канонічним процесом:** 9
+- **Явних exemptions:** 6
 - **Без покриття:** 0
 
 | Domain | Версія | Статус | Процесів | Кроків | Capability mapped | Capability gaps | Debt |
@@ -33,7 +33,7 @@ generated: true
 | `hr` · HR | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `marketing` · Marketing | `0.1.2` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
 | `procurement` · Procurement | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
-| `product_management` · Product Management | `0.1.0` | `exempt` | 0 | 0 | 0/0 | 0 | 0 |
+| `product_management` · Product Management | `0.1.0` | `covered` | 6 | 38 | 38/38 | 0 | 0 |
 | `property` · Property | `1.0.0` | `covered` | 1 | 6 | 6/6 | 0 | 0 |
 | `real_estate` · Real Estate | `1.0.0` | `covered` | 1 | 7 | 7/7 | 0 | 0 |
 | `sales` · Sales | `1.0.0` | `covered` | 2 | 13 | 2/13 | 11 | 11 |
@@ -91,8 +91,12 @@ generated: true
 
 ### Product Management (`product_management`)
 
-- **Exempt:** E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted.
-- **Owner:** COS Product Management
+- `product_management.catalog-to-variants`
+- `product_management.csv-to-native-catalog`
+- `product_management.governed-business-cycle`
+- `product_management.physical-count-to-correction`
+- `product_management.pricing-to-quote`
+- `product_management.stock-to-reconciliation`
 
 ### Property (`property`)
 
@@ -129,7 +133,6 @@ generated: true
 | `hr` | COS Architecture | V1 skeleton only; executable HR process models are intentionally deferred until HR runtime implementation. |
 | `marketing` | COS Marketing / Architecture | M0 Domain foundation and Meta read-only have no canonical paid-execution process; FIN-BUDGET-001 and Workflow approval acceptance must precede process activation. |
 | `procurement` | COS Architecture | V1 skeleton only; executable Procurement process models are intentionally deferred until Procurement runtime implementation. |
-| `product_management` | COS Product Management | E0–E4 pilot includes bounded Product Management capabilities and Shopify read-only ingestion; canonical business Process Registry workflow is deferred until governed sync and stock orchestration are independently accepted. |
 
 ## Авторитетність і обмеження
 
