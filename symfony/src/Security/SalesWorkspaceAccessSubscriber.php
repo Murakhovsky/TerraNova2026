@@ -77,8 +77,19 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
                 $this->entity($org,$actor,$method==='lead'?'lead':'deal',$request->attributes->get('id'));return;
             }
             if (($name==='SalesReadController'&&in_array($method,['dashboard','pipelines'],true))||$name==='SalesDashboardController') return;
-            if ($name==='SalesTodayController'&&$request->query->get('scope','mine')!=='team') return;
-            if ($name==='SalesWriteController'&&$method==='createLead') return;
+            if ($name==='SalesTodayController'&&strtolower(trim((string)$request->query->get('scope','mine')))!=='team') return;
+            if ($name==='SalesWriteController'&&$method==='createLead') {
+                $input=json_decode((string)$request->getContent(),true);
+                if (!is_array($input)) $input=$request->request->all();
+                foreach (['owner_id','assigned_user_id'] as $field) {
+                    if (!array_key_exists($field,$input)) continue;
+                    $target=$input[$field];
+                    if ((!is_int($target)&&!is_string($target))||!ctype_digit((string)$target)||(int)$target<1) throw new DomainException('Denied.');
+                    $this->scope->resolve($org,$actor,'owner',(int)$target);
+                    if ((int)$target!==$actor&&!$require(SalesCapability::DealAssign)) throw new DomainException('Denied.');
+                }
+                return;
+            }
             if ($name==='SalesFrontendController'&&in_array($method,['approve','reject','execute','dismiss'],true)) {
                 // Approval scope and governed execution must be proven by S6, not by a generic manager role.
                 throw new DomainException('Legacy action execution requires governed workflow.');
