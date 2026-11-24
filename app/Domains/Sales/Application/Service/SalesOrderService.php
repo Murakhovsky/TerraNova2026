@@ -37,7 +37,7 @@ final readonly class SalesOrderService
             foreach ($terms['lines'] as $line) {
                 if ($line['product_id']===null) continue;
                 $ref=$this->references->resolve($org,[...$line,'kind'=>'product']);
-                if ($ref===null||($ref['product_id']??null)!==$line['product_id']||($ref['variant_id']??null)!==$line['variant_id']) throw new DomainException('Product variant unavailable.');
+                if ($ref===null||($ref['product_id']??null)!==$line['product_id']||($ref['variant_id']??null)!==$line['variant_id']||($ref['sku']??null)!==$line['sku']) throw new DomainException('Product variant unavailable.');
             }
             $customer=$deal===null?null:$this->orders->customerForDeal($org,$deal);
             if ($deal!==null&&$customer===null) throw new DomainException('Order deal unavailable.');
