@@ -8,6 +8,7 @@ use Domains\ProductManagement\Application\Service\ProductMediaService;
 use Domains\ProductManagement\Application\Service\PricingService;
 use Domains\ProductManagement\Application\Service\CsvProductImportService;
 use Domains\ProductManagement\Infrastructure\Shopify\ShopifyObservationStore;
+use Domains\ProductManagement\Infrastructure\Persistence\MySqlProductAnalytics;
 use Kernel\Application\Query\QueryHandlerInterface;
 use DomainException;
 
@@ -19,6 +20,7 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
         private CsvProductImportService $imports,
         private ShopifyObservationStore $shopify,
         private ProductMediaService $media,
+        private MySqlProductAnalytics $analytics,
     ) {}
 
     /** @return array<string,mixed> */
@@ -27,6 +29,11 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
         $org=$query->organization->value();
         $in=$query->input;
         return match($query->operation) {
+            'analytics.summary.get' => $this->analytics->summary($org,(string)$in['currency']),
+            'analytics.stock.search' => $this->analytics->stock($org,isset($in['location_id'])?(string)$in['location_id']:null,(string)($in['risk']??'all'),(string)($in['low']??'5'),(string)($in['high']??'100'),(int)($in['limit']??30),(int)($in['offset']??0)),
+            'analytics.movement.search' => $this->analytics->movement($org,(string)$in['from'],(string)$in['to'],(int)($in['limit']??30),(int)($in['offset']??0)),
+            'analytics.quality.search' => $this->analytics->quality($org,(string)$in['currency'],(string)$in['kind'],(int)($in['limit']??30),(int)($in['offset']??0)),
+            'analytics.reconciliation.get' => $this->analytics->reconciliation($org,(int)($in['limit']??100)),
             'attribute.search' => ['items'=>$this->products->attributes($org,(int)($in['limit']??30),(int)($in['offset']??0)),'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0)],
             'attribute.category.get' => ['items'=>$this->products->categoryAttributes($org,(string)$in['category_id'])],
             'attribute.product.get' => $this->products->productAttributes($org,(string)$in['product_id']),
