@@ -51,7 +51,7 @@ foreach(['product.archive','variant.update','variant.archive','findVariant(','co
 foreach(['cos_product_management_product_archive:','cos_product_management_variant_update:','cos_product_management_variant_archive:'] as $name) {
     $assert(str_contains($routes,$name),'Missing lifecycle route: '.$name);
 }
-$assert(substr_count($twig,'name="confirm_archive"')===2 && str_contains($twig,'name="expected_revision"'),
+$assert(substr_count($twig,'name="confirm_archive"')===3 && str_contains($twig,'name="expected_revision"'),
     'Archive confirmation and revision fences required.');
 $store=$read('app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductManagementStore.php');
 $assert(str_contains($store,"WHERE v.organization_id=? AND v.variant_id=? FOR UPDATE', [".'$organizationId,$variantId]'),
