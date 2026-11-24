@@ -10,9 +10,14 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==84)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==89)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.governed.price.list.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['code'=>'QA','name'=>'QA','kind'=>'retail','currency'=>'USD']],
+ 'product_management.governed.price.list.update'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['list_id'=>str_repeat('a',32),'name'=>'QA','expected_revision'=>1]],
+ 'product_management.governed.price.list.archive'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['list_id'=>str_repeat('a',32),'expected_revision'=>1]],
+ 'product_management.governed.price.list.entry.remove'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'expected_revision'=>1]],
+ 'product_management.governed.price.list.tier.set'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'min_quantity'=>'10','amount'=>'8.25','expected_revision'=>0]],
  'product_management.governed.category.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'QA','slug'=>'qa']],
  'product_management.governed.category.assign'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'category_id'=>str_repeat('b',32)]],
  'product_management.governed.translation.upsert'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'locale'=>'uk','name'=>'QA']],

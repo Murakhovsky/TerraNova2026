@@ -39,13 +39,13 @@ try {
   const inventoryResponse=await context.request.get(url('/api/v1/capabilities'));
   check(inventoryResponse.ok(),'Authenticated Capability Library unavailable: '+inventoryResponse.status());
   const inventory=(await inventoryResponse.json()).capabilities.filter(c=>c.owner_domain==='product_management');
-  check(inventory.length===84,'Product Capability Library must expose 84 typed capabilities');
+  check(inventory.length===89,'Product Capability Library must expose 89 typed capabilities');
   const counts={};
   for(const c of inventory){
     counts[c.status]=(counts[c.status]||0)+1;
     check(c.contract&&c.status!=='unavailable','Unavailable Product binding: '+c.id+' '+c.reason);
   }
-  check(counts.read_only===31&&counts.direct_human===30&&counts.workflow_approval_required===23,'Unexpected Product execution modes: '+JSON.stringify(counts));
+  check(counts.read_only===31&&counts.direct_human===30&&counts.workflow_approval_required===28,'Unexpected Product execution modes: '+JSON.stringify(counts));
   const csrf=await page.locator('form[action="/product-management/products"] [name=csrf_token]').getAttribute('value');
   const headers={'X-CSRF-Token':csrf,'X-Idempotency-Key':'pm-browser-'+tag};
   const summary=await context.request.post(url('/api/v1/capabilities/product_management.analytics.summary.get/invoke'),{headers,data:{currency:'UAH'}});

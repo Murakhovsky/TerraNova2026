@@ -182,6 +182,43 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
                 }
                 $this->require($ids[0]!==$ids[1],'distinct transfer movements');
                 break;
+            case 'price.list.create':
+                $id=$r['list_id']??null;
+                $fresh=$this->db->fetchAssociative('SELECT list_id,code,name,kind,currency,status,revision FROM pm_price_lists WHERE organization_id=? AND list_id=?',[$org,$id]);
+                $this->require($fresh!==false&&$fresh['code']===ProductRules::code($p['code'])&&$fresh['name']===ProductRules::name($p['name'])
+                    &&$fresh['kind']===$p['kind']&&$fresh['currency']===strtoupper($p['currency'])&&$fresh['status']==='active'&&(int)$fresh['revision']===1,'native created price list');
+                foreach(['list_id','code','name','kind','currency'] as $field)$this->require(($r[$field]??null)===$fresh[$field],'price list receipt '.$field);
+                $ids=['product_management:price_list:'.$id];
+                break;
+            case 'price.list.update':
+            case 'price.list.archive':
+                $id=$p['list_id'];
+                $fresh=$this->db->fetchAssociative('SELECT list_id,code,name,kind,currency,status,revision FROM pm_price_lists WHERE organization_id=? AND list_id=?',[$org,$id]);
+                $this->require($fresh!==false,'native price list exists');
+                $fresh['revision']=(int)$fresh['revision'];
+                $this->require($fresh==$r&&$fresh['revision']===$p['expected_revision']+1
+                    &&$fresh['status']===($op==='price.list.archive'?'archived':'active'),'price list revision and lifecycle');
+                if($op==='price.list.update')$this->require($fresh['name']===ProductRules::name($p['name']),'price list name');
+                $ids=['product_management:price_list:'.$id];
+                break;
+            case 'price.list.entry.remove':
+                $fresh=$this->prices->getListPrice($org,$p['list_id'],$p['variant_id']);
+                $revision=$p['expected_revision']+1;
+                $history=$this->db->fetchAssociative('SELECT old_amount,new_amount,actor_ref FROM pm_price_list_history WHERE organization_id=? AND list_id=? AND variant_id=? AND revision=?',[$org,$p['list_id'],$p['variant_id'],$revision]);
+                $this->require($fresh['found']&&$fresh['revision']===$revision&&$fresh['price']===null&&$fresh==$r
+                    &&$history!==false&&$history['old_amount']!==null&&$history['new_amount']===null&&$history['actor_ref']===$actor,'removed price and history');
+                $ids=['product_management:list_price:'.$p['list_id'].':'.$p['variant_id'].':'.$revision];
+                break;
+            case 'price.list.tier.set':
+                $minimum=self::decimal($p['min_quantity'],6);$revision=$p['expected_revision']+1;
+                $amount=$p['amount']===null?null:self::decimal($p['amount'],4);
+                $fresh=$this->prices->tiers($org,$p['list_id'],$p['variant_id'],1,0,$minimum)[0]??null;
+                $history=$this->db->fetchAssociative('SELECT old_amount,new_amount,actor_ref FROM pm_price_list_tier_history WHERE organization_id=? AND list_id=? AND variant_id=? AND min_quantity=? AND revision=?',[$org,$p['list_id'],$p['variant_id'],$minimum,$revision]);
+                $this->require($fresh!==null&&$fresh==$r&&$fresh['revision']===$revision&&$fresh['price']===$amount
+                    &&$fresh['min_quantity']===$minimum&&$history!==false&&$history['new_amount']===$amount&&$history['actor_ref']===$actor
+                    &&($amount!==null||$history['old_amount']!==null),'tier threshold, price and history');
+                $ids=['product_management:list_tier:'.$p['list_id'].':'.$p['variant_id'].':'.$minimum.':'.$revision];
+                break;
             case 'price.list.entry.set':
                 $fresh=$this->prices->getListPrice($org,$p['list_id'],$p['variant_id']);
                 $revision=$p['expected_revision']+1;

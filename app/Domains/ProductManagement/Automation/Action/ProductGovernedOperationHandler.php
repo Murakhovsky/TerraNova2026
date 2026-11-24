@@ -39,6 +39,11 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
         'variant.archive'=>'variant.archive',
         'stock.transfer'=>'stock.transfer',
         'price.list.entry.set'=>'price.list.entry.set',
+        'price.list.create'=>'price.list.create',
+        'price.list.update'=>'price.list.update',
+        'price.list.archive'=>'price.list.archive',
+        'price.list.entry.remove'=>'price.list.entry.remove',
+        'price.list.tier.set'=>'price.list.tier.set',
     ];
     public function __construct(private ProductManagementService $products,private PricingService $prices,
         private ActiveModuleResolver $modules,private CanonicalCapabilityCatalog $catalog){}
@@ -79,6 +84,11 @@ final readonly class ProductGovernedOperationHandler implements IdempotentExtern
                 'variant.archive'=>$this->products->archiveVariant($org,$p['variant_id'],$p['expected_revision'],$key,$actor,$trace),
                 'stock.transfer'=>$this->products->transferStock($org,$p['variant_id'],$p['from_location_id'],$p['to_location_id'],$p['quantity'],$p['source_ref'],$key,$actor,$trace),
                 'price.list.entry.set'=>$this->prices->setListPrice($org,$p['list_id'],$p['variant_id'],$p['amount'],$p['expected_revision'],$key,$actor,$trace),
+                'price.list.create'=>$this->prices->createList($org,$p['code'],$p['name'],$p['kind'],$p['currency'],$key,$actor,$trace),
+                'price.list.update'=>$this->prices->updateList($org,$p['list_id'],$p['name'],$p['expected_revision'],$key,$actor,$trace),
+                'price.list.archive'=>$this->prices->archiveList($org,$p['list_id'],$p['expected_revision'],$key,$actor,$trace),
+                'price.list.entry.remove'=>$this->prices->removeListPrice($org,$p['list_id'],$p['variant_id'],$p['expected_revision'],$key,$actor,$trace),
+                'price.list.tier.set'=>$this->prices->setTier($org,$p['list_id'],$p['variant_id'],$p['min_quantity'],$p['amount'],$p['expected_revision'],$key,$actor,$trace),
             };
             return ExecutionResult::success($result);
         }catch(Throwable){
