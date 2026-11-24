@@ -257,6 +257,7 @@ generated: true
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_list_history` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_price_lists` |
 | `product_management` | `app/migrations/20261124_000190_product_management_price_lists.sql` | `pm_variants` |
+| `product_management` | `app/migrations/20261124_000191_product_management_price_list_lifecycle.sql` | `pm_price_lists` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |
