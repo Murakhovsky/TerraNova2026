@@ -89,7 +89,7 @@ final readonly class SalesWorkspaceAccessSubscriber implements EventSubscriberIn
                 $this->entity($org,$actor,$method==='lead'?'lead':'deal',$request->attributes->get('id'));return;
             }
             if (($name==='SalesReadController'&&in_array($method,['dashboard','pipelines'],true))||$name==='SalesDashboardController') return;
-            if (in_array($name,['ClientCaseInboxController','ClientCaseCollectionController','SalesTodayController'],true)&&!$mutation) return;
+            if (in_array($name,['ClientCaseInboxController','ClientCaseCollectionController','SalesTodayController','SalesClientCaseStatsController'],true)&&!$mutation) return;
             if ($name==='ClientCaseWorkspaceController'&&!$mutation) {$this->entity($org,$actor,'deal',$request->attributes->get('id'));return;}
             if ($name==='SalesWriteController'&&$method==='createLead') {
                 $input=str_contains(strtolower((string)$request->headers->get('Content-Type','')),'application/json')
