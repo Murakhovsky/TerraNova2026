@@ -135,7 +135,7 @@ try {
   for(const p of products){
     await go('/product-management/stock?variant='+p.variant+'&location='+location);
     const form=page.locator('form[action="/product-management/stock/post"]');
-    await form.locator('[name=kind]').selectOption('receipt');
+    await form.locator('[name=kind]').selectOption('receive');
     await form.locator('[name=variant_id]').selectOption(p.variant);
     await form.locator('[name=from_location_id]').selectOption(location);
     await form.locator('[name=quantity]').fill('5');
