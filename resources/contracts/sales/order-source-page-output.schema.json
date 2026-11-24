@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "order_ids": {
+      "type": "array",
+      "maxItems": 25,
+      "items": {
+        "type": "string",
+        "pattern": "^gid://shopify/Order/[1-9][0-9]{0,18}$"
+      }
+    },
+    "next_cursor": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 512
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "order_ids",
+    "next_cursor"
+  ],
+  "additionalProperties": false
+}
