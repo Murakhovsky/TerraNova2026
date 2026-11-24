@@ -78,6 +78,13 @@ final readonly class ProductMutationCommandHandler implements CommandHandlerInte
                 $org,(string)$in['variant_id'],(string)$in['from_location_id'],(string)$in['to_location_id'],
                 (string)$in['quantity'],(string)$in['source_ref'],$key,$actor,$trace,
             ),
+            'stock.reserve' => $this->products->reserveStock(
+                $org,(string)$in['variant_id'],(string)$in['location_id'],
+                (string)$in['quantity'],(string)$in['source_ref'],$key,$actor,$trace,
+            ),
+            'stock.release' => $this->products->releaseStock(
+                $org,(string)$in['reservation_id'],(string)$in['reason'],$key,$actor,$trace,
+            ),
             'stock.issue' => $this->products->recordMovement(
                 $org, (string) $in['variant_id'], (string) $in['location_id'],
                 '-' . (string) $in['quantity'], 'issue', (string) $in['source_ref'],
