@@ -24,7 +24,7 @@ final readonly class SalesAttributionReadAdapter implements MarketingSalesAttrib
         if((string)($l['id']??'')!==$leadId||(string)($l['organization_id']??'')!==$org)throw new DomainException('Sales lead scope mismatch.');
         $deal=$l['opportunity']??null;$outcome=null;
         if(is_array($deal)&&(string)($deal['organization_id']??'')===$org&&(string)($deal['id']??'')===(string)($l['client_case_id']??'')
-            &&(string)($deal['lead_id']??'')===$leadId){
+            &&(string)($deal['inbound_request_id']??'')===$leadId){
             $won=false;
             foreach($this->sales->pipelines($org) as $pipeline){
                 if((string)$pipeline['id']!==(string)($deal['pipeline_id']??''))continue;

@@ -79,9 +79,10 @@ $db->prepare('INSERT INTO tn_people (organization_id,public_id,full_name) VALUES
 $person=(int)$db->lastInsertId();$pipeline='p-'.bin2hex(random_bytes(10));$stage='s-'.bin2hex(random_bytes(10));
 $db->prepare("INSERT INTO sales_pipelines (id,organization_id,code,name,status) VALUES (?,?,'M4FIXTURE','M4 fixture','ACTIVE')")->execute([$pipeline,$org]);
 $db->prepare("INSERT INTO sales_pipeline_stages (id,organization_id,pipeline_id,code,name,is_terminal,is_won,probability_default) VALUES (?,?,?,'WON','Won',1,1,100)")->execute([$stage,$org,$pipeline]);
-$db->prepare("INSERT INTO tn_client_cases (organization_id,public_id,person_id,type,title,status,lead_id,pipeline_id,stage_id,deal_value,currency,closed_at) VALUES (?,?,?,'buy','Private deal','closed',?,?,?,125.50,'EUR','2026-01-02 10:00:00')")->execute([$org,'CC-'.bin2hex(random_bytes(5)),$person,$id,$pipeline,$stage]);
+$db->prepare("INSERT INTO tn_client_cases (organization_id,public_id,person_id,type,title,status,inbound_request_id,pipeline_id,stage_id,deal_value,currency,closed_at) VALUES (?,?,?,'buy','Private deal','closed',?,?,?,125.50,'EUR','2026-01-02 10:00:00')")->execute([$org,'CC-'.bin2hex(random_bytes(5)),$person,$id,$pipeline,$stage]);
 $deal=(int)$db->lastInsertId();
 $db->prepare('UPDATE tn_leads SET client_case_id=? WHERE organization_id=? AND id=?')->execute([$deal,$org,$id]);
+$assert($sales->lead($actor,$id)['deal']['deal_id']===(string)$deal,'Canonical inbound request backlink missing.');
 $discovery=$analytics->discover($actor,$c2,null,'2026-01-01','2026-01-02',0);
 $assert(array_column($discovery['matches'],'lead_id')===[$id]&&!$discovery['complete_coverage'],'Exact native lead discovery failed.');
 $receipt=$analytics->capture($actor,$c2,null,[$id,$wrong],'m4-native-capture');
