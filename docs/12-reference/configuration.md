@@ -16,7 +16,7 @@ generated: true
 | --- | --- | --- | ---: |
 | `capital_markets` | `0.9.0` | — | 39 |
 | `construction` | `0.1.0` | — | 0 |
-| `diagnostic` | `1.0.0` | — | 7 |
+| `diagnostic` | `1.0.0` | — | 8 |
 | `documents` | `0.1.0` | — | 3 |
 | `federation` | `1.0.0` | — | 1 |
 | `finance` | `0.2.2` | — | 8 |
@@ -46,7 +46,7 @@ generated: true
 
 - manifest: `app/Domains/Diagnostic/module.php`;
 - configuration provisioners: —;
-- capabilities: `diagnostic.session.start`, `diagnostic.evidence.capture`, `diagnostic.methodology.compile`, `diagnostic.state.rebuild`, `diagnostic.traceability`, `diagnostic.semantic.v1`, `diagnostic.v1`.
+- capabilities: `diagnostic.session.start`, `diagnostic.evidence.capture`, `diagnostic.session.complete`, `diagnostic.methodology.compile`, `diagnostic.state.rebuild`, `diagnostic.traceability`, `diagnostic.semantic.v1`, `diagnostic.v1`.
 
 ## `documents`
 
