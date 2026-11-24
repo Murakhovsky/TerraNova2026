@@ -2,7 +2,7 @@
 title: Marketing — паспорт домену COS
 description: Межі, компоненти, доступні Capabilities і докази приймання Marketing.
 status: draft
-updated: 2026-11-20
+updated: 2026-11-24
 kind: domain
 contract: domain-v1
 domain_id: marketing
@@ -32,6 +32,22 @@ domain_id: marketing
         "marketing.paid.sync.history",
         "marketing.paid.spend.evidence.get"
       ]
+    },
+    {
+      "id": "creative_planning",
+      "capability_ids": [
+        "marketing.creative.create",
+        "marketing.creative.revise",
+        "marketing.creative.list"
+      ]
+    },
+    {
+      "id": "analyst_review",
+      "capability_ids": [
+        "marketing.analyst.proposal.submit",
+        "marketing.analyst.proposal.list",
+        "marketing.analyst.proposal.review"
+      ]
     }
   ],
   "process_ids": [],
@@ -59,6 +75,8 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 | --- | --- | --- |
 | `campaign_planning` | Чернетки та пошук внутрішніх кампаній | D2, без незалежного staging |
 | `paid_media_read` | Meta read-only snapshots, атомарність імпорту й історія sync | D2, без real Ads Manager acceptance |
+| `creative_planning` | Версії креативів і Product refs | D2, без Product live verification |
+| `analyst_review` | Evidence proposals та незалежні review-рішення | D2, Hermes runtime не підключений |
 
 Компоненти не є незалежними installable modules.
 
@@ -68,7 +86,7 @@ Marketing володіє Campaign Draft, Meta Ad Account binding, provider Campa
 
 ## 5. Use Cases та Capabilities
 
-Callable capabilities і точні input/output schemas належать manifest, а не цьому тексту. Початкові Query включають Campaign search/get, Meta account list/Insights query/sync history. Публічного Finance evidence export у цьому M1.1 пакеті немає.
+Callable capabilities і точні input/output schemas належать manifest, а не цьому тексту. Початкові Query включають Campaign search/get, Meta account list/Insights query/sync history. Finance-facing read-only source evidence Query присутній, але не підтверджує Expense. M2a має Creative create/revise/list і Proposal submit/list/review, без запуску Meta.
 
 ## 6. Виконання
 
@@ -76,7 +94,7 @@ Canonical Capability Gateway виконує лише дозволені Query а
 
 ## 7. Міждоменні контракти
 
-Product є власником товару, Finance власником бюджетів та фінансового журналу, Marketing власником Meta readback. Finance-facing evidence port і підтвердження provider billing або Expense у цьому зрізі відсутні. Прямий запис Marketing до Finance DB заборонений.
+Product є власником товару, Finance власником бюджетів та фінансового журналу, Marketing власником Meta readback. Marketing evidence Query та Finance F1/readback уже в `main`; незалежного підтвердження provider billing чи Expense немає. Прямий запис Marketing до Finance DB заборонений.
 
 ## 8. Процеси та результати
 
@@ -100,7 +118,7 @@ MySQL atomic import відхиляє часткове оновлення при 
 
 ## 13. План розвитку, борги та рішення
 
-Пріоритети: незалежне приймання Marketing M0/M1, Finance F1 і readback contract; надалі M2 Product/Hermes і M3 governed paid operations. Наявний D2 source import не легалізує жоден Meta write.
+Пріоритети: M1 Meta real Ads Manager reconciliation, M2 Product verification і Hermes analyst, M3 governed paid operations, незалежне D3/D4 приймання. Наявний D2 source import не легалізує жоден Meta write.
 
 ## 14. Карта джерел
 

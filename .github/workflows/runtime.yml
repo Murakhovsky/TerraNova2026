@@ -141,6 +141,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/product_management_approved_csv_mysql.php
+      - name: Marketing M2 real MySQL Creative and independent analyst review
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/marketing_m2_planning_mysql.php
       - name: Marketing Meta real MySQL atomic sync and rollback acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

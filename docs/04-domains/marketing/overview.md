@@ -2,9 +2,9 @@
 title: Маркетинг як окремий домен COS
 description: Планування маркетингових кампаній і безпечне читання Meta Ads без рекламних мутацій.
 status: draft
-updated: 2026-11-19
+updated: 2026-11-24
 kind: domain
-version: 0.1.2
+version: 0.2.2
 ---
 
 # Огляд домену Marketing
@@ -25,11 +25,23 @@ Marketing — окремий bounded context, що володіє рекламн
 
 ## Фактично додані можливості
 
-Шість typed capabilities початкового зрізу: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
+Тринадцять typed capabilities, включно з шістьма M2a та Finance-facing source Query: `marketing.campaign.search`, `marketing.campaign.get`, `marketing.campaign.create`, `marketing.paid.account.list`, `marketing.paid.insights.query`, `marketing.paid.sync.history`. Для них діють Canonical Capability Gateway і перевірка tenant менеджера. Нових універсальних executor або CommandBus не створено.
 
 На UI передбачено Overview, Campaigns, Campaign Workspace, Paid Media Accounts, Performance та Action Queue. Менеджер може створити внутрішню чернетку, під'єднати read-only Meta Ad Account через opaque Vault reference, імпортувати і переглядати provider observations.
 
 Активація, створення рекламних кампаній у Meta, зміна бюджету та інші paid writes відсутні й навмисно блокуються. Для них потрібні Finance F1, незалежне погодження, canonical Workflow і провайдерний readback.
+
+## M2a: Креативи та незалежний перегляд рекомендацій
+
+Користувач у `/marketing/campaigns/{id}` створює Creative Draft, додає HTTPS destination, текст, CTA, локаль та необов'язковий Product reference або SHA-256 медіа. Модель зберігає `product_verification=PENDING_PRODUCT_ACCEPTANCE`, `destination_verification=UNVERIFIED` і `compliance_state=NOT_REVIEWED`. Вона **не підтверджує** доступність товару, безпечність URL чи політику Meta.
+
+Усі правки Creative зберігаються як послідовність `marketing_creative_revisions` із content hash, actor і revision fencing. При зміні ревізії подані раніше, але ще не розглянуті рекомендації стають застарілими та не можуть бути прийняті.
+
+Поради аналітика зберігаються в `marketing_analyst_proposals` із reference на конкретну Campaign і Creative revision, автором і явно зазначеними джерелами evidence. У M2a origin встановлює **сервер** як `HUMAN`, а evidence — `UNVERIFIED`: користувач не може видати людську нотатку за Hermes або verified provider insight. Інший менеджер може `ACCEPT` / `REJECT` із причиною; автор не може погодити власну пропозицію. Прийняття рекомендації **не змінює** статус Marketing Campaign і не запускає Meta/Finance операції.
+
+Шість capabilities: `marketing.creative.create`, `marketing.creative.revise`, `marketing.creative.list`, `marketing.analyst.proposal.submit`, `marketing.analyst.proposal.list`, `marketing.analyst.proposal.review`. Вони працюють через той самий Canonical Capability Gateway; мутації `internal` і `human_only`. Відсутні token integration, Hermes autonomous invocation та паралельний executor.
+
+Схема: `app/migrations/20261119_000154_marketing_planning_m2.sql`; інтеграційна перевірка: `tests/integration/marketing_m2_planning_mysql.php`. Модуль вимкнений за замовчуванням.
 
 ## Надійність імпорту та операційна черга
 
@@ -43,8 +55,8 @@ Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `l
 
 - **M0**: SQL, сервіси, контракти, початкові тести; приймання D2–D5 ще не доведене.
 - **M1**: Meta read-only адаптер і збереження спостережень, але без підтвердженого реального рекламного акаунта та Ads Manager reconciliation.
-- **M2**: Product, креативні затвердження та Hermes Paid Media Analyst не реалізовані.
-- **F1/M3**: Finance reservation та зовнішні рекламні дії заблоковано.
+- **M2a**: Creative revisions, людські evidence proposals та незалежний review реалізовані; Product API уже прийнято в `main`, але перевірка товару з боку Marketing, Hermes delegation і provider policy gate не підключені.
+- **F1/M3**: Finance F1 уже в `main`; Marketing Meta writes залишаються заблокованими до окремого canonical Workflow, live evidence і staging acceptance.
 - **M4/M5**: мультиджерельна атрибуція, оптимізація й додаткові провайдери не реалізовані.
 
 Початкова модель прав використовує `cos.tenant.access` та `cos.tenant.manage`; окремі `marketing.*` permissions необхідно додати до ширшого розгортання. У таблицях зберігаються лише непрозорі посилання на облікові дані, що розкриваються Platform Credential Vault під час дозволеного запиту.
