@@ -146,7 +146,7 @@ try {
     $replayed = $inbound->createCaseFromRequest($conversionLeadId, [], null, 'replay-' . $token);
     assertCommand($replayed->ok && $replayed->code === 'already_attached' && ($replayed->data['case_id'] ?? null) === $convertedId, 'Conversion replay created or returned a different case.');
     assertCommand((int) ($commands->inboundRequest($organizationId, $conversionLeadId)['client_case_id'] ?? 0) === $convertedId, 'Native lead readback disagrees with conversion.');
-    $conversionEvents = $connection->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=:org AND aggregate_id=:id AND event_type=:event_type');
+    $conversionEvents = $connection->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=:org AND aggregate_id=:id AND type=:event_type');
     $conversionEvents->execute(['org' => $organizationId, 'id' => (string) $convertedId, 'event_type' => 'sales.client_case.created']);
     assertCommand((int) $conversionEvents->fetchColumn() === 1, 'Conversion replay duplicated case-created event.');
     assertCommand(!$inbound->attachRequest($caseId, $conversionLeadId)->ok, 'Existing conversion was silently relinked.');
