@@ -85,7 +85,7 @@ final readonly class FederationCanonicalReceiptInspector
                 }
                 $receipt=$step['result_reference'];
                 if(!is_string($receipt)||$receipt==='')return $result('drift','missing_receipt',$verified,$total);
-                if($step['side_effect_level']==='external') {
+                if(in_array($step['side_effect_level'],['external','financial'],true)) {
                     $proof=$this->actions->attestForAudit(
                         $identity,$sid,$receipt,(string)$run['input_digest']);
                     if(!$proof->verified||$proof->stepId!==$sid

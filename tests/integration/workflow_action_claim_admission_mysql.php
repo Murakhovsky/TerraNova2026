@@ -50,6 +50,7 @@ $db=DriverManager::getConnection([
     'user'=>(string)(getenv('DB_USERNAME') ?: 'cos'),
     'password'=>(string)(getenv('DB_PASSWORD') ?: ''), 'charset'=>'utf8mb4',
 ]);
+$effect=getenv('COS_TEST_FINANCIAL_WORKFLOW')==='1'?'financial':'external';
 $token=bin2hex(random_bytes(6));
 $org='wf-gate-'.$token;
 $actorId='gate-manager-'.$token;
@@ -64,7 +65,7 @@ $planHash=hash('sha256','approved-plan-'.$token);
 $approvalRef='plan-approval-'.$token;
 $def=new WorkflowDefinitionSnapshot('test.pinned-command','1.0.0',[
     ['id'=>'send','capability_id'=>'test.publish','capability_version'=>'1.0.0',
-     'side_effect_level'=>'external','owner_domain'=>'sales',
+     'side_effect_level'=>$effect,'owner_domain'=>'sales',
      'execution_binding'=>'action:test.publish','depends_on'=>[],
      'input'=>['target_type'=>'case','target_id'=>'123','parameters'=>['approved'=>true,'count'=>2]]],
 ]);
@@ -86,7 +87,7 @@ $capability=new CapabilityContract(
     id:'test.publish',version:'1.0.0',ownerDomain:'sales',kind:'command',
     inputSchema:'resources/contracts/tests/claim.schema.json',
     outputSchema:'resources/contracts/tests/claim-output.schema.json',
-    executionBinding:'action:test.publish',sideEffectLevel:'external',
+    executionBinding:'action:test.publish',sideEffectLevel:$effect,
     permission:'test.publish',approvalPolicy:'required',idempotency:'required',
     timeoutPolicy:['seconds'=>60],retryPolicy:['max_attempts'=>1],
     failureContract:'manual_reconciliation',

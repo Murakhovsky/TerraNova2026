@@ -41,7 +41,7 @@ final readonly class WorkflowReceiptAttestationRouter implements WorkflowReceipt
         if (!$ctx || $ctx['input_digest']!==$request->inputDigest) {
             throw new DomainException('Workflow receipt scope differs from pinned Run.');
         }
-        if ($ctx['side_effect_level']==='external') return $this->actions->attest($request);
+        if (in_array($ctx['side_effect_level'],['external','financial'],true)) return $this->actions->attest($request);
         if ($ctx['side_effect_level']!=='none' || $ctx['definition_id']!=='federation.approved-plan'
             || !in_array($ctx['state'],['claimed','waiting','completed'],true)
             || ($ctx['result_reference']!==null

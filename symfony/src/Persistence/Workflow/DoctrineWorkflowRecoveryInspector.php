@@ -133,11 +133,11 @@ final readonly class DoctrineWorkflowRecoveryInspector implements WorkflowRecove
             $state = (string) $step['state'];
             $effect = (string) $step['side_effect_level'];
             if ($state === 'ambiguous' || $state === 'failed') {
-                return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'step_requires_manual_reconciliation', $effect === 'external');
+                return $assessment(WorkflowRecoveryDisposition::MANUAL_REQUIRED, 'step_requires_manual_reconciliation', in_array($effect,['external','financial'],true));
             }
             if ($state === 'claimed') {
                 $expired = (int) $step['lease_expired'] === 1;
-                if ($effect === 'external') {
+                if (in_array($effect,['external','financial'],true)) {
                     return $assessment(
                         $expired ? WorkflowRecoveryDisposition::MANUAL_REQUIRED : WorkflowRecoveryDisposition::RECONCILE_ONLY,
                         $expired ? 'external_claim_lease_expired' : 'external_claim_outcome_pending',
