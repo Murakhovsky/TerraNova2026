@@ -10,16 +10,6 @@
       "severity": "high",
       "resolution": "declare-domain-capability",
       "target_capability": "diagnostic.methodology.manage"
-    },
-    {
-      "id": "sales.lead-to-managed-case:intake",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "intake",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.lead.intake"
     }
   ]
 }

@@ -19,6 +19,13 @@ return [
         'extension_services' => [],
         'cross_domain_contracts' => [
             [
+                'contract' => 'Domains\\Sales\\Application\\Contract\\SalesCommercialEvidencePort',
+                'role' => 'requires',
+                'counterpart' => 'sales',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Read accepted Sales commercial evidence without creating ledger entries or payment.',
+            ],
+            [
                 'contract' => 'Domains\\Finance\\Application\\Contract\\MarketingSpendEvidenceReadPort',
                 'role' => 'requires',
                 'counterpart' => 'marketing',
@@ -27,8 +34,25 @@ return [
             ],
         ],
         'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql'],
-        'capabilities' => ['finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status'],
+        'capabilities' => ['finance.sales.commercial_evidence.read','finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status'],
         'capability_contracts' => [
+            [
+                'id' => 'finance.sales.commercial_evidence.read',
+                'version' => '1.0.0',
+                'owner_domain' => 'finance',
+                'kind' => 'query',
+                'input_schema' => 'resources/contracts/finance/sales-commercial-evidence-read-input.schema.json',
+                'output_schema' => 'resources/contracts/finance/sales-commercial-evidence-read-output.schema.json',
+                'execution_binding' => 'query:finance.sales.commercial_evidence.read',
+                'async' => false,
+                'side_effect_level' => 'none',
+                'permission' => 'cos.tenant.manage',
+                'approval_policy' => 'none',
+                'idempotency' => 'none',
+                'lifecycle' => 'experimental',
+                'tests' => ['tests/unit/sales_offer_policy.php', 'tests/integration/sales_client_case_create_mysql.php'],
+                'documentation' => 'docs/04-domains/sales/completion-roadmap.md',
+            ],
 
             [
                 'id'=>'finance.ad_spend.reconciliation.status',

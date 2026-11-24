@@ -22,7 +22,8 @@ domain_id: sales
         "sales.inbound.request.read",
         "sales.lead.create",
         "sales.lead.qualify",
-        "sales.lead.state.manage"
+        "sales.lead.state.manage",
+        "sales.lead.intake"
       ]
     },
     {
@@ -61,6 +62,17 @@ domain_id: sales
         "sales.activity.reschedule",
         "sales.followup.schedule",
         "sales.property_match.record"
+      ]
+    },
+    {
+      "id": "offers",
+      "capability_ids": [
+        "sales.offer.create",
+        "sales.offer.revise",
+        "sales.offer.transition",
+        "sales.negotiation.record",
+        "sales.offer.read",
+        "sales.offer.list"
       ]
     }
   ],

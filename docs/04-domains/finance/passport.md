@@ -37,6 +37,12 @@ domain_id: finance
     {
       "id": "marketing_spend_readback",
       "capability_ids": []
+    },
+    {
+      "id": "sales_commercial_evidence",
+      "capability_ids": [
+        "finance.sales.commercial_evidence.read"
+      ]
     }
   ],
   "process_ids": [],
