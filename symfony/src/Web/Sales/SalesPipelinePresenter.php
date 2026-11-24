@@ -96,7 +96,7 @@ final class SalesPipelinePresenter
 
             $items = [];
             foreach ($byStage[$stageId] ?? [] as $deal) {
-                $currency = trim((string) ($deal['currency'] ?? 'USD')) ?: 'USD';
+                $currency = trim((string) ($deal['currency'] ?? ''));
                 $risk = strtoupper(trim((string) ($deal['risk_level'] ?? 'NORMAL')));
                 $items[] = [
                     'id' => (int) ($deal['id'] ?? 0),
@@ -106,8 +106,8 @@ final class SalesPipelinePresenter
                     'owner' => trim((string) ($deal['owner_name'] ?? '')) ?: 'Unassigned',
                     'daysInStage' => (int) ($deal['days_in_stage'] ?? 0),
                     'stageAgeEstimated' => (bool) ($deal['stage_age_estimated'] ?? false),
-                    'value' => $this->money($deal['deal_value'] ?? 0, $currency),
-                    'weightedValue' => $this->money($deal['weighted_value'] ?? 0, $currency),
+                    'value' => $this->money($deal['deal_value'] ?? null, $currency),
+                    'weightedValue' => $this->money($deal['weighted_value'] ?? null, $currency),
                     'nextAction' => (string) ($deal['next_action_at'] ?? 'Not set'),
                     'attentionReason' => (string) ($deal['attention_reason'] ?? '—'),
                     'recommendation' => (string) ($deal['ai_recommendation'] ?? 'Continue planned next action'),
@@ -123,11 +123,10 @@ final class SalesPipelinePresenter
                 'label' => $stageLabel,
                 'count' => count($items),
                 'summary' => sprintf(
-                    '%d deals · %s · weighted %s · avg %dd',
+                    '%d open deals (all owners) · %s · weighted %s',
                     (int) ($stage['deal_count'] ?? count($items)),
-                    $this->money($stage['pipeline_value'] ?? 0, 'USD'),
-                    $this->money($stage['weighted_value'] ?? 0, 'USD'),
-                    (int) ($stage['avg_days_in_stage'] ?? 0),
+                    $this->moneyRows($stage['money_by_currency']??[],'pipeline_value'),
+                    $this->moneyRows($stage['money_by_currency']??[],'weighted_value'),
                 ),
                 'deals' => $items,
             ];
@@ -157,7 +156,13 @@ final class SalesPipelinePresenter
 
     private function money(mixed $value, string $currency): string
     {
-        return number_format((float) $value, 0, '.', ' ') . ' ' . $currency;
+        return $value===null||$currency===''?'—':number_format((float)$value,2,'.',' ').' '.$currency;
+    }
+
+    private function moneyRows(array $rows,string $key):string
+    {
+        $parts=[];foreach($rows as $row)$parts[]=$this->money($row[$key]??null,(string)($row['currency']??''));
+        return $parts===[]?'—':implode(' · ',$parts);
     }
 
     /** @return list<array<string,mixed>> */

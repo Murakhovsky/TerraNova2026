@@ -25,7 +25,7 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
     {
         $data = $this->base->dashboard($organizationId, $ownerId);
         $data['today'] = $this->today($organizationId, $ownerId ?? 0);
-        $data['at_risk'] = $this->deals($organizationId, ['owner_id' => $ownerId, 'risk' => 'high', 'limit' => 8]);
+        $data['at_risk'] = $this->deals($organizationId, ['owner_id' => $ownerId, 'risk' => 'high', 'open_only'=>true, 'limit' => 8]);
         $data['new_leads'] = $this->leads($organizationId, ['owner_id' => $ownerId, 'status' => 'new', 'limit' => 8]);
         return $data;
     }
@@ -102,8 +102,9 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             $where[] = 'c.assigned_user_id = :owner_id';
             $params['owner_id'] = $ownerId;
         }
+        if(!empty($filters['open_only']))$where[]='c.status IN ("active","paused")';
         if (($filters['risk'] ?? '') === 'high') {
-            $where[] = '(c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at < NOW() - INTERVAL 48 HOUR)';
+            $where[] = '(c.priority IN ("high", "urgent") OR c.next_contact_at < NOW() OR c.last_activity_at IS NULL OR c.last_activity_at < NOW() - INTERVAL 48 HOUR)';
         }
         if (($filters['value_min'] ?? '') !== '' && is_numeric($filters['value_min'])) {
             $where[] = 'COALESCE(c.deal_value,c.budget_max,0) >= :value_min';
@@ -118,8 +119,8 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
             'SELECT c.id,c.public_id,c.title,c.status,c.priority,c.source,c.pipeline_id,c.stage_id,'
             . 'COALESCE(s.code,UPPER(c.stage)) stage_code,COALESCE(s.name,c.stage) stage_name,s.sort_order stage_order,'
             . 'p.full_name customer,p.phone customer_phone,p.email customer_email,c.assigned_user_id owner_id,u.full_name owner_name,'
-            . 'COALESCE(c.deal_value,c.budget_max) deal_value,c.currency,COALESCE(c.probability,s.probability_default,0) probability,'
-            . 'ROUND(COALESCE(c.deal_value,c.budget_max,0)*COALESCE(c.probability,s.probability_default,0)/100,2) weighted_value,'
+            . 'c.deal_value deal_value,c.currency,COALESCE(c.probability,s.probability_default,0) probability,'
+            . 'CASE WHEN COALESCE(c.probability,s.probability_default) BETWEEN 0 AND 100 THEN ROUND(c.deal_value*COALESCE(c.probability,s.probability_default)/100,2) ELSE NULL END weighted_value,'
             . 'c.last_activity_at,c.next_contact_at next_action_at,c.expected_close_at,c.created_at,c.updated_at,'
             . 'COALESCE(h.entered_at,c.created_at) stage_entered_at,'
             . 'TIMESTAMPDIFF(DAY,COALESCE(h.entered_at,c.created_at),NOW()) days_in_stage,'
@@ -175,17 +176,18 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
     public function pipelines(string $organizationId): array
     {
         $pipelines = $this->base->pipelines($organizationId);
-        foreach ($pipelines as &$pipeline) {
-            $deals = $this->deals($organizationId, ['pipeline_id' => (string) ($pipeline['id'] ?? ''), 'limit' => 250]);
-            foreach ($pipeline['stages'] ?? [] as &$stage) {
-                $stageDeals = array_values(array_filter(
-                    $deals,
-                    static fn (array $deal): bool => (string) ($deal['stage_id'] ?? '') === (string) ($stage['id'] ?? ''),
-                ));
-                $stage['deal_count'] = count($stageDeals);
-                $stage['pipeline_value'] = array_sum(array_map(static fn (array $deal): float => (float) ($deal['deal_value'] ?? 0), $stageDeals));
-                $stage['weighted_value'] = array_sum(array_map(static fn (array $deal): float => (float) ($deal['weighted_value'] ?? 0), $stageDeals));
-                $stage['avg_days_in_stage'] = $stageDeals === [] ? 0 : round(array_sum(array_map(static fn (array $deal): int => (int) ($deal['days_in_stage'] ?? 0), $stageDeals)) / count($stageDeals), 1);
+        if(!$this->base instanceof \Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort)throw new \LogicException('Native pipeline summary unavailable.');
+        $summary=$this->base->summary($organizationId);
+        foreach($pipelines as &$pipeline){
+            foreach($pipeline['stages'] as &$stage){
+                $row=null;
+                foreach($summary['stages'] as $candidate)if($candidate['pipeline_id']===$pipeline['id']&&$candidate['stage_id']===$stage['id']){$row=$candidate;break;}
+                $stage['deal_count']=$row['deal_count']??0;
+                $stage['money_by_currency']=$row['money_by_currency']??[];
+                $single=count($stage['money_by_currency'])===1?$stage['money_by_currency'][0]:null;
+                $stage['pipeline_value']=$single['pipeline_value']??null;
+                $stage['weighted_value']=$single['weighted_value']??null;
+                $stage['avg_days_in_stage']=null; // Exact historical aging is reported by Director, not approximated from a page.
             }
             unset($stage);
         }

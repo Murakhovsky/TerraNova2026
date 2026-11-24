@@ -20,7 +20,7 @@ final class SalesDashboardPresenter
             $atRisk[] = [
                 'title' => (string) ($deal['customer'] ?? $deal['title'] ?? 'Deal'),
                 'subtitle' => (string) ($deal['stage_name'] ?? ''),
-                'meta' => $this->money($deal['deal_value'] ?? $deal['value'] ?? 0),
+                'meta' => $this->money($deal['deal_value'] ?? null,(string)($deal['currency']??'')),
                 'status' => 'HIGH',
                 'tone' => 'danger',
                 'href' => $id > 0 ? '/sales/deals/' . $id : '/sales/deals?risk=high',
@@ -61,8 +61,8 @@ final class SalesDashboardPresenter
 
         return new SalesDashboardViewModel(
             activeDeals: (string) (int) ($kpis['active_deals'] ?? 0),
-            pipelineValue: $this->money($kpis['pipeline_value'] ?? 0),
-            expectedRevenue: $this->money($kpis['expected_revenue'] ?? 0),
+            pipelineValue: $this->moneyRows($kpis['money_by_currency']??[],'pipeline_value'),
+            expectedRevenue: $this->moneyRows($kpis['money_by_currency']??[],'weighted_value'),
             dealsAtRisk: (string) (int) ($kpis['deals_at_risk'] ?? 0),
             atRisk: $atRisk,
             nextActions: $nextActions,
@@ -101,8 +101,14 @@ final class SalesDashboardPresenter
         ];
     }
 
-    private function money(mixed $value): string
+    private function money(mixed $value,string $currency): string
     {
-        return number_format((float) $value, 0, '.', ' ') . ' USD';
+        return $value===null||$currency===''?'—':number_format((float)$value,2,'.',' ').' '.$currency;
+    }
+
+    private function moneyRows(array $rows,string $key):string
+    {
+        $parts=[];foreach($rows as $row)$parts[]=$this->money($row[$key]??null,(string)($row['currency']??''));
+        return $parts===[]?'—':implode(' · ',$parts);
     }
 }
