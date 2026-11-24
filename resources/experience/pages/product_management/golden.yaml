@@ -36,7 +36,7 @@ pages:
     archetype: entity_workspace
     patterns:
       required: [WorkspaceHeader, EntityHeader]
-      optional: [ContextPanel, Toolbar, ErrorState]
+      optional: [ContextPanel, ErrorState]
     primary_action: product_management.product.update
     states: [normal, error]
     responsive: { desktop: canonical, tablet: canonical, mobile: stacked_workspace }
