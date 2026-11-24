@@ -1,0 +1,187 @@
+{% extends 'experience/workspace_shell.html.twig' %}
+{% block title %}{{ pageTitle }} | Terra Nova COS{% endblock %}
+{% block workspace_content %}
+<div class="cos-page__stack">
+    <header class="cos-page__section-head">
+        <div>
+            <small>Product Management · Native COS catalog</small>
+            <h1>{{ pageTitle }}</h1>
+            <p>Товари, варіанти, категорії та базові ціни. Shopify і Sales не беруть участі в цих операціях.</p>
+        </div>
+    </header>
+    <nav class="cos-toolbar" aria-label="Product Management">
+        <a class="btn btn-outline-secondary" href="/product-management">Каталог</a>
+        <a class="btn btn-outline-secondary" href="/product-management/categories">Категорії</a>
+    </nav>
+    {% if notice == 'created' or notice == 'updated' %}
+        <p role="status" class="alert alert-success">Операцію збережено. Дані повторно прочитані з Domain.</p>
+    {% endif %}
+
+    {% if section == 'catalog' %}
+        <section class="cos-panel">
+            <h2>Пошук товарів</h2>
+            <form method="get" action="/product-management" class="cos-toolbar">
+                <label class="flex-grow-1">Назва або SKU
+                    <input name="q" class="form-control" value="{{ q }}" maxlength="200" placeholder="Назва або SKU">
+                </label>
+                <button type="submit" class="btn btn-outline-primary">Знайти</button>
+            </form>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Товар</th><th>SKU</th><th>Тип</th><th>Статус</th><th>Складський облік</th></tr></thead>
+                    <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td><a href="/product-management/products/{{ row.product_id|url_encode }}">{{ row.name }}</a></td>
+                            <td>{{ row.sku }}</td><td>{{ row.product_type }}</td><td>{{ row.status }}</td>
+                            <td>{{ row.track_inventory ? 'Так' : 'Ні' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5">Нічого не знайдено у цій організації.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <nav class="cos-toolbar" aria-label="Пагінація товарів">
+                {% if pageNumber > 1 %}
+                    <a class="btn btn-outline-secondary" href="/product-management?q={{ q|url_encode }}&page={{ pageNumber - 1 }}">Попередня</a>
+                {% endif %}
+                <span>Сторінка {{ pageNumber }}</span>
+                {% if hasNext %}
+                    <a class="btn btn-outline-secondary" href="/product-management?q={{ q|url_encode }}&page={{ pageNumber + 1 }}">Наступна</a>
+                {% endif %}
+            </nav>
+        </section>
+        <section class="cos-panel">
+            <h2>Новий товар</h2>
+            <form method="post" action="/product-management/products" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                <label>Назва <input name="name" class="form-control" required maxlength="255"></label>
+                <label>SKU <input name="sku" class="form-control" required maxlength="128"></label>
+                <label>Тип <select name="type" class="form-select">
+                    <option value="stock">Товар</option><option value="material">Матеріал</option>
+                    <option value="service">Послуга</option><option value="digital">Цифровий продукт</option>
+                </select></label>
+                <label>Одиниця виміру <input name="uom" class="form-control" value="pcs" maxlength="16" required></label>
+                <label><input type="checkbox" name="track_inventory" value="1" checked> Вести складський облік (для товарів і матеріалів)</label>
+                <button type="submit" class="btn btn-primary">Створити товар</button>
+            </form>
+        </section>
+
+    {% elseif section == 'product' %}
+        <section class="cos-panel">
+            <h2>{{ product.name }}</h2>
+            <p>Тип: {{ product.product_type }} · Статус: {{ product.status }} · Ревізія: {{ product.revision }}</p>
+            <p>Ідентифікатор: <code>{{ product.product_id }}</code></p>
+            {% if product.status != 'archived' %}
+                <form method="post" action="/product-management/products/{{ product.product_id }}/update" class="cos-page__stack">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <input type="hidden" name="expected_revision" value="{{ product.revision }}">
+                    <label>Назва <input class="form-control" name="name" value="{{ product.name }}" required maxlength="255"></label>
+                    <label>Бренд <input class="form-control" name="brand" value="{{ product.brand|default('') }}" maxlength="190"></label>
+                    <label>Опис <textarea class="form-control" name="description" maxlength="20000" rows="3">{{ product.description|default('') }}</textarea></label>
+                    <button class="btn btn-outline-primary" type="submit">Зберегти зміни</button>
+                </form>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
+            <h2>Варіанти та базові ціни</h2>
+            <p>Відображаються перші 30 цін у UAH. Рух залишків і ціни інших валют тут поки не редагуються.</p>
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th>SKU</th><th>Одиниця</th><th>Статус</th><th>Ревізія</th><th>UAH / базова ціна</th></tr></thead>
+                <tbody>
+                {% for v in product.variants|default([]) %}
+                    <tr><td>{{ v.sku }}</td><td>{{ v.uom }}</td><td>{{ v.status }}</td><td>{{ v.revision }}</td>
+                        <td>
+                            {{ prices[v.variant_id]|default('Не встановлено') }}
+                            {% if product.status != 'archived' and v.status == 'active' %}
+                                <form class="cos-toolbar" method="post" action="/product-management/products/{{ product.product_id }}/price">
+                                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                                    <input type="hidden" name="variant_id" value="{{ v.variant_id }}">
+                                    <input class="form-control" name="amount" aria-label="Ціна UAH для {{ v.sku }}" placeholder="0.0000" required pattern="[0-9]+(\.[0-9]{1,4})?">
+                                    <button type="submit" class="btn btn-outline-primary">Ціна</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="5">Варіанти відсутні.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+            {% if product.status != 'archived' %}
+                <h3>Додати варіант</h3>
+                <form method="post" class="cos-toolbar" action="/product-management/products/{{ product.product_id }}/variants">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <label>SKU <input class="form-control" name="sku" maxlength="128" required></label>
+                    <label>Одиниця <input class="form-control" name="uom" value="pcs" maxlength="16" required></label>
+                    <button class="btn btn-primary" type="submit">Додати</button>
+                </form>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
+            <h2>Категорії товару</h2>
+            <p>
+                {% for c in product.categories|default([]) %}
+                    <span class="badge text-bg-secondary">{{ c.name }}</span>
+                {% else %}Без категорій{% endfor %}
+            </p>
+            {% if product.status != 'archived' %}
+                <form method="post" class="cos-toolbar" action="/product-management/products/{{ product.product_id }}/categories">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <label>Категорія
+                        <select class="form-select" name="category_id" required>
+                            {% for c in categories %}
+                                <option value="{{ c.category_id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <button class="btn btn-outline-primary" type="submit" {% if categories is empty %}disabled{% endif %}>Призначити</button>
+                </form>
+                <a href="/product-management/categories">Керування категоріями</a>
+            {% endif %}
+        </section>
+        <section class="cos-panel">
+            <h2>Локалізація товару</h2>
+            {% for t in product.translations|default([]) %}
+                <p><strong>{{ t.locale }}</strong>: {{ t.name }}</p>
+            {% else %}<p>Перекладів ще немає.</p>{% endfor %}
+            {% if product.status != 'archived' %}
+                <form method="post" class="cos-page__stack" action="/product-management/products/{{ product.product_id }}/translations">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                    <label>Мова <select class="form-select" name="locale"><option value="uk">Українська</option><option value="en">English</option></select></label>
+                    <label>Локалізована назва <input class="form-control" name="name" required maxlength="255"></label>
+                    <label>Локалізований опис <textarea class="form-control" name="description" maxlength="20000" rows="2"></textarea></label>
+                    <button class="btn btn-outline-primary" type="submit">Зберегти переклад</button>
+                </form>
+            {% endif %}
+        </section>
+    {% elseif section == 'categories' %}
+        <section class="cos-panel">
+            <h2>Категорії організації</h2>
+            {% for c in categories %}
+                <div class="cos-page__section-head"><strong>{{ c.name }}</strong><span>{{ c.slug }} · {{ c.category_id }}</span></div>
+            {% else %}<p>Категорій ще немає.</p>{% endfor %}
+        </section>
+        <section class="cos-panel">
+            <h2>Створити категорію</h2>
+            <form method="post" action="/product-management/categories" class="cos-page__stack">
+                <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                <input type="hidden" name="idempotency_key" value="{{ mutationKey }}">
+                <label>Назва <input class="form-control" name="name" maxlength="255" required></label>
+                <label>Slug <input class="form-control" name="slug" maxlength="190" pattern="[a-z0-9]+(-[a-z0-9]+)*" required></label>
+                <label>Батьківська категорія
+                    <select class="form-select" name="parent_id"><option value="">Коренева</option>
+                        {% for c in categories %}<option value="{{ c.category_id }}">{{ c.name }}</option>{% endfor %}
+                    </select>
+                </label>
+                <button class="btn btn-primary" type="submit">Створити категорію</button>
+            </form>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}

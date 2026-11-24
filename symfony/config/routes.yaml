@@ -1,3 +1,60 @@
+# Product Management E5: tenant-gated human workspace, never Shopify or direct DB writer.
+cos_product_management_index:
+  path: /product-management
+  controller: App\Web\ProductManagement\ProductManagementPageController::index
+  methods: [GET]
+
+cos_product_management_create:
+  path: /product-management/products
+  controller: App\Web\ProductManagement\ProductManagementPageController::create
+  methods: [POST]
+
+cos_product_management_product:
+  path: /product-management/products/{id}
+  controller: App\Web\ProductManagement\ProductManagementPageController::product
+  methods: [GET]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_update:
+  path: /product-management/products/{id}/update
+  controller: App\Web\ProductManagement\ProductManagementPageController::update
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_variant_create:
+  path: /product-management/products/{id}/variants
+  controller: App\Web\ProductManagement\ProductManagementPageController::variant
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_translation:
+  path: /product-management/products/{id}/translations
+  controller: App\Web\ProductManagement\ProductManagementPageController::translate
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_category:
+  path: /product-management/products/{id}/categories
+  controller: App\Web\ProductManagement\ProductManagementPageController::assignCategory
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_product_price:
+  path: /product-management/products/{id}/price
+  controller: App\Web\ProductManagement\ProductManagementPageController::setPrice
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
+cos_product_management_categories:
+  path: /product-management/categories
+  controller: App\Web\ProductManagement\ProductManagementPageController::categories
+  methods: [GET]
+
+cos_product_management_category_create:
+  path: /product-management/categories
+  controller: App\Web\ProductManagement\ProductManagementPageController::createCategory
+  methods: [POST]
+
 # Product Management: signed Shopify events are staged only, never mutate stock.
 cos_product_management_shopify_webhook:
   path: /api/v1/integrations/shopify/webhook

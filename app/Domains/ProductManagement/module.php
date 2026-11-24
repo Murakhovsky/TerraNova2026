@@ -16,7 +16,12 @@ return [
         'job_handler_services' => [],
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
-        'extension_services' => [],
+        'extension_services' => [
+            'web.navigation' => ['productManagementNavigationContributor'],
+            'web.search' => ['productManagementNavigationContributor'],
+            'web.commands' => ['productManagementNavigationContributor'],
+            'web.workspace' => ['productManagementNavigationContributor'],
+        ],
         'cross_domain_contracts' => [],
         'migration_files' => [
             'app/migrations/20261118_000152_product_management_catalog.sql',

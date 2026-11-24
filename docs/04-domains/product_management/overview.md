@@ -57,3 +57,20 @@ Product Management є власником `pm_*` і не змінює безпо�
 - [Каталог модулів і можливостей](../../12-reference/module-capabilities.md)
 - [Покриття бізнес-процесами](../../12-reference/domain-process-coverage.md)
 - [Архітектурне рішення](../../11-decisions/ADR-0016-product-management-domain.md)
+
+## E5 native Product catalog Workspace
+
+Human manager at `/product-management` (only when the `product_management`
+module is enabled for this tenant). Product and Category navigation is a
+module-contributed WebExtension, not a global hard-coded menu. The workspace
+supports bounded SKU/name search, Product create/update, Variant create,
+Category hierarchy create/assign, UK/EN Product translations and UAH base
+price changes. All queries and writes invoke the **existing canonical
+Capability Gateway** with server-side TenantContext, manager permissions,
+input schemas, CSRF, operation idempotency and Domain readback. No direct SQL
+or new executor, no Shopify/stock imports or Sales calls.
+
+This is the E5 catalog slice only, **not** a claim that Inventory Operations,
+Product Media UX, CSV approvals, full UI acceptance or production activation
+are complete. Product remains off by default; UI requires the tenant to
+activate the module explicitly.

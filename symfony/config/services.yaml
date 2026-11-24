@@ -2852,6 +2852,13 @@ services:
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyNestedConnectionReader: ~
   Domains\ProductManagement\Infrastructure\Shopify\ShopifyCatalogPullService: ~
 
+  productManagementNavigationContributor:
+    alias: App\\Web\\Experience\\Extension\\Provider\\ProductManagementWebProvider
+
+  App\\Web\\ProductManagement\\ProductManagementPageController:
+    public: true
+    tags: ['controller.service_arguments']
+
   # Product Management E0: domain stays tenant-disabled until explicit activation.
   Domains\ProductManagement\Automation\Action\ProductImportApplyHandler: ~
   Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler: ~
