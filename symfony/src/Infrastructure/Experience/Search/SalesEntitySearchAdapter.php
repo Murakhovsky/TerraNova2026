@@ -54,7 +54,7 @@ final readonly class SalesEntitySearchAdapter implements SalesEntitySearchInterf
 
         foreach ($this->sales->leads($organizationId, $filters) as $lead) {
             $id = (int) ($lead['id'] ?? 0);
-            if ($id <= 0 || !$this->scope->entity($organizationId, isset($deal) && !isset($lead) ? 'deal' : 'lead', $id)) {
+            if ($id <= 0 || !$this->scope->entity($organizationId, 'lead', $id)) {
                 continue;
             }
 
