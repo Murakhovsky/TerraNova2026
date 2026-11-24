@@ -128,7 +128,13 @@ final readonly class ProductInventoryController
             $input['location_id']=$from;
         }
         try{
-            $result=$this->write($actor,'stock.'.$kind,$input,$request);
+            $operation=match($kind){
+                'receive'=>'stock.receive',
+                'issue'=>'stock.issue',
+                'transfer'=>'stock.transfer',
+                default=>throw new DomainException('Unsupported stock operation.'),
+            };
+            $result=$this->write($actor,$operation,$input,$request);
             if($kind==='transfer'){
                 foreach([['from_balance',$from],['to_balance',$to]] as [$field,$loc]){
                     $after=$this->read($actor,'stock.balance.get',[

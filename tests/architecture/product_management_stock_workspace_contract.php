@@ -34,7 +34,7 @@ $assert(str_contains($adapter,"'query:product_management.location.search'")
     'Stock location discovery must be tenant-scoped and one canonical binding.');
 $assert(str_contains($provider,"'/product-management/stock'")
     &&str_contains($routes,'cos_product_management_stock:')
-    &&str_contains($twig,'stock.post')===false
+    &&str_contains($twig,'action="/product-management/stock/post"')
     &&substr_count($twig,'name="csrf_token"')>=2,
     'Inventory Workspace routes or guarded forms not registered.');
 $assert(str_contains($workflow,'php tests/architecture/product_management_stock_workspace_contract.php'),
