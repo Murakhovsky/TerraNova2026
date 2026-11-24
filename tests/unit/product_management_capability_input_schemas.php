@@ -10,9 +10,12 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==34)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==37)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.price.list.update'=>['list_id'=>str_repeat('a',32),'name'=>'Renamed','expected_revision'=>1],
+ 'product_management.price.list.archive'=>['list_id'=>str_repeat('a',32),'expected_revision'=>2],
+ 'product_management.price.list.history.search'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'limit'=>30],
  'product_management.price.list.create'=>['code'=>'B2B','name'=>'Wholesale','kind'=>'wholesale','currency'=>'EUR'],
  'product_management.price.list.search'=>['code'=>'B2B','limit'=>10],
  'product_management.price.list.entry.get'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32)],
@@ -43,6 +46,9 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.price.list.update'=>[['list_id'=>str_repeat('a',32),'name'=>'X','expected_revision'=>0],['list_id'=>str_repeat('a',32),'name'=>'X','expected_revision'=>1,'currency'=>'USD']],
+ 'product_management.price.list.archive'=>[['list_id'=>str_repeat('a',32),'expected_revision'=>0]],
+ 'product_management.price.list.history.search'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'offset'=>-1]],
  'product_management.price.list.create'=>[['code'=>'B2B','name'=>'Wholesale','kind'=>'invalid','currency'=>'EUR']],
  'product_management.price.list.search'=>[['limit'=>101],['organization_id'=>'other']],
  'product_management.price.list.entry.set'=>[['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'amount'=>'12.34567','expected_revision'=>0],['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'amount'=>'12','expected_revision'=>-1]],
