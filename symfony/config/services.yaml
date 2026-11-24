@@ -4211,3 +4211,9 @@ services:
 
   App\Application\Experience\Business\Contract\BusinessEntitySummaryReadInterface:
     alias: App\Infrastructure\Experience\Business\TenantBusinessEntitySummaryRead
+
+
+  App\Persistence\Capability\CanonicalAutomationIntentStore:
+    arguments:
+      $productPlans: '@App\Persistence\ProductManagement\ProductGovernedPlanProposalService'
+      $catalog: '@Kernel\Module\CanonicalCapabilityCatalog'
