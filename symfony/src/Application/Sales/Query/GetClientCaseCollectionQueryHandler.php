@@ -34,7 +34,7 @@ final readonly class GetClientCaseCollectionQueryHandler implements QueryHandler
             'managers' => $this->scope->ownerOptions($organizationId,$read->managerOptions()),
             'property_types' => $this->catalog->propertyTypes(),
             'locations' => $this->catalog->locations(),
-            'pipelines' => $this->sales->pipelines($organizationId),
+            'pipelines' => $this->sales->pipelines($organizationId,$owner),
         ];
         if ($this->scope->ownerFor($organizationId,$query->filters['assigned_user_id']??null)!==$owner) throw new \DomainException('Sales scope changed.');
         return $result;
