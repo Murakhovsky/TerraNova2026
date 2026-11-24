@@ -466,6 +466,11 @@ try {
     $lostFacts=$history->outcomes($org,$targetOwner,$pdef->id,$period['first_day'],$period['end_day']);
     $check($wonFacts['won_count']===1&&$wonFacts['lost_count']===0&&$wonFacts['win_rate_percent']==='100.00'&&$wonFacts['booked_by_currency']===[['currency'=>'USD','deal_count'=>1,'booked_value'=>'999.99']],'WON historical evidence/amount incorrect.');
     $check($lostFacts['won_count']===0&&$lostFacts['lost_count']===1&&$lostFacts['win_rate_percent']==='0.00'&&$lostFacts['booked_by_currency']===[],'LOST historical owner scope incorrect.');
+    $leadDate=$db->prepare('SELECT DATE(created_at) FROM tn_leads WHERE organization_id=? AND id=?');
+    $leadDate->execute([$org,$leadId]);$cohortDay=(string)$leadDate->fetchColumn();
+    $cohortEnd=(new DateTimeImmutable($cohortDay))->modify('+1 day')->format('Y-m-d');
+    $nativeCohort=$history->conversion($org,$userId,null,$cohortDay,$cohortEnd);
+    $check($nativeCohort['event_confirmed_count']>=1&&$nativeCohort['linked_count']>=$nativeCohort['event_confirmed_count'],'Native conversion event not reflected in cohort.');
     $empty=$history->outcomes('foreign-'.$token,$userId,$pdef->id,$period['first_day'],$period['end_day']);
     $check($empty['won_count']===0&&$empty['lost_count']===0&&$empty['win_rate_percent']===null,'Cross-tenant outcome isolation or empty-rate semantics failed.');
     $teamInput=['operation'=>'create','name'=>'CI Sales team','code'=>'CI_'.strtoupper($token)];
