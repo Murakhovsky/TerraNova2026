@@ -1,0 +1,99 @@
+{
+  "schema_version": 4,
+  "id": "product_management.physical-count-to-correction",
+  "title": "Product Physical Count → Correction",
+  "domain": "product_management",
+  "state": "as-is",
+  "workflow": "02-workflows/product-management-physical-count-to-correction.md",
+  "trigger": "A physical count document identifies discrepancies for tracked SKU",
+  "outcomes": [
+    "Revision-pinned physical count is independently approved",
+    "Correction and count receipt are atomic",
+    "Native ledger and count outcome are verified"
+  ],
+  "actors": [
+    "Warehouse manager",
+    "Approved Product Action worker",
+    "Independent reviewer"
+  ],
+  "steps": [
+    {
+      "id": "candidates",
+      "label": "Read count candidates",
+      "kind": "state",
+      "owner": "Warehouse manager",
+      "domain": "product_management",
+      "capability": "product_management.stock.count.session.candidates",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function countCandidates("
+        }
+      ]
+    },
+    {
+      "id": "apply",
+      "label": "Apply independently approved count session",
+      "kind": "operation",
+      "owner": "Approved Product Action worker",
+      "domain": "product_management",
+      "capability": "product_management.stock.count.session.apply",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function applyApprovedCountSession("
+        }
+      ]
+    },
+    {
+      "id": "readback",
+      "label": "Verify immutable session",
+      "kind": "outcome",
+      "owner": "Independent reviewer",
+      "domain": "product_management",
+      "capability": "product_management.stock.count.session.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Application/Service/ProductManagementService.php",
+          "symbol": "public function countSession("
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "label": "Audit corrected ledger",
+      "kind": "outcome",
+      "owner": "Independent reviewer",
+      "domain": "product_management",
+      "capability": "product_management.analytics.reconciliation.get",
+      "critical": true,
+      "runtime": [
+        {
+          "type": "source",
+          "path": "app/Domains/ProductManagement/Infrastructure/Persistence/MySqlProductAnalytics.php",
+          "symbol": "public function reconciliation("
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "candidates",
+      "to": "apply"
+    },
+    {
+      "from": "apply",
+      "to": "readback"
+    },
+    {
+      "from": "readback",
+      "to": "audit"
+    }
+  ]
+}
