@@ -355,6 +355,7 @@ Manifest capabilities не задекларовані.
 - `product_management.import.batch.get`;
 - `product_management.import.preview`;
 - `product_management.location.create`;
+- `product_management.location.search`;
 - `product_management.media.attach`;
 - `product_management.media.detach`;
 - `product_management.media.search`;
