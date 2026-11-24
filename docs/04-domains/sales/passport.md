@@ -55,7 +55,12 @@ domain_id: sales
     {
       "id": "activities",
       "capability_ids": [
-        "sales.create_task"
+        "sales.create_task",
+        "sales.activity.record",
+        "sales.activity.complete",
+        "sales.activity.reschedule",
+        "sales.followup.schedule",
+        "sales.property_match.record"
       ]
     }
   ],

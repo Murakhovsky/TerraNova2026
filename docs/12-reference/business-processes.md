@@ -26,8 +26,8 @@ generated: true
 | Signal → Qualified Opportunity Handoff | `growth` | `to-be` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 5/5 | 0/5 | [Відкрити workflow](../02-workflows/growth-opportunity-candidate-to-handoff.md) |
 | Property Submission → Publication | `property` | `as-is` | `source-verified` | 6 | 0 | 6/6 | 6/6 | 6/6 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/property-submission-to-publication.md) |
 | Opportunity → Property Reservation | `real_estate` | `as-is` | `source-verified` | 7 | 3 | 7/7 | 7/7 | 7/7 | 7/7 | 3/7 | [Відкрити workflow](../02-workflows/real-estate-opportunity-to-reservation.md) |
-| Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 5/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
-| Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 3/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
+| Sales Lead → Managed Case | `sales` | `as-is` | `source-verified` | 8 | 0 | 8/8 | 7/8 | 8/8 | 6/6 | 3/6 | [Відкрити workflow](../02-workflows/sales-lead-to-managed-case.md) |
+| Sales Request → Property Match | `sales` | `as-is` | `source-verified` | 5 | 1 | 5/5 | 5/5 | 5/5 | 4/4 | 1/4 | [Відкрити workflow](../02-workflows/sales-request-to-property-match.md) |
 | Service Request → Ticket Close | `service` | `as-is` | `source-verified` | 7 | 0 | 7/7 | 7/7 | 7/7 | 6/6 | 0/6 | [Відкрити workflow](../02-workflows/service-request-to-close.md) |
 
 ## Модель перевірки та можливостей
@@ -49,8 +49,8 @@ generated: true
 | Signal → Qualified Opportunity Handoff | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 5/5 | 0/5 |
 | Property Submission → Publication | 6/6 | 6/6 | 0/6 | 0/6 | 6/6 | 6/6 | 0/6 | 6/6 | 0/6 |
 | Opportunity → Property Reservation | 7/7 | 7/7 | 0/7 | 3/7 | 7/7 | 7/7 | 3/7 | 7/7 | 3/7 |
-| Sales Lead → Managed Case | 8/8 | 5/8 | 3/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
-| Sales Request → Property Match | 5/5 | 3/5 | 2/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
+| Sales Lead → Managed Case | 8/8 | 7/8 | 1/8 | 0/8 | 8/8 | 8/8 | 3/8 | 6/6 | 3/6 |
+| Sales Request → Property Match | 5/5 | 5/5 | 0/5 | 1/5 | 5/5 | 5/5 | 1/5 | 4/4 | 1/4 |
 | Service Request → Ticket Close | 7/7 | 7/7 | 0/7 | 0/7 | 7/7 | 7/7 | 0/7 | 6/6 | 0/6 |
 
 ## Market Source → Trusted Market State
@@ -301,7 +301,7 @@ generated: true
 - **Schema:** `v4`
 - **Domain:** `sales`
 - **Бізнес-стан:** `as-is`
-- **Покриття capabilities:** 5/8 кроків
+- **Покриття capabilities:** 7/8 кроків
 - **Cross-domain кроки:** 0/8
 - **Derived verification:** `source-verified`
 - **Тригер:** Inbound public lead or external CRM webhook
@@ -322,8 +322,8 @@ generated: true
 | Manage canonical Lead lifecycle | Sales automation | `sales` | `sales.lead.state.manage` | `state` | так | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `updateRequest(` [source] |
 | Assign owner | manager | `sales` | `sales.deal.owner.assign` | `operation` | так | use_case `AssignDealOwner` [source]<br>event `sales.deal.owner_assigned` [runtime] |
 | Manage pipeline stage | salesperson | `sales` | `sales.pipeline.stage.manage` | `operation` | так | use_case `ChangeDealStage` [source]<br>source `app/Domains/Sales/Automation/Event/DealStageChanged.php` · `sales.deal.stage_changed` [source] |
-| Record activity / call | salesperson | `sales` | gap: `missing-domain-capability` | `operation` | ні | use_case `CompleteSalesCall` [source]<br>source `app/Domains/Sales/Automation/Event/CallCompleted.php` · `sales.call.completed` [source] |
-| Schedule next action | salesperson | `sales` | gap: `missing-domain-capability` | `operation` | так | use_case `ScheduleDealFollowup` [source]<br>event `sales.followup.created` [runtime] |
+| Record activity / call | salesperson | `sales` | `sales.activity.record` | `operation` | ні | use_case `CompleteSalesCall` [source]<br>source `app/Domains/Sales/Automation/Event/CallCompleted.php` · `sales.call.completed` [source] |
+| Schedule next action | salesperson | `sales` | `sales.followup.schedule` | `operation` | так | use_case `ScheduleDealFollowup` [source]<br>event `sales.followup.created` [runtime] |
 | Record business outcome | salesperson | `sales` | `sales.deal.outcome.record` | `outcome` | так | event `sales.deal.won` [runtime]<br>event `sales.deal.lost` [runtime] |
 
 ## Sales Request → Property Match
@@ -332,7 +332,7 @@ generated: true
 - **Schema:** `v5`
 - **Domain:** `sales`
 - **Бізнес-стан:** `as-is`
-- **Покриття capabilities:** 3/5 кроків
+- **Покриття capabilities:** 5/5 кроків
 - **Cross-domain кроки:** 1/5
 - **Derived verification:** `source-verified`
 - **Тригер:** Sales operator converts an inbound request into a Client Case with referenced Property context
@@ -351,8 +351,8 @@ generated: true
 | Load inbound request and referenced Property context | Sales application | `sales` | `sales.inbound.request.read` | `operation` | так | source `symfony/src/Infrastructure/Capability/SalesInboundRequestReadAdapter.php` · `SalesProposalLeadReadModelInterface` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `createCaseFromRequest(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `inboundRequest(` [source] |
 | Create Client Case and link inbound request | Sales application | `sales` | `sales.client_case.create` | `state` | так | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `createCaseFromRequest(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `createCase(` [source]<br>source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `attachInboundRequest(` [source] |
 | Resolve canonical Property presentation | Property read boundary | `property` | `property.reference` | `operation` | так | contract `Domains\Property\Contract\PropertyReferencePort` [runtime]<br>source `app/Domains/Sales/Infrastructure/Property/SalesPropertyReference.php` · `getPropertyPresentation(` [source] |
-| Record Property Match in Sales | Sales application | `sales` | gap: `missing-domain-capability` | `state` | так | source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `upsertPropertyMatch(` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `PropertyMatchStatus::Interested` [source] |
-| Record Sales activity and publish case/lead events | Sales application | `sales` | gap: `missing-domain-capability` | `outcome` | ні | source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `Обʼєкт додано у підбір` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `ClientCaseCreated::create` [source] |
+| Record Property Match in Sales | Sales application | `sales` | `sales.property_match.record` | `state` | так | source `app/Domains/Sales/Infrastructure/Persistence/MySql/MysqlClientCaseCommandRepository.php` · `upsertPropertyMatch(` [source]<br>source `app/Domains/Sales/Application/Service/SalesInboundService.php` · `PropertyMatchStatus::Interested` [source] |
+| Record Sales activity and publish native activity evidence | Sales application | `sales` | `sales.activity.record` | `outcome` | ні | source `app/Domains/Sales/Application/Service/ClientCaseCommandService.php` · `addActivity(` [source]<br>source `app/Domains/Sales/Application/Service/ClientCaseCommandService.php` · `sales.activity.recorded` [source] |
 
 ## Service Request → Ticket Close
 

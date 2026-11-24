@@ -446,6 +446,9 @@ Manifest capabilities не задекларовані.
 
 ### Задекларовані capabilities
 
+- `sales.activity.complete`;
+- `sales.activity.record`;
+- `sales.activity.reschedule`;
 - `sales.admin.agents.manage`;
 - `sales.admin.audit.view`;
 - `sales.admin.integrations.manage`;
@@ -465,11 +468,13 @@ Manifest capabilities не задекларовані.
 - `sales.deal.state.read`;
 - `sales.deal.won.observation`;
 - `sales.director.view`;
+- `sales.followup.schedule`;
 - `sales.inbound.request.read`;
 - `sales.lead.create`;
 - `sales.lead.qualify`;
 - `sales.lead.state.manage`;
 - `sales.pipeline.stage.manage`;
+- `sales.property_match.record`;
 - `sales.team.manage`;
 - `sales.team.read`;
 - `sales.workspace.use`;

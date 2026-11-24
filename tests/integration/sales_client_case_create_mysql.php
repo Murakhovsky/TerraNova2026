@@ -11,6 +11,19 @@ use App\Application\Sales\Command\UpdateSalesLeadCommandHandler;
 use App\Application\Sales\Command\ManageSalesLeadStateCommand;
 use App\Application\Sales\Command\ManageSalesLeadStateCommandHandler;
 use App\Application\Sales\Command\ManageSalesDealCommand;
+use App\Application\Sales\Command\ManageSalesActivityCommand;
+use App\Application\Sales\Command\ManageSalesActivityCommandHandler;
+use App\Infrastructure\Capability\SalesActivityRecordAdapter;
+use App\Infrastructure\Capability\SalesActivityCompleteAdapter;
+use App\Infrastructure\Capability\SalesActivityRescheduleAdapter;
+use App\Infrastructure\Capability\SalesFollowupScheduleAdapter;
+use App\Infrastructure\Capability\SalesPropertyMatchRecordAdapter;
+use Domains\Sales\Application\Service\SalesOperationService;
+use Domains\Sales\Application\Contract\MessageGatewayInterface;
+use Domains\Sales\Application\DTO\SendMessageCommand;
+use Domains\Sales\Application\DTO\OperationResult;
+use Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOperationRepository;
+use Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesActivityEvidenceReadModel;
 use App\Application\Sales\Command\ManageSalesDealCommandHandler;
 use App\Application\Sales\Command\ManageSalesTeamCommand;
 use App\Application\Sales\Command\ManageSalesTeamCommandHandler;
@@ -96,6 +109,12 @@ try {
     $stages=new ChangeDealStage($deals,$pipelines,new StageTransitionPolicy(),$events,$tx);
     $commercial=new SetDealCommercialTerms($deals,$deals,$events,$tx);
     $teams=new MysqlSalesTeamAdministration($db);$teamAuth=new SalesAdminAuthorization(new MysqlSalesAccessControl($db));
+    $activityEvidence=new MysqlSalesActivityEvidenceReadModel($db);
+    $messageGateway=new class implements MessageGatewayInterface{
+        public function send(SendMessageCommand $command):OperationResult{throw new RuntimeException('Unexpected external delivery.');}
+    };
+    $operations=new SalesOperationService($messageGateway,new MysqlSalesOperationRepository($db),$events,$tx);
+    $activityHandler=new ManageSalesActivityCommandHandler($factory,$operations,$deals,$activityEvidence,$receipts,new MysqlPropertyReferencePort($db),$tx);
     $handler = new ConvertSalesLeadToOpportunityCommandHandler($factory);
     $bus = new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
@@ -105,6 +124,7 @@ try {
         ManageSalesLeadStateCommand::class => [new ManageSalesLeadStateCommandHandler($factory,$read,$receipts,$tx)],
         ManageSalesDealCommand::class => [new ManageSalesDealCommandHandler($deals,$owners,$stages,$commercial,$receipts,$tx)],
         ManageSalesTeamCommand::class => [new ManageSalesTeamCommandHandler($teams,$teamAuth,$receipts,$tx)],
+        ManageSalesActivityCommand::class => [$activityHandler],
     ]))]));
     $module = new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);
     $catalog = new CanonicalCapabilityCatalog($module);
@@ -115,7 +135,7 @@ try {
     $active = new ActiveModuleResolver($module,$state);
     $resolver = new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active);
     $read = new MysqlSalesWorkspaceReadModel($db);
-    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus),new SalesTeamManageAdapter($bus),new SalesTeamReadAdapter($teams,$teamAuth)]);
+    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus),new SalesTeamManageAdapter($bus),new SalesTeamReadAdapter($teams,$teamAuth),new SalesActivityRecordAdapter($bus),new SalesActivityCompleteAdapter($bus),new SalesActivityRescheduleAdapter($bus),new SalesFollowupScheduleAdapter($bus),new SalesPropertyMatchRecordAdapter($bus)]);
     $actor = static fn(string $tenant,string $role='manager') => new TenantContext(
         UserId::fromString((string)$userId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)],
@@ -227,6 +247,30 @@ try {
     foreach($pipeline->stages as $stage){if($stage->isLost)$lost=$stage;if($stage->isWon)$won=$stage;}
     $check($lost!==null && $won!==null,'Terminal stages missing.');
     $reason=$pipelines->defaultLostReasonId($org,$pipeline->id);
+    // Real operator activities and projection: earliest outstanding followup survives unrelated call.
+    $due1='2035-01-01T10:00:00+00:00';$due2='2035-01-02T10:00:00+00:00';$due3='2035-01-03T10:00:00+00:00';
+    $first=['deal_id'=>$caseId,'title'=>'First followup','due_at'=>$due1];
+    $second=['deal_id'=>$caseId,'title'=>'Second followup','due_at'=>$due2];
+    $f1=$invoke('sales.followup.schedule',$first,'followup-1');$f2=$invoke('sales.followup.schedule',$second,'followup-2');
+    $check($f1['record_id']!==$f2['record_id']&&$invoke('sales.followup.schedule',$first,'followup-1')['replayed'],'Followup identity or replay failed.');
+    $reject(fn()=>$invoke('sales.followup.schedule',[...$first,'title'=>'Changed'],'followup-1'));
+    $expectedDate=static fn(string $s)=>(new DateTimeImmutable($s))->setTimezone(new DateTimeZone(date_default_timezone_get()))->format('Y-m-d H:i:s');
+    $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due1),'Earliest followup projection failed.');
+    $call=['deal_id'=>$caseId,'activity_type'=>'call','title'=>'Completed call','completed'=>true,'duration_seconds'=>42,'call_result'=>'answered'];
+    $callReceipt=$invoke('sales.activity.record',$call,'call');
+    $check($callReceipt['status']==='completed'&&$invoke('sales.activity.record',$call,'call')['replayed'],'Completed call replay failed.');
+    $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due1),'Call erased pending followup.');
+    $reschedule=['deal_id'=>$caseId,'activity_id'=>$f1['record_id'],'due_at'=>$due3];
+    $invoke('sales.activity.reschedule',$reschedule,'move');
+    $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due2),'Reschedule did not recompute next contact.');
+    $complete=['deal_id'=>$caseId,'activity_id'=>$f2['record_id']];
+    $check($invoke('sales.activity.complete',$complete,'complete')['status']==='completed','Completion failed.');
+    $check($invoke('sales.activity.complete',$complete,'complete')['replayed'],'Completion replay failed.');
+    $check($read->deal($org,$caseId)['next_contact_at']===$expectedDate($due3),'Completion did not preserve remaining followup.');
+    $reject(fn()=>$invoke('sales.activity.reschedule',['deal_id'=>$caseId,'activity_id'=>$f2['record_id'],'due_at'=>$due1],'completed'));
+    $reject(fn()=>$invoke('sales.property_match.record',['deal_id'=>$caseId,'property_id'=>PHP_INT_MAX,'match_status'=>'suggested'],'no-property'));
+    $q=$db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
+    $q->execute([$org,(string)$caseId,'sales.call.completed']);$check((int)$q->fetchColumn()===1,'Call event missing or duplicated.');
     $state=$snapshot($caseId);
     $base=['deal_id'=>$caseId,'expected_revision'=>$state['revision']];
     $reject(fn()=>$invoke('sales.pipeline.stage.manage',[...$base,'target_stage_id'=>$lost->id],'terminal-stage'));

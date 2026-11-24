@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sales.property_match.record input v1",
+  "type": "object",
+  "properties": {
+    "deal_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "property_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "expected_status": {
+      "type": "string",
+      "enum": [
+        "suggested",
+        "sent",
+        "interested",
+        "viewing",
+        "rejected",
+        "deal"
+      ]
+    },
+    "match_status": {
+      "type": "string",
+      "enum": [
+        "suggested",
+        "sent",
+        "interested",
+        "viewing",
+        "rejected",
+        "deal"
+      ]
+    },
+    "score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "note": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 500
+    }
+  },
+  "required": [
+    "deal_id",
+    "property_id",
+    "match_status"
+  ],
+  "additionalProperties": false
+}

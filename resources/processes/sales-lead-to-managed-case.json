@@ -89,8 +89,7 @@
       "kind": "operation",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.activity.record",
       "critical": false,
       "runtime": [
         { "type": "use_case", "ref": "CompleteSalesCall" },
@@ -103,8 +102,7 @@
       "kind": "operation",
       "owner": "salesperson",
       "domain": "sales",
-      "capability": null,
-      "capability_gap": "missing-domain-capability",
+      "capability": "sales.followup.schedule",
       "critical": true,
       "runtime": [
         { "type": "use_case", "ref": "ScheduleDealFollowup" },

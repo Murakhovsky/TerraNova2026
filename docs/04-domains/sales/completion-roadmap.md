@@ -113,3 +113,5 @@ Pipeline condition evaluation now supports a bounded deterministic AND list: `de
 ## S3 — активності та наступні контакти
 
 Native follow-up scheduling locks the deal, verifies legacy replay against the actual activity, claims a unique receipt before writing, preserves the earliest open follow-up in next_contact_at, rejects terminal deals and propagates failures into the owning transaction. Activity completion/rescheduling lock the deal and activity; completed calls and unrelated completed notes no longer clear pending next contact. Property match updates preserve omitted values and publish native case change evidence. 
+
+Five typed activity, schedule, completion, reschedule and Property Match commands use existing SalesWriteService/SalesOperationService, not a parallel writer. One bounded payload-bound receipt per tenant and operation, verified native records, explicit date offsets, Property reference checked through provider port, expected match status. Four process gaps are resolved at the operator contract level; `sales.lead.intake` remains distinct from authenticated lead creation until admission authority is modeled.

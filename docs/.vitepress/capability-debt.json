@@ -20,46 +20,6 @@
       "severity": "high",
       "resolution": "declare-domain-capability",
       "target_capability": "sales.lead.intake"
-    },
-    {
-      "id": "sales.lead-to-managed-case:activity",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "activity",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "medium",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.activity.record"
-    },
-    {
-      "id": "sales.lead-to-managed-case:followup",
-      "process_id": "sales.lead-to-managed-case",
-      "step_id": "followup",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.followup.schedule"
-    },
-    {
-      "id": "sales.request-to-property-match:record-match",
-      "process_id": "sales.request-to-property-match",
-      "step_id": "record-match",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "high",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.property-match.record"
-    },
-    {
-      "id": "sales.request-to-property-match:activity-events",
-      "process_id": "sales.request-to-property-match",
-      "step_id": "activity-events",
-      "gap_type": "missing-domain-capability",
-      "owner_domain": "sales",
-      "severity": "medium",
-      "resolution": "declare-domain-capability",
-      "target_capability": "sales.activity.record"
     }
   ]
 }

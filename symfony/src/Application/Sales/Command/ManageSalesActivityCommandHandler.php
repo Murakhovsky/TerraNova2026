@@ -39,9 +39,11 @@ final readonly class ManageSalesActivityCommandHandler implements CommandHandler
                 if ($receipt===null||preg_match('/^([a-f0-9]{64}):([1-9][0-9]{0,18})$/D',$receipt,$parts)!==1||!hash_equals($hash,$parts[1])) throw new DomainException('Activity receipt conflict.');
                 return $this->readback($org,$id,(int)$parts[2],$op,$input,true);
             }
-            if (in_array($deal['status'],['closed','lost'],true)&&$op!=='activity.complete') throw new DomainException('Terminal deal cannot receive new operational activity.');
+            if (in_array($deal['status'],['closed','lost'],true)&&$op!=='activity.complete'&&!($op==='property.match'&&$deal['status']==='closed'&&($input['match_status']??null)==='deal')) throw new DomainException('Terminal deal cannot receive new operational activity.');
             $write=$this->writes->forOrganization($org);
             if ($op==='activity.record'){
+                if (isset($input['due_at'])&&$this->date($input['due_at'])<=new DateTimeImmutable()) throw new DomainException('Activity must be scheduled in the future.');
+                if(isset($input['due_at']))$input['due_at']=$this->date($input['due_at'])->format(DATE_ATOM);
                 $result=$write->addOpportunityActivity($id,array_diff_key($input,['deal_id'=>true]),$command->actorId,$command->correlationId);
                 if (!$result->ok) throw new DomainException($result->code);
                 $nativeId=(int)($result->data['activity_id']??0);
@@ -63,7 +65,7 @@ final readonly class ManageSalesActivityCommandHandler implements CommandHandler
                 $from=$before['match_status']??null;$to=$input['match_status'];
                 if ($from!==($input['expected_status']??null)||!PropertyMatchLifecycle::allows($from,$to)) throw new DomainException('Stale or prohibited property match transition.');
                 // A deal match records a commercial outcome, never writes Property inventory.
-                if ($to==='deal') throw new DomainException('Deal match requires independently recorded outcome.');
+                if ($to==='deal'&&$deal['status']!=='closed') throw new DomainException('Deal match requires independently recorded outcome.');
                 $changes=array_intersect_key($input,['match_status'=>true,'score'=>true,'note'=>true]);
                 if ($before===null) $result=$write->addOpportunityPropertyMatch($id,$property,$changes,$command->actorId);
                 else $result=$write->updateOpportunityPropertyMatch((int)$before['id'],$changes,$command->actorId);
@@ -90,6 +92,7 @@ final readonly class ManageSalesActivityCommandHandler implements CommandHandler
         if ($row===null) throw new DomainException('Native activity not found.');
         if ($op==='activity.record'&&($row['activity_type']!==$input['activity_type']||$row['title']!==$input['title']||($row['body']??'')!==($input['body']??'')
             ||(!empty($input['completed'])&&$row['completed_at']===null))) throw new DomainException('Recorded activity differs.');
+        if ($op==='activity.record'&&isset($input['due_at'])&&$row['due_at']!==$this->date($input['due_at'])->format('Y-m-d H:i:s')) throw new DomainException('Recorded activity due date differs.');
         if ($op==='followup.schedule'&&($row['activity_type']!=='followup'||$row['title']!==$input['title']||($row['body']??'')!==($input['body']??''))) throw new DomainException('Followup differs.');
         if (in_array($op,['followup.schedule','activity.reschedule'],true)&&$row['due_at']!==$this->date($input['due_at'])->format('Y-m-d H:i:s')) throw new DomainException('Native due date changed.');
         if ($op==='activity.complete'&&$row['completed_at']===null) throw new DomainException('Activity is not completed.');
