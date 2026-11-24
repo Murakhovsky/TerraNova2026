@@ -51,5 +51,7 @@ interface ProductManagementStoreInterface
     public function releaseStock(string $org,string $reservationId,string $reason,string $key,string $actor,string $correlation):array;
     /** @return array<string,mixed> */
     public function searchReservations(string $org,string $variantId,string $locationId,?string $reservationId,int $limit,int $offset):array;
+    public function applyStockCount(string $org,string $countId,string $variantId,string $locationId,string $counted,int $expectedRevision,string $source,string $key,string $actor,string $correlation):array;
+    public function getStockCount(string $org,string $countId):?array;
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array;
 }
