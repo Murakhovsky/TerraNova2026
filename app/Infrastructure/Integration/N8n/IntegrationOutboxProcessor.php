@@ -32,8 +32,7 @@ class IntegrationOutboxProcessor
                 $body = json_encode($envelope, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
                 $result = ($this->sender)($body, $item);
                 if ($result === true) {
-                    $this->finish($item, 'sent', $body, null);
-                    $stats['sent']++;
+                    $stats[$this->finish($item, 'sent', $body, null) ? 'sent' : 'failed']++;
                 } else {
                     $this->retry($item, $body, is_string($result) ? $result : 'n8n rejected the webhook.');
                     $stats['failed']++;
@@ -76,21 +75,25 @@ class IntegrationOutboxProcessor
         }
     }
 
-    private function finish(array $item, string $status, string $body, ?string $error): void
+    private function finish(array $item, string $status, string $body, ?string $error): bool
     {
         $pdo = $this->database->connection();
-        $pdo->prepare('
+        $statement = $pdo->prepare('
             UPDATE tn_integration_outbox
-            SET status = :status, sent_at = IF(:status = "sent", NOW(), sent_at), last_error = :error,
+            SET status = :status, sent_at = IF(:sent_status = "sent", NOW(), sent_at), last_error = :error,
                 locked_at = NULL, lock_token = NULL
             WHERE id = :id AND lock_token = :token LIMIT 1
-        ')->execute([
+        ');
+        $statement->execute([
             'id' => $item['id'],
             'token' => $item['lock_token'],
             'status' => $status,
+            'sent_status' => $status,
             'error' => $error ? mb_substr($error, 0, 2000) : null,
         ]);
+        if ($statement->rowCount() !== 1) return false;
         $this->recordDelivery($item, $status === 'sent' ? 'processed' : 'failed', $body, $error);
+        return true;
     }
 
     private function retry(array $item, string $body, string $error): void
@@ -101,17 +104,18 @@ class IntegrationOutboxProcessor
             return;
         }
         $delay = min(60, 2 ** max(0, (int) $item['attempts'] - 1));
-        $this->database->connection()->prepare('
+        $statement = $this->database->connection()->prepare('
             UPDATE tn_integration_outbox
             SET status = "failed", last_error = :error, locked_at = NULL, lock_token = NULL,
                 available_at = DATE_ADD(NOW(), INTERVAL ' . $delay . ' MINUTE)
             WHERE id = :id AND lock_token = :token LIMIT 1
-        ')->execute([
+        ');
+        $statement->execute([
             'id' => $item['id'],
             'token' => $item['lock_token'],
             'error' => mb_substr($error, 0, 2000),
         ]);
-        $this->recordDelivery($item, 'failed', $body, $error);
+        if ($statement->rowCount() === 1) $this->recordDelivery($item, 'failed', $body, $error);
     }
 
     private function recordDelivery(array $item, string $status, string $body, ?string $error): void
