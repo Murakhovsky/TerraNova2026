@@ -170,6 +170,36 @@ try{
     $check($page('sales.deal.state.read',['deal_id'=>$otherId])['found'],'Director deal read denied.');
     $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.director.view"')->execute([$org,$owner]);
     $reject(fn()=>$page('sales.deal.state.read',['deal_id'=>$otherId]));
+    // P4: HTTP boundary checks execute before legacy controller methods.
+    $tenantProvider=new class($manager) implements \Kernel\Tenant\Contract\TenantContextProviderInterface {
+        public function __construct(private \Kernel\Tenant\Model\TenantContext $tenant){}
+        public function current():?\Kernel\Tenant\Model\TenantContext{return $this->tenant;}
+    };
+    $subscriber=new \App\Security\SalesWorkspaceAccessSubscriber($tenantProvider,$active,$entityScope,new MysqlSalesAccessControl($db));
+    $kernel=new class implements \Symfony\Component\HttpKernel\HttpKernelInterface {
+        public function handle(\Symfony\Component\HttpFoundation\Request $request,int $type=self::MAIN_REQUEST,bool $catch=true):\Symfony\Component\HttpFoundation\Response {
+            return new \Symfony\Component\HttpFoundation\Response();
+        }
+    };
+    $readController=(new ReflectionClass(\App\Http\Api\V1\Controller\SalesReadController::class))->newInstanceWithoutConstructor();
+    $request=\Symfony\Component\HttpFoundation\Request::create('/api/v1/sales/opportunities');
+    $subscriber->authorize(new \Symfony\Component\HttpKernel\Event\ControllerEvent($kernel,[$readController,'opportunities'],$request,\Symfony\Component\HttpKernel\HttpKernelInterface::MAIN_REQUEST));
+    $check((int)$request->query->get('owner_id')===$owner,'HTTP list missing authorized owner predicate.');
+    $httpDenied=static function(callable $call,int $status):void {
+        try{$call();}catch(\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e){
+            if($e->getStatusCode()===$status)return;
+            throw new RuntimeException('Unexpected authorization status: '.$e->getStatusCode());
+        }
+        throw new RuntimeException('HTTP authorization bypass.');
+    };
+    $request=\Symfony\Component\HttpFoundation\Request::create('/api/v1/sales/opportunities/'.$otherId);
+    $request->attributes->set('id',(string)$otherId);
+    $httpDenied(fn()=>$subscriber->authorize(new \Symfony\Component\HttpKernel\Event\ControllerEvent($kernel,[$readController,'opportunity'],$request,\Symfony\Component\HttpKernel\HttpKernelInterface::MAIN_REQUEST)),404);
+    $request=\Symfony\Component\HttpFoundation\Request::create('/api/v1/sales/opportunities?scope=tenant');
+    $httpDenied(fn()=>$subscriber->authorize(new \Symfony\Component\HttpKernel\Event\ControllerEvent($kernel,[$readController,'opportunities'],$request,\Symfony\Component\HttpKernel\HttpKernelInterface::MAIN_REQUEST)),403);
+    $directorController=(new ReflectionClass(\App\Web\Sales\SalesDirectorController::class))->newInstanceWithoutConstructor();
+    $request=\Symfony\Component\HttpFoundation\Request::create('/sales/director');
+    $httpDenied(fn()=>$subscriber->authorize(new \Symfony\Component\HttpKernel\Event\ControllerEvent($kernel,[$directorController,'index'],$request,\Symfony\Component\HttpKernel\HttpKernelInterface::MAIN_REQUEST)),403);
     // P5: stable table data contract for Workspace/export, exact values and scope.
     $reportCall=static fn(string $id,array $extra=[])=>$gateway->invoke($manager,'sales.reports.data.read',['report_id'=>$id,...$range,...$extra],'trusted_read','','reports-test');
     $report=$reportCall('forecast',['pipeline_id'=>$pid]);
