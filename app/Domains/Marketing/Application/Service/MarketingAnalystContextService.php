@@ -44,7 +44,11 @@ final readonly class MarketingAnalystContextService
         if($adsetId!==null){
             $adset=$this->find($this->planning->adsets($actor,$campaignId),$adsetId,$adsetRevision);
             $ad=$adset['content'];
-            if($adset['pins_stale']||!in_array(['creative_id'=>$creativeId,'revision'=>$creativeRevision],$ad['creatives'],true)){
+            $pinned=false;
+            foreach($ad['creatives'] as $pin){
+                if(($pin['creative_id']??null)===$creativeId&&($pin['revision']??null)===$creativeRevision)$pinned=true;
+            }
+            if($adset['pins_stale']||!$pinned){
                 throw new DomainException('AdSet context does not pin the current Creative.');
             }
             $audience=$this->find($this->planning->audiences($actor),$ad['audience_id'],$ad['audience_revision']);
