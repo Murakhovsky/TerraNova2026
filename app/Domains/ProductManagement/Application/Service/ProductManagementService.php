@@ -333,6 +333,14 @@ final readonly class ProductManagementService
         return $this->store->applyCountSession($org,$action->targetId,$p['location_id'],self::countSessionRows($p['rows']),$p['source_ref'],$key,$actor,$trace);
     }
 
+    public function countCandidates(string $org,string $location,int $limit=50,int $offset=0):array
+    {
+        $this->tenant($org);
+        if(!preg_match('/^[a-f0-9]{32}$/D',$location)||$limit<1||$limit>50||$offset<0||$offset>10000000)
+            throw new DomainException('Invalid count candidates scope.');
+        return $this->store->countCandidates($org,$location,$limit,$offset);
+    }
+
     public function countSession(string $org,string $sessionId):?array
     {
         $this->tenant($org);
