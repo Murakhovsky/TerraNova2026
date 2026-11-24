@@ -10,9 +10,10 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==39)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==40)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.stock.reservation.search'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'limit'=>30],
  'product_management.stock.reserve'=>['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'2.500000','source_ref'=>'manual:ORDER-1'],
  'product_management.stock.release'=>['reservation_id'=>str_repeat('a',32),'reason'=>'Order cancelled'],
  'product_management.price.list.update'=>['list_id'=>str_repeat('a',32),'name'=>'Renamed','expected_revision'=>1],
@@ -48,6 +49,7 @@ $good=[
 ];
 foreach($good as $id=>$input) $validator->validate($contracts[$id],$input);
 $bad=[
+ 'product_management.stock.reservation.search'=>[['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'limit'=>101],['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'organization_id'=>'other']],
  'product_management.stock.reserve'=>[['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'1','source_ref'=>'sales:FORGED'],['variant_id'=>str_repeat('a',32),'location_id'=>str_repeat('b',32),'quantity'=>'-1','source_ref'=>'manual:X']],
  'product_management.stock.release'=>[['reservation_id'=>'invalid','reason'=>'X'],['reservation_id'=>str_repeat('a',32),'reason'=>'X','actor_id'=>'forged']],
  'product_management.price.list.update'=>[['list_id'=>str_repeat('a',32),'name'=>'X','expected_revision'=>0],['list_id'=>str_repeat('a',32),'name'=>'X','expected_revision'=>1,'currency'=>'USD']],
