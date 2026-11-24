@@ -14,7 +14,7 @@ The integration already uses Shopify client credentials grant to obtain a
 24-hour Admin API access token; a separate manually copied Admin API token
 is **not** required for this flow.
 
-## Credential boundary
+## Межа доступу до реквізитів
 
 Never add Client Secret, an access token or an API response body to this
 repository, CI logs, PR or issue. This repository intentionally contains
@@ -41,7 +41,7 @@ The file contains only the three `SHOPIFY_*` variables above; it does
 not authorize the import or trigger domain mutations. The workflow is
 manual-only and checks the pinned domain before requesting a token.
 
-## Verification
+## Перевірка
 
 The independent smoke checks:
 1. SSH to the configured COS VPS (existing environment secrets).
