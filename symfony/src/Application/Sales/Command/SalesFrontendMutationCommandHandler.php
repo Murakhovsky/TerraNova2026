@@ -28,6 +28,7 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
         private ApprovalService $approvals,
         private ActionService $actions,
         private CommandBusInterface $commands,
+        private \Domains\Sales\Application\Service\SalesMutationGuard $guard,
     ) {
     }
 
@@ -38,6 +39,21 @@ final readonly class SalesFrontendMutationCommandHandler implements CommandHandl
             throw new DomainException('Authenticated actor is invalid.');
         }
 
+        if (in_array($command->operation,[SalesFrontendMutationCommand::APPROVAL,SalesFrontendMutationCommand::ACTION],true)) {
+            throw new DomainException('Legacy direct action execution requires governed workflow.');
+        }
+        if (in_array($command->operation,[SalesFrontendMutationCommand::MEETING,SalesFrontendMutationCommand::COMPLETE_ACTIVITY,
+            SalesFrontendMutationCommand::RESCHEDULE_ACTIVITY,SalesFrontendMutationCommand::LEAD_FOLLOWUP],true)) {
+            $kind=$command->operation===SalesFrontendMutationCommand::LEAD_FOLLOWUP?'lead':'deal';
+            $id=$this->positiveInt(explode(':',$command->resourceId,2)[0],'Invalid Sales entity id.');
+            return $this->guard->run($command->organizationId->value(),$command->actorId,
+                fn()=>$this->dispatchLocal($command),$kind,$id);
+        }
+        return $this->dispatchLocal($command);
+    }
+
+    private function dispatchLocal(SalesFrontendMutationCommand $command):array
+    {
         return match ($command->operation) {
             SalesFrontendMutationCommand::QUICK_EDIT => $this->quickUpdate($command),
             SalesFrontendMutationCommand::OWNER => $this->owner($command),
