@@ -116,6 +116,17 @@ try {
     $operations=new SalesOperationService($messageGateway,new MysqlSalesOperationRepository($db),$events,$tx);
     $activityHandler=new ManageSalesActivityCommandHandler($factory,$operations,$deals,$activityEvidence,$receipts,new MysqlPropertyReferencePort($db),$tx);
     $handler = new ConvertSalesLeadToOpportunityCommandHandler($factory);
+    $module = new ModuleCatalog(array_map(static fn(string $d)=>ModuleDefinition::fromArray(require $root.'/app/Domains/'.$d.'/module.php'),['Sales','ProductManagement','Property','Finance']));
+    $catalog = new CanonicalCapabilityCatalog($module);
+    $state = new class implements ModuleStateRepositoryInterface {
+        public function enabledOverride(string $organizationId,string $moduleId): ?bool { return true; }
+        public function setEnabled(string $organizationId,string $moduleId,bool $enabled): void {}
+    };
+    $active = new ActiveModuleResolver($module,$state);
+    $offerRepo=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesOfferRepository($db);
+    $productRef=new \Domains\ProductManagement\Application\Service\ProductCommercialReference(new \Domains\ProductManagement\Infrastructure\Persistence\MySqlProductManagementStore($db,new MysqlEventStore($db)));
+    $offerRefs=new \App\Application\Sales\SalesOfferReferenceResolver($productRef,new MysqlPropertyReferencePort($db),$active);
+    $offerService=new \Domains\Sales\Application\Service\SalesOfferService($offerRepo,$offerRefs,$deals,$commercial,$receipts,$events,$tx);
     $bus = new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
         CreateSalesLeadCommand::class => [new CreateSalesLeadCommandHandler($factory)],
@@ -125,17 +136,11 @@ try {
         ManageSalesDealCommand::class => [new ManageSalesDealCommandHandler($deals,$owners,$stages,$commercial,$receipts,$tx)],
         ManageSalesTeamCommand::class => [new ManageSalesTeamCommandHandler($teams,$teamAuth,$receipts,$tx)],
         ManageSalesActivityCommand::class => [$activityHandler],
+        \App\Application\Sales\Command\ManageSalesOfferCommand::class => [new \App\Application\Sales\Command\ManageSalesOfferCommandHandler($offerService)],
     ]))]));
-    $module = new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);
-    $catalog = new CanonicalCapabilityCatalog($module);
-    $state = new class implements ModuleStateRepositoryInterface {
-        public function enabledOverride(string $organizationId,string $moduleId): ?bool { return true; }
-        public function setEnabled(string $organizationId,string $moduleId,bool $enabled): void {}
-    };
-    $active = new ActiveModuleResolver($module,$state);
     $resolver = new FederationCapabilityBindingResolver($catalog,new DomainModuleRegistry([]),$active);
     $read = new MysqlSalesWorkspaceReadModel($db);
-    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus),new SalesTeamManageAdapter($bus),new SalesTeamReadAdapter($teams,$teamAuth),new SalesActivityRecordAdapter($bus),new SalesActivityCompleteAdapter($bus),new SalesActivityRescheduleAdapter($bus),new SalesFollowupScheduleAdapter($bus),new SalesPropertyMatchRecordAdapter($bus)]);
+    $gateway = new CanonicalCapabilityGateway($catalog,$active,$resolver,[new SalesClientCaseCreateAdapter($bus,$read),new SalesLeadCreateAdapter($bus,$read),new SalesLeadQualificationAdapter($bus,$read),new SalesLeadStateManageAdapter($bus),new SalesDealStateReadAdapter($deals),new SalesDealOwnerAssignAdapter($bus),new SalesDealCommercialSetAdapter($bus),new SalesPipelineStageManageAdapter($bus),new SalesDealOutcomeRecordAdapter($bus),new SalesTeamManageAdapter($bus),new SalesTeamReadAdapter($teams,$teamAuth),new SalesActivityRecordAdapter($bus),new SalesActivityCompleteAdapter($bus),new SalesActivityRescheduleAdapter($bus),new SalesFollowupScheduleAdapter($bus),new SalesPropertyMatchRecordAdapter($bus),new \App\Infrastructure\Capability\SalesLeadIntakeAdapter($bus,$read),new \App\Infrastructure\Capability\SalesOfferCreateAdapter($bus),new \App\Infrastructure\Capability\SalesOfferReviseAdapter($bus),new \App\Infrastructure\Capability\SalesOfferTransitionAdapter($bus),new \App\Infrastructure\Capability\SalesNegotiationRecordAdapter($bus),new \App\Infrastructure\Capability\SalesOfferReadAdapter($offerRepo),new \App\Infrastructure\Capability\SalesOfferListAdapter($offerRepo),new \App\Infrastructure\Capability\FinanceSalesCommercialEvidenceReadAdapter($offerRepo,$active)]);
     $actor = static fn(string $tenant,string $role='manager') => new TenantContext(
         UserId::fromString((string)$userId),OrganizationId::fromString($tenant),OrganizationRole::fromString($role),
         [Permission::fromString(TenantPermissions::ACCESS),Permission::fromString(TenantPermissions::MANAGE)],
@@ -295,6 +300,52 @@ try {
     $invoke('sales.deal.owner.assign',$assignWon,'owner-won');
     $current=$snapshot($wonCase);
     $invoke('sales.deal.commercial.set',['deal_id'=>$wonCase,'expected_revision'=>$current['revision'],'deal_value'=>'999.99','currency'=>'USD'],'terms-won');
+    $current=$snapshot($wonCase);
+    // S4: native intake and commercial negotiation through the same tenant capability boundary.
+    $operatorForm=['full_name'=>'Operator enquiry '.$token,'email'=>'operator-'.$token.'@example.test'];
+    $operator=$invoke('sales.lead.intake',$operatorForm,'operator-intake');
+    $check($operator['deal_id']>0&&!$operator['replayed'],'Operator intake missing native case.');
+    $check($invoke('sales.lead.intake',$operatorForm,'operator-intake')['replayed'],'Operator intake replay missing.');
+    $reject(fn()=>$invoke('sales.lead.intake',[...$operatorForm,'full_name'=>'Different'],'operator-intake'));
+    $reject(fn()=>$invoke('sales.lead.intake',$operatorForm,'ai-intake','ai'));
+    $product=bin2hex(random_bytes(16));$variant=bin2hex(random_bytes(16));
+    $db->prepare("INSERT INTO pm_products (organization_id,product_id,product_type,status,name) VALUES (?,?,'service','active','CI catalog service')")->execute([$org,$product]);
+    $db->prepare("INSERT INTO pm_variants (organization_id,variant_id,product_id,sku,uom,track_inventory,status) VALUES (?,?,?,?,?,0,'active')")->execute([$org,$variant,$product,'SKU-'.$token,'pcs']);
+    $offerTerms=['title'=>'Native CI quote','currency'=>'USD','valid_until'=>'2035-01-01T00:00:00Z','lines'=>[
+        ['kind'=>'service','title'=>'Work','quantity'=>1,'unit_price'=>'500.01'],
+        ['kind'=>'product','title'=>'Catalog line','quantity'=>2,'unit_price'=>'249.99','product_id'=>$product,'variant_id'=>$variant],
+    ]];
+    $quote=['deal_id'=>$wonCase,...$offerTerms];
+    $readFinance=fn()=>$gateway->invoke($manager,'finance.sales.commercial_evidence.read',['deal_id'=>$wonCase],'trusted_read','','finance-evidence');
+    $check(!$readFinance()['found'],'Draft is not Finance evidence.');
+    $reject(fn()=>$invoke('sales.offer.create',$quote,'ai-quote','ai'));
+    $reject(fn()=>$invoke('sales.offer.create',[...$quote,'lines'=>[[...$offerTerms['lines'][1],'variant_id'=>'missing']]],'missing-variant'));
+    $created=$invoke('sales.offer.create',$quote,'offer-create');$offerId=$created['offer']['offer_id'];
+    $check($created['offer']['total']==='999.99'&&$created['offer']['revision']===1&&!$created['replayed'],'Native quote calculation mismatch.');
+    $check($invoke('sales.offer.create',$quote,'offer-create')['replayed'],'Quote replay missing.');
+    $reject(fn()=>$invoke('sales.offer.create',[...$quote,'title'=>'Changed'],'offer-create'));
+    $identity=['deal_id'=>$wonCase,'offer_id'=>$offerId,'expected_revision'=>1];
+    $reject(fn()=>$invoke('sales.offer.transition',[...$identity,'target_status'=>'accepted','evidence_reference'=>'customer-1'],'skip-presentation'));
+    $present=$invoke('sales.offer.transition',[...$identity,'target_status'=>'presented','evidence_reference'=>'operator-email-1'],'present');
+    $note=$invoke('sales.negotiation.record',[...$identity,'expected_revision'=>2,'kind'=>'objection','note'=>'Customer requested alternative'],'negotiation');
+    $check($note['offer']['revision']===3&&$note['offer']['terms_version']===1,'Negotiation changed immutable terms.');
+    $counter=$invoke('sales.offer.revise',[...$identity,'expected_revision'=>3,...$offerTerms,'direction'=>'customer','evidence_reference'=>'customer-counter-1'],'counter');
+    $check($counter['offer']['terms_version']===2&&$counter['offer']['status']==='draft','Counteroffer not recorded.');
+    $reject(fn()=>$invoke('sales.offer.transition',[...$identity,'expected_revision'=>4,'target_status'=>'presented','evidence_reference'=>'email-2'],'customer-draft'));
+    $revised=$invoke('sales.offer.revise',[...$identity,'expected_revision'=>4,...$offerTerms,'direction'=>'sales'],'adopt-counter');
+    $invoke('sales.offer.transition',[...$identity,'expected_revision'=>5,'target_status'=>'presented','evidence_reference'=>'operator-email-2'],'present-adopted');
+    $accept=[...$identity,'expected_revision'=>6,'target_status'=>'accepted','evidence_reference'=>'customer-accept-1'];
+    $accepted=$invoke('sales.offer.transition',$accept,'accept-offer');
+    $check($accepted['offer']['status']==='accepted'&&$accepted['offer']['revision']===7&&$invoke('sales.offer.transition',$accept,'accept-offer')['replayed'],'Acceptance replay failed.');
+    $evidence=$readFinance();$check($evidence['found']&&$evidence['evidence']['total']==='999.99'&&$evidence['evidence']['settled']===false,'Finance evidence mismatch.');
+    $check($snapshot($wonCase)['status']!=='closed','Offer acceptance implicitly closed Deal.');
+    $history=$gateway->invoke($manager,'sales.offer.read',['offer_id'=>$offerId],'trusted_read','','offer-read');
+    $check(count($history['history'])===7&&count($history['terms_history'])===3,'Immutable negotiation history missing.');
+    $check(count($gateway->invoke($manager,'sales.offer.list',['deal_id'=>$wonCase],'trusted_read','','offer-list')['items'])===1,'Offer list mismatch.');
+    $check(!$gateway->invoke($actor('foreign-'.$token),'sales.offer.read',['offer_id'=>$offerId],'trusted_read','','foreign-read')['found'],'Cross-tenant quote leaked.');
+    $reject(fn()=>$invoke('sales.offer.revise',[...$identity,'expected_revision'=>7,...$offerTerms,'direction'=>'sales'],'immutable-accepted'));
+    $reject(fn()=>$invoke('sales.deal.commercial.set',['deal_id'=>$wonCase,'expected_revision'=>$snapshot($wonCase)['revision'],'deal_value'=>'1.00','currency'=>'USD'],'accepted-terms-lock'));
+    $q->execute([$org,$offerId,'sales.offer.created']);$check((int)$q->fetchColumn()===1,'Offer event/outbox duplicated.');
     $current=$snapshot($wonCase);
     $pdef=$pipelines->getPipeline($org,$current['pipeline_id']);
     $queue=[[$current['stage_id'],[]]];$visited=[];$route=null;

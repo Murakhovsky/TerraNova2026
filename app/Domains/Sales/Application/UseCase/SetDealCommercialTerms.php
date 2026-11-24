@@ -28,7 +28,7 @@ final readonly class SetDealCommercialTerms
             if ($before===['deal_value'=>$value,'currency'=>$currency]) return OperationResult::success($id,['changed'=>false]);
             if (in_array((string)$row['status'],['closed','lost'],true)) return OperationResult::failure('Terminal deal commercial terms are immutable.');
             $result=$this->deals->update($org,$id,$changes);
-            if (!$result->successful) throw new RuntimeException('Commercial update failed.');
+            if (!$result->successful) throw new \DomainException('Commercial update rejected.');
             $after=$this->state->getForStageChange($org,$id);
             if ($after===null || (string)$after['deal_value']!==$value || (string)$after['currency']!==$currency) throw new RuntimeException('Commercial terms native readback failed.');
             $this->events->publish(ClientCaseChanged::create(bin2hex(random_bytes(16)),$org,$id,[

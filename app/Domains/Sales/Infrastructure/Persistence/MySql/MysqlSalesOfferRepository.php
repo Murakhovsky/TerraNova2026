@@ -28,6 +28,7 @@ final readonly class MysqlSalesOfferRepository implements SalesOfferRepositoryIn
     {
         $row=$this->acceptedForDeal($organizationId,$dealId);
         if($row===null)return null;
+        $row=\Domains\Sales\Application\Support\SalesOfferSnapshot::fromNative($row,$organizationId,$row['offer_id']);
         return ['offer_id'=>$row['offer_id'],'deal_id'=>(int)$row['deal_id'],'terms_version'=>(int)$row['terms_version'],
             'total'=>(string)$row['total'],'currency'=>$row['currency'],'accepted_at'=>$row['accepted_at'],'terms_hash'=>$row['terms_hash'],
             'evidence_kind'=>'operator_recorded_accepted_offer','settled'=>false];
