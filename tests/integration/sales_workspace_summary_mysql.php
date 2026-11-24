@@ -30,7 +30,7 @@ try{
     };
     $owner=$makeUser('owner');$other=$makeUser('other');
     $db->prepare('INSERT INTO tn_people(organization_id,public_id,full_name) VALUES (?,?,?)')->execute([$org,'P-'.$token,'Private fixture person']);$person=(int)$db->lastInsertId();
-    $q=$db->prepare('INSERT INTO tn_client_cases(organization_id,public_id,person_id,type,title,status,stage,pipeline_id,stage_id,probability,priority,assigned_user_id,deal_value,currency,budget_max) VALUES (?,?,?,"buyer","Private title",?,"new",?,?,50,"normal",?,?,?,99999)');
+    $q=$db->prepare('INSERT INTO tn_client_cases(organization_id,public_id,person_id,type,title,status,stage,pipeline_id,stage_id,probability,priority,assigned_user_id,deal_value,currency,budget_max) VALUES (?,?,?,"buy","Private title",?,"new",?,?,50,"normal",?,?,?,99999)');
     $insert=static function(int $i,int $who,?string $money,string $currency,string $status='active')use($q,$org,$token,$person,$pid,$stage):void{$q->execute([$org,'D-'.$token.'-'.$i,$person,$status,$pid,$stage,$who,$money,$currency]);};
     for($i=0;$i<251;$i++)$insert($i,$owner,'10.01','USD');
     $insert(251,$owner,'20.02','EUR');$insert(252,$owner,null,'UAH');$insert(253,$owner,'100.00','USD','closed');$insert(254,$other,'333.00','UAH');
@@ -60,6 +60,14 @@ try{
     $all=$invoke(['scope'=>'tenant','pipeline_id'=>$pid]);$check($all['scope']['owner_id']===null&&$all['counts']['active_deals']>=254,'Director tenant scope failed.');
     $db->prepare('DELETE FROM sales_user_capabilities WHERE organization_id=? AND user_id=? AND capability="sales.director.view"')->execute([$org,$owner]);
     $reject(fn()=>$invoke(['scope'=>'tenant']));
+    $teams=new \Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesTeamAdministration($db);
+    $team=$teams->createTeam($org,['name'=>'Summary team','code'=>'S5_'.strtoupper($token)],(string)$owner);
+    $teamId=$team['id'];
+    $teams->setMember($org,$teamId,$owner,['role'=>'LEAD','status'=>'ACTIVE','assignment_enabled'=>true],(string)$owner);
+    $teams->setMember($org,$teamId,$other,['role'=>'MEMBER','status'=>'ACTIVE','assignment_enabled'=>true],(string)$owner);
+    $check($invoke(['scope'=>'owner','owner_id'=>$other])['counts']['active_deals']===1,'Active team lead scope failed.');
+    $db->prepare('UPDATE sales_teams SET status="DISABLED" WHERE organization_id=? AND id=?')->execute([$org,$teamId]);
+    $reject(fn()=>$invoke(['scope'=>'owner','owner_id'=>$other]));
     $dash=$read->dashboard($org,$owner);$check($dash['kpis']['pipeline_value']===null&&$dash['kpis']['money_by_currency']===$summary['money_by_currency']&&$dash['metrics']===[],'Dashboard parity/tenant leakage.');
     $operational=new MysqlSalesWorkspaceOperationalReadModel($db,$read);
     $pipelines=$operational->pipelines($org);$p=array_values(array_filter($pipelines,fn($x)=>$x['id']===$pid))[0];

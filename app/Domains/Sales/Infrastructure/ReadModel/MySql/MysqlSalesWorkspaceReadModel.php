@@ -41,15 +41,15 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         if($ownerId!==null){$where[]='c.assigned_user_id=:owner';$params['owner']=$ownerId;}
         if($pipelineId!==null){$where[]='c.pipeline_id=:pipeline';$params['pipeline']=$pipelineId;}
         $from=' FROM tn_client_cases c LEFT JOIN sales_pipeline_stages s ON s.id=c.stage_id AND s.organization_id=c.organization_id AND s.pipeline_id=c.pipeline_id WHERE '.implode(' AND ',$where);
-        $known='c.deal_value IS NOT NULL AND c.deal_value>=0 AND c.currency IN ("USD","EUR","UAH")';
+        $known='c.deal_value IS NOT NULL AND c.deal_value>=0 AND UPPER(c.currency) IN ("USD","EUR","UAH")';
         $prob='COALESCE(c.probability,s.probability_default)';
         $valid=$known.' AND '.$prob.' BETWEEN 0 AND 100';
         $risk='(c.priority IN ("high","urgent") OR c.next_contact_at<NOW() OR c.last_activity_at IS NULL OR c.last_activity_at<NOW()-INTERVAL 48 HOUR)';
         $counts=$this->one('SELECT COUNT(*) active_deals,COALESCE(SUM(c.next_contact_at<NOW()),0) followups_overdue,COALESCE(SUM('.$risk.'),0) deals_at_risk,COALESCE(SUM(c.next_contact_at IS NULL),0) without_next_action,COALESCE(SUM(CASE WHEN '.$known.' THEN 1 ELSE 0 END),0) monetary_deals,COALESCE(SUM(CASE WHEN '.$valid.' THEN 1 ELSE 0 END),0) weighted_deals'.$from,$params)??[];
         $moneySelect='COUNT(*) deal_count,CAST(SUM(c.deal_value) AS DECIMAL(30,2)) pipeline_value,CAST(ROUND(SUM(CASE WHEN '.$valid.' THEN c.deal_value*'.$prob.'/100 ELSE NULL END),2) AS DECIMAL(30,2)) weighted_value,SUM(CASE WHEN '.$valid.' THEN 1 ELSE 0 END) weighted_count';
-        $money=$this->all('SELECT c.currency,'.$moneySelect.$from.' AND '.$known.' GROUP BY c.currency ORDER BY c.currency',$params);
+        $money=$this->all('SELECT UPPER(c.currency) currency,'.$moneySelect.$from.' AND '.$known.' GROUP BY UPPER(c.currency) ORDER BY UPPER(c.currency)',$params);
         $stageRows=$this->all('SELECT c.pipeline_id,c.stage_id,COUNT(*) deal_count,COALESCE(SUM(CASE WHEN '.$known.' THEN 1 ELSE 0 END),0) monetary_deals'.$from.' GROUP BY c.pipeline_id,c.stage_id ORDER BY c.pipeline_id,c.stage_id',$params);
-        $stageMoney=$this->all('SELECT c.pipeline_id,c.stage_id,c.currency,'.$moneySelect.$from.' AND '.$known.' GROUP BY c.pipeline_id,c.stage_id,c.currency ORDER BY c.pipeline_id,c.stage_id,c.currency',$params);
+        $stageMoney=$this->all('SELECT c.pipeline_id,c.stage_id,UPPER(c.currency) currency,'.$moneySelect.$from.' AND '.$known.' GROUP BY c.pipeline_id,c.stage_id,UPPER(c.currency) ORDER BY c.pipeline_id,c.stage_id,UPPER(c.currency)',$params);
         $normal=static fn(array $row):array=>['currency'=>(string)$row['currency'],'deal_count'=>(int)$row['deal_count'],'pipeline_value'=>(string)$row['pipeline_value'],'weighted_value'=>$row['weighted_value']===null?null:(string)$row['weighted_value'],'weighted_count'=>(int)$row['weighted_count']];
         $stages=[];foreach($stageRows as $row){
             $by=[];foreach($stageMoney as $item)if($item['pipeline_id']===$row['pipeline_id']&&$item['stage_id']===$row['stage_id'])$by[]=$normal($item);

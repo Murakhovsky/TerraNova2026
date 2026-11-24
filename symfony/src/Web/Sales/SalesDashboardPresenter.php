@@ -103,7 +103,10 @@ final class SalesDashboardPresenter
 
     private function money(mixed $value,string $currency): string
     {
-        return $value===null||$currency===''?'—':number_format((float)$value,2,'.',' ').' '.$currency;
+        if($value===null||$currency==='')return '—';
+        $raw=(string)$value;
+        if(preg_match('/^([0-9]+)(?:\.([0-9]{1,2}))?$/D',$raw,$m)!==1)return '—';
+        return preg_replace('/\B(?=(\d{3})+(?!\d))/',' ',$m[1]).'.'.str_pad($m[2]??'',2,'0').' '.$currency;
     }
 
     private function moneyRows(array $rows,string $key):string
