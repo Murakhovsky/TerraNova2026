@@ -58,4 +58,9 @@ $assert(str_contains($store,"WHERE v.organization_id=? AND v.variant_id=? FOR UP
     'Stock posting must lock Product/Variant before checking lifecycle.');
 $assert(str_contains($store,'(b.on_hand<>0 OR b.reserved<>0) LIMIT 1 FOR UPDATE'),
     'Product archive must use current locking balance read.');
+$pricing=$read('app/Domains/ProductManagement/Application/Service/PricingService.php');
+$assert(str_contains($pricing,'Base price revision conflict.')&&str_contains($pricing,'Active tenant Variant and Product required for pricing.'),
+    'Pricing must fence revision and archived lifecycle at Domain writer.');
+$assert(str_contains($controller,'price_readback_uncertain')&&str_contains($twig,'price.revision')&&str_contains($twig,'priceCurrency'),
+    'Multi-currency pricing requires observed revision and independent receipt readback.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
