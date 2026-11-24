@@ -12,6 +12,8 @@ namespace Domains\Sales\Application\Contract;
 interface SalesWorkspaceOperationalReadModelInterface extends SalesWorkspaceReadModelInterface
 {
     /** @return list<array<string, mixed>> */
+    public function pipelines(string $organizationId,?int $ownerId=null): array;
+
     public function communications(string $organizationId, int $dealId, int $limit = 50): array;
 
     /** @return list<array<string, mixed>> */
