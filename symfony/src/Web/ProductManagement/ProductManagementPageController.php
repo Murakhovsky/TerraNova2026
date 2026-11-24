@@ -88,15 +88,124 @@ final readonly class ProductManagementPageController
                     'variant_id'=>$historyVariantId,'currency'=>$currency,'limit'=>30,'offset'=>($historyPage-1)*30,
                 ]);
             }
+            $listCode=strtoupper(trim((string)$request->query->get('list_code','')));
+            $listVariantId=trim((string)$request->query->get('list_variant',''));
+            $list=null;$listPrice=null;$listVariant=null;
+            if ($listCode!==''||$listVariantId!=='') {
+                if (!preg_match('/^[A-Z0-9][A-Z0-9_-]{0,63}$/D',$listCode)) return new Response('Invalid price list code.',422);
+                $listVariant=$this->findVariant($product,$listVariantId);
+                if ($listVariant===null) return new Response('Variant not found for this Product.',404);
+                $lists=$this->read($actor,'price.list.search',['code'=>$listCode,'limit'=>1]);
+                $list=$lists['items'][0]??null;
+                if ($list===null) return new Response('Price list not found.',404);
+                $listPrice=$this->read($actor,'price.list.entry.get',['list_id'=>$list['list_id'],'variant_id'=>$listVariantId]);
+                if (($listPrice['found']??false)!==true) return new Response('Price list or Variant not found.',404);
+            }
             return $this->render($request,$actor,'product',[
                 'product'=>$product,'categories'=>$categories['items']??[], 'prices'=>$prices,
                 'priceCurrency'=>$currency,'pricePage'=>$pricePage,
                 'priceHasNext'=>count($product['variants']??[])>$pricePage*30,
                 'priceHistory'=>$history,'historyVariant'=>$historyVariant,'historyPage'=>$historyPage,
+                'selectedList'=>$list,'listPrice'=>$listPrice,'listVariant'=>$listVariant,
             ]);
         } catch (Throwable $e) {
             error_log('product_management.workspace.detail_unavailable '.$e::class);
             return new Response('Product details temporarily unavailable.',503);
+        }
+    }
+
+    public function priceLists(Request $request):Response
+    {
+        $actor=$this->manager();
+        if ($actor instanceof Response) return $actor;
+        $page=filter_var($request->query->get('page','1'),FILTER_VALIDATE_INT);
+        if ($page===false||$page<1||$page>333334) return new Response('Invalid list page.',422);
+        try {
+            $data=$this->read($actor,'price.list.search',['limit'=>30,'offset'=>($page-1)*30]);
+            return $this->render($request,$actor,'price-lists',['lists'=>$data['items']??[],
+                'listPage'=>$page,'listHasNext'=>count($data['items']??[])===30&&$page<333334]);
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.price_lists_unavailable '.$e::class);
+            return new Response('Price lists temporarily unavailable.',503);
+        }
+    }
+
+    public function createPriceList(Request $request):Response
+    {
+        $actor=$this->guardWrite($request);
+        if ($actor instanceof Response) return $actor;
+        $input=['code'=>strtoupper(trim((string)$request->request->get('code',''))),
+            'name'=>trim((string)$request->request->get('name','')),
+            'kind'=>(string)$request->request->get('kind',''),
+            'currency'=>strtoupper(trim((string)$request->request->get('currency','')))];
+        try {
+            $receipt=$this->write($actor,'price.list.create',$input,$request);
+        } catch (DomainException|\InvalidArgumentException) {
+            return new Response('Price list creation blocked.',422);
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.list_create_uncertain '.$e::class);
+            return new Response('List outcome uncertain. Reload before retrying.',503);
+        }
+        try {
+            $read=$this->read($actor,'price.list.search',['code'=>$input['code'],'limit'=>1]);
+            $row=$read['items'][0]??[];
+            if (!preg_match('/^[a-f0-9]{32}$/D',(string)($receipt['list_id']??''))) throw new \RuntimeException('Invalid receipt.');
+            foreach (['list_id','code','name','kind','currency'] as $field) {
+                if (($row[$field]??null)!==($receipt[$field]??null)||($field!=='list_id'&&($row[$field]??null)!==$input[$field]))
+                    throw new \RuntimeException('List readback mismatch.');
+            }
+            return $this->go('/product-management/price-lists?notice=created');
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.list_readback_uncertain '.$e::class);
+            return new Response('List receipt obtained; current state unverified.',503);
+        }
+    }
+
+    public function setListPrice(Request $request,string $id):Response
+    {
+        $actor=$this->guardWrite($request);
+        if ($actor instanceof Response) return $actor;
+        $product=$this->checkedProduct($actor,$id);
+        if ($product instanceof Response) return $product;
+        $vid=trim((string)$request->request->get('variant_id',''));
+        $variant=$this->findVariant($product,$vid);
+        if ($variant===null||($variant['status']??null)!=='active'||($product['status']??null)==='archived')
+            return new Response('Active Product Variant required.',422);
+        $code=strtoupper(trim((string)$request->request->get('list_code','')));
+        $revision=filter_var($request->request->get('expected_revision'),FILTER_VALIDATE_INT);
+        if ($revision===false||$revision<0||!preg_match('/^[A-Z0-9][A-Z0-9_-]{0,63}$/D',$code))
+            return new Response('Invalid list code or revision.',422);
+        try {
+            $lists=$this->read($actor,'price.list.search',['code'=>$code,'limit'=>1]);
+            $list=$lists['items'][0]??null;
+            if ($list===null||($list['list_id']??null)!==$request->request->get('list_id'))
+                return new Response('Price list not found.',404);
+        } catch (Throwable $e) {
+            return new Response('Price list temporarily unavailable.',503);
+        }
+        $amount=trim((string)$request->request->get('amount',''));
+        if (!preg_match('/^(0|[1-9][0-9]{0,15})(\.[0-9]{1,4})?$/D',$amount)) return new Response('Invalid amount.',422);
+        $input=['list_id'=>$list['list_id'],'variant_id'=>$vid,'amount'=>$amount,'expected_revision'=>$revision];
+        try {
+            $receipt=$this->write($actor,'price.list.entry.set',$input,$request);
+        } catch (DomainException|\InvalidArgumentException) {
+            return new Response('List price action blocked. Reload current revision.',422);
+        } catch (Throwable $e) {
+            return new Response('List price outcome uncertain. Reload before retrying.',503);
+        }
+        try {
+            $after=$this->read($actor,'price.list.entry.get',['list_id'=>$list['list_id'],'variant_id'=>$vid]);
+            [$whole,$fraction]=array_pad(explode('.',$amount,2),2,'');
+            $expected=['list_id'=>$list['list_id'],'variant_id'=>$vid,'found'=>true,'currency'=>$list['currency'],
+                'price'=>$whole.'.'.str_pad($fraction,4,'0'),'revision'=>$revision+1];
+            foreach ($expected as $field=>$value) {
+                if (($receipt[$field]??null)!==$value||($after[$field]??null)!==$value)
+                    throw new \RuntimeException('List price readback mismatch.');
+            }
+            return $this->go('/product-management/products/'.$id.'?list_code='.$code.'&list_variant='.$vid.'&notice=updated#list-price');
+        } catch (Throwable $e) {
+            error_log('product_management.workspace.list_price_readback_uncertain '.$e::class);
+            return new Response('List price receipt obtained; current state unverified.',503);
         }
     }
 
@@ -551,7 +660,7 @@ final readonly class ProductManagementPageController
     private function render(Request $request,TenantContext $actor,string $section,array $data):Response
     {
         $label=match($section){
-            'catalog'=>'Каталог товарів','product'=>'Картка товару','categories'=>'Категорії',
+            'catalog'=>'Каталог товарів','product'=>'Картка товару','categories'=>'Категорії','price-lists'=>'Прайс-листи',
             default=>'Product Management',
         };
         $context=new WebExtensionContext(
