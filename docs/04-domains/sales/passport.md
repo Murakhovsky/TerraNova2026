@@ -87,10 +87,18 @@ domain_id: sales
       ]
     },
     {
-      "id": "workspace",
+      "id": "orders",
       "capability_ids": [
         "sales.order.create",
         "sales.order.read",
+        "sales.order.source.reconcile",
+        "sales.order.source.page.read",
+        "sales.order.source.pending.read"
+      ]
+    },
+    {
+      "id": "workspace",
+      "capability_ids": [
         "sales.reports.data.read",
         "sales.analytics.conversion.read",
         "sales.analytics.forecast.read",
@@ -125,7 +133,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 
 ## 2. Межі відповідальності
 
-**Власний предмет відповідальності:** Sales Leads, Client Cases/Deals, pipeline, activities та Sales outcome.
+**Власний предмет відповідальності:** Sales Leads, Client Cases/Deals, pipeline, activities, native commerce orders та Sales outcome.
 **Не володіє:** Не володіє Property Inventory чи Growth OpportunityCandidate.
 Актуальні invariants визначаються Domain Model/Application, а не текстом паспорта.
 
@@ -138,6 +146,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 | `deals` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `teams` | Sales team configuration and membership | UNKNOWN |
 | `offers` | Immutable quoted terms, negotiations and accepted commercial evidence | UNKNOWN |
+| `orders` | Native order snapshots, source reconciliation and placement evidence | UNKNOWN |
 | `workspace` | Scoped operational workspace and currency-separated pipeline summary | UNKNOWN |
 | `activities` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 
