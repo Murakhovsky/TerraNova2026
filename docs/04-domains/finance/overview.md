@@ -4,13 +4,13 @@ description: Канонічний фінансовий домен COS із ко�
 status: draft
 updated: 2026-11-19
 kind: domain
-version: 0.2.1
+version: 0.2.2
 contract: domain-v1
 ---
 
 # Огляд домену Finance
 
-Finance `0.2.1` додає ізольований бюджетний контур **F1 Budget Control** поверх базового Finance V1. Це **не повноцінна бухгалтерія**, не модуль платежів і не підтверджена інтеграція з банками або рекламними провайдерами.
+Finance `0.2.2` додає ізольований бюджетний контур **F1 Budget Control** поверх базового Finance V1. Це **не повноцінна бухгалтерія**, не модуль платежів і не підтверджена інтеграція з банками або рекламними провайдерами.
 
 Усі фінансові операції залишаються вимкненими для tenants за замовчуванням. У production модуль не активовано; приймання реального бюджету та витрат не завершено.
 
@@ -70,3 +70,9 @@ Finance приймає й зберігає **окремий журнал спо�
 - [Модулі та capabilities](../../12-reference/module-capabilities.md)
 - [Покриття доменів процесами](../../12-reference/domain-process-coverage.md)
 
+
+## F1.2. Міждоменне читання джерельних рекламних даних
+
+Finance читає Marketing-owned snapshot лише через `MarketingSpendEvidenceReadPort` та окремий integration adapter. Внутрішній `FinanceMarketingSpendReadbackService` перевіряє роль менеджера, tenant, account, snapshot та source revision і зберігає свідчення у власному Finance ledger.
+
+Сервіс не експонований як публічний Capability або HTTP endpoint. `SOURCE_OBSERVATION_UNRECONCILED` не є Finance Expense, оплатою, settlement або бюджетним резервом. Публічний запис вимагає незалежного Approval через canonical Workflow/Action у F1.3. Відповідні відмови та replay перевіряються MySQL тестом.

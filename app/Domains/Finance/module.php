@@ -4,8 +4,8 @@ declare(strict_types=1);
 return [
     'id' => 'finance',
     'name' => 'Finance',
-    'version' => '0.2.1',
-    'schema_version' => '0.2.1',
+    'version' => '0.2.2',
+    'schema_version' => '0.2.2',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
     'description' => 'Finance F1 budget envelopes, approved reservations and unverified provider spend evidence; no settlement, payments or Meta writes.',
     'icon' => 'wallet-cards',
@@ -17,6 +17,15 @@ return [
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
         'extension_services' => [],
+        'cross_domain_contracts' => [
+            [
+                'contract' => 'Domains\\Finance\\Application\\Contract\\MarketingSpendEvidenceReadPort',
+                'role' => 'requires',
+                'counterpart' => 'marketing',
+                'kind' => 'synchronous_port',
+                'purpose' => 'Read verified tenant-bound Marketing source snapshots into Finance-owned unreconciled observations, without Marketing writes or financial settlement claims.',
+            ],
+        ],
         'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql'],
         'capabilities' => ['finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status'],
         'capability_contracts' => [
