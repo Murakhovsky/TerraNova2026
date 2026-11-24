@@ -9,7 +9,7 @@ use PDO;
 use Domains\Sales\Application\Contract\SalesWorkspaceSummaryReadPort;
 use Domains\Sales\Application\Contract\SalesTeamSummaryReadPort;
 
-final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface, SalesProposalLeadReadModelInterface, SalesWorkspaceSummaryReadPort, SalesTeamSummaryReadPort
+final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadModelInterface, SalesProposalLeadReadModelInterface, SalesWorkspaceSummaryReadPort, SalesTeamSummaryReadPort, \Domains\Sales\Application\Contract\SalesTodayPopulationReadPort
 {
     public function __construct(private PDO $connection)
     {
