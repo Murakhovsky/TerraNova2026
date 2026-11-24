@@ -271,6 +271,10 @@ generated: true
 | `product_management` | `app/migrations/20261124_000193_product_management_stock_counts.sql` | `pm_stock_counts` |
 | `product_management` | `app/migrations/20261124_000193_product_management_stock_counts.sql` | `pm_stock_movements` |
 | `product_management` | `app/migrations/20261124_000193_product_management_stock_counts.sql` | `pm_variants` |
+| `product_management` | `app/migrations/20261124_000194_product_management_count_sessions.sql` | `pm_locations` |
+| `product_management` | `app/migrations/20261124_000194_product_management_count_sessions.sql` | `pm_stock_count_session_lines` |
+| `product_management` | `app/migrations/20261124_000194_product_management_count_sessions.sql` | `pm_stock_count_sessions` |
+| `product_management` | `app/migrations/20261124_000194_product_management_count_sessions.sql` | `pm_stock_counts` |
 | `property` | `app/migrations/20260914_000048_web_v041_property_tenancy.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_properties` |
 | `property` | `app/migrations/20260914_000050_property_v022_tenant_boundary.sql` | `tn_property_activities` |
