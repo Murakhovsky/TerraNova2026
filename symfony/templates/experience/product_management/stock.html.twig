@@ -45,6 +45,42 @@
             <twig:CosMetric label="Доступно" value="{{ balance.available }}" hint="on_hand − reserved" />
         </section>
     {% endif %}
+    {% if balance is not null %}
+    <section class="cos-panel">
+        <h2>Резервування товару</h2>
+        <p>Резерв зменшує доступну кількість, але не фізичний залишок. Джерело має починатися з manual:.</p>
+        <form method="post" action="/product-management/stock/reservation" class="cos-toolbar">
+            <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+            <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}00000003">
+            <input type="hidden" name="action" value="reserve">
+            <input type="hidden" name="variant_id" value="{{ variantId }}"><input type="hidden" name="location_id" value="{{ locationId }}">
+            <label>Кількість <input name="quantity" class="form-control" inputmode="decimal" required></label>
+            <label>Підстава <input name="source_ref" class="form-control" placeholder="manual:ORDER-1" maxlength="157" required></label>
+            <button class="btn btn-primary" type="submit">Зарезервувати</button>
+        </form>
+        <div class="table-responsive"><table class="table">
+            <thead><tr><th>Підстава</th><th>Кількість</th><th>Статус</th><th>Дата</th><th>Дії / причина</th></tr></thead>
+            <tbody>{% for r in reservations %}
+                <tr><td>{{ r.source_ref }}</td><td>{{ r.quantity }}</td><td>{{ r.status }}</td><td>{{ r.created_at }}</td><td>
+                {% if r.status == 'active' %}
+                <form method="post" action="/product-management/stock/reservation" class="cos-toolbar">
+                    <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
+                    <input type="hidden" name="idempotency_key" value="{{ mutationKey|slice(0,24) }}{{ '%08x'|format(loop.index+256) }}">
+                    <input type="hidden" name="action" value="release"><input type="hidden" name="reservation_id" value="{{ r.reservation_id }}">
+                    <input type="hidden" name="variant_id" value="{{ variantId }}"><input type="hidden" name="location_id" value="{{ locationId }}">
+                    <label>Причина <input name="reason" class="form-control" maxlength="191" required></label>
+                    <label><input type="checkbox" name="confirm_release" value="yes" required> Підтверджую</label>
+                    <button class="btn btn-outline-danger" type="submit">Звільнити</button>
+                </form>
+                {% else %}{{ r.release_reason }}{% endif %}</td></tr>
+            {% else %}<tr><td colspan="5">Резервів немає.</td></tr>{% endfor %}</tbody>
+        </table></div>
+        <nav class="cos-toolbar">
+            {% if reservationPage > 1 %}<a href="?variant={{ variantId }}&amp;location={{ locationId }}&amp;reservation_page={{ reservationPage-1 }}">Попередня</a>{% endif %}
+            {% if reservations|length == 30 and reservationPage < 333334 %}<a href="?variant={{ variantId }}&amp;location={{ locationId }}&amp;reservation_page={{ reservationPage+1 }}">Наступна</a>{% endif %}
+        </nav>
+    </section>
+    {% endif %}
     {% if variantId is not empty %}
         <section class="cos-panel">
             <h2>Останні 30 рухів SKU</h2>
