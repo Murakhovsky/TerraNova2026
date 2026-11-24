@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 236 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 237 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -305,6 +305,7 @@ generated: true
 | `sales` | `sales.property_match.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.team.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.team.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.workspace.summary.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.workspace.use` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `service` | `service.api.v1` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
 | `service` | `service.assignment` | ні | так | `manifest-only` | — | `app/Domains/Service/module.php` |
