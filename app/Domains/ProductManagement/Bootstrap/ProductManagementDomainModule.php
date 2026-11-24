@@ -12,6 +12,7 @@ use Kernel\Policy\PolicyDecision;
 use Domains\ProductManagement\Automation\Action\ProductImportApplyHandler;
 use Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler;
 use Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler;
+use Domains\ProductManagement\Automation\Action\ProductGovernedOperationHandler;
 use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
@@ -26,20 +27,21 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
         private ?ShopifyImportApplyHandler $shopifyHandler = null,
         private ?ProductStockCountApplyHandler $stockCountHandler = null,
         private ?ProductStockCountSessionApplyHandler $countSessionHandler = null,
+        private ?ProductGovernedOperationHandler $governedHandler = null,
     ) {}
 
     public function name(): string { return 'product_management'; }
     public function actionTypes():array {
-        return array_values(array_filter([
+        return array_merge(array_values(array_filter([
             $this->importHandler===null?null:ProductImportApplyHandler::TYPE,
             $this->shopifyHandler===null?null:ShopifyImportApplyHandler::TYPE,
             $this->stockCountHandler===null?null:ProductStockCountApplyHandler::TYPE,
             $this->countSessionHandler===null?null:ProductStockCountSessionApplyHandler::TYPE,
-        ]));
+        ])), $this->governedHandler===null?[]:ProductGovernedOperationHandler::types());
     }
 
     public function actionHandlers():array {
-        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler]));
+        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler,$this->governedHandler]));
     }
 
     public function policies(string $organizationId):array {
@@ -63,6 +65,10 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             $policyId=substr(hash('sha256',$organizationId.':product-stock-session-approved-v1'),0,32);
             $policies[]=new ActionPolicy($policyId,$organizationId,ProductStockCountSessionApplyHandler::TYPE,[],
                 PolicyDecision::ApprovalRequired,10,'Atomic physical count session requires independent approval.');
+        }
+        if($this->governedHandler!==null)foreach(ProductGovernedOperationHandler::types() as $type){
+            $policies[]=new ActionPolicy(substr(hash('sha256',$organizationId.':'.$type.':v1'),0,32),
+                $organizationId,$type,[],PolicyDecision::ApprovalRequired,10,'Independent approved Product business operation.');
         }
         return $policies;
     }
