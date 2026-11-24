@@ -78,7 +78,7 @@ $deny=static function(callable $fn)use($assert):void {
     try{$fn();}catch(DomainException){return;}
     $assert(false,'Untrusted Product capability invoked.');
 };
-$assert(count($catalog->executables())===75,'expected 75 Product Management contracts');
+$assert(count($catalog->executables())===79,'expected 79 Product Management contracts');
 $assert($gateway->describe($actor,'product_management.stock.receive')['status']==='direct_human',
     'stock command must be bound only to trusted human');
 $assert($gateway->describe($actor,'product_management.category.search')['status']==='read_only',
@@ -125,4 +125,4 @@ $deny(static fn()=> $gateway->invoke($actor,'product_management.category.search'
 $deny(static fn()=> $gateway->invoke($actor,'product_management.stock.receive',
     $payload,'human_api','pm-gate-9','trace-014'));
 $assert($read->calls===1&&$stock->calls===1,'inactive module must reject both reads and writes');
-echo "Product Management 75 canonical Gateway contracts, tenant policy and schema guards passed.\n";
+echo "Product Management 79 canonical Gateway contracts, tenant policy and schema guards passed.\n";

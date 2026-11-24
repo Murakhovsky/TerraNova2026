@@ -96,6 +96,44 @@ final readonly class ProductGovernedRunOutcomeProvider implements RunScopedGoalO
                     &&$m['quantity_delta']===self::decimal($delta,6)&&$m['movement_type']===$kind&&$m['source_ref']===$p['source_ref']&&$m['actor_ref']===$actor,'immutable movement');
                 $ids=['product_management:stock_movement:'.$m['movement_id']];
                 break;
+            case 'product.update':
+            case 'product.archive':
+                $id=$p['product_id'];
+                $fresh=$this->db->fetchAssociative('SELECT name,description,brand,status,revision FROM pm_products WHERE organization_id=? AND product_id=?',[$org,$id]);
+                $this->require($fresh!==false&&($r['product_id']??null)===$id&&($r['revision']??null)===$p['expected_revision']+1
+                    &&(int)$fresh['revision']===$r['revision']&&$fresh['status']===($r['status']??null),'product lifecycle revision and status');
+                if($op==='product.archive'){
+                    $this->require($fresh['status']==='archived','product archived');
+                    $this->require((int)$this->db->fetchOne('SELECT COUNT(*) FROM pm_stock_balances b JOIN pm_variants v ON v.organization_id=b.organization_id AND v.variant_id=b.variant_id WHERE b.organization_id=? AND v.product_id=? AND (b.on_hand<>0 OR b.reserved<>0)',[$org,$id])===0,'archived product stock');
+                }else{
+                    $this->require($fresh['status']!=='archived','product update status');
+                    foreach(['name','description','brand'] as $field)if(array_key_exists($field,$p))
+                        $this->require($fresh[$field]===($field==='name'?ProductRules::name($p[$field]):trim($p[$field])),'product updated '.$field);
+                }
+                $ids=['product_management:product:'.$id];
+                break;
+            case 'variant.update':
+            case 'variant.archive':
+                $id=$p['variant_id'];
+                $fresh=$this->db->fetchAssociative('SELECT sku,uom,barcode,options_json,status,revision FROM pm_variants WHERE organization_id=? AND variant_id=?',[$org,$id]);
+                $this->require($fresh!==false&&($r['variant_id']??null)===$id&&($r['revision']??null)===$p['expected_revision']+1
+                    &&(int)$fresh['revision']===$r['revision']&&$fresh['status']===($r['status']??null),'variant lifecycle revision and status');
+                if($op==='variant.archive'){
+                    $this->require($fresh['status']==='archived','variant archived');
+                    $this->require((int)$this->db->fetchOne('SELECT COUNT(*) FROM pm_stock_balances WHERE organization_id=? AND variant_id=? AND (on_hand<>0 OR reserved<>0)',[$org,$id])===0,'archived variant stock');
+                }else{
+                    $this->require($fresh['status']==='active','variant update status');
+                    if(array_key_exists('sku',$p))$this->require($fresh['sku']===ProductRules::sku($p['sku']),'variant SKU');
+                    if(array_key_exists('uom',$p))$this->require($fresh['uom']===$p['uom'],'variant UOM');
+                    if(array_key_exists('barcode',$p))$this->require($fresh['barcode']===($p['barcode']===''?null:$p['barcode']),'variant barcode');
+                    if(array_key_exists('options',$p)){
+                        $expected=array_column($p['options'],'value','name');
+                        $actual=json_decode((string)$fresh['options_json'],true,32,JSON_THROW_ON_ERROR);
+                        $this->require(is_array($actual)&&$actual==$expected,'variant options');
+                    }
+                }
+                $ids=['product_management:variant:'.$id];
+                break;
             case 'stock.transfer':
                 $this->require(($r['variant_id']??null)===$p['variant_id']&&($r['from_location_id']??null)===$p['from_location_id']
                     &&($r['to_location_id']??null)===$p['to_location_id']&&($r['source_ref']??null)===$p['source_ref']

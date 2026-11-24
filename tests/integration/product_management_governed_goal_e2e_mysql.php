@@ -186,6 +186,12 @@ try {
     $second=$products->createProduct($org,['name'=>'Release fixture','sku'=>'REL'.strtoupper($token),'type'=>'stock'],'seed-release-product',$owner,'governed-e2e');
     $products->recordMovement($org,$second['variant_id'],$loc,'2','receipt','QA-BASE','seed-release-stock',$owner,'governed-e2e');
     $reservation=$products->reserveStock($org,$second['variant_id'],$loc,'1','manual:SEED','seed-reservation',$owner,'governed-e2e')['reservation_id'];
+    // Separate lifecycle targets prevent a later archive from invalidating an earlier update's exact readback.
+    $lifecycle=[];
+    foreach(['product-update','product-archive','variant-update','variant-archive'] as $kind){
+        $seed=$products->createProduct($org,['name'=>'Lifecycle '.$kind,'sku'=>'LC'.strtoupper($kind).strtoupper($token),'type'=>'stock'],'seed-'.$kind,$owner,'governed-e2e');
+        $lifecycle[$kind]=$products->getProduct($org,$seed['product_id']);
+    }
     $steps=[];
     foreach([
         ['receive','stock.receive',['variant_id'=>$variant,'location_id'=>$loc,'quantity'=>'10','source_ref'=>'QA-RECEIPT']],
@@ -198,6 +204,10 @@ try {
         ['release','stock.release',['reservation_id'=>$reservation,'reason'=>'QA cancellation']],
         ['transfer','stock.transfer',['variant_id'=>$variant,'from_location_id'=>$loc,'to_location_id'=>$destination,'quantity'=>'2','source_ref'=>'QA-TRANSFER']],
         ['list-price','price.list.entry.set',['list_id'=>$listId,'variant_id'=>$variant,'amount'=>'99.25','expected_revision'=>0]],
+        ['product-update','product.update',['product_id'=>$lifecycle['product-update']['product_id'],'expected_revision'=>$lifecycle['product-update']['revision'],'name'=>'Approved rename','brand'=>'QA']],
+        ['product-archive','product.archive',['product_id'=>$lifecycle['product-archive']['product_id'],'expected_revision'=>$lifecycle['product-archive']['revision']]],
+        ['variant-update','variant.update',['variant_id'=>$lifecycle['variant-update']['variants'][0]['variant_id'],'expected_revision'=>$lifecycle['variant-update']['variants'][0]['revision'],'barcode'=>'QA123','options'=>[['name'=>'color','value'=>'blue']]]],
+        ['variant-archive','variant.archive',['variant_id'=>$lifecycle['variant-archive']['variants'][0]['variant_id'],'expected_revision'=>$lifecycle['variant-archive']['variants'][0]['revision']]],
     ] as [$id,$op,$input]){
         $steps[]=['id'=>$id,'capability_id'=>ProductGovernedOperationHandler::PREFIX.$op,'capability_version'=>'1.0.0',
             'input'=>['target_type'=>'product_governed_operation','target_id'=>substr(hash('sha256',$token.':'.$id),0,32),'parameters'=>$input]];
@@ -220,7 +230,7 @@ try {
     $deny(fn()=>$intents->submitProduct('ai',$ts,$nonce,$sign($altered),$altered),'Conflicting signed nonce');
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_plans WHERE organization_id=?',[$org])===0,'Machine intake created Plan before manager adoption');
     $inspected=$intents->inspect($actor,$machine['intent_id']);
-    $assert($inspected['kind']==='product'&&count($inspected['operations'])===10,'Human review exact signed proposal');
+    $assert($inspected['kind']==='product'&&count($inspected['operations'])===14,'Human review exact signed proposal');
     $deny(fn()=>$intents->adopt($actor,$machine['intent_id'],str_repeat('0',64)),'Wrong reviewed digest');
     $adopted=$intents->adopt($actor,$machine['intent_id'],$machine['digest']);
     $goalId=$adopted['goal_id'];$planId=$adopted['plan_id'];
@@ -228,7 +238,7 @@ try {
     $deny(fn()=>$intents->adopt($actor,$machine['intent_id'],$machine['digest']),'Repeated adoption');
     $proposalKey=ProductGovernedPlanProposalService::intentKey($machine['intent_id']);
     $proposal=$proposalService->propose($actor,$proposalKey,$description,$operations);
-    $assert($proposal['plan_id']===$planId&&$proposal['operation_count']===10&&$proposal['approval_required']&&!$proposal['execution_started'],'Adopted proposal replay');
+    $assert($proposal['plan_id']===$planId&&$proposal['operation_count']===14&&$proposal['approval_required']&&!$proposal['execution_started'],'Adopted proposal replay');
     $deny(fn()=>$proposalService->propose($actor,$proposalKey,$description,$changed),'Changed approved proposal');
     $bad=$operations;$bad[0]['parameters']['organization_id']='foreign';
     $deny(fn()=>$proposalService->propose($actor,bin2hex(random_bytes(16)),$description,$bad),'Injected tenant');
@@ -293,11 +303,16 @@ try {
     $assert($attributes['notes']==='QA validated','Bulk attribute effect');
     $assert($products->balance($org,$second['variant_id'],$loc)['reserved']==='0.000000','Reservation released');
     $eval=$goals->recordEvaluation($actor,'eval-'.$token,$runId);
-    $assert($eval['result']==='satisfied'&&($eval['criteria'][0]['observed']??null)===10,'Independent native business Goal outcome');
-    $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_actions WHERE organization_id=? AND type LIKE ?',[$org,'product_management.governed.%' ])===10,'Exactly ten canonical business Actions');
+    $assert($eval['result']==='satisfied'&&($eval['criteria'][0]['observed']??null)===14,'Independent native business Goal outcome');
+    $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_actions WHERE organization_id=? AND type LIKE ?',[$org,'product_management.governed.%' ])===14,'Exactly fourteen canonical business Actions');
     $assert((int)$db->fetchOne('SELECT COUNT(*) FROM cos_federation_runs WHERE organization_id=?',[$org])===0,'No legacy executor');
     $foreign=new TenantContext(UserId::fromString($owner),OrganizationId::fromString('foreign-'.$token),OrganizationRole::fromString('manager'),[Permission::fromString(TenantPermissions::MANAGE)]);
     $deny(fn()=>$outcome->observeRun($foreign,$runId,ProductGovernedRunOutcomeProvider::CRITERION,new DateTimeImmutable('-1 day'),new DateTimeImmutable('+1 day')),'Foreign tenant evidence');
+    $assert($products->getProduct($org,$lifecycle['product-update']['product_id'])['name']==='Approved rename','Product update readback');
+    $assert($products->getProduct($org,$lifecycle['product-archive']['product_id'])['status']==='archived','Product archive readback');
+    $db->executeStatement('UPDATE pm_variants SET barcode=? WHERE organization_id=? AND variant_id=?',['FORGED',$org,$lifecycle['variant-update']['variants'][0]['variant_id']]);
+    $deny(fn()=>$goals->recordEvaluation($actor,'lifecycle-tampered-'.$token,$runId),'Variant update tampering');
+    $db->executeStatement('UPDATE pm_variants SET barcode=? WHERE organization_id=? AND variant_id=?',['QA123',$org,$lifecycle['variant-update']['variants'][0]['variant_id']]);
     // Independently invalidate price history, then restore it and invalidate a transfer leg.
     $db->executeStatement('UPDATE pm_price_list_history SET new_amount=? WHERE organization_id=? AND list_id=? AND variant_id=?',['100.0000',$org,$listId,$variant]);
     $deny(fn()=>$goals->recordEvaluation($actor,'list-tampered-'.$token,$runId),'List price history tampering');
@@ -307,7 +322,7 @@ try {
     // Deliberately alter only fixture native ledger, preserving technical Action success.
     $db->executeStatement('UPDATE pm_stock_movements SET source_ref=? WHERE organization_id=? AND variant_id=?',['FORGED',$org,$variant]);
     $deny(fn()=>$goals->recordEvaluation($actor,'tampered-'.$token,$runId),'Technical success without intact native evidence');
-    echo "Product Management governed ten-step business Goal/Plan/Action/Outcome native MySQL E2E PASS.\n";
+    echo "Product Management governed fourteen-step business Goal/Plan/Action/Outcome native MySQL E2E PASS.\n";
 } finally {
     if($oldRollout===false)putenv('COS_FEDERATION_CANONICAL_ORGANIZATION');
     else putenv('COS_FEDERATION_CANONICAL_ORGANIZATION='.$oldRollout);

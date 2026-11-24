@@ -10,9 +10,13 @@ foreach($raw['contributions']['capability_contracts'] as $definition) {
     $cap=CapabilityContract::fromArray($definition);
     $contracts[$cap->id]=$cap;
 }
-if(count($contracts)!==75)throw new RuntimeException('Missing typed PM contracts.');
+if(count($contracts)!==79)throw new RuntimeException('Missing typed PM contracts.');
 $validator=new CapabilityJsonInputValidator();
 $good=[
+ 'product_management.governed.product.update'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'expected_revision'=>1,'name'=>'New']],
+ 'product_management.governed.product.archive'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['product_id'=>str_repeat('a',32),'expected_revision'=>1]],
+ 'product_management.governed.variant.update'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'expected_revision'=>1,'barcode'=>'QA']],
+ 'product_management.governed.variant.archive'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'expected_revision'=>1]],
  'product_management.governed.stock.transfer'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['variant_id'=>str_repeat('a',32),'from_location_id'=>str_repeat('b',32),'to_location_id'=>str_repeat('c',32),'quantity'=>'2','source_ref'=>'QA']],
  'product_management.governed.price.list.entry.set'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['list_id'=>str_repeat('a',32),'variant_id'=>str_repeat('b',32),'amount'=>'99.25','expected_revision'=>0]],
  'product_management.governed.product.create'=>['target_type'=>'product_governed_operation','target_id'=>str_repeat('a',32),'parameters'=>['name'=>'Product','sku'=>'SKU']],
