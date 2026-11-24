@@ -24,7 +24,7 @@ query COSCommerceOrder($id: ID!) {
     totalTaxSet { shopMoney { amount currencyCode } }
     totalShippingPriceSet { shopMoney { amount currencyCode } }
     lineItems(first: 100) {
-      nodes { id quantity sku title product { id } variant { id } originalUnitPriceSet { shopMoney { amount currencyCode } } }
+      nodes { id quantity sku product { id } variant { id } originalUnitPriceSet { shopMoney { amount currencyCode } } }
       pageInfo { hasNextPage endCursor }
     }
   }
@@ -61,7 +61,6 @@ GQL;
         $reason=null;$terms=null;
         if($raw['test'])$reason='test_order';
         elseif($raw['edited']||$cancelled!==null||$current!==$original||$beforeReturns!==$original||in_array($financial,['REFUNDED','PARTIALLY_REFUNDED','VOIDED'],true))$reason='historical_or_changed_terms';
-        elseif($raw['taxesIncluded'])$reason='tax_inclusive_terms_require_review';
         else {
             $items=$raw['lineItems']??null;
             if(!is_array($items)||($items['pageInfo']['hasNextPage']??null)!==false||!is_array($items['nodes']??null)||!array_is_list($items['nodes'])||count($items['nodes'])<1||count($items['nodes'])>100)
@@ -88,14 +87,16 @@ GQL;
                 if($reason===null){
                     ksort($lines,SORT_STRING);
                     $terms=['currency'=>$currency,'lines'=>array_values($lines),'total'=>$original,
-                        'discount'=>self::money($raw['totalDiscountsSet']??null,$currency),
+                        'discount'=>self::money($raw['totalDiscountsSet']??null,$currency),'tax_included'=>$raw['taxesIncluded'],
                         'tax'=>self::money($raw['totalTaxSet']??null,$currency),
                         'shipping'=>self::money($raw['totalShippingPriceSet']??null,$currency)];
                 }
             }
         }
         $this->connection($org,$channel,$connection); // Re-attest connection after provider read.
-        return ['channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$externalId,'created_at'=>$created,'updated_at'=>$updated,
+        // Hash the provider response independently of COS mapping revisions. Persist only the digest and redacted observation.
+        $providerHash=hash('sha256',json_encode($raw,JSON_THROW_ON_ERROR));
+        return ['provider_hash'=>$providerHash,'channel'=>'shopify','store_reference'=>$connection,'external_order_id'=>$externalId,'created_at'=>$created,'updated_at'=>$updated,
             'financial_status'=>$financial,'fulfillment_status'=>$fulfillment,'cancelled_at'=>$cancelled,'test'=>$raw['test'],
             'currency'=>$currency,'original_total'=>$original,'current_total'=>$current,'terms'=>$terms,'blocked_reason'=>$reason];
     }
