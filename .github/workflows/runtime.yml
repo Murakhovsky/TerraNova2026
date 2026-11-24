@@ -111,6 +111,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/sales_notification_transport_mysql.php
+      - name: Sales S5 workspace full-population and scope MySQL acceptance
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/sales_workspace_summary_mysql.php
       - name: Sales CRM Inbox two-connection lease and atomic processing acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

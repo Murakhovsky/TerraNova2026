@@ -105,6 +105,23 @@ return [
         ],
         'capability_contracts' => [
             [
+                'id' => 'sales.workspace.summary.read',
+                'version' => '1.0.0',
+                'owner_domain' => 'sales',
+                'kind' => 'query',
+                'input_schema' => 'resources/contracts/sales/workspace-summary-input.schema.json',
+                'output_schema' => 'resources/contracts/sales/workspace-summary-output.schema.json',
+                'execution_binding' => 'query:sales.workspace.summary.read',
+                'async' => false,
+                'side_effect_level' => 'none',
+                'permission' => 'cos.tenant.manage',
+                'approval_policy' => 'none',
+                'idempotency' => 'none',
+                'lifecycle' => 'experimental',
+                'tests' => ['tests/integration/sales_workspace_summary_mysql.php'],
+                'documentation' => 'docs/04-domains/sales/completion-roadmap.md',
+            ],
+            [
                 'id' => 'sales.offer.document.render',
                 'version' => '1.0.0',
                 'owner_domain' => 'sales',
@@ -874,6 +891,7 @@ return [
             ],
         ],
         'capabilities' => [
+            'sales.workspace.summary.read',
             'sales.offer.document.render',
             'sales.offer.delivery.status',
             'sales.offer.delivery.queue',

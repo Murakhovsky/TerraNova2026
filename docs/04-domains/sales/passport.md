@@ -85,6 +85,12 @@ domain_id: sales
         "sales.offer.delivery.status",
         "sales.offer.delivery.queue"
       ]
+    },
+    {
+      "id": "workspace",
+      "capability_ids": [
+        "sales.workspace.summary.read"
+      ]
     }
   ],
   "process_ids": [
@@ -121,6 +127,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 | `deals` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `teams` | Sales team configuration and membership | UNKNOWN |
 | `offers` | Immutable quoted terms, negotiations and accepted commercial evidence | UNKNOWN |
+| `workspace` | Scoped operational workspace and currency-separated pipeline summary | UNKNOWN |
 | `activities` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 
 Компоненти не можуть незалежно активуватися без окремо підтвердженого ModuleLifecycle contract.
