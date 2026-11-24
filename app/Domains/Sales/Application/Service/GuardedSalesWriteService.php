@@ -80,7 +80,7 @@ final readonly class GuardedSalesWriteService implements SalesWriteServiceInterf
         return $this->result(fn()=>$this->guard->run($this->org,$actorId,
             function()use($leadId,$input,$actorId,$correlationId):ClientCaseCommandResult{
                 $this->authority->leadContact($this->org,$actorId,$leadId);
-                return $this->native->convertLeadToOpportunity($leadId,[...$input,'assigned_user_id'=>$this->owner($input,$actorId)],$actorId,$correlationId);
+                return $this->native->convertLeadToOpportunity($leadId,[...$input,'owner_id'=>$this->owner($input,$actorId),'assigned_user_id'=>$this->owner($input,$actorId)],$actorId,$correlationId);
             },'lead',$leadId,$this->owner($input,$actorId)));
     }
 
