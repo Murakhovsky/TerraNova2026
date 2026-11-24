@@ -29,7 +29,9 @@ return [
             'app/migrations/20261119_000159_product_management_shopify_import_preview.sql',
             'app/migrations/20261119_000160_product_management_shopify_approved_apply.sql',
             'app/migrations/20261120_000161_product_management_shopify_identity_claim.sql',
+            'app/migrations/20261124_000162_product_management_reservations.sql',
             'app/migrations/20261124_000162_product_management_shopify_order_pointer.sql',
+            'app/migrations/20261125_009007_product_order_reservation_evidence.sql',
         ],
         // Expose only implemented bindings, never aspirational commands.
         'capability_contracts' => [
