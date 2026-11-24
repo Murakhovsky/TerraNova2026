@@ -1376,6 +1376,7 @@ services:
     alias: Domains\Sales\Infrastructure\Persistence\MySql\MysqlSalesWorkspaceScope
 
   Domains\Sales\Application\Service\SalesWorkspaceScopedReadService: ~
+  Domains\Sales\Application\Service\SalesEntityScopeService: ~
 
   Domains\Sales\Infrastructure\ReadModel\MySql\MysqlSalesCommercialAnalyticsReadModel:
     arguments:
