@@ -155,6 +155,10 @@ jobs:
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
         run: php tests/integration/marketing_m2_planning_mysql.php
+      - name: Marketing approved analyst Goal Workflow Action Outcome native MySQL E2E
+        env:
+          COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php
+        run: php tests/integration/marketing_analyst_approved_goal_e2e_mysql.php
       - name: Marketing Meta real MySQL atomic sync and rollback acceptance
         env:
           COS_TEST_AUTOLOAD: ${{ github.workspace }}/symfony/vendor/autoload.php

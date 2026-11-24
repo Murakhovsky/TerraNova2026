@@ -121,6 +121,10 @@ MarketingDomainModule реєструє один external Action `marketing.analy
 
 Campaign Workspace дозволяє **propose** one-step Goal/Plan за наявності accepted tenant config, explicit LLM budget і canonical rollout allowlist. POST захищений CSRF; запуск, Approval і progression залишаються у COS Goals/Platform Workflow. Не існує direct external execution через Capability Gateway. Run-scoped outcome provider re-attests canonical Action receipt та читає Marketing run by Workflow idempotency key, campaign, actor і context hash. Criterion `marketing.analyst.advice_recorded` вимірює тільки факт отриманої рекомендації, не її review або Meta launch. Runtime status не заявляє live verification. Реальна ізоляція та remote cost cap потребують незалежної перевірки, end-to-end staging ще не виконано.
 
+## M2c.6a: Canonical acceptance harness
+
+`tests/integration/marketing_analyst_approved_goal_e2e_mysql.php` використовує real MySQL Goal Store, Platform Workflow, Action repository/worker admission, Policy, Approval repository, Marketing owner records та Kernel LLM budget. Незалежне Plan Approval evidence створюється як SQL fixture (як у Product approved Goal E2E); Action approval проходить repository. Identity resolver, credential vault, Product read port і Hermes HTTP transport тестові. Тест перевіряє заборону unapproved Plan/Action, replay, один remote turn після списання ceiling, native receipt, Workflow checkpoint, незалежний Goal outcome, human review і tampered context. Не є live Hermes acceptance, не підтверджує provider isolation/cost, не запускає Meta. CI gate додано в runtime workflow; результат очікується.
+
 ## Надійність імпорту та операційна черга
 
 Meta read-only sync об'єднує імпорт Campaign/AdSet/Ad, Insights, `last_synced_at` і запис `SUCCEEDED` в **одну MySQL-транзакцію**. Невалідний рядок Insights або помилка посеред import викликає rollback без часткових campaign/metrics; окремий `tests/integration/marketing_meta_atomic_mysql.php` перевіряє це на справжній MySQL.
