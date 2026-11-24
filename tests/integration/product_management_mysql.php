@@ -26,7 +26,7 @@ $pdo=new PDO(
     [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC],
 );
 foreach (['pm_products','pm_variants','pm_stock_balances','pm_stock_movements','pm_base_prices',
-          'pm_import_batches','pm_external_connections','cos_events','cos_event_outbox'] as $table) {
+          'pm_price_lists','pm_price_list_entries','pm_price_list_history','pm_import_batches','pm_external_connections','cos_events','cos_event_outbox'] as $table) {
     $stmt=$pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?');
     $stmt->execute([$table]);
     if ((int)$stmt->fetchColumn()!==1) throw new RuntimeException('Migration not applied: '.$table);
@@ -191,6 +191,29 @@ $assert($history[0]['old_amount']==='19.9900' && $history[0]['new_amount']==='21
 $assert(count($prices->history($org,$variant,'EUR',1,1))===1,'Bounded history pagination');
 $assert(count($prices->history($org,$variant,'UAH'))===1,'Currency history isolation');
 $assert($prices->history($other,$variant,'EUR')===[],'Foreign tenant history is not disclosed');
+$retail=$prices->createList($org,'RETAIL','Retail','retail','EUR','pm-list-retail-'.$token,'ci-user','ci-pm');
+$wholesale=$prices->createList($org,'B2B','Wholesale','wholesale','EUR','pm-list-b2b-'.$token,'ci-user','ci-pm');
+$partner=$prices->createList($org,'PARTNER','Partner','partner','UAH','pm-list-partner-'.$token,'ci-user','ci-pm');
+$replayList=$prices->createList($org,'B2B','Wholesale','wholesale','EUR','pm-list-b2b-'.$token,'ci-user','ci-pm');
+$assert($replayList['list_id']===$wholesale['list_id'],'Price list creation replay');
+$assert(count($prices->searchLists($org))===3 && $prices->searchLists($other)===[],'Tenant price list isolation');
+$assert(count($prices->searchLists($org,'B2B'))===1,'Exact price list discovery');
+$lid=$wholesale['list_id'];$retailId=$retail['list_id'];
+$empty=$prices->getListPrice($org,$lid,$variant);
+$assert($empty['found']===true && $empty['price']===null && $empty['revision']===0,'No implicit base price fallback');
+$lp=$prices->setListPrice($org,$lid,$variant,'10.0000',0,'pm-list-entry-'.$token,'ci-user','ci-pm');
+$lp2=$prices->setListPrice($org,$lid,$variant,'11.1250',1,'pm-list-entry-up-'.$token,'ci-user','ci-pm');
+$replayEntry=$prices->setListPrice($org,$lid,$variant,'11.1250',1,'pm-list-entry-up-'.$token,'ci-user','ci-pm');
+ksort($lp2);ksort($replayEntry);
+$assert($lp2===$replayEntry && $lp2['revision']===2 && $lp2['price']==='11.1250','Price list entry replay and revision');
+$reject(static fn()=> $prices->setListPrice($org,$lid,$variant,'1',1,'pm-list-stale-'.$token,'ci-user','ci-pm'),'Stale list price');
+$reject(static fn()=> $prices->setListPrice($org,$lid,$variant,'12',1,'pm-list-entry-up-'.$token,'ci-user','ci-pm'),'Reused key changed amount');
+$reject(static fn()=> $prices->setListPrice($other,$lid,$variant,'1',0,'pm-list-cross-'.$token,'ci-other','ci-pm'),'Foreign tenant list price');
+$assert($prices->getListPrice($other,$lid,$variant)['found']===false,'Foreign price not exposed');
+$assert($prices->getListPrice($org,$retailId,$variant)['price']===null && $prices->get($org,$variant,'EUR')['price']==='21.1250','List and base price isolation');
+$historyCheck=$pdo->prepare('SELECT revision,old_amount,new_amount,actor_ref FROM pm_price_list_history WHERE organization_id=? AND list_id=? AND variant_id=? ORDER BY revision');
+$historyCheck->execute([$org,$lid,$variant]);$listHistory=$historyCheck->fetchAll();
+$assert(count($listHistory)===2 && $listHistory[0]['old_amount']===null && $listHistory[1]['old_amount']==='10.0000' && $listHistory[1]['new_amount']==='11.1250' && $listHistory[1]['actor_ref']==='ci-user','Immutable list price history');
 $csvPayload="sku,name,type,uom,track_inventory\nCSV".$token.",Sample,stock,pcs,1\n";
 $batch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
 $againBatch=$csv->preview($org,$csvPayload,'ci-user','pm-csv-stage-'.$token);
@@ -282,13 +305,15 @@ $assert((string)$products->balance($org,$variant,$loc)['on_hand']==='0.000000',
 $reject(static fn()=> $prices->set($org,$variant,'EUR','1','pm-eur-archived-'.$token,'ci-user','ci-pm',2),'Archived Variant/Product price mutation');
 $assert($prices->get($org,$variant,'EUR')['price']==='21.1250','Archived price remains readable');
 $assert(count($prices->history($org,$variant,'EUR'))===2,'Archived SKU history remains readable');
+$reject(static fn()=> $prices->setListPrice($org,$lid,$variant,'1',2,'pm-list-archived-'.$token,'ci-user','ci-pm'),'Archived Variant list price mutation');
+$assert($prices->getListPrice($org,$lid,$variant)['price']==='11.1250','Archived list price remains readable');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_events WHERE organization_id=? AND type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===22,'twenty-two confirmed native Domain events');
+$assert((int)$stmt->fetchColumn()===27,'twenty-seven confirmed native Domain events');
 $stmt=$pdo->prepare('SELECT actor_type FROM cos_events WHERE organization_id=? AND type=? LIMIT 1');
 $stmt->execute([$org,'product_management.product.created']);
 $assert($stmt->fetchColumn()==='USER','event actor uses canonical Kernel enum');
 $stmt=$pdo->prepare('SELECT COUNT(*) FROM cos_event_outbox o JOIN cos_events e ON e.id=o.event_id WHERE e.organization_id=? AND e.type LIKE ?');
 $stmt->execute([$org,'product_management.%']);
-$assert((int)$stmt->fetchColumn()===22,'same-transaction event/outbox evidence');
+$assert((int)$stmt->fetchColumn()===27,'same-transaction event/outbox evidence');
 echo "Product Management MySQL E1–E4 acceptance passed: product, ledger, price, CSV, integration inbox.\n";
