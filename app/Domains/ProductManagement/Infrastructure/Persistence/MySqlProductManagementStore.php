@@ -597,7 +597,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
     }
     private function applicableAttributes(string $org,string $product):array
     {
-        $rows=$this->rows('SELECT d.code,d.name,d.value_type,d.unit,d.choices_json,MAX(a.is_required) AS is_required,MAX(a.is_axis) AS is_axis FROM pm_product_categories pc JOIN pm_category_attributes a ON a.organization_id=pc.organization_id AND a.category_id=pc.category_id JOIN pm_attribute_definitions d ON d.organization_id=a.organization_id AND d.code=a.code WHERE pc.organization_id=? AND pc.product_id=? GROUP BY d.code,d.name,d.value_type,d.unit,d.choices_json ORDER BY d.code',[$org,$product]);
+        $rows=$this->rows('SELECT d.code,d.name,d.value_type,d.unit,d.choices_json,x.is_required,x.is_axis FROM (SELECT pc.organization_id,a.code,MAX(a.is_required) AS is_required,MAX(a.is_axis) AS is_axis FROM pm_product_categories pc JOIN pm_category_attributes a ON a.organization_id=pc.organization_id AND a.category_id=pc.category_id WHERE pc.organization_id=? AND pc.product_id=? GROUP BY pc.organization_id,a.code) x JOIN pm_attribute_definitions d ON d.organization_id=x.organization_id AND d.code=x.code ORDER BY d.code',[$org,$product]);
         $map=[];foreach($rows as $row)$map[$row['code']]=$this->decodeAttribute($row);
         return $map;
     }
@@ -713,7 +713,7 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
                 return json_decode((string)$existing['result_json'],true,flags:JSON_THROW_ON_ERROR);
             }
             $result=$callback();
-            $id=(string)($result['product_id']??$result['session_id']??$result['count_id']??$result['reservation_id']??$result['variant_id']??$result['category_id']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
+            $id=(string)($result['product_id']??$result['session_id']??$result['count_id']??$result['reservation_id']??$result['variant_id']??$result['category_id']??$result['code']??$result['location_id']??$result['movement_id']??bin2hex(random_bytes(16)));
             $event=new DomainEvent(bin2hex(random_bytes(16)),$org,$eventType,$aggregateType,$id,
                 ['operation'=>$operation,'result'=>$result],new EventMetadata(strlen($correlation)<=40?$correlation:substr(hash('sha256',$correlation),0,40),null,str_starts_with($actor,'shopify:')?'INTEGRATION':'USER',$actor),new \DateTimeImmutable('now',new \DateTimeZone('UTC')));
             $this->events->append($event); // writes cos_events + cos_event_outbox in this same transaction
