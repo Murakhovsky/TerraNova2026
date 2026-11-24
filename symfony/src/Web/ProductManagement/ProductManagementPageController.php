@@ -226,9 +226,10 @@ final readonly class ProductManagementPageController
         if ($current instanceof Response) return $current;
         if (($current['status']??null)==='archived') return new Response('Archived Product cannot be edited.',422);
         try {
-            $this->write($actor,$capability,$input,$request);
+            $receipt=$this->write($actor,$capability,$input,$request);
             $updated=$this->readProduct($actor,$id);
             if ($updated===null) throw new DomainException('Product mutation has no independently readable result.');
+            $this->verifyProductMutation($actor,$capability,$input,$current,$updated,$receipt);
             return $this->go('/product-management/products/'.$id.'?notice=updated');
         } catch (DomainException|\InvalidArgumentException) {
             return new Response('Product action blocked. Check fields, revision and current ownership.',422);
@@ -236,6 +237,71 @@ final readonly class ProductManagementPageController
             error_log('product_management.workspace.mutation_failed '.$e::class);
             return new Response('Product result unverified. Reload before retrying.',503);
         }
+    }
+
+    /**
+     * A native operation receipt alone is not UI success. Compare independent
+     * post-command Domain query evidence (same tenant and exact entity).
+     * @param array<string,mixed> $input
+     * @param array<string,mixed> $before
+     * @param array<string,mixed> $after
+     * @param array<string,mixed> $receipt
+     */
+    private function verifyProductMutation(
+        TenantContext $actor,string $capability,array $input,array $before,array $after,array $receipt
+    ):void {
+        $verified=match($capability) {
+            'product.update' => (int)($after['revision']??0)>=(int)$input['expected_revision']+1
+                &&($after['name']??null)===$input['name']
+                &&($after['brand']??null)===$input['brand']
+                &&($after['description']??null)===$input['description'],
+            'variant.create' => $this->containsId($after['variants']??[],'variant_id',(string)($receipt['variant_id']??'')),
+            'translation.upsert' => $this->containsPair($after['translations']??[],'locale','name',
+                (string)$input['locale'],(string)$input['name']),
+            'category.assign' => $this->containsId($after['categories']??[],'category_id',(string)$input['category_id']),
+            'price.base.set' => $this->verifyPrice($actor,$input),
+            default => false,
+        };
+        if (!$verified) throw new DomainException('Canonical Domain result did not match independently readable state.');
+    }
+
+    /** @param array<int,mixed> $rows */
+    private function containsId(array $rows,string $field,string $expected):bool
+    {
+        if (!preg_match('/^[a-f0-9]{32}$/D',$expected)) return false;
+        foreach ($rows as $row) {
+            if (is_array($row)&&($row[$field]??null)===$expected) return true;
+        }
+        return false;
+    }
+
+    /** @param array<int,mixed> $rows */
+    private function containsPair(array $rows,string $a,string $b,string $x,string $y):bool
+    {
+        foreach ($rows as $row) {
+            if (is_array($row)&&($row[$a]??null)===$x&&($row[$b]??null)===$y) return true;
+        }
+        return false;
+    }
+
+    /** @param array<string,mixed> $input */
+    private function verifyPrice(TenantContext $actor,array $input):bool
+    {
+        $price=$this->read($actor,'price.base.get',[
+            'variant_id'=>(string)$input['variant_id'],'currency'=>(string)$input['currency'],
+        ]);
+        $actual=$price['price']??null;
+        // Decimal comparison is exact to the Domain base-price scale (4),
+        // without floating point rounding of potentially large money values.
+        if (!is_string($actual)||!preg_match('/^([0-9]+)(?:\\.([0-9]{1,4}))?$/D',$actual)) return false;
+        $expected=(string)$input['amount'];
+        if (!preg_match('/^([0-9]+)(?:\\.([0-9]{1,4}))?$/D',$expected)) return false;
+        $normalize=static function(string $n):string {
+            [$whole,$fraction]=array_pad(explode('.',$n,2),2,'');
+            $trimmed=ltrim($whole,'0');
+            return ($trimmed===''?'0':$trimmed).'.'.str_pad($fraction,4,'0');
+        };
+        return $normalize($actual)===$normalize($expected)&&(int)($price['revision']??0)>=1;
     }
 
     private function checkedProduct(TenantContext $actor,string $id):array|Response
