@@ -11,6 +11,7 @@ use Kernel\Policy\ActionPolicy;
 use Kernel\Policy\PolicyDecision;
 use Domains\ProductManagement\Automation\Action\ProductImportApplyHandler;
 use Domains\ProductManagement\Automation\Action\ProductStockCountApplyHandler;
+use Domains\ProductManagement\Automation\Action\ProductStockCountSessionApplyHandler;
 use Domains\ProductManagement\Automation\Action\ShopifyImportApplyHandler;
 use Kernel\Module\Contract\EventOwningModuleInterface;
 use Kernel\Rule\Contract\RuleContextProviderInterface;
@@ -24,6 +25,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
         private ?ProductImportApplyHandler $importHandler = null,
         private ?ShopifyImportApplyHandler $shopifyHandler = null,
         private ?ProductStockCountApplyHandler $stockCountHandler = null,
+        private ?ProductStockCountSessionApplyHandler $countSessionHandler = null,
     ) {}
 
     public function name(): string { return 'product_management'; }
@@ -32,11 +34,12 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             $this->importHandler===null?null:ProductImportApplyHandler::TYPE,
             $this->shopifyHandler===null?null:ShopifyImportApplyHandler::TYPE,
             $this->stockCountHandler===null?null:ProductStockCountApplyHandler::TYPE,
+            $this->countSessionHandler===null?null:ProductStockCountSessionApplyHandler::TYPE,
         ]));
     }
 
     public function actionHandlers():array {
-        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler]));
+        return array_values(array_filter([$this->importHandler,$this->shopifyHandler,$this->stockCountHandler,$this->countSessionHandler]));
     }
 
     public function policies(string $organizationId):array {
@@ -55,6 +58,11 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             $policyId=substr(hash('sha256',$organizationId.':product-stock-count-approved-v1'),0,32);
             $policies[]=new ActionPolicy($policyId,$organizationId,ProductStockCountApplyHandler::TYPE,[],
                 PolicyDecision::ApprovalRequired,10,'Physical stock count requires independent approved canonical Action.');
+        }
+        if($this->countSessionHandler!==null) {
+            $policyId=substr(hash('sha256',$organizationId.':product-stock-session-approved-v1'),0,32);
+            $policies[]=new ActionPolicy($policyId,$organizationId,ProductStockCountSessionApplyHandler::TYPE,[],
+                PolicyDecision::ApprovalRequired,10,'Atomic physical count session requires independent approval.');
         }
         return $policies;
     }
@@ -85,6 +93,7 @@ final readonly class ProductManagementDomainModule implements DomainModuleInterf
             'product_management.stock.reserved',
             'product_management.stock.released',
             'product_management.stock.count_applied',
+            'product_management.stock.count_session_applied',
             'product_management.price.updated',
             'product_management.price_list.created',
             'product_management.price_list.updated',
