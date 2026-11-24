@@ -92,6 +92,16 @@ domain_id: product_management
       ]
     },
     {
+      "id": "analytics",
+      "capability_ids": [
+        "product_management.analytics.summary.get",
+        "product_management.analytics.stock.search",
+        "product_management.analytics.movement.search",
+        "product_management.analytics.quality.search",
+        "product_management.analytics.reconciliation.get"
+      ]
+    },
+    {
       "id": "integration",
       "capability_ids": [
         "product_management.import.preview",
@@ -128,6 +138,7 @@ Owns Product, Variant/SKU, Categories, Media references, Locations, Stock Ledger
 | Inventory | Locations та balances | MySQL |
 | Movements | Ledger та stock transfer | MySQL |
 | Pricing | BasePrice та history | MySQL |
+| Analytics | Native read-only assortment, stock and quality metrics | MySQL pending |
 | Integration | CSV, Shopify read-only, approved import, conflicts | Mock/MySQL; live canary pending |
 
 Це функціональна декомпозиція, не незалежні modules або executors.
