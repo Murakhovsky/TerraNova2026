@@ -80,4 +80,7 @@ $assert(str_contains($twig,'name="min_quantity"')&&str_contains($twig,'name="quo
     'Quantity tier editing and deterministic quote preview required.');
 $assert(str_contains($controller,'price.list.tier.history.search')&&str_contains($twig,'id="tier-history"')&&str_contains($pricing,'FROM pm_price_list_tier_history'),
     'Tier history requires canonical query and native immutable history.');
+foreach(['attribute.define','attribute.category.bind','attribute.product.filter','attribute.product.set','variant.matrix.preview','variant.matrix.create'] as $required)
+    $assert(str_contains($controller,$required),'Attribute Workspace missing: '.$required);
+$assert(str_contains($twig,'product_attributes.html.twig')&&str_contains($routes,'cos_product_management_product_attributes:'),'Attribute Workspace routes missing.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
