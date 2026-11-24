@@ -4,6 +4,8 @@ declare(strict_types=1);
 use App\Application\Capability\CanonicalCapabilityGateway;
 use App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommand;
 use App\Application\Sales\Command\CreateSalesLeadCommand;
+use App\Application\Sales\Command\ReceivePublicLeadCommand;
+use App\Application\Sales\Command\ReceivePublicLeadCommandHandler;
 use App\Application\Sales\Command\CreateSalesLeadCommandHandler;
 use App\Infrastructure\Capability\SalesLeadCreateAdapter;
 use App\Application\Sales\Command\ConvertSalesLeadToOpportunityCommandHandler;
@@ -61,6 +63,7 @@ try {
     $bus = new SymfonyCommandBus(new MessageBus([new HandleMessageMiddleware(new HandlersLocator([
         ConvertSalesLeadToOpportunityCommand::class => [$handler],
         CreateSalesLeadCommand::class => [new CreateSalesLeadCommandHandler($factory)],
+        ReceivePublicLeadCommand::class => [new ReceivePublicLeadCommandHandler($factory)],
     ]))]));
     $module = new ModuleCatalog([ModuleDefinition::fromArray(require $root.'/app/Domains/Sales/module.php')]);
     $catalog = new CanonicalCapabilityCatalog($module);
@@ -118,7 +121,29 @@ try {
     $legacyKey='legacy-'.$token;
     $db->prepare('INSERT INTO sales_operation_receipts(organization_id,operation_type,idempotency_key,mutation_id) VALUES(?,?,?,?)')->execute([$org,'api.lead.create',$legacyKey,(string)$newId]);
     $reject(fn()=>$gateway->invoke($manager,'sales.lead.create',$intake,'human_api',$legacyKey,'trace-legacy'));
-    echo "Sales canonical conversion and authenticated intake Gateway, Messenger, native state and outbox PASS.\n";
+    $public=['submission_id'=>bin2hex(random_bytes(16)),'full_name'=>'Public '.$token,'email'=>'public-'.$token.'@example.test','request_intent'=>'viewing'];
+    $submit=static fn(array $data)=>$bus->dispatch(new ReceivePublicLeadCommand(OrganizationId::fromString($org),$data,'/contacts'));
+    $accepted=$submit($public);
+    $check($accepted->ok && (int)$accepted->data['lead_id']>0,'Public intake failed.');
+    $publicId=(int)$accepted->data['lead_id'];
+    $again=$submit(array_reverse($public,true));
+    $check($again->ok && (int)$again->data['lead_id']===$publicId,'Public replay created a different lead.');
+    $check(!$submit([...$public,'full_name'=>'Different'])->ok,'Conflicting public submission accepted.');
+    $check(!$submit(array_diff_key($public,['submission_id'=>true]))->ok,'Missing public submission identity accepted.');
+    $row=$read->lead($org,$publicId);
+    $check($row['request_intent']==='viewing' && (int)$row['client_case_id']>0,'Public intent or case link missing.');
+    $q=$db->prepare('SELECT COUNT(*) FROM tn_leads WHERE organization_id=? AND email=?');$q->execute([$org,$public['email']]);
+    $check((int)$q->fetchColumn()===1,'Public replay duplicated the native lead.');
+    $q=$db->prepare('SELECT COUNT(*) FROM tn_client_cases WHERE organization_id=? AND person_id=?');$q->execute([$org,(int)$row['person_id']]);
+    $check((int)$q->fetchColumn()===1,'Public replay duplicated the case.');
+    $q=$db->prepare('SELECT COUNT(*) FROM cos_events e INNER JOIN cos_event_outbox o ON o.event_id=e.id WHERE e.organization_id=? AND e.aggregate_id=? AND e.type=?');
+    $q->execute([$org,(string)$publicId,'sales.lead.created']);
+    $check((int)$q->fetchColumn()===1,'Public replay duplicated event/outbox.');
+    $q->execute([$org,(string)$row['client_case_id'],'sales.client_case.created']);
+    $check((int)$q->fetchColumn()===1,'Public replay duplicated case event/outbox.');
+    $other=$submit([...$public,'submission_id'=>bin2hex(random_bytes(16))]);
+    $check($other->ok && (int)$other->data['lead_id']!==$publicId,'New independent enquiry was suppressed.');
+    echo "Sales canonical conversion, authenticated and public intake native state and outbox PASS.\n";
 } finally {
     if ($db->inTransaction()) $db->rollBack();
 }
