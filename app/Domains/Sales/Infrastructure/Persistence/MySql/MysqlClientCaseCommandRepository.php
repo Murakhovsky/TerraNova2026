@@ -86,12 +86,12 @@ final readonly class MysqlClientCaseCommandRepository implements ClientCaseComma
     public function findPerson(string $organizationId, ?string $email, ?string $phone): ?array
     {
         if ($email !== null && $email !== '') {
-            $person = $this->one('SELECT id FROM tn_people WHERE email = :email AND organization_id = :organization_id LIMIT 1',
+            $person = $this->one('SELECT id FROM tn_people WHERE email = :email AND organization_id = :organization_id ORDER BY id LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':''),
                 ['email' => $email, 'organization_id' => $organizationId]);
             if ($person) return $person;
         }
         if ($phone !== null && $phone !== '') {
-            return $this->one('SELECT id FROM tn_people WHERE phone = :phone AND organization_id = :organization_id LIMIT 1',
+            return $this->one('SELECT id FROM tn_people WHERE phone = :phone AND organization_id = :organization_id ORDER BY id LIMIT 1'.($this->connection->inTransaction()?' FOR UPDATE':''),
                 ['phone' => $phone, 'organization_id' => $organizationId]);
         }
         return null;
