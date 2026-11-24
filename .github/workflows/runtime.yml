@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_dev:
-        description: 'Explicitly authorize GHCR publish and AWS dev deployment'
+        description: 'Manually authorize AWS dev deployment (pushes to main deploy automatically after required CI)'
         type: boolean
         required: true
         default: false
@@ -1135,7 +1135,7 @@ jobs:
   publish-runtime-images:
     name: Publish immutable COS images to GHCR
     needs: [runtime, federation-mysql, capital-markets-unit]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_dev == true))
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -1187,7 +1187,7 @@ jobs:
   deploy-dev:
     name: Deploy main to AWS dev
     needs: [runtime, federation-mysql, capital-markets-unit, publish-runtime-images]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.deploy_dev == true
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_dev == true))
     runs-on: ubuntu-24.04
     environment: AWS TN2026
     permissions:
