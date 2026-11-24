@@ -96,7 +96,7 @@ UpdateRequest locks the tenant lead before reading/validating changes; absent ne
 
 Typed `sales.lead.qualify` now exposes the existing locked qualification path for human operators. Input requires expected and target state, no arbitrary notes/owner/tenant; native lead readback required. Natural desired-state replay, not a generic receipt for unrelated operations. Disqualified/spam/terminal leads cannot be silently converted or attached; attachment failure after validation throws to roll back. The broad `sales.lead.state.manage` debt remains until all lifecycle transitions are governed and tested; qualification does not claim that wider operation.
 
-## S1/P6 and S2 — lifecycle boundaries
+## S1/P6 та S2 — межі життєвих циклів
 
 LeadLifecyclePolicy explicitly enumerates allowed transitions; terminal states cannot reopen. Lead WON/linked LOST are classifications of an independently recorded Deal outcome, not shortcuts to close it. Lead status updates no longer write deal owner, status or followup via compatibility SQL; forward early qualification may mirror configured stage via ChangeDealStage with expected-stage compare-and-set. Stage read is locked in its own transaction, expected stage and requested outcome fenced, non-user approval-required transitions denied (no false approval evidence), terminal LOST requires explicit active reason, WON requires positive value/valid currency/owner, terminal event snapshots use decimal string. Unknown transition predicates fail closed. Combined quick update rolls back on assignment/write failure. Currency changes must go through dedicated commercial operation rather than generic case edit.
 
