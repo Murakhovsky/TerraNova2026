@@ -162,11 +162,15 @@ try {
   await submit(reserve,'/product-management/stock/reservation');
   await page.waitForURL(u=>u.searchParams.get('notice')==='posted');
   const release=page.locator('form[action="/product-management/stock/reservation"]').filter({has:page.locator('[name=action][value=release]')});
+  const releasedId=await release.locator('[name=reservation_id]').getAttribute('value');
+  check(/^[a-f0-9]{32}$/.test(releasedId||''),'Reservation identity missing');
   await release.locator('[name=reason]').fill('QA release');
   await release.locator('[name=confirm_release]').check();
   await submit(release,'/product-management/stock/reservation');
   await page.waitForURL(u=>u.searchParams.get('notice')==='posted');
-  check(await page.getByText('QA release',{exact:true}).count()===1,'Release not visible');
+  const released=page.locator('[data-reservation-id="'+releasedId+'"]');
+  await released.getByText('QA release',{exact:true}).waitFor({state:'visible'});
+  check((await released.locator('td').nth(2).innerText()).trim()==='released','Reservation not released');
 
   await go('/product-management/price-lists');
   const list=page.locator('form[action="/product-management/price-lists"]');

@@ -122,7 +122,7 @@
         <div class="table-responsive"><table class="table">
             <thead><tr><th>Підстава</th><th>Кількість</th><th>Статус</th><th>Дата</th><th>Дії / причина</th></tr></thead>
             <tbody>{% for r in reservations %}
-                <tr><td>{{ r.source_ref }}</td><td>{{ r.quantity }}</td><td>{{ r.status }}</td><td>{{ r.created_at }}</td><td>
+                <tr data-reservation-id="{{ r.reservation_id }}"><td>{{ r.source_ref }}</td><td>{{ r.quantity }}</td><td>{{ r.status }}</td><td>{{ r.created_at }}</td><td>
                 {% if r.status == 'active' %}
                 <form method="post" action="/product-management/stock/reservation" class="cos-toolbar">
                     <input type="hidden" name="csrf_token" value="{{ csrfToken }}">
