@@ -348,6 +348,11 @@ Manifest capabilities не задекларовані.
 
 ### Задекларовані capabilities
 
+- `product_management.analytics.movement.search`;
+- `product_management.analytics.quality.search`;
+- `product_management.analytics.reconciliation.get`;
+- `product_management.analytics.stock.search`;
+- `product_management.analytics.summary.get`;
 - `product_management.attribute.category.bind`;
 - `product_management.attribute.category.get`;
 - `product_management.attribute.define`;
