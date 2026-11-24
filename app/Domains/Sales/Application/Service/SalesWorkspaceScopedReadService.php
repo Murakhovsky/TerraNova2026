@@ -48,7 +48,7 @@ final readonly class SalesWorkspaceScopedReadService
         $owner=$this->owner($org,$actor,$input);$id=$input['deal_id']??null;$limit=$input['limit']??50;
         if(!is_int($id)||$id<1||!is_int($limit)||$limit<1||$limit>100)throw new DomainException('Invalid timeline identity.');
         $row=$this->read->deal($org,$id);
-        if($row===null||(int)$row['id']!==$id||$row['organization_id']!==$org||($owner!==null&&(int)$row['owner_id']!==$owner))return ['found'=>false,'items'=>[]];
+        if($row===null||(int)$row['id']!==$id||$row['organization_id']!==$org||($owner!==null&&(int)($row['assigned_user_id']??0)!==$owner))return ['found'=>false,'items'=>[]];
         $items=[];foreach($this->read->timeline($org,$id,$limit) as $item){
             $type=$item['item_type'];
             // Unknown foreign event/action names are not Sales evidence.
@@ -57,7 +57,7 @@ final readonly class SalesWorkspaceScopedReadService
         }
         // Re-attest current owner after projection, rather than returning another owner's history.
         $now=$this->read->deal($org,$id);
-        if($now===null||$now['organization_id']!==$org||($owner!==null&&(int)$now['owner_id']!==$owner))return ['found'=>false,'items'=>[]];
+        if($now===null||$now['organization_id']!==$org||($owner!==null&&(int)($now['assigned_user_id']??0)!==$owner))return ['found'=>false,'items'=>[]];
         return ['found'=>true,'items'=>$items];
     }
     private function owner(string $org,int $actor,array $input):?int
