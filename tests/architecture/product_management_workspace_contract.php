@@ -74,4 +74,8 @@ foreach (['price.list.history.search','list_lifecycle_readback_uncertain','confi
     $assert(str_contains($controller,$required),'Missing price list lifecycle workspace contract: '.$required);
 $assert(str_contains($routes,'cos_product_management_price_list_change:')&&str_contains($twig,'listHistory.items'),
     'Price list lifecycle routes and history form required.');
+foreach (['price.resolve','price.list.entry.remove','price.list.tier.search','price.list.tier.set','confirm_remove'] as $required)
+    $assert(str_contains($controller,$required),'Advanced pricing Workspace missing: '.$required);
+$assert(str_contains($twig,'name="min_quantity"')&&str_contains($twig,'name="quote_qty"'),
+    'Quantity tier editing and deterministic quote preview required.');
 echo "Product Management E7/P0 catalog workspace architecture passed.\n";
