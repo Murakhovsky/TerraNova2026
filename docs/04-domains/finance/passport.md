@@ -35,6 +35,10 @@ domain_id: finance
       ]
     },
     {
+      "id": "paid_settlement",
+      "capability_ids": ["finance.ad_spend.settlement.commit"]
+    },
+    {
       "id": "marketing_spend_readback",
       "capability_ids": []
     }

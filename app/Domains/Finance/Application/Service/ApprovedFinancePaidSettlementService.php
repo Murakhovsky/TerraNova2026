@@ -13,7 +13,7 @@ use Kernel\Module\ActiveModuleResolver;
 use Kernel\Tenant\Model\TenantContext;
 use Kernel\Tenant\Model\TenantPermissions;
 
-/** Internal worker service. No public binding until the native evidence port is implemented. */
+/** Canonical financial worker service, with source reads inside the Finance transaction. */
 final readonly class ApprovedFinancePaidSettlementService
 {
     public const TYPE='finance.ad_spend.settlement.commit';
@@ -40,11 +40,14 @@ final readonly class ApprovedFinancePaidSettlementService
         $id=BudgetControlPolicy::id((string)$action->targetId,'finr-');
         $rev=BudgetControlPolicy::revision($p['expected_revision']);
         $this->admission->assertAuthorized($action);
+        $facts=function()use($actor,$id,$p,$action):array{
         $facts=$this->evidence->read($actor,$id,$p['document_ref'],$p['snapshot_ref']);
         if(($facts['document']['document_ref']??null)!==$p['document_ref']
             ||($facts['observation']['source_snapshot_ref']??null)!==$p['snapshot_ref'])
             throw new DomainException('Evidence references changed after approval.');
         $this->admission->assertAuthorized($action);
+        return $facts;
+        };
         return $this->store->settle($org,$id,$action->sourceId,$action->id,$action->correlationId,$rev,$p['candidate_hash'],$facts);
     }
 }

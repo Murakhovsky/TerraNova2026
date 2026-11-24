@@ -2866,7 +2866,30 @@ services:
     alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinanceBudgetRepository
   Domains\Finance\Application\Service\ApprovedFinancePaidExposureService: ~
   Domains\Finance\Automation\Action\FinanceBudgetActionHandler: ~
-  Domains\Finance\Bootstrap\FinanceDomainModule: ~
+  Domains\Finance\Domain\FinancePaidSettlementPolicy: ~
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinancePaidSettlementStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementRepository
+  Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinancePaidSettlementReviewStore:
+    alias: Domains\Finance\Infrastructure\Persistence\MySql\MysqlFinancePaidSettlementReviewStore
+  App\Infrastructure\Finance\NativePaidSettlementSourceAdapter:
+    arguments:
+      $connection: '@cos.database.pdo'
+  Domains\Finance\Application\Contract\FinancePaidSettlementSourcePort:
+    alias: App\Infrastructure\Finance\NativePaidSettlementSourceAdapter
+  Domains\Finance\Application\Service\FinancePaidSettlementReviewService: ~
+  Domains\Finance\Application\Contract\FinancePaidSettlementEvidencePort:
+    alias: Domains\Finance\Application\Service\FinancePaidSettlementReviewService
+  Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService: ~
+  Domains\Finance\Automation\Action\FinancePaidSettlementHandler: ~
+  Domains\Finance\Bootstrap\FinanceDomainModule:
+    arguments:
+      $settlement: '@Domains\Finance\Automation\Action\FinancePaidSettlementHandler'
   financeDomainModule:
     alias: Domains\Finance\Bootstrap\FinanceDomainModule
 

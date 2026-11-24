@@ -27,7 +27,7 @@ final readonly class MysqlFinancePaidSettlementRepository implements FinancePaid
     }
 
     public function settle(string $org,string $reservationId,string $actor,string $action,string $trace,
-        int $expectedRevision,string $candidateHash,array $evidence):array
+        int $expectedRevision,string $candidateHash,array|callable $evidence):array
     {
         BudgetControlPolicy::id($reservationId,'finr-');BudgetControlPolicy::revision($expectedRevision);
         if($org===''||strlen($org)>190||!preg_match('/^[1-9][0-9]{0,18}$/D',$actor)
@@ -35,6 +35,7 @@ final readonly class MysqlFinancePaidSettlementRepository implements FinancePaid
             ||!preg_match('/^[A-Za-z0-9_.:-]{8,190}$/D',$trace)||$this->connection->inTransaction()){
             throw new DomainException('Invalid private Finance settlement transaction.');
         }
+        $this->connection->exec('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
         $this->connection->beginTransaction();
         try{
             // Shared lock order with reserve, release and exposure claim.
@@ -52,6 +53,7 @@ final readonly class MysqlFinancePaidSettlementRepository implements FinancePaid
                     ||$reservation['state']!=='SETTLED')throw new DomainException('Settlement already committed with different authority.');
                 $this->connection->commit();return [...$existing,'fresh'=>false];
             }
+            if(is_callable($evidence))$evidence=$evidence();
             foreach(['plan','terminal','observation','document'] as $field)
                 if(!is_array($evidence[$field]??null))throw new DomainException('Missing native settlement evidence.');
             $candidate=$this->policy->prepare($org,$claim,$evidence['plan'],$evidence['terminal'],$evidence['observation'],$evidence['document']);

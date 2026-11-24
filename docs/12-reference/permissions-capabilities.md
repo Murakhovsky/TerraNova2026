@@ -80,6 +80,7 @@ generated: true
 | `documents` | `documents.signature.sign` | ні | так | `manifest-only` | — | `app/Domains/Documents/module.php` |
 | `federation` | `federation.plan.approval` | ні | так | `manifest-only` | — | `app/Domains/Federation/module.php` |
 | `finance` | `finance.ad_spend.reconciliation.status` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
+| `finance` | `finance.ad_spend.settlement.commit` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.budget.envelope.activate` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.budget.envelope.draft.create` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |
 | `finance` | `finance.budget.envelope.freeze` | ні | так | `manifest-only` | — | `app/Domains/Finance/module.php` |

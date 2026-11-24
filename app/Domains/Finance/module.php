@@ -7,7 +7,7 @@ return [
     'version' => '0.2.2',
     'schema_version' => '0.2.2',
     'kernel_constraint' => '>=0.11.0 <0.12.0',
-    'description' => 'Finance F1 budget envelopes, approved reservations and unverified provider spend evidence; no settlement, payments or Meta writes.',
+    'description' => 'Finance F1 budget envelopes, approved reservations, reviewed paid budget settlement and source evidence; no payments or Meta writes.',
     'icon' => 'wallet-cards',
     'dependencies' => [],
     'enabled_by_default' => false,
@@ -26,9 +26,21 @@ return [
                 'purpose' => 'Read verified tenant-bound Marketing source snapshots into Finance-owned unreconciled observations, without Marketing writes or financial settlement claims.',
             ],
         ],
-        'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql','app/migrations/20261124_000166_finance_paid_exposure_claims.sql','app/migrations/20261124_000190_finance_paid_settlements.sql'],
-        'capabilities' => ['finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status'],
+        'migration_files' => ['app/migrations/20261119_000153_finance_budget_f1.sql','app/migrations/20261119_000155_finance_spend_observations.sql','app/migrations/20261124_000166_finance_paid_exposure_claims.sql','app/migrations/20261124_000190_finance_paid_settlements.sql','app/migrations/20261124_000191_finance_paid_document_reviews.sql'],
+        'capabilities' => ['finance.budget.envelope.draft.create','finance.budget.envelope.get','finance.budget.reservation.list','finance.budget.envelope.activate','finance.budget.reservation.reserve','finance.budget.reservation.release','finance.budget.envelope.freeze','finance.ad_spend.reconciliation.status','finance.ad_spend.settlement.commit'],
         'capability_contracts' => [
+            [
+                'id'=>'finance.ad_spend.settlement.commit',
+                'version'=>'1.0.0','owner_domain'=>'finance','kind'=>'command',
+                'input_schema'=>'resources/contracts/finance/ad-spend-settlement-commit-input.schema.json',
+                'output_schema'=>'resources/contracts/finance/ad-spend-settlement-commit-output.schema.json',
+                'execution_binding'=>'action:finance.ad_spend.settlement.commit','async'=>true,'side_effect_level'=>'financial',
+                'permission'=>'cos.tenant.manage','approval_policy'=>'required','idempotency'=>'required',
+                'timeout_policy'=>['seconds'=>90],'retry_policy'=>['max_attempts'=>1],
+                'failure_contract'=>'Immutable document review and native source revision required; reconcile uncertain receipts, no blind retry.',
+                'lifecycle'=>'experimental','tests'=>['tests/integration/finance_budget_f1_concurrency_mysql.php','tests/unit/finance_spend_observation.php'],
+                'documentation'=>'docs/04-domains/finance/overview.md',
+            ],
 
             [
                 'id'=>'finance.ad_spend.reconciliation.status',

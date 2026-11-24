@@ -3,6 +3,8 @@ declare(strict_types=1);
 namespace Domains\Finance\Bootstrap;
 
 use Domains\Finance\Automation\Action\FinanceBudgetActionHandler;
+use Domains\Finance\Automation\Action\FinancePaidSettlementHandler;
+use Domains\Finance\Application\Service\ApprovedFinancePaidSettlementService;
 use Kernel\Module\Contract\ActionOwningModuleInterface;
 use Kernel\Module\Contract\BootstrapPolicyProvidingModuleInterface;
 use Kernel\Module\Contract\PolicyProvidingModuleInterface;
@@ -14,7 +16,7 @@ use Kernel\Policy\PolicyDecision;
 final readonly class FinanceDomainModule implements DomainModuleInterface,
     ActionOwningModuleInterface,PolicyProvidingModuleInterface,BootstrapPolicyProvidingModuleInterface
 {
-    public function __construct(private FinanceBudgetActionHandler $handler){}
+    public function __construct(private FinanceBudgetActionHandler $handler,private ?FinancePaidSettlementHandler $settlement=null){}
     public function name():string{return 'finance';}
     public function actionTypes():array
     {
@@ -23,9 +25,10 @@ final readonly class FinanceDomainModule implements DomainModuleInterface,
             FinanceBudgetActionHandler::RESERVE,
             FinanceBudgetActionHandler::RELEASE,
             FinanceBudgetActionHandler::FREEZE,
+            ...($this->settlement===null?[]:[ApprovedFinancePaidSettlementService::TYPE]),
         ];
     }
-    public function actionHandlers():array{return [$this->handler];}
+    public function actionHandlers():array{return $this->settlement===null?[$this->handler]:[$this->handler,$this->settlement];}
     public function policies(string $organizationId):array
     {
         $policies=[];

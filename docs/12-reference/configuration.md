@@ -64,7 +64,7 @@ generated: true
 
 - manifest: `app/Domains/Finance/module.php`;
 - configuration provisioners: —;
-- capabilities: `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`.
+- capabilities: `finance.budget.envelope.draft.create`, `finance.budget.envelope.get`, `finance.budget.reservation.list`, `finance.budget.envelope.activate`, `finance.budget.reservation.reserve`, `finance.budget.reservation.release`, `finance.budget.envelope.freeze`, `finance.ad_spend.reconciliation.status`, `finance.ad_spend.settlement.commit`.
 
 ## `growth`
 

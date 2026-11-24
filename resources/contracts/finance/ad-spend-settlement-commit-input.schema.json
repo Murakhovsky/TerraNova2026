@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target_type",
+    "target_id",
+    "parameters"
+  ],
+  "properties": {
+    "target_type": {
+      "const": "finance_reservation"
+    },
+    "target_id": {
+      "type": "string",
+      "pattern": "^finr-[a-f0-9]{24}$"
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_hash",
+        "document_ref",
+        "expected_revision",
+        "snapshot_ref"
+      ],
+      "properties": {
+        "candidate_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "document_ref": {
+          "type": "string",
+          "pattern": "^DOC-[A-Za-z0-9_-]{8,76}$"
+        },
+        "expected_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000000000
+        },
+        "snapshot_ref": {
+          "type": "string",
+          "pattern": "^mis-[a-f0-9]{24}$"
+        }
+      }
+    }
+  }
+}
