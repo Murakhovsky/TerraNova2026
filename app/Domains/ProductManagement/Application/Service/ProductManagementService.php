@@ -299,6 +299,47 @@ final readonly class ProductManagementService
         return $this->store->applyStockCount($org,$action->targetId,$p['variant_id'],$p['location_id'],$counted,$p['expected_revision'],$p['source_ref'],$key,$actor,$trace);
     }
 
+    /** Canonical order and exact quantities; a session contains one location and 1..50 distinct SKU identities. */
+    public static function countSessionRows(array $rows):array
+    {
+        if(!array_is_list($rows)||count($rows)<1||count($rows)>50)throw new DomainException('Count session requires 1..50 rows.');
+        $out=[];
+        foreach($rows as $row){
+            if(!is_array($row)||count($row)!==3||!is_string($row['variant_id']??null)||!preg_match('/^[a-f0-9]{32}$/D',$row['variant_id'])
+                ||!is_string($row['counted']??null)||!is_int($row['expected_revision']??null)||$row['expected_revision']<0)
+                throw new DomainException('Invalid count session row.');
+            $id=$row['variant_id'];
+            if(isset($out[$id]))throw new DomainException('Duplicate session Variant.');
+            $out[$id]=['variant_id'=>$id,'counted'=>self::countQuantity($row['counted']),'expected_revision'=>$row['expected_revision']];
+        }
+        ksort($out,SORT_STRING);
+        return array_values($out);
+    }
+
+    public function applyApprovedCountSession(\Kernel\Action\Action $action):array
+    {
+        $p=$action->parameters;
+        if($action->type!=='product_management.stock.count.session.apply'||$action->status!==\Kernel\Action\ActionStatus::Running
+            ||$action->sourceType!=='USER'||!ctype_digit($action->sourceId)||(int)$action->sourceId<1
+            ||$action->executionMode!=='APPROVAL_REQUIRED'||$action->riskLevel!=='HIGH'
+            ||$action->targetType!=='product_stock_count_session'||!is_string($action->targetId)||!preg_match('/^[a-f0-9]{32}$/D',$action->targetId)
+            ||!is_string($action->idempotencyKey)||!preg_match('/^wf:[a-f0-9]{64}$/D',$action->idempotencyKey)
+            ||count($p)!==3||!is_string($p['location_id']??null)||!preg_match('/^[a-f0-9]{32}$/D',$p['location_id'])
+            ||!is_string($p['source_ref']??null)||!preg_match('#^count:[A-Za-z0-9._:/-]{1,150}$#D',$p['source_ref'])
+            ||!is_array($p['rows']??null))
+            throw new DomainException('Running approved stock count session Action required.');
+        $org=$action->organizationId;$key=$action->idempotencyKey;$actor=$action->sourceId;$trace=$action->correlationId!==''?$action->correlationId:$action->id;
+        $this->scope($org,$key,$actor,$trace);
+        return $this->store->applyCountSession($org,$action->targetId,$p['location_id'],self::countSessionRows($p['rows']),$p['source_ref'],$key,$actor,$trace);
+    }
+
+    public function countSession(string $org,string $sessionId):?array
+    {
+        $this->tenant($org);
+        if(!preg_match('/^[a-f0-9]{32}$/D',$sessionId))throw new DomainException('Invalid count session identity.');
+        return $this->store->getCountSession($org,$sessionId);
+    }
+
     public static function countQuantity(string $quantity):string
     {
         if(!preg_match('/^(0|[1-9][0-9]{0,13})(\.[0-9]{1,6})?$/D',$quantity))
