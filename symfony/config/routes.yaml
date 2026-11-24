@@ -36,6 +36,22 @@ cos_product_management_stock_post:
   controller: App\Web\ProductManagement\ProductInventoryController::post
   methods: [POST]
 
+cos_product_management_price_lists:
+  path: /product-management/price-lists
+  controller: App\Web\ProductManagement\ProductManagementPageController::priceLists
+  methods: [GET]
+
+cos_product_management_price_list_create:
+  path: /product-management/price-lists
+  controller: App\Web\ProductManagement\ProductManagementPageController::createPriceList
+  methods: [POST]
+
+cos_product_management_price_list_entry_set:
+  path: /product-management/products/{id}/list-price
+  controller: App\Web\ProductManagement\ProductManagementPageController::setListPrice
+  methods: [POST]
+  requirements: { id: '[a-f0-9]{32}' }
+
 cos_product_management_index:
   path: /product-management
   controller: App\Web\ProductManagement\ProductManagementPageController::index
