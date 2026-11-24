@@ -16,21 +16,19 @@ Capability debt означає, що бізнес-крок реальний, а�
 
 ## Підсумок
 
-- **Відкритих debt items:** 12
-- **High severity:** 9
+- **Відкритих debt items:** 11
+- **High severity:** 8
 - **Medium severity:** 3
-- **Зачеплених Domains:** 2
+- **Зачеплених Domains:** 1
 
 | Domain | Відкрито | High | Medium | Low |
 | --- | ---: | ---: | ---: | ---: |
-| `diagnostic` | 1 | 1 | 0 | 0 |
 | `sales` | 11 | 8 | 3 | 0 |
 
 ## Пріоритетний backlog
 
 | Severity | Domain | Процес / крок | Runtime evidence | Target capability | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| `high` | `diagnostic` | [Diagnostic Session → Recommendation](../02-workflows/diagnostic-session-to-recommendation.md) · `methodology` · Draft and publish methodology version | `source` | `diagnostic.methodology.manage` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `assign-owner` · Assign owner | `runtime` | `sales.deal.owner.assign` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `canonical-state` · Create or update canonical Sales state | `source` | `sales.lead.state.manage` | `declare-domain-capability` |
 | `high` | `sales` | [Sales Lead → Managed Case](../02-workflows/sales-lead-to-managed-case.md) · `followup` · Schedule next action | `runtime` | `sales.followup.schedule` | `declare-domain-capability` |

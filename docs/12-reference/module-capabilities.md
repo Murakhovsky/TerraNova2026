@@ -116,14 +116,11 @@ Manifest capabilities не задекларовані.
 
 - `diagnostic.evidence.capture`;
 - `diagnostic.methodology.compile`;
+- `diagnostic.methodology.publish`;
 - `diagnostic.recommendation.accept`;
 - `diagnostic.report.summary.get`;
-- `diagnostic.semantic.v1`;
 - `diagnostic.session.complete`;
 - `diagnostic.session.start`;
-- `diagnostic.state.rebuild`;
-- `diagnostic.traceability`;
-- `diagnostic.v1`;
 
 ## Documents (`documents`)
 
