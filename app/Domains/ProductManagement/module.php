@@ -17,15 +17,7 @@ return [
         'api_route_contributor_services' => [],
         'configuration_provisioner_services' => [],
         'extension_services' => [],
-        'cross_domain_contracts' => [
-            [
-                'contract' => 'Domains\\ProductManagement\\Application\\Contract\\CommerceOrderSourcePort',
-                'role' => 'provides',
-                'counterpart' => 'sales',
-                'kind' => 'synchronous_port',
-                'purpose' => 'Expose scoped commerce source reads and verified delivery acknowledgement without credentials or customer PII.',
-            ],
-        ],
+        'cross_domain_contracts' => [],
         'migration_files' => [
             'app/migrations/20261118_000152_product_management_catalog.sql',
             'app/migrations/20261118_000153_product_management_inventory.sql',
