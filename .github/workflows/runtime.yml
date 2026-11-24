@@ -20,7 +20,7 @@ on:
       - 'bin/ci/**'
       - '.github/workflows/runtime.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feat/sales-domain-completion]
   workflow_dispatch:
     inputs:
       deploy_dev:
