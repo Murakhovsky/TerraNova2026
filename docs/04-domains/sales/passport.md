@@ -24,6 +24,13 @@ domain_id: sales
       ]
     },
     {
+      "id": "crm_inbox",
+      "capability_ids": [
+        "sales.crm.inbox.status",
+        "sales.crm.inbox.recover"
+      ]
+    },
+    {
       "id": "deals",
       "capability_ids": [
         "sales.deal.won.observation",
@@ -66,6 +73,7 @@ COS-DOMAIN-PASSPORT-DATA -->
 
 | component_id | Призначення | Рівень доказів |
 | --- | --- | --- |
+| `crm_inbox` | Durable CRM intake, processing observation and operator recovery | UNKNOWN |
 | `leads` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `deals` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |
 | `activities` | Функціональний розділ `sales`; деталізація capabilities потребує owner review | UNKNOWN |

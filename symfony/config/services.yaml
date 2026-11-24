@@ -3165,6 +3165,9 @@ services:
   Domains\Sales\Application\Contract\CrmInboxRepositoryInterface:
     alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
 
+  Domains\Sales\Application\Contract\CrmInboxRecoveryRepositoryInterface:
+    alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
+
   Domains\Sales\Application\Contract\CrmInboxPendingRepositoryInterface:
     alias: Infrastructure\Integration\Crm\MysqlCrmInboxRepository
 

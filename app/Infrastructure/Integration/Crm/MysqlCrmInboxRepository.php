@@ -5,13 +5,14 @@ namespace Infrastructure\Integration\Crm;
 
 use DomainException;
 use Domains\Sales\Application\Contract\CrmInboxPendingRepositoryInterface;
+use Domains\Sales\Application\Contract\CrmInboxRecoveryRepositoryInterface;
 use Domains\Sales\Application\Contract\CrmInboxRepositoryInterface;
 use Domains\Sales\Application\DTO\CrmInboxItem;
 use PDO;
 use RuntimeException;
 use Throwable;
 
-final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterface, CrmInboxPendingRepositoryInterface
+final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterface, CrmInboxPendingRepositoryInterface, CrmInboxRecoveryRepositoryInterface
 {
     public function __construct(private PDO $connection)
     {
@@ -114,6 +115,29 @@ final readonly class MysqlCrmInboxRepository implements CrmInboxRepositoryInterf
     {
         $statement=$this->connection->prepare("UPDATE cos_crm_inbox SET status=:status,available_at=DATE_ADD(NOW(6), INTERVAL 30 SECOND),locked_at=NULL,locked_by=NULL,last_error=:error WHERE id=:id AND organization_id=:organization_id AND status='PROCESSING' AND attempts=:attempts AND locked_by=:token");
         $statement->execute($this->claimParameters($item)+['status'=>$item->attempts>=10?'DEAD':'FAILED','error'=>'CRM processing failed: '.$error::class]);
+    }
+
+    public function status(string $organizationId,string $id,bool $lock=false): ?array
+    {
+        if ($lock && !$this->connection->inTransaction()) throw new DomainException('CRM observation lock requires a transaction.');
+        $statement=$this->connection->prepare('SELECT id,organization_id,provider,event_type,status,attempts,signature_verified,available_at,processed_at,updated_at FROM cos_crm_inbox WHERE organization_id=:org AND id=:id LIMIT 1'.($lock?' FOR UPDATE':''));
+        $statement->execute(['org'=>$organizationId,'id'=>$id]);
+        $row=$statement->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) return null;
+        $row['attempts']=(int)$row['attempts'];
+        $row['signature_verified']=(int)$row['signature_verified']===1;
+        $row['revision']=hash('sha256',json_encode([$row['organization_id'],$row['id'],$row['status'],$row['attempts'],$row['updated_at']],JSON_THROW_ON_ERROR));
+        unset($row['updated_at']);
+        return $row;
+    }
+
+    public function requeueDead(string $organizationId,string $id,string $revision): bool
+    {
+        $row=$this->status($organizationId,$id,true);
+        if ($row===null || $row['status']!=='DEAD' || !$row['signature_verified'] || !hash_equals($row['revision'],$revision)) return false;
+        $statement=$this->connection->prepare("UPDATE cos_crm_inbox SET status='RECEIVED',attempts=0,available_at=NOW(6),locked_at=NULL,locked_by=NULL,processed_at=NULL,last_error=NULL WHERE organization_id=:org AND id=:id AND status='DEAD' AND signature_verified=1");
+        $statement->execute(['org'=>$organizationId,'id'=>$id]);
+        return $statement->rowCount()===1;
     }
 
     private function claimParameters(CrmInboxItem $item): array
