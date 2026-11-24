@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "backfill",
+        "webhooks"
+      ]
+    },
+    "connection_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{32}$"
+    },
+    "discovery_state": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "complete",
+        "review"
+      ]
+    },
+    "cutoff_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pages": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checkpoint": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "historical_access": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "all_orders_scope",
+        "provider_limited",
+        null
+      ]
+    },
+    "review_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "properties": {
+        "discovery_pending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "discovery_done": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "discovery_review": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "orders_pending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "orders_done": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "orders_review": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "discovery_pending",
+        "discovery_done",
+        "discovery_review",
+        "orders_pending",
+        "orders_done",
+        "orders_review"
+      ],
+      "additionalProperties": false
+    },
+    "tasks": {
+      "type": "array",
+      "maxItems": 25,
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_key": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "job_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "page",
+              "order"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "done",
+              "review"
+            ]
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "blocked_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "queue_status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "dead",
+              "retry_scheduled",
+              "unknown"
+            ]
+          },
+          "attempts": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        },
+        "required": [
+          "task_key",
+          "job_id",
+          "kind",
+          "state",
+          "outcome",
+          "blocked_reason",
+          "order_id",
+          "queue_status",
+          "attempts"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "next_cursor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "run_id",
+    "mode",
+    "connection_id",
+    "discovery_state",
+    "cutoff_at",
+    "pages",
+    "checkpoint",
+    "historical_access",
+    "review_reason",
+    "counts",
+    "tasks",
+    "next_cursor"
+  ],
+  "additionalProperties": false
+}
