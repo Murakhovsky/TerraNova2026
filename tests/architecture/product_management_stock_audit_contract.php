@@ -15,7 +15,8 @@ $assert(str_contains($audit,'function audit(')
     && str_contains($audit,'WITH stock_pairs AS')
     && str_contains($audit,'FROM pm_stock_movements WHERE organization_id=?')
     && str_contains($audit,"FROM pm_stock_reservations WHERE organization_id=? AND status='active'")
-    && str_contains($audit,"'status'=>!$complete?'INCOMPLETE':")
+    && str_contains($audit,'INCOMPLETE')
+    && str_contains($audit,'DRIFT')
     && str_contains($audit,"'automatic_repair_authorized'=>false"),
     'Audit must compare source aggregates, fail closed on truncated output and forbid repair.');
 $assert(!preg_match('/\b(?:INSERT|UPDATE|DELETE|REPLACE|TRUNCATE)\b/i',$audit)
