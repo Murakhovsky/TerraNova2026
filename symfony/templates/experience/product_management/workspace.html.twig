@@ -10,6 +10,7 @@
         </div>
     </header>
     <nav class="cos-toolbar" aria-label="Product Management">
+        <a class="btn btn-outline-secondary" href="/product-management/dashboard">Dashboard</a>
         <a class="btn btn-outline-secondary" href="/product-management">Каталог</a>
         <a class="btn btn-outline-secondary" href="/product-management/categories">Категорії</a>
         <a class="btn btn-outline-secondary" href="/product-management/price-lists">Прайс-листи</a>
@@ -19,7 +20,9 @@
         <p role="status" class="alert alert-success">Операцію збережено. Дані повторно прочитані з Domain.</p>
     {% endif %}
 
-    {% if section == 'catalog' %}
+    {% if section == 'dashboard' %}
+        {% include 'experience/product_management/dashboard.html.twig' %}
+    {% elseif section == 'catalog' %}
         <section class="cos-panel">
             <h2>Пошук товарів</h2>
             <form method="get" action="/product-management" class="cos-toolbar">
