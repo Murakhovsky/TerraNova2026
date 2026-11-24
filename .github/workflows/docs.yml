@@ -21,7 +21,7 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/workflows/runtime.yml'
   pull_request:
-    branches: [main]
+    branches: [main, feat/sales-domain-completion]
     paths:
       - 'docs/**'
       - 'resources/processes/**'
