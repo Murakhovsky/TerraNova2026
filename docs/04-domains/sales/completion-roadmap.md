@@ -61,3 +61,7 @@ Each slice contains actual Sales implementation, typed input/output where public
 ## S1/P2 — канонічна конвертація ліда
 
 Контракт `sales.client_case.create` приймає лише `lead_id`; owner за замовчуванням визначає наявний SalesWriteService з авторизованого actor. Окрема зміна owner/priority не є частиною конвертації. Ідентифікатор нормалізовано відповідно до правил Kernel (underscore замість hyphen). Gateway вимагає ключ запиту, але бізнесова ідемпотентність визначається парою tenant/lead, а не значенням ключа. Інший lead є іншим бізнес-наміром. Повторний виклик не змінює owner. Результат містить тільки lead_id, case_id та replayed після незалежного читання ліда і кейса. Помилка читання після commit не є підтвердженням rollback: повторно прочитати нативний стан. Пряме виконання обмежено авторизованим менеджером; AI Workflow binding ще не реалізовано. Закриття gap у гілці є кандидатом до приймання після CI та runtime evidence; D3–D5 не змінюються.
+
+## S1/P3 — ідемпотентність приймання лідів
+
+Authenticated createLead keeps the existing `api.lead.create` receipt namespace. Completed receipts store SHA-256 of the normalized persisted payload and actor plus the resulting lead ID; existing numeric receipts fail closed (manual reconciliation, never create a replacement). A conflicting key never changes the lead. New receipt, lead and event/outbox share the transaction. Provider/public ingestion and CRM Inbox retain their separate trust boundaries. The repository defaults request_intent to general_contact, matching the NOT NULL schema. No migration required.

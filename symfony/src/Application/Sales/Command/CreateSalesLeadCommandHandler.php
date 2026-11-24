@@ -39,7 +39,8 @@ final readonly class CreateSalesLeadCommandHandler implements CommandHandlerInte
             'activity_title_required' => 'Activity title is required.',
             'invalid_activity_type' => 'Activity type is invalid.',
             'idempotency_key_required' => 'X-Idempotency-Key is required.',
-            'idempotency_conflict' => 'The idempotent operation is already in progress.',
+            'idempotency_conflict' => 'The key is bound to a different or unverifiable lead creation request.',
+            'invalid_property' => 'Property is not available in this organization.',
             default => str_replace('_', ' ', $code),
         };
     }
