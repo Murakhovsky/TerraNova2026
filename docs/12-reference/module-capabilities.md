@@ -443,12 +443,15 @@ Manifest capabilities не задекларовані.
 - обробники jobs: `salesCrmInboxJobHandler`;
 - внески API routes: —;
 - постачальники конфігурації: `salesModuleConfigurationProvisioner`;
-- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`.
+- міграції: `app/migrations/20260910_000030_sales_v071_configuration_ownership.sql`, `app/migrations/20260913_000044_sales_v081_historical_stage_history.sql`, `app/migrations/20260913_000045_sales_v082_funnel_metrics.sql`, `app/migrations/20260913_000046_sales_v083_operational_performance.sql`, `app/migrations/20260913_000047_sales_v086_hardening.sql`, `app/migrations/20260928_000118_sales_v100_release.sql`, `app/migrations/20261003_000121_sales_lead_qualification_transition.sql`, `app/migrations/20261003_000122_sales_followup_activity_type.sql`, `app/migrations/20261003_000123_sales_lead_qualification_governance_repair.sql`, `app/migrations/20261124_009001_sales_offer_lifecycle.sql`, `app/migrations/20261124_009002_sales_activity_cancellation.sql`, `app/migrations/20261124_009003_sales_offer_delivery.sql`.
 
 ### Задекларовані capabilities
 
+- `sales.activity.cancel`;
 - `sales.activity.complete`;
+- `sales.activity.overdue.read`;
 - `sales.activity.record`;
+- `sales.activity.reminder.queue`;
 - `sales.activity.reschedule`;
 - `sales.admin.agents.manage`;
 - `sales.admin.audit.view`;
@@ -463,6 +466,7 @@ Manifest capabilities не задекларовані.
 - `sales.crm.inbox.process`;
 - `sales.crm.inbox.recover`;
 - `sales.crm.inbox.status`;
+- `sales.crm.reconciliation.read`;
 - `sales.deal.commercial.set`;
 - `sales.deal.outcome.record`;
 - `sales.deal.owner.assign`;
@@ -471,12 +475,19 @@ Manifest capabilities не задекларовані.
 - `sales.director.view`;
 - `sales.followup.schedule`;
 - `sales.inbound.request.read`;
+- `sales.lead.activity.cancel`;
+- `sales.lead.activity.complete`;
+- `sales.lead.activity.reschedule`;
 - `sales.lead.create`;
+- `sales.lead.followup.schedule`;
 - `sales.lead.intake`;
 - `sales.lead.qualify`;
 - `sales.lead.state.manage`;
 - `sales.negotiation.record`;
 - `sales.offer.create`;
+- `sales.offer.delivery.queue`;
+- `sales.offer.delivery.status`;
+- `sales.offer.document.render`;
 - `sales.offer.list`;
 - `sales.offer.read`;
 - `sales.offer.revise`;

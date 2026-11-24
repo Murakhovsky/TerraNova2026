@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 225 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 236 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -253,8 +253,11 @@ generated: true
 | `real_estate` | `real_estate.property_match` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
 | `real_estate` | `real_estate.reservation` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
 | `real_estate` | `real_estate.viewing` | ні | так | `manifest-only` | — | `app/Domains/RealEstate/module.php` |
+| `sales` | `sales.activity.cancel` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.activity.complete` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.activity.overdue.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.activity.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.activity.reminder.queue` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.activity.reschedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.admin.agents.manage` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.admin.audit.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
@@ -271,6 +274,7 @@ generated: true
 | `sales` | `sales.crm.inbox.process` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.crm.inbox.recover` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.crm.inbox.status` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.crm.reconciliation.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.deal.assign` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.deal.commercial.set` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.deal.outcome.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
@@ -280,12 +284,19 @@ generated: true
 | `sales` | `sales.director.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.followup.schedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.inbound.request.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.lead.activity.cancel` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.lead.activity.complete` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.lead.activity.reschedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.lead.followup.schedule` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.intake` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.qualify` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.lead.state.manage` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.negotiation.record` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.offer.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.delivery.queue` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.delivery.status` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.offer.document.render` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.offer.list` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.offer.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.offer.revise` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |

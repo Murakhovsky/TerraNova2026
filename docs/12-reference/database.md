@@ -344,6 +344,10 @@ generated: true
 | `sales` | `app/migrations/20261124_009001_sales_offer_lifecycle.sql` | `sales_offer_negotiations` |
 | `sales` | `app/migrations/20261124_009001_sales_offer_lifecycle.sql` | `sales_offer_revisions` |
 | `sales` | `app/migrations/20261124_009001_sales_offer_lifecycle.sql` | `sales_offers` |
+| `sales` | `app/migrations/20261124_009002_sales_activity_cancellation.sql` | `tn_client_case_activities` |
+| `sales` | `app/migrations/20261124_009002_sales_activity_cancellation.sql` | `tn_lead_activities` |
+| `sales` | `app/migrations/20261124_009003_sales_offer_delivery.sql` | `sales_offer_deliveries` |
+| `sales` | `app/migrations/20261124_009003_sales_offer_delivery.sql` | `sales_offer_revisions` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_assignments` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_cases` |
 | `service` | `app/migrations/20260919_000064_service_wave11_cutover.sql` | `tn_service_escalations` |
