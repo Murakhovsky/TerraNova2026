@@ -440,6 +440,18 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
             },'product_management.stock.released','StockReservation');
     }
 
+    public function searchReservations(string $org,string $variantId,string $locationId,?string $reservationId,int $limit,int $offset):array
+    {
+        $sql='SELECT reservation_id,variant_id,location_id,source_ref,quantity,status,release_reason,revision,created_at,released_at
+            FROM pm_stock_reservations WHERE organization_id=:org AND variant_id=:variant AND location_id=:loc';
+        if($reservationId!==null)$sql.=' AND reservation_id=:id';
+        $stmt=$this->connection->prepare($sql.' ORDER BY created_at DESC,reservation_id DESC LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':variant',$variantId);$stmt->bindValue(':loc',$locationId);
+        if($reservationId!==null)$stmt->bindValue(':id',$reservationId);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function stockBalance(string $organizationId, string $variantId, string $locationId): array
     {
         $variant=$this->one('SELECT track_inventory FROM pm_variants WHERE organization_id=? AND variant_id=?',[$organizationId,$variantId]);
