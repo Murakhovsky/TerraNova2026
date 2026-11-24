@@ -28,7 +28,7 @@ generated: true
 | `finance` | Finance | `0.2.1` | `0.2.1` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Finance/module.php` |
 | `growth` | Growth | `0.50.0` | `0.50.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Growth/module.php` |
 | `hr` | HR | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/HR/module.php` |
-| `marketing` | Marketing | `0.1.1` | `0.1.1` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
+| `marketing` | Marketing | `0.1.2` | `0.1.2` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Marketing/module.php` |
 | `procurement` | Procurement | `0.1.0` | `0.1.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/Procurement/module.php` |
 | `product_management` | Product Management | `0.1.0` | `0.8.0` | `>=0.11.0 <0.12.0` | ні | — | `app/Domains/ProductManagement/module.php` |
 | `property` | Property | `1.0.0` | `1.0.0` | `>=0.11.0 <0.12.0` | так | — | `app/Domains/Property/module.php` |
@@ -315,6 +315,7 @@ Manifest capabilities не задекларовані.
 - `marketing.paid.meta.campaign.activate`;
 - `marketing.paid.meta.campaign.create_paused`;
 - `marketing.paid.meta.campaign.pause`;
+- `marketing.paid.spend.evidence.get`;
 - `marketing.paid.sync.history`;
 - `marketing.paid.sync.request`;
 

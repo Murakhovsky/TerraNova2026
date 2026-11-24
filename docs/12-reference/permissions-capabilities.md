@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 194 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 195 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -187,6 +187,7 @@ generated: true
 | `marketing` | `marketing.paid.meta.campaign.activate` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.meta.campaign.create_paused` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.meta.campaign.pause` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
+| `marketing` | `marketing.paid.spend.evidence.get` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.sync.history` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `marketing` | `marketing.paid.sync.request` | ні | так | `manifest-only` | — | `app/Domains/Marketing/module.php` |
 | `product_management` | `product_management.category.assign` | ні | так | `manifest-only` | — | `app/Domains/ProductManagement/module.php` |
