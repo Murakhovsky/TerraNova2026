@@ -6,7 +6,8 @@ namespace Domains\ProductManagement\Application\Contract;
 interface CommerceOrderSourcePort
 {
     public function order(string $org,string $channel,string $connection,string $externalId):array;
-    public function page(string $org,string $channel,string $connection,?string $cursor):array;
+    public function page(string $org,string $channel,string $connection,?string $cursor,?string $cutoff=null):array;
+    public function pendingPage(string $org,string $channel,string $connection,?string $cursor):array;
     public function pending(string $org,string $channel,string $connection):array;
     public function assertDelivery(string $org,string $channel,string $connection,string $delivery,string $externalId):void;
     public function acknowledge(string $org,string $channel,string $connection,string $delivery,string $externalId):void;
