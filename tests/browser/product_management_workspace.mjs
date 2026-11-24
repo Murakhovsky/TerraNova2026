@@ -14,11 +14,13 @@ const dir = process.env.PM_E2E_OUTPUT_DIR || 'tmp/product-management-browser';
 await mkdir(dir,{recursive:true});
 const url = path => new URL(path,base).href;
 const check = (ok,msg) => {if(!ok)throw new Error(msg);};
-const context = await browser.newContext({viewport:{width:1440,height:1000}});
+const context = await browser.newContext({viewport:{width:1440,height:1000},serviceWorkers:'block'});
 const page = await context.newPage();
 const go = async path => {
   const r = await page.goto(url(path),{waitUntil:'domcontentloaded'});
-  check(r && r.status()<400 && !new URL(page.url()).pathname.startsWith('/auth/login'), 'Navigation failed: '+path+' '+r?.status());
+  const actual=new URL(page.url()).pathname;
+  check(r && r.status()<400 && actual===new URL(url(path)).pathname, 'Navigation failed: '+path+' status='+r?.status()+' final='+actual+' title='+await page.title());
+  check(await page.locator('.cos-page__stack').count()>0,'Workspace shell missing: '+actual+' title='+await page.title()+' body='+(await page.locator('body').innerText()).slice(0,600));
 };
 const submit = async (form, path) => {
   const [r] = await Promise.all([
@@ -37,6 +39,7 @@ try {
   for (const suffix of ['A','B']) {
     await go('/product-management');
     const form=page.locator('form[action="/product-management/products"]');
+    check(await form.count()===1,'Expected catalog create form missing: '+page.url()+' title='+await page.title()+' body='+(await page.locator('body').innerText()).slice(0,800));
     await form.locator('[name=name]').fill('PM Browser '+tag+suffix);
     await form.locator('[name=sku]').fill('PM'+tag+suffix);
     await submit(form,'/product-management/products');
