@@ -58,6 +58,10 @@ final readonly class ProductManagementQueryHandler implements QueryHandlerInterf
                 'items'=>$this->prices->listHistory($org,(string)$in['list_id'],(string)$in['variant_id'],(int)($in['limit']??30),(int)($in['offset']??0)),
                 'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
             ],
+            'price.list.tier.history.search' => [
+                'items'=>$this->prices->tierHistory($org,(string)$in['list_id'],(string)$in['variant_id'],(string)$in['min_quantity'],(int)($in['limit']??30),(int)($in['offset']??0)),
+                'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
+            ],
             'price.list.tier.search' => [
                 'items'=>$this->prices->tiers($org,(string)$in['list_id'],(string)$in['variant_id'],(int)($in['limit']??30),(int)($in['offset']??0),isset($in['min_quantity'])?(string)$in['min_quantity']:null),
                 'limit'=>(int)($in['limit']??30),'offset'=>(int)($in['offset']??0),
