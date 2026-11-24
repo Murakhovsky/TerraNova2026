@@ -39,12 +39,13 @@ final class ProductManagementShopifyOperatorCommand extends Command
 
     protected function configure(): void
     {
-        $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull|inspect|stage|audit')
+        $this->addArgument('action',InputArgument::REQUIRED,'provision|status|pull|candidates|inspect|stage|audit')
             ->addOption('organization',null,InputOption::VALUE_REQUIRED,'Explicit tenant organization')
             ->addOption('shop',null,InputOption::VALUE_REQUIRED,'Existing <shop>.myshopify.com name')
             ->addOption('secret-ref',null,InputOption::VALUE_REQUIRED,'Vault ref env://COS_SHOPIFY_* or pilot legacy','shopify_env_primary')
             ->addOption('connection',null,InputOption::VALUE_REQUIRED,'Existing 32-character connection ID')
             ->addOption('pages',null,InputOption::VALUE_REQUIRED,'Maximum 1..20 product pages','1')
+            ->addOption('limit',null,InputOption::VALUE_REQUIRED,'Maximum 1..50 snapshot candidates','20')
             ->addOption('product-gid',null,InputOption::VALUE_REQUIRED,'Observed Shopify Product GID')
             ->addOption('preview-id',null,InputOption::VALUE_REQUIRED,'Existing Shopify import preview ID for read-only recovery audit')
             ->addOption('expected-hash',null,InputOption::VALUE_REQUIRED,'Pinned snapshot SHA-256')
@@ -64,7 +65,7 @@ final class ProductManagementShopifyOperatorCommand extends Command
             return $this->result($output,['status'=>'INVALID_TENANT'],Command::INVALID);
         }
         try {
-            if (!in_array($action,['provision','status','pull','inspect','stage','audit'],true)) {
+            if (!in_array($action,['provision','status','pull','candidates','inspect','stage','audit'],true)) {
                 return $this->result($output,['status'=>'INVALID_ACTION'],Command::INVALID);
             }
             if (!$this->modules->isEnabled($org,'product_management')) {
@@ -92,6 +93,16 @@ final class ProductManagementShopifyOperatorCommand extends Command
             }
             if ($action==='status') {
                 return $this->result($output,$this->observations->status($org,$connection),Command::SUCCESS);
+            }
+            if ($action==='candidates') {
+                $limit=filter_var($input->getOption('limit'),FILTER_VALIDATE_INT);
+                if ($limit===false||$limit<1||$limit>50) {
+                    return $this->result($output,['status'=>'INVALID_CANDIDATE_LIMIT'],Command::INVALID);
+                }
+                $items=$this->observations->candidates($org,$connection,$limit);
+                return $this->result($output,
+                    ['status'=>'SNAPSHOT_CANDIDATES','connection_id'=>$connection,
+                        'count'=>count($items),'candidates'=>$items],Command::SUCCESS);
             }
             if ($action==='audit') {
                 $id=trim((string)$input->getOption('preview-id'));

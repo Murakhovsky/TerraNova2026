@@ -83,6 +83,43 @@ final readonly class ShopifyObservationStore
         if ($stmt->rowCount()!==1) throw new DomainException('Missing Shopify currency connection scope.');
     }
 
+
+    /**
+     * Tenant-scoped, bounded candidate metadata for supervised Shopify Preview.
+     * Raw product data is never returned and canonical Product is not changed.
+     * @return list<array<string,mixed>>
+     */
+    public function candidates(string $org,string $conn,int $limit=20):array
+    {
+        if ($limit<1||$limit>50) throw new DomainException('Invalid Shopify candidate limit.');
+        $connection=$this->connection($org,$conn);
+        $currencyVerified=is_string($connection['shop_currency']??null)
+            && preg_match('/^[A-Z]{3}$/D',$connection['shop_currency'])===1
+            && is_string($connection['shop_currency_checked_at']??null)
+            && strtotime($connection['shop_currency_checked_at'].' UTC')!==false
+            && strtotime($connection['shop_currency_checked_at'].' UTC')>=time()-86400;
+        // LIMIT is checked as an integer above; no raw JSON is selected.
+        $rows=$this->query('SELECT product_gid,payload_hash,is_complete,observed_at,
+                (observed_at >= DATE_SUB(UTC_TIMESTAMP(6), INTERVAL 24 HOUR)) AS fresh
+                FROM pm_external_product_snapshots WHERE organization_id=? AND connection_id=?
+                ORDER BY observed_at DESC,product_gid ASC LIMIT '.$limit,
+            [$org,$conn])->fetchAll(PDO::FETCH_ASSOC);
+        return array_map(static function(array $row)use($currencyVerified):array {
+            $complete=(int)$row['is_complete']===1;
+            $fresh=(int)$row['fresh']===1;
+            return [
+                'product_gid'=>(string)$row['product_gid'],
+                'source_hash'=>(string)$row['payload_hash'],
+                'complete'=>$complete,
+                'fresh'=>$fresh,
+                'shop_currency_verified'=>$currencyVerified,
+                // SKU, mapping and Plan conflicts are still checked on stage.
+                'stage_preconditions_met'=>$complete&&$fresh&&$currencyVerified,
+                'observed_at'=>(string)$row['observed_at'],
+            ];
+        },$rows);
+    }
+
     /** @return array<string,mixed>|null */
     public function productSnapshot(string $org,string $conn,string $gid):?array
     {

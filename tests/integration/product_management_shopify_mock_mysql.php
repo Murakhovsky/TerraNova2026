@@ -180,6 +180,24 @@ $assert($first['products_observed']===1 && $first['conflicts']===1
 $status=$observations->status($org,$id);
 $assert($status['open_conflicts']===1 && $status['cursor_pending']===false,
     'Sync result must expose conflict and completed pagination');
+$candidates=$observations->candidates($org,$id,20);
+$assert(count($candidates)===1
+    && $candidates[0]['product_gid']==='gid://shopify/Product/901'
+    && preg_match('/^[a-f0-9]{64}$/D',$candidates[0]['source_hash'])===1
+    && $candidates[0]['complete']===true
+    && $candidates[0]['fresh']===true
+    && $candidates[0]['shop_currency_verified']===true
+    && $candidates[0]['stage_preconditions_met']===true
+    && !array_key_exists('payload_json',$candidates[0]),
+    'candidate listing must expose a bounded verified digest, not raw JSON');
+$deniedCandidates=false;
+try { $observations->candidates('pm-foreign-'.$token,$id,20); }
+catch (DomainException) { $deniedCandidates=true; }
+$assert($deniedCandidates,'candidate listing fails closed across tenants');
+$invalidCandidateLimit=false;
+try { $observations->candidates($org,$id,51); }
+catch (DomainException) { $invalidCandidateLimit=true; }
+$assert($invalidCandidateLimit,'candidate listing limit must be bounded');
 $assert($products->searchProducts($org,$sku)===[],'Shopify pull must never create canonical Product');
 $stmt=$pdo->prepare('SELECT payload_json FROM pm_external_product_snapshots WHERE organization_id=? AND connection_id=? AND product_gid=?');
 $stmt->execute([$org,$id,'gid://shopify/Product/901']);
