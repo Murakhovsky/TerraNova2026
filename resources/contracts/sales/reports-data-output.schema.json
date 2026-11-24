@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "report_id": {
+      "type": "string",
+      "enum": [
+        "outcomes",
+        "forecast",
+        "conversion",
+        "stages"
+      ]
+    },
+    "schema_version": {
+      "type": "string",
+      "enum": [
+        "1.0.0"
+      ]
+    },
+    "basis": {
+      "type": "string"
+    },
+    "from": {
+      "type": "string"
+    },
+    "to_exclusive": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "pipeline_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "row_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "rows": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+(\\.[0-9]+)?$"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "count",
+              "money",
+              "percent",
+              "seconds"
+            ]
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "USD",
+              "EUR",
+              "UAH",
+              null
+            ]
+          },
+          "bucket": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pipeline_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from_stage_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to_stage_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "metric",
+          "value",
+          "unit",
+          "currency",
+          "bucket",
+          "pipeline_id",
+          "from_stage_id",
+          "to_stage_id"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "report_id",
+    "schema_version",
+    "basis",
+    "from",
+    "to_exclusive",
+    "owner_id",
+    "pipeline_id",
+    "columns",
+    "row_count",
+    "rows"
+  ],
+  "additionalProperties": false
+}
