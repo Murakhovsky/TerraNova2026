@@ -29,6 +29,14 @@ final readonly class ProductManagementRuleContextProvider implements RuleContext
             'product_management.stock.movement_posted',
             'product_management.stock.transferred',
             'product_management.price.updated',
+            'product_management.stock.reserved',
+            'product_management.stock.released',
+            'product_management.price_list.created',
+            'product_management.price_list.updated',
+            'product_management.price_list.archived',
+            'product_management.price_list.entry_updated',
+            'product_management.price_list.entry_removed',
+            'product_management.price_list.tier_changed',
         ], true)) {
             throw new InvalidArgumentException('Unsupported Product Management event type.');
         }
