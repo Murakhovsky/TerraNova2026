@@ -40,6 +40,7 @@ domain_id: product_management
       "id": "inventory",
       "capability_ids": [
         "product_management.location.create",
+        "product_management.location.search",
         "product_management.stock.balance.get"
       ]
     },

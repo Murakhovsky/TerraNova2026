@@ -122,6 +122,12 @@ $reject(static fn()=> $products->updateVariant($org,$created['variant_id'],['bar
 $reject(static fn()=> $products->updateVariant($other,$created['variant_id'],['barcode'=>'BAD'],2,
     'pm-var-cross-'.$token,'ci-other','ci-pm'),'cross-tenant Variant update');
 $location=$products->createLocation($org,'L-'.$token,'Test warehouse','pm-loc-'.$token,'ci-user','ci-pm');
+$locFound=$products->locations($org,'L-'.$token,10,0);
+$assert(count($locFound)===1 && $locFound[0]['location_id']===$location['location_id'],
+    'tenant warehouse discovery must return the native location');
+$assert($products->locations($other,'L-'.$token,10,0)===[],
+    'warehouse discovery cannot leak another tenant');
+
 $variant=$created['variant_id'];$loc=$location['location_id'];
 $receipt=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');
 $replayed=$products->recordMovement($org,$variant,$loc,'10.000000','receipt','TEST-PO','pm-in-'.$token,'ci-user','ci-pm');

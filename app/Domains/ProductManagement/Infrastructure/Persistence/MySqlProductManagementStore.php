@@ -282,6 +282,21 @@ final readonly class MySqlProductManagementStore implements ProductManagementSto
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** @return list<array<string,mixed>> */
+    public function searchLocations(string $organizationId,string $q,int $limit,int $offset):array
+    {
+        $stmt=$this->connection->prepare('SELECT location_id,code,name,status FROM pm_locations
+            WHERE organization_id=:org AND (code LIKE :code OR name LIKE :name)
+            ORDER BY code,location_id LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$organizationId);
+        $stmt->bindValue(':code','%'.$q.'%');
+        $stmt->bindValue(':name','%'.$q.'%');
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);
+        $stmt->bindValue(':off',$offset,PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function createLocation(string $organizationId, string $code, string $name, string $key, string $actor, string $correlation): array
     {
         return $this->mutate($organizationId, 'location.create', $key, [$code,$name], $actor, $correlation,

@@ -86,6 +86,13 @@ the connection cursor or release a replacement run. Failed requests retain
 their last completed page cursor for deliberate retry. This is a local sync
 reservation, **not** a new workflow executor or autonomous scheduler.
 
+## Tenant location discovery
+
+`product_management.location.search` is a bounded, tenant-scoped read QueryBus capability.
+It filters by warehouse code/name, returns only ID/code/name/status (no stock write),
+and supports explicit pagination. Native availability is obtained separately through
+`stock.balance.get` and never estimated from external Shopify inventory observations.
+
 ## E1 categories
 
 `category.create` creates tenant-scoped slugs and optional child nodes

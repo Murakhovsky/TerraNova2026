@@ -196,6 +196,16 @@ final readonly class ProductManagementService
         return $this->store->searchProducts($organizationId, trim($q), $limit, $offset);
     }
 
+    /** @return list<array<string,mixed>> */
+    public function locations(string $org,string $q='',int $limit=30,int $offset=0):array
+    {
+        $this->tenant($org);
+        if ($limit<1||$limit>100||$offset<0||$offset>100000000||mb_strlen($q)>100) {
+            throw new DomainException('Invalid location search bounds.');
+        }
+        return $this->store->searchLocations($org,trim($q),$limit,$offset);
+    }
+
     /** @return array<string,mixed> */
     public function createLocation(string $organizationId, string $code, string $name, string $key, string $actor, string $correlation): array
     {
