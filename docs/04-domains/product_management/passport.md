@@ -62,7 +62,10 @@ domain_id: product_management
         "product_management.price.list.create",
         "product_management.price.list.search",
         "product_management.price.list.entry.set",
-        "product_management.price.list.entry.get"
+        "product_management.price.list.entry.get",
+        "product_management.price.list.update",
+        "product_management.price.list.archive",
+        "product_management.price.list.history.search"
       ]
     },
     {
