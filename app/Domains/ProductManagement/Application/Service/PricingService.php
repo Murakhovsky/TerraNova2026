@@ -207,6 +207,94 @@ final readonly class PricingService
         },$stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
+    /** Remove the explicit entry without destroying its identity/revision history. */
+    public function removeListPrice(string $org,string $listId,string $variantId,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        $this->listScope($org,$listId,$variantId);
+        if($expectedRevision<1)throw new DomainException('Invalid entry revision.');
+        return $this->listMutation($org,'price.list.entry.remove',[$listId,$variantId,$expectedRevision],$key,$actor,$correlation,
+            'product_management.price_list.entry_removed',function()use($org,$listId,$variantId,$expectedRevision,$actor):array{
+                $this->lockPriceableVariant($org,$variantId);$this->lockActiveList($org,$listId);
+                $old=$this->query('SELECT amount,revision FROM pm_price_list_entries WHERE organization_id=? AND list_id=? AND variant_id=? FOR UPDATE',[$org,$listId,$variantId])->fetch(PDO::FETCH_ASSOC);
+                if($old===false||$old['amount']===null||(int)$old['revision']!==$expectedRevision)throw new DomainException('Current priced entry required.');
+                $this->query('UPDATE pm_price_list_entries SET amount=NULL,revision=revision+1 WHERE organization_id=? AND list_id=? AND variant_id=?',[$org,$listId,$variantId]);
+                $this->query('INSERT INTO pm_price_list_history (organization_id,list_id,variant_id,revision,old_amount,new_amount,actor_ref) VALUES (?,?,?,?,?,?,?)',[$org,$listId,$variantId,$expectedRevision+1,$old['amount'],null,$actor]);
+                return $this->getListPrice($org,$listId,$variantId);
+            });
+    }
+
+    /** One independently versioned quantity threshold; null amount is a tombstone. */
+    public function setTier(string $org,string $listId,string $variantId,string $minimum,?string $amount,int $expectedRevision,string $key,string $actor,string $correlation):array
+    {
+        $this->listScope($org,$listId,$variantId);
+        $minimum=ProductRules::quantity($minimum);
+        [$whole,$fraction]=array_pad(explode('.',$minimum,2),2,'');$minimum=$whole.'.'.str_pad($fraction,6,'0');
+        if($amount!==null)$amount=ProductRules::money($amount);
+        if($expectedRevision<0||($amount===null&&$expectedRevision<1))throw new DomainException('Invalid tier revision.');
+        return $this->listMutation($org,'price.list.tier.set',[$listId,$variantId,$minimum,$amount,$expectedRevision],$key,$actor,$correlation,
+            'product_management.price_list.tier_changed',function()use($org,$listId,$variantId,$minimum,$amount,$expectedRevision,$actor):array{
+                $this->lockPriceableVariant($org,$variantId);$list=$this->lockActiveList($org,$listId);
+                $old=$this->query('SELECT amount,revision FROM pm_price_list_tiers WHERE organization_id=? AND list_id=? AND variant_id=? AND min_quantity=? FOR UPDATE',[$org,$listId,$variantId,$minimum])->fetch(PDO::FETCH_ASSOC);
+                if(($old===false?0:(int)$old['revision'])!==$expectedRevision||($amount===null&&($old===false||$old['amount']===null)))
+                    throw new DomainException('Tier revision or lifecycle conflict.');
+                if($old===false){
+                    $this->query('INSERT INTO pm_price_list_tiers (organization_id,list_id,variant_id,min_quantity,amount) VALUES (?,?,?,?,?)',[$org,$listId,$variantId,$minimum,$amount]);
+                }else{
+                    $this->query('UPDATE pm_price_list_tiers SET amount=?,revision=revision+1 WHERE organization_id=? AND list_id=? AND variant_id=? AND min_quantity=?',[$amount,$org,$listId,$variantId,$minimum]);
+                }
+                $row=$this->query('SELECT min_quantity,amount,revision FROM pm_price_list_tiers WHERE organization_id=? AND list_id=? AND variant_id=? AND min_quantity=?',[$org,$listId,$variantId,$minimum])->fetch(PDO::FETCH_ASSOC);
+                $result=['list_id'=>$listId,'variant_id'=>$variantId,'currency'=>$list['currency'],'min_quantity'=>$row['min_quantity'],'price'=>$row['amount'],'revision'=>(int)$row['revision']];
+                $this->query('INSERT INTO pm_price_list_tier_history (organization_id,list_id,variant_id,min_quantity,revision,old_amount,new_amount,actor_ref) VALUES (?,?,?,?,?,?,?,?)',[$org,$listId,$variantId,$minimum,$result['revision'],$old===false?null:$old['amount'],$result['price'],$actor]);
+                return $result;
+            });
+    }
+
+    public function tiers(string $org,string $listId,string $variantId,int $limit=30,int $offset=0):array
+    {
+        $this->listScope($org,$listId,$variantId);
+        if($limit<1||$limit>100||$offset<0||$offset>10000000)throw new DomainException('Invalid tier pagination.');
+        $stmt=$this->connection->prepare('SELECT t.list_id,t.variant_id,l.currency,t.min_quantity,t.amount AS price,t.revision FROM pm_price_list_tiers t
+            JOIN pm_price_lists l ON l.organization_id=t.organization_id AND l.list_id=t.list_id
+            WHERE t.organization_id=:org AND t.list_id=:list AND t.variant_id=:variant ORDER BY t.min_quantity LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':org',$org);$stmt->bindValue(':list',$listId);$stmt->bindValue(':variant',$variantId);
+        $stmt->bindValue(':lim',$limit,PDO::PARAM_INT);$stmt->bindValue(':off',$offset,PDO::PARAM_INT);$stmt->execute();
+        return array_map(static function(array $row):array{$row['revision']=(int)$row['revision'];return $row;},$stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    /** Deterministic quote, not customer eligibility or a commitment to sell. */
+    public function resolvePrice(string $org,string $variantId,string $currency,string $quantity,?string $listId):array
+    {
+        $quantity=ProductRules::quantity($quantity);$currency=$this->currency($currency);
+        if($org===''||strlen($org)>40||!preg_match('/^[a-f0-9]{32}$/D',$variantId))throw new DomainException('Invalid price scope.');
+        $result=['variant_id'=>$variantId,'list_id'=>$listId,'currency'=>$currency,'quantity'=>$quantity,'source'=>'none','price'=>null,'min_quantity'=>null,'revision'=>0];
+        if($listId===null){
+            $row=$this->query("SELECT b.amount,b.revision FROM pm_variants v JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id
+                JOIN pm_base_prices b ON b.organization_id=v.organization_id AND b.variant_id=v.variant_id AND b.currency=?
+                WHERE v.organization_id=? AND v.variant_id=? AND v.status='active' AND p.status<>'archived'",[$currency,$org,$variantId])->fetch(PDO::FETCH_ASSOC);
+            if($row!==false){$result['source']='base';$result['price']=$row['amount'];$result['revision']=(int)$row['revision'];}
+            return $result;
+        }
+        $this->listScope($org,$listId,$variantId);
+        // One statement observes list, Product/Variant status, eligible tiers and entry consistently.
+        $row=$this->query("SELECT e.amount AS entry_amount,e.revision AS entry_revision,t.amount AS tier_amount,t.revision AS tier_revision,t.min_quantity
+            FROM pm_price_lists l JOIN pm_variants v ON v.organization_id=l.organization_id AND v.variant_id=?
+            JOIN pm_products p ON p.organization_id=v.organization_id AND p.product_id=v.product_id
+            LEFT JOIN pm_price_list_entries e ON e.organization_id=l.organization_id AND e.list_id=l.list_id AND e.variant_id=v.variant_id
+            LEFT JOIN pm_price_list_tiers t ON t.organization_id=l.organization_id AND t.list_id=l.list_id AND t.variant_id=v.variant_id AND t.amount IS NOT NULL AND t.min_quantity<=CAST(? AS DECIMAL(20,6))
+            WHERE l.organization_id=? AND l.list_id=? AND l.currency=? AND l.status='active' AND v.status='active' AND p.status<>'archived'
+            ORDER BY t.min_quantity DESC LIMIT 1",[$variantId,$quantity,$org,$listId,$currency])->fetch(PDO::FETCH_ASSOC);
+        if($row!==false&&$row['tier_amount']!==null){$result['source']='tier';$result['price']=$row['tier_amount'];$result['min_quantity']=$row['min_quantity'];$result['revision']=(int)$row['tier_revision'];}
+        elseif($row!==false&&$row['entry_amount']!==null){$result['source']='list';$result['price']=$row['entry_amount'];$result['revision']=(int)$row['entry_revision'];}
+        return $result;
+    }
+
+    private function lockActiveList(string $org,string $listId):array
+    {
+        $list=$this->query('SELECT currency,status FROM pm_price_lists WHERE organization_id=? AND list_id=? FOR UPDATE',[$org,$listId])->fetch(PDO::FETCH_ASSOC);
+        if($list===false||$list['status']!=='active')throw new DomainException('Active tenant price list required.');
+        return $list;
+    }
+
     private function listScope(string $org,string $listId,string $variantId):void
     {
         if($org===''||strlen($org)>40||!preg_match('/^[a-f0-9]{32}$/D',$listId)||!preg_match('/^[a-f0-9]{32}$/D',$variantId))
