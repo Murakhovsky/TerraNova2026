@@ -1003,10 +1003,19 @@ jobs:
       - name: Product Management functional browser acceptance
         env:
           PM_E2E_BASE_URL: http://127.0.0.1:8081
-          PM_E2E_EMAIL: sales-functional-acceptance@example.test
-          PM_E2E_PASSWORD: Sales-Functional-Acceptance-CI-Ab9!
+          PM_E2E_EMAIL: product-functional-acceptance@example.test
+          PM_E2E_PASSWORD: Product-Functional-Acceptance-CI-Ab9!
           PM_E2E_MUTATION_SAFE: '1'
         run: |
+          PM_HASH="$(php -r 'echo password_hash(getenv("PM_E2E_PASSWORD"), PASSWORD_DEFAULT);')"
+          docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "
+            INSERT INTO tn_users (organization_id,email,password_hash,full_name,role,status)
+            VALUES ('default','$PM_E2E_EMAIL','$PM_HASH','Product Functional Acceptance','manager','active')
+            ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),role='manager',status='active';
+            INSERT INTO cos_organization_memberships (organization_id,user_id,role,status)
+            SELECT 'default',id,'manager','ACTIVE' FROM tn_users WHERE email='$PM_E2E_EMAIL'
+            ON DUPLICATE KEY UPDATE role='manager',status='ACTIVE';
+          "
           # Only this disposable CI tenant is enabled; restore module visibility after the browser journey.
           docker compose exec -T mysql mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" -e "INSERT INTO cos_organization_modules (organization_id,module_id,enabled) VALUES ('default','product_management',1) ON DUPLICATE KEY UPDATE enabled=1"
           restore_pm() {
@@ -1015,7 +1024,10 @@ jobs:
           trap restore_pm EXIT
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME_BIN"
-          CHROME_PATH="$CHROME_BIN" node tests/browser/product_management_workspace.mjs
+          if ! CHROME_PATH="$CHROME_BIN" node tests/browser/product_management_workspace.mjs; then
+            docker compose logs --no-color --tail=200 php nginx
+            exit 1
+          fi
       - name: Upload Product Management browser evidence
         if: always()
         uses: actions/upload-artifact@v4
