@@ -62,6 +62,10 @@ final readonly class ChangeDealStage
             return ChangeDealStageResult::success($current->id, $target->id, false);
         }
 
+        if (strtoupper($command->actorType) === 'INTEGRATION' && $validation->requiresApproval) {
+            return ChangeDealStageResult::failure('CRM stage transition requires canonical approval.');
+        }
+
         $lostReasonId = null;
         if ($target->isLost) {
             $lostReasonId = trim((string) $command->lostReasonId);

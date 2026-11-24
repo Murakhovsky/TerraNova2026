@@ -32,12 +32,30 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
             throw new RuntimeException('Unsupported CRM event type: ' . $item->eventType);
         }
         $entityType = strtolower(trim((string) ($item->payload['entity_type'] ?? 'deal')));
+        $expectedEntity = match (strtolower($item->eventType)) {
+            'deal.updated', 'deal.stage_changed' => ['deal','client_case'],
+            'lead.updated', 'lead.changed' => ['lead'],
+            'message.received' => ['message'],
+            default => [],
+        };
+        if (!in_array($entityType,$expectedEntity,true)) throw new RuntimeException('CRM event and entity types do not match.');
         $externalId = trim((string) ($item->payload['external_id'] ?? $item->payload['aggregate_id'] ?? ''));
         if ($externalId === '') throw new RuntimeException('CRM payload requires external_id.');
         $localId = $entityType==='message'
             ? $this->localReference($item,'deal',trim((string)($item->payload['deal_external_id']??$item->payload['deal_id']??'')))
             : $this->localReference($item, $entityType, $externalId);
         $changes = is_array($item->payload['changes'] ?? null) ? $item->payload['changes'] : [];
+        // Lifecycle and relationship mutations require canonical Sales commands;
+        // never let a signed external provider bypass terminal outcome or conversion rules.
+        if (array_intersect_key($changes,['status'=>true,'client_case_id'=>true,'pipeline_id'=>true,'assigned_user_id'=>true,'owner_id'=>true]) !== []) {
+            throw new RuntimeException('CRM lifecycle or ownership mutation requires governed Sales execution.');
+        }
+        if (array_diff(array_keys($changes), in_array($entityType,['deal','client_case'],true)?['priority','next_contact_at','stage','stage_id']:[]) !== []) {
+            throw new RuntimeException('CRM changes contain unsupported fields.');
+        }
+        if (isset($changes['priority']) && !in_array($changes['priority'],\Domains\Sales\Model\SalesPriority::values(),true)) {
+            throw new RuntimeException('Invalid CRM priority.');
+        }
 
         if (in_array($entityType, ['deal', 'client_case'], true)) {
             $pipelineStatement = $this->connection->prepare('SELECT pipeline_id FROM tn_client_cases WHERE id=:id AND organization_id=:organization_id LIMIT 1');
@@ -45,7 +63,7 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
             $pipelineId = (string)($pipelineStatement->fetchColumn() ?: '');
             $this->updateAllowed(
                 'tn_client_cases',
-                ['status', 'priority', 'next_contact_at'],
+                ['priority', 'next_contact_at'],
                 $item->organizationId,
                 $localId,
                 $changes,
@@ -54,7 +72,7 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
         } elseif ($entityType === 'lead') {
             $this->updateAllowed(
                 'tn_leads',
-                ['status', 'client_case_id'],
+                [],
                 $item->organizationId,
                 $localId,
                 $changes,
@@ -91,7 +109,7 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
 
     private function localReference(CrmInboxItem $item, string $entityType, string $externalId): string
     {
-        if ($item->provider === 'aida' && ctype_digit($externalId)) return $externalId;
+        if ($item->provider === 'aida' && preg_match('/^[1-9][0-9]*$/D',$externalId)===1) return $externalId;
         $statement = $this->connection->prepare(
             'SELECT cos_reference FROM cos_external_references WHERE organization_id = :organization_id '
             . 'AND provider = :provider AND entity_type = :entity_type AND external_id = :external_id LIMIT 1'
@@ -104,7 +122,9 @@ final readonly class MysqlCrmInboundApplier implements CrmInboundApplierInterfac
         ]);
         $reference = $statement->fetchColumn();
         if ($reference === false) throw new RuntimeException('CRM entity has no local mapping.');
-        return str_starts_with((string) $reference, 'entity:') ? substr((string) $reference, 7) : (string) $reference;
+        $id = str_starts_with((string) $reference, 'entity:') ? substr((string) $reference, 7) : (string) $reference;
+        if (preg_match('/^[1-9][0-9]*$/D',$id)!==1) throw new RuntimeException('CRM mapping is not a native Sales identity.');
+        return $id;
     }
 
     private function updateAllowed(string $table, array $allowed, string $organizationId, string $id, array $changes): void

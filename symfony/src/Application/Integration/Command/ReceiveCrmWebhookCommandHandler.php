@@ -6,6 +6,7 @@ namespace App\Application\Integration\Command;
 use App\Application\Integration\Contract\CrmWebhookCredentialResolverInterface;
 use App\Application\Integration\IntegrationMutationAudit;
 use Domains\Sales\Application\Contract\CrmInboxRepositoryInterface;
+use Domains\Sales\Application\Support\CrmSignedEnvelope;
 use Domains\Sales\Application\Contract\CrmIngressResolverInterface;
 use InvalidArgumentException;
 use Kernel\Application\Bus\CommandBusInterface;
@@ -60,6 +61,7 @@ final readonly class ReceiveCrmWebhookCommandHandler implements CommandHandlerIn
             throw new InvalidArgumentException('Invalid CRM webhook signature.');
         }
 
+        CrmSignedEnvelope::assertMatches($command->rawPayload, $command->payload, $externalEventId, $eventType);
         $inboxId = $this->transactions->transactional(function () use (
             $command,
             $organizationId,

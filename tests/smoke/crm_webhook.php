@@ -55,7 +55,7 @@ $transactions = new class implements TransactionManagerInterface {
     public function afterCommit(callable $callback): void { $callback(); }
 };
 $receiver = new ReceiveCrmWebhook($secrets, $inbox, $queue, $transactions);
-$raw = '{"event_type":"deal.stage_changed","entity_type":"deal","external_id":"crm-42"}';
+$raw = '{"event_id":"evt-1","event_type":"deal.stage_changed","entity_type":"deal","external_id":"crm-42"}';
 $payload = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
 $signature = 'sha256=' . hash_hmac('sha256', $raw, $secret);
 
@@ -69,6 +69,16 @@ try {
     $receiver->execute('tenant-a', 'hubspot', 'evt-2', $payload['event_type'], $payload, 'invalid', $raw);
     throw new RuntimeException('Invalid CRM signature was accepted.');
 } catch (InvalidArgumentException) {
+}
+foreach ([
+    ['evt-2', $payload['event_type'], $payload],
+    ['evt-1', 'lead.updated', $payload],
+    ['evt-1', $payload['event_type'], [...$payload,'external_id'=>'foreign']],
+] as [$id,$type,$changed]) {
+    try {
+        $receiver->execute('tenant-a','hubspot',$id,$type,$changed,$signature,$raw);
+        throw new RuntimeException('Signed CRM identity or payload substitution was accepted.');
+    } catch (InvalidArgumentException) {}
 }
 if (count($inbox->items) !== 1 || count($queue->jobs) !== 1) {
     throw new RuntimeException('Rejected CRM webhook changed durable state.');
