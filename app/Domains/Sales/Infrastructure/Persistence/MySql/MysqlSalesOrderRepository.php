@@ -6,7 +6,7 @@ use Domains\Sales\Application\Contract\SalesOrderRepositoryInterface;
 use PDO;
 use LogicException;
 
-final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface
+final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryInterface, \Domains\Sales\Application\Contract\SalesCommerceOrderEvidencePort
 {
     public function __construct(private PDO $connection){}
     public function create(string $org,array $order,array $lines,array $evidence):void
@@ -34,6 +34,19 @@ final readonly class MysqlSalesOrderRepository implements SalesOrderRepositoryIn
             'placed_at'=>str_replace(' ','T',$row['placed_at']).'Z','lines'=>$lines];
         foreach(['subtotal','discount','tax','shipping','total'] as $key)$result[$key]=(string)$row[$key];
         return $result; // Attribution observations are not a user-visible customer profile.
+    }
+    public function placement(string $organizationId,string $orderId):?array
+    {
+        if ($organizationId===''||preg_match('/^[a-f0-9]{32}$/D',$orderId)!==1) return null;
+        $q=$this->connection->prepare('SELECT payload FROM sales_order_evidence WHERE organization_id=? AND order_id=? AND revision=1 AND event_type="sales.commerce.order.placed"');
+        $q->execute([$organizationId,$orderId]);$raw=$q->fetchColumn();
+        if (!is_string($raw)) return null;
+        $fact=json_decode($raw,true,512,JSON_THROW_ON_ERROR);
+        if (($fact['organization_id']??null)!==$organizationId||($fact['order_id']??null)!==$orderId||
+            ($fact['event_type']??null)!=='sales.commerce.order.placed'||($fact['schema_version']??null)!=='1.0.0')
+            throw new LogicException('Native placement evidence integrity failed.');
+        $fact['attribution_observations']=(object)$fact['attribution_observations'];
+        return $fact;
     }
     public function customerForDeal(string $org,int $deal):?int
     {
