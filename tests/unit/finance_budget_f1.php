@@ -53,7 +53,7 @@ $manifest=require $root.'/app/Domains/Finance/module.php';
 $module=ModuleDefinition::fromArray($manifest);
 $assert($module->manifest->id==='finance'&&!$module->manifest->enabledByDefault,'Finance F1 must be disabled by default');
 $assert($module->contributions->runtimeModuleService==='financeDomainModule','Finance F1 missing runtime owner');
-$assert(count($module->contributions->capabilityContracts)===8,'Expected seven budget and one evidence-read Finance capabilities');
+$assert(count($module->contributions->capabilityContracts)===9,'Expected seven budget and two source-evidence read capabilities');
 $typed=[];
 foreach($module->contributions->capabilityContracts as $c){
     $typed[$c->id]=$c;
@@ -64,6 +64,7 @@ foreach($module->contributions->capabilityContracts as $c){
             &&$c->idempotency==='required','Financial capability must require approval and idempotency');
     }
 }
+$assert($typed['finance.sales.commercial_evidence.read']->executionBinding==='query:finance.sales.commercial_evidence.read' && $typed['finance.sales.commercial_evidence.read']->sideEffectLevel==='none','Sales evidence must remain read-only');
 $validator=new CapabilityJsonInputValidator();
 $validator->validate($typed['finance.budget.envelope.draft.create'],$valid);
 $validator->validate($typed['finance.budget.reservation.reserve'],[
