@@ -20,7 +20,7 @@ generated: true
 | --- | ---: | --- |
 | `both` | 48 | Capability присутня і в runtime catalogue, і в manifest. |
 | `runtime-only` | 3 | Runtime може перевіряти capability, але manifest її не декларує. |
-| `manifest-only` | 240 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
+| `manifest-only` | 244 | Manifest декларує capability, але explicit runtime catalogue її не містить. |
 
 ## Каталог
 
@@ -267,11 +267,11 @@ generated: true
 | `sales` | `sales.admin.rules.manage` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.admin.teams.manage` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
 | `sales` | `sales.admin.view` | так | так | `both` | `app/Domains/Sales/Model/SalesCapability.php` | `app/Domains/Sales/module.php` |
-| `sales` | `sales.approval.any_team` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.analytics.conversion.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.analytics.forecast.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.analytics.outcomes.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.analytics.stages.read` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
+| `sales` | `sales.approval.any_team` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.approval.decide` | так | ні | `runtime-only` | `app/Domains/Sales/Model/SalesCapability.php` | — |
 | `sales` | `sales.client_case.create` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
 | `sales` | `sales.create_task` | ні | так | `manifest-only` | — | `app/Domains/Sales/module.php` |
