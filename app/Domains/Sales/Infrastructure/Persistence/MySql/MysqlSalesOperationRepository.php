@@ -148,7 +148,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
         // Activity ids are not globally trusted. Organization + deal + open state form the mutation boundary.
         $statement = $this->connection->prepare(
             'SELECT activity_type,title FROM tn_client_case_activities '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL LIMIT 1 FOR UPDATE'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL LIMIT 1 FOR UPDATE'
         );
         $statement->execute([
             'activity_id' => $activityId,
@@ -162,7 +162,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
 
         $update = $this->connection->prepare(
             'UPDATE tn_client_case_activities SET completed_at=NOW(),user_id=COALESCE(user_id,:user_id) '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL'
         );
         $update->execute([
             'user_id' => $userId,
@@ -195,7 +195,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
         // Resolve the activity under the same tenant/deal/open predicate before changing any Deal projection.
         $type = $this->connection->prepare(
             'SELECT activity_type FROM tn_client_case_activities '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL LIMIT 1 FOR UPDATE'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL LIMIT 1 FOR UPDATE'
         );
         $type->execute([
             'activity_id' => $activityId,
@@ -209,7 +209,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
 
         $statement = $this->connection->prepare(
             'UPDATE tn_client_case_activities SET due_at=:due_at '
-            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL'
+            . 'WHERE id=:activity_id AND organization_id=:org AND client_case_id=:deal AND completed_at IS NULL AND cancelled_at IS NULL'
         );
         $statement->execute([
             'due_at' => $dueAt->format('Y-m-d H:i:s'),
@@ -277,7 +277,7 @@ final readonly class MysqlSalesOperationRepository implements SalesOperationRepo
         $statement = $this->connection->prepare(
             'SELECT MIN(due_at) FROM tn_client_case_activities '
             . 'WHERE organization_id=:org AND client_case_id=:id '
-            . 'AND activity_type="followup" AND completed_at IS NULL AND due_at IS NOT NULL'
+            . 'AND activity_type="followup" AND completed_at IS NULL AND cancelled_at IS NULL AND due_at IS NOT NULL'
         );
         $statement->execute(compact('org', 'id'));
         $next = $statement->fetchColumn();

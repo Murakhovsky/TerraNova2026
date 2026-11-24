@@ -63,7 +63,7 @@ final readonly class MysqlFollowupRepository implements FollowupRepositoryInterf
             $this->references->put($command->organizationId, 'aida', 'followup', $externalId, $reference);
             if (!$receipts->complete($command->organizationId,'native.followup.schedule',$key,$pending,$externalId)) throw new \RuntimeException('Followup receipt completion failed.');
             $this->connection->prepare('UPDATE tn_client_cases SET next_contact_at=(
-                SELECT MIN(a.due_at) FROM tn_client_case_activities a WHERE a.organization_id=:activity_org AND a.client_case_id=:activity_deal AND a.activity_type="followup" AND a.completed_at IS NULL
+                SELECT MIN(a.due_at) FROM tn_client_case_activities a WHERE a.organization_id=:activity_org AND a.client_case_id=:activity_deal AND a.activity_type="followup" AND a.completed_at IS NULL AND a.cancelled_at IS NULL
                 ),last_activity_at=NOW() WHERE organization_id=:org AND id=:deal')->execute([
                     'activity_org'=>$command->organizationId,'activity_deal'=>$command->dealReference,'org'=>$command->organizationId,'deal'=>$command->dealReference,
                 ]);

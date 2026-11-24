@@ -38,12 +38,12 @@ final readonly class MysqlLeadFollowupRepository implements LeadFollowupReposito
                 if($owns)$this->connection->commit();
                 return OperationResult::success($id,['duplicate'=>true,'due_at'=>$command->dueAt->format(DATE_ATOM)]);
             }
-            if(in_array($status,['lost','disqualified','converted','closed'],true)||$command->dueAt<=new \DateTimeImmutable())throw new DomainException('Lead is terminal or due date has passed.');
+            if(in_array($status,['won','lost','disqualified','spam','closed'],true)||$command->dueAt<=new \DateTimeImmutable())throw new DomainException('Lead is terminal or due date has passed.');
             $q=$this->connection->prepare('INSERT INTO tn_lead_activities(lead_id,user_id,activity_type,title,body,due_at,completed_at) SELECT id,assigned_user_id,"task",?,?,?,NULL FROM tn_leads WHERE organization_id=? AND id=?');
             $q->execute([$command->title,$command->body,$due,$org,$lead]);
             if($q->rowCount()!==1)throw new DomainException('Lead followup not created.');
             $id=(string)$this->connection->lastInsertId();
-            $this->connection->prepare('UPDATE tn_leads SET next_contact_at=(SELECT MIN(a.due_at) FROM tn_lead_activities a WHERE a.lead_id=? AND a.activity_type="task" AND a.completed_at IS NULL),updated_at=NOW() WHERE organization_id=? AND id=?')->execute([$lead,$org,$lead]);
+            $this->connection->prepare('UPDATE tn_leads SET next_contact_at=(SELECT MIN(a.due_at) FROM tn_lead_activities a WHERE a.lead_id=? AND a.activity_type="task" AND a.completed_at IS NULL AND a.cancelled_at IS NULL),updated_at=NOW() WHERE organization_id=? AND id=?')->execute([$lead,$org,$lead]);
             if(!$receipts->complete($org,self::OPERATION,$key,$pending,$hash.':'.$id))throw new \RuntimeException('Lead followup receipt not completed.');
             if($owns)$this->connection->commit();
             return OperationResult::success($id,['duplicate'=>false,'due_at'=>$command->dueAt->format(DATE_ATOM)]);

@@ -10,7 +10,7 @@ final readonly class MysqlSalesActivityEvidenceReadModel implements SalesActivit
     public function __construct(private PDO $connection) {}
     public function activity(string $org,int $deal,int $id):?array
     {
-        return $this->one('SELECT id,organization_id,client_case_id,activity_type,title,body,due_at,completed_at FROM tn_client_case_activities WHERE organization_id=? AND client_case_id=? AND id=?',[$org,$deal,$id]);
+        return $this->one('SELECT id,organization_id,client_case_id,activity_type,title,body,due_at,completed_at,cancelled_at,cancellation_reason FROM tn_client_case_activities WHERE organization_id=? AND client_case_id=? AND id=?',[$org,$deal,$id]);
     }
     public function propertyMatch(string $org,int $deal,int $property):?array
     {

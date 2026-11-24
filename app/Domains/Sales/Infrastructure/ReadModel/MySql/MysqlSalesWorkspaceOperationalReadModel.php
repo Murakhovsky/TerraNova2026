@@ -336,7 +336,7 @@ final readonly class MysqlSalesWorkspaceOperationalReadModel implements SalesWor
         foreach ($this->safeAll(
             'SELECT user_id owner_id,ROUND(100*SUM(completed_at IS NOT NULL)/NULLIF(COUNT(*),0),1) followup_completion_rate '
             . 'FROM tn_client_case_activities WHERE organization_id=:organization_id AND user_id IS NOT NULL '
-            . 'AND activity_type IN ("followup","task") AND created_at>=NOW()-INTERVAL ' . $days . ' DAY GROUP BY user_id',
+            . 'AND activity_type IN ("followup","task") AND cancelled_at IS NULL AND created_at>=NOW()-INTERVAL ' . $days . ' DAY GROUP BY user_id',
             ['organization_id' => $organizationId],
         ) as $row) {
             $key = (string) ((int) ($row['owner_id'] ?? 0));

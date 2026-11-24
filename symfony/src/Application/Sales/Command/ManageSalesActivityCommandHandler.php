@@ -53,7 +53,7 @@ final readonly class ManageSalesActivityCommandHandler implements CommandHandler
                 $nativeId=(int)$result->externalId;
             }elseif($op==='activity.complete'||$op==='activity.reschedule'){
                 $nativeId=$input['activity_id'];$before=$this->evidence->activity($org,$id,$nativeId);
-                if ($before===null||$before['completed_at']!==null||!in_array($before['activity_type'],['task','followup','meeting','viewing'],true)) throw new DomainException('Open scheduled activity required.');
+                if ($before===null||$before['completed_at']!==null||$before['cancelled_at']!==null||!in_array($before['activity_type'],['task','followup','meeting','viewing'],true)) throw new DomainException('Open scheduled activity required.');
                 $result=$op==='activity.complete'?$this->operations->completeActivity($org,(string)$id,$nativeId,$command->actorId,'USER',$command->correlationId)
                     :$this->operations->rescheduleActivity($org,(string)$id,$nativeId,$this->date($input['due_at']));
                 if (!$result->successful) throw new DomainException($result->error??'Activity mutation rejected.');
@@ -96,7 +96,7 @@ final readonly class ManageSalesActivityCommandHandler implements CommandHandler
         if ($op==='followup.schedule'&&($row['activity_type']!=='followup'||$row['title']!==$input['title']||($row['body']??'')!==($input['body']??''))) throw new DomainException('Followup differs.');
         if (in_array($op,['followup.schedule','activity.reschedule'],true)&&$row['due_at']!==$this->date($input['due_at'])->format('Y-m-d H:i:s')) throw new DomainException('Native due date changed.');
         if ($op==='activity.complete'&&$row['completed_at']===null) throw new DomainException('Activity is not completed.');
-        return ['deal_id'=>$deal,'record_id'=>$id,'kind'=>$row['activity_type'],'status'=>$row['completed_at']===null?'open':'completed','replayed'=>$replayed];
+        return ['deal_id'=>$deal,'record_id'=>$id,'kind'=>$row['activity_type'],'status'=>$row['cancelled_at']!==null?'cancelled':($row['completed_at']===null?'open':'completed'),'replayed'=>$replayed];
     }
 
     private function validate(string $op,array $in):void

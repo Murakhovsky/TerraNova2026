@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "lead",
+              "deal"
+            ]
+          },
+          "target_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "activity_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "activity_type": {
+            "type": "string"
+          },
+          "due_at": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "target_type",
+          "target_id",
+          "activity_id",
+          "activity_type",
+          "due_at",
+          "owner_id"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "additionalProperties": false
+}

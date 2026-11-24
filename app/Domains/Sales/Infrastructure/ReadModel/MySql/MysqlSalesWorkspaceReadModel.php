@@ -78,7 +78,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         if ($lead === null) return null;
 
         $lead['activities'] = $this->safeAll(
-            'SELECT a.id,a.user_id,a.activity_type,a.title,a.body,a.due_at,a.completed_at,a.created_at '
+            'SELECT a.id,a.user_id,a.activity_type,a.title,a.body,a.due_at,a.completed_at,a.cancelled_at,a.cancellation_reason,a.created_at '
             . 'FROM tn_lead_activities a INNER JOIN tn_leads l ON l.id=a.lead_id '
             . 'WHERE l.organization_id=:organization_id AND a.lead_id=:lead_id ORDER BY a.created_at DESC LIMIT 100',
             ['organization_id' => $organizationId, 'lead_id' => $leadId],
@@ -263,7 +263,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
             'SELECT c.id, c.public_id, c.title, p.full_name customer, c.priority, a.id activity_id, a.title activity_title, a.due_at '
             . 'FROM tn_client_case_activities a INNER JOIN tn_client_cases c ON c.id=a.client_case_id AND c.organization_id=a.organization_id '
             . 'INNER JOIN tn_people p ON p.id=c.person_id AND p.organization_id=c.organization_id '
-            . 'WHERE a.organization_id=:activity_org AND a.activity_type="' . $type . '" AND a.completed_at IS NULL' . $activityOwnerSql . ' AND ' . $condition
+            . 'WHERE a.organization_id=:activity_org AND a.activity_type="' . $type . '" AND a.completed_at IS NULL AND a.cancelled_at IS NULL' . $activityOwnerSql . ' AND ' . $condition
             . ' ORDER BY a.due_at IS NULL,a.due_at,c.updated_at DESC LIMIT 20',
             $activityBase,
         );
@@ -309,7 +309,7 @@ final readonly class MysqlSalesWorkspaceReadModel implements SalesWorkspaceReadM
         $followups = $this->one(
             'SELECT ROUND(100 * SUM(a.completed_at IS NOT NULL) / NULLIF(COUNT(*),0),2) followup_completion_rate '
             . 'FROM tn_client_case_activities a INNER JOIN tn_client_cases c ON c.id=a.client_case_id AND c.organization_id=a.organization_id '
-            . 'WHERE a.organization_id=:organization_id AND a.activity_type IN ("task","followup") AND a.created_at>=NOW()-INTERVAL ' . $days . ' DAY',
+            . 'WHERE a.organization_id=:organization_id AND a.activity_type IN ("task","followup") AND a.cancelled_at IS NULL AND a.created_at>=NOW()-INTERVAL ' . $days . ' DAY',
             $params,
         ) ?? ['followup_completion_rate' => 0];
         $ai = $this->safeOne(
